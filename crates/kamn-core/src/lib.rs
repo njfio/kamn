@@ -152,14 +152,16 @@ pub use audit_exports::{
     AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
 };
 pub use block_pipeline::{
-    decode_transport_candidate_payload, encode_transport_candidate_payload,
-    AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
-    BlockPipelineError, CanonicalCandidateDecision, CanonicalCandidateOutcome,
-    CanonicalCommitRecord, CanonicalCommitStore, DeterministicCompetingBranchForkChoiceHook,
-    ForkChoiceDecision, ForkChoiceHook, GossipFrameTransportMempoolFeed, GossipIngressAdapter,
-    GossipIngressBatch, GossipIngressError, GossipIngressRecord, InMemoryCanonicalCommitStore,
-    InMemoryTransportMempoolFeed, MempoolBlockPipeline, TransportCanonicalCandidateFeed,
-    TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
+    decode_transport_candidate_payload, decode_transport_canonical_candidate_payload,
+    encode_transport_candidate_payload, encode_transport_canonical_candidate_payload,
+    encode_transport_commit_report_payload, AcceptAllForkChoiceHook, BlockConsensusRoundInput,
+    BlockPipelineCommitReport, BlockPipelineError, CanonicalCandidateDecision,
+    CanonicalCandidateOutcome, CanonicalCommitRecord, CanonicalCommitStore,
+    DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
+    GossipFrameTransportMempoolFeed, GossipIngressAdapter, GossipIngressBatch, GossipIngressError,
+    GossipIngressRecord, InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed,
+    MempoolBlockPipeline, TransportCanonicalCandidateFeed, TransportEventMempoolFeed,
+    TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{

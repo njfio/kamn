@@ -171,6 +171,81 @@ pub fn decode_transport_candidate_payload(
     }
 }
 
+/// Encodes canonical commit candidate into deterministic transport block payload.
+pub fn encode_transport_canonical_candidate_payload(
+    record: &CanonicalCommitRecord,
+) -> Result<String, BlockPipelineError> {
+    if record.block_height == 0 {
+        return Err(BlockPipelineError::TransportFeed(
+            "transport canonical candidate block_height must be positive (transport_candidate_block_height_invalid)"
+                .to_owned(),
+        ));
+    }
+    validate_transport_payload_field_value("payload_digest", record.payload_digest.as_str())?;
+    if record.transaction_ids.is_empty() {
+        return Err(BlockPipelineError::TransportFeed(
+            "transport canonical candidate transaction_ids must not be empty (transport_candidate_transaction_ids_invalid)"
+                .to_owned(),
+        ));
+    }
+    let mut seen_ids = BTreeSet::new();
+    for tx_id in &record.transaction_ids {
+        validate_transport_payload_field_value("transaction_id", tx_id.as_str())?;
+        if tx_id.contains(',') {
+            return Err(BlockPipelineError::TransportFeed(
+                "transport canonical candidate transaction_id contains reserved separator ',' (transport_candidate_transaction_id_invalid)"
+                    .to_owned(),
+            ));
+        }
+        if !seen_ids.insert(tx_id) {
+            return Err(BlockPipelineError::TransportFeed(
+                "transport canonical candidate transaction_id is duplicated (transport_candidate_transaction_id_invalid)"
+                    .to_owned(),
+            ));
+        }
+    }
+    let transaction_ids = record.transaction_ids.join(",");
+    Ok(format!(
+        "block_height={}\nproducer_role={}\npayload_digest={}\ntransaction_ids={}",
+        record.block_height,
+        record.producer_role.as_str(),
+        record.payload_digest,
+        transaction_ids
+    ))
+}
+
+/// Decodes deterministic transport canonical-candidate payload into canonical commit record.
+pub fn decode_transport_canonical_candidate_payload(
+    payload: &str,
+) -> Result<CanonicalCommitRecord, BlockPipelineError> {
+    let frame = PeerGossipFrame {
+        topic: TOPIC_BLOCKS_V1.to_owned(),
+        sender_peer_id: "transport-candidate-decode-source".to_owned(),
+        recipient_peer_id: "transport-candidate-decode-target".to_owned(),
+        payload: payload.to_owned(),
+    };
+    match GossipIngressAdapter::decode_frame(&frame) {
+        Ok(GossipIngressRecord::BlockCandidate(record)) => Ok(record),
+        Ok(GossipIngressRecord::Transaction(_)) => Err(BlockPipelineError::TransportFeed(
+            "transport canonical candidate decode yielded transaction payload (transport_candidate_payload_kind_invalid)"
+                .to_owned(),
+        )),
+        Err(error) => Err(BlockPipelineError::TransportFeed(format!(
+            "{}:{}",
+            error.reason_code(),
+            error
+        ))),
+    }
+}
+
+/// Encodes committed consensus round report into deterministic transport canonical-candidate payload.
+pub fn encode_transport_commit_report_payload(
+    report: &BlockPipelineCommitReport,
+) -> Result<String, BlockPipelineError> {
+    let canonical_record = CanonicalCommitRecord::from_commit_report(report);
+    encode_transport_canonical_candidate_payload(&canonical_record)
+}
+
 fn validate_transport_payload_field_value(
     field: &str,
     value: &str,
