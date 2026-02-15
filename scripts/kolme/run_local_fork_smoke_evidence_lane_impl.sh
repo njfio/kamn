@@ -209,70 +209,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$SMOKE_COMMAND" "$METADATA_REPORT" "$SMOKE_OUTPUT_FILE" "$CHECK_FILE" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-output_path = pathlib.Path(sys.argv[1]).resolve()
-mode = sys.argv[2]
-status = sys.argv[3]
-reason_code = sys.argv[4]
-local_only_enforced = sys.argv[5] == "true"
-elapsed_seconds = int(sys.argv[6])
-max_seconds = int(sys.argv[7])
-budget_status = sys.argv[8]
-checkout_path = sys.argv[9]
-expected_remote_url = sys.argv[10]
-expected_ref = sys.argv[11]
-smoke_command = sys.argv[12]
-metadata_report = sys.argv[13]
-smoke_output_file = sys.argv[14]
-checks_path = pathlib.Path(sys.argv[15])
-
-checkpoints = []
-for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
-    if not raw_line.strip():
-        continue
-    parts = raw_line.split("\t")
-    if len(parts) != 3:
-        continue
-    check_id, command, check_status = parts
-    checkpoints.append(
-        {
-            "id": check_id,
-            "command": command,
-            "status": check_status,
-        }
-    )
-
-summary = {
-    "schema_version": "kamn.kolme.local-fork-smoke-evidence-summary.v1",
-    "mode": mode,
-    "status": status,
-    "reason_code": reason_code,
-    "local_only_enforced": local_only_enforced,
-    "elapsed_seconds": elapsed_seconds,
-    "max_seconds": max_seconds,
-    "budget_status": budget_status,
-    "checkout_path": checkout_path,
-    "expected_remote_url": expected_remote_url,
-    "expected_ref": expected_ref,
-    "smoke_command": smoke_command,
-    "metadata_report": metadata_report,
-    "smoke_output_file": smoke_output_file,
-    "checkpoints": checkpoints,
-    "artifact_paths": [
-        metadata_report,
-        smoke_output_file,
-    ],
-}
-
-output_path.parent.mkdir(parents=True, exist_ok=True)
-output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-PY
+python3 "$ROOT_DIR/scripts/kolme/contracts/local_fork_smoke_evidence_summary.py" "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$SMOKE_COMMAND" "$METADATA_REPORT" "$SMOKE_OUTPUT_FILE" "$CHECK_FILE"
 
 echo "status=$overall_status"
 echo "smoke_mode=$MODE"

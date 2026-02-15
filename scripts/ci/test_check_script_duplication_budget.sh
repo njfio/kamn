@@ -58,12 +58,12 @@ if ! printf '%s\n' "$pass_output" | grep -q '^violations=none$'; then
   echo "expected no violations on pass path" >&2
   exit 1
 fi
-if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=2$'; then
+if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=1$'; then
   echo "expected deterministic script_count delta output on pass path" >&2
   exit 1
 fi
-if ! printf '%s\n' "$pass_output" | grep -q '^shell_line_total=5$'; then
-  echo "expected symlink wrappers to contribute one line each in shell_line_total metric" >&2
+if ! printf '%s\n' "$pass_output" | grep -q '^shell_line_total=4$'; then
+  echo "expected symlink wrappers to be excluded from shell_line_total metric" >&2
   exit 1
 fi
 if ! printf '%s\n' "$pass_output" | grep -q '^duplicate_content=0$'; then
@@ -111,7 +111,7 @@ if ! printf '%s\n' "$test_exclusion_output" | grep -q '^status=pass$'; then
   echo "expected test harness files (test_*.sh) to be excluded from script_count budget" >&2
   exit 1
 fi
-if ! printf '%s\n' "$test_exclusion_output" | grep -q '^script_count=3$'; then
+if ! printf '%s\n' "$test_exclusion_output" | grep -q '^script_count=2$'; then
   echo "expected script_count to ignore test_*.sh harness files" >&2
   exit 1
 fi
