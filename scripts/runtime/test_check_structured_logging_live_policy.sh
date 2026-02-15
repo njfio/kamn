@@ -60,6 +60,10 @@ if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if payload.get("correlation_error_reason_taxonomy_version") != "kamn.runtime.correlation-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic correlation_error_reason_taxonomy_version marker")
+if payload.get("correlation_error_reason_codes_csv") != "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped":
+    raise SystemExit("expected deterministic correlation_error_reason_codes_csv marker")
 PY
 
 cp "$summary_report" "$tampered_report"
@@ -93,6 +97,38 @@ if ! printf '%s\n' "$tampered_output" | grep -q 'structured_logging_policy_marke
   exit 1
 fi
 
+tampered_trace_classification_report="$TMP_DIR/structured-logging-live-summary.trace-classification.tampered.json"
+cp "$summary_report" "$tampered_trace_classification_report"
+python3 - "$tampered_trace_classification_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["trace_classification_contract_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_trace_classification_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_trace_classification_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/structured-logging-live-policy.trace-classification.tampered.json" 2>&1
+)"
+tampered_trace_classification_code=$?
+set -e
+if [ "$tampered_trace_classification_code" -eq 0 ]; then
+  echo "expected trace-classification tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_trace_classification_output" | grep -q 'structured_logging_policy_marker_value_mismatch:trace_classification_contract_status'; then
+  echo "expected deterministic trace-classification mismatch marker" >&2
+  exit 1
+fi
+
 tampered_taxonomy_report="$TMP_DIR/structured-logging-live-summary.taxonomy.tampered.json"
 cp "$summary_report" "$tampered_taxonomy_report"
 python3 - "$tampered_taxonomy_report" <<'PY'
@@ -122,6 +158,38 @@ if [ "$tampered_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'structured_logging_policy_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic reason-taxonomy mismatch marker" >&2
+  exit 1
+fi
+
+tampered_correlation_taxonomy_report="$TMP_DIR/structured-logging-live-summary.correlation-taxonomy.tampered.json"
+cp "$summary_report" "$tampered_correlation_taxonomy_report"
+python3 - "$tampered_correlation_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["correlation_error_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_correlation_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_correlation_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/structured-logging-live-policy.correlation-taxonomy.tampered.json" 2>&1
+)"
+tampered_correlation_taxonomy_code=$?
+set -e
+if [ "$tampered_correlation_taxonomy_code" -eq 0 ]; then
+  echo "expected correlation reason-taxonomy tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_correlation_taxonomy_output" | grep -q 'structured_logging_policy_correlation_error_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic correlation reason-taxonomy mismatch marker" >&2
   exit 1
 fi
 

@@ -28,8 +28,28 @@ if ! printf '%s\n' "$validation_output" | grep -q '^correlation_contract_status=
   echo "expected correlation contract status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_id_parity_status=verified$'; then
+  echo "expected correlation id parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^trace_classification_contract_status=verified$'; then
+  echo "expected trace classification contract status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^log_classification_gate_status=verified$'; then
+  echo "expected log classification gate status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1$'; then
   echo "expected structured logging reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1$'; then
+  echo "expected correlation error reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped$'; then
+  echo "expected deterministic correlation error reason codes taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^docs_contract_status=verified$'; then
@@ -61,8 +81,18 @@ if payload.get("structured_logging_contract_status") != "verified":
     raise SystemExit("expected structured_logging_contract_status=verified")
 if payload.get("correlation_contract_status") != "verified":
     raise SystemExit("expected correlation_contract_status=verified")
+if payload.get("correlation_id_parity_status") != "verified":
+    raise SystemExit("expected correlation_id_parity_status=verified")
+if payload.get("trace_classification_contract_status") != "verified":
+    raise SystemExit("expected trace_classification_contract_status=verified")
+if payload.get("log_classification_gate_status") != "verified":
+    raise SystemExit("expected log_classification_gate_status=verified")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if payload.get("correlation_error_reason_taxonomy_version") != "kamn.runtime.correlation-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic correlation_error_reason_taxonomy_version marker")
+if payload.get("correlation_error_reason_codes_csv") != "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped":
+    raise SystemExit("expected deterministic correlation_error_reason_codes_csv marker")
 if payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if payload.get("fail_closed_status") != "verified":

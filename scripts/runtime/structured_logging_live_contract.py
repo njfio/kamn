@@ -13,6 +13,12 @@ POLICY_SCHEMA_VERSION = "kamn.runtime.structured-logging-live-policy-report.v1"
 REASON_TAXONOMY_VERSION = (
     "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
 )
+CORRELATION_ERROR_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.correlation-error-reason-taxonomy.v1"
+)
+CORRELATION_ERROR_REASON_CODES_CSV = (
+    "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped"
+)
 EXPECTED_FAIL_CLOSED_REASON_CODE = "invalid_log_config_level"
 
 
@@ -66,6 +72,9 @@ def _check_policy(args: argparse.Namespace) -> int:
     required_markers = {
         "structured_logging_contract_status": "verified",
         "correlation_contract_status": "verified",
+        "correlation_id_parity_status": "verified",
+        "trace_classification_contract_status": "verified",
+        "log_classification_gate_status": "verified",
         "docs_contract_status": "verified",
         "fail_closed_status": "verified",
         "performance_budget_status": "verified",
@@ -86,6 +95,25 @@ def _check_policy(args: argparse.Namespace) -> int:
         reason_codes.append("structured_logging_policy_marker_missing:reason_taxonomy_version")
     elif report.get("reason_taxonomy_version") != REASON_TAXONOMY_VERSION:
         reason_codes.append("structured_logging_policy_reason_taxonomy_version_mismatch")
+
+    if "correlation_error_reason_taxonomy_version" not in report:
+        reason_codes.append(
+            "structured_logging_policy_marker_missing:correlation_error_reason_taxonomy_version"
+        )
+    elif (
+        report.get("correlation_error_reason_taxonomy_version")
+        != CORRELATION_ERROR_REASON_TAXONOMY_VERSION
+    ):
+        reason_codes.append(
+            "structured_logging_policy_correlation_error_reason_taxonomy_version_mismatch"
+        )
+
+    if "correlation_error_reason_codes_csv" not in report:
+        reason_codes.append(
+            "structured_logging_policy_marker_missing:correlation_error_reason_codes_csv"
+        )
+    elif report.get("correlation_error_reason_codes_csv") != CORRELATION_ERROR_REASON_CODES_CSV:
+        reason_codes.append("structured_logging_policy_correlation_error_reason_codes_csv_mismatch")
 
     reason_codes = _dedupe(reason_codes)
     if reason_codes:
@@ -109,6 +137,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_final_decision": observed_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "correlation_error_reason_taxonomy_version": (
+            CORRELATION_ERROR_REASON_TAXONOMY_VERSION
+        ),
+        "correlation_error_reason_codes_csv": CORRELATION_ERROR_REASON_CODES_CSV,
         "reason_codes": reason_codes,
         "fail_closed_reason_code": fail_closed_reason_code,
     }
@@ -120,6 +152,11 @@ def _check_policy(args: argparse.Namespace) -> int:
         print("final_decision=GO")
         print("structured_logging_policy_status=verified")
         print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+        print(
+            "correlation_error_reason_taxonomy_version="
+            f"{CORRELATION_ERROR_REASON_TAXONOMY_VERSION}"
+        )
+        print(f"correlation_error_reason_codes_csv={CORRELATION_ERROR_REASON_CODES_CSV}")
         print("reason_codes_csv=none")
         return 0
 

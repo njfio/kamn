@@ -162,9 +162,14 @@ Expected markers:
 - `final_decision=GO`
 - `structured_logging_contract_status=verified`
 - `correlation_contract_status=verified`
+- `correlation_id_parity_status=verified`
+- `trace_classification_contract_status=verified`
+- `log_classification_gate_status=verified`
 - `structured_logging_policy_status=verified`
 - `structured_logging_contract_lane_status=verified`
 - `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`
+- `correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1`
+- `correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped`
 - `docs_contract_status=verified`
 - `fail_closed_status=verified`
 - `fail_closed_reason_code=invalid_log_config_level`

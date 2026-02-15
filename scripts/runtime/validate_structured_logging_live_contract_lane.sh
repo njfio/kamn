@@ -87,8 +87,28 @@ if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
   echo "expected structured logging live validation GO marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_id_parity_status=verified$'; then
+  echo "expected structured logging live validation correlation parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^trace_classification_contract_status=verified$'; then
+  echo "expected structured logging live validation trace-classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^log_classification_gate_status=verified$'; then
+  echo "expected structured logging live validation log-classification gate marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1$'; then
   echo "expected structured logging live validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1$'; then
+  echo "expected structured logging live validation correlation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped$'; then
+  echo "expected structured logging live validation correlation reason taxonomy csv marker" >&2
   exit 1
 fi
 
@@ -222,7 +242,20 @@ lane_report = {
         "structured_logging_policy_status"
     ),
     "structured_logging_contract_lane_status": "verified",
+    "correlation_id_parity_status": summary_report.get("correlation_id_parity_status"),
+    "trace_classification_contract_status": summary_report.get(
+        "trace_classification_contract_status"
+    ),
+    "log_classification_gate_status": summary_report.get(
+        "log_classification_gate_status"
+    ),
     "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
+    "correlation_error_reason_taxonomy_version": summary_report.get(
+        "correlation_error_reason_taxonomy_version"
+    ),
+    "correlation_error_reason_codes_csv": summary_report.get(
+        "correlation_error_reason_codes_csv"
+    ),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "structured_logging_policy_marker_missing:structured_logging_contract_status",
@@ -246,7 +279,12 @@ echo "structured_logging_contract_status=verified"
 echo "correlation_contract_status=verified"
 echo "structured_logging_policy_status=verified"
 echo "structured_logging_contract_lane_status=verified"
+echo "correlation_id_parity_status=verified"
+echo "trace_classification_contract_status=verified"
+echo "log_classification_gate_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
+echo "correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1"
+echo "correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status"

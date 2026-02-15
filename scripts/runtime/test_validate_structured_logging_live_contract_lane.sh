@@ -45,8 +45,28 @@ if ! printf '%s\n' "$lane_output" | grep -q '^structured_logging_contract_lane_s
   echo "expected structured logging contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^correlation_id_parity_status=verified$'; then
+  echo "expected structured logging contract lane correlation parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^trace_classification_contract_status=verified$'; then
+  echo "expected structured logging contract lane trace-classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^log_classification_gate_status=verified$'; then
+  echo "expected structured logging contract lane log-classification gate marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1$'; then
   echo "expected structured logging contract lane reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1$'; then
+  echo "expected structured logging contract lane correlation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped$'; then
+  echo "expected structured logging contract lane correlation reason codes marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status$'; then
@@ -70,8 +90,18 @@ if lane_payload.get("structured_logging_policy_status") != "verified":
     raise SystemExit("expected structured_logging_policy_status=verified")
 if lane_payload.get("structured_logging_contract_lane_status") != "verified":
     raise SystemExit("expected structured_logging_contract_lane_status=verified")
+if lane_payload.get("correlation_id_parity_status") != "verified":
+    raise SystemExit("expected correlation_id_parity_status=verified")
+if lane_payload.get("trace_classification_contract_status") != "verified":
+    raise SystemExit("expected trace_classification_contract_status=verified")
+if lane_payload.get("log_classification_gate_status") != "verified":
+    raise SystemExit("expected log_classification_gate_status=verified")
 if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if lane_payload.get("correlation_error_reason_taxonomy_version") != "kamn.runtime.correlation-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic correlation_error_reason_taxonomy_version marker")
+if lane_payload.get("correlation_error_reason_codes_csv") != "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped":
+    raise SystemExit("expected deterministic correlation_error_reason_codes_csv marker")
 if lane_payload.get("fail_closed_reason_code") != "structured_logging_policy_marker_missing:structured_logging_contract_status":
     raise SystemExit("expected deterministic fail-closed reason code marker")
 if lane_payload.get("performance_budget_status") != "verified":

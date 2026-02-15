@@ -71,10 +71,15 @@ cat >"$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.structured-logging-live-validation.v1",
   "reason_taxonomy_version": "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1",
+  "correlation_error_reason_taxonomy_version": "kamn.runtime.correlation-error-reason-taxonomy.v1",
+  "correlation_error_reason_codes_csv": "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped",
   "status": "pass",
   "final_decision": "GO",
   "structured_logging_contract_status": "verified",
   "correlation_contract_status": "verified",
+  "correlation_id_parity_status": "verified",
+  "trace_classification_contract_status": "verified",
+  "log_classification_gate_status": "verified",
   "docs_contract_status": "verified",
   "fail_closed_status": "verified",
   "fail_closed_reason_code": "invalid_log_config_level",
@@ -92,7 +97,12 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "structured_logging_contract_status=verified"
 echo "correlation_contract_status=verified"
+echo "correlation_id_parity_status=verified"
+echo "trace_classification_contract_status=verified"
+echo "log_classification_gate_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
+echo "correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1"
+echo "correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=invalid_log_config_level"

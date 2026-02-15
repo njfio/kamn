@@ -586,6 +586,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `structured_logging_policy_marker_missing:structured_logging_contract_status`
   - `structured_logging_policy_reason_taxonomy_version_mismatch`
+  - `structured_logging_policy_marker_value_mismatch:trace_classification_contract_status`
+  - `structured_logging_policy_correlation_error_reason_taxonomy_version_mismatch`
 
 ## Runtime Local Retry/Diagnostics Contract Lane
 - Entry commands:
