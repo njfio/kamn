@@ -937,8 +937,11 @@ JSON`
   - `managed_signer_missing_key_source_fail_closed_status=verified`
   - `managed_signer_invalid_profile_fail_closed_status=verified`
   - `managed_signer_stale_rotation_fail_closed_status=verified`
+  - `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
+  - `managed_signer_custody_audit_parity_fail_closed_status=verified`
   - `managed_signer_reason_code_status=verified`
   - `execution_scope=local-scheduled`
+  - `ci_local_promotion_budget_boundary_status=verified`
 - Fault-injection matrix and deterministic fail-closed reason codes:
   - missing managed-external key source:
     - checkpoint: `checkpoint_failed_signer_provenance_contract`
@@ -949,9 +952,16 @@ JSON`
   - stale signer rotation metadata:
     - checkpoint: `checkpoint_failed_signer_rotation_freshness_contract`
     - policy reason: `signer_rotation_epoch_stale`
+  - rotation promotion stalled:
+    - checkpoint: `deployment_preflight_passed`
+    - policy reason: `signer_rotation_promotion_stalled`
+  - custody-audit parity drift:
+    - checkpoint: `deployment_preflight_passed`
+    - policy reason: `quorum_evidence_custody_sha256_mismatch`
 - Cost policy:
   - lane runtime is bounded via `--max-seconds`.
   - lane is local/scheduled by default (`ci_fast_gate_eligible=false`).
+  - ci-local promotion budget boundary remains fail-closed for oversized `--max-seconds` inputs.
   - lane composes existing deployment preflight runner/policy checker and does not call external infrastructure.
 
 ## Staging Soak Telemetry Lane (Issue #2422)

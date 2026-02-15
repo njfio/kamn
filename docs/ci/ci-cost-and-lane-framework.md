@@ -253,13 +253,18 @@ Deterministic contract markers:
 
 - `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`
 - `deployment_preflight_passed`
+- `signer_rotation_promotion_stalled`
+- `quorum_evidence_custody_sha256_mismatch`
 - `checkpoint_failed_signer_provenance_contract`
 - `checkpoint_failed_signer_profile_contract`
 - `checkpoint_failed_signer_rotation_freshness_contract`
 - `signer_key_source_production_managed_external_required`
 - `signer_profile_mismatch`
 - `signer_rotation_epoch_stale`
+- `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
+- `managed_signer_custody_audit_parity_fail_closed_status=verified`
 - `execution_scope=local-scheduled`
+- `ci_local_promotion_budget_boundary_status=verified`
 
 Cost boundary:
 

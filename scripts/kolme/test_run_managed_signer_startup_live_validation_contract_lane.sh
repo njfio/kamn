@@ -85,12 +85,17 @@ required_markers=(
   "run_managed_signer_startup_live_validation_contract_lane.sh"
   "kamn.kolme.managed-signer-startup-live-validation-contract-report.v1"
   "deployment_preflight_passed"
+  "signer_rotation_promotion_stalled"
+  "quorum_evidence_custody_sha256_mismatch"
   "checkpoint_failed_signer_profile_contract"
   "checkpoint_failed_signer_provenance_contract"
   "checkpoint_failed_signer_rotation_freshness_contract"
   "signer_key_source_production_managed_external_required"
   "signer_profile_mismatch"
   "signer_rotation_epoch_stale"
+  "managed_signer_rotation_promotion_stalled_fail_closed_status=verified"
+  "managed_signer_custody_audit_parity_fail_closed_status=verified"
+  "ci_local_promotion_budget_boundary_status=verified"
   "execution_scope=local-scheduled"
 )
 
@@ -129,6 +134,8 @@ for marker in \
   "managed_signer_missing_key_source_fail_closed_status=verified" \
   "managed_signer_invalid_profile_fail_closed_status=verified" \
   "managed_signer_stale_rotation_fail_closed_status=verified" \
+  "managed_signer_rotation_promotion_stalled_fail_closed_status=verified" \
+  "managed_signer_custody_audit_parity_fail_closed_status=verified" \
   "managed_signer_reason_code_status=verified" \
   "signer_key_source_profile_matrix_status=verified" \
   "signer_key_source_production_reject_status=verified" \
@@ -136,6 +143,7 @@ for marker in \
   "signer_fallback_private_key_reject_status=verified" \
   "signer_key_source_managed_external_allow_status=verified" \
   "execution_scope=local-scheduled" \
+  "ci_local_promotion_budget_boundary_status=verified" \
   "performance_budget_status=verified"; do
   if ! printf '%s\n' "$run_output" | grep -q "^${marker}$"; then
     echo "expected managed-signer startup live validation output marker: $marker" >&2
@@ -165,6 +173,10 @@ if payload.get("managed_signer_invalid_profile_fail_closed_status") != "verified
     raise SystemExit("expected managed_signer_invalid_profile_fail_closed_status=verified")
 if payload.get("managed_signer_stale_rotation_fail_closed_status") != "verified":
     raise SystemExit("expected managed_signer_stale_rotation_fail_closed_status=verified")
+if payload.get("managed_signer_rotation_promotion_stalled_fail_closed_status") != "verified":
+    raise SystemExit("expected managed_signer_rotation_promotion_stalled_fail_closed_status=verified")
+if payload.get("managed_signer_custody_audit_parity_fail_closed_status") != "verified":
+    raise SystemExit("expected managed_signer_custody_audit_parity_fail_closed_status=verified")
 if payload.get("managed_signer_reason_code_status") != "verified":
     raise SystemExit("expected managed_signer_reason_code_status=verified")
 if payload.get("signer_key_source_profile_matrix_status") != "verified":
@@ -177,16 +189,20 @@ if payload.get("signer_fallback_private_key_reject_status") != "verified":
     raise SystemExit("expected signer_fallback_private_key_reject_status=verified")
 if payload.get("signer_key_source_managed_external_allow_status") != "verified":
     raise SystemExit("expected signer_key_source_managed_external_allow_status=verified")
+if payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 scenario_reports = payload.get("scenario_reports")
-if not isinstance(scenario_reports, list) or len(scenario_reports) != 4:
-    raise SystemExit("expected four scenario reports")
+if not isinstance(scenario_reports, list) or len(scenario_reports) != 6:
+    raise SystemExit("expected six scenario reports")
 expected = {
     "go_baseline": ("GO", "deployment_preflight_passed"),
     "no_go_missing_key_source": ("NO-GO", "checkpoint_failed_signer_provenance_contract"),
     "no_go_invalid_signer_profile": ("NO-GO", "checkpoint_failed_signer_profile_contract"),
     "no_go_stale_rotation_metadata": ("NO-GO", "checkpoint_failed_signer_rotation_freshness_contract"),
+    "no_go_rotation_promotion_stalled": ("NO-GO", "deployment_preflight_passed"),
+    "no_go_custody_audit_parity_drift": ("NO-GO", "deployment_preflight_passed"),
 }
 for entry in scenario_reports:
     if not isinstance(entry, dict):
@@ -237,6 +253,22 @@ if [ "$invalid_budget_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_budget_output" | grep -q "invalid int value"; then
   echo "expected deterministic invalid max-seconds marker" >&2
+  exit 1
+fi
+
+set +e
+oversized_budget_output="$(
+  bash "$RUNNER" \
+    --max-seconds 181 2>&1
+)"
+oversized_budget_code=$?
+set -e
+if [ "$oversized_budget_code" -eq 0 ]; then
+  echo "expected managed-signer startup live validation runner to fail closed when ci-local promotion budget boundary is exceeded" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$oversized_budget_output" | grep -q "ci-local promotion budget boundary exceeded"; then
+  echo "expected deterministic ci-local promotion budget boundary rejection marker" >&2
   exit 1
 fi
 

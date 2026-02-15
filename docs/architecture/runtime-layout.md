@@ -21,3 +21,16 @@ Supporting runtime-focused modules remain scoped by responsibility:
 - `service_api_endpoint.rs` and `observability_endpoint.rs` for local API/observability surfaces.
 
 This split keeps test ownership aligned with runtime domains while preserving backward-compatible selector coverage for existing contract lanes.
+
+## Managed-Signer Rollout Governance
+
+Managed-signer startup promotion/custody governance is validated through the contract lane:
+
+- `scripts/kolme/contracts/managed_signer_startup_live_validation_contract_lane.py`
+- `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh`
+
+Deterministic fail-closed rollout markers include:
+
+- `signer_rotation_promotion_stalled` for no-progress rotation gate drift.
+- `quorum_evidence_custody_sha256_mismatch` for custody-audit parity drift.
+- `ci_local_promotion_budget_boundary_status=verified` for bounded local/scheduled validation scope.

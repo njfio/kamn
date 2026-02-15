@@ -873,6 +873,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("startup_latency_budget_reason_code_mismatch")
         elif budget_status != "exceeded_budget" and reason_code == "preflight_budget_exceeded":
             reason_codes.append("startup_latency_budget_reason_code_mismatch")
+        if isinstance(signer_rotation_delta_epochs, int) and signer_rotation_delta_epochs <= 0:
+            reason_codes.append("signer_rotation_promotion_stalled")
 
         if isinstance(required_approvals, int) and isinstance(received_approvals, int):
             if received_approvals < required_approvals:

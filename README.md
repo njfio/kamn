@@ -1009,8 +1009,11 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # managed_signer_missing_key_source_fail_closed_status=verified
 # managed_signer_invalid_profile_fail_closed_status=verified
 # managed_signer_stale_rotation_fail_closed_status=verified
+# managed_signer_rotation_promotion_stalled_fail_closed_status=verified
+# managed_signer_custody_audit_parity_fail_closed_status=verified
 # managed_signer_reason_code_status=verified
 # execution_scope=local-scheduled
+# ci_local_promotion_budget_boundary_status=verified
 # baseline pass marker: deployment_preflight_passed
 # missing key-source fail-closed markers
 # checkpoint_failed_signer_provenance_contract
@@ -1021,6 +1024,10 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # stale-rotation fail-closed markers
 # checkpoint_failed_signer_rotation_freshness_contract
 # signer_rotation_epoch_stale
+# rotation-promotion stall fail-closed markers
+# signer_rotation_promotion_stalled
+# custody-audit parity fail-closed markers
+# quorum_evidence_custody_sha256_mismatch
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
