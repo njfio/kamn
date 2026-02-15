@@ -725,6 +725,215 @@ fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_net
 }
 
 #[test]
+fn regression_3599_startup_signer_mode_negative_matrix_corpus() {
+    // Regression: #3599
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let mut covered_cases: Vec<&'static str> = Vec::new();
+    let expected_cases = vec![
+        "strict-missing-signer-profile",
+        "strict-missing-signer-key-source",
+        "daemon-shutdown-controls-missing-signal",
+        "strict-selector-env-mismatch-preflight",
+        "fallback-secret-preflight",
+    ];
+
+    {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "env-local".to_owned(),
+        ];
+        assert!(
+            matches!(
+                parse_args(args),
+                Err(ConfigError::MissingArgumentValue(
+                    "--kolme-live-signer-profile"
+                ))
+            ),
+            "matrix case strict-missing-signer-profile must fail closed"
+        );
+        covered_cases.push("strict-missing-signer-profile");
+    }
+
+    {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+        ];
+        assert!(
+            matches!(
+                parse_args(args),
+                Err(ConfigError::MissingArgumentValue(
+                    "--kolme-live-signer-key-source"
+                ))
+            ),
+            "matrix case strict-missing-signer-key-source must fail closed"
+        );
+        covered_cases.push("strict-missing-signer-key-source");
+    }
+
+    {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "12".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "5".to_owned(),
+            "--daemon-shutdown-drain-ticks".to_owned(),
+            "2".to_owned(),
+            "--daemon-shutdown-timeout-ticks".to_owned(),
+            "4".to_owned(),
+        ];
+        assert!(
+            matches!(
+                parse_args(args),
+                Err(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-signal-tick"
+                ))
+            ),
+            "matrix case daemon-shutdown-controls-missing-signal must fail closed"
+        );
+        covered_cases.push("daemon-shutdown-controls-missing-signal");
+    }
+
+    {
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let _fallback_key_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+        let _override_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", None);
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+            ),
+        ]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "env-local".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("strict mismatch args should parse");
+        assert!(
+            matches!(
+                execute(parsed),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("strict signer profile mismatch")
+            ),
+            "matrix case strict-selector-env-mismatch-preflight must fail closed before network"
+        );
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            0,
+            "strict selector/env mismatch must fail before network"
+        );
+        covered_cases.push("strict-selector-env-mismatch-preflight");
+    }
+
+    {
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _primary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let _fallback_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#,
+        )]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "env-local".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("fallback-secret args should parse");
+        assert!(
+            matches!(
+                execute(parsed),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("fallback_signer_secret_present_violation")
+            ),
+            "matrix case fallback-secret-preflight must fail closed with deterministic reason code"
+        );
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            0,
+            "fallback secret path must fail before network dispatch"
+        );
+        covered_cases.push("fallback-secret-preflight");
+    }
+
+    assert_eq!(
+        covered_cases, expected_cases,
+        "startup_negative_matrix_policy_marker_missing"
+    );
+}
+
+#[test]
 fn rejects_kolme_live_with_invalid_signing_profile() {
     let args = vec![
         "kamn-node".to_owned(),

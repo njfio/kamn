@@ -383,6 +383,19 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
 }
 
 #[test]
+fn doc_contains_node_runtime_startup_negative_matrix_fast_lane_contract_markers() {
+    assert!(DOC.contains("## Node Runtime Startup Negative-Matrix Fast Lane"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::cli_contract_tests::regression_3599_startup_signer_mode_negative_matrix_corpus -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node cli_tests::regression_3598_startup_paths_have_no_panic_control_flow -- --exact"
+    ));
+    assert!(DOC.contains("startup_negative_matrix_policy_marker_missing"));
+    assert!(DOC.contains("must fail before network dispatch"));
+}
+
+#[test]
 fn regression_requires_make_and_selector_demo_contract_marker() {
     // Regression: #900
     assert!(DOC.contains("Regression: #900"));
