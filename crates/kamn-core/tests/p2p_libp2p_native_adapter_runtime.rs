@@ -7,7 +7,10 @@ use kamn_core::{
     PeerLifecycleState, PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
     RuntimeTransportProfile, SyncMode,
 };
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+static NEXT_TEST_PORT: AtomicU16 = AtomicU16::new(22_000);
 
 fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
     NodeConfig {
@@ -21,11 +24,16 @@ fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
 }
 
 fn unique_bootstrap_seed() -> String {
-    let nonce = SystemTime::now()
+    unique_listen_address()
+}
+
+fn unique_listen_address() -> String {
+    let time_port_hint = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock should be monotonic")
-        .as_nanos();
-    let port = 20_000 + (nonce % 20_000) as u16;
+        .subsec_nanos() as u16;
+    let base_port = NEXT_TEST_PORT.fetch_add(1, Ordering::Relaxed);
+    let port = base_port.wrapping_add(time_port_hint % 1000);
     format!("/ip4/127.0.0.1/tcp/{port}")
 }
 
@@ -153,13 +161,13 @@ fn functional_libp2p_native_adapter_loop_marker_is_stable() {
 
 #[test]
 fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets() {
-    let processor_listen = "/ip4/127.0.0.1/tcp/9520";
-    let listener_listen = "/ip4/127.0.0.1/tcp/9521";
-    let bootstrap_peers = vec![processor_listen.to_owned(), listener_listen.to_owned()];
+    let processor_listen = unique_listen_address();
+    let listener_listen = unique_listen_address();
+    let bootstrap_peers = vec![processor_listen.clone(), listener_listen.clone()];
     let processor_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer_with_bootstrap(
             "peer-native-processor",
-            processor_listen,
+            processor_listen.as_str(),
             bootstrap_peers.clone(),
         ),
         P2pSwarmHarnessMode::DryRun,
@@ -169,7 +177,7 @@ fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets(
     let listener_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer_with_bootstrap(
             "peer-native-listener",
-            listener_listen,
+            listener_listen.as_str(),
             bootstrap_peers,
         ),
         P2pSwarmHarnessMode::DryRun,
@@ -250,10 +258,12 @@ fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets(
 #[test]
 fn integration_libp2p_native_adapter_disconnected_publish_fails_closed() {
     let bootstrap_seed = unique_bootstrap_seed();
+    let sender_listen = unique_listen_address();
+    let recipient_listen = unique_listen_address();
     let sender_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer(
             "peer-native-disconnected-sender",
-            "/ip4/127.0.0.1/tcp/9570",
+            sender_listen.as_str(),
             bootstrap_seed.as_str(),
         ),
         P2pSwarmHarnessMode::DryRun,
@@ -262,7 +272,7 @@ fn integration_libp2p_native_adapter_disconnected_publish_fails_closed() {
     let recipient_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer(
             "peer-native-disconnected-recipient",
-            "/ip4/127.0.0.1/tcp/9571",
+            recipient_listen.as_str(),
             bootstrap_seed.as_str(),
         ),
         P2pSwarmHarnessMode::DryRun,
@@ -299,10 +309,162 @@ fn integration_libp2p_native_adapter_disconnected_publish_fails_closed() {
         )
         .expect("frame should build"),
     );
+    let error = result.expect_err("disconnected publish must fail closed");
+    assert_eq!(error, kamn_core::P2pTransportError::LiveSocketSendFailed);
+    assert_eq!(error.reason_code(), "p2p_transport_live_socket_send_failed");
+}
+
+#[test]
+fn integration_libp2p_native_adapter_three_node_partition_rejoin_and_publish_drop_convergence_over_sockets(
+) {
+    let sender_a_listen = unique_listen_address();
+    let sender_b_listen = unique_listen_address();
+    let recipient_listen = unique_listen_address();
+    let bootstrap_peers = vec![
+        sender_a_listen.clone(),
+        sender_b_listen.clone(),
+        recipient_listen.clone(),
+    ];
+
+    let sender_a_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer_with_bootstrap(
+            "peer-native-three-node-sender-a",
+            sender_a_listen.as_str(),
+            bootstrap_peers.clone(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("sender A transport should initialize");
+    std::thread::sleep(Duration::from_millis(200));
+    let sender_b_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer_with_bootstrap(
+            "peer-native-three-node-sender-b",
+            sender_b_listen.as_str(),
+            bootstrap_peers.clone(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("sender B transport should initialize");
+    std::thread::sleep(Duration::from_millis(200));
+    let recipient_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer_with_bootstrap(
+            "peer-native-three-node-recipient",
+            recipient_listen.as_str(),
+            bootstrap_peers,
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("recipient transport should initialize");
+
+    sender_a_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-native-three-node-sender-a",
+                NodeRole::Processor,
+                vec!["messages".to_owned()],
+            )
+            .expect("sender A record should build"),
+        )
+        .expect("sender A advertise should pass");
+    sender_b_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-native-three-node-sender-b",
+                NodeRole::Processor,
+                vec!["messages".to_owned()],
+            )
+            .expect("sender B record should build"),
+        )
+        .expect("sender B advertise should pass");
+    // Partition simulation: recipient has not joined yet, so publish attempts fail closed.
+    let partition_error = sender_b_transport
+        .send(
+            PeerGossipFrame::new(
+                "messages",
+                "peer-native-three-node-sender-b",
+                "peer-native-three-node-recipient",
+                "tx-native-three-node-partition-publish",
+            )
+            .expect("partition frame should build"),
+        )
+        .expect_err("partitioned sender must fail closed");
     assert_eq!(
-        result,
-        Err(kamn_core::P2pTransportError::LiveSocketSendFailed)
+        partition_error,
+        P2pTransportError::UnknownRecipientPeer("peer-native-three-node-recipient".to_owned())
     );
+    assert_eq!(
+        partition_error.reason_code(),
+        "p2p_transport_unknown_recipient_peer"
+    );
+
+    // Rejoin: recipient advertises and discovery converges for both senders.
+    recipient_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-native-three-node-recipient",
+                NodeRole::Listener,
+                vec!["messages".to_owned()],
+            )
+            .expect("recipient record should build"),
+        )
+        .expect("recipient advertise should pass");
+
+    let discovery_deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let discovered = sender_a_transport
+            .discover("peer-native-three-node-sender-a", "messages")
+            .expect("sender A discovery should succeed");
+        if discovered
+            .iter()
+            .any(|record| record.peer_id == "peer-native-three-node-recipient")
+        {
+            break;
+        }
+        assert!(
+            Instant::now() < discovery_deadline,
+            "sender A failed to discover recipient within timeout"
+        );
+        std::thread::sleep(Duration::from_millis(25));
+    }
+    loop {
+        let discovered = sender_b_transport
+            .discover("peer-native-three-node-sender-b", "messages")
+            .expect("sender B discovery should succeed");
+        if discovered
+            .iter()
+            .any(|record| record.peer_id == "peer-native-three-node-recipient")
+        {
+            break;
+        }
+        assert!(
+            Instant::now() < discovery_deadline,
+            "sender B failed to discover recipient within timeout"
+        );
+        std::thread::sleep(Duration::from_millis(25));
+    }
+
+    let frame_a = PeerGossipFrame::new(
+        "messages",
+        "peer-native-three-node-sender-a",
+        "peer-native-three-node-recipient",
+        "tx-native-three-node-rejoin-a",
+    )
+    .expect("sender A rejoin frame should build");
+    send_with_retry(&sender_a_transport, &frame_a, Duration::from_secs(5))
+        .expect("sender A rejoin publish should succeed");
+
+    let frame_b = PeerGossipFrame::new(
+        "messages",
+        "peer-native-three-node-sender-b",
+        "peer-native-three-node-recipient",
+        "tx-native-three-node-rejoin-b",
+    )
+    .expect("sender B rejoin frame should build");
+    send_with_retry(&sender_b_transport, &frame_b, Duration::from_secs(5))
+        .expect("sender B rejoin publish should succeed");
+
+    // Publish-drop recovery: first publish attempt failed in partition; successful rejoin publish
+    // above proves recovery over the native socket path.
 }
 
 #[test]
@@ -347,14 +509,74 @@ fn regression_libp2p_native_runtime_config_error_reason_code_stays_stable() {
 }
 
 #[test]
+fn regression_libp2p_native_adapter_partition_publish_drop_reason_code_stays_stable() {
+    let bootstrap_seed = unique_bootstrap_seed();
+    let sender_listen = unique_listen_address();
+    let recipient_listen = unique_listen_address();
+    let sender_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            "peer-native-reason-regression-sender",
+            sender_listen.as_str(),
+            bootstrap_seed.as_str(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("sender transport should initialize");
+    let recipient_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            "peer-native-reason-regression-recipient",
+            recipient_listen.as_str(),
+            bootstrap_seed.as_str(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("recipient transport should initialize");
+
+    sender_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-native-reason-regression-sender",
+                NodeRole::Processor,
+                vec!["messages".to_owned()],
+            )
+            .expect("sender record should build"),
+        )
+        .expect("sender advertise should pass");
+    recipient_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-native-reason-regression-recipient",
+                NodeRole::Listener,
+                vec!["messages".to_owned()],
+            )
+            .expect("recipient record should build"),
+        )
+        .expect("recipient advertise should pass");
+
+    let error = sender_transport
+        .send(
+            PeerGossipFrame::new(
+                "messages",
+                "peer-native-reason-regression-sender",
+                "peer-native-reason-regression-recipient",
+                "tx-native-reason-regression",
+            )
+            .expect("frame should build"),
+        )
+        .expect_err("partitioned publish must fail closed");
+    assert_eq!(error, P2pTransportError::LiveSocketSendFailed);
+    assert_eq!(error.reason_code(), "p2p_transport_live_socket_send_failed");
+}
+
+#[test]
 fn performance_libp2p_native_adapter_stays_within_local_heavy_budget() {
-    let sender_listen = "/ip4/127.0.0.1/tcp/9530";
-    let recipient_listen = "/ip4/127.0.0.1/tcp/9531";
-    let bootstrap_peers = vec![sender_listen.to_owned(), recipient_listen.to_owned()];
+    let sender_listen = unique_listen_address();
+    let recipient_listen = unique_listen_address();
+    let bootstrap_peers = vec![sender_listen.clone(), recipient_listen.clone()];
     let sender_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer_with_bootstrap(
             "peer-native-perf-sender",
-            sender_listen,
+            sender_listen.as_str(),
             bootstrap_peers.clone(),
         ),
         P2pSwarmHarnessMode::DryRun,
@@ -364,7 +586,7 @@ fn performance_libp2p_native_adapter_stays_within_local_heavy_budget() {
     let recipient_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer_with_bootstrap(
             "peer-native-perf-recipient",
-            recipient_listen,
+            recipient_listen.as_str(),
             bootstrap_peers,
         ),
         P2pSwarmHarnessMode::DryRun,

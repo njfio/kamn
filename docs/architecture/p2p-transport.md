@@ -285,6 +285,9 @@ cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
 cargo test -p kamn-core --test p2p_transport_feature_gates
 cargo test -p kamn-core --test p2p_transport_feature_gates --features libp2p-live-transport
 cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime --features libp2p-live-transport
+cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets -- --exact
+cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_three_node_partition_rejoin_and_publish_drop_convergence_over_sockets -- --exact
+cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime regression_libp2p_native_adapter_partition_publish_drop_reason_code_stays_stable -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime functional_live_transport_emits_normalized_runtime_events -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
