@@ -291,7 +291,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Runtime Local Full-Stack Integration Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --output-json /tmp/local-full-stack-integration-summary.json`
-  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-stack-integration-summary.json`
+- `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --kolme-checkout-path /tmp/kolme_fork --kolme-expected-remote-url https://github.com/njfio/kolme_fork.git --kolme-expected-ref refs/heads/main --kolme-base-url http://127.0.0.1:3000 --kolme-fork-chain-version v0.15.2 --output-json /tmp/local-full-stack-integration-summary.json`
   - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
   - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
   - `bash scripts/runtime/test_validate_local_full_stack_integration_live.sh`
@@ -303,13 +303,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Integration composition contract:
   - composes full I/O scenario matrix lane (`validate_full_io_scenario_matrix_live.sh`) in run mode.
   - composes full-runtime supervisor lane (`validate_local_full_runtime_live.sh`) in run mode.
-  - composes Kolme runtime integration contract lane (`run_local_kamn_live_runtime_integration_contract_lane.sh`) in run mode.
+  - composes Kolme runtime integration lane (`run_local_kamn_live_runtime_integration_lane.sh`) in run mode.
   - enforces top-level marker domains for:
     - transport convergence
     - signer provenance
     - runtime commit submission
     - runtime commit finality
     - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
+    - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
+    - nested Kolme local-only enforcement and run-mode policy markers
   - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
