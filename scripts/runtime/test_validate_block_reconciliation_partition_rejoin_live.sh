@@ -55,6 +55,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_taxono
   echo "expected reconciliation reason taxonomy status marker for block reconciliation partition/rejoin validation" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^head_alignment_status=verified$'; then
+  echo "expected deterministic head-alignment recovery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^quorum_restore_status=verified$'; then
+  echo "expected deterministic quorum-restore recovery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^replay_stabilization_status=verified$'; then
+  echo "expected deterministic replay-stabilization recovery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^publish_drop_recovery_status=verified$'; then
+  echo "expected deterministic publish-drop recovery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_churn_recovery_status=verified$'; then
+  echo "expected deterministic peer-churn recovery marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_codes=none$'; then
   echo "expected deterministic reconciliation reason-code matrix marker for block reconciliation partition/rejoin validation" >&2
   exit 1
@@ -92,6 +112,16 @@ if payload.get("reconciliation_reason_taxonomy_status") != "verified":
     raise SystemExit("expected reconciliation_reason_taxonomy_status=verified")
 if payload.get("reconciliation_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reconciliation reason taxonomy version")
+if payload.get("head_alignment_status") != "verified":
+    raise SystemExit("expected deterministic head_alignment_status=verified")
+if payload.get("quorum_restore_status") != "verified":
+    raise SystemExit("expected deterministic quorum_restore_status=verified")
+if payload.get("replay_stabilization_status") != "verified":
+    raise SystemExit("expected deterministic replay_stabilization_status=verified")
+if payload.get("publish_drop_recovery_status") != "verified":
+    raise SystemExit("expected deterministic publish_drop_recovery_status=verified")
+if payload.get("peer_churn_recovery_status") != "verified":
+    raise SystemExit("expected deterministic peer_churn_recovery_status=verified")
 if payload.get("reconciliation_reason_codes") != ["none"]:
     raise SystemExit("expected deterministic reconciliation_reason_codes=['none'] for dry-run")
 PY
@@ -108,6 +138,10 @@ synthetic_report = {
     "scenario_results": [
         {"scenario": "primary_loss_reconnect_catchup", "status": "fail"},
         {"scenario": "reconnect_drift_regression", "status": "fail"},
+        {"scenario": "publish_drop_recovery", "status": "fail"},
+        {"scenario": "transient_peer_churn_recovery", "status": "fail"},
+        {"scenario": "split_head_rejoin_recovery", "status": "fail"},
+        {"scenario": "replay_instability_recovery", "status": "fail"},
     ],
     "reason_codes": ["runtime_budget_exceeded", "ci_fast_gate_failed"],
 }
@@ -115,8 +149,12 @@ codes = contract._derive_reconciliation_reason_codes(synthetic_report, lane_mode
 expected = [
     "reconciliation_ci_fast_gate_failed",
     "reconciliation_partition_transition_failed",
+    "reconciliation_peer_churn_recovery_failed",
+    "reconciliation_publish_drop_recovery_failed",
     "reconciliation_rejoin_transition_failed",
+    "reconciliation_replay_instability",
     "reconciliation_runtime_budget_exceeded",
+    "reconciliation_split_head_unresolved",
 ]
 if codes != expected:
     raise SystemExit(f"unexpected reconciliation taxonomy codes: expected={expected}, found={codes}")
@@ -142,6 +180,14 @@ if ! printf '%s\n' "$run_output" | grep -q '^lane_mode=run$'; then
 fi
 if ! printf '%s\n' "$run_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
   echo "expected run-mode runtime transport mode marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^publish_drop_recovery_status=verified$'; then
+  echo "expected run-mode deterministic publish-drop recovery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^peer_churn_recovery_status=verified$'; then
+  echo "expected run-mode deterministic peer-churn recovery marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$run_output" | grep -q '^reconciliation_reason_codes=none$'; then
@@ -173,6 +219,10 @@ if payload.get("run_mode_command_count", 0) <= 0:
     raise SystemExit("expected run_mode_command_count>0 for run mode")
 if payload.get("runtime_transport_mode") != "libp2p_transport_fed":
     raise SystemExit("expected runtime_transport_mode=libp2p_transport_fed")
+if payload.get("publish_drop_recovery_status") != "verified":
+    raise SystemExit("expected deterministic publish_drop_recovery_status=verified for run mode")
+if payload.get("peer_churn_recovery_status") != "verified":
+    raise SystemExit("expected deterministic peer_churn_recovery_status=verified for run mode")
 if payload.get("reconciliation_reason_codes") != ["none"]:
     raise SystemExit("expected deterministic reconciliation_reason_codes=['none'] for run mode")
 PY
