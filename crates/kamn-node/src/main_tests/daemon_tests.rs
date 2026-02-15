@@ -1,22 +1,10 @@
 use super::*;
-
+use crate::daemon_test_env_lock;
 #[cfg(unix)]
-const SIGTERM: i32 = 15;
-
-#[cfg(unix)]
-unsafe extern "C" {
-    fn raise(sig: i32) -> i32;
-}
-
-fn daemon_env_lock() -> &'static std::sync::Mutex<()> {
-    use std::sync::{Mutex, OnceLock};
-
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-}
+use crate::{configure_os_signal_test_triggers, OsSignalTestKind, OsSignalTestTrigger};
 
 fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli, ConfigError> {
-    let _env_lock = daemon_env_lock()
+    let _env_lock = daemon_test_env_lock()
         .lock()
         .expect("daemon env lock should guard process-level overrides");
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", None);
@@ -377,7 +365,7 @@ fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
 
 #[test]
 fn env_only_daemon_controls_parse_without_config_file() {
-    let _env_lock = daemon_env_lock()
+    let _env_lock = daemon_test_env_lock()
         .lock()
         .expect("daemon env lock should guard process-level overrides");
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("12"));
@@ -398,7 +386,7 @@ fn env_only_daemon_controls_parse_without_config_file() {
 
 #[test]
 fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file() {
-    let _env_lock = daemon_env_lock()
+    let _env_lock = daemon_test_env_lock()
         .lock()
         .expect("daemon env lock should guard process-level overrides");
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("invalid"));
@@ -582,15 +570,8 @@ pub(super) fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal(
 
     let parsed =
         parse_args_with_clean_daemon_env(args).expect("daemon os-signal args should parse");
-    let trigger = std::thread::spawn(|| {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        let result = unsafe { raise(SIGTERM) };
-        assert_eq!(result, 0, "test SIGTERM raise should succeed");
-    });
+    configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(5, OsSignalTestKind::Sigterm)]);
     let report = execute(parsed).expect("daemon os-signal execution should succeed");
-    trigger
-        .join()
-        .expect("os-signal trigger thread should complete");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"daemon_completion_reason\":\"graceful-shutdown:signal@"));
 }

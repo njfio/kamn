@@ -1,4 +1,5 @@
 use super::*;
+use crate::daemon_test_env_lock;
 use crate::observability_endpoint::RuntimeObservabilitySnapshot;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -69,6 +70,17 @@ fn try_send_http_get(addr: &str, path: &str) -> Result<String, String> {
         }
     }
     Ok(response)
+}
+
+fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli, ConfigError> {
+    let _env_lock = daemon_test_env_lock()
+        .lock()
+        .expect("daemon env lock should guard process-level overrides");
+    let _daemon_control_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_CONTROL", None);
+    let _daemon_lifecycle_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_LIFECYCLE_EVENT", None);
+    let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", None);
+    let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", None);
+    parse_args(args)
 }
 
 fn send_raw_http_request(addr: &str, request: &str) -> String {
@@ -227,7 +239,7 @@ fn unit_observability_endpoint_rejects_zero_idle_timeout_budget() {
 
 #[test]
 fn unit_observability_endpoint_maps_daemon_telemetry_into_snapshot() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -256,7 +268,7 @@ fn unit_observability_endpoint_maps_daemon_telemetry_into_snapshot() {
 
 #[test]
 fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -342,7 +354,7 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
 
 #[test]
 fn functional_observability_endpoint_renders_stream_payload() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -384,7 +396,7 @@ fn functional_observability_endpoint_renders_stream_payload() {
 
 #[test]
 fn functional_observability_endpoint_readiness_reports_degraded_timeout_reason_codes() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -562,7 +574,7 @@ fn functional_observability_endpoint_projects_readiness_reason_code_parity_acros
 
 #[test]
 fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -634,7 +646,7 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
 
 #[test]
 fn integration_runtime_observability_endpoint_serves_stream_path() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -683,7 +695,7 @@ fn integration_runtime_observability_endpoint_serves_stream_path() {
 
 #[test]
 fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_stream_requests() {
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -935,7 +947,7 @@ fn integration_runtime_observability_endpoint_fails_closed_on_idle_timeout() {
 #[test]
 fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unchanged() {
     // Regression: #2830
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),

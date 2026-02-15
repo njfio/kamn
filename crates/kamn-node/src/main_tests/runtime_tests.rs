@@ -1,12 +1,6 @@
 use super::*;
-
 #[cfg(unix)]
-const SIGTERM: i32 = 15;
-
-#[cfg(unix)]
-unsafe extern "C" {
-    fn raise(sig: i32) -> i32;
-}
+use crate::{configure_os_signal_test_triggers, OsSignalTestKind, OsSignalTestTrigger};
 
 fn write_temp_node_config(contents: &str) -> std::path::PathBuf {
     let mut path = std::env::temp_dir();
@@ -1298,15 +1292,8 @@ fn regression_runtime_full_os_signal_stop_markers_project_shutdown_field_parity(
         "127.0.0.1:19086".to_owned(),
     ])
     .expect("full args should parse");
-    let trigger = std::thread::spawn(|| {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        let result = unsafe { raise(SIGTERM) };
-        assert_eq!(result, 0, "test SIGTERM raise should succeed");
-    });
+    configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(5, OsSignalTestKind::Sigterm)]);
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
-    trigger
-        .join()
-        .expect("os-signal trigger thread should complete");
     let report = report_result.expect("full runtime os-signal execution should succeed");
     let stop_complete_line = captured_logs
         .iter()
