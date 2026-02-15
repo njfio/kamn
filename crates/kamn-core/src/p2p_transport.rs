@@ -5,6 +5,8 @@ use crate::runtime::{
     PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
     RuntimeTransportProfile,
 };
+#[cfg(feature = "libp2p-live-transport")]
+use libp2p::{gossipsub, identify, noise, swarm::Swarm, tcp, yamux, Multiaddr, SwarmBuilder};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -14,6 +16,13 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
     ["tcp", "noise", "yamux", "identify", "kad", "gossipsub"];
+
+#[cfg(feature = "libp2p-live-transport")]
+#[derive(libp2p::swarm::NetworkBehaviour)]
+struct Libp2pDeterministicRuntimeBehaviour {
+    gossipsub: gossipsub::Behaviour,
+    identify: identify::Behaviour,
+}
 
 /// Transport-level discovery metadata advertised by each active peer.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1454,14 +1463,86 @@ impl P2pSwarmHarnessTask {
         } else {
             0
         };
+        let behavior_components = self.stack.behavior_components();
+        #[cfg(feature = "libp2p-live-transport")]
+        let mut behavior_components = behavior_components;
+        #[cfg(feature = "libp2p-live-transport")]
+        if started {
+            validate_libp2p_runtime_stack_composition(&self.config)?;
+            behavior_components.push("libp2p-runtime-swarm");
+        }
         Ok(P2pSwarmHarnessReport {
             mode,
             started,
             executed_ticks,
             bootstrap_peer_count: self.config.bootstrap_peers().len(),
-            behavior_components: self.stack.behavior_components(),
+            behavior_components,
         })
     }
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+fn validate_libp2p_runtime_stack_composition(
+    config: &P2pSwarmDeterministicConfig,
+) -> Result<(), P2pTransportError> {
+    let config = config.clone();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+
+    runtime.block_on(async move {
+        let mut swarm = SwarmBuilder::with_new_identity()
+            .with_tokio()
+            .with_tcp(
+                tcp::Config::default(),
+                noise::Config::new,
+                yamux::Config::default,
+            )
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?
+            .with_behaviour(|key| {
+                let gossipsub_config = gossipsub::ConfigBuilder::default()
+                    .validation_mode(gossipsub::ValidationMode::Permissive)
+                    .build()
+                    .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+                let mut gossipsub_behavior = gossipsub::Behaviour::new(
+                    gossipsub::MessageAuthenticity::Signed(key.clone()),
+                    gossipsub_config,
+                )
+                .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+                for topic in config.gossip_topics() {
+                    gossipsub_behavior
+                        .subscribe(&gossipsub::IdentTopic::new(topic.clone()))
+                        .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+                }
+                Ok(Libp2pDeterministicRuntimeBehaviour {
+                    gossipsub: gossipsub_behavior,
+                    identify: identify::Behaviour::new(identify::Config::new(
+                        "/kamn/libp2p-live/1.0.0".to_owned(),
+                        key.public(),
+                    )),
+                })
+            })
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?
+            .build();
+
+        let listen_multiaddr = config
+            .listen_address()
+            .parse::<Multiaddr>()
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+        Swarm::listen_on(&mut swarm, listen_multiaddr)
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+
+        for bootstrap_peer in config.bootstrap_peers() {
+            let bootstrap_multiaddr = bootstrap_peer
+                .parse::<Multiaddr>()
+                .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+            let _ = Swarm::dial(&mut swarm, bootstrap_multiaddr);
+        }
+
+        Ok(())
+    })
 }
 
 /// Deterministic p2p discovery and gossip transport error variants.

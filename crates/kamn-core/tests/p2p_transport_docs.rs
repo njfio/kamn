@@ -3,6 +3,7 @@ const ROADMAP: &str = include_str!("../../../docs/plans/2026-02-08-production-se
 
 #[test]
 fn architecture_doc_contains_p2p_transport_core_components() {
+    assert!(DOC.contains("`tokio`"));
     assert!(DOC.contains("PeerLifecycleTransport"));
     assert!(DOC.contains("InMemoryPeerLifecycleTransport"));
     assert!(DOC.contains("Libp2pLivePeerLifecycleTransport"));
@@ -14,6 +15,7 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("P2pSwarmDeterministicConfig"));
     assert!(DOC.contains("P2pSwarmBehaviorStack"));
     assert!(DOC.contains("P2pSwarmHarnessTask"));
+    assert!(DOC.contains("libp2p-runtime-swarm"));
     assert!(DOC.contains("LiveTransportReconnectPolicy"));
     assert!(DOC.contains("LiveTransportReconnectDecision"));
     assert!(DOC.contains("LiveTransportFaultClass"));
@@ -52,6 +54,7 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
     assert!(DOC.contains("p2p-live-libp2p-provider:native"));
     assert!(DOC.contains("p2p-live-libp2p-provider:contract-only"));
+    assert!(DOC.contains("bootstrap peer multiaddrs"));
     assert!(DOC.contains("runtime_peer_transition_invalid"));
     assert!(DOC.contains("validate_p2p_transport_live.sh"));
     assert!(DOC.contains("test_validate_p2p_transport_live.sh"));

@@ -28,8 +28,9 @@ libp2p I/O integration while preserving low-cost default CI behavior.
 
 - `kamn-core` optional dependency:
   - `libp2p` (disabled by default)
+  - `tokio` (enabled only with native live transport feature)
 - Cargo feature gate:
-  - `libp2p-live-transport` enables `dep:libp2p`
+  - `libp2p-live-transport` enables `dep:libp2p` + `dep:tokio`
 - Compile-mode hooks:
   - `libp2p_feature_gate_name()` returns `libp2p-live-transport`
   - `resolve_libp2p_compile_mode()` returns:
@@ -91,6 +92,8 @@ libp2p I/O integration while preserving low-cost default CI behavior.
 - `P2pSwarmHarnessTask`
   - controlled runtime-harness startup surface for deterministic `DryRun` / `Run`
     execution modes used by local integration tests.
+  - feature-enabled `Run` mode validates native libp2p stack composition and
+    appends `libp2p-runtime-swarm` to harness behavior markers.
 - `LiveTransportReconnectPolicy`
   - deterministic reconnect/backoff evaluator for live transport faults.
 - `LiveTransportReconnectDecision`
@@ -156,6 +159,10 @@ Task #3633 adds a feature-enabled native runtime path:
     `libp2p-live-transport` is enabled.
 - Feature-enabled live adapter construction validates native libp2p runtime
   inputs and then routes send/receive/discovery over socket-backed transport.
+- Feature-enabled harness startup validates:
+  - live listen multiaddr
+  - bootstrap peer multiaddrs
+  - gossipsub topic subscription composition
 
 ## Reconnect Taxonomy
 

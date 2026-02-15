@@ -59,8 +59,8 @@ fn integration_runtime_can_start_swarm_harness_task() {
         "peer-processor",
         "/ip4/127.0.0.1/tcp/9000",
         vec![
-            "/ip4/127.0.0.1/tcp/9001/p2p/peer-listener".to_owned(),
-            "/ip4/127.0.0.1/tcp/9002/p2p/peer-approver".to_owned(),
+            "/ip4/127.0.0.1/tcp/9001".to_owned(),
+            "/ip4/127.0.0.1/tcp/9002".to_owned(),
         ],
         vec![
             "messages".to_owned(),
@@ -78,6 +78,32 @@ fn integration_runtime_can_start_swarm_harness_task() {
     assert!(report.started());
     assert_eq!(report.executed_ticks(), 4);
     assert_eq!(report.bootstrap_peer_count(), 2);
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+#[test]
+fn integration_swarm_harness_report_includes_native_runtime_marker_when_feature_enabled() {
+    let config = build_p2p_swarm_deterministic_config(
+        &config_for(NodeRole::Processor, true),
+        "peer-native-marker",
+        "/ip4/127.0.0.1/tcp/9050",
+        vec!["/ip4/127.0.0.1/tcp/9051".to_owned()],
+        vec!["messages".to_owned()],
+        2,
+    )
+    .expect("deterministic config should build");
+
+    let task = P2pSwarmHarnessTask::new(config);
+    let report = task
+        .start(P2pSwarmHarnessMode::Run)
+        .expect("runtime harness start should pass");
+    assert!(report.started());
+    assert!(
+        report
+            .behavior_components()
+            .contains(&"libp2p-runtime-swarm"),
+        "feature-enabled run mode must report native libp2p runtime stack marker"
+    );
 }
 
 #[test]
