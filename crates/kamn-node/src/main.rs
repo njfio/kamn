@@ -515,6 +515,16 @@ fn daemon_shutdown_drain_status(completion_reason: &str) -> &'static str {
     }
 }
 
+fn daemon_shutdown_snapshot_flush_status(completion_reason: &str) -> &'static str {
+    if completion_reason.starts_with("graceful-shutdown:signal@") {
+        "snapshot-flushed"
+    } else if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
+        "snapshot-flush-timeout"
+    } else {
+        "snapshot-not-requested"
+    }
+}
+
 fn daemon_shutdown_signal_tick(completion_reason: &str) -> Option<&str> {
     completion_reason
         .strip_prefix("graceful-shutdown:signal@")
@@ -561,6 +571,7 @@ fn validate_full_bootstrap_component_contract(components: &[&str]) -> Result<(),
 fn classify_full_supervisor_stop_contract_violation(
     completion_reason: &str,
     shutdown_drain_status: &str,
+    shutdown_snapshot_flush_status: &str,
 ) -> Option<&'static str> {
     if !matches!(
         shutdown_drain_status,
@@ -568,11 +579,20 @@ fn classify_full_supervisor_stop_contract_violation(
     ) {
         return Some("full_supervisor_stop_invalid_shutdown_drain_status");
     }
+    if !matches!(
+        shutdown_snapshot_flush_status,
+        "snapshot-flushed" | "snapshot-flush-timeout" | "snapshot-not-requested"
+    ) {
+        return Some("full_supervisor_stop_invalid_shutdown_snapshot_flush_status");
+    }
     if completion_reason == "tick-budget-exhausted"
         || completion_reason.starts_with("tick-budget-exhausted;ignored_signals=")
     {
         if shutdown_drain_status != "not-signaled" {
             return Some("full_supervisor_stop_not_signaled_status_mismatch");
+        }
+        if shutdown_snapshot_flush_status != "snapshot-not-requested" {
+            return Some("full_supervisor_stop_not_signaled_snapshot_flush_mismatch");
         }
         return None;
     }
@@ -592,6 +612,9 @@ fn classify_full_supervisor_stop_contract_violation(
         if shutdown_drain_status != "completed" {
             return Some("full_supervisor_stop_graceful_status_mismatch");
         }
+        if shutdown_snapshot_flush_status != "snapshot-flushed" {
+            return Some("full_supervisor_stop_graceful_snapshot_flush_status_mismatch");
+        }
         return None;
     }
     if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
@@ -610,6 +633,9 @@ fn classify_full_supervisor_stop_contract_violation(
         if shutdown_drain_status != "timeout" {
             return Some("full_supervisor_stop_graceful_timeout_status_mismatch");
         }
+        if shutdown_snapshot_flush_status != "snapshot-flush-timeout" {
+            return Some("full_supervisor_stop_graceful_timeout_snapshot_flush_status_mismatch");
+        }
         return None;
     }
     Some("full_supervisor_stop_unknown_completion_reason")
@@ -618,10 +644,13 @@ fn classify_full_supervisor_stop_contract_violation(
 fn validate_full_supervisor_stop_contract(
     completion_reason: &str,
     shutdown_drain_status: &str,
+    shutdown_snapshot_flush_status: &str,
 ) -> Result<(), ConfigError> {
-    if let Some(reason) =
-        classify_full_supervisor_stop_contract_violation(completion_reason, shutdown_drain_status)
-    {
+    if let Some(reason) = classify_full_supervisor_stop_contract_violation(
+        completion_reason,
+        shutdown_drain_status,
+        shutdown_snapshot_flush_status,
+    ) {
         return Err(ConfigError::RuntimeDaemonLifecycle(format!(
             "full_supervisor_invariant_violation:{reason}"
         )));
@@ -704,6 +733,8 @@ fn execute_daemon_runtime(
     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     let shutdown_drain_status =
         daemon_shutdown_drain_status(daemon_completion.completion_reason.as_str());
+    let shutdown_snapshot_flush_status =
+        daemon_shutdown_snapshot_flush_status(daemon_completion.completion_reason.as_str());
     let shutdown_signal_tick =
         daemon_shutdown_signal_tick(daemon_completion.completion_reason.as_str()).unwrap_or("none");
     let shutdown_drain_ticks =
@@ -730,6 +761,10 @@ fn execute_daemon_runtime(
                 daemon_completion.completion_reason.as_str(),
             ),
             ("shutdown_drain_status", shutdown_drain_status),
+            (
+                "shutdown_snapshot_flush_status",
+                shutdown_snapshot_flush_status,
+            ),
             ("shutdown_signal_tick", shutdown_signal_tick),
             ("shutdown_drain_ticks", shutdown_drain_ticks),
             ("shutdown_timeout_ticks", shutdown_timeout_ticks),
@@ -1149,12 +1184,22 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let stop_reason = "daemon-execution-complete";
             let completion_reason = daemon_execution.completion_reason.as_str();
             let shutdown_drain_status = daemon_shutdown_drain_status(completion_reason);
-            validate_full_supervisor_stop_contract(completion_reason, shutdown_drain_status)?;
+            let shutdown_snapshot_flush_status =
+                daemon_shutdown_snapshot_flush_status(completion_reason);
+            validate_full_supervisor_stop_contract(
+                completion_reason,
+                shutdown_drain_status,
+                shutdown_snapshot_flush_status,
+            )?;
             log_info(
                 "node.runtime.full.supervisor.stop.requested",
                 &[
                     ("stop_reason", stop_reason),
                     ("daemon_completion_reason", completion_reason),
+                    (
+                        "shutdown_snapshot_flush_status",
+                        shutdown_snapshot_flush_status,
+                    ),
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;
@@ -1164,6 +1209,10 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     ("stop_reason", stop_reason),
                     ("daemon_completion_reason", completion_reason),
                     ("shutdown_drain_status", shutdown_drain_status),
+                    (
+                        "shutdown_snapshot_flush_status",
+                        shutdown_snapshot_flush_status,
+                    ),
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;

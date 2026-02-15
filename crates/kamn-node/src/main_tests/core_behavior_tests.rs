@@ -578,6 +578,10 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         Some("not-signaled")
     );
     assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-not-requested")
+    );
+    assert_eq!(
         extract_json_string_field(complete_line, "shutdown_signal_tick").as_deref(),
         Some("none")
     );
@@ -801,6 +805,10 @@ fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() 
         extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
         Some("0")
     );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-flushed")
+    );
 }
 
 #[test]
@@ -860,6 +868,10 @@ fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeout_drain_mar
     assert_eq!(
         extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
         Some("0")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-flush-timeout")
     );
 }
 
@@ -1213,6 +1225,14 @@ fn regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason() {
         extract_json_string_field(stop_complete_line, "daemon_completion_reason").as_deref(),
         Some("tick-budget-exhausted")
     );
+    assert_eq!(
+        extract_json_string_field(stop_requested_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-not-requested")
+    );
+    assert_eq!(
+        extract_json_string_field(stop_complete_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-not-requested")
+    );
     let requested_execution_id = extract_json_string_field(stop_requested_line, "execution_id")
         .expect("stop-request marker should include execution id");
     let complete_execution_id = extract_json_string_field(stop_complete_line, "execution_id")
@@ -1237,8 +1257,12 @@ fn unit_full_supervisor_bootstrap_component_contract_rejects_order_drift() {
 #[test]
 fn regression_full_supervisor_stop_contract_rejects_unknown_completion_reason() {
     // Regression: #3283
-    let error = validate_full_supervisor_stop_contract("legacy-stop-reason", "not-signaled")
-        .expect_err("unknown supervisor stop completion reason must fail closed");
+    let error = validate_full_supervisor_stop_contract(
+        "legacy-stop-reason",
+        "not-signaled",
+        "snapshot-not-requested",
+    )
+    .expect_err("unknown supervisor stop completion reason must fail closed");
     assert!(
         matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason")),
         "unknown supervisor stop completion reason must emit deterministic fail-closed reason code"
@@ -1250,10 +1274,25 @@ fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
     let reason = classify_full_supervisor_stop_contract_violation(
         "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
         "not-signaled",
+        "snapshot-flushed",
     );
     assert_eq!(
         reason,
         Some("full_supervisor_stop_graceful_status_mismatch")
+    );
+}
+
+#[test]
+fn regression_full_supervisor_stop_contract_classifier_rejects_snapshot_flush_mismatch() {
+    // Regression: #3597
+    let reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown-timeout:signal@2;drain_ticks=3;timeout_ticks=1;ignored_signals=0",
+        "timeout",
+        "snapshot-flushed",
+    );
+    assert_eq!(
+        reason,
+        Some("full_supervisor_stop_graceful_timeout_snapshot_flush_status_mismatch")
     );
 }
 
@@ -1294,6 +1333,10 @@ fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
     assert_eq!(
         extract_json_string_field(stop_complete_line, "shutdown_drain_status").as_deref(),
         Some("timeout")
+    );
+    assert_eq!(
+        extract_json_string_field(stop_complete_line, "shutdown_snapshot_flush_status").as_deref(),
+        Some("snapshot-flush-timeout")
     );
     assert!(
         extract_json_string_field(stop_complete_line, "daemon_completion_reason")
