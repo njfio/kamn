@@ -117,3 +117,35 @@ fn regression_2745_cli_kolme_live_branch_has_no_expect_panics() {
         "kolme-live signing-profile guard must remain fallible and panic-free"
     );
 }
+
+#[test]
+fn regression_3598_startup_paths_have_no_panic_control_flow() {
+    // Regression: #3598
+    fn production_source(source: &str) -> &str {
+        source.split("#[cfg(test)]").next().unwrap_or(source)
+    }
+
+    for (name, source) in [
+        ("cli.rs", include_str!("cli.rs")),
+        ("main.rs", include_str!("main.rs")),
+        (
+            "runtime_kolme_live.rs",
+            include_str!("runtime_kolme_live.rs"),
+        ),
+        ("signer.rs", include_str!("signer.rs")),
+    ] {
+        let production_source = production_source(source);
+        assert!(
+            !production_source.contains("expect("),
+            "startup production paths must not use expect(): {name}"
+        );
+        assert!(
+            !production_source.contains("unreachable!("),
+            "startup production paths must not use unreachable!(): {name}"
+        );
+        assert!(
+            !production_source.contains("panic!("),
+            "startup production paths must not use panic!(): {name}"
+        );
+    }
+}
