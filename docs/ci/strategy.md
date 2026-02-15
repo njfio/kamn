@@ -373,6 +373,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Process-isolated convergence evidence contracts:
   - lane emits deterministic disconnected fail-closed marker (`two_node_disconnected_fail_closed_status=verified`) with reason-code marker (`two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed`).
   - lane emits deterministic connected delivery marker (`two_node_connected_delivery_status=verified`).
+  - lane emits deterministic no-shared-state zero-delivery marker (`no_shared_state_zero_delivery_status=verified`) with guard reason marker (`no_shared_state_unexpected_delivery_reason_code=no_shared_state_unexpected_delivery_detected`) and deterministic zero-delivery count (`no_shared_state_delivery_count=0`).
   - lane emits deterministic two-node discovery marker (`two_node_discovery_status=verified`).
   - lane emits deterministic two-node gossip marker (`two_node_gossip_status=verified`).
   - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
@@ -388,7 +389,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deep run-mode composes the process-isolated harness (`validate_libp2p_process_isolated_harness.sh`) for full 3-node/fault validation.
   - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
-  - `libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status`
+  - `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`
 
 ## Process Harness Primitive Contract
 - Entry commands:

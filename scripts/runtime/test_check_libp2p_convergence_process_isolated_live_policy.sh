@@ -28,6 +28,9 @@ cat > "$report_file" <<'JSON'
   "two_node_disconnected_fail_closed_status": "verified",
   "two_node_disconnected_fail_closed_reason_code": "p2p_transport_live_socket_send_failed",
   "two_node_connected_delivery_status": "verified",
+  "no_shared_state_zero_delivery_status": "verified",
+  "no_shared_state_unexpected_delivery_reason_code": "no_shared_state_unexpected_delivery_detected",
+  "no_shared_state_delivery_count": 0,
   "two_node_discovery_status": "verified",
   "two_node_gossip_status": "verified",
   "three_node_partition_rejoin_status": "verified",
@@ -35,6 +38,7 @@ cat > "$report_file" <<'JSON'
   "convergence_reason_code_status": "verified",
   "convergence_reason_codes": ["fork_choice_stale_block_height"],
   "evidence_keys": [
+    "no_shared_state_zero_delivery_status",
     "two_node_disconnected_fail_closed_status",
     "two_node_connected_delivery_status",
     "two_node_discovery_status",
@@ -94,7 +98,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["two_node_disconnected_fail_closed_status"] = "tampered"
+payload["no_shared_state_zero_delivery_status"] = "tampered"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -112,7 +116,7 @@ if [ "$tampered_code" -eq 0 ]; then
   echo "expected tampered process-isolated convergence report to fail policy checker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_output" | grep -q 'libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status'; then
+if ! printf '%s\n' "$tampered_output" | grep -q 'libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status'; then
   echo "expected deterministic mismatch reason code for tampered process-isolated convergence policy validation" >&2
   exit 1
 fi
@@ -162,6 +166,9 @@ cat > "$deep_report" <<JSON
   "two_node_disconnected_fail_closed_status": "verified",
   "two_node_disconnected_fail_closed_reason_code": "p2p_transport_live_socket_send_failed",
   "two_node_connected_delivery_status": "verified",
+  "no_shared_state_zero_delivery_status": "verified",
+  "no_shared_state_unexpected_delivery_reason_code": "no_shared_state_unexpected_delivery_detected",
+  "no_shared_state_delivery_count": 0,
   "two_node_discovery_status": "verified",
   "two_node_gossip_status": "verified",
   "three_node_partition_rejoin_status": "verified",
@@ -169,6 +176,7 @@ cat > "$deep_report" <<JSON
   "convergence_reason_code_status": "verified",
   "convergence_reason_codes": ["fork_choice_stale_block_height"],
   "evidence_keys": [
+    "no_shared_state_zero_delivery_status",
     "two_node_disconnected_fail_closed_status",
     "two_node_connected_delivery_status",
     "two_node_discovery_status",

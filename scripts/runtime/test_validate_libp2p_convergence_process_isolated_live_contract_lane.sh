@@ -51,7 +51,7 @@ if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_process_isolated_convergenc
   echo "expected process-isolated convergence policy status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status$'; then
   echo "expected process-isolated convergence fail-closed reason marker" >&2
   exit 1
 fi

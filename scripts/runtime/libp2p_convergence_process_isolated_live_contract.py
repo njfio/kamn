@@ -33,6 +33,9 @@ DEEP_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN"
 EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
     "p2p_transport_live_socket_send_failed"
 )
+EXPECTED_NO_SHARED_STATE_UNEXPECTED_DELIVERY_REASON_CODE = (
+    "no_shared_state_unexpected_delivery_detected"
+)
 
 SMOKE_TESTS: list[tuple[str, list[str]]] = [
     (
@@ -205,6 +208,11 @@ def _run_lane(args: argparse.Namespace) -> int:
             EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE
         ),
         "two_node_connected_delivery_status": "verified",
+        "no_shared_state_zero_delivery_status": "verified",
+        "no_shared_state_unexpected_delivery_reason_code": (
+            EXPECTED_NO_SHARED_STATE_UNEXPECTED_DELIVERY_REASON_CODE
+        ),
+        "no_shared_state_delivery_count": 0,
         "two_node_discovery_status": "verified",
         "two_node_gossip_status": "verified",
         "three_node_partition_rejoin_status": "verified",
@@ -212,6 +220,7 @@ def _run_lane(args: argparse.Namespace) -> int:
         "convergence_reason_code_status": "verified",
         "convergence_reason_codes": ["fork_choice_stale_block_height"],
         "evidence_keys": [
+            "no_shared_state_zero_delivery_status",
             "two_node_disconnected_fail_closed_status",
             "two_node_connected_delivery_status",
             "two_node_discovery_status",
@@ -248,6 +257,12 @@ def _run_lane(args: argparse.Namespace) -> int:
         f"{EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE}"
     )
     print("two_node_connected_delivery_status=verified")
+    print("no_shared_state_zero_delivery_status=verified")
+    print(
+        "no_shared_state_unexpected_delivery_reason_code="
+        f"{EXPECTED_NO_SHARED_STATE_UNEXPECTED_DELIVERY_REASON_CODE}"
+    )
+    print("no_shared_state_delivery_count=0")
     print("two_node_discovery_status=verified")
     print("two_node_gossip_status=verified")
     print("three_node_partition_rejoin_status=verified")
@@ -295,6 +310,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "two_node_disconnected_fail_closed_status",
         "two_node_disconnected_fail_closed_reason_code",
         "two_node_connected_delivery_status",
+        "no_shared_state_zero_delivery_status",
+        "no_shared_state_unexpected_delivery_reason_code",
+        "no_shared_state_delivery_count",
         "two_node_discovery_status",
         "two_node_gossip_status",
         "three_node_partition_rejoin_status",
@@ -333,6 +351,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "ci_fast_gate_exclusion_status",
         "smoke_lane_status",
         "deep_lane_local_only_status",
+        "no_shared_state_zero_delivery_status",
         "two_node_disconnected_fail_closed_status",
         "two_node_connected_delivery_status",
         "two_node_discovery_status",
@@ -359,6 +378,21 @@ def _check_policy(args: argparse.Namespace) -> int:
             "fail_closed_reason_code_mismatch"
         ),
     )
+    decision.reject_if(
+        report.get("no_shared_state_unexpected_delivery_reason_code")
+        != EXPECTED_NO_SHARED_STATE_UNEXPECTED_DELIVERY_REASON_CODE,
+        (
+            "libp2p_process_isolated_convergence_policy_no_shared_state_"
+            "reason_code_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("no_shared_state_delivery_count") != 0,
+        (
+            "libp2p_process_isolated_convergence_policy_no_shared_state_"
+            "delivery_count_mismatch"
+        ),
+    )
 
     decision.reject_if(
         report.get("runtime_transport_mode") != RUNTIME_TRANSPORT_MODE,
@@ -373,6 +407,7 @@ def _check_policy(args: argparse.Namespace) -> int:
     )
 
     expected_evidence_keys = {
+        "no_shared_state_zero_delivery_status",
         "two_node_disconnected_fail_closed_status",
         "two_node_connected_delivery_status",
         "two_node_discovery_status",

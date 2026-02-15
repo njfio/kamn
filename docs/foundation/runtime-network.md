@@ -187,13 +187,20 @@ This document captures the initial runtime-network foundation slice for peer lif
     `two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed`.
   - connected two-node drill must succeed and emit
     `two_node_connected_delivery_status=verified`.
+  - no-shared-state invariant must emit deterministic zero-delivery marker
+    `no_shared_state_zero_delivery_status=verified` with guard reason marker
+    `no_shared_state_unexpected_delivery_reason_code=no_shared_state_unexpected_delivery_detected`
+    and deterministic count marker `no_shared_state_delivery_count=0`.
   - lane must retain deterministic transport marker
     `runtime_transport_mode=libp2p_process_isolated_convergence`.
 - Policy fail-closed contracts:
   - missing/tampered disconnected marker rejects with
-    `libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status`.
+    `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`.
   - disconnected reason-code drift rejects with
     `libp2p_process_isolated_convergence_policy_disconnected_fail_closed_reason_code_mismatch`.
+  - no-shared-state reason/count drift rejects with
+    `libp2p_process_isolated_convergence_policy_no_shared_state_reason_code_mismatch`
+    or `libp2p_process_isolated_convergence_policy_no_shared_state_delivery_count_mismatch`.
 
 ## Bridge Quorum Runtime Mapping
 - Listener and approver bridge quorum runtime contracts are documented in:
