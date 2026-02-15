@@ -103,6 +103,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^full_runtime_shutdown_status
   echo "expected local full-runtime live validation shutdown marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^three_node_role_set_status=verified$'; then
+  echo "expected local full-runtime live validation three-node role-set marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^transport_propagation_status=verified$'; then
+  echo "expected local full-runtime live validation transport propagation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^canonical_convergence_status=verified$'; then
+  echo "expected local full-runtime live validation canonical convergence marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
+  echo "expected local full-runtime live validation runtime transport mode marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -199,6 +215,14 @@ if summary_report.get("final_decision") != "GO":
     raise SystemExit("expected local full-runtime live summary final_decision=GO")
 if policy_report.get("final_decision") != "GO":
     raise SystemExit("expected local full-runtime live policy final_decision=GO")
+if summary_report.get("three_node_role_set_status") != "verified":
+    raise SystemExit("expected summary three_node_role_set_status=verified")
+if summary_report.get("transport_propagation_status") != "verified":
+    raise SystemExit("expected summary transport_propagation_status=verified")
+if summary_report.get("canonical_convergence_status") != "verified":
+    raise SystemExit("expected summary canonical_convergence_status=verified")
+if summary_report.get("runtime_transport_mode") != "libp2p_transport_fed":
+    raise SystemExit("expected summary runtime_transport_mode=libp2p_transport_fed")
 
 lane_report = {
     "schema_version": "kamn.runtime.local-full-runtime-live-contract-lane-report.v1",
@@ -208,6 +232,8 @@ lane_report = {
     "local_full_runtime_contract_status": "verified",
     "local_full_runtime_policy_status": policy_report.get("local_full_runtime_policy_status"),
     "docs_contract_status": "verified",
+    "three_node_convergence_status": "verified",
+    "runtime_transport_mode_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "local_full_runtime_policy_fast_gate_exclusion_mismatch",
     "performance_budget_status": "verified",
@@ -230,6 +256,8 @@ echo "lane_mode=$mode"
 echo "local_full_runtime_contract_status=verified"
 echo "local_full_runtime_policy_status=verified"
 echo "docs_contract_status=verified"
+echo "three_node_convergence_status=verified"
+echo "runtime_transport_mode_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=local_full_runtime_policy_fast_gate_exclusion_mismatch"
 echo "performance_budget_status=verified"

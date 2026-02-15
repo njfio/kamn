@@ -175,13 +175,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - ci-fast-gate mode: fast
 - local-dev mode: local
 - manual-hardened mode: manual
+- Three-node convergence evidence contracts:
+  - lane emits deterministic three-node role-set marker (`three_node_role_set_status=verified`).
+  - lane emits deterministic transport propagation marker (`transport_propagation_status=verified`).
+  - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic runtime transport mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - policy checker fails closed on transport/convergence marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1`.
-  - run mode executes only two targeted full-runtime integration tests with bounded per-command budgets.
+  - run mode executes four targeted full-runtime/transport convergence checks with bounded per-command budgets.
   - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
+  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
 
 ## Runtime Sqlite Crash-Recovery Live Validation Contract Lane
 - Entry commands:

@@ -1539,6 +1539,22 @@ Operator checkpoints:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
   - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
 
+## Runtime Local Three-Node Convergence (Issue #3417)
+
+- Bounded dry-run contract lane:
+  - `bash scripts/runtime/validate_local_full_runtime_live_contract_lane.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/local-full-runtime-live-contract-lane-report.json --policy-output-json /tmp/local-full-runtime-live-policy-report.json`
+- Explicit local-heavy run mode:
+  - `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1 bash scripts/runtime/validate_local_full_runtime_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-runtime-live-summary.json`
+- Required convergence evidence markers:
+  - `three_node_role_set_status=verified`
+  - `transport_propagation_status=verified`
+  - `canonical_convergence_status=verified`
+  - `runtime_transport_mode=libp2p_transport_fed`
+- Deterministic fail-closed policy reason markers:
+  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `local_full_runtime_policy_three_node_role_set_status_mismatch`
+  - `local_full_runtime_policy_canonical_convergence_status_mismatch`
+
 ## Runtime Block Reconciliation Partition/Rejoin (Issue #3418)
 
 - Bounded dry-run contract lane:
