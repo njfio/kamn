@@ -157,6 +157,28 @@ fn main_module_extraction_contract_removes_inline_runtime_orchestration_impls() 
 }
 
 #[test]
+fn runtime_orchestration_module_extraction_contract_declares_daemon_phase_module() {
+    let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
+    let daemon_phase_rs = read_repo_file("src/runtime_orchestration/daemon_phase.rs");
+    assert!(
+        runtime_orchestration_rs.contains("mod daemon_phase;"),
+        "runtime_orchestration.rs should declare daemon phase submodule"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn execute_daemon_runtime("),
+        "runtime_orchestration.rs should not keep inline daemon runtime executor"
+    );
+    assert!(
+        daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
+        "daemon phase module should own daemon runtime execution"
+    );
+    assert!(
+        daemon_phase_rs.contains("pub(super) fn daemon_shutdown_drain_status("),
+        "daemon phase module should own shutdown drain status derivation"
+    );
+}
+
+#[test]
 fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     let signer_rs = read_repo_file("src/signer.rs");
     let report_builder_rs = read_repo_file("src/report_builder.rs");

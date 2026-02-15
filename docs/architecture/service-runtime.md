@@ -12,6 +12,17 @@ full runtime execution paths.
 - explicit OS-signal override flag (`--daemon-shutdown-os-signals`) remains
   supported for policy clarity and cross-platform fail-closed checks
 
+## Runtime Phase Module Map
+
+- `crates/kamn-node/src/runtime_orchestration.rs`
+  - owns runtime mode dispatch, production transport profile policy checks, full
+    supervisor stop-contract validation, and signer policy enforcement.
+- `crates/kamn-node/src/runtime_orchestration/daemon_phase.rs`
+  - owns daemon/full daemon-phase execution, peer lifecycle transition
+    projection, and shutdown marker parsing/projection.
+- Extraction contract lane:
+  - `cargo test -p kamn-node --test main_module_extraction_contract`
+
 ## Drain Marker Contract
 
 `shutdown_drain_status` is emitted on daemon completion and full-supervisor stop
