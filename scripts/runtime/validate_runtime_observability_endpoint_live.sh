@@ -41,6 +41,7 @@ pushd "$ROOT_DIR" >/dev/null
 cargo test -p kamn-node functional_observability_endpoint_renders_stream_payload
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_stream_path
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_metrics_and_health_paths
+cargo test -p kamn-node functional_observability_endpoint_projects_readiness_reason_code_parity_across_endpoint_surfaces
 cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_unknown_path
 cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_malformed_request_method
 cargo test -p kamn-node integration_runtime_observability_endpoint_fails_closed_on_idle_timeout
