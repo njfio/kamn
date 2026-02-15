@@ -251,8 +251,13 @@ fn render_observability_endpoint_response_with_paths(
 
 fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     let health_value = if snapshot.health == "healthy" { 1 } else { 0 };
+    let ready_value = if is_runtime_ready(snapshot) { 1 } else { 0 };
+    let readiness_reason_code = readiness_reason_code(snapshot);
+    let transport_status = transport_dependency_status(snapshot);
+    let signer_status = signer_dependency_status(snapshot);
+    let commit_status = commit_dependency_status(snapshot);
     format!(
-        "kamn_observability_latency_p50_ms {}\nkamn_observability_latency_p99_ms {}\nkamn_observability_throughput_tps {}\nkamn_observability_error_rate_bps {}\nkamn_observability_availability_bps {}\nkamn_observability_alert_count {}\nkamn_observability_transport_checkpoint_failures {}\nkamn_observability_signer_checkpoint_failures {}\nkamn_observability_commit_checkpoint_failures {}\nkamn_observability_source{{source=\"{}\"}} 1\nkamn_observability_runtime_mode{{runtime_mode=\"{}\"}} 1\nkamn_observability_reason_code{{reason_code=\"{}\"}} 1\nkamn_observability_health{{health=\"{}\"}} {}\n",
+        "kamn_observability_latency_p50_ms {}\nkamn_observability_latency_p99_ms {}\nkamn_observability_throughput_tps {}\nkamn_observability_error_rate_bps {}\nkamn_observability_availability_bps {}\nkamn_observability_alert_count {}\nkamn_observability_transport_checkpoint_failures {}\nkamn_observability_signer_checkpoint_failures {}\nkamn_observability_commit_checkpoint_failures {}\nkamn_observability_ready {}\nkamn_observability_source{{source=\"{}\"}} 1\nkamn_observability_runtime_mode{{runtime_mode=\"{}\"}} 1\nkamn_observability_reason_code{{reason_code=\"{}\"}} 1\nkamn_observability_readiness_reason_code{{readiness_reason_code=\"{}\"}} 1\nkamn_observability_transport_dependency_status{{status=\"{}\"}} 1\nkamn_observability_signer_dependency_status{{status=\"{}\"}} 1\nkamn_observability_commit_dependency_status{{status=\"{}\"}} 1\nkamn_observability_health{{health=\"{}\"}} {}\n",
         snapshot.latency_p50_ms,
         snapshot.latency_p99_ms,
         snapshot.throughput_tps,
@@ -262,22 +267,33 @@ fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
         snapshot.transport_checkpoint_failures,
         snapshot.signer_checkpoint_failures,
         snapshot.commit_checkpoint_failures,
+        ready_value,
         escape_metrics_label(snapshot.source.as_str()),
         escape_metrics_label(snapshot.runtime_mode.as_str()),
         escape_metrics_label(snapshot.reason_code.as_str()),
+        escape_metrics_label(readiness_reason_code),
+        escape_metrics_label(transport_status),
+        escape_metrics_label(signer_status),
+        escape_metrics_label(commit_status),
         escape_metrics_label(snapshot.health.as_str()),
         health_value
     )
 }
 
 fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
+    let readiness_reason_code = readiness_reason_code(snapshot);
     format!(
-        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
+        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
         snapshot.alert_count,
         escape_json_string(snapshot.reason_code.as_str()),
+        is_runtime_ready(snapshot),
+        escape_json_string(readiness_reason_code),
+        transport_dependency_status(snapshot),
+        signer_dependency_status(snapshot),
+        commit_dependency_status(snapshot),
         snapshot.transport_checkpoint_failures,
         snapshot.signer_checkpoint_failures,
         snapshot.commit_checkpoint_failures,
@@ -290,13 +306,19 @@ fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 }
 
 fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
+    let readiness_reason_code = readiness_reason_code(snapshot);
     format!(
-        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
+        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
         snapshot.alert_count,
         escape_json_string(snapshot.reason_code.as_str()),
+        is_runtime_ready(snapshot),
+        escape_json_string(readiness_reason_code),
+        transport_dependency_status(snapshot),
+        signer_dependency_status(snapshot),
+        commit_dependency_status(snapshot),
         snapshot.transport_checkpoint_failures,
         snapshot.signer_checkpoint_failures,
         snapshot.commit_checkpoint_failures,

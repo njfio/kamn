@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_observability_scrape_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_observability_scrape_live_policy.sh"
+CONTRACT_IMPL="$ROOT_DIR/scripts/runtime/local_observability_scrape_live_contract.py"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
 NEXT_STEPS_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
@@ -66,6 +67,10 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
     exit 1
   fi
 done
+if [ ! -f "$CONTRACT_IMPL" ]; then
+  echo "expected local observability scrape contract implementation '$CONTRACT_IMPL'" >&2
+  exit 1
+fi
 for required_doc in "$STRATEGY_DOC" "$ROADMAP_DOC" "$NEXT_STEPS_DOC"; do
   if [ ! -f "$required_doc" ]; then
     echo "expected required documentation file '$required_doc'" >&2
@@ -196,6 +201,10 @@ if ! grep -q "local observability scrape run-mode commands remain excluded from 
   echo "expected CI strategy docs to include local observability scrape run-mode exclusion marker" >&2
   exit 1
 fi
+if ! grep -q "bounded to five targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include five-test local observability scrape run-mode budget marker" >&2
+  exit 1
+fi
 
 if ! grep -q "Task #3335, Subtask #3336" "$ROADMAP_DOC"; then
   echo "expected roadmap marker for Task #3335, Subtask #3336" >&2
@@ -215,6 +224,14 @@ if ! grep -q "#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490" "$NEXT_STEPS_D
 fi
 if ! grep -q "scripts/runtime/test_validate_local_observability_scrape_live.sh" "$NEXT_STEPS_DOC"; then
   echo "expected next-steps plan to reference local observability scrape lane-runner test script" >&2
+  exit 1
+fi
+if ! grep -q "functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix" "$NEXT_STEPS_DOC"; then
+  echo "expected next-steps plan to reference readiness dependency-probe taxonomy matrix selector" >&2
+  exit 1
+fi
+if ! grep -q "functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix" "$CONTRACT_IMPL"; then
+  echo "expected local observability scrape contract implementation to include readiness dependency-probe taxonomy selector" >&2
   exit 1
 fi
 

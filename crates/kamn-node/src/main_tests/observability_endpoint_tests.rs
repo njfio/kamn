@@ -197,6 +197,10 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
         .contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
     assert!(metrics
         .body
+        .contains("kamn_observability_readiness_reason_code{readiness_reason_code=\"none\"} 1"));
+    assert!(metrics.body.contains("kamn_observability_ready 1"));
+    assert!(metrics
+        .body
         .contains("kamn_observability_health{health=\"healthy\"} 1"));
 
     let health = render_observability_endpoint_response(&snapshot, "/healthz");
@@ -205,6 +209,17 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     assert!(health.body.contains("\"health\":\"healthy\""));
     assert!(health.body.contains("\"runtime_mode\":\"daemon\""));
     assert!(health.body.contains("\"reason_code\":\"none\""));
+    assert!(health.body.contains("\"ready\":true"));
+    assert!(health.body.contains("\"readiness_reason_code\":\"none\""));
+    assert!(health
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(health
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(health
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
     assert!(health.body.contains("\"transport_checkpoint_failures\":0"));
     assert!(health.body.contains("\"signer_checkpoint_failures\":0"));
     assert!(health.body.contains("\"commit_checkpoint_failures\":0"));
@@ -252,6 +267,17 @@ fn functional_observability_endpoint_renders_stream_payload() {
         .body
         .contains("\"schema_version\":\"kamn.runtime.observability.stream.v1\""));
     assert!(stream.body.contains("\"reason_code\":\"none\""));
+    assert!(stream.body.contains("\"ready\":true"));
+    assert!(stream.body.contains("\"readiness_reason_code\":\"none\""));
+    assert!(stream
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(stream
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(stream
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
     assert!(stream.body.contains("\"transport_checkpoint_failures\":0"));
     assert!(stream.body.contains("\"signer_checkpoint_failures\":0"));
     assert!(stream.body.contains("\"commit_checkpoint_failures\":0"));
@@ -305,6 +331,83 @@ fn functional_observability_endpoint_readiness_reports_degraded_timeout_reason_c
 }
 
 #[test]
+fn functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix() {
+    let mut transport_degraded = sample_observability_snapshot();
+    transport_degraded.health = "critical".to_owned();
+    transport_degraded.reason_code = "transport_finality_retry_unavailable".to_owned();
+    transport_degraded.transport_checkpoint_failures = 2;
+    let transport_readiness =
+        render_observability_endpoint_response(&transport_degraded, "/readyz");
+    assert!(transport_readiness.body.contains("\"ready\":false"));
+    assert!(transport_readiness
+        .body
+        .contains("\"readiness_reason_code\":\"readiness_transport_dependency_unhealthy\""));
+    assert!(transport_readiness
+        .body
+        .contains("\"transport_dependency_status\":\"degraded\""));
+    assert!(transport_readiness
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(transport_readiness
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
+
+    let mut signer_degraded = sample_observability_snapshot();
+    signer_degraded.health = "critical".to_owned();
+    signer_degraded.reason_code = "signer_rotation_stale".to_owned();
+    signer_degraded.signer_checkpoint_failures = 1;
+    let signer_readiness = render_observability_endpoint_response(&signer_degraded, "/readyz");
+    assert!(signer_readiness
+        .body
+        .contains("\"readiness_reason_code\":\"readiness_signer_dependency_unhealthy\""));
+    assert!(signer_readiness
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(signer_readiness
+        .body
+        .contains("\"signer_dependency_status\":\"degraded\""));
+    assert!(signer_readiness
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
+
+    let mut commit_degraded = sample_observability_snapshot();
+    commit_degraded.health = "critical".to_owned();
+    commit_degraded.reason_code = "daemon_shutdown_timeout".to_owned();
+    commit_degraded.commit_checkpoint_failures = 1;
+    let commit_readiness = render_observability_endpoint_response(&commit_degraded, "/readyz");
+    assert!(commit_readiness
+        .body
+        .contains("\"readiness_reason_code\":\"readiness_commit_dependency_unhealthy\""));
+    assert!(commit_readiness
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(commit_readiness
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(commit_readiness
+        .body
+        .contains("\"commit_dependency_status\":\"degraded\""));
+
+    let mut runtime_health_degraded = sample_observability_snapshot();
+    runtime_health_degraded.health = "degraded".to_owned();
+    runtime_health_degraded.reason_code = "daemon_slo_alert".to_owned();
+    let runtime_health_readiness =
+        render_observability_endpoint_response(&runtime_health_degraded, "/readyz");
+    assert!(runtime_health_readiness
+        .body
+        .contains("\"readiness_reason_code\":\"readiness_runtime_health_degraded\""));
+    assert!(runtime_health_readiness
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(runtime_health_readiness
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(runtime_health_readiness
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
+}
+
+#[test]
 fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -345,12 +448,17 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
     );
     assert!(metrics_response.contains("kamn_observability_latency_p50_ms 25"));
     assert!(metrics_response.contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
+    assert!(metrics_response
+        .contains("kamn_observability_readiness_reason_code{readiness_reason_code=\"none\"} 1"));
+    assert!(metrics_response.contains("kamn_observability_ready 1"));
     assert!(
         health_response.contains("HTTP/1.1 200 OK"),
         "health endpoint should return 200 response"
     );
     assert!(health_response.contains("\"health\":\"healthy\""));
     assert!(health_response.contains("\"reason_code\":\"none\""));
+    assert!(health_response.contains("\"ready\":true"));
+    assert!(health_response.contains("\"readiness_reason_code\":\"none\""));
     assert!(readiness_response.contains("HTTP/1.1 200 OK"));
     assert!(readiness_response.contains("\"ready\":true"));
     assert!(readiness_response.contains("\"readiness_reason_code\":\"none\""));
@@ -401,6 +509,8 @@ fn integration_runtime_observability_endpoint_serves_stream_path() {
     assert!(stream_response.contains("application/x-ndjson"));
     assert!(stream_response.contains("kamn.runtime.observability.stream.v1"));
     assert!(stream_response.contains("\"reason_code\":\"none\""));
+    assert!(stream_response.contains("\"ready\":true"));
+    assert!(stream_response.contains("\"readiness_reason_code\":\"none\""));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

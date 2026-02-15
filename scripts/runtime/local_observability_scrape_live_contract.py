@@ -46,6 +46,10 @@ LOCAL_OBSERVABILITY_SCRAPE_TESTS: list[tuple[str, str]] = [
         "readiness_failure_drill",
         "main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reports_degraded_timeout_reason_codes",
     ),
+    (
+        "readiness_reason_taxonomy",
+        "main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix",
+    ),
 ]
 
 
