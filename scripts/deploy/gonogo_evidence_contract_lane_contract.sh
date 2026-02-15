@@ -125,4 +125,50 @@ if ! printf '%s\n' "$milestone_policy_output" | grep -q "^final_decision=GO$"; t
   exit 1
 fi
 
+runbook_marker_missing_doc="$TMP_DIR/runbook-marker-missing.md"
+cat >"$runbook_marker_missing_doc" <<'TXT'
+# Upgrade Rollback Runbook
+Marker intentionally incomplete for contract lane regression coverage.
+TXT
+
+milestone_missing_runbook_bundle_file="$TMP_DIR/gonogo-milestone-contract-missing-runbook.json"
+milestone_missing_runbook_output="$(
+  KAMN_GONOGO_RUNBOOK_DOC_FILE="$runbook_marker_missing_doc" \
+    bash "$GENERATOR" \
+      --output-file "$milestone_missing_runbook_bundle_file" \
+      --release-candidate "v1.0.0-contract-missing-runbook" \
+      --schema-target-version "1.0.0" \
+      --runtime-image-digest "sha256:contract-missing-runbook" \
+      --ci-fast-gate PASS \
+      --ci-deep-lane PASS \
+      --rollback-precheck PASS \
+      --rollback-trigger-status CLEAR \
+      --required-approvals 2 \
+      --received-approvals 2 \
+      --deployment-preflight-summary-file "$milestone_preflight_summary" \
+      --deployment-preflight-policy-file "$milestone_preflight_policy" \
+      --live-node-validation-summary-file "$milestone_live_bundle_summary" \
+      --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+      --go-no-go-gate-report-file "$milestone_gate_report"
+)"
+
+if ! printf '%s\n' "$milestone_missing_runbook_output" | grep -q "^final_decision=NO-GO$"; then
+  echo "expected milestone aggregate generator decision to fail closed when runbook markers are missing" >&2
+  exit 1
+fi
+
+milestone_missing_runbook_policy_output="$(
+  KAMN_GONOGO_RUNBOOK_DOC_FILE="$runbook_marker_missing_doc" \
+    bash "$POLICY_CHECKER" \
+      --bundle-file "$milestone_missing_runbook_bundle_file"
+)"
+if ! printf '%s\n' "$milestone_missing_runbook_policy_output" | grep -q "^milestone_review_final_decision=NO-GO$"; then
+  echo "expected milestone aggregate policy decision marker to fail closed when runbook markers are missing" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_missing_runbook_policy_output" | grep -q "^final_decision=NO-GO$"; then
+  echo "expected milestone aggregate policy check decision to fail closed when runbook markers are missing" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence contract lane tests passed."

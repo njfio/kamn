@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import os
 from pathlib import Path
 import sys
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
+ROOT_DIR = SCRIPT_DIR.parent.parent
 
 from framework.contract_framework import (  # noqa: E402
     ContractError,
@@ -26,6 +28,15 @@ SCHEMA_VERSION = "kamn.release.gonogo.v1"
 MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
+DEFAULT_OPERATOR_RUNBOOK_DOC = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
+REQUIRED_OPERATOR_RUNBOOK_MARKERS = (
+    "## Deployment SLO Evidence and Rollback Automation Contract",
+    "run_deployment_slo_rollback_lane.sh",
+    "check_deployment_slo_rollback_policy.sh",
+    "run_deployment_slo_rollback_contract_lane.sh",
+    "kamn.deploy.slo-rollback-report.v1",
+    "Regression: #944",
+)
 REQUIRED_EVIDENCE_MARKERS = (
     "ci_fast_gate",
     "ci_deep_lane",
@@ -54,6 +65,26 @@ def _artifact_sha256(path: Path) -> str:
     if not path.is_file():
         return ""
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _resolve_operator_runbook_doc() -> Path:
+    override = os.getenv("KAMN_GONOGO_RUNBOOK_DOC_FILE", "").strip()
+    if override:
+        return Path(override).resolve()
+    return DEFAULT_OPERATOR_RUNBOOK_DOC.resolve()
+
+
+def _operator_runbook_marker_status(runbook_doc: Path) -> tuple[bool, list[str]]:
+    if not runbook_doc.is_file():
+        return False, list(REQUIRED_OPERATOR_RUNBOOK_MARKERS)
+
+    try:
+        runbook_text = runbook_doc.read_text(encoding="utf-8")
+    except OSError:
+        return False, list(REQUIRED_OPERATOR_RUNBOOK_MARKERS)
+
+    missing_markers = [marker for marker in REQUIRED_OPERATOR_RUNBOOK_MARKERS if marker not in runbook_text]
+    return len(missing_markers) == 0, missing_markers
 
 
 def _optional_milestone_artifact_paths(args: argparse.Namespace) -> dict[str, Path] | None:
@@ -100,6 +131,14 @@ def _load_milestone_artifact(
 
 def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str, Any]:
     reason_codes: list[str] = []
+    operator_runbook_doc = _resolve_operator_runbook_doc()
+    operator_runbook_markers_present, operator_runbook_missing_markers = _operator_runbook_marker_status(
+        operator_runbook_doc
+    )
+    if not operator_runbook_doc.is_file():
+        reason_codes.append("milestone_review_operator_runbook_missing")
+    elif not operator_runbook_markers_present:
+        reason_codes.append("milestone_review_operator_runbook_markers_missing")
 
     preflight_summary = _load_milestone_artifact(
         artifact_paths["deployment_preflight_summary_file"],
@@ -229,6 +268,8 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
     for field_name, path in artifact_paths.items():
         artifacts[field_name] = str(path)
         artifacts[f"{field_name[:-5]}sha256"] = _artifact_sha256(path)
+    artifacts["operator_runbook_doc_file"] = str(operator_runbook_doc)
+    artifacts["operator_runbook_doc_sha256"] = _artifact_sha256(operator_runbook_doc)
 
     return {
         "schema_version": MILESTONE_REVIEW_SCHEMA_VERSION,
@@ -249,9 +290,13 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             "live_node_validation_lineage_contract_present": live_rollback_recovery_lineage_required,
             "live_node_validation_rollback_lineage_present": live_rollback_evidence_present,
             "live_node_validation_recovery_lineage_present": live_recovery_evidence_present,
+            "operator_runbook_markers_present": operator_runbook_markers_present,
+            "operator_runbook_missing_markers": operator_runbook_missing_markers,
         },
         "contracts": {
             "linked_artifact_lineage_required": True,
+            "operator_runbook_markers_required": True,
+            "operator_runbook_required_markers": list(REQUIRED_OPERATOR_RUNBOOK_MARKERS),
             "deployment_preflight_scope_required": "ci-fast-gate",
             "live_bundle_scope_required": "local-only",
             "live_bundle_runtime_provider_client_required": "KolmeRuntimeCommitLiveProvider",
