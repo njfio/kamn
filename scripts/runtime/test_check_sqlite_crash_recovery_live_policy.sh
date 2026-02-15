@@ -12,6 +12,10 @@ tmp_tampered_wal_taxonomy=""
 tmp_tampered_historical_query_index=""
 tmp_tampered_historical_query_taxonomy=""
 tmp_tampered_historical_query_latency=""
+tmp_tampered_promotion_gate=""
+tmp_tampered_audit_parity=""
+tmp_tampered_durability_taxonomy=""
+tmp_tampered_ci_local_budget=""
 cleanup() {
   rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"
   if [[ -n "$tmp_tampered_wal_checkpoint" ]]; then
@@ -28,6 +32,18 @@ cleanup() {
   fi
   if [[ -n "$tmp_tampered_historical_query_latency" ]]; then
     rm -f "$tmp_tampered_historical_query_latency"
+  fi
+  if [[ -n "$tmp_tampered_promotion_gate" ]]; then
+    rm -f "$tmp_tampered_promotion_gate"
+  fi
+  if [[ -n "$tmp_tampered_audit_parity" ]]; then
+    rm -f "$tmp_tampered_audit_parity"
+  fi
+  if [[ -n "$tmp_tampered_durability_taxonomy" ]]; then
+    rm -f "$tmp_tampered_durability_taxonomy"
+  fi
+  if [[ -n "$tmp_tampered_ci_local_budget" ]]; then
+    rm -f "$tmp_tampered_ci_local_budget"
   fi
 }
 trap cleanup EXIT
@@ -83,6 +99,10 @@ if payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime.hist
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
 if payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
+if payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker")
+if payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic durability_governance_reason_codes_csv marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -268,6 +288,131 @@ if [ "$historical_query_latency_tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$historical_query_latency_tampered_output" | grep -q 'sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded'; then
   echo "expected deterministic historical-query latency budget bypass reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_promotion_gate="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_promotion_gate"
+python3 - "$tmp_tampered_promotion_gate" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["crash_recovery_promotion_gate_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+promotion_gate_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_promotion_gate" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+promotion_gate_tampered_code=$?
+set -e
+if [ "$promotion_gate_tampered_code" -eq 0 ]; then
+  echo "expected tampered promotion-gate sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$promotion_gate_tampered_output" | grep -q 'sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch'; then
+  echo "expected deterministic promotion-gate mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_audit_parity="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_audit_parity"
+python3 - "$tmp_tampered_audit_parity" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["audit_trail_parity_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+audit_parity_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_audit_parity" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+audit_parity_tampered_code=$?
+set -e
+if [ "$audit_parity_tampered_code" -eq 0 ]; then
+  echo "expected tampered audit-parity sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$audit_parity_tampered_output" | grep -q 'sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch'; then
+  echo "expected deterministic audit-parity mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_durability_taxonomy="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_durability_taxonomy"
+python3 - "$tmp_tampered_durability_taxonomy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["durability_governance_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+durability_taxonomy_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_durability_taxonomy" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+durability_taxonomy_tampered_code=$?
+set -e
+if [ "$durability_taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected tampered durability-taxonomy sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$durability_taxonomy_tampered_output" | grep -q 'sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic durability-taxonomy mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_ci_local_budget="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_ci_local_budget"
+python3 - "$tmp_tampered_ci_local_budget" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["ci_local_promotion_max_seconds"] = 10
+payload["max_seconds"] = 120
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+ci_local_budget_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_ci_local_budget" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+ci_local_budget_tampered_code=$?
+set -e
+if [ "$ci_local_budget_tampered_code" -eq 0 ]; then
+  echo "expected ci-local budget bypass sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ci_local_budget_tampered_output" | grep -q 'sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded'; then
+  echo "expected deterministic ci-local budget bypass reason for tampered sqlite crash-recovery report" >&2
   exit 1
 fi
 

@@ -276,6 +276,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic historical-query taxonomy markers:
     `historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1`,
     `historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch`.
+  - lane emits deterministic promotion/audit governance markers:
+    `crash_recovery_promotion_gate_status=verified`,
+    `audit_trail_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`.
+  - lane emits deterministic durability-governance taxonomy markers:
+    `durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1`,
+    `durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
@@ -289,6 +296,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_recovery_policy_historical_query_index_status_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded`
+  - `sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch`
+  - `sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch`
+  - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded`
 
 ## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
 - Entry commands:

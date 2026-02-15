@@ -76,6 +76,26 @@ if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_reason_codes_csv=
   echo "expected sqlite crash-recovery contract lane historical-query reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane promotion-gate marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^audit_trail_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane audit-trail parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_promotion_budget_boundary_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane ci-local promotion budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane durability-governance reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+  echo "expected sqlite crash-recovery contract lane durability-governance reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_recovery_policy_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane policy status marker" >&2
   exit 1
@@ -117,6 +137,16 @@ if lane_payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
 if lane_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
+if lane_payload.get("crash_recovery_promotion_gate_status") != "verified":
+    raise SystemExit("expected crash_recovery_promotion_gate_status=verified")
+if lane_payload.get("audit_trail_parity_status") != "verified":
+    raise SystemExit("expected audit_trail_parity_status=verified")
+if lane_payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
+if lane_payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker")
+if lane_payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic durability_governance_reason_codes_csv marker")
 if lane_payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified")
 if lane_payload.get("sqlite_crash_recovery_contract_status") != "verified":
@@ -137,6 +167,10 @@ if policy_payload.get("historical_query_reason_taxonomy_version") != "kamn.runti
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker in policy report")
 if policy_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker in policy report")
+if policy_payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker in policy report")
+if policy_payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic durability_governance_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_sqlite_crash_recovery_live_policy.sh" "$CONTRACT_LANE"; then

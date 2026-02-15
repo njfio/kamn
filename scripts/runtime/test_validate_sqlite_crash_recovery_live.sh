@@ -74,6 +74,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_code
   echo "expected sqlite crash-recovery live validation historical-query reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation promotion-gate marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^audit_trail_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation audit-trail parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_promotion_budget_boundary_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation ci-local promotion budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation durability-governance reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+  echo "expected sqlite crash-recovery live validation durability-governance reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected sqlite crash-recovery live validation dry-run command marker" >&2
   exit 1
@@ -115,6 +135,16 @@ if payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime.hist
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
 if payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
+if payload.get("crash_recovery_promotion_gate_status") != "verified":
+    raise SystemExit("expected crash_recovery_promotion_gate_status=verified")
+if payload.get("audit_trail_parity_status") != "verified":
+    raise SystemExit("expected audit_trail_parity_status=verified")
+if payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
+if payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker")
+if payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic durability_governance_reason_codes_csv marker")
 PY
 
 set +e

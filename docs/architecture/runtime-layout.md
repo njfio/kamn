@@ -70,6 +70,11 @@ Deterministic lane and policy markers include:
 - `historical_query_latency_budget_status=verified`
 - `historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1`
 - `historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch`
+- `crash_recovery_promotion_gate_status=verified`
+- `audit_trail_parity_status=verified`
+- `ci_local_promotion_budget_boundary_status=verified`
+- `durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1`
+- `durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
 - `sqlite_crash_recovery_policy_status=verified`
 
 ## Reconciliation Consistency Governance

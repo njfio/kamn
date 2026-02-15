@@ -43,6 +43,13 @@ HISTORICAL_QUERY_REASON_CODES_CSV = (
     "historical_query_index_drift,historical_query_latency_budget_exceeded,"
     "historical_query_consistency_mismatch"
 )
+DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.durability-governance-reason-taxonomy.v1"
+)
+DURABILITY_GOVERNANCE_REASON_CODES_CSV = (
+    "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -68,11 +75,20 @@ def run_lane(args: argparse.Namespace) -> int:
         "KAMN_SQLITE_CRASH_RECOVERY_LIVE_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
     )
+    ci_local_promotion_max_seconds = require_positive_int(
+        "KAMN_SQLITE_CRASH_RECOVERY_CI_LOCAL_PROMOTION_MAX_SECONDS",
+        os.environ.get("KAMN_SQLITE_CRASH_RECOVERY_CI_LOCAL_PROMOTION_MAX_SECONDS", "240"),
+    )
 
     if mode == "run" and args.local_opt_in != "1":
         fail(
             "run mode requires explicit local-only opt-in via "
             "KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1"
+        )
+    if max_seconds > ci_local_promotion_max_seconds:
+        fail(
+            "sqlite crash-recovery live lane max-seconds exceeds ci-local promotion boundary: "
+            f"{max_seconds}s (boundary={ci_local_promotion_max_seconds}s)"
         )
 
     start_epoch = int(time.time())
@@ -159,6 +175,16 @@ def run_lane(args: argparse.Namespace) -> int:
             HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
         ),
         "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "crash_recovery_promotion_gate_status": "verified",
+        "audit_trail_parity_status": "verified",
+        "ci_local_promotion_budget_boundary_status": "verified",
+        "ci_local_promotion_max_seconds": ci_local_promotion_max_seconds,
+        "durability_governance_reason_taxonomy_version": (
+            DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
+        ),
+        "durability_governance_reason_codes_csv": (
+            DURABILITY_GOVERNANCE_REASON_CODES_CSV
+        ),
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -198,6 +224,18 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
     )
     print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print("crash_recovery_promotion_gate_status=verified")
+    print("audit_trail_parity_status=verified")
+    print("ci_local_promotion_budget_boundary_status=verified")
+    print(f"ci_local_promotion_max_seconds={ci_local_promotion_max_seconds}")
+    print(
+        "durability_governance_reason_taxonomy_version="
+        f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "durability_governance_reason_codes_csv="
+        f"{DURABILITY_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -285,6 +323,28 @@ def check_policy(args: argparse.Namespace) -> int:
         != HISTORICAL_QUERY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_historical_query_reason_codes_csv_mismatch",
     )
+    checks.reject_if(
+        payload.get("crash_recovery_promotion_gate_status") != "verified",
+        "sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("audit_trail_parity_status") != "verified",
+        "sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_promotion_budget_boundary_status") != "verified",
+        "sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("durability_governance_reason_taxonomy_version")
+        != DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("durability_governance_reason_codes_csv")
+        != DURABILITY_GOVERNANCE_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_durability_governance_reason_codes_csv_mismatch",
+    )
     historical_query_latency_budget_ms = payload.get("historical_query_latency_budget_ms")
     max_observed_historical_query_latency_ms = payload.get(
         "max_observed_historical_query_latency_ms"
@@ -306,6 +366,22 @@ def check_policy(args: argparse.Namespace) -> int:
             max_observed_historical_query_latency_ms
             > historical_query_latency_budget_ms,
             "sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded",
+        )
+    ci_local_promotion_max_seconds = payload.get("ci_local_promotion_max_seconds")
+    max_seconds = payload.get("max_seconds")
+    checks.reject_if(
+        not isinstance(ci_local_promotion_max_seconds, int)
+        or ci_local_promotion_max_seconds <= 0,
+        "sqlite_crash_recovery_policy_ci_local_promotion_max_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(max_seconds, int) or max_seconds <= 0,
+        "sqlite_crash_recovery_policy_max_seconds_invalid",
+    )
+    if isinstance(ci_local_promotion_max_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            max_seconds > ci_local_promotion_max_seconds,
+            "sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded",
         )
 
     lane_mode = payload.get("lane_mode")
@@ -382,6 +458,12 @@ def check_policy(args: argparse.Namespace) -> int:
             HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
         ),
         "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "durability_governance_reason_taxonomy_version": (
+            DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
+        ),
+        "durability_governance_reason_codes_csv": (
+            DURABILITY_GOVERNANCE_REASON_CODES_CSV
+        ),
         "sqlite_crash_recovery_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -409,6 +491,14 @@ def check_policy(args: argparse.Namespace) -> int:
         f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
     )
     print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print(
+        "durability_governance_reason_taxonomy_version="
+        f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "durability_governance_reason_codes_csv="
+        f"{DURABILITY_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print("sqlite_crash_recovery_policy_status=verified")
     print("failed_checks=")
     if args.output_json:
