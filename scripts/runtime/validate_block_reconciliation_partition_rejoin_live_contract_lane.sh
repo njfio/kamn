@@ -107,6 +107,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^canonical_convergence_status
   echo "expected canonical convergence marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
+  echo "expected runtime transport mode marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_taxonomy_status=verified$'; then
+  echo "expected reconciliation reason taxonomy status marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_codes=none$'; then
+  echo "expected deterministic reconciliation reason-code matrix marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -203,6 +215,14 @@ if summary_report.get("final_decision") != "GO":
     raise SystemExit("expected block reconciliation partition/rejoin summary final_decision=GO")
 if policy_report.get("final_decision") != "GO":
     raise SystemExit("expected block reconciliation partition/rejoin policy final_decision=GO")
+if summary_report.get("runtime_transport_mode") != "libp2p_transport_fed":
+    raise SystemExit("expected summary runtime_transport_mode=libp2p_transport_fed")
+if summary_report.get("transport_state_transition_status") != "verified":
+    raise SystemExit("expected summary transport_state_transition_status=verified")
+if summary_report.get("reconciliation_reason_taxonomy_status") != "verified":
+    raise SystemExit("expected summary reconciliation_reason_taxonomy_status=verified")
+if summary_report.get("reconciliation_reason_codes") != ["none"]:
+    raise SystemExit("expected summary reconciliation_reason_codes=['none']")
 
 lane_report = {
     "schema_version": "kamn.runtime.block-reconciliation-partition-rejoin-live-contract-lane-report.v1",
@@ -214,6 +234,8 @@ lane_report = {
         "block_reconciliation_partition_rejoin_policy_status"
     ),
     "docs_contract_status": "verified",
+    "runtime_transport_mode_status": "verified",
+    "reconciliation_reason_taxonomy_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch",
     "performance_budget_status": "verified",
@@ -236,6 +258,8 @@ echo "lane_mode=$mode"
 echo "block_reconciliation_partition_rejoin_contract_status=verified"
 echo "block_reconciliation_partition_rejoin_policy_status=verified"
 echo "docs_contract_status=verified"
+echo "runtime_transport_mode_status=verified"
+echo "reconciliation_reason_taxonomy_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch"
 echo "performance_budget_status=verified"

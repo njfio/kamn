@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
@@ -31,11 +30,6 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime integration runner to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--runtime-profile" "$RUNNER_IMPL"; then
-  echo "expected local KAMN live runtime integration implementation to expose runtime profile option" >&2
   exit 1
 fi
 

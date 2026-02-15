@@ -3,6 +3,40 @@
 This document captures the live-node integration contract surface between KAMN
 runtime signing and `njfio/kolme_fork` compatibility expectations.
 
+## Composed Full-Stack E2E Boundary (Task #3433)
+
+- Architecture boundary:
+  - `scripts/runtime/validate_local_full_stack_integration_live.sh` is the top-level composed runtime lane.
+  - run-mode composition includes:
+    - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
+    - `scripts/runtime/validate_local_full_runtime_live.sh`
+    - `scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh`
+- Evidence lineage:
+  - top-level summary schema: `kamn.runtime.local-full-stack-integration-live-report.v1`
+  - nested Kolme summary schema: `kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
+  - nested Kolme policy schema: `kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1`
+  - composed evidence bundle schema: `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`
+  - release manifest linkage: `scripts/runtime/release_evidence_manifest.json` requires artifact id `local_full_stack_integration`.
+- Marker taxonomy (top-level fail-closed contract):
+  - `transport_convergence_status`
+  - `signer_provenance_status`
+  - `runtime_commit_submission_status`
+  - `runtime_commit_finality_status`
+  - `runtime_commit_failure_taxonomy`
+  - `runtime_provider_contract_status`
+  - `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+  - `runtime_signing_profile=kolme-fork-secp256k1-v1`
+  - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+- Deterministic fail-closed reasons:
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+  - `local_full_stack_integration_policy_kolme_summary_schema_mismatch`
+  - `local_full_stack_integration_policy_kolme_policy_final_decision_mismatch`
+  - `release_manifest_missing_required_artifact:local_full_stack_integration`
+- Operator references:
+  - CI policy surface: `docs/ci/strategy.md`
+  - Local runbook: `docs/planning/kolme-devnet-ops.md`
+  - Release gate command: `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --output-json /tmp/go-no-go-gate-report.json`
+
 ## Signature Parity Lane (Task #2299)
 
 - Vector source policy:

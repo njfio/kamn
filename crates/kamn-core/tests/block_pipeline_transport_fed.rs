@@ -200,7 +200,7 @@ fn regression_transport_fed_pipeline_rejects_stale_candidate_against_seeded_head
 #[test]
 fn functional_transport_event_feed_decodes_inbox_frames_into_transactions() {
     let transport = InMemoryPeerLifecycleTransport::default();
-    let topic = "kamn.tx.v1";
+    let topic = "kamn/messages/v1";
     let sender = "peer-sender";
     let recipient = "peer-recipient";
 
@@ -228,8 +228,9 @@ fn functional_transport_event_feed_decodes_inbox_frames_into_transactions() {
         )
         .expect("gossip frame should send");
 
-    let mut feed = TransportEventMempoolFeed::new(transport, recipient, Some(topic))
-        .expect("feed should build");
+    let mut feed =
+        TransportEventMempoolFeed::new(transport, recipient, Some(vec![topic.to_owned()]))
+            .expect("feed should build");
     let drained = feed
         .drain_pending_transactions()
         .expect("feed should decode one transaction");
@@ -239,7 +240,7 @@ fn functional_transport_event_feed_decodes_inbox_frames_into_transactions() {
 #[test]
 fn regression_transport_event_feed_rejects_malformed_payload() {
     let transport = InMemoryPeerLifecycleTransport::default();
-    let topic = "kamn.tx.v1";
+    let topic = "kamn/messages/v1";
     let sender = "peer-alpha";
     let recipient = "peer-beta";
 
@@ -263,12 +264,13 @@ fn regression_transport_event_feed_rejects_malformed_payload() {
         )
         .expect("gossip frame should send");
 
-    let mut feed = TransportEventMempoolFeed::new(transport, recipient, Some(topic))
-        .expect("feed should build");
+    let mut feed =
+        TransportEventMempoolFeed::new(transport, recipient, Some(vec![topic.to_owned()]))
+            .expect("feed should build");
     let result = feed.drain_pending_transactions();
     assert!(
         matches!(result, Err(BlockPipelineError::TransportFeed(detail))
-            if detail.contains("transport_candidate_payload_malformed")),
+            if detail.contains("p2p_ingress_payload_line_malformed")),
         "malformed payload should fail with deterministic marker"
     );
 }
@@ -312,8 +314,12 @@ fn regression_transport_event_feed_rejects_topic_mismatch() {
         )
         .expect("gossip frame should send");
 
-    let mut feed = TransportEventMempoolFeed::new(transport, recipient, Some("kamn.tx.v1"))
-        .expect("feed should build");
+    let mut feed = TransportEventMempoolFeed::new(
+        transport,
+        recipient,
+        Some(vec!["kamn/messages/v1".to_owned()]),
+    )
+    .expect("feed should build");
     let result = feed.drain_pending_transactions();
     assert!(
         matches!(result, Err(BlockPipelineError::TransportFeed(detail))

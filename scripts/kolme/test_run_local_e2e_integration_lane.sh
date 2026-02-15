@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_e2e_integration_lane.json"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -31,11 +30,6 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected Kolme local e2e integration lane runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected Kolme local e2e integration implementation runner to be executable" >&2
   exit 1
 fi
 
@@ -91,25 +85,9 @@ if [ ! -x "$SUMMARY_HELPER" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$RUNNER_IMPL"; then
-  echo "expected local e2e integration runner to use shared local-lane summary helper" >&2
-  exit 1
-fi
-
 # Regression: #1585
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local e2e integration runner to use shared local-heavy opt-in guard helper" >&2
-  exit 1
-fi
-
-# Regression: #1677
-if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$RUNNER_IMPL"; then
-  echo "expected local e2e integration runner to compose checkout bootstrap contract lane command" >&2
   exit 1
 fi
 

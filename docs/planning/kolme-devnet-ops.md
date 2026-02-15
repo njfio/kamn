@@ -12,6 +12,36 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deterministic marker validation from fixture contract.
 - PR-safe runtime budget guard for smoke lane cost control.
 
+## Composed Full-Stack E2E Lane (Issue #3420)
+
+- Composed runtime lane command:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --output-json /tmp/local-full-stack-integration-summary.json`
+- Local-only composed run-mode command:
+  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --kolme-checkout-path /tmp/kolme_fork --kolme-expected-remote-url https://github.com/njfio/kolme_fork.git --kolme-expected-ref refs/heads/main --kolme-base-url http://127.0.0.1:3000 --kolme-fork-chain-version v0.15.2 --output-json /tmp/local-full-stack-integration-summary.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
+- Contract lane command:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
+- Composition contract:
+  - run-mode composes:
+    - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
+    - `scripts/runtime/validate_local_full_runtime_live.sh`
+    - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
+  - nested Kolme summary/policy evidence is fail-closed for:
+    - signer provenance markers
+    - runtime commit submission markers
+    - runtime commit finality markers
+    - provider contract marker `KolmeRuntimeCommitLiveProvider`
+    - local checkout/remote/ref/base-url/fork-chain prerequisite markers
+    - local-only enforcement and nested run-mode policy reason-code marker `live_runtime_integration_passed`
+- Deterministic tamper reason:
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+- Release go/no-go linkage:
+  - `scripts/runtime/release_evidence_manifest.json` includes required artifact id `local_full_stack_integration`.
+  - release gate runner consumes `validate_local_full_stack_integration_live_contract_lane.sh` and fails closed on missing/tampered evidence linkage.
+- Architecture boundary reference:
+  - `docs/architecture/kolme-live-integration.md`
+
 ## Lane Migration Matrix (Issue #1721)
 
 - Canonical prioritized lane migration matrix fixture:
@@ -1538,6 +1568,39 @@ Operator checkpoints:
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
   - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
+
+## Runtime Local Three-Node Convergence (Issue #3417)
+
+- Bounded dry-run contract lane:
+  - `bash scripts/runtime/validate_local_full_runtime_live_contract_lane.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/local-full-runtime-live-contract-lane-report.json --policy-output-json /tmp/local-full-runtime-live-policy-report.json`
+- Explicit local-heavy run mode:
+  - `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1 bash scripts/runtime/validate_local_full_runtime_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-runtime-live-summary.json`
+- Required convergence evidence markers:
+  - `three_node_role_set_status=verified`
+  - `transport_propagation_status=verified`
+  - `canonical_convergence_status=verified`
+  - `runtime_transport_mode=libp2p_transport_fed`
+- Deterministic fail-closed policy reason markers:
+  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `local_full_runtime_policy_three_node_role_set_status_mismatch`
+  - `local_full_runtime_policy_canonical_convergence_status_mismatch`
+
+## Runtime Block Reconciliation Partition/Rejoin (Issue #3418)
+
+- Bounded dry-run contract lane:
+  - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live_contract_lane.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/block-reconciliation-partition-rejoin-contract-lane-report.json --policy-output-json /tmp/block-reconciliation-partition-rejoin-policy-report.json`
+- Explicit local-heavy run mode:
+  - `KAMN_BLOCK_RECONCILIATION_PARTITION_REJOIN_LIVE_OPT_IN=1 bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`
+- Required reconciliation evidence markers:
+  - `runtime_transport_mode=libp2p_transport_fed`
+  - `transport_state_transition_status=verified`
+  - `reconciliation_reason_taxonomy_status=verified`
+  - `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
+  - `reconciliation_reason_codes=none|...`
+- Deterministic fail-closed policy reason markers:
+  - `block_reconciliation_partition_rejoin_policy_transport_mode_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
 
 ## Failover + Sync Drill Lane Policy (Issues #787, #788)
 

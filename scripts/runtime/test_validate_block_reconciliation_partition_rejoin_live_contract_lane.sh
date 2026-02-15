@@ -52,6 +52,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^block_reconciliation_partition_rej
   echo "expected block reconciliation partition/rejoin contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_transport_mode_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin contract lane runtime transport mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reconciliation_reason_taxonomy_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin contract lane reconciliation taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch$'; then
   echo "expected block reconciliation partition/rejoin contract lane fail-closed reason marker" >&2
   exit 1
@@ -75,6 +83,10 @@ if lane_payload.get("block_reconciliation_partition_rejoin_contract_status") != 
     raise SystemExit("expected block_reconciliation_partition_rejoin_contract_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
+if lane_payload.get("runtime_transport_mode_status") != "verified":
+    raise SystemExit("expected runtime_transport_mode_status=verified")
+if lane_payload.get("reconciliation_reason_taxonomy_status") != "verified":
+    raise SystemExit("expected reconciliation_reason_taxonomy_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 

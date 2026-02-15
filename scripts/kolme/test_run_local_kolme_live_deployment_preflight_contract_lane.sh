@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py"
 LANE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
-LANE_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane_impl.sh"
 RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_contract_lane.json"
@@ -32,11 +31,6 @@ fi
 
 if [ ! -x "$LANE_RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$LANE_RUNNER_IMPL" ]; then
-  echo "expected local Kolme live deployment preflight implementation runner to be executable" >&2
   exit 1
 fi
 

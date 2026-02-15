@@ -104,17 +104,15 @@ def load_baseline_metrics(path: Path) -> ScriptMetrics:
 
 def compute_metrics(scripts_root: Path) -> ScriptMetrics:
     def include_in_budget(path: Path) -> bool:
-        return path.is_file() and not path.name.startswith("test_")
+        # Symlink wrappers are tracked by dedicated wrapper-family trend
+        # budgets; this checker focuses on concrete implementation scripts.
+        return path.is_file() and not path.is_symlink() and not path.name.startswith("test_")
 
     scripts = sorted(
         path for path in scripts_root.rglob("*.sh") if include_in_budget(path)
     )
     script_count = len(scripts)
     def shell_lines_for_budget(path: Path) -> int:
-        # Symlink wrappers represent command-surface entries, not full copies
-        # of the target implementation body.
-        if path.is_symlink():
-            return 1
         return sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
 
     shell_line_total = sum(shell_lines_for_budget(path) for path in scripts)
@@ -124,12 +122,11 @@ def compute_metrics(scripts_root: Path) -> ScriptMetrics:
         count for count in basename_counts.values() if count > 1
     )
 
-    # Treat symlink wrappers as intentional command-surface entries and only
-    # enforce duplicate-content policy across regular files.
+    # Only regular files are in-budget; duplicate-content policy applies
+    # across the same regular-file set.
     content_counts = Counter(
         hashlib.sha256(path.read_bytes()).hexdigest()
         for path in scripts
-        if not path.is_symlink()
     )
     duplicate_content = sum(
         count for count in content_counts.values() if count > 1

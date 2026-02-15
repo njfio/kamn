@@ -16,6 +16,15 @@ production and consensus validation (Task #2926, Subtask #2927).
 
 - `MempoolBlockPipeline`
   - orchestrates one consensus round over pending mempool transactions.
+- `GossipIngressAdapter`
+  - decodes deterministic gossip frame payloads into typed
+    `BaselineTransaction` and `CanonicalCommitRecord` structures.
+- `GossipFrameTransportMempoolFeed`
+  - bridges `PeerGossipFrame` ingress payloads into transport-fed mempool
+    candidates while retaining decoded canonical block candidates.
+- `TransportFedBlockPipeline::reconcile_transport_candidates(...)`
+  - applies deterministic fork-choice over transport-provided canonical
+    candidates and persists accepted records before transaction consensus.
 - `BlockConsensusRoundInput`
   - listener and approver attestation input envelope for a round.
 - `BlockPipelineCommitReport`
@@ -50,14 +59,28 @@ Processor role runtime wiring now includes:
 - Approver payload-digest overrides must match deterministic digest:
   `BlockPipelineError::ConsensusPayloadDigestMismatch`.
 - Listener and approver quorum errors are surfaced as typed failures.
+- Unsupported ingress topics fail closed with:
+  `p2p_ingress_topic_unsupported`.
+- Malformed ingress payload key/value lines fail closed with:
+  `p2p_ingress_payload_line_malformed`.
+- Invalid transaction signatures fail closed with:
+  `p2p_ingress_tx_signature_invalid`.
+- Reconciled canonical candidates surface deterministic reject reasons:
+  `fork_choice_stale_block_height`, `fork_choice_duplicate_candidate`,
+  `fork_choice_tie_break_loser`.
 
 Regression marker:
 - `Regression: #2927` keeps digest mismatch fail-closed before commit.
+- `Regression: #3415` keeps gossip ingress decode/reason-code taxonomy stable.
+- `Regression: #3416` keeps canonical candidate reconciliation ordering and
+  reorg reason-code outcomes deterministic.
 
 ## Validation Commands
 
 ```bash
 cargo test -p kamn-core --test block_pipeline
+cargo test -p kamn-core --test block_pipeline_gossip_ingest
+cargo test -p kamn-core --test block_pipeline_canonical_reconciliation
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

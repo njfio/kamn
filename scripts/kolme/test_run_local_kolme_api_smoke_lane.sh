@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_api_smoke_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_api_smoke_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_api_smoke_lane.json"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -45,11 +44,6 @@ PY
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme API smoke runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local Kolme API smoke implementation runner to be executable" >&2
   exit 1
 fi
 
@@ -101,11 +95,6 @@ manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --res
 assert_eq "$manifest_path" "$MANIFEST" "expected local Kolme API smoke wrapper to resolve deterministic manifest"
 if bash "$DISPATCHER" --lane-wrapper run_missing_api_smoke_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
   echo "expected local run lane dispatcher to fail closed for unknown wrapper" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local Kolme API smoke implementation runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

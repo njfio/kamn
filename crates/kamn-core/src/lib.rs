@@ -154,9 +154,11 @@ pub use audit_exports::{
 pub use block_pipeline::{
     decode_transport_candidate_payload, encode_transport_candidate_payload,
     AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
-    BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore,
-    DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
-    InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed, MempoolBlockPipeline,
+    BlockPipelineError, CanonicalCandidateDecision, CanonicalCandidateOutcome,
+    CanonicalCommitRecord, CanonicalCommitStore, DeterministicCompetingBranchForkChoiceHook,
+    ForkChoiceDecision, ForkChoiceHook, GossipFrameTransportMempoolFeed, GossipIngressAdapter,
+    GossipIngressBatch, GossipIngressError, GossipIngressRecord, InMemoryCanonicalCommitStore,
+    InMemoryTransportMempoolFeed, MempoolBlockPipeline, TransportCanonicalCandidateFeed,
     TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};

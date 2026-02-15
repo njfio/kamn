@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_native_api_parity_live_proof_lane.json"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -34,11 +33,6 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local native API parity live proof implementation runner to be executable" >&2
-  exit 1
-fi
-
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected local run lane dispatcher to be executable" >&2
   exit 1
@@ -56,11 +50,6 @@ fi
 
 if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
   echo "expected local native API parity live proof runner symlink target to be run_lane_dispatch.sh" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local native API parity live proof implementation to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

@@ -185,10 +185,18 @@ This document captures node-runtime productionization slices for machine-readabl
 
 ## Transport-Fed Block Pipeline Contracts
 - `TransportFedBlockPipeline` consumes transaction candidates from `TransportMempoolFeed` rather than synthetic-only mempool input.
+- `TransportFedBlockPipeline::reconcile_transport_candidates(...)` drains transport-provided canonical block candidates before each consensus round.
 - Canonical commits persist through `CanonicalCommitStore` after fork-choice acceptance.
 - Fork-choice integration points are deterministic:
   - `ForkChoiceHook::evaluate_candidate(...)` drives `Accept` vs `Reject` decisions
   - reject path fails closed via `BlockPipelineError::ForkChoiceRejected`
+- Reconciled transport candidates emit explicit deterministic outcome categories:
+  - `CanonicalCandidateDecision::Accepted`
+  - `CanonicalCandidateDecision::Rejected { reason_code }`
+- Reconciled reject reason-code examples:
+  - `fork_choice_stale_block_height`
+  - `fork_choice_duplicate_candidate`
+  - `fork_choice_tie_break_loser`
 - Canonical commit payload includes:
   - block height and producer role
   - deterministic payload digest

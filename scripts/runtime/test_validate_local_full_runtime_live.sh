@@ -42,6 +42,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^full_runtime_shutdown_status
   echo "expected local full-runtime live validation shutdown marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^three_node_role_set_status=verified$'; then
+  echo "expected local full-runtime live validation three-node role-set marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^transport_propagation_status=verified$'; then
+  echo "expected local full-runtime live validation transport propagation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^canonical_convergence_status=verified$'; then
+  echo "expected local full-runtime live validation canonical convergence marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
+  echo "expected local full-runtime live validation runtime transport mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected local full-runtime live validation dry-run command marker" >&2
   exit 1
@@ -67,6 +83,14 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 for dry-run")
 if payload.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("three_node_role_set_status") != "verified":
+    raise SystemExit("expected three_node_role_set_status=verified")
+if payload.get("transport_propagation_status") != "verified":
+    raise SystemExit("expected transport_propagation_status=verified")
+if payload.get("canonical_convergence_status") != "verified":
+    raise SystemExit("expected canonical_convergence_status=verified")
+if payload.get("runtime_transport_mode") != "libp2p_transport_fed":
+    raise SystemExit("expected runtime_transport_mode=libp2p_transport_fed")
 PY
 
 set +e

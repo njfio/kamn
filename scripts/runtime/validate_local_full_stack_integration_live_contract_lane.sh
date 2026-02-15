@@ -11,6 +11,11 @@ policy_output_json=""
 max_seconds="${KAMN_LOCAL_FULL_STACK_INTEGRATION_CONTRACT_MAX_SECONDS:-180}"
 ci_fast_gate="PASS"
 mode="dry-run"
+kolme_checkout_path="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_CHECKOUT_PATH:-/tmp/kolme_fork}"
+kolme_expected_remote_url="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_EXPECTED_REMOTE_URL:-https://github.com/njfio/kolme_fork.git}"
+kolme_expected_ref="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_EXPECTED_REF:-refs/heads/main}"
+kolme_base_url="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_BASE_URL:-http://127.0.0.1:3000}"
+kolme_fork_chain_version="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_FORK_CHAIN_VERSION:-v0.15.2}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +37,26 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mode)
       mode="${2:-}"
+      shift 2
+      ;;
+    --kolme-checkout-path)
+      kolme_checkout_path="${2:-}"
+      shift 2
+      ;;
+    --kolme-expected-remote-url)
+      kolme_expected_remote_url="${2:-}"
+      shift 2
+      ;;
+    --kolme-expected-ref)
+      kolme_expected_ref="${2:-}"
+      shift 2
+      ;;
+    --kolme-base-url)
+      kolme_base_url="${2:-}"
+      shift 2
+      ;;
+    --kolme-fork-chain-version)
+      kolme_fork_chain_version="${2:-}"
       shift 2
       ;;
     *)
@@ -81,8 +106,17 @@ validation_output="$(
   bash "$VALIDATION_SCRIPT" \
     --mode "$mode" \
     --max-seconds "$max_seconds" \
+    --kolme-checkout-path "$kolme_checkout_path" \
+    --kolme-expected-remote-url "$kolme_expected_remote_url" \
+    --kolme-expected-ref "$kolme_expected_ref" \
+    --kolme-base-url "$kolme_base_url" \
+    --kolme-fork-chain-version "$kolme_fork_chain_version" \
     --output-json "$summary_report"
 )"
+domain_expected_status="planned"
+if [ "$mode" = "run" ]; then
+  domain_expected_status="verified"
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
   echo "expected local full-stack integration validation status=pass marker" >&2
   exit 1
@@ -101,6 +135,54 @@ if ! printf '%s\n' "$validation_output" | grep -q '^full_runtime_status=verified
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^evidence_bundle_status=verified$'; then
   echo "expected local full-stack integration evidence bundle marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^transport_convergence_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration transport convergence marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^signer_provenance_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration signer provenance marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^runtime_commit_submission_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration runtime commit submission marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^runtime_commit_finality_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration runtime commit finality marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^runtime_provider_contract_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration runtime provider contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider$'; then
+  echo "expected local full-stack integration runtime provider contract client marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signing_profile=kolme-fork-secp256k1-v1$'; then
+  echo "expected local full-stack integration runtime signing profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1$'; then
+  echo "expected local full-stack integration runtime signer attestation schema marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^kolme_local_prerequisite_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration Kolme local prerequisite marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^kolme_local_only_enforced_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration Kolme local-only enforcement marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^kolme_integration_mode_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration Kolme integration mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^kolme_integration_policy_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration Kolme integration policy marker" >&2
   exit 1
 fi
 
@@ -132,7 +214,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["evidence_bundle_status"] = "missing"
+payload["runtime_commit_finality_status"] = "missing"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -150,7 +232,7 @@ if [ "$tampered_policy_code" -eq 0 ]; then
   echo "expected tampered local full-stack integration report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_full_stack_integration_policy_evidence_bundle_status_mismatch'; then
+if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_full_stack_integration_policy_runtime_commit_finality_status_mismatch'; then
   echo "expected deterministic fail-closed reason for tampered local full-stack integration report" >&2
   exit 1
 fi
@@ -179,7 +261,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 lane_report="$TMP_DIR/local-full-stack-integration-contract-lane-report.json"
-python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" <<'PY'
+python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" "$kolme_checkout_path" "$kolme_expected_remote_url" "$kolme_expected_ref" "$kolme_base_url" "$kolme_fork_chain_version" <<'PY'
 import json
 import pathlib
 import sys
@@ -199,6 +281,41 @@ if summary_report.get("final_decision") != "GO":
     raise SystemExit("expected local full-stack integration summary final_decision=GO")
 if policy_report.get("final_decision") != "GO":
     raise SystemExit("expected local full-stack integration policy final_decision=GO")
+if summary_report.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected runtime provider client contract marker in summary report")
+if summary_report.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime signing profile marker in summary report")
+if summary_report.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected runtime signer attestation schema marker in summary report")
+if summary_report.get("kolme_integration_report_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-summary.v1":
+    raise SystemExit("expected kolme integration report schema marker in summary report")
+if summary_report.get("kolme_integration_policy_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
+    raise SystemExit("expected kolme integration policy schema marker in summary report")
+if summary_report.get("kolme_checkout_path") != sys.argv[7]:
+    raise SystemExit("expected kolme checkout path marker in summary report")
+if summary_report.get("kolme_expected_remote_url") != sys.argv[8]:
+    raise SystemExit("expected kolme expected remote url marker in summary report")
+if summary_report.get("kolme_expected_ref") != sys.argv[9]:
+    raise SystemExit("expected kolme expected ref marker in summary report")
+if summary_report.get("kolme_base_url") != sys.argv[10]:
+    raise SystemExit("expected kolme base url marker in summary report")
+if summary_report.get("kolme_fork_chain_version") != sys.argv[11]:
+    raise SystemExit("expected kolme fork chain version marker in summary report")
+
+expected_domain_status = "planned" if mode == "dry-run" else "verified"
+for marker in (
+    "transport_convergence_status",
+    "signer_provenance_status",
+    "runtime_commit_submission_status",
+    "runtime_commit_finality_status",
+    "runtime_provider_contract_status",
+    "kolme_local_prerequisite_status",
+    "kolme_local_only_enforced_status",
+    "kolme_integration_mode_status",
+    "kolme_integration_policy_status",
+):
+    if summary_report.get(marker) != expected_domain_status:
+        raise SystemExit(f"expected {marker}={expected_domain_status} in summary report")
 
 lane_report = {
     "schema_version": "kamn.runtime.local-full-stack-integration-live-contract-lane-report.v1",
@@ -209,13 +326,41 @@ lane_report = {
     "local_full_stack_integration_policy_status": policy_report.get(
         "local_full_stack_integration_policy_status", "unknown"
     ),
+    "transport_convergence_status": summary_report.get("transport_convergence_status", "unknown"),
+    "signer_provenance_status": summary_report.get("signer_provenance_status", "unknown"),
+    "runtime_commit_submission_status": summary_report.get("runtime_commit_submission_status", "unknown"),
+    "runtime_commit_finality_status": summary_report.get("runtime_commit_finality_status", "unknown"),
+    "runtime_provider_contract_status": summary_report.get("runtime_provider_contract_status", "unknown"),
+    "runtime_provider_client_contract": summary_report.get("runtime_provider_client_contract", ""),
+    "runtime_signing_profile": summary_report.get("runtime_signing_profile", ""),
+    "runtime_signer_attestation_schema_version": summary_report.get(
+        "runtime_signer_attestation_schema_version",
+        "",
+    ),
+    "kolme_local_prerequisite_status": summary_report.get("kolme_local_prerequisite_status", "unknown"),
+    "kolme_local_only_enforced_status": summary_report.get("kolme_local_only_enforced_status", "unknown"),
+    "kolme_integration_mode_status": summary_report.get("kolme_integration_mode_status", "unknown"),
+    "kolme_integration_policy_status": summary_report.get("kolme_integration_policy_status", "unknown"),
+    "kolme_checkout_path": summary_report.get("kolme_checkout_path", ""),
+    "kolme_expected_remote_url": summary_report.get("kolme_expected_remote_url", ""),
+    "kolme_expected_ref": summary_report.get("kolme_expected_ref", ""),
+    "kolme_base_url": summary_report.get("kolme_base_url", ""),
+    "kolme_fork_chain_version": summary_report.get("kolme_fork_chain_version", ""),
+    "kolme_integration_report_schema_version": summary_report.get(
+        "kolme_integration_report_schema_version",
+        "",
+    ),
+    "kolme_integration_policy_schema_version": summary_report.get(
+        "kolme_integration_policy_schema_version",
+        "",
+    ),
     "docs_contract_status": "verified",
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "summary_report_file": str(pathlib.Path(sys.argv[1]).resolve()),
     "policy_report_file": str(pathlib.Path(sys.argv[2]).resolve()),
-    "fail_closed_reason_code": "local_full_stack_integration_policy_evidence_bundle_status_mismatch",
+    "fail_closed_reason_code": "local_full_stack_integration_policy_runtime_commit_finality_status_mismatch",
 }
 lane_report_file.write_text(json.dumps(lane_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
@@ -232,9 +377,28 @@ echo "final_decision=GO"
 echo "lane_mode=${mode}"
 echo "local_full_stack_integration_contract_status=verified"
 echo "local_full_stack_integration_policy_status=verified"
+echo "transport_convergence_status=${domain_expected_status}"
+echo "signer_provenance_status=${domain_expected_status}"
+echo "runtime_commit_submission_status=${domain_expected_status}"
+echo "runtime_commit_finality_status=${domain_expected_status}"
+echo "runtime_provider_contract_status=${domain_expected_status}"
+echo "runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider"
+echo "runtime_signing_profile=kolme-fork-secp256k1-v1"
+echo "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
+echo "kolme_local_prerequisite_status=${domain_expected_status}"
+echo "kolme_local_only_enforced_status=${domain_expected_status}"
+echo "kolme_integration_mode_status=${domain_expected_status}"
+echo "kolme_integration_policy_status=${domain_expected_status}"
+echo "kolme_checkout_path=${kolme_checkout_path}"
+echo "kolme_expected_remote_url=${kolme_expected_remote_url}"
+echo "kolme_expected_ref=${kolme_expected_ref}"
+echo "kolme_base_url=${kolme_base_url}"
+echo "kolme_fork_chain_version=${kolme_fork_chain_version}"
+echo "kolme_integration_report_schema_version=kamn.kolme.local-kamn-live-runtime-integration-summary.v1"
+echo "kolme_integration_policy_schema_version=kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1"
 echo "docs_contract_status=verified"
 echo "performance_budget_status=verified"
-echo "fail_closed_reason_code=local_full_stack_integration_policy_evidence_bundle_status_mismatch"
+echo "fail_closed_reason_code=local_full_stack_integration_policy_runtime_commit_finality_status_mismatch"
 if [[ -n "$output_json" ]]; then
   echo "report_file=$(realpath "$output_json")"
 fi
