@@ -112,8 +112,25 @@ This refreshed version separates:
 - Scope: keep this document and CI docs-contract guards synchronized with real state as issue chains close.
 
 ## Active Open Chains
-- None in this document scope as of 2026-02-15.
-- New production gaps should be decomposed under `#3333` with a new epic/story/task/subtask chain before implementation work starts.
+- Legacy R26 umbrella chain remains active with refreshed truth scope:
+  - `#3626` (epic, refreshed 2026-02-15), with active stories:
+    - `#3630` TLS completion + release-governance integration.
+    - `#3631` anti-flake merge gate reliability.
+    - `#3632` unified API-observability contract hardening (post-migration governance).
+- New R26.5 closure tranche opened for remaining production-service operational gaps:
+  - Milestone: `R26.5 Observability and transport resilience hardening` (`#37`).
+  - Epic chain: `#3333 -> #3772`.
+  - Story chains:
+    - `#3772 -> #3773` tracing standardization + observability-serving hardening.
+    - `#3772 -> #3774` shared Kolme transport retry/reconnect hardening.
+  - Task chains:
+    - `#3773 -> #3775 -> (#3782, #3783)`.
+    - `#3773 -> #3781 -> (#3789, #3788)`.
+    - `#3773 -> #3776 -> (#3784, #3785)`.
+    - `#3774 -> #3778 -> (#3790, #3791)`.
+    - `#3774 -> #3779 -> (#3793, #3792)`.
+    - `#3774 -> #3780 -> (#3794, #3795)`.
+- New production gaps continue to be decomposed under `#3333` with epic/story/task/subtask hierarchy before implementation work starts.
 
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.

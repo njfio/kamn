@@ -31,7 +31,12 @@ required_markers = (
     "#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490",
     "#3333 -> #3424 -> #3425 -> #3426",
     "Active Open Chains",
-    "None in this document scope as of 2026-02-15.",
+    "R26.5 Observability and transport resilience hardening",
+    "#3333 -> #3772",
+    "#3772 -> #3773",
+    "#3772 -> #3774",
+    "`#3773 -> #3775 -> (#3782, #3783)`.",
+    "`#3774 -> #3780 -> (#3794, #3795)`.",
     "Historical Baseline (Superseded)",
 )
 for marker in required_markers:
