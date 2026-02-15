@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check service API tranche-1 wrapper family parity and migration invariants."""
+"""Check service API tranche-2 wrapper family parity and retirement invariants."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-MATRIX_SCHEMA = "kamn.runtime.service-api-tranche1-wrapper-family-matrix.v1"
+MATRIX_SCHEMA = "kamn.runtime.service-api-tranche2-wrapper-family-matrix.v1"
 
 
 def _load_json(path: Path) -> Any:
@@ -39,8 +39,22 @@ def _ensure_string(payload: dict[str, Any], key: str) -> str:
     return value
 
 
-def _check_wrapper(root: Path, wrapper_cfg: dict[str, Any], reason_codes: list[str]) -> int:
+def _count_shell_lines(path: Path) -> int:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return sum(1 for _ in handle)
+    except OSError as exc:
+        raise SystemExit(f"wrapper_shell_loc_read_failed:{path}:{exc}") from exc
+
+
+def _check_wrapper(
+    root: Path,
+    wrapper_cfg: dict[str, Any],
+    expected_dispatch_target: str,
+    reason_codes: list[str],
+) -> tuple[int, int]:
     wrapper = _ensure_string(wrapper_cfg, "wrapper")
+    impl_script = _ensure_string(wrapper_cfg, "impl_script")
     validation_script = _ensure_string(wrapper_cfg, "validation_script")
     policy_checker = _ensure_string(wrapper_cfg, "policy_checker")
     contract_status_key = _ensure_string(wrapper_cfg, "contract_status_key")
@@ -48,30 +62,50 @@ def _check_wrapper(root: Path, wrapper_cfg: dict[str, Any], reason_codes: list[s
     tamper_reason_code = _ensure_string(wrapper_cfg, "tamper_reason_code")
 
     wrapper_path = root / wrapper
+    impl_path = root / impl_script
+
+    wrapper_shell_loc = 0
+    impl_shell_loc = 0
+
     if not wrapper_path.exists():
         reason_codes.append(f"wrapper_missing:{wrapper}")
-        return 0
-    if not _is_executable(wrapper_path):
-        reason_codes.append(f"wrapper_not_executable:{wrapper}")
-        return 0
+        return wrapper_shell_loc, impl_shell_loc
+    if not wrapper_path.is_symlink():
+        reason_codes.append(f"wrapper_not_symlink:{wrapper}")
+        return wrapper_shell_loc, impl_shell_loc
 
-    text = _read_text(wrapper_path)
-    if 'source "$ROOT_DIR/scripts/runtime/service_api_contract_lane_runner.sh"' not in text:
-        reason_codes.append(f"wrapper_runner_source_marker_missing:{wrapper}")
-    if 'service_api_contract_lane_run "$@"' not in text:
-        reason_codes.append(f"wrapper_runner_entry_marker_missing:{wrapper}")
-    if f'VALIDATION_SCRIPT="$ROOT_DIR/{validation_script}"' not in text:
-        reason_codes.append(f"wrapper_validation_script_marker_missing:{wrapper}")
-    if f'POLICY_CHECKER="$ROOT_DIR/{policy_checker}"' not in text:
-        reason_codes.append(f"wrapper_policy_checker_marker_missing:{wrapper}")
-    if f'CONTRACT_STATUS_KEY="{contract_status_key}"' not in text:
-        reason_codes.append(f"wrapper_contract_status_marker_missing:{wrapper}")
-    if f'POLICY_STATUS_KEY="{policy_status_key}"' not in text:
-        reason_codes.append(f"wrapper_policy_status_marker_missing:{wrapper}")
-    if f'TAMPER_REASON_CODE="{tamper_reason_code}"' not in text:
-        reason_codes.append(f"wrapper_tamper_reason_marker_missing:{wrapper}")
+    dispatch_target = os.readlink(wrapper_path)
+    if dispatch_target != expected_dispatch_target:
+        reason_codes.append(f"wrapper_dispatch_target_mismatch:{wrapper}")
 
-    return sum(1 for _ in wrapper_path.read_text(encoding="utf-8").splitlines())
+    # Symlink wrappers count as one line in wrapper budget accounting.
+    wrapper_shell_loc = 1
+
+    if not impl_path.exists():
+        reason_codes.append(f"impl_missing:{impl_script}")
+        return wrapper_shell_loc, impl_shell_loc
+    if not _is_executable(impl_path):
+        reason_codes.append(f"impl_not_executable:{impl_script}")
+        return wrapper_shell_loc, impl_shell_loc
+
+    impl_text = _read_text(impl_path)
+    if 'source "$ROOT_DIR/scripts/runtime/service_api_contract_lane_runner.sh"' not in impl_text:
+        reason_codes.append(f"impl_runner_source_marker_missing:{impl_script}")
+    if 'service_api_contract_lane_run "$@"' not in impl_text:
+        reason_codes.append(f"impl_runner_entry_marker_missing:{impl_script}")
+    if f'VALIDATION_SCRIPT="$ROOT_DIR/{validation_script}"' not in impl_text:
+        reason_codes.append(f"impl_validation_script_marker_missing:{impl_script}")
+    if f'POLICY_CHECKER="$ROOT_DIR/{policy_checker}"' not in impl_text:
+        reason_codes.append(f"impl_policy_checker_marker_missing:{impl_script}")
+    if f'CONTRACT_STATUS_KEY="{contract_status_key}"' not in impl_text:
+        reason_codes.append(f"impl_contract_status_marker_missing:{impl_script}")
+    if f'POLICY_STATUS_KEY="{policy_status_key}"' not in impl_text:
+        reason_codes.append(f"impl_policy_status_marker_missing:{impl_script}")
+    if f'TAMPER_REASON_CODE="{tamper_reason_code}"' not in impl_text:
+        reason_codes.append(f"impl_tamper_reason_marker_missing:{impl_script}")
+
+    impl_shell_loc = _count_shell_lines(impl_path)
+    return wrapper_shell_loc, impl_shell_loc
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -86,43 +120,65 @@ def _run(args: argparse.Namespace) -> int:
     if not isinstance(wrappers, list) or not wrappers:
         raise SystemExit("matrix_wrappers_missing")
 
-    max_shell_loc = payload.get("max_shell_loc")
-    if not isinstance(max_shell_loc, int) or max_shell_loc < 1:
-        raise SystemExit("matrix_max_shell_loc_invalid")
+    expected_dispatch_target = payload.get("expected_dispatch_target")
+    if not isinstance(expected_dispatch_target, str) or not expected_dispatch_target:
+        raise SystemExit("matrix_expected_dispatch_target_invalid")
+
+    max_wrapper_shell_loc = payload.get("max_wrapper_shell_loc")
+    if not isinstance(max_wrapper_shell_loc, int) or max_wrapper_shell_loc < 1:
+        raise SystemExit("matrix_max_wrapper_shell_loc_invalid")
+
+    max_impl_shell_loc = payload.get("max_impl_shell_loc")
+    if not isinstance(max_impl_shell_loc, int) or max_impl_shell_loc < 1:
+        raise SystemExit("matrix_max_impl_shell_loc_invalid")
 
     reason_codes: list[str] = []
-    total_shell_loc = 0
+    total_wrapper_shell_loc = 0
+    total_impl_shell_loc = 0
     for entry in wrappers:
         if not isinstance(entry, dict):
             reason_codes.append("matrix_wrapper_entry_invalid")
             continue
-        total_shell_loc += _check_wrapper(root, entry, reason_codes)
+        wrapper_loc, impl_loc = _check_wrapper(
+            root,
+            entry,
+            expected_dispatch_target,
+            reason_codes,
+        )
+        total_wrapper_shell_loc += wrapper_loc
+        total_impl_shell_loc += impl_loc
 
-    if total_shell_loc > max_shell_loc:
-        reason_codes.append("service_api_tranche1_shell_loc_budget_exceeded")
+    if total_wrapper_shell_loc > max_wrapper_shell_loc:
+        reason_codes.append("service_api_tranche2_wrapper_shell_loc_budget_exceeded")
+    if total_impl_shell_loc > max_impl_shell_loc:
+        reason_codes.append("service_api_tranche2_impl_shell_loc_budget_exceeded")
 
     if reason_codes:
         reason_codes_csv = ",".join(reason_codes)
         print("status=fail")
-        print("service_api_tranche1_wrapper_family_status=rejected")
+        print("service_api_tranche2_wrapper_family_status=rejected")
         print(f"wrapper_count={len(wrappers)}")
-        print(f"total_shell_loc={total_shell_loc}")
-        print(f"max_shell_loc={max_shell_loc}")
+        print(f"wrapper_shell_loc={total_wrapper_shell_loc}")
+        print(f"max_wrapper_shell_loc={max_wrapper_shell_loc}")
+        print(f"impl_shell_loc={total_impl_shell_loc}")
+        print(f"max_impl_shell_loc={max_impl_shell_loc}")
         print(f"reason_codes={reason_codes_csv}")
         raise SystemExit(1)
 
     print("status=pass")
-    print("service_api_tranche1_wrapper_family_status=verified")
+    print("service_api_tranche2_wrapper_family_status=verified")
     print(f"wrapper_count={len(wrappers)}")
-    print(f"total_shell_loc={total_shell_loc}")
-    print(f"max_shell_loc={max_shell_loc}")
+    print(f"wrapper_shell_loc={total_wrapper_shell_loc}")
+    print(f"max_wrapper_shell_loc={max_wrapper_shell_loc}")
+    print(f"impl_shell_loc={total_impl_shell_loc}")
+    print(f"max_impl_shell_loc={max_impl_shell_loc}")
     print("reason_codes=none")
     return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate service API tranche-1 wrapper family parity contract.",
+        description="Validate service API tranche-2 wrapper retirement parity contract.",
     )
     parser.add_argument("--root-dir", required=True, help="Repository root.")
     parser.add_argument("--matrix-file", required=True, help="Wrapper family matrix JSON.")

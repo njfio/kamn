@@ -3,17 +3,22 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/runtime/service_api_tranche1_wrapper_family_parity_contract.py"
+DISPATCHER="$ROOT_DIR/scripts/runtime/run_service_api_tranche2_contract_lane_dispatch.sh"
 MATRIX_FILE="$ROOT_DIR/fixtures/ci/service_api_tranche1_wrapper_family_matrix.json"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$CHECKER" ]; then
-  echo "expected service api tranche-1 wrapper parity checker to be executable" >&2
+  echo "expected service api tranche-2 wrapper parity checker to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected service api tranche-2 dispatcher script to be executable" >&2
   exit 1
 fi
 if [ ! -f "$MATRIX_FILE" ]; then
-  echo "expected service api tranche-1 wrapper family matrix file" >&2
+  echo "expected service api tranche-2 wrapper family matrix file" >&2
   exit 1
 fi
 
@@ -23,21 +28,38 @@ parity_output="$(
     --matrix-file "$MATRIX_FILE"
 )"
 if ! printf '%s\n' "$parity_output" | grep -q '^status=pass$'; then
-  echo "expected service api tranche-1 parity checker status=pass" >&2
+  echo "expected service api tranche-2 parity checker status=pass" >&2
   exit 1
 fi
-if ! printf '%s\n' "$parity_output" | grep -q '^service_api_tranche1_wrapper_family_status=verified$'; then
-  echo "expected service api tranche-1 parity checker status marker" >&2
+if ! printf '%s\n' "$parity_output" | grep -q '^service_api_tranche2_wrapper_family_status=verified$'; then
+  echo "expected service api tranche-2 parity checker status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$parity_output" | grep -q '^reason_codes=none$'; then
-  echo "expected service api tranche-1 parity checker reason code marker" >&2
+  echo "expected service api tranche-2 parity checker reason code marker" >&2
   exit 1
 fi
 
-while IFS=$'\t' read -r wrapper contract_key policy_key tamper_reason; do
+while IFS=$'\t' read -r wrapper impl contract_key policy_key tamper_reason; do
+  wrapper_path="$ROOT_DIR/$wrapper"
+  if [ ! -L "$wrapper_path" ]; then
+    echo "expected service api tranche-2 wrapper to be a dispatcher symlink: $wrapper" >&2
+    exit 1
+  fi
+  if [ "$(readlink "$wrapper_path")" != "run_service_api_tranche2_contract_lane_dispatch.sh" ]; then
+    echo "expected service api tranche-2 wrapper to target dispatcher script: $wrapper" >&2
+    exit 1
+  fi
+
+  resolved_impl_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$wrapper")" --resolve-impl-path)"
+  expected_impl_path="$ROOT_DIR/$impl"
+  if [ "$resolved_impl_path" != "$expected_impl_path" ]; then
+    echo "expected service api tranche-2 dispatcher to resolve implementation for $wrapper" >&2
+    exit 1
+  fi
+
   lane_output="$(
-    bash "$ROOT_DIR/$wrapper" \
+    bash "$wrapper_path" \
       --mode dry-run \
       --output-json "$TMP_DIR/$(basename "$wrapper" .sh)-report.json" \
       --policy-output-json "$TMP_DIR/$(basename "$wrapper" .sh)-policy.json"
@@ -78,6 +100,7 @@ for wrapper in payload["wrappers"]:
         "\t".join(
             [
                 wrapper["wrapper"],
+                wrapper["impl_script"],
                 wrapper["contract_status_key"],
                 wrapper["policy_status_key"],
                 wrapper["tamper_reason_code"],
@@ -88,15 +111,28 @@ PY
 )
 
 if ! grep -q "test_service_api_tranche1_wrapper_family_parity_matrix.sh" "$STRATEGY_DOC"; then
-  echo "expected CI strategy docs to reference service api tranche-1 parity matrix command" >&2
+  echo "expected CI strategy docs to reference service api tranche-2 parity matrix command" >&2
   exit 1
 fi
-if ! grep -q "service api tranche-1 runner migration parity guard" "$STRATEGY_DOC"; then
-  echo "expected CI strategy docs to include service api tranche-1 migration marker" >&2
+if ! grep -q "service api tranche-2 wrapper retirement parity guard" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include service api tranche-2 migration marker" >&2
   exit 1
 fi
 
-tampered_matrix="$TMP_DIR/service-api-tranche1-wrapper-family-matrix.tampered.json"
+set +e
+unknown_wrapper_output="$(bash "$DISPATCHER" --lane-wrapper validate_service_api_unknown_contract_lane.sh --resolve-impl-path 2>&1)"
+unknown_wrapper_code=$?
+set -e
+if [ "$unknown_wrapper_code" -eq 0 ]; then
+  echo "expected service api tranche-2 dispatcher to fail for unknown wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q 'unknown service api tranche-2 wrapper for dispatch'; then
+  echo "expected deterministic unknown-wrapper reason marker for service api tranche-2 dispatcher" >&2
+  exit 1
+fi
+
+tampered_matrix="$TMP_DIR/service-api-tranche2-wrapper-family-matrix.tampered.json"
 cp "$MATRIX_FILE" "$tampered_matrix"
 python3 - "$tampered_matrix" <<'PY'
 import json
@@ -119,12 +155,12 @@ tampered_code=$?
 set -e
 
 if [ "$tampered_code" -eq 0 ]; then
-  echo "expected tampered service api tranche-1 matrix to fail closed" >&2
+  echo "expected tampered service api tranche-2 matrix to fail closed" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_output" | grep -q 'wrapper_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh'; then
-  echo "expected deterministic policy-checker drift reason code for tampered service api tranche-1 matrix" >&2
+if ! printf '%s\n' "$tampered_output" | grep -q 'impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh'; then
+  echo "expected deterministic policy-checker drift reason code for tampered service api tranche-2 matrix" >&2
   exit 1
 fi
 
-echo "service api tranche-1 wrapper family parity matrix tests passed."
+echo "service api tranche-2 wrapper family parity matrix tests passed."

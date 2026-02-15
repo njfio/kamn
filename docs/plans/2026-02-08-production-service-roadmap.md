@@ -232,6 +232,22 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_service_api_prometheus_metrics_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `metrics_contract_status=verified`, `health_contract_status=verified`, `prometheus_format_status=verified`, `service_api_prometheus_metrics_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and metrics guard drills: `service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status`.
+  - Script-governance tranche reference (Task #3524, Subtasks #3525 and #3526):
+    - service API tranche wrapper retirement now routes through dispatcher symlink path `scripts/runtime/run_service_api_tranche2_contract_lane_dispatch.sh`.
+    - retired wrapper entrypoints:
+      - `scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh`
+      - `scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh`
+      - `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`
+      - `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh`
+    - retained implementation wrappers:
+      - `scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
+      - `scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh`
+      - `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane_impl.sh`
+      - `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane_impl.sh`
+    - deterministic tranche parity/drift guard command:
+      - `bash scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh`
+    - deterministic drift reason marker:
+      - `impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
 - Phase 2.11 local metrics scrape contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_local_metrics_scrape_live.sh`, `scripts/runtime/validate_local_metrics_scrape_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh`, `scripts/runtime/test_check_local_metrics_scrape_live_policy.sh` (Task #3271).
   - Policy checker: `scripts/runtime/check_local_metrics_scrape_live_policy.sh`.

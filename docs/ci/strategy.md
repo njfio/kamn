@@ -706,18 +706,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status`
 
-## Runtime Service API Tranche-1 Wrapper Migration Parity Matrix
-- service api tranche-1 runner migration parity guard stays on PR fast gate:
+## Runtime Service API Tranche-2 Wrapper Retirement Parity Matrix
+- service api tranche-2 wrapper retirement parity guard stays on PR fast gate:
   - `bash scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh`
-  - validates migrated wrappers are runner-backed via `scripts/runtime/service_api_contract_lane_runner.sh`:
+  - validates retired wrapper entrypoints are dispatcher symlinks:
+    - dispatcher: `scripts/runtime/run_service_api_tranche2_contract_lane_dispatch.sh`
+    - resolve command: `bash scripts/runtime/run_service_api_tranche2_contract_lane_dispatch.sh --lane-wrapper validate_service_api_prometheus_metrics_live_contract_lane.sh --resolve-impl-path`
+  - validates implementation wrappers remain runner-backed via `scripts/runtime/service_api_contract_lane_runner.sh`:
     - `scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
     - `scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh`
     - `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane_impl.sh`
     - `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane_impl.sh`
   - enforces tranche shell-wrapper budget:
-    - combined migrated wrapper shell LOC must remain `<= 260`
+    - combined wrapper symlink shell LOC must remain `<= 8`
+    - combined implementation shell LOC must remain `<= 260`
   - deterministic fail-closed drift reason marker:
-    - `wrapper_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh`
+    - `impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
 
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
