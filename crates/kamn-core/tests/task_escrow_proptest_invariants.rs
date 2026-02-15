@@ -94,7 +94,7 @@ fn apply_escrow_action(
             let amount = if remaining == 0 {
                 1
             } else {
-                (remaining.saturating_mul(u128::from(scale)) + 15) / 16
+                remaining.saturating_mul(u128::from(scale)).div_ceil(16)
             }
             .max(1);
             escrow.release(amount)
