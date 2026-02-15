@@ -545,3 +545,21 @@ fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unc
     let after = render_bootstrap_report(&report, OutputMode::json());
     assert_eq!(before, after);
 }
+
+#[test]
+fn regression_observability_endpoint_uses_async_listener_serving_path() {
+    // Regression: #3511
+    let source = include_str!("../observability_endpoint.rs");
+    assert!(
+        source.contains("tokio::net::TcpListener::bind("),
+        "observability endpoint must use tokio listener serving path"
+    );
+    assert!(
+        source.contains("async fn serve_observability_endpoint_async("),
+        "observability endpoint should expose async serving function"
+    );
+    assert!(
+        source.contains("runtime.block_on(serve_observability_endpoint_async("),
+        "sync wrapper must drive async observability serving via runtime block_on"
+    );
+}
