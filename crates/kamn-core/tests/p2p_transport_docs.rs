@@ -10,6 +10,7 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("PeerGossipFrame"));
     assert!(DOC.contains("PeerLifecycleTransportCoordinator"));
     assert!(DOC.contains("apply_live_transport_signal"));
+    assert!(DOC.contains("live_data_plane_network_id()"));
     assert!(DOC.contains("P2pSwarmDeterministicConfig"));
     assert!(DOC.contains("P2pSwarmBehaviorStack"));
     assert!(DOC.contains("P2pSwarmHarnessTask"));
@@ -29,6 +30,7 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("p2p-in-memory-transport-fallback"));
     assert!(DOC.contains("p2p-transport-profile:libp2p-live"));
     assert!(DOC.contains("p2p-live-libp2p-provider"));
+    assert!(DOC.contains("no `InMemoryPeerLifecycleTransport` delegate fallback path"));
     assert!(DOC.contains("gossip-transport-disabled"));
     assert!(DOC.contains("P2pTransportError::InvalidPeerId"));
     assert!(DOC.contains("P2pTransportError::InvalidTopic"));
@@ -43,6 +45,9 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("test_validate_p2p_transport_live.sh"));
     assert!(DOC.contains("cargo test -p kamn-core --test p2p_kademlia_bootstrap"));
     assert!(DOC.contains("cargo test -p kamn-core --test p2p_lifecycle_regression_corpus"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact"
+    ));
 }
 
 #[test]
