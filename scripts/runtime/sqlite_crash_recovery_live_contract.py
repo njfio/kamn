@@ -30,6 +30,12 @@ OPT_IN_ENV = "KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN"
 RUN_MODE_FAST_GATE_EXCLUSION_REASON = "sqlite_crash_recovery_run_mode_excluded_from_fast_gate"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "sqlite_crash_recovery_live_validation_executed"
+WAL_DURABILITY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.wal-durability-reason-taxonomy.v1"
+)
+WAL_DURABILITY_REASON_CODES_CSV = (
+    "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
+)
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -126,6 +132,10 @@ def run_lane(args: argparse.Namespace) -> int:
         "fast_gate_exclusion_reason_code": RUN_MODE_FAST_GATE_EXCLUSION_REASON,
         "sqlite_crash_recovery_state_replay_status": "verified",
         "sqlite_crash_recovery_abrupt_kill_status": "verified",
+        "wal_append_status": "verified",
+        "wal_checkpoint_status": "verified",
+        "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -146,6 +156,13 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"fast_gate_exclusion_reason_code={RUN_MODE_FAST_GATE_EXCLUSION_REASON}")
     print("sqlite_crash_recovery_state_replay_status=verified")
     print("sqlite_crash_recovery_abrupt_kill_status=verified")
+    print("wal_append_status=verified")
+    print("wal_checkpoint_status=verified")
+    print(
+        "wal_durability_reason_taxonomy_version="
+        f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -196,6 +213,24 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("sqlite_crash_recovery_abrupt_kill_status") != "verified",
         "sqlite_crash_recovery_policy_abrupt_kill_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_append_status") != "verified",
+        "sqlite_crash_recovery_policy_wal_append_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_checkpoint_status") != "verified",
+        "sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_durability_reason_taxonomy_version")
+        != WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_wal_durability_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_durability_reason_codes_csv")
+        != WAL_DURABILITY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_wal_durability_reason_codes_csv_mismatch",
     )
 
     lane_mode = payload.get("lane_mode")
@@ -262,6 +297,8 @@ def check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
+        "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -279,6 +316,11 @@ def check_policy(args: argparse.Namespace) -> int:
     print("status=ok")
     print(f"final_decision={observed_final_decision}")
     print(f"expected_final_decision={expected_final_decision}")
+    print(
+        "wal_durability_reason_taxonomy_version="
+        f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
     print("sqlite_crash_recovery_policy_status=verified")
     print("failed_checks=")
     if args.output_json:

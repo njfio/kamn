@@ -7,7 +7,18 @@ POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_sqlite_crash_recovery_live_polic
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"' EXIT
+tmp_tampered_wal_checkpoint=""
+tmp_tampered_wal_taxonomy=""
+cleanup() {
+  rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"
+  if [[ -n "$tmp_tampered_wal_checkpoint" ]]; then
+    rm -f "$tmp_tampered_wal_checkpoint"
+  fi
+  if [[ -n "$tmp_tampered_wal_taxonomy" ]]; then
+    rm -f "$tmp_tampered_wal_taxonomy"
+  fi
+}
+trap cleanup EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected sqlite crash-recovery validation script to be executable" >&2
@@ -52,6 +63,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected sqlite crash-recovery policy final_decision=GO")
 if payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified")
+if payload.get("wal_durability_reason_taxonomy_version") != "kamn.runtime.wal-durability-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic wal_durability_reason_taxonomy_version marker")
+if payload.get("wal_durability_reason_codes_csv") != "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete":
+    raise SystemExit("expected deterministic wal_durability_reason_codes_csv marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -81,6 +96,68 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch'; then
   echo "expected deterministic fail-closed reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_wal_checkpoint="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_wal_checkpoint"
+python3 - "$tmp_tampered_wal_checkpoint" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["wal_checkpoint_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+wal_checkpoint_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_wal_checkpoint" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+wal_checkpoint_tampered_code=$?
+set -e
+if [ "$wal_checkpoint_tampered_code" -eq 0 ]; then
+  echo "expected tampered wal-checkpoint sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$wal_checkpoint_tampered_output" | grep -q 'sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch'; then
+  echo "expected deterministic wal-checkpoint mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_wal_taxonomy="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_wal_taxonomy"
+python3 - "$tmp_tampered_wal_taxonomy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["wal_durability_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+wal_taxonomy_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_wal_taxonomy" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+wal_taxonomy_tampered_code=$?
+set -e
+if [ "$wal_taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected tampered wal-durability taxonomy sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$wal_taxonomy_tampered_output" | grep -q 'sqlite_crash_recovery_policy_wal_durability_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic wal-durability reason taxonomy mismatch for tampered sqlite crash-recovery report" >&2
   exit 1
 fi
 

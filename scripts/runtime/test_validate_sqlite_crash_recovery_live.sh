@@ -42,6 +42,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^sqlite_crash_recovery_abrupt
   echo "expected sqlite crash-recovery live validation abrupt-kill marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_append_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation wal-append marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_checkpoint_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation wal-checkpoint marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation wal-durability reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete$'; then
+  echo "expected sqlite crash-recovery live validation wal-durability reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected sqlite crash-recovery live validation dry-run command marker" >&2
   exit 1
@@ -67,6 +83,14 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 for dry-run")
 if payload.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("wal_append_status") != "verified":
+    raise SystemExit("expected wal_append_status=verified")
+if payload.get("wal_checkpoint_status") != "verified":
+    raise SystemExit("expected wal_checkpoint_status=verified")
+if payload.get("wal_durability_reason_taxonomy_version") != "kamn.runtime.wal-durability-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic wal_durability_reason_taxonomy_version marker")
+if payload.get("wal_durability_reason_codes_csv") != "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete":
+    raise SystemExit("expected deterministic wal_durability_reason_codes_csv marker")
 PY
 
 set +e

@@ -52,3 +52,18 @@ Deterministic lane markers include:
 - `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`
 - `correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1`
 - `correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped`
+
+## Sqlite Crash-Recovery WAL Durability Governance
+
+Sqlite crash-recovery WAL append/checkpoint taxonomy drift is enforced through:
+
+- `scripts/runtime/check_sqlite_crash_recovery_live_policy.sh`
+- `scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh`
+
+Deterministic lane and policy markers include:
+
+- `wal_append_status=verified`
+- `wal_checkpoint_status=verified`
+- `wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1`
+- `wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete`
+- `sqlite_crash_recovery_policy_status=verified`
