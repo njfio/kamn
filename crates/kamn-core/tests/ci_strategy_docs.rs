@@ -783,3 +783,15 @@ fn doc_contains_runtime_service_api_prometheus_metrics_contract_lane_ci_mode_mar
     assert!(DOC
         .contains("service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status"));
 }
+
+#[test]
+fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers() {
+    assert!(DOC.contains(
+        "run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json"
+    ));
+    assert!(DOC.contains("test_run_ignored_test_and_script_budget_trend_contract_lane.sh"));
+    assert!(DOC.contains("ignored_test_metadata_stale_entry"));
+    assert!(DOC.contains("combined_shell_surface_shell_line_total_delta_fail_exceeded"));
+    assert!(DOC.contains("combined_shell_surface_ratio_fail_ceiling_exceeded"));
+    assert!(DOC.contains("ignored_test_script_budget_trend_contract_status=pass|fail"));
+}

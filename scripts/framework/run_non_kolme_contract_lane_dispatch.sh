@@ -125,6 +125,7 @@ resolve_manifest_name() {
     run_kamn_core_rustdoc_artifact_contract_lane.sh) echo "ci_kamn_core_rustdoc_artifact_contract_lane.json" ;;
     run_test_harness_loc_soft_budget_contract_lane.sh) echo "ci_test_harness_loc_soft_budget_contract_lane.json" ;;
     run_kolme_test_harness_loc_soft_budget_contract_lane.sh) echo "ci_kolme_test_harness_loc_soft_budget_contract_lane.json" ;;
+    run_ignored_test_and_script_budget_trend_contract_lane.sh) echo "ci_ignored_test_and_script_budget_trend_contract_lane.json" ;;
     run_fast_gate_budget_delta_contract_lane.sh) echo "ci_fast_gate_budget_delta_contract_lane.json" ;;
     run_secure_provider_key_lifecycle_contract_lane.sh) echo "signer_secure_provider_key_lifecycle_contract_lane.json" ;;
     run_staging_rehearsal_contract_lane.sh) echo "deploy_staging_rehearsal_contract_lane.json" ;;
