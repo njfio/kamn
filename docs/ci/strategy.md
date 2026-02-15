@@ -2844,6 +2844,11 @@ Fast-mode CI tooling regression coverage includes:
 - Combined shell-surface trend report generator (`test_generate_combined_shell_surface_trend_report.sh`)
   - generator command:
     - `bash scripts/ci/generate_combined_shell_surface_trend_report.sh --output-json /tmp/combined-shell-surface-trend-report.json`
+  - baseline fixture:
+    - `fixtures/ci/combined_shell_surface_trend_baseline.json`
+  - script budget envelope:
+    - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=34000`)
+    - `.ci/script-surface-baseline.env` (post-#3740 refreshed baseline snapshot)
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`

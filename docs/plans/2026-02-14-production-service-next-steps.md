@@ -121,6 +121,16 @@ This refreshed version separates:
 - Local-heavy/live-node validations remain opt-in and bounded for cost control.
 - Reference policy doc: `docs/ci/strategy.md`.
 
+### Script-Surface Trend Governance Refresh (Task #3740)
+- Combined shell-surface baseline refreshed to current post-migration snapshot:
+  - `fixtures/ci/combined_shell_surface_trend_baseline.json` (`script_count=399`, `shell_line_total=33055`, `rust_line_total=115247`, `shell_to_rust_ratio=0.286819`).
+- Script-surface budget envelope refreshed for current dispatcher-migration state:
+  - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=34000`).
+  - `.ci/script-surface-baseline.env` (`SCRIPT_COUNT_BASELINE=399`, `SHELL_LINE_TOTAL_BASELINE=33055`).
+- Combined trend gate remains fail-closed for future drift using:
+  - `scripts/ci/check_combined_shell_surface_trend_policy.sh`
+  - `fixtures/ci/combined_shell_surface_trend_thresholds.json`
+
 ## Validation Commands (Low-Cost Truth Guard)
 - `bash scripts/ci/test_ci_strategy_contract.sh`
 - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
