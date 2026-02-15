@@ -164,6 +164,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^readiness_reason_taxonomy_st
   echo "expected local observability scrape validation readiness reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^degradation_taxonomy_status=verified$'; then
+  echo "expected local observability scrape validation degradation taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^degradation_reason_codes_csv=none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded$'; then
+  echo "expected local observability scrape validation degradation reason-code taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^scrape_failure_taxonomy_status=verified$'; then
+  echo "expected local observability scrape validation scrape-failure taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status$'; then
+  echo "expected local observability scrape validation scrape-failure taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
   echo "expected local observability scrape validation fail-closed marker" >&2
   exit 1
@@ -197,7 +213,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["readiness_failure_drill_status"] = "missing"
+payload["degradation_reason_codes_csv"] = "none,unexpected_code"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -216,7 +232,7 @@ if [ "$tampered_policy_code" -eq 0 ]; then
   echo "expected tampered local observability scrape report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_observability_scrape_policy_marker_missing:readiness_failure_drill_status'; then
+if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_observability_scrape_policy_degradation_reason_codes_csv_mismatch'; then
   echo "expected deterministic fail-closed reason for tampered local observability scrape report" >&2
   exit 1
 fi
@@ -249,6 +265,10 @@ if ! grep -q "bounded to seven targeted \`kamn-node\` observability endpoint tes
   echo "expected CI strategy docs to include seven-test local observability scrape run-mode budget marker" >&2
   exit 1
 fi
+if ! grep -q "telemetry degradation taxonomy policy checker markers remain command-surface contract-governed" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include telemetry degradation taxonomy policy checker command-surface contract marker" >&2
+  exit 1
+fi
 
 if ! grep -q "Task #3335, Subtask #3336" "$ROADMAP_DOC"; then
   echo "expected roadmap marker for Task #3335, Subtask #3336" >&2
@@ -276,6 +296,10 @@ if ! grep -q "functional_observability_endpoint_readiness_reason_taxonomy_covers
 fi
 if ! grep -q "functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix" "$CONTRACT_IMPL"; then
   echo "expected local observability scrape contract implementation to include readiness dependency-probe taxonomy selector" >&2
+  exit 1
+fi
+if ! grep -q "DEGRADATION_REASON_CODES_CSV" "$CONTRACT_IMPL"; then
+  echo "expected local observability scrape contract implementation to include degradation reason-code taxonomy matrix marker" >&2
   exit 1
 fi
 
@@ -335,7 +359,7 @@ lane_report = {
     ),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
-    "fail_closed_reason_code": "local_observability_scrape_policy_marker_missing:readiness_failure_drill_status",
+    "fail_closed_reason_code": "local_observability_scrape_policy_degradation_reason_codes_csv_mismatch",
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
@@ -376,7 +400,7 @@ echo "local_observability_scrape_contract_status=verified"
 echo "local_observability_scrape_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
-echo "fail_closed_reason_code=local_observability_scrape_policy_marker_missing:readiness_failure_drill_status"
+echo "fail_closed_reason_code=local_observability_scrape_policy_degradation_reason_codes_csv_mismatch"
 echo "performance_budget_status=verified"
 if [[ -n "$output_json" ]]; then
   echo "contract_lane_report=$output_json"

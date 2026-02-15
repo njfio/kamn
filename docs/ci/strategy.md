@@ -561,8 +561,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
   - lane emits deterministic readiness degradation drill marker (`readiness_failure_drill_status=verified`).
   - lane emits deterministic readiness reason taxonomy marker (`readiness_reason_taxonomy_status=verified`).
+  - lane emits deterministic degradation taxonomy marker (`degradation_taxonomy_status=verified`) and reason-code csv marker (`degradation_reason_codes_csv=none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded`).
+  - lane emits deterministic scrape-failure taxonomy marker (`scrape_failure_taxonomy_status=verified`) and taxonomy csv marker (`scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status`).
+  - telemetry degradation taxonomy policy checker markers remain command-surface contract-governed.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`
+  - `local_observability_scrape_policy_degradation_reason_codes_csv_mismatch`
 
 ## Runtime Service API Axum Ingress Contract Lane
 - Entry commands:
