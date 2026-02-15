@@ -93,7 +93,8 @@ This refreshed version separates:
 - Validation:
   - local-focused targeted tests in `kamn-node` for daemon and `kolme-live` runtime execution status mapping,
   - endpoint rendering contract tests for metrics/health/stream payload parity,
-  - readiness degradation/failure-drill marker coverage in the local observability scrape lane and policy checker.
+  - readiness degradation/failure-drill marker coverage in the local observability scrape lane and policy checker,
+  - readiness dependency-probe taxonomy matrix coverage (`main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix`) tracked under #3489.
 
 ### Docs truth synchronization (this tranche)
 - Open chain: `#3333 -> #3424 -> #3425 -> #3426`.
