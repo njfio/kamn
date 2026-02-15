@@ -9,8 +9,9 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `scripts/runtime/validate_local_full_stack_integration_live.sh` is the top-level composed runtime lane.
   - run-mode composition includes:
     - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
-    - `scripts/runtime/validate_local_full_runtime_live.sh`
-    - `scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh`
+    - `scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh`
+    - `scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh`
+    - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
 - Evidence lineage:
   - top-level summary schema: `kamn.runtime.local-full-stack-integration-live-report.v1`
   - nested Kolme summary schema: `kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
@@ -22,13 +23,20 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `signer_provenance_status`
   - `runtime_commit_submission_status`
   - `runtime_commit_finality_status`
-  - `runtime_commit_failure_taxonomy`
+  - `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+  - `combined_transport_reason_codes=fork_choice_stale_block_height`
+  - `combined_kolme_runtime_reason_code`
+  - `kolme_runtime_commit_failure_taxonomy_version=v1`
+  - `kolme_runtime_commit_failure_taxonomy`
+  - `kolme_fixture_profile=real-node-non-synthetic-v1`
+  - `kolme_fixture_profile_version=v1`
+  - `kolme_fixture_profile_status`
   - `runtime_provider_contract_status`
   - `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`
   - `runtime_signing_profile=kolme-fork-secp256k1-v1`
   - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
 - Deterministic fail-closed reasons:
-  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+  - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
   - `local_full_stack_integration_policy_kolme_summary_schema_mismatch`
   - `local_full_stack_integration_policy_kolme_policy_final_decision_mismatch`
   - `release_manifest_missing_required_artifact:local_full_stack_integration`

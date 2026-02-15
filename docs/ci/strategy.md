@@ -45,7 +45,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
-  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+  - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
   - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
@@ -468,7 +468,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - manual-hardened mode: manual
 - Integration composition contract:
   - composes full I/O scenario matrix lane (`validate_full_io_scenario_matrix_live.sh`) in run mode.
-  - composes full-runtime supervisor lane (`validate_local_full_runtime_live.sh`) in run mode.
+  - composes native libp2p convergence lane (`validate_libp2p_convergence_process_isolated_live.sh`) in deep run mode.
+  - composes native libp2p convergence policy checker (`check_libp2p_convergence_process_isolated_live_policy.sh`) in run mode.
   - composes Kolme runtime integration lane (`run_local_kamn_live_runtime_integration_lane.sh`) in run mode.
   - enforces top-level marker domains for:
     - transport convergence
@@ -478,6 +479,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
     - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
     - nested Kolme local-only enforcement and run-mode policy markers
+    - deterministic combined reason taxonomy version (`kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`)
+    - deterministic transport reason taxonomy (`fork_choice_stale_block_height`)
+    - deterministic Kolme fixture profile (`real-node-non-synthetic-v1`, profile version `v1`)
   - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
@@ -486,7 +490,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
-  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+  - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
 
 ## Deploy Compose Topology Contract Lane
 - Entry commands:

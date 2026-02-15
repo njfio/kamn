@@ -58,3 +58,26 @@ hand-rolled parser/listener path.
   - `GET` requests with non-empty body indicators (`Content-Length > 0` or
     `Transfer-Encoding`) resolve to deterministic `404 not found`
   - request budget and idle timeout remain deterministic and fail closed
+
+## Combined Native Transport + Kolme Commit Validation Flow
+
+The local full-stack integration lane composes native libp2p transport and
+Kolme runtime-commit checks in one local-heavy run.
+
+- Entry lane:
+  - `scripts/runtime/validate_local_full_stack_integration_live.sh`
+- Composed run-mode lanes:
+  - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
+  - `scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh`
+  - `scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh`
+  - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
+  - `scripts/kolme/check_local_kamn_live_runtime_integration_policy.py`
+- Combined fail-closed taxonomy contracts:
+  - `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+  - `combined_transport_reason_codes=fork_choice_stale_block_height`
+  - `combined_kolme_runtime_reason_code`
+  - `kolme_runtime_commit_failure_taxonomy_version=v1`
+  - `kolme_runtime_commit_failure_taxonomy`
+  - `kolme_fixture_profile=real-node-non-synthetic-v1`
+  - `kolme_fixture_profile_version=v1`
+  - `kolme_fixture_profile_status`

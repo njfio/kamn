@@ -678,6 +678,29 @@ This document captures the initial runtime-network foundation slice for peer lif
   - scheduled concurrency stress deep lane hook (`--ignored`)
   - scheduled snapshot recovery deep lane stress hook (`--ignored`)
 
+## Combined Native libp2p + Kolme Runtime Commit Taxonomy
+
+The combined local-heavy lane keeps runtime transport and Kolme commit evidence
+in a single fail-closed taxonomy surface.
+
+- Lane composition:
+  - `scripts/runtime/validate_local_full_stack_integration_live.sh`
+  - `scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh`
+  - `scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh`
+  - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
+  - `scripts/kolme/check_local_kamn_live_runtime_integration_policy.py`
+- Top-level taxonomy markers:
+  - `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+  - `combined_transport_reason_codes=fork_choice_stale_block_height`
+  - `combined_kolme_runtime_reason_code`
+  - `kolme_runtime_commit_failure_taxonomy_version=v1`
+  - `kolme_runtime_commit_failure_taxonomy`
+  - `kolme_fixture_profile=real-node-non-synthetic-v1`
+  - `kolme_fixture_profile_version=v1`
+  - `kolme_fixture_profile_status`
+- Deterministic fail-closed drift marker:
+  - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 

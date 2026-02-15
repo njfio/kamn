@@ -25,6 +25,10 @@ cat >"$TMP_REPORT" <<'JSON'
   "fast_gate_exclusion_reason_code": "local_full_stack_integration_run_mode_excluded_from_fast_gate",
   "scenario_matrix_status": "verified",
   "full_runtime_status": "verified",
+  "native_libp2p_convergence_status": "planned",
+  "libp2p_runtime_transport_mode": "libp2p_process_isolated_convergence",
+  "libp2p_convergence_report_schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1",
+  "libp2p_convergence_policy_schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1",
   "evidence_bundle_status": "verified",
   "transport_convergence_status": "planned",
   "signer_provenance_status": "planned",
@@ -45,6 +49,14 @@ cat >"$TMP_REPORT" <<'JSON'
   "kolme_fork_chain_version": "v0.15.2",
   "kolme_integration_report_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "kolme_integration_policy_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1",
+  "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+  "combined_transport_reason_codes": ["fork_choice_stale_block_height"],
+  "combined_kolme_runtime_reason_code": "not_run",
+  "kolme_runtime_commit_failure_taxonomy_version": "v1",
+  "kolme_runtime_commit_failure_taxonomy": "not_run",
+  "kolme_fixture_profile": "real-node-non-synthetic-v1",
+  "kolme_fixture_profile_version": "v1",
+  "kolme_fixture_profile_status": "planned",
   "run_mode_command_status": "dry_run_no_commands_executed",
   "run_mode_command_count": 0,
   "reason_code": "dry_run_no_commands_executed",
@@ -150,6 +162,37 @@ if [ "$tampered_kolme_marker_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_kolme_marker_output" | grep -q 'local_full_stack_integration_policy_kolme_local_prerequisite_status_mismatch'; then
   echo "expected deterministic reason marker for tampered Kolme local prerequisite status" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["combined_reason_taxonomy_version"] = "v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_reason_taxonomy_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_reason_taxonomy_code=$?
+set -e
+if [ "$tampered_reason_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered combined reason taxonomy version to fail policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reason_taxonomy_output" | grep -q 'local_full_stack_integration_policy_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic reason marker for tampered combined reason taxonomy version" >&2
   exit 1
 fi
 

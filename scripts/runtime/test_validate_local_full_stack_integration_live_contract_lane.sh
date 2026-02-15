@@ -71,6 +71,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^runtime_provider_contract_status=p
   echo "expected local full-stack integration contract lane provider marker in dry-run" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^native_libp2p_convergence_status=planned$'; then
+  echo "expected local full-stack integration contract lane native libp2p marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_runtime_transport_mode=libp2p_process_isolated_convergence$'; then
+  echo "expected local full-stack integration contract lane libp2p runtime transport mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^kolme_local_prerequisite_status=planned$'; then
   echo "expected local full-stack integration contract lane Kolme local prerequisite marker in dry-run" >&2
   exit 1
@@ -87,7 +95,39 @@ if ! printf '%s\n' "$lane_output" | grep -q '^kolme_integration_policy_status=pl
   echo "expected local full-stack integration contract lane Kolme integration policy marker in dry-run" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_full_stack_integration_policy_runtime_commit_finality_status_mismatch$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration contract lane combined reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
+  echo "expected local full-stack integration contract lane combined transport reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_kolme_runtime_reason_code=not_run$'; then
+  echo "expected local full-stack integration contract lane combined Kolme reason marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_runtime_commit_failure_taxonomy_version=v1$'; then
+  echo "expected local full-stack integration contract lane Kolme runtime commit failure taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_runtime_commit_failure_taxonomy=not_run$'; then
+  echo "expected local full-stack integration contract lane Kolme runtime commit failure taxonomy marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile=real-node-non-synthetic-v1$'; then
+  echo "expected local full-stack integration contract lane Kolme fixture profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile_version=v1$'; then
+  echo "expected local full-stack integration contract lane Kolme fixture profile version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile_status=planned$'; then
+  echo "expected local full-stack integration contract lane Kolme fixture profile status marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_full_stack_integration_policy_reason_taxonomy_version_mismatch$'; then
   echo "expected local full-stack integration contract lane fail-closed reason marker" >&2
   exit 1
 fi
@@ -128,6 +168,14 @@ if lane_payload.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
     raise SystemExit("expected runtime_signing_profile marker")
 if lane_payload.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
     raise SystemExit("expected runtime_signer_attestation_schema_version marker")
+if lane_payload.get("native_libp2p_convergence_status") != "planned":
+    raise SystemExit("expected native_libp2p_convergence_status=planned in dry-run")
+if lane_payload.get("libp2p_runtime_transport_mode") != "libp2p_process_isolated_convergence":
+    raise SystemExit("expected libp2p_runtime_transport_mode marker")
+if lane_payload.get("libp2p_convergence_report_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
+    raise SystemExit("expected libp2p_convergence_report_schema_version marker")
+if lane_payload.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
+    raise SystemExit("expected libp2p_convergence_policy_schema_version marker")
 if lane_payload.get("kolme_local_prerequisite_status") != "planned":
     raise SystemExit("expected kolme_local_prerequisite_status=planned in dry-run")
 if lane_payload.get("kolme_local_only_enforced_status") != "planned":
@@ -136,6 +184,22 @@ if lane_payload.get("kolme_integration_mode_status") != "planned":
     raise SystemExit("expected kolme_integration_mode_status=planned in dry-run")
 if lane_payload.get("kolme_integration_policy_status") != "planned":
     raise SystemExit("expected kolme_integration_policy_status=planned in dry-run")
+if lane_payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
+    raise SystemExit("expected combined_reason_taxonomy_version marker")
+if lane_payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
+    raise SystemExit("expected combined_transport_reason_codes marker")
+if lane_payload.get("combined_kolme_runtime_reason_code") != "not_run":
+    raise SystemExit("expected combined_kolme_runtime_reason_code=not_run in dry-run")
+if lane_payload.get("kolme_runtime_commit_failure_taxonomy_version") != "v1":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy_version marker")
+if lane_payload.get("kolme_runtime_commit_failure_taxonomy") != "not_run":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy=not_run in dry-run")
+if lane_payload.get("kolme_fixture_profile") != "real-node-non-synthetic-v1":
+    raise SystemExit("expected kolme_fixture_profile marker")
+if lane_payload.get("kolme_fixture_profile_version") != "v1":
+    raise SystemExit("expected kolme_fixture_profile_version marker")
+if lane_payload.get("kolme_fixture_profile_status") != "planned":
+    raise SystemExit("expected kolme_fixture_profile_status=planned in dry-run")
 if lane_payload.get("kolme_checkout_path") != "/tmp/kolme_fork":
     raise SystemExit("expected default kolme_checkout_path marker")
 if lane_payload.get("kolme_expected_remote_url") != "https://github.com/njfio/kolme_fork.git":
@@ -166,6 +230,14 @@ if ! grep -q "check_local_full_stack_integration_live_policy.sh" "$CONTRACT_LANE
 fi
 if ! grep -q "validate_local_full_stack_integration_live.sh" "$CONTRACT_LANE"; then
   echo "expected local full-stack integration contract lane to compose validation lane" >&2
+  exit 1
+fi
+if ! grep -q "validate_libp2p_convergence_process_isolated_live.sh" "$CONTRACT_LANE"; then
+  echo "expected local full-stack integration contract lane to compose native libp2p convergence lane" >&2
+  exit 1
+fi
+if ! grep -q "check_libp2p_convergence_process_isolated_live_policy.sh" "$CONTRACT_LANE"; then
+  echo "expected local full-stack integration contract lane to compose native libp2p convergence policy checker" >&2
   exit 1
 fi
 
