@@ -479,6 +479,116 @@ fn build_live_data_plane_network_id(config: &P2pSwarmDeterministicConfig) -> Str
     format!("{bootstrap_segment}|{topic_segment}")
 }
 
+/// Fault classes observed during live libp2p reconnect/discovery operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveTransportFaultClass {
+    /// Dial or connection setup timed out.
+    DialTimeout,
+    /// Discovery backend returned unavailable/unreachable status.
+    DiscoveryUnavailable,
+    /// Stream churn/drop detected during reconnect sequence.
+    StreamChurn,
+    /// Protocol legality violation was observed (fail closed).
+    ProtocolViolation,
+}
+
+impl LiveTransportFaultClass {
+    fn retry_reason_code(self) -> &'static str {
+        match self {
+            Self::DialTimeout => "p2p_live_reconnect_retry_dial_timeout",
+            Self::DiscoveryUnavailable => "p2p_live_reconnect_retry_discovery_unavailable",
+            Self::StreamChurn => "p2p_live_reconnect_retry_stream_churn",
+            Self::ProtocolViolation => "p2p_live_reconnect_protocol_violation",
+        }
+    }
+}
+
+/// Deterministic reconnect/backoff decision output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LiveTransportReconnectDecision {
+    /// Retry is allowed with bounded deterministic backoff.
+    Retry {
+        /// Backoff budget in abstract ticks.
+        backoff_ticks: u16,
+        /// Deterministic reason code.
+        reason_code: &'static str,
+    },
+    /// Retry is disallowed and transport must fail closed.
+    FailClosed {
+        /// Deterministic reason code.
+        reason_code: &'static str,
+    },
+}
+
+/// Deterministic reconnect/backoff policy for live transport faults.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LiveTransportReconnectPolicy {
+    base_backoff_ticks: u16,
+    max_backoff_ticks: u16,
+    max_retry_attempts: u16,
+}
+
+impl LiveTransportReconnectPolicy {
+    /// Builds a validated deterministic reconnect/backoff policy.
+    pub fn new(
+        base_backoff_ticks: u16,
+        max_backoff_ticks: u16,
+        max_retry_attempts: u16,
+    ) -> Result<Self, P2pTransportError> {
+        if max_retry_attempts == 0 {
+            return Err(P2pTransportError::InvalidReconnectRetryBudget);
+        }
+        if base_backoff_ticks == 0
+            || max_backoff_ticks == 0
+            || base_backoff_ticks > max_backoff_ticks
+        {
+            return Err(P2pTransportError::InvalidReconnectBackoffWindow);
+        }
+        Ok(Self {
+            base_backoff_ticks,
+            max_backoff_ticks,
+            max_retry_attempts,
+        })
+    }
+
+    /// Evaluates deterministic reconnect decision for one fault class + attempt index.
+    pub fn evaluate(
+        &self,
+        fault_class: LiveTransportFaultClass,
+        attempt: u16,
+    ) -> LiveTransportReconnectDecision {
+        if fault_class == LiveTransportFaultClass::ProtocolViolation {
+            return LiveTransportReconnectDecision::FailClosed {
+                reason_code: fault_class.retry_reason_code(),
+            };
+        }
+
+        let normalized_attempt = attempt.max(1);
+        if normalized_attempt >= self.max_retry_attempts {
+            return LiveTransportReconnectDecision::FailClosed {
+                reason_code: "p2p_live_reconnect_retry_budget_exhausted",
+            };
+        }
+
+        LiveTransportReconnectDecision::Retry {
+            backoff_ticks: self.backoff_ticks_for_attempt(normalized_attempt),
+            reason_code: fault_class.retry_reason_code(),
+        }
+    }
+
+    fn backoff_ticks_for_attempt(&self, attempt: u16) -> u16 {
+        let mut backoff = u32::from(self.base_backoff_ticks);
+        let max_backoff = u32::from(self.max_backoff_ticks);
+        for _ in 1..attempt {
+            if backoff >= max_backoff {
+                break;
+            }
+            backoff = backoff.saturating_mul(2).min(max_backoff);
+        }
+        backoff as u16
+    }
+}
+
 /// Deterministic config used to compose a libp2p swarm behavior stack.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct P2pSwarmDeterministicConfig {
@@ -1059,6 +1169,10 @@ pub enum P2pTransportError {
     InvalidSwarmBootstrapPeerAddress(String),
     /// Swarm harness tick budget must be positive.
     InvalidSwarmHarnessTickBudget,
+    /// Reconnect retry budget must be positive.
+    InvalidReconnectRetryBudget,
+    /// Reconnect backoff window is invalid.
+    InvalidReconnectBackoffWindow,
     /// Swarm composition requested while gossip transport is disabled.
     GossipTransportDisabled,
     /// Transport state lock is unavailable.
@@ -1091,6 +1205,8 @@ impl P2pTransportError {
                 "p2p_transport_invalid_swarm_bootstrap_peer_address"
             }
             Self::InvalidSwarmHarnessTickBudget => "p2p_transport_invalid_harness_tick_budget",
+            Self::InvalidReconnectRetryBudget => "p2p_transport_invalid_reconnect_retry_budget",
+            Self::InvalidReconnectBackoffWindow => "p2p_transport_invalid_reconnect_backoff_window",
             Self::GossipTransportDisabled => "p2p_transport_gossip_disabled",
             Self::StateUnavailable => "p2p_transport_state_unavailable",
             Self::InactivePeerLifecycleState(_) => "p2p_transport_inactive_lifecycle_state",
@@ -1124,6 +1240,13 @@ impl Display for P2pTransportError {
             Self::InvalidSwarmHarnessTickBudget => {
                 write!(f, "p2p swarm harness tick budget must be positive")
             }
+            Self::InvalidReconnectRetryBudget => {
+                write!(f, "p2p reconnect retry budget must be positive")
+            }
+            Self::InvalidReconnectBackoffWindow => write!(
+                f,
+                "p2p reconnect backoff window is invalid (base/max must be positive and base <= max)"
+            ),
             Self::GossipTransportDisabled => {
                 write!(
                     f,

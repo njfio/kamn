@@ -59,6 +59,12 @@ the default fast test lane.
 - `P2pSwarmHarnessTask`
   - controlled runtime-harness startup surface for deterministic `DryRun` / `Run`
     execution modes used by local integration tests.
+- `LiveTransportReconnectPolicy`
+  - deterministic reconnect/backoff evaluator for live transport faults.
+- `LiveTransportReconnectDecision`
+  - deterministic retry/fail-closed decision contract with reason-code output.
+- `LiveTransportFaultClass`
+  - canonical fault-class taxonomy for live reconnect/discovery policy mapping.
 - `KademliaBootstrapSeedSet`
   - deterministic seed-set normalization for discovery bootstrap startup.
 - `KademliaDiscoveryBootstrapPlan`
@@ -108,6 +114,28 @@ deterministic network identity.
   - exposes deterministic reason-code taxonomy for transport policy checks and
     repeated invalid-event idempotence guards.
 
+## Reconnect Taxonomy
+
+Subtask #3576 adds deterministic reconnect/backoff policy contracts for live
+libp2p transport hardening:
+
+- `LiveTransportReconnectPolicy::new(base_backoff_ticks, max_backoff_ticks, max_retry_attempts)`
+  - validates deterministic policy bounds.
+- `LiveTransportReconnectPolicy::evaluate(fault_class, attempt)`
+  - maps fault class + attempt to deterministic decision output.
+- `LiveTransportReconnectDecision::Retry { backoff_ticks, reason_code }`
+  - emitted for retryable faults before budget exhaustion.
+- `LiveTransportReconnectDecision::FailClosed { reason_code }`
+  - emitted for non-retryable protocol faults or exhausted retry budget.
+
+Deterministic reason-code markers:
+
+- `p2p_live_reconnect_retry_dial_timeout`
+- `p2p_live_reconnect_retry_discovery_unavailable`
+- `p2p_live_reconnect_retry_stream_churn`
+- `p2p_live_reconnect_protocol_violation`
+- `p2p_live_reconnect_retry_budget_exhausted`
+
 ## Deterministic Guardrails
 
 - Empty peer IDs fail closed with `P2pTransportError::InvalidPeerId`.
@@ -123,6 +151,10 @@ deterministic network identity.
   `P2pTransportError::InvalidSwarmBootstrapPeerAddress`.
 - Zero swarm harness budgets fail closed with
   `P2pTransportError::InvalidSwarmHarnessTickBudget`.
+- Zero reconnect retry budget fails closed with
+  `P2pTransportError::InvalidReconnectRetryBudget`.
+- Invalid reconnect backoff window (`base/max` bounds) fails closed with
+  `P2pTransportError::InvalidReconnectBackoffWindow`.
 - Swarm config requests with `enable_gossip=false` fail closed with
   `P2pTransportError::GossipTransportDisabled`.
 - Empty Kademlia seed sets fail closed with
@@ -166,6 +198,7 @@ cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact
+cargo test -p kamn-core --test p2p_reconnect_policy_runtime
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants functional_peer_lifecycle_proptest_enforces_legal_transition_graph -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent -- --exact

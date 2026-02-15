@@ -14,6 +14,9 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("P2pSwarmDeterministicConfig"));
     assert!(DOC.contains("P2pSwarmBehaviorStack"));
     assert!(DOC.contains("P2pSwarmHarnessTask"));
+    assert!(DOC.contains("LiveTransportReconnectPolicy"));
+    assert!(DOC.contains("LiveTransportReconnectDecision"));
+    assert!(DOC.contains("LiveTransportFaultClass"));
     assert!(DOC.contains("KademliaBootstrapSeedSet"));
     assert!(DOC.contains("KademliaDiscoveryBootstrapPlan"));
     assert!(DOC.contains("PeerLifecycleRegressionCase"));
@@ -39,6 +42,8 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::InvalidSwarmListenAddress"));
     assert!(DOC.contains("P2pTransportError::InvalidSwarmBootstrapPeerAddress"));
     assert!(DOC.contains("P2pTransportError::InvalidSwarmHarnessTickBudget"));
+    assert!(DOC.contains("P2pTransportError::InvalidReconnectRetryBudget"));
+    assert!(DOC.contains("P2pTransportError::InvalidReconnectBackoffWindow"));
     assert!(DOC.contains("P2pTransportError::GossipTransportDisabled"));
     assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
     assert!(DOC.contains("runtime_peer_transition_invalid"));
@@ -55,6 +60,12 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains(
         "cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact"
     ));
+    assert!(DOC.contains("cargo test -p kamn-core --test p2p_reconnect_policy_runtime"));
+    assert!(DOC.contains("p2p_live_reconnect_retry_dial_timeout"));
+    assert!(DOC.contains("p2p_live_reconnect_retry_discovery_unavailable"));
+    assert!(DOC.contains("p2p_live_reconnect_retry_stream_churn"));
+    assert!(DOC.contains("p2p_live_reconnect_protocol_violation"));
+    assert!(DOC.contains("p2p_live_reconnect_retry_budget_exhausted"));
 }
 
 #[test]
