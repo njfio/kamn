@@ -562,6 +562,17 @@ Post-cutover launch gates require deterministic SLO evidence export with stale/p
   - `scripts/canary/post_cutover_slo_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
+- Deterministic alert-governance markers:
+  - `alert_rule_promotion_gate_status=verified`
+  - `burn_rate_parity_status=verified`
+  - `ci_local_promotion_budget_boundary_status=verified`
+  - `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
+  - `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+- Runtime budget controls:
+  - `KAMN_POST_CUTOVER_SLO_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY`
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
   - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`).

@@ -57,9 +57,21 @@ if ! grep -q "alerts.alert_keys mismatch" "$SHARED_CONTRACT"; then
   echo "expected post-cutover SLO shared contract-lane module to enforce alert-key drift failures" >&2
   exit 1
 fi
+if ! grep -q "burn_rate_parity_status mismatch" "$ROOT_DIR/scripts/canary/post_cutover_slo_contract.py"; then
+  echo "expected post-cutover SLO policy checker to enforce burn-rate parity drift failures" >&2
+  exit 1
+fi
+if ! grep -q "alert_governance_reason_taxonomy_version mismatch" "$ROOT_DIR/scripts/canary/post_cutover_slo_contract.py"; then
+  echo "expected post-cutover SLO policy checker to enforce alert-governance taxonomy drift failures" >&2
+  exit 1
+fi
 
 if ! grep -q "KAMN_POST_CUTOVER_SLO_MAX_SECONDS" "$SHARED_CONTRACT"; then
   echo "expected post-cutover SLO shared contract-lane module to enforce runtime budget env guard" >&2
+  exit 1
+fi
+if ! grep -q "KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS" "$SHARED_CONTRACT"; then
+  echo "expected post-cutover SLO shared contract-lane module to enforce ci-local promotion budget env guard" >&2
   exit 1
 fi
 
@@ -80,6 +92,10 @@ fi
 
 if ! grep -q "KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS" "$DEEP_SCRIPT"; then
   echo "expected SLO deep-lane script to enforce deep runtime budget env guard" >&2
+  exit 1
+fi
+if ! grep -q "KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY" "$DEEP_SCRIPT"; then
+  echo "expected SLO deep-lane script to enforce local-only opt-in guard" >&2
   exit 1
 fi
 

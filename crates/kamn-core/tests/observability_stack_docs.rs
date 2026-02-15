@@ -36,6 +36,17 @@ fn doc_contains_slo_alert_policy_checker_contract() {
     assert!(DOC.contains("slo_alert_reason_codes:GO:v1"));
     assert!(DOC.contains("slo_alert_reason_codes:NO-GO:v1"));
     assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_MAX_SECONDS"));
+    assert!(DOC.contains(
+        "alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1",
+    ));
+    assert!(DOC.contains(
+        "alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
+    ));
+    assert!(DOC.contains("alert_rule_promotion_gate_status=verified"));
+    assert!(DOC.contains("burn_rate_parity_status=verified"));
+    assert!(DOC.contains("ci_local_promotion_budget_boundary_status=verified"));
+    assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY"));
 }
 
 #[test]

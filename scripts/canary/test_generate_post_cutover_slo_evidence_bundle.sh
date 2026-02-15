@@ -53,11 +53,21 @@ go_generate_output="$(
 assert_eq "$(extract_value "$go_generate_output" "status")" "generated" "expected GO SLO bundle generation to succeed"
 assert_eq "$(extract_value "$go_generate_output" "final_decision")" "GO" "expected generator to derive GO SLO decision"
 assert_eq "$(extract_value "$go_generate_output" "reason_key")" "slo_alert_reason_codes:GO:v1" "expected GO SLO reason-key marker"
+assert_eq "$(extract_value "$go_generate_output" "alert_rule_promotion_gate_status")" "verified" "expected GO alert-rule promotion gate marker"
+assert_eq "$(extract_value "$go_generate_output" "burn_rate_parity_status")" "verified" "expected GO burn-rate parity marker"
+assert_eq "$(extract_value "$go_generate_output" "ci_local_promotion_budget_boundary_status")" "verified" "expected GO ci-local promotion budget marker"
+assert_eq "$(extract_value "$go_generate_output" "alert_governance_reason_taxonomy_version")" "kamn.runtime.alert-governance-reason-taxonomy.v1" "expected GO alert-governance reason taxonomy marker"
+assert_eq "$(extract_value "$go_generate_output" "alert_governance_reason_codes_csv")" "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded" "expected GO alert-governance reason taxonomy csv marker"
 
 go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$go_bundle")"
 assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO SLO bundle policy check to pass"
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected policy check to keep GO SLO decision"
 assert_eq "$(extract_value "$go_policy_output" "reason_key")" "slo_alert_reason_codes:GO:v1" "expected GO SLO policy reason-key marker"
+assert_eq "$(extract_value "$go_policy_output" "alert_rule_promotion_gate_status")" "verified" "expected GO policy alert-rule promotion gate marker"
+assert_eq "$(extract_value "$go_policy_output" "burn_rate_parity_status")" "verified" "expected GO policy burn-rate parity marker"
+assert_eq "$(extract_value "$go_policy_output" "ci_local_promotion_budget_boundary_status")" "verified" "expected GO policy ci-local promotion budget marker"
+assert_eq "$(extract_value "$go_policy_output" "alert_governance_reason_taxonomy_version")" "kamn.runtime.alert-governance-reason-taxonomy.v1" "expected GO policy alert-governance reason taxonomy marker"
+assert_eq "$(extract_value "$go_policy_output" "alert_governance_reason_codes_csv")" "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded" "expected GO policy alert-governance reason taxonomy csv marker"
 
 python3 - "$go_bundle" <<'PY'
 import json
@@ -77,6 +87,16 @@ if alerts["has_alerts"] is not False:
     raise SystemExit("expected GO SLO bundle alerts.has_alerts to be false")
 if alerts["alert_keys"] != []:
     raise SystemExit("expected GO SLO bundle alerts.alert_keys to be empty")
+if payload.get("alert_rule_promotion_gate_status") != "verified":
+    raise SystemExit("expected GO alert_rule_promotion_gate_status=verified")
+if payload.get("burn_rate_parity_status") != "verified":
+    raise SystemExit("expected GO burn_rate_parity_status=verified")
+if payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected GO ci_local_promotion_budget_boundary_status=verified")
+if payload.get("alert_governance_reason_taxonomy_version") != "kamn.runtime.alert-governance-reason-taxonomy.v1":
+    raise SystemExit("expected GO alert_governance_reason_taxonomy_version marker")
+if payload.get("alert_governance_reason_codes_csv") != "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected GO alert_governance_reason_codes_csv marker")
 PY
 
 no_go_bundle="$TMP_DIR/slo-no-go.json"
@@ -98,11 +118,21 @@ no_go_generate_output="$(
 
 assert_eq "$(extract_value "$no_go_generate_output" "final_decision")" "NO-GO" "expected stale/threshold-breached SLO bundle to force NO-GO"
 assert_eq "$(extract_value "$no_go_generate_output" "reason_key")" "slo_alert_reason_codes:NO-GO:v1" "expected NO-GO SLO reason-key marker"
+assert_eq "$(extract_value "$no_go_generate_output" "alert_rule_promotion_gate_status")" "verified" "expected NO-GO alert-rule promotion gate marker"
+assert_eq "$(extract_value "$no_go_generate_output" "burn_rate_parity_status")" "verified" "expected NO-GO burn-rate parity marker"
+assert_eq "$(extract_value "$no_go_generate_output" "ci_local_promotion_budget_boundary_status")" "verified" "expected NO-GO ci-local promotion budget marker"
+assert_eq "$(extract_value "$no_go_generate_output" "alert_governance_reason_taxonomy_version")" "kamn.runtime.alert-governance-reason-taxonomy.v1" "expected NO-GO alert-governance reason taxonomy marker"
+assert_eq "$(extract_value "$no_go_generate_output" "alert_governance_reason_codes_csv")" "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded" "expected NO-GO alert-governance reason taxonomy csv marker"
 
 no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$no_go_bundle")"
 assert_eq "$(extract_value "$no_go_policy_output" "status")" "ok" "expected NO-GO SLO policy check to pass"
 assert_eq "$(extract_value "$no_go_policy_output" "final_decision")" "NO-GO" "expected policy check to keep NO-GO SLO decision"
 assert_eq "$(extract_value "$no_go_policy_output" "reason_key")" "slo_alert_reason_codes:NO-GO:v1" "expected NO-GO SLO policy reason-key marker"
+assert_eq "$(extract_value "$no_go_policy_output" "alert_rule_promotion_gate_status")" "verified" "expected NO-GO policy alert-rule promotion gate marker"
+assert_eq "$(extract_value "$no_go_policy_output" "burn_rate_parity_status")" "verified" "expected NO-GO policy burn-rate parity marker"
+assert_eq "$(extract_value "$no_go_policy_output" "ci_local_promotion_budget_boundary_status")" "verified" "expected NO-GO policy ci-local promotion budget marker"
+assert_eq "$(extract_value "$no_go_policy_output" "alert_governance_reason_taxonomy_version")" "kamn.runtime.alert-governance-reason-taxonomy.v1" "expected NO-GO policy alert-governance reason taxonomy marker"
+assert_eq "$(extract_value "$no_go_policy_output" "alert_governance_reason_codes_csv")" "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded" "expected NO-GO policy alert-governance reason taxonomy csv marker"
 
 python3 - "$no_go_bundle" <<'PY'
 import json
@@ -124,6 +154,60 @@ missing = sorted(required.difference(alert_keys))
 if missing:
     raise SystemExit(f"missing required NO-GO alert keys: {', '.join(missing)}")
 PY
+
+burn_rate_parity_bundle="$TMP_DIR/slo-burn-rate-parity-drift.json"
+cp "$no_go_bundle" "$burn_rate_parity_bundle"
+python3 - "$burn_rate_parity_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["burn_rate_parity_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+burn_rate_parity_output="$(bash "$POLICY_CHECKER" --bundle-file "$burn_rate_parity_bundle" 2>&1)"
+burn_rate_parity_code=$?
+set -e
+
+if [ "$burn_rate_parity_code" -eq 0 ]; then
+  echo "expected tampered SLO burn-rate parity bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$burn_rate_parity_output" | grep -q "burn_rate_parity_status mismatch"; then
+  echo "expected explicit burn-rate parity mismatch error from SLO policy checker" >&2
+  exit 1
+fi
+
+taxonomy_drift_bundle="$TMP_DIR/slo-alert-governance-taxonomy-drift.json"
+cp "$no_go_bundle" "$taxonomy_drift_bundle"
+python3 - "$taxonomy_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["alert_governance_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+taxonomy_drift_output="$(bash "$POLICY_CHECKER" --bundle-file "$taxonomy_drift_bundle" 2>&1)"
+taxonomy_drift_code=$?
+set -e
+
+if [ "$taxonomy_drift_code" -eq 0 ]; then
+  echo "expected tampered SLO alert-governance taxonomy bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$taxonomy_drift_output" | grep -q "alert_governance_reason_taxonomy_version mismatch"; then
+  echo "expected explicit alert-governance taxonomy mismatch error from SLO policy checker" >&2
+  exit 1
+fi
 
 tampered_bundle="$TMP_DIR/slo-tampered.json"
 cp "$no_go_bundle" "$tampered_bundle"

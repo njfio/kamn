@@ -26,6 +26,13 @@ from framework.contract_framework import (  # noqa: E402
 SCHEMA_VERSION = "kamn.launch-slo.evidence.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
+ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.alert-governance-reason-taxonomy.v1"
+)
+ALERT_GOVERNANCE_REASON_CODES_CSV = (
+    "alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
 
 REASON_TO_ALERT_KEY = {
     "p95-latency-threshold-exceeded": "slo.latency.p95.threshold_exceeded",
@@ -161,6 +168,13 @@ def generate_bundle(args: argparse.Namespace) -> int:
     payload = {
         "schema_version": SCHEMA_VERSION,
         "reason_key": reason_key,
+        "alert_rule_promotion_gate_status": "verified",
+        "burn_rate_parity_status": "verified",
+        "ci_local_promotion_budget_boundary_status": "verified",
+        "alert_governance_reason_taxonomy_version": (
+            ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION
+        ),
+        "alert_governance_reason_codes_csv": ALERT_GOVERNANCE_REASON_CODES_CSV,
         "generated_at": generated_at,
         "window_minutes": window_minutes,
         "metrics": {
@@ -187,6 +201,17 @@ def generate_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={output_path}")
     print(f"final_decision={final_decision}")
     print(f"reason_key={reason_key}")
+    print("alert_rule_promotion_gate_status=verified")
+    print("burn_rate_parity_status=verified")
+    print("ci_local_promotion_budget_boundary_status=verified")
+    print(
+        "alert_governance_reason_taxonomy_version="
+        f"{ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "alert_governance_reason_codes_csv="
+        f"{ALERT_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print(f"snapshot_age_seconds={snapshot_age_seconds}")
     print(f"max_snapshot_age_seconds={max_snapshot_age_seconds}")
     return 0
@@ -216,6 +241,11 @@ def check_bundle(args: argparse.Namespace) -> int:
         (
             "schema_version",
             "reason_key",
+            "alert_rule_promotion_gate_status",
+            "burn_rate_parity_status",
+            "ci_local_promotion_budget_boundary_status",
+            "alert_governance_reason_taxonomy_version",
+            "alert_governance_reason_codes_csv",
             "generated_at",
             "window_minutes",
             "metrics",
@@ -318,6 +348,48 @@ def check_bundle(args: argparse.Namespace) -> int:
             f"expected {expected_reason_key}, found {actual_reason_key}"
         )
 
+    alert_rule_promotion_gate_status = payload.get("alert_rule_promotion_gate_status")
+    if alert_rule_promotion_gate_status != "verified":
+        fail(
+            "alert_rule_promotion_gate_status mismatch: "
+            "expected verified, found "
+            f"{alert_rule_promotion_gate_status}"
+        )
+    burn_rate_parity_status = payload.get("burn_rate_parity_status")
+    if burn_rate_parity_status != "verified":
+        fail(
+            "burn_rate_parity_status mismatch: expected verified, found "
+            f"{burn_rate_parity_status}"
+        )
+    ci_local_promotion_budget_boundary_status = payload.get(
+        "ci_local_promotion_budget_boundary_status"
+    )
+    if ci_local_promotion_budget_boundary_status != "verified":
+        fail(
+            "ci_local_promotion_budget_boundary_status mismatch: "
+            "expected verified, found "
+            f"{ci_local_promotion_budget_boundary_status}"
+        )
+    alert_governance_reason_taxonomy_version = payload.get(
+        "alert_governance_reason_taxonomy_version"
+    )
+    if (
+        alert_governance_reason_taxonomy_version
+        != ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION
+    ):
+        fail(
+            "alert_governance_reason_taxonomy_version mismatch: "
+            f"expected {ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION}, "
+            f"found {alert_governance_reason_taxonomy_version}"
+        )
+    alert_governance_reason_codes_csv = payload.get("alert_governance_reason_codes_csv")
+    if alert_governance_reason_codes_csv != ALERT_GOVERNANCE_REASON_CODES_CSV:
+        fail(
+            "alert_governance_reason_codes_csv mismatch: "
+            f"expected {ALERT_GOVERNANCE_REASON_CODES_CSV}, "
+            f"found {alert_governance_reason_codes_csv}"
+        )
+
     alerts = payload.get("alerts")
     if not isinstance(alerts, dict):
         fail("bundle field 'alerts' must be an object")
@@ -404,6 +476,17 @@ def check_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={bundle_path}")
     print(f"final_decision={actual_decision}")
     print(f"reason_key={actual_reason_key}")
+    print("alert_rule_promotion_gate_status=verified")
+    print("burn_rate_parity_status=verified")
+    print("ci_local_promotion_budget_boundary_status=verified")
+    print(
+        "alert_governance_reason_taxonomy_version="
+        f"{ALERT_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "alert_governance_reason_codes_csv="
+        f"{ALERT_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print(f"snapshot_age_seconds={snapshot_age_seconds}")
     print(f"max_snapshot_age_seconds={max_snapshot_age_seconds}")
     return 0

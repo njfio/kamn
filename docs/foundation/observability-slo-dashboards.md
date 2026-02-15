@@ -232,16 +232,24 @@ Operational launch readiness now enforces deterministic alert-schema evidence an
 Runtime budget controls:
 
 - `KAMN_POST_CUTOVER_SLO_MAX_SECONDS`
+- `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`
 - `KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS`
+- `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY`
 
 Required reason-key markers:
 
 - `slo_alert_reason_codes:GO:v1`
 - `slo_alert_reason_codes:NO-GO:v1`
+- `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
+- `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+- `alert_rule_promotion_gate_status=verified`
+- `burn_rate_parity_status=verified`
+- `ci_local_promotion_budget_boundary_status=verified`
 
 Regression policy:
 
 - missing or drifted alert evidence schema/keys must fail closed (`Regression: #913`).
+- burn-rate parity and alert-governance taxonomy drift must fail closed.
 
 ## Dashboard Stale/Error Budget Policy Checker Contract
 Deterministic stale-data and error-budget policy checks are enforced through a bounded dashboard evidence lane:

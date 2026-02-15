@@ -2696,6 +2696,15 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
 - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+  - alert-governance taxonomy markers stay deterministic:
+    - `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
+    - `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+  - burn-rate and promotion gate markers remain fail-closed:
+    - `alert_rule_promotion_gate_status=verified`
+    - `burn_rate_parity_status=verified`
+    - `ci_local_promotion_budget_boundary_status=verified`
+  - ci-local budget boundary remains bounded by `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`.
+  - deep lane remains local-only via `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY=true`.
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
 - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`

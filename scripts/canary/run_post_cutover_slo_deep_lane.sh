@@ -12,6 +12,11 @@ if [[ ! "$max_runtime" =~ ^[0-9]+$ ]]; then
   echo "KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS must be an integer >= 0" >&2
   exit 1
 fi
+deep_local_only="${KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY:-true}"
+if [[ "$deep_local_only" != "true" ]]; then
+  echo "KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY must remain true for deep local-only scope" >&2
+  exit 1
+fi
 
 report_file="$ROOT_DIR/post-cutover-slo-report.json"
 
