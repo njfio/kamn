@@ -171,6 +171,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_
   echo "expected local full-stack integration dry-run command marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^local_heavy_runtime_budget_status=verified$'; then
+  echo "expected local full-stack integration local-heavy runtime budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^elapsed_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration elapsed runtime marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^max_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration max runtime budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^command_max_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration per-command runtime budget marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -192,6 +208,8 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 for dry-run")
 if payload.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("local_heavy_runtime_budget_status") != "verified":
+    raise SystemExit("expected local_heavy_runtime_budget_status=verified")
 if payload.get("transport_convergence_status") != "planned":
     raise SystemExit("expected transport_convergence_status=planned in dry-run")
 if payload.get("signer_provenance_status") != "planned":
@@ -271,6 +289,19 @@ if payload.get("kolme_base_url") != "http://127.0.0.1:3000":
     raise SystemExit("expected default kolme_base_url marker")
 if payload.get("kolme_fork_chain_version") != "v0.15.2":
     raise SystemExit("expected default kolme_fork_chain_version marker")
+elapsed_seconds = payload.get("elapsed_seconds")
+max_seconds = payload.get("max_seconds")
+command_max_seconds = payload.get("command_max_seconds")
+if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
+    raise SystemExit("expected non-negative elapsed_seconds marker")
+if not isinstance(max_seconds, int) or max_seconds <= 0:
+    raise SystemExit("expected positive max_seconds marker")
+if not isinstance(command_max_seconds, int) or command_max_seconds <= 0:
+    raise SystemExit("expected positive command_max_seconds marker")
+if elapsed_seconds > max_seconds:
+    raise SystemExit("expected elapsed_seconds <= max_seconds marker contract")
+if command_max_seconds > max_seconds:
+    raise SystemExit("expected command_max_seconds <= max_seconds marker contract")
 if not isinstance(payload.get("artifact_paths"), dict):
     raise SystemExit("expected artifact_paths dictionary")
 PY

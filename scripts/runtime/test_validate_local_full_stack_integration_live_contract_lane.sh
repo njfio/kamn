@@ -159,6 +159,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_full
   echo "expected local full-stack integration contract lane fail-closed reason marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_heavy_runtime_budget_status=verified$'; then
+  echo "expected local full-stack integration contract lane local-heavy runtime budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^elapsed_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration contract lane elapsed runtime marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^max_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration contract lane max runtime budget marker" >&2
+  exit 1
+fi
 
 python3 - "$lane_report" "$policy_report" <<'PY'
 import json
@@ -180,6 +192,8 @@ if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if lane_payload.get("local_heavy_runtime_budget_status") != "verified":
+    raise SystemExit("expected local_heavy_runtime_budget_status=verified")
 if lane_payload.get("transport_convergence_status") != "planned":
     raise SystemExit("expected transport_convergence_status=planned in dry-run")
 if lane_payload.get("signer_provenance_status") != "planned":
@@ -259,6 +273,14 @@ if lane_payload.get("kolme_integration_report_schema_version") != "kamn.kolme.lo
     raise SystemExit("expected kolme integration report schema marker")
 if lane_payload.get("kolme_integration_policy_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("expected kolme integration policy schema marker")
+elapsed_seconds = lane_payload.get("elapsed_seconds")
+max_seconds = lane_payload.get("max_seconds")
+if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
+    raise SystemExit("expected non-negative elapsed_seconds marker")
+if not isinstance(max_seconds, int) or max_seconds <= 0:
+    raise SystemExit("expected positive max_seconds marker")
+if elapsed_seconds > max_seconds:
+    raise SystemExit("expected elapsed_seconds <= max_seconds marker contract")
 
 policy_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 if policy_payload.get("schema_version") != "kamn.runtime.local-full-stack-integration-live-policy-report.v1":

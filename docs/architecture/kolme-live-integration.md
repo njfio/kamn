@@ -26,6 +26,10 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `signer_provenance_status`
   - `runtime_commit_submission_status`
   - `runtime_commit_finality_status`
+  - `local_heavy_runtime_budget_status`
+  - `elapsed_seconds`
+  - `max_seconds`
+  - `command_max_seconds`
   - `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
   - `combined_transport_reason_codes=fork_choice_stale_block_height`
   - `combined_kolme_runtime_reason_code`
@@ -45,6 +49,8 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_summary_three_node_partition_rejoin_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_summary_three_node_publish_drop_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_budget_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_budget_exceeded`
   - `local_full_stack_integration_policy_kolme_summary_schema_mismatch`
   - `local_full_stack_integration_policy_kolme_policy_final_decision_mismatch`
   - `release_manifest_missing_required_artifact:local_full_stack_integration`

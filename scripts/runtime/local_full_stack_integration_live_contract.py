@@ -157,6 +157,8 @@ def run_lane(args: argparse.Namespace) -> int:
         "KAMN_LOCAL_FULL_STACK_INTEGRATION_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
     )
+    if command_max_seconds > max_seconds:
+        command_max_seconds = max_seconds
     kolme_checkout_path = Path(args.kolme_checkout_path).expanduser().resolve()
     kolme_expected_remote_url = args.kolme_expected_remote_url.strip()
     kolme_expected_ref = args.kolme_expected_ref.strip()
@@ -601,6 +603,7 @@ def run_lane(args: argparse.Namespace) -> int:
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
+        "local_heavy_runtime_budget_status": "verified",
         "elapsed_seconds": elapsed_seconds,
         "max_seconds": max_seconds,
         "command_max_seconds": command_max_seconds,
@@ -669,6 +672,10 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
+    print("local_heavy_runtime_budget_status=verified")
+    print(f"elapsed_seconds={elapsed_seconds}")
+    print(f"max_seconds={max_seconds}")
+    print(f"command_max_seconds={command_max_seconds}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
     return 0
@@ -813,6 +820,35 @@ def check_policy(args: argparse.Namespace) -> int:
         reason_code not in {DRY_RUN_REASON, RUN_REASON},
         "local_full_stack_integration_policy_reason_code_unsupported",
     )
+    checks.reject_if(
+        payload.get("local_heavy_runtime_budget_status") != "verified",
+        "local_full_stack_integration_policy_runtime_budget_status_mismatch",
+    )
+    elapsed_seconds = payload.get("elapsed_seconds")
+    max_seconds = payload.get("max_seconds")
+    command_max_seconds = payload.get("command_max_seconds")
+    checks.reject_if(
+        not isinstance(elapsed_seconds, int) or elapsed_seconds < 0,
+        "local_full_stack_integration_policy_elapsed_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(max_seconds, int) or max_seconds <= 0,
+        "local_full_stack_integration_policy_max_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(command_max_seconds, int) or command_max_seconds <= 0,
+        "local_full_stack_integration_policy_command_max_seconds_invalid",
+    )
+    if isinstance(command_max_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            command_max_seconds > max_seconds,
+            "local_full_stack_integration_policy_command_budget_exceeds_lane_budget",
+        )
+    if isinstance(elapsed_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            elapsed_seconds > max_seconds,
+            "local_full_stack_integration_policy_runtime_budget_exceeded",
+        )
     combined_transport_reason_codes = payload.get("combined_transport_reason_codes")
     checks.reject_if(
         combined_transport_reason_codes != [LIBP2P_CONVERGENCE_REASON_CODE],

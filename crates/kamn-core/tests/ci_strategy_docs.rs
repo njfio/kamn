@@ -821,3 +821,13 @@ fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers()
     assert!(DOC.contains("combined_shell_surface_ratio_fail_ceiling_exceeded"));
     assert!(DOC.contains("ignored_test_script_budget_trend_contract_status=pass|fail"));
 }
+
+#[test]
+fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
+    assert!(DOC.contains("local_heavy_runtime_budget_status"));
+    assert!(DOC.contains("elapsed_seconds"));
+    assert!(DOC.contains("max_seconds"));
+    assert!(DOC.contains("command_max_seconds"));
+    assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_status_mismatch"));
+    assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_exceeded"));
+}

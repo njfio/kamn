@@ -6,6 +6,10 @@ fn doc_contains_process_isolation_marker_contracts() {
     assert!(DOC.contains("libp2p_process_isolation_status"));
     assert!(DOC.contains("libp2p_two_node_process_isolated_status"));
     assert!(DOC.contains("libp2p_three_node_process_isolated_status"));
+    assert!(DOC.contains("local_heavy_runtime_budget_status"));
+    assert!(DOC.contains("elapsed_seconds"));
+    assert!(DOC.contains("max_seconds"));
+    assert!(DOC.contains("command_max_seconds"));
     assert!(DOC.contains("runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider"));
 }
 
@@ -26,4 +30,6 @@ fn doc_contains_process_isolation_fail_closed_reasons() {
     assert!(DOC.contains(
         "local_full_stack_integration_policy_libp2p_summary_three_node_publish_drop_status_mismatch"
     ));
+    assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_status_mismatch"));
+    assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_exceeded"));
 }
