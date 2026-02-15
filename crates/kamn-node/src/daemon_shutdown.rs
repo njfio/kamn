@@ -6,6 +6,14 @@ pub(super) struct DaemonCompletion {
     pub(super) completion_reason: String,
 }
 
+#[cfg(test)]
+fn os_signal_test_runtime_lock() -> &'static std::sync::Mutex<()> {
+    use std::sync::{Mutex, OnceLock};
+
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
 fn evaluate_daemon_completion_from_signal(
     max_ticks: u64,
     signal_tick: u64,
@@ -82,6 +90,11 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
 ) -> Result<DaemonCompletion, String> {
     #[cfg(unix)]
     {
+        #[cfg(test)]
+        let _signal_test_guard = os_signal_test_runtime_lock()
+            .lock()
+            .map_err(|_| "daemon os-signal test runtime lock poisoned".to_owned())?;
+
         let signal_runtime = tokio::runtime::Builder::new_current_thread()
             .enable_io()
             .enable_time()
@@ -102,34 +115,12 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
             let mut ignored_signals = 0usize;
             for tick in 1..=max_ticks {
                 if first_signal_tick.is_none() {
-                    if tick < max_ticks {
-                        tokio::select! {
-                            _ = sigint_stream.recv() => {
-                                first_signal_tick = Some(tick);
-                            }
-                            _ = sigterm_stream.recv() => {
-                                first_signal_tick = Some(tick);
-                            }
-                            _ = tokio::time::sleep(tick_duration) => {}
-                        }
-                    } else {
-                        tokio::select! {
-                            _ = sigint_stream.recv() => {
-                                first_signal_tick = Some(tick);
-                            }
-                            _ = sigterm_stream.recv() => {
-                                first_signal_tick = Some(tick);
-                            }
-                            else => {}
-                        }
-                    }
-                } else if tick < max_ticks {
                     tokio::select! {
                         _ = sigint_stream.recv() => {
-                            ignored_signals = ignored_signals.saturating_add(1);
+                            first_signal_tick = Some(tick);
                         }
                         _ = sigterm_stream.recv() => {
-                            ignored_signals = ignored_signals.saturating_add(1);
+                            first_signal_tick = Some(tick);
                         }
                         _ = tokio::time::sleep(tick_duration) => {}
                     }
@@ -141,7 +132,7 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
                         _ = sigterm_stream.recv() => {
                             ignored_signals = ignored_signals.saturating_add(1);
                         }
-                        else => {}
+                        _ = tokio::time::sleep(tick_duration) => {}
                     }
                 }
 
@@ -188,7 +179,7 @@ mod tests {
     #[cfg(unix)]
     use std::thread;
     #[cfg(unix)]
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     #[cfg(unix)]
     const SIGINT: i32 = 2;
@@ -312,6 +303,20 @@ mod tests {
             completion.completion_reason.contains("ignored_signals=1"),
             "expected repeated signal count to be recorded, got {}",
             completion.completion_reason
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn regression_daemon_completion_with_os_signals_without_signal_stays_bounded() {
+        let start = Instant::now();
+        let completion = evaluate_daemon_completion_with_os_signals(3, 1, Some(2), Some(3))
+            .expect("daemon completion with os-signal handling should remain bounded");
+        assert_eq!(completion.executed_ticks, 3);
+        assert_eq!(completion.completion_reason, "tick-budget-exhausted");
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "daemon os-signal no-signal path must remain bounded"
         );
     }
 
