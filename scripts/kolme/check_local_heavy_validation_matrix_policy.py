@@ -5,33 +5,63 @@ import argparse
 import json
 from pathlib import Path
 
-EXPECTED_COMMAND_SNIPPETS = [
-    "run_local_bootstrap_health_checks.sh",
-    "run_version_compatibility_replay_deep_lane.sh",
-    "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
-    "run_local_kolme_live_api_conformance_contract_lane.sh",
-    "run_signature_parity_contract_lane.sh",
-    "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
-    "run_local_native_api_parity_live_proof_contract_lane.sh",
-    "run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node",
-    "check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+SCENARIO_MATRIX_SCHEMA_VERSION = "kamn.kolme.local-heavy-validation-scenario-matrix.v1"
+EXPECTED_SCENARIO_MATRIX = [
+    {
+        "scenario_id": "bootstrap_health",
+        "command_snippet": "run_local_bootstrap_health_checks.sh",
+        "artifact_snippet": "/tmp/kolme-local-bootstrap-summary.json",
+    },
+    {
+        "scenario_id": "version_compatibility_replay",
+        "command_snippet": "run_version_compatibility_replay_deep_lane.sh",
+        "artifact_snippet": "/tmp/kolme-version-compatibility-report.json",
+    },
+    {
+        "scenario_id": "fork_rust_matrix",
+        "command_snippet": "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-fork-rust-test-matrix-summary.json",
+    },
+    {
+        "scenario_id": "live_api_conformance",
+        "command_snippet": "run_local_kolme_live_api_conformance_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-live-api-conformance-summary.json",
+    },
+    {
+        "scenario_id": "signature_parity",
+        "command_snippet": "run_signature_parity_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-signature-parity-matrix-report.json",
+    },
+    {
+        "scenario_id": "runtime_commit_finality",
+        "command_snippet": "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-runtime-commit-live-summary.json",
+    },
+    {
+        "scenario_id": "native_api_parity",
+        "command_snippet": "run_local_native_api_parity_live_proof_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
+    },
+    {
+        "scenario_id": "real_node_runtime_integration",
+        "command_snippet": "run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node",
+        "artifact_snippet": "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+    },
+    {
+        "scenario_id": "real_node_runtime_policy",
+        "command_snippet": "check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+        "artifact_snippet": "/tmp/kolme-local-kamn-live-runtime-real-node-policy.json",
+    },
 ]
 
-EXPECTED_ARTIFACT_SNIPPETS = [
-    "/tmp/kolme-local-bootstrap-summary.json",
-    "/tmp/kolme-version-compatibility-report.json",
-    "/tmp/kolme-local-fork-rust-test-matrix-summary.json",
+EXPECTED_SCENARIO_IDS = [scenario["scenario_id"] for scenario in EXPECTED_SCENARIO_MATRIX]
+EXPECTED_COMMAND_SNIPPETS = [scenario["command_snippet"] for scenario in EXPECTED_SCENARIO_MATRIX]
+EXPECTED_ARTIFACT_SNIPPETS = [scenario["artifact_snippet"] for scenario in EXPECTED_SCENARIO_MATRIX] + [
     "/tmp/kolme-local-fork-rust-test-matrix-policy.json",
-    "/tmp/kolme-local-live-api-conformance-summary.json",
     "/tmp/kolme-local-live-api-conformance-policy.json",
-    "/tmp/kolme-signature-parity-matrix-report.json",
     "/tmp/kolme-signature-parity-policy-report.json",
-    "/tmp/kolme-local-runtime-commit-live-summary.json",
     "/tmp/kolme-local-runtime-commit-live-policy.json",
-    "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
     "/tmp/kolme-local-native-api-parity-live-proof-policy.json",
-    "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
-    "/tmp/kolme-local-kamn-live-runtime-real-node-policy.json",
 ]
 
 
@@ -71,6 +101,37 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if report.get("local_only_enforced") is not True:
         reason_codes.append("local_only_enforced_missing")
 
+    if report.get("scenario_matrix_schema_version") != SCENARIO_MATRIX_SCHEMA_VERSION:
+        reason_codes.append("scenario_matrix_schema_version_mismatch")
+
+    scenario_runtime_mode = report.get("scenario_runtime_mode")
+    if scenario_runtime_mode not in ("dry-run", "run"):
+        reason_codes.append("scenario_runtime_mode_invalid")
+
+    scenario_runtime_profiles = report.get("scenario_runtime_profiles")
+    if not isinstance(scenario_runtime_profiles, list) or not scenario_runtime_profiles:
+        reason_codes.append("scenario_runtime_profiles_missing")
+    elif scenario_runtime_profiles != ["real-node"]:
+        reason_codes.append("scenario_runtime_profiles_mismatch")
+
+    scenario_ids = report.get("scenario_ids")
+    if not isinstance(scenario_ids, list) or not scenario_ids:
+        reason_codes.append("scenario_ids_missing")
+        scenario_ids = []
+    else:
+        if any(not isinstance(scenario_id, str) or not scenario_id for scenario_id in scenario_ids):
+            reason_codes.append("scenario_ids_invalid")
+        if sorted(scenario_ids) != sorted(EXPECTED_SCENARIO_IDS):
+            reason_codes.append("scenario_ids_mismatch")
+
+    scenario_count = report.get("scenario_count")
+    if not isinstance(scenario_count, int) or scenario_count < 0:
+        reason_codes.append("scenario_count_invalid")
+    elif scenario_count != len(EXPECTED_SCENARIO_IDS):
+        reason_codes.append("scenario_count_mismatch")
+    if isinstance(scenario_ids, list) and isinstance(scenario_count, int) and scenario_count != len(scenario_ids):
+        reason_codes.append("scenario_count_ids_mismatch")
+
     commands = report.get("commands")
     if not isinstance(commands, list) or not commands:
         reason_codes.append("commands_missing")
@@ -78,6 +139,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if isinstance(commands, list):
         if not all(isinstance(command, str) and command.strip() for command in commands):
             reason_codes.append("commands_invalid")
+        for scenario in EXPECTED_SCENARIO_MATRIX:
+            scenario_command = scenario["command_snippet"]
+            if not any(
+                scenario_command in command
+                for command in commands
+                if isinstance(command, str)
+            ):
+                reason_codes.append(f"scenario_command_missing:{scenario['scenario_id']}")
         for expected_snippet in EXPECTED_COMMAND_SNIPPETS:
             if not any(expected_snippet in command for command in commands if isinstance(command, str)):
                 reason_codes.append(f"command_missing:{expected_snippet}")
@@ -156,6 +225,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if isinstance(artifact_paths, list):
         if not all(isinstance(path, str) and path.strip() for path in artifact_paths):
             reason_codes.append("artifact_paths_invalid")
+        for scenario in EXPECTED_SCENARIO_MATRIX:
+            scenario_artifact = scenario["artifact_snippet"]
+            if not any(
+                scenario_artifact in path
+                for path in artifact_paths
+                if isinstance(path, str)
+            ):
+                reason_codes.append(f"scenario_artifact_missing:{scenario['scenario_id']}")
         for expected_snippet in EXPECTED_ARTIFACT_SNIPPETS:
             if not any(expected_snippet in path for path in artifact_paths if isinstance(path, str)):
                 reason_codes.append(f"artifact_missing:{expected_snippet}")
@@ -181,6 +258,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
 
     if observed_final_decision and observed_final_decision != args.expected_final_decision:
         reason_codes.append("observed_final_decision_mismatch")
+    if (
+        isinstance(mode, str)
+        and isinstance(scenario_runtime_mode, str)
+        and mode in ("dry-run", "run")
+        and scenario_runtime_mode in ("dry-run", "run")
+        and scenario_runtime_mode != mode
+    ):
+        reason_codes.append("scenario_runtime_mode_mismatch")
 
     final_decision = "GO" if not reason_codes else "NO-GO"
     return final_decision, reason_codes

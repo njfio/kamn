@@ -18,6 +18,21 @@ fi
 cat >"$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-heavy-validation-summary.v1",
+  "scenario_matrix_schema_version": "kamn.kolme.local-heavy-validation-scenario-matrix.v1",
+  "scenario_runtime_mode": "dry-run",
+  "scenario_runtime_profiles": ["real-node"],
+  "scenario_ids": [
+    "bootstrap_health",
+    "version_compatibility_replay",
+    "fork_rust_matrix",
+    "live_api_conformance",
+    "signature_parity",
+    "runtime_commit_finality",
+    "native_api_parity",
+    "real_node_runtime_integration",
+    "real_node_runtime_policy"
+  ],
+  "scenario_count": 9,
   "summary_type": "commands",
   "mode": "dry-run",
   "status": "ok",
@@ -77,6 +92,21 @@ PY
 cat >"$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-heavy-validation-summary.v1",
+  "scenario_matrix_schema_version": "kamn.kolme.local-heavy-validation-scenario-matrix.v1",
+  "scenario_runtime_mode": "dry-run",
+  "scenario_runtime_profiles": ["real-node"],
+  "scenario_ids": [
+    "bootstrap_health",
+    "version_compatibility_replay",
+    "fork_rust_matrix",
+    "live_api_conformance",
+    "signature_parity",
+    "runtime_commit_finality",
+    "native_api_parity",
+    "real_node_runtime_integration",
+    "real_node_runtime_policy"
+  ],
+  "scenario_count": 9,
   "summary_type": "commands",
   "mode": "dry-run",
   "status": "ok",

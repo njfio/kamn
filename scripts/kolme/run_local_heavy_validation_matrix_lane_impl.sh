@@ -155,6 +155,98 @@ python3 "$SUMMARY_HELPER" \
   --artifacts-file "$ARTIFACT_FILE" \
   --output-json "$OUTPUT_JSON"
 
+python3 - "$OUTPUT_JSON" "$MODE" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+output_path = Path(sys.argv[1])
+mode = sys.argv[2]
+payload = json.loads(output_path.read_text(encoding="utf-8"))
+
+scenarios = [
+    {
+        "scenario_id": "bootstrap_health",
+        "command_snippet": "run_local_bootstrap_health_checks.sh",
+        "artifact_snippet": "/tmp/kolme-local-bootstrap-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "version_compatibility_replay",
+        "command_snippet": "run_version_compatibility_replay_deep_lane.sh",
+        "artifact_snippet": "/tmp/kolme-version-compatibility-report.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "fork_rust_matrix",
+        "command_snippet": "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-fork-rust-test-matrix-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "live_api_conformance",
+        "command_snippet": "run_local_kolme_live_api_conformance_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-live-api-conformance-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "signature_parity",
+        "command_snippet": "run_signature_parity_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-signature-parity-matrix-report.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "runtime_commit_finality",
+        "command_snippet": "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-runtime-commit-live-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "native_api_parity",
+        "command_snippet": "run_local_native_api_parity_live_proof_contract_lane.sh",
+        "artifact_snippet": "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "real_node_runtime_integration",
+        "command_snippet": "run_local_kamn_live_runtime_integration_lane.sh --mode",
+        "artifact_snippet": "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+        "runtime_profile": "real-node",
+    },
+    {
+        "scenario_id": "real_node_runtime_policy",
+        "command_snippet": "check_local_kamn_live_runtime_real_node_profile_policy.py",
+        "artifact_snippet": "/tmp/kolme-local-kamn-live-runtime-real-node-policy.json",
+        "runtime_profile": "real-node",
+    },
+]
+
+commands = payload.get("commands", [])
+artifacts = payload.get("artifact_paths", [])
+if not isinstance(commands, list):
+    raise SystemExit("scenario_matrix_commands_missing")
+if not isinstance(artifacts, list):
+    raise SystemExit("scenario_matrix_artifacts_missing")
+
+for scenario in scenarios:
+    command_snippet = scenario["command_snippet"]
+    if not any(command_snippet in command for command in commands if isinstance(command, str)):
+        raise SystemExit(f"scenario_matrix_command_missing:{scenario['scenario_id']}")
+    artifact_snippet = scenario["artifact_snippet"]
+    if not any(artifact_snippet in artifact for artifact in artifacts if isinstance(artifact, str)):
+        raise SystemExit(f"scenario_matrix_artifact_missing:{scenario['scenario_id']}")
+
+scenario_ids = [scenario["scenario_id"] for scenario in scenarios]
+runtime_profiles = sorted({scenario["runtime_profile"] for scenario in scenarios})
+payload["scenario_matrix_schema_version"] = "kamn.kolme.local-heavy-validation-scenario-matrix.v1"
+payload["scenario_runtime_mode"] = mode
+payload["scenario_runtime_profiles"] = runtime_profiles
+payload["scenario_ids"] = scenario_ids
+payload["scenario_count"] = len(scenario_ids)
+
+output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
 echo "status=ok"
 echo "matrix_mode=$MODE"
 echo "reason_code=$reason_code"

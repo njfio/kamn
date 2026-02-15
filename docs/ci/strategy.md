@@ -2484,6 +2484,18 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json`
 - `python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-heavy-validation-policy.json`
 - `bash scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
+- local-heavy scenario matrix deterministic summary markers:
+  - `scenario_matrix_schema_version=kamn.kolme.local-heavy-validation-scenario-matrix.v1`
+  - `scenario_runtime_mode=dry-run|run`
+  - `scenario_runtime_profiles=real-node`
+  - `scenario_count=9`
+  - `scenario_ids=bootstrap_health,version_compatibility_replay,fork_rust_matrix,live_api_conformance,signature_parity,runtime_commit_finality,native_api_parity,real_node_runtime_integration,real_node_runtime_policy`
+- local-heavy scenario matrix policy fail-closed markers:
+  - `scenario_matrix_schema_version_mismatch`
+  - `scenario_ids_mismatch`
+  - `scenario_runtime_mode_mismatch`
+  - `scenario_command_missing:<scenario_id>`
+  - `scenario_artifact_missing:<scenario_id>`
 - `bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
 - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json`
 - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
