@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "bridge.replay_redaction.deep",
+  "evidence_key": "bridge_replay_redaction_deep_lane:v1",
+  "reason_key": "bridge_replay_redaction_deep_lane_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/bridge/run_bridge_replay_redaction_deep_lane_impl.sh"
+    ]
+  }
+}

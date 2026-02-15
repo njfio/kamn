@@ -55,15 +55,18 @@ resolve_manifest_name() {
   case "$1" in
     run_bridge_adapter_conformance_contract_lane.sh) echo "bridge_bridge_adapter_conformance_contract_lane.json" ;;
     run_bridge_credentialed_contract_lane.sh) echo "bridge_bridge_credentialed_contract_lane.json" ;;
+    run_bridge_credentialed_deep_lane.sh) echo "bridge_bridge_credentialed_deep_lane.json" ;;
     run_bridge_ingress_relay_contract_lane.sh) echo "bridge_bridge_ingress_relay_contract_lane.json" ;;
     run_bridge_outbound_quorum_contract_lane.sh) echo "bridge_bridge_outbound_quorum_contract_lane.json" ;;
     run_bridge_replay_redaction_contract_lane.sh) echo "bridge_bridge_replay_redaction_contract_lane.json" ;;
+    run_bridge_replay_redaction_deep_lane.sh) echo "bridge_bridge_replay_redaction_deep_lane.json" ;;
     run_cutover_rollback_contract_lane.sh) echo "cutover_cutover_rollback_contract_lane.json" ;;
     run_dr_evidence_contract_lane.sh) echo "deploy_dr_evidence_contract_lane.json" ;;
     run_deployment_slo_rollback_lane.sh) echo "deploy_deployment_slo_rollback_lane.json" ;;
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
     run_backend_session_auth_freshness_lane.sh) echo "dashboard_backend_session_auth_freshness_lane.json" ;;
     run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
+    run_cross_chain_outbound_intent_deep_lane.sh) echo "bridge_cross_chain_outbound_intent_deep_lane.json" ;;
     run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
     run_dashboard_stale_error_budget_lane.sh) echo "dashboard_stale_error_budget_lane.json" ;;
     run_did_registry_contract_lane.sh) echo "did_did_registry_contract_lane.json" ;;
@@ -170,6 +173,9 @@ resolve_phase_name() {
   case "$1" in
     run_live_transport_replay_tamper_fast_lane.sh) echo "run" ;;
     run_live_transport_replay_tamper_deep_lane.sh) echo "run" ;;
+    run_bridge_credentialed_deep_lane.sh) echo "deep" ;;
+    run_bridge_replay_redaction_deep_lane.sh) echo "deep" ;;
+    run_cross_chain_outbound_intent_deep_lane.sh) echo "deep" ;;
     run_live_transport_smoke_parity_lane.sh) echo "run" ;;
     run_live_network_smoke_lane.sh) echo "run" ;;
     run_live_validation_environment_lane.sh) echo "run" ;;

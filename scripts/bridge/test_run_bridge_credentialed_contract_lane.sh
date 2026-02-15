@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credentialed_contract_lane.sh"
 FAST_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credentialed_contract_lane_impl.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credentialed_deep_lane.sh"
+DEEP_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credentialed_deep_lane_impl.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_credentialed_contract_lane.json"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_credentialed_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
@@ -15,6 +17,11 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected bridge credentialed deep-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DEEP_IMPL_SCRIPT" ]; then
+  echo "expected bridge credentialed deep-lane implementation script to be executable" >&2
   exit 1
 fi
 
@@ -28,6 +35,11 @@ if [ ! -f "$MANIFEST_FILE" ]; then
   exit 1
 fi
 
+if [ ! -f "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected bridge credentialed deep-lane manifest to exist" >&2
+  exit 1
+fi
+
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT
 
@@ -37,8 +49,29 @@ if ! grep -q "bridge credentialed contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
-if ! grep -Fq "run_bridge_credentialed_contract_lane.sh" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to execute fast-lane credential checks first" >&2
+if [ ! -L "$DEEP_SCRIPT" ]; then
+  echo "expected bridge credentialed deep lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$DEEP_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected bridge credentialed deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected bridge credentialed deep wrapper to resolve bridge deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_bridge_credentialed_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected bridge credentialed deep manifest to dispatch to implementation script" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_bridge_credentialed_contract_lane.sh" "$DEEP_IMPL_SCRIPT"; then
+  echo "expected deep-lane implementation script to execute fast-lane credential checks first" >&2
   exit 1
 fi
 
@@ -68,13 +101,13 @@ if ! grep -q "run_cross_chain_outbound_intent_contract_lane.sh" "$FAST_IMPL_SCRI
   exit 1
 fi
 
-if ! grep -q "bridge-credential-redaction-report.json" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to emit bridge credential redaction report" >&2
+if ! grep -q "bridge-credential-redaction-report.json" "$DEEP_IMPL_SCRIPT"; then
+  echo "expected deep-lane implementation script to emit bridge credential redaction report" >&2
   exit 1
 fi
 
-if ! grep -q "bridge-outbound-intent-deep-report.json" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to emit outbound intent deep report" >&2
+if ! grep -q "bridge-outbound-intent-deep-report.json" "$DEEP_IMPL_SCRIPT"; then
+  echo "expected deep-lane implementation script to emit outbound intent deep report" >&2
   exit 1
 fi
 
