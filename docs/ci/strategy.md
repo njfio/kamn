@@ -42,6 +42,16 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
+## Production Plan Truth Contract
+- Production-service roadmap truth refresh is tracked in `docs/plans/2026-02-14-production-service-next-steps.md`.
+- Deterministic docs-contract command:
+  - `bash scripts/ci/test_production_service_next_steps_contract.sh`
+- Fail-closed stale-claim markers:
+  - `stale_claim_detected:ingress_hand_rolled_tcp_listener`
+  - `stale_claim_detected:storage_file_only_no_sqlite`
+  - `stale_claim_detected:runtime_mode_full_missing`
+- This check remains lightweight and runs in `scripts/ci/test_ci_tools.sh` fast and full modes.
+
 ## Test Layering Policy Contract
 - Test-layering policy is fail-closed and tracked in `docs/planning/test_layering_policy.md`.
 - Deterministic policy checker command:
