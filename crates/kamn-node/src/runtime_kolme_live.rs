@@ -328,6 +328,10 @@ pub(crate) fn execute_kolme_live_runtime(
         observability_availability_bps: observability.availability_bps,
         observability_health: observability.health,
         observability_alert_count: observability.alert_count,
+        observability_reason_code: observability.reason_code,
+        observability_transport_checkpoint_failures: observability.transport_checkpoint_failures,
+        observability_signer_checkpoint_failures: observability.signer_checkpoint_failures,
+        observability_commit_checkpoint_failures: observability.commit_checkpoint_failures,
     })
 }
 

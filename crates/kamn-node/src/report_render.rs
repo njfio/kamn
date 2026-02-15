@@ -80,6 +80,22 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .daemon_observability_alert_count
         .map(|value| value.to_string())
         .unwrap_or_else(|| "none".to_owned());
+    let daemon_observability_reason_code = report
+        .daemon_observability_reason_code
+        .as_deref()
+        .unwrap_or("none");
+    let daemon_observability_transport_checkpoint_failures = report
+        .daemon_observability_transport_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let daemon_observability_signer_checkpoint_failures = report
+        .daemon_observability_signer_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let daemon_observability_commit_checkpoint_failures = report
+        .daemon_observability_commit_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
     let daemon_peer_id = report.daemon_peer_id.as_deref().unwrap_or("none");
     let daemon_peer_lifecycle_final_state = report
         .daemon_peer_lifecycle_final_state
@@ -148,8 +164,24 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .kolme_live_observability_alert_count
         .map(|value| value.to_string())
         .unwrap_or_else(|| "none".to_owned());
+    let kolme_live_observability_reason_code = report
+        .kolme_live_observability_reason_code
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_observability_transport_checkpoint_failures = report
+        .kolme_live_observability_transport_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let kolme_live_observability_signer_checkpoint_failures = report
+        .kolme_live_observability_signer_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let kolme_live_observability_commit_checkpoint_failures = report
+        .kolme_live_observability_commit_checkpoint_failures
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_observability_latency_p50_ms: {}\n  daemon_observability_latency_p99_ms: {}\n  daemon_observability_throughput_tps: {}\n  daemon_observability_error_rate_bps: {}\n  daemon_observability_availability_bps: {}\n  daemon_observability_health: {}\n  daemon_observability_alert_count: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  kolme_live_provider_client_contract: {}\n  kolme_live_base_url: {}\n  kolme_live_provider_hint: {}\n  kolme_live_signing_profile: {}\n  kolme_live_signer_profile_selector_env: {}\n  kolme_live_signer_profile: {}\n  kolme_live_signer_key_source: {}\n  kolme_live_signer_private_key_env: {}\n  kolme_live_execution_status: {}\n  kolme_live_observability_latency_p50_ms: {}\n  kolme_live_observability_latency_p99_ms: {}\n  kolme_live_observability_throughput_tps: {}\n  kolme_live_observability_error_rate_bps: {}\n  kolme_live_observability_availability_bps: {}\n  kolme_live_observability_health: {}\n  kolme_live_observability_alert_count: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_observability_latency_p50_ms: {}\n  daemon_observability_latency_p99_ms: {}\n  daemon_observability_throughput_tps: {}\n  daemon_observability_error_rate_bps: {}\n  daemon_observability_availability_bps: {}\n  daemon_observability_health: {}\n  daemon_observability_alert_count: {}\n  daemon_observability_reason_code: {}\n  daemon_observability_transport_checkpoint_failures: {}\n  daemon_observability_signer_checkpoint_failures: {}\n  daemon_observability_commit_checkpoint_failures: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  kolme_live_provider_client_contract: {}\n  kolme_live_base_url: {}\n  kolme_live_provider_hint: {}\n  kolme_live_signing_profile: {}\n  kolme_live_signer_profile_selector_env: {}\n  kolme_live_signer_profile: {}\n  kolme_live_signer_key_source: {}\n  kolme_live_signer_private_key_env: {}\n  kolme_live_execution_status: {}\n  kolme_live_observability_latency_p50_ms: {}\n  kolme_live_observability_latency_p99_ms: {}\n  kolme_live_observability_throughput_tps: {}\n  kolme_live_observability_error_rate_bps: {}\n  kolme_live_observability_availability_bps: {}\n  kolme_live_observability_health: {}\n  kolme_live_observability_alert_count: {}\n  kolme_live_observability_reason_code: {}\n  kolme_live_observability_transport_checkpoint_failures: {}\n  kolme_live_observability_signer_checkpoint_failures: {}\n  kolme_live_observability_commit_checkpoint_failures: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -186,6 +218,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         daemon_observability_availability_bps,
         daemon_observability_health,
         daemon_observability_alert_count,
+        daemon_observability_reason_code,
+        daemon_observability_transport_checkpoint_failures,
+        daemon_observability_signer_checkpoint_failures,
+        daemon_observability_commit_checkpoint_failures,
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
@@ -205,6 +241,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         kolme_live_observability_availability_bps,
         kolme_live_observability_health,
         kolme_live_observability_alert_count,
+        kolme_live_observability_reason_code,
+        kolme_live_observability_transport_checkpoint_failures,
+        kolme_live_observability_signer_checkpoint_failures,
+        kolme_live_observability_commit_checkpoint_failures,
         report.components.join(", "),
     )
 }
@@ -300,6 +340,25 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         Some(value) => value.to_string(),
         None => "null".to_owned(),
     };
+    let daemon_observability_reason_code = match &report.daemon_observability_reason_code {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let daemon_observability_transport_checkpoint_failures =
+        match report.daemon_observability_transport_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
+    let daemon_observability_signer_checkpoint_failures =
+        match report.daemon_observability_signer_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
+    let daemon_observability_commit_checkpoint_failures =
+        match report.daemon_observability_commit_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
     let daemon_peer_id = match &report.daemon_peer_id {
         Some(value) => format!("\"{}\"", json_escape(value)),
         None => "null".to_owned(),
@@ -389,6 +448,25 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         Some(value) => value.to_string(),
         None => "null".to_owned(),
     };
+    let kolme_live_observability_reason_code = match &report.kolme_live_observability_reason_code {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_observability_transport_checkpoint_failures =
+        match report.kolme_live_observability_transport_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
+    let kolme_live_observability_signer_checkpoint_failures =
+        match report.kolme_live_observability_signer_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
+    let kolme_live_observability_commit_checkpoint_failures =
+        match report.kolme_live_observability_commit_checkpoint_failures {
+            Some(value) => value.to_string(),
+            None => "null".to_owned(),
+        };
     let components = report
         .components
         .iter()
@@ -396,7 +474,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_observability_latency_p50_ms\":{},\"daemon_observability_latency_p99_ms\":{},\"daemon_observability_throughput_tps\":{},\"daemon_observability_error_rate_bps\":{},\"daemon_observability_availability_bps\":{},\"daemon_observability_health\":{},\"daemon_observability_alert_count\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"kolme_live_provider_client_contract\":{},\"kolme_live_base_url\":{},\"kolme_live_provider_hint\":{},\"kolme_live_signing_profile\":{},\"kolme_live_signer_profile_selector_env\":{},\"kolme_live_signer_profile\":{},\"kolme_live_signer_key_source\":{},\"kolme_live_signer_private_key_env\":{},\"kolme_live_execution_status\":{},\"kolme_live_observability_latency_p50_ms\":{},\"kolme_live_observability_latency_p99_ms\":{},\"kolme_live_observability_throughput_tps\":{},\"kolme_live_observability_error_rate_bps\":{},\"kolme_live_observability_availability_bps\":{},\"kolme_live_observability_health\":{},\"kolme_live_observability_alert_count\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_observability_latency_p50_ms\":{},\"daemon_observability_latency_p99_ms\":{},\"daemon_observability_throughput_tps\":{},\"daemon_observability_error_rate_bps\":{},\"daemon_observability_availability_bps\":{},\"daemon_observability_health\":{},\"daemon_observability_alert_count\":{},\"daemon_observability_reason_code\":{},\"daemon_observability_transport_checkpoint_failures\":{},\"daemon_observability_signer_checkpoint_failures\":{},\"daemon_observability_commit_checkpoint_failures\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"kolme_live_provider_client_contract\":{},\"kolme_live_base_url\":{},\"kolme_live_provider_hint\":{},\"kolme_live_signing_profile\":{},\"kolme_live_signer_profile_selector_env\":{},\"kolme_live_signer_profile\":{},\"kolme_live_signer_key_source\":{},\"kolme_live_signer_private_key_env\":{},\"kolme_live_execution_status\":{},\"kolme_live_observability_latency_p50_ms\":{},\"kolme_live_observability_latency_p99_ms\":{},\"kolme_live_observability_throughput_tps\":{},\"kolme_live_observability_error_rate_bps\":{},\"kolme_live_observability_availability_bps\":{},\"kolme_live_observability_health\":{},\"kolme_live_observability_alert_count\":{},\"kolme_live_observability_reason_code\":{},\"kolme_live_observability_transport_checkpoint_failures\":{},\"kolme_live_observability_signer_checkpoint_failures\":{},\"kolme_live_observability_commit_checkpoint_failures\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -429,6 +507,10 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         daemon_observability_availability_bps,
         daemon_observability_health,
         daemon_observability_alert_count,
+        daemon_observability_reason_code,
+        daemon_observability_transport_checkpoint_failures,
+        daemon_observability_signer_checkpoint_failures,
+        daemon_observability_commit_checkpoint_failures,
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
@@ -448,6 +530,10 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         kolme_live_observability_availability_bps,
         kolme_live_observability_health,
         kolme_live_observability_alert_count,
+        kolme_live_observability_reason_code,
+        kolme_live_observability_transport_checkpoint_failures,
+        kolme_live_observability_signer_checkpoint_failures,
+        kolme_live_observability_commit_checkpoint_failures,
         components,
     )
 }

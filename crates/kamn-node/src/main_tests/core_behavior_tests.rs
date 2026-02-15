@@ -1644,6 +1644,10 @@ fn functional_json_render_is_deterministic() {
         daemon_observability_availability_bps: None,
         daemon_observability_health: None,
         daemon_observability_alert_count: None,
+        daemon_observability_reason_code: None,
+        daemon_observability_transport_checkpoint_failures: None,
+        daemon_observability_signer_checkpoint_failures: None,
+        daemon_observability_commit_checkpoint_failures: None,
         daemon_peer_id: None,
         daemon_peer_lifecycle_final_state: None,
         daemon_peer_lifecycle_applied_events: None,
@@ -1663,6 +1667,10 @@ fn functional_json_render_is_deterministic() {
         kolme_live_observability_availability_bps: None,
         kolme_live_observability_health: None,
         kolme_live_observability_alert_count: None,
+        kolme_live_observability_reason_code: None,
+        kolme_live_observability_transport_checkpoint_failures: None,
+        kolme_live_observability_signer_checkpoint_failures: None,
+        kolme_live_observability_commit_checkpoint_failures: None,
         profile: None,
         role: "processor".to_owned(),
         chain_id: "kamn-devnet".to_owned(),
@@ -1884,6 +1892,10 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
     assert!(rendered.contains("\"daemon_observability_availability_bps\":9990"));
     assert!(rendered.contains("\"daemon_observability_health\":\"healthy\""));
     assert!(rendered.contains("\"daemon_observability_alert_count\":0"));
+    assert!(rendered.contains("\"daemon_observability_reason_code\":\"none\""));
+    assert!(rendered.contains("\"daemon_observability_transport_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"daemon_observability_signer_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"daemon_observability_commit_checkpoint_failures\":0"));
     assert!(rendered.contains("\"daemon_peer_id\":\"peer-alpha\""));
     assert!(rendered.contains("\"daemon_peer_lifecycle_final_state\":\"active\""));
     assert!(
@@ -1962,6 +1974,10 @@ fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
     assert!(rendered.contains("\"daemon_observability_availability_bps\":9800"));
     assert!(rendered.contains("\"daemon_observability_health\":\"critical\""));
     assert!(rendered.contains("\"daemon_observability_alert_count\":4"));
+    assert!(rendered.contains("\"daemon_observability_reason_code\":\"daemon_shutdown_timeout\""));
+    assert!(rendered.contains("\"daemon_observability_transport_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"daemon_observability_signer_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"daemon_observability_commit_checkpoint_failures\":1"));
 }
 
 #[cfg(unix)]
@@ -2067,6 +2083,10 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     assert!(rendered.contains("\"kolme_live_observability_availability_bps\":9995"));
     assert!(rendered.contains("\"kolme_live_observability_health\":\"healthy\""));
     assert!(rendered.contains("\"kolme_live_observability_alert_count\":0"));
+    assert!(rendered.contains("\"kolme_live_observability_reason_code\":\"none\""));
+    assert!(rendered.contains("\"kolme_live_observability_transport_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"kolme_live_observability_signer_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"kolme_live_observability_commit_checkpoint_failures\":0"));
     assert!(rendered.contains("submit_attempts=1"));
     assert!(rendered.contains("submit_retry_reason=none"));
     assert!(rendered.contains("finality_retry_attempts=1"));
@@ -2333,6 +2353,12 @@ fn functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailab
     assert!(rendered.contains("retry_backoff_base_ms=10"));
     assert!(rendered.contains("retry_backoff_cap_ms=40"));
     assert!(rendered.contains("resolution=finality-polled"));
+    assert!(rendered.contains(
+        "\"kolme_live_observability_reason_code\":\"transport_finality_retry_unavailable\""
+    ));
+    assert!(rendered.contains("\"kolme_live_observability_transport_checkpoint_failures\":2"));
+    assert!(rendered.contains("\"kolme_live_observability_signer_checkpoint_failures\":0"));
+    assert!(rendered.contains("\"kolme_live_observability_commit_checkpoint_failures\":0"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(

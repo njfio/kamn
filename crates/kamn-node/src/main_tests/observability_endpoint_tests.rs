@@ -62,6 +62,10 @@ fn sample_observability_snapshot() -> RuntimeObservabilitySnapshot {
         availability_bps: 9_990,
         health: "healthy".to_owned(),
         alert_count: 0,
+        reason_code: "none".to_owned(),
+        transport_checkpoint_failures: 0,
+        signer_checkpoint_failures: 0,
+        commit_checkpoint_failures: 0,
     }
 }
 
@@ -190,6 +194,9 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
         .contains("kamn_observability_latency_p50_ms 25"));
     assert!(metrics
         .body
+        .contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
+    assert!(metrics
+        .body
         .contains("kamn_observability_health{health=\"healthy\"} 1"));
 
     let health = render_observability_endpoint_response(&snapshot, "/healthz");
@@ -197,6 +204,10 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     assert_eq!(health.content_type, "application/json");
     assert!(health.body.contains("\"health\":\"healthy\""));
     assert!(health.body.contains("\"runtime_mode\":\"daemon\""));
+    assert!(health.body.contains("\"reason_code\":\"none\""));
+    assert!(health.body.contains("\"transport_checkpoint_failures\":0"));
+    assert!(health.body.contains("\"signer_checkpoint_failures\":0"));
+    assert!(health.body.contains("\"commit_checkpoint_failures\":0"));
 }
 
 #[test]
@@ -223,6 +234,10 @@ fn functional_observability_endpoint_renders_stream_payload() {
     assert!(stream
         .body
         .contains("\"schema_version\":\"kamn.runtime.observability.stream.v1\""));
+    assert!(stream.body.contains("\"reason_code\":\"none\""));
+    assert!(stream.body.contains("\"transport_checkpoint_failures\":0"));
+    assert!(stream.body.contains("\"signer_checkpoint_failures\":0"));
+    assert!(stream.body.contains("\"commit_checkpoint_failures\":0"));
     assert!(stream.body.ends_with('\n'));
 }
 
@@ -265,11 +280,13 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
         "metrics endpoint should return 200 response"
     );
     assert!(metrics_response.contains("kamn_observability_latency_p50_ms 25"));
+    assert!(metrics_response.contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
     assert!(
         health_response.contains("HTTP/1.1 200 OK"),
         "health endpoint should return 200 response"
     );
     assert!(health_response.contains("\"health\":\"healthy\""));
+    assert!(health_response.contains("\"reason_code\":\"none\""));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -316,6 +333,7 @@ fn integration_runtime_observability_endpoint_serves_stream_path() {
     );
     assert!(stream_response.contains("application/x-ndjson"));
     assert!(stream_response.contains("kamn.runtime.observability.stream.v1"));
+    assert!(stream_response.contains("\"reason_code\":\"none\""));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
