@@ -102,6 +102,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_service_api_prometheus_metrics_ci_exclusion_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh"'

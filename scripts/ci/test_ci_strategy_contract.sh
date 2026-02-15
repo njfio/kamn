@@ -49,6 +49,8 @@ required_snippets=(
   "delta_threshold_violation_unwaived"
   "run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json"
   "test_run_fast_gate_budget_delta_contract_lane.sh"
+  "test_generate_fast_gate_budget_delta_report.sh"
+  "test_check_fast_gate_budget_delta_threshold.sh"
   "reason_codes=fast_gate_delta_threshold_file_stale"
   "reason_codes=fast_gate_delta_threshold_file_corrupt"
   "refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata"
