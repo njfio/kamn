@@ -6,6 +6,35 @@ pub(super) struct DaemonCompletion {
     pub(super) completion_reason: String,
 }
 
+fn evaluate_daemon_completion_from_signal(
+    max_ticks: u64,
+    signal_tick: u64,
+    ignored_signals: usize,
+    drain_ticks: Option<u64>,
+    timeout_ticks: Option<u64>,
+) -> DaemonCompletion {
+    let drain_ticks = drain_ticks.unwrap_or(1);
+    let timeout_ticks = timeout_ticks.unwrap_or(1);
+    let target_drain_tick = signal_tick.saturating_add(drain_ticks);
+    let timeout_deadline_tick = signal_tick.saturating_add(timeout_ticks).min(max_ticks);
+
+    if target_drain_tick <= timeout_deadline_tick && target_drain_tick <= max_ticks {
+        return DaemonCompletion {
+            executed_ticks: target_drain_tick,
+            completion_reason: format!(
+                "graceful-shutdown:signal@{signal_tick};drain_ticks={drain_ticks};timeout_ticks={timeout_ticks};ignored_signals={ignored_signals}"
+            ),
+        };
+    }
+
+    DaemonCompletion {
+        executed_ticks: timeout_deadline_tick,
+        completion_reason: format!(
+            "graceful-shutdown-timeout:signal@{signal_tick};drain_ticks={drain_ticks};timeout_ticks={timeout_ticks};ignored_signals={ignored_signals}"
+        ),
+    }
+}
+
 pub(super) fn evaluate_daemon_completion(
     max_ticks: u64,
     shutdown_signal_ticks: &[u64],
@@ -36,26 +65,13 @@ pub(super) fn evaluate_daemon_completion(
         };
     };
 
-    let drain_ticks = drain_ticks.unwrap_or(1);
-    let timeout_ticks = timeout_ticks.unwrap_or(1);
-    let target_drain_tick = signal_tick.saturating_add(drain_ticks);
-    let timeout_deadline_tick = signal_tick.saturating_add(timeout_ticks).min(max_ticks);
-
-    if target_drain_tick <= timeout_deadline_tick && target_drain_tick <= max_ticks {
-        return DaemonCompletion {
-            executed_ticks: target_drain_tick,
-            completion_reason: format!(
-                "graceful-shutdown:signal@{signal_tick};drain_ticks={drain_ticks};timeout_ticks={timeout_ticks};ignored_signals={ignored_signals}"
-            ),
-        };
-    }
-
-    DaemonCompletion {
-        executed_ticks: timeout_deadline_tick,
-        completion_reason: format!(
-            "graceful-shutdown-timeout:signal@{signal_tick};drain_ticks={drain_ticks};timeout_ticks={timeout_ticks};ignored_signals={ignored_signals}"
-        ),
-    }
+    evaluate_daemon_completion_from_signal(
+        max_ticks,
+        signal_tick,
+        ignored_signals,
+        drain_ticks,
+        timeout_ticks,
+    )
 }
 
 pub(super) fn evaluate_daemon_completion_with_os_signals(
@@ -83,6 +99,7 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
 
             let tick_duration = Duration::from_millis(tick_interval_ms);
             let mut first_signal_tick: Option<u64> = None;
+            let mut ignored_signals = 0usize;
             for tick in 1..=max_ticks {
                 if first_signal_tick.is_none() {
                     if tick < max_ticks {
@@ -107,13 +124,32 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
                         }
                     }
                 } else if tick < max_ticks {
-                    tokio::time::sleep(tick_duration).await;
+                    tokio::select! {
+                        _ = sigint_stream.recv() => {
+                            ignored_signals = ignored_signals.saturating_add(1);
+                        }
+                        _ = sigterm_stream.recv() => {
+                            ignored_signals = ignored_signals.saturating_add(1);
+                        }
+                        _ = tokio::time::sleep(tick_duration) => {}
+                    }
+                } else {
+                    tokio::select! {
+                        _ = sigint_stream.recv() => {
+                            ignored_signals = ignored_signals.saturating_add(1);
+                        }
+                        _ = sigterm_stream.recv() => {
+                            ignored_signals = ignored_signals.saturating_add(1);
+                        }
+                        else => {}
+                    }
                 }
 
                 if let Some(signal_tick) = first_signal_tick {
-                    let completion = evaluate_daemon_completion(
+                    let completion = evaluate_daemon_completion_from_signal(
                         max_ticks,
-                        &[signal_tick],
+                        signal_tick,
+                        ignored_signals,
                         drain_ticks,
                         timeout_ticks,
                     );
@@ -124,9 +160,10 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
             }
 
             if let Some(signal_tick) = first_signal_tick {
-                return Ok(evaluate_daemon_completion(
+                return Ok(evaluate_daemon_completion_from_signal(
                     max_ticks,
-                    &[signal_tick],
+                    signal_tick,
+                    ignored_signals,
                     drain_ticks,
                     timeout_ticks,
                 ));
@@ -154,11 +191,23 @@ mod tests {
     use std::time::Duration;
 
     #[cfg(unix)]
+    const SIGINT: i32 = 2;
+    #[cfg(unix)]
     const SIGTERM: i32 = 15;
 
     #[cfg(unix)]
     unsafe extern "C" {
         fn raise(sig: i32) -> i32;
+    }
+
+    #[cfg(unix)]
+    fn raise_sigint_for_test() -> Result<(), String> {
+        let result = unsafe { raise(SIGINT) };
+        if result == 0 {
+            Ok(())
+        } else {
+            Err("failed to raise SIGINT".to_owned())
+        }
     }
 
     #[cfg(unix)]
@@ -241,6 +290,28 @@ mod tests {
         assert!(
             completion.executed_ticks <= 40,
             "signal-driven shutdown should remain bounded by max ticks"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn regression_daemon_completion_with_os_signals_counts_replayed_signals() {
+        // Regression: #3596
+        let trigger = thread::spawn(|| {
+            thread::sleep(Duration::from_millis(5));
+            raise_sigterm_for_test().expect("SIGTERM test signal should be raised");
+            thread::sleep(Duration::from_millis(1));
+            raise_sigint_for_test().expect("SIGINT test signal should be raised");
+        });
+        let completion = evaluate_daemon_completion_with_os_signals(60, 1, Some(5), Some(12))
+            .expect("daemon completion with OS signal handling should succeed");
+        trigger
+            .join()
+            .expect("signal trigger thread should complete");
+        assert!(
+            completion.completion_reason.contains("ignored_signals=1"),
+            "expected repeated signal count to be recorded, got {}",
+            completion.completion_reason
         );
     }
 
