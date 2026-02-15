@@ -267,6 +267,18 @@ The checker also computes per-PR deltas against `.ci/script-surface-baseline.env
 
 The checker fails closed when any metric exceeds its configured threshold and emits deterministic remediation guidance.
 
+## Post-Waiver Tranche-2 Snapshot (`#3449`)
+- Migrated the highest-LOC non-Kolme service-api contract-lane wrapper family (`axum_ingress`, `reason_code_compatibility`, `serde_payload_parity`) to a shared runner:
+  - `scripts/runtime/service_api_contract_lane_runner.sh`
+- Command-surface compatibility is preserved by keeping existing wrapper entrypoints:
+  - `scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh`
+  - `scripts/runtime/validate_service_api_reason_code_compatibility_live_contract_lane.sh`
+  - `scripts/runtime/validate_service_api_serde_payload_parity_live_contract_lane.sh`
+- Latest local budget evidence after migration:
+  - `shell_line_total=31253` (down from `31599`)
+  - `script_count=381`
+  - `violations=none`
+
 ## Waiver Rules
 Temporary exceptions are allowed through `.ci/script-surface-budget-waiver.json`.
 Required fields:
