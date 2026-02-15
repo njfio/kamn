@@ -316,6 +316,7 @@ required_snippets=(
   "local fork bootstrap/readiness run-mode commands remain excluded from ci-fast-gate."
   "local KAMN live runtime integration run-mode commands remain excluded from ci-fast-gate."
   "check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json"
+  "signer rotation/failover drill lane remains local-heavy and excluded from ci-fast-gate."
   "runtime_commit_command_profile=real-node-non-synthetic-v1"
   "runtime_commit_policy_command_profile=real-node-non-synthetic-v1"
   "runtime_commit_command_profile_version=v1"
