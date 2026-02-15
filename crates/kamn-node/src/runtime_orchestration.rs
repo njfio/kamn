@@ -745,6 +745,14 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             let shutdown_drain_status = daemon_shutdown_drain_status(completion_reason);
             let shutdown_snapshot_flush_status =
                 daemon_shutdown_snapshot_flush_status(completion_reason);
+            let shutdown_signal_tick =
+                daemon_shutdown_signal_tick(completion_reason).unwrap_or("none");
+            let shutdown_drain_ticks =
+                daemon_shutdown_reason_field(completion_reason, "drain_ticks").unwrap_or("0");
+            let shutdown_timeout_ticks =
+                daemon_shutdown_reason_field(completion_reason, "timeout_ticks").unwrap_or("0");
+            let shutdown_ignored_signals =
+                daemon_shutdown_reason_field(completion_reason, "ignored_signals").unwrap_or("0");
             validate_full_supervisor_stop_contract(
                 completion_reason,
                 shutdown_drain_status,
@@ -759,6 +767,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                         "shutdown_snapshot_flush_status",
                         shutdown_snapshot_flush_status,
                     ),
+                    ("shutdown_signal_tick", shutdown_signal_tick),
+                    ("shutdown_drain_ticks", shutdown_drain_ticks),
+                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
+                    ("shutdown_ignored_signals", shutdown_ignored_signals),
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;
@@ -772,6 +784,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                         "shutdown_snapshot_flush_status",
                         shutdown_snapshot_flush_status,
                     ),
+                    ("shutdown_signal_tick", shutdown_signal_tick),
+                    ("shutdown_drain_ticks", shutdown_drain_ticks),
+                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
+                    ("shutdown_ignored_signals", shutdown_ignored_signals),
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;

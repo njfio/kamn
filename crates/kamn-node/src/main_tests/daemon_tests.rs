@@ -8,6 +8,22 @@ unsafe extern "C" {
     fn raise(sig: i32) -> i32;
 }
 
+fn daemon_env_lock() -> &'static std::sync::Mutex<()> {
+    use std::sync::{Mutex, OnceLock};
+
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli, ConfigError> {
+    let _env_lock = daemon_env_lock()
+        .lock()
+        .expect("daemon env lock should guard process-level overrides");
+    let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", None);
+    let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", None);
+    parse_args(args)
+}
+
 #[test]
 fn functional_runtime_daemon_emits_structured_transition_markers() {
     let _lock = log_env_lock()
@@ -15,7 +31,7 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         .expect("log env lock should guard test mutation");
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -25,6 +41,12 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         "3".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
         "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "99".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
     ])
     .expect("daemon args should parse");
 
@@ -65,7 +87,7 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
     );
     assert_eq!(
         extract_json_string_field(complete_line, "completion_reason").as_deref(),
-        Some("tick-budget-exhausted")
+        Some("tick-budget-exhausted;ignored_signals=1")
     );
     assert_eq!(
         extract_json_string_field(complete_line, "shutdown_drain_status").as_deref(),
@@ -89,7 +111,7 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
     );
     assert_eq!(
         extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
-        Some("0")
+        Some("1")
     );
     let complete_execution_id = extract_json_string_field(complete_line, "execution_id")
         .expect("daemon completion marker should include execution_id");
@@ -103,7 +125,7 @@ fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() 
         .expect("log env lock should guard test mutation");
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -167,7 +189,7 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
         .expect("log env lock should guard test mutation");
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let parsed = parse_args(vec![
+    let parsed = parse_args_with_clean_daemon_env(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
         "processor".to_owned(),
@@ -236,6 +258,12 @@ fn parses_runtime_mode_daemon_with_bounded_controls() {
         "3".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
         "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "99".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
         "--daemon-peer-id".to_owned(),
         "peer-alpha".to_owned(),
         "--daemon-lifecycle-event".to_owned(),
@@ -244,7 +272,7 @@ fn parses_runtime_mode_daemon_with_bounded_controls() {
         "handshake-succeeded".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon args should parse");
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
     assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
     assert_eq!(parsed.daemon_max_ticks, Some(3));
     assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
@@ -273,7 +301,8 @@ fn parses_runtime_mode_daemon_with_shutdown_controls() {
         "4".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon args with shutdown controls should parse");
+    let parsed = parse_args_with_clean_daemon_env(args)
+        .expect("daemon args with shutdown controls should parse");
     assert_eq!(parsed.daemon_shutdown_signal_ticks, vec![3]);
     assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
@@ -299,7 +328,8 @@ fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
         "4".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon args with os signal controls should parse");
+    let parsed = parse_args_with_clean_daemon_env(args)
+        .expect("daemon args with os signal controls should parse");
     assert_eq!(parsed.daemon_shutdown_signal_ticks, Vec::<u64>::new());
     assert!(parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
@@ -330,7 +360,8 @@ fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
         "1200".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon args with observability endpoint should parse");
+    let parsed = parse_args_with_clean_daemon_env(args)
+        .expect("daemon args with observability endpoint should parse");
     assert_eq!(
         parsed.observability_endpoint_bind_addr,
         Some("127.0.0.1:9108".to_owned())
@@ -346,9 +377,9 @@ fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
 
 #[test]
 fn env_only_daemon_controls_parse_without_config_file() {
-    let _env_lock = signer_env_lock()
+    let _env_lock = daemon_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .expect("daemon env lock should guard process-level overrides");
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("12"));
     let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
 
@@ -367,9 +398,9 @@ fn env_only_daemon_controls_parse_without_config_file() {
 
 #[test]
 fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file() {
-    let _env_lock = signer_env_lock()
+    let _env_lock = daemon_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .expect("daemon env lock should guard process-level overrides");
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("invalid"));
     let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
 
@@ -403,6 +434,12 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
         "3".to_owned(),
         "--daemon-tick-interval-ms".to_owned(),
         "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "99".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
         "--daemon-peer-id".to_owned(),
         "peer-alpha".to_owned(),
         "--daemon-lifecycle-event".to_owned(),
@@ -417,14 +454,15 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
         "json".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon args should parse");
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
     let report = execute(parsed).expect("daemon execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"runtime_mode\":\"daemon\""));
     assert!(rendered.contains("\"daemon_max_ticks\":3"));
     assert!(rendered.contains("\"daemon_tick_interval_ms\":25"));
     assert!(rendered.contains("\"daemon_executed_ticks\":3"));
-    assert!(rendered.contains("\"daemon_completion_reason\":\"tick-budget-exhausted\""));
+    assert!(rendered
+        .contains("\"daemon_completion_reason\":\"tick-budget-exhausted;ignored_signals=1\""));
     assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":25"));
     assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":50"));
     assert!(rendered.contains("\"daemon_observability_throughput_tps\":2000"));
@@ -467,7 +505,7 @@ fn functional_runtime_daemon_applies_graceful_shutdown_signal() {
         "json".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon shutdown args should parse");
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon shutdown args should parse");
     let report = execute(parsed).expect("daemon graceful shutdown execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"daemon_executed_ticks\":5"));
@@ -500,7 +538,7 @@ fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
         "json".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon timeout args should parse");
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon timeout args should parse");
     let report = execute(parsed).expect("daemon timeout execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"daemon_executed_ticks\":9"));
@@ -542,7 +580,8 @@ pub(super) fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal(
         "json".to_owned(),
     ];
 
-    let parsed = parse_args(args).expect("daemon os-signal args should parse");
+    let parsed =
+        parse_args_with_clean_daemon_env(args).expect("daemon os-signal args should parse");
     let trigger = std::thread::spawn(|| {
         std::thread::sleep(std::time::Duration::from_millis(10));
         let result = unsafe { raise(SIGTERM) };
