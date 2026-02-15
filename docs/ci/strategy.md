@@ -299,6 +299,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic gossip propagation marker (`gossip_propagation_status=verified`).
   - lane emits deterministic lifecycle transition marker (`lifecycle_transition_status=verified`).
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_discovery_gossip_three_node`).
+  - Kademlia bootstrap contracts are covered by `cargo test -p kamn-core --test p2p_kademlia_bootstrap`.
+  - bootstrap seed validation remains fail-closed for empty/invalid seed sets before discovery startup.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
@@ -307,6 +309,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - libp2p three-node discovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `libp2p_three_node_discovery_policy_marker_missing:three_node_discovery_status`
+  - `MissingKademliaBootstrapSeeds`
 
 ## Process Harness Primitive Contract
 - Entry commands:

@@ -188,6 +188,7 @@ fn doc_contains_p2p_swarm_harness_contracts() {
     assert!(DOC.contains("## P2P Swarm Harness Contracts"));
     assert!(DOC.contains("build_p2p_swarm_deterministic_config"));
     assert!(DOC.contains("compose_libp2p_swarm_behavior_stack"));
+    assert!(DOC.contains("compose_kademlia_discovery_bootstrap"));
     assert!(DOC.contains("P2pSwarmHarnessTask::start"));
     assert!(DOC.contains("p2p-libp2p-swarm-stack"));
     assert!(DOC.contains("p2p-libp2p-harness-ready"));
@@ -195,6 +196,8 @@ fn doc_contains_p2p_swarm_harness_contracts() {
     assert!(DOC.contains("P2pTransportError::InvalidSwarmBootstrapPeerAddress"));
     assert!(DOC.contains("P2pTransportError::InvalidSwarmHarnessTickBudget"));
     assert!(DOC.contains("P2pTransportError::GossipTransportDisabled"));
+    assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
+    assert!(DOC.contains("discovery backend marker remains deterministic: `kademlia`."));
 }
 
 #[test]

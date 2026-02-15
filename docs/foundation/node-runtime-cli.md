@@ -225,6 +225,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - `P2pTransportError::InvalidSwarmBootstrapPeerAddress`
   - `P2pTransportError::InvalidSwarmHarnessTickBudget`
   - `P2pTransportError::GossipTransportDisabled`
+- Kademlia bootstrap contracts:
+  - `compose_kademlia_discovery_bootstrap(...)` composes deterministic discovery plans from configured seed peers.
+  - bootstrap seed list is canonicalized and deduplicated before startup.
+  - empty seed lists fail closed with `P2pTransportError::MissingKademliaBootstrapSeeds`.
+  - discovery backend marker remains deterministic: `kademlia`.
 - Harness startup modes:
   - `DryRun`: validates deterministic composition and reports `started=false`.
   - `Run`: starts bounded harness loop and reports deterministic `executed_ticks`.
