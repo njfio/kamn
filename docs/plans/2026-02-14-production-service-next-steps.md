@@ -55,11 +55,14 @@ This refreshed version separates:
 ## Remaining Open Gaps (Active)
 
 ### Item 3: Real libp2p transport delivery
-- Open chain: `#3228 -> #3229 -> #3313 -> (#3356, #3314, #3315, #3319)`.
+- Open chain: `#3228 -> #3229 -> #3313 -> (#3356, #3314, #3315, #3319, #3470)`.
 - Current focus:
   - deterministic swarm behavior composition,
   - lifecycle/discovery fail-closed evidence,
-  - local-heavy live lane validation with CI fast-gate exclusion.
+  - local-heavy live lane validation with CI fast-gate exclusion,
+  - Task #3470 live transport fault matrix policy lane:
+    `scripts/runtime/validate_live_transport_fault_matrix_live_contract_lane.sh`,
+    `scripts/runtime/check_live_transport_fault_matrix_live_policy.sh`.
 
 ### Item 4 follow-on: Transport-fed consensus convergence
 - Open chain: `#3228 -> #3413 -> #3414 -> (#3443, #3444, #3446, #3447, #3448)`.
@@ -95,6 +98,7 @@ This refreshed version separates:
 - `bash scripts/ci/test_ci_strategy_contract.sh`
 - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
 - `bash scripts/ci/test_kolme_live_integration_architecture_contract.sh`
+- `bash scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh`
 
 ## Historical Baseline (Superseded)
 The earlier 2026-02-14 draft language that described ingress/storage/runtime composition as unresolved scaffolding is retained only as historical context and is superseded by the issue-chain status above.
