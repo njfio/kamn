@@ -79,6 +79,16 @@ def _run_cargo_test(selector: str, *, timeout_seconds: int) -> str:
 
 def _run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
+    lane_profile = require_enum(
+        "--lane-profile",
+        args.lane_profile.strip(),
+        ("standard", "soak"),
+    )
+    requested_soak_iterations = require_positive_int(
+        "KAMN_LOCAL_OBSERVABILITY_SCRAPE_SOAK_ITERATIONS",
+        args.soak_iterations,
+    )
+    soak_iterations = requested_soak_iterations if lane_profile == "soak" else 1
     max_seconds = require_positive_int(
         "KAMN_LOCAL_OBSERVABILITY_SCRAPE_MAX_SECONDS",
         args.max_seconds,
@@ -91,14 +101,21 @@ def _run_lane(args: argparse.Namespace) -> int:
     start_epoch = int(time.time())
     commands: list[str] = []
     execution_reason_code = "dry_run_no_commands_executed"
+    soak_iterations_executed = 0
 
     if mode == "run":
         if args.require_opt_in and args.local_opt_in != "1":
             fail(f"run mode requires explicit local-only opt-in via {OPT_IN_ENV}=1")
 
-        for _, selector in LOCAL_OBSERVABILITY_SCRAPE_TESTS:
-            commands.append(_run_cargo_test(selector, timeout_seconds=command_max_seconds))
-        execution_reason_code = "run_mode_commands_executed"
+        for _ in range(soak_iterations):
+            for _, selector in LOCAL_OBSERVABILITY_SCRAPE_TESTS:
+                commands.append(_run_cargo_test(selector, timeout_seconds=command_max_seconds))
+        soak_iterations_executed = soak_iterations
+        execution_reason_code = (
+            "soak_run_mode_commands_executed"
+            if lane_profile == "soak"
+            else "run_mode_commands_executed"
+        )
 
     elapsed_seconds = int(time.time()) - start_epoch
     if elapsed_seconds > max_seconds:
@@ -112,12 +129,18 @@ def _run_lane(args: argparse.Namespace) -> int:
         "status": "pass",
         "final_decision": "GO",
         "lane_mode": mode,
+        "lane_profile": lane_profile,
         "scrape_probe_status": "verified",
         "metrics_content_type_status": "verified",
         "stream_lifecycle_status": "verified",
         "readiness_probe_status": "verified",
         "readiness_failure_drill_status": "verified",
         "readiness_reason_taxonomy_status": "verified",
+        "local_heavy_soak_lane_status": (
+            "verified" if lane_profile == "soak" else "not_enabled"
+        ),
+        "soak_iterations_requested": soak_iterations,
+        "soak_iterations_executed": soak_iterations_executed,
         "fail_closed_status": "verified",
         "ci_fast_gate_exclusion_status": "verified",
         "performance_budget_status": "verified",
@@ -136,12 +159,19 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("status=pass")
     print("final_decision=GO")
     print(f"lane_mode={mode}")
+    print(f"lane_profile={lane_profile}")
     print("scrape_probe_status=verified")
     print("metrics_content_type_status=verified")
     print("stream_lifecycle_status=verified")
     print("readiness_probe_status=verified")
     print("readiness_failure_drill_status=verified")
     print("readiness_reason_taxonomy_status=verified")
+    if lane_profile == "soak":
+        print("local_heavy_soak_lane_status=verified")
+    else:
+        print("local_heavy_soak_lane_status=not_enabled")
+    print(f"soak_iterations_requested={soak_iterations}")
+    print(f"soak_iterations_executed={soak_iterations_executed}")
     print("fail_closed_status=verified")
     print("ci_fast_gate_exclusion_status=verified")
     print("performance_budget_status=verified")
@@ -174,12 +204,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "status",
         "final_decision",
         "lane_mode",
+        "lane_profile",
         "scrape_probe_status",
         "metrics_content_type_status",
         "stream_lifecycle_status",
         "readiness_probe_status",
         "readiness_failure_drill_status",
         "readiness_reason_taxonomy_status",
+        "local_heavy_soak_lane_status",
+        "soak_iterations_requested",
+        "soak_iterations_executed",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
@@ -230,6 +264,21 @@ def _check_policy(args: argparse.Namespace) -> int:
         lane_mode not in {"dry-run", "run"},
         "local_observability_scrape_policy_lane_mode_invalid",
     )
+    lane_profile = report.get("lane_profile")
+    decision.reject_if(
+        lane_profile not in {"standard", "soak"},
+        "local_observability_scrape_policy_lane_profile_invalid",
+    )
+    soak_iterations_requested = report.get("soak_iterations_requested")
+    decision.reject_if(
+        not _is_non_negative_int(soak_iterations_requested) or soak_iterations_requested <= 0,
+        "local_observability_scrape_policy_soak_iterations_requested_invalid",
+    )
+    soak_iterations_executed = report.get("soak_iterations_executed")
+    decision.reject_if(
+        not _is_non_negative_int(soak_iterations_executed),
+        "local_observability_scrape_policy_soak_iterations_executed_invalid",
+    )
 
     command_count = report.get("command_count")
     decision.reject_if(
@@ -247,16 +296,52 @@ def _check_policy(args: argparse.Namespace) -> int:
             command_count != 0,
             "local_observability_scrape_policy_command_count_mismatch",
         )
+        decision.reject_if(
+            soak_iterations_executed != 0,
+            "local_observability_scrape_policy_soak_iterations_executed_mismatch",
+        )
     elif lane_mode == "run":
-        decision.reject_if(
-            execution_reason_code != "run_mode_commands_executed",
-            "local_observability_scrape_policy_execution_reason_code_mismatch",
-        )
-        decision.reject_if(
-            not isinstance(command_count, int)
-            or command_count < len(LOCAL_OBSERVABILITY_SCRAPE_TESTS),
-            "local_observability_scrape_policy_command_count_mismatch",
-        )
+        if lane_profile == "soak":
+            decision.reject_if(
+                execution_reason_code != "soak_run_mode_commands_executed",
+                "local_observability_scrape_policy_execution_reason_code_mismatch",
+            )
+            decision.reject_if(
+                report.get("local_heavy_soak_lane_status") != "verified",
+                "local_observability_scrape_policy_marker_missing:local_heavy_soak_lane_status",
+            )
+            decision.reject_if(
+                soak_iterations_executed != soak_iterations_requested,
+                "local_observability_scrape_policy_soak_iterations_executed_mismatch",
+            )
+            decision.reject_if(
+                not isinstance(command_count, int)
+                or command_count
+                < len(LOCAL_OBSERVABILITY_SCRAPE_TESTS) * soak_iterations_requested,
+                "local_observability_scrape_policy_command_count_mismatch",
+            )
+        else:
+            decision.reject_if(
+                report.get("local_heavy_soak_lane_status") != "not_enabled",
+                "local_observability_scrape_policy_soak_status_invalid_for_standard",
+            )
+            decision.reject_if(
+                execution_reason_code != "run_mode_commands_executed",
+                "local_observability_scrape_policy_execution_reason_code_mismatch",
+            )
+            decision.reject_if(
+                soak_iterations_requested != 1,
+                "local_observability_scrape_policy_soak_iterations_requested_invalid",
+            )
+            decision.reject_if(
+                soak_iterations_executed != 1,
+                "local_observability_scrape_policy_soak_iterations_executed_mismatch",
+            )
+            decision.reject_if(
+                not isinstance(command_count, int)
+                or command_count < len(LOCAL_OBSERVABILITY_SCRAPE_TESTS),
+                "local_observability_scrape_policy_command_count_mismatch",
+            )
 
     decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
@@ -317,6 +402,18 @@ def main() -> int:
         "--mode",
         default=os.environ.get("KAMN_LOCAL_OBSERVABILITY_SCRAPE_MODE", "dry-run"),
         help="Lane mode: dry-run|run.",
+    )
+    run_lane_parser.add_argument(
+        "--lane-profile",
+        default=os.environ.get(
+            "KAMN_LOCAL_OBSERVABILITY_SCRAPE_LANE_PROFILE", "standard"
+        ),
+        help="Lane profile: standard|soak.",
+    )
+    run_lane_parser.add_argument(
+        "--soak-iterations",
+        default=os.environ.get("KAMN_LOCAL_OBSERVABILITY_SCRAPE_SOAK_ITERATIONS", "3"),
+        help="Iteration count used for soak profile execution.",
     )
     run_lane_parser.add_argument(
         "--max-seconds",

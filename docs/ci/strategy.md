@@ -539,6 +539,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Entry commands:
   - `bash scripts/runtime/validate_local_observability_scrape_live.sh --mode dry-run --output-json /tmp/local-observability-scrape-live-summary.json`
   - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --output-json /tmp/local-observability-scrape-live-summary.json`
+  - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --lane-profile soak --soak-iterations 2 --output-json /tmp/local-observability-scrape-live-summary.soak.json`
   - `bash scripts/runtime/check_local_observability_scrape_live_policy.sh --report-file /tmp/local-observability-scrape-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-observability-scrape-live-policy.json`
   - `bash scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh --output-json /tmp/local-observability-scrape-live-contract-lane-report.json --policy-output-json /tmp/local-observability-scrape-live-policy.json`
   - `bash scripts/runtime/test_validate_local_observability_scrape_live.sh`
@@ -550,9 +551,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested local observability scrape commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`.
+  - soak run-mode profile is local-only (`--lane-profile soak`) and emits deterministic `local_heavy_soak_lane_status=verified` plus iteration markers (`soak_iterations_requested`, `soak_iterations_executed`).
   - bounded to five targeted `kamn-node` observability endpoint tests when run mode is enabled (metrics/health scrape, stream projection, readiness failure-drill degradation taxonomy, and readiness dependency-probe taxonomy matrix coverage).
   - async handler parity checks remain in the bounded test scope, including concurrent metrics/stream request handling against the async observability adapter path.
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Readiness/failure-drill contracts:
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
   - lane emits deterministic readiness degradation drill marker (`readiness_failure_drill_status=verified`).
