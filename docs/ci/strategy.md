@@ -2815,6 +2815,25 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 - Flaky test quarantine inventory is tracked in `.ci/flaky-tests.txt`.
 - Each quarantine entry must include owner, tracking issue, and expiry date.
 
+## Anti-Flake Merge Gate Policy
+- Merge-gate policy command:
+  - `bash scripts/ci/check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --output-json /tmp/anti-flake-policy-report.json`
+- Policy report schema:
+  - `kamn.ci.anti-flake-policy-report.v1`
+- Deterministic status markers:
+  - `anti_flake_policy_status=pass|fail`
+  - `anti_flake_policy_final_decision=GO|NO-GO`
+  - `anti_flake_policy_reason_codes=<comma-delimited>`
+- Deterministic reason-code surface:
+  - `no_active_flaky_entries`
+  - `active_flaky_entries_within_budget`
+  - `active_flaky_entries_exceed_max`
+  - `registry_validation_failed`
+  - `registry_file_missing`
+  - `expected_final_decision_mismatch`
+- Merge gate wiring:
+  - `ci-fast-gate` runs anti-flake policy enforcement after registry format validation and uploads `ci-anti-flake-policy-report.json` as artifact telemetry.
+
 ## PR CI Impact Declaration
 When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.ci/*`), PR description must explicitly declare CI impact.
 

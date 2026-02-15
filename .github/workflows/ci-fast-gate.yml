@@ -52,6 +52,23 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: bash scripts/ci/check_flaky_registry.sh
 
+      - name: Enforce anti-flake merge gate policy
+        if: steps.scope.outputs.docs_only != 'true'
+        run: |
+          bash scripts/ci/check_anti_flake_policy.sh \
+            --registry-file .ci/flaky-tests.txt \
+            --expected-final-decision GO \
+            --max-active-entries 0 \
+            --output-json ci-anti-flake-policy-report.json
+
+      - name: Upload anti-flake policy report
+        if: always() && hashFiles('ci-anti-flake-policy-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-anti-flake-policy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-anti-flake-policy-report.json
+          if-no-files-found: error
+
       - name: Validate PR CI impact declaration
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/check_pr_ci_declaration.sh
