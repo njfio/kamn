@@ -112,6 +112,25 @@ provider marker contracts for local-heavy runtime rehearsal:
 - Invalid lifecycle transition replay remains fail closed with reason code
   `runtime_peer_transition_invalid`.
 
+## Peer Lifecycle Proptest Invariants
+
+- Proptest target:
+  - `cargo test -p kamn-core --test peer_lifecycle_proptest_invariants`
+- Deterministic runner contract:
+  - fixed runner seeds are used for legality/idempotence/replay checks
+    (`LEGALITY_SEED`, `IDEMPOTENCE_SEED`, `REPLAY_SEED`).
+  - runner persistence is enabled with
+    `FileFailurePersistence::SourceParallel("proptest-regressions")`.
+  - tracked seed corpus path:
+    `crates/kamn-core/proptest-regressions/tests/peer_lifecycle_proptest_invariants.txt`.
+- Invariant inventory:
+  - legal transitions must match the peer lifecycle state graph.
+  - invalid transition retries must remain idempotent and preserve lifecycle state.
+  - replaying an identical event sequence must produce identical outcomes.
+- Rejection guardrail:
+  - invalid transition retries must continue returning reason code
+    `runtime_peer_transition_invalid`.
+
 Regression marker:
 - `Regression: #2922` ensures disconnected peers cannot broadcast gossip frames.
 
@@ -122,6 +141,10 @@ cargo test -p kamn-core --test p2p_transport_runtime
 cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core --test p2p_kademlia_bootstrap
 cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
+cargo test -p kamn-core --test peer_lifecycle_proptest_invariants unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent -- --exact
+cargo test -p kamn-core --test peer_lifecycle_proptest_invariants functional_peer_lifecycle_proptest_enforces_legal_transition_graph -- --exact
+cargo test -p kamn-core --test peer_lifecycle_proptest_invariants integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent -- --exact
+cargo test -p kamn-core --test peer_lifecycle_proptest_invariants integration_peer_lifecycle_proptest_sequence_replay_is_deterministic -- --exact
 cargo test -p kamn-core p2p_transport
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
