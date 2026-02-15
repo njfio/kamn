@@ -14,6 +14,7 @@
 Supporting runtime-focused modules remain scoped by responsibility:
 
 - `cli.rs` for CLI/config parsing and mode resolution.
+- `runtime_orchestration.rs` for runtime-mode dispatch, daemon/full phase orchestration, and signer policy contract enforcement.
 - `runtime_kolme_live.rs` for Kolme live runtime orchestration.
 - `daemon_shutdown.rs` and `daemon_observability.rs` for daemon lifecycle/telemetry.
 - `report_builder.rs` and `report_render.rs` for runtime report shaping/rendering.
