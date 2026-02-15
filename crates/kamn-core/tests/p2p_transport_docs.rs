@@ -46,6 +46,21 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
 }
 
 #[test]
+fn architecture_doc_contains_peer_lifecycle_proptest_invariant_catalog() {
+    assert!(DOC.contains("## Peer Lifecycle Proptest Invariants"));
+    assert!(DOC.contains("cargo test -p kamn-core --test peer_lifecycle_proptest_invariants"));
+    assert!(DOC.contains("LEGALITY_SEED"));
+    assert!(DOC.contains("IDEMPOTENCE_SEED"));
+    assert!(DOC.contains("REPLAY_SEED"));
+    assert!(DOC.contains("FileFailurePersistence::SourceParallel(\"proptest-regressions\")"));
+    assert!(DOC.contains(
+        "crates/kamn-core/proptest-regressions/tests/peer_lifecycle_proptest_invariants.txt"
+    ));
+    assert!(DOC.contains("invalid transition retries must remain idempotent"));
+    assert!(DOC.contains("runtime_peer_transition_invalid"));
+}
+
+#[test]
 fn roadmap_references_phase_31_initial_p2p_slice() {
     assert!(ROADMAP.contains("Phase 3.1 initial slice delivered"));
     assert!(ROADMAP.contains("Task #2921, Subtask #2922"));
