@@ -12,14 +12,32 @@ gossip lifecycle integration (Task #2921, Subtask #2922).
 - Wire bootstrap/runtime component planning so gossip-enabled nodes explicitly
   include p2p transport surfaces.
 
-This slice is intentionally dependency-light and does not yet bind to live
-libp2p transport networking. Live validation/rehearsal is tracked separately in
-Task #2923 and Subtask #2924.
+This slice is intentionally dependency-light by default and does not yet bind to
+live libp2p transport networking. Live validation/rehearsal is tracked
+separately in Task #2923 and Subtask #2924.
 
 Subtask #3356 extends this slice with deterministic libp2p swarm-composition
 contracts (configuration validation, behavior-stack composition, and bounded
 runtime harness startup) without introducing heavyweight network dependencies in
 the default fast test lane.
+
+Subtask #3651 adds explicit compile-time feature-gate wiring for future native
+libp2p I/O integration while preserving low-cost default CI behavior.
+
+## Dependency And Feature-Gate Map
+
+- `kamn-core` optional dependency:
+  - `libp2p` (disabled by default)
+- Cargo feature gate:
+  - `libp2p-live-transport` enables `dep:libp2p`
+- Compile-mode hooks:
+  - `libp2p_feature_gate_name()` returns `libp2p-live-transport`
+  - `resolve_libp2p_compile_mode()` returns:
+    - `Libp2pCompileMode::ContractOnly` (default fast lane)
+    - `Libp2pCompileMode::NativeLibp2p` (feature-enabled lane)
+- Runtime wiring marker:
+  - `p2p-live-libp2p-provider:contract-only` when feature disabled
+  - `p2p-live-libp2p-provider:native` when feature enabled
 
 ## Core Components
 
@@ -195,6 +213,8 @@ cargo test -p kamn-core --test p2p_transport_runtime
 cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core --test p2p_kademlia_bootstrap
 cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
+cargo test -p kamn-core --test p2p_transport_feature_gates
+cargo test -p kamn-core --test p2p_transport_feature_gates --features libp2p-live-transport
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact
