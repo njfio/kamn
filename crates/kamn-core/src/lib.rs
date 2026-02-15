@@ -348,11 +348,11 @@ pub use p2p_transport::{
     compose_kademlia_discovery_bootstrap, compose_libp2p_swarm_behavior_stack,
     run_libp2p_lifecycle_regression_case, run_libp2p_lifecycle_regression_corpus,
     InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan,
-    P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pSwarmHarnessReport,
-    P2pSwarmHarnessTask, P2pTransportError, PeerDiscoveryRecord, PeerGossipFrame,
-    PeerLifecycleRegressionCase, PeerLifecycleRegressionError,
-    PeerLifecycleRegressionExpectedOutcome, PeerLifecycleRegressionOutcome, PeerLifecycleTransport,
-    PeerLifecycleTransportCoordinator,
+    Libp2pLivePeerLifecycleTransport, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
+    P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask, P2pTransportError,
+    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleRegressionCase,
+    PeerLifecycleRegressionError, PeerLifecycleRegressionExpectedOutcome,
+    PeerLifecycleRegressionOutcome, PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
@@ -377,6 +377,7 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
+    build_runtime_wiring, build_runtime_wiring_with_transport_profile,
     simulate_daemon_network_fault, AuthenticatedPeerFrame, AuthenticatedPeerFrameError,
     BoundedRuntimeQueue, DeterministicBackpressureController, DeterministicNetworkFaultSimulator,
     DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
@@ -385,9 +386,9 @@ pub use runtime::{
     ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
     RecoveryStatus, RejoinAttempt, RuntimeBackpressureAction, RuntimeBackpressureDecision,
     RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
-    RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, RuntimeWiring,
-    SnapshotRecoveryResult, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
-    SqliteRuntimeSnapshotStore,
+    RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
+    RuntimeTransportProfile, RuntimeWiring, SnapshotRecoveryResult, SnapshotRestoreError,
+    SnapshotRestoreGuard, SnapshotStoreError, SqliteRuntimeSnapshotStore,
 };
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,

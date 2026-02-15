@@ -899,14 +899,45 @@ impl RuntimeWiring {
     }
 }
 
-/// Handles build runtime wiring.
-pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
+/// Runtime transport profile used to select deterministic p2p wiring markers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeTransportProfile {
+    /// In-memory deterministic transport adapter path.
+    InMemoryDeterministic,
+    /// Live libp2p transport adapter path.
+    Libp2pLive,
+}
+
+impl RuntimeTransportProfile {
+    /// Returns deterministic profile marker used in runtime wiring.
+    pub fn marker_component(self) -> &'static str {
+        match self {
+            Self::InMemoryDeterministic => "p2p-transport-profile:in-memory-deterministic",
+            Self::Libp2pLive => "p2p-transport-profile:libp2p-live",
+        }
+    }
+
+    fn provider_component(self) -> &'static str {
+        match self {
+            Self::InMemoryDeterministic => "p2p-in-memory-transport-fallback",
+            Self::Libp2pLive => "p2p-live-libp2p-provider",
+        }
+    }
+}
+
+/// Builds runtime wiring with explicit deterministic p2p transport profile markers.
+pub fn build_runtime_wiring_with_transport_profile(
+    config: &NodeConfig,
+    transport_profile: RuntimeTransportProfile,
+) -> RuntimeWiring {
     let mut common_components = vec!["state-store", "message-router", "audit-log", "api-surface"];
     if config.enable_gossip {
         common_components.push("p2p-discovery");
         common_components.push("p2p-gossip-transport");
         common_components.push("p2p-libp2p-swarm-stack");
         common_components.push("p2p-libp2p-harness-ready");
+        common_components.push(transport_profile.marker_component());
+        common_components.push(transport_profile.provider_component());
     } else {
         common_components.push("gossip-transport-disabled");
     }
@@ -926,4 +957,12 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
         common_components,
         role_components,
     }
+}
+
+/// Handles build runtime wiring.
+pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
+    build_runtime_wiring_with_transport_profile(
+        config,
+        RuntimeTransportProfile::InMemoryDeterministic,
+    )
 }

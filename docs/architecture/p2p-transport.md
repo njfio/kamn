@@ -27,6 +27,9 @@ the default fast test lane.
   - transport adapter contract for advertise/discover/send/drain operations.
 - `InMemoryPeerLifecycleTransport`
   - shared deterministic adapter for low-cost local tests and smoke lanes.
+- `Libp2pLivePeerLifecycleTransport`
+  - deterministic live-adapter surface that boots swarm harness startup and
+    provides a concrete transport profile for runtime wiring.
 - `PeerDiscoveryRecord`
   - normalized peer advertisement payload with role and gossip topic set.
 - `PeerGossipFrame`
@@ -38,6 +41,8 @@ the default fast test lane.
     - discovers peers by topic
     - broadcasts fan-out gossip frames
     - drains inbound queue frames
+    - maps live transport lifecycle events through
+      `apply_live_transport_signal(...)` with fail-closed transition handling
 - `P2pSwarmDeterministicConfig`
   - validates deterministic listen multiaddr, bootstrap peers, gossip topics,
     and bounded harness tick budgets.
@@ -70,11 +75,20 @@ the default fast test lane.
   - `p2p-gossip-transport`
   - `p2p-libp2p-swarm-stack`
   - `p2p-libp2p-harness-ready`
+  - `p2p-transport-profile:in-memory-deterministic`
+  - `p2p-in-memory-transport-fallback`
 - with `enable_gossip=false`:
   - `gossip-transport-disabled`
 
 This makes bootstrap planning explicitly reflect whether gossip transport is
 enabled for a node profile.
+
+`build_runtime_wiring_with_transport_profile(...)` additionally supports live
+provider marker contracts for local-heavy runtime rehearsal:
+
+- `RuntimeTransportProfile::Libp2pLive`
+  - `p2p-transport-profile:libp2p-live`
+  - `p2p-live-libp2p-provider`
 
 ## Deterministic Guardrails
 

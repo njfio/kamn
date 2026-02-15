@@ -206,6 +206,10 @@ This document captures node-runtime productionization slices for machine-readabl
 - Deterministic swarm composition for runtime integration uses:
   - `build_p2p_swarm_deterministic_config(...)`
   - `compose_libp2p_swarm_behavior_stack(...)`
+  - `build_runtime_wiring_with_transport_profile(...)`
+  - `RuntimeTransportProfile::Libp2pLive`
+  - `Libp2pLivePeerLifecycleTransport::new(...)`
+  - `PeerLifecycleTransportCoordinator::apply_live_transport_signal(...)`
   - `P2pSwarmHarnessTask::start(...)`
 - Swarm config inputs are explicit and validated:
   - `local_peer_id`
@@ -218,6 +222,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - `p2p-gossip-transport`
   - `p2p-libp2p-swarm-stack`
   - `p2p-libp2p-harness-ready`
+  - `p2p-transport-profile:in-memory-deterministic`
+  - `p2p-in-memory-transport-fallback`
+- Runtime wiring with live-profile override includes:
+  - `p2p-transport-profile:libp2p-live`
+  - `p2p-live-libp2p-provider`
 - Runtime wiring with `enable_gossip=false` remains fail-closed for swarm startup and keeps:
   - `gossip-transport-disabled`
 - Typed fail-closed error semantics:

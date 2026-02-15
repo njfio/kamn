@@ -5,9 +5,11 @@ const ROADMAP: &str = include_str!("../../../docs/plans/2026-02-08-production-se
 fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("PeerLifecycleTransport"));
     assert!(DOC.contains("InMemoryPeerLifecycleTransport"));
+    assert!(DOC.contains("Libp2pLivePeerLifecycleTransport"));
     assert!(DOC.contains("PeerDiscoveryRecord"));
     assert!(DOC.contains("PeerGossipFrame"));
     assert!(DOC.contains("PeerLifecycleTransportCoordinator"));
+    assert!(DOC.contains("apply_live_transport_signal"));
     assert!(DOC.contains("P2pSwarmDeterministicConfig"));
     assert!(DOC.contains("P2pSwarmBehaviorStack"));
     assert!(DOC.contains("P2pSwarmHarnessTask"));
@@ -23,6 +25,10 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("p2p-gossip-transport"));
     assert!(DOC.contains("p2p-libp2p-swarm-stack"));
     assert!(DOC.contains("p2p-libp2p-harness-ready"));
+    assert!(DOC.contains("p2p-transport-profile:in-memory-deterministic"));
+    assert!(DOC.contains("p2p-in-memory-transport-fallback"));
+    assert!(DOC.contains("p2p-transport-profile:libp2p-live"));
+    assert!(DOC.contains("p2p-live-libp2p-provider"));
     assert!(DOC.contains("gossip-transport-disabled"));
     assert!(DOC.contains("P2pTransportError::InvalidPeerId"));
     assert!(DOC.contains("P2pTransportError::InvalidTopic"));

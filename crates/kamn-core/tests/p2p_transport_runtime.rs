@@ -102,6 +102,14 @@ fn integration_bootstrap_wiring_includes_p2p_transport_components_when_gossip_en
         .wiring
         .all_components()
         .contains(&"p2p-libp2p-harness-ready"));
+    assert!(gossip_plan
+        .wiring
+        .all_components()
+        .contains(&"p2p-transport-profile:in-memory-deterministic"));
+    assert!(gossip_plan
+        .wiring
+        .all_components()
+        .contains(&"p2p-in-memory-transport-fallback"));
 
     let disabled_plan = bootstrap(config_for(NodeRole::Processor, false))
         .expect("gossip-disabled bootstrap should pass");

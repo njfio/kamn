@@ -26,10 +26,11 @@ pub use runtime_network_fault::{
     NetworkFaultSimulationInput, NetworkFaultSimulationReport,
 };
 pub use runtime_peer_coordination::{
-    build_runtime_wiring, AuthenticatedPeerFrame, AuthenticatedPeerFrameError, BoundedRuntimeQueue,
-    DeterministicProposalPlanner, PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent,
-    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError,
-    RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
+    build_runtime_wiring, build_runtime_wiring_with_transport_profile, AuthenticatedPeerFrame,
+    AuthenticatedPeerFrameError, BoundedRuntimeQueue, DeterministicProposalPlanner,
+    PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    ProposalCandidate, ProposalPlan, ProposalPlannerError, RuntimeLifecycleError,
+    RuntimeQueueError, RuntimeTransportProfile, RuntimeWiring,
 };
 pub use runtime_phase_coordination::{
     authorize_daemon_outbound_action, evaluate_daemon_listener_quorum,
