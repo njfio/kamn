@@ -3049,6 +3049,33 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - per-run payload stays compact by truncating captured output with `--stdout-excerpt-lines`.
   - local validation remains deterministic and does not require external network services.
 
+## Daemon OS-Signal Stress Matrix Contract
+- Stress matrix command:
+  - `bash scripts/ci/run_daemon_os_signal_stress_matrix.sh --iterations 10 --attempts-per-iteration 1 --max-seconds 600 --reproducer-max-seconds 180 --failure-threshold 0 --artifact-dir /tmp/daemon-os-signal-stress-matrix-artifacts --output-json /tmp/daemon-os-signal-stress-matrix-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_run_daemon_os_signal_stress_matrix.sh`
+- Stress matrix artifact schema:
+  - `kamn.ci.daemon-os-signal-stress-matrix-report.v1`
+- Required aggregate fields:
+  - iterations, attempts_per_iteration, failure_threshold, pass_iterations, fail_iterations, quarantine_status, anti_flake_chain_artifacts, iteration_results
+- Required iteration fields:
+  - iteration_index, status, exit_code, reproducer_reason_code, reproducer_report_file
+- Deterministic reason codes:
+  - `stable_success`
+  - `stable_success_with_quarantine_followup`
+  - `matrix_failures_within_threshold`
+  - `matrix_failure_threshold_exceeded`
+  - `runtime_budget_exceeded`
+  - `quarantine_registry_missing`
+  - `quarantine_reference_present_without_followup`
+- Quarantine retirement criteria:
+  - targeted daemon OS-signal tests must be absent from .ci/flaky-tests.txt, or an explicit follow-up issue id must be provided via --quarantine-followup-issue #<id>.
+  - unresolved quarantine references fail closed with `quarantine_reference_present_without_followup`.
+- Cost controls:
+  - total runtime is bounded by `--max-seconds`.
+  - per-iteration reproducer runtime is bounded by `--reproducer-max-seconds`.
+  - iteration count and failure threshold are explicit (`--iterations`, `--failure-threshold`).
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
