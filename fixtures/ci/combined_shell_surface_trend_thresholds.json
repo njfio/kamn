@@ -1,0 +1,11 @@
+{
+  "schema_version": "kamn.ci.combined-shell-surface-trend-thresholds.v1",
+  "warn_script_count_increase": 5,
+  "fail_script_count_increase": 15,
+  "warn_shell_line_total_increase": 150,
+  "fail_shell_line_total_increase": 400,
+  "warn_shell_to_rust_ratio": 0.305,
+  "fail_shell_to_rust_ratio": 0.34,
+  "warn_shell_to_rust_ratio_increase": 0.005,
+  "fail_shell_to_rust_ratio_increase": 0.02
+}

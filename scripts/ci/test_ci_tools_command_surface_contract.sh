@@ -79,6 +79,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_run_signature_parity_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_generate_test_harness_loc_report.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_legacy_ingress_parser_drift.sh"'
