@@ -267,6 +267,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_p2p_transport_live.sh` and `scripts/runtime/test_validate_p2p_transport_live.sh` (Task #2923, Subtask #2924).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `p2p_transport_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for disconnected broadcast guard behavior: `fail_closed_reason_code=p2p_transport_inactive_lifecycle_state`.
+- Subtask #3314 three-node discovery lane delivered:
+  - Runtime lane: `scripts/runtime/validate_libp2p_three_node_discovery_live.sh`, `scripts/runtime/check_libp2p_three_node_discovery_live_policy.sh`, and `scripts/runtime/validate_libp2p_three_node_discovery_live_contract_lane.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `three_node_discovery_status=verified`, `gossip_propagation_status=verified`, `lifecycle_transition_status=verified`, `runtime_transport_mode=libp2p_discovery_gossip_three_node`.
+  - Fail-closed validation confirmed for tampered marker behavior: `libp2p_three_node_discovery_policy_marker_missing:three_node_discovery_status`.
 - Phase 3.2 initial slice delivered:
   - Added `MempoolBlockPipeline` with explicit listener quorum, approver quorum, and commit orchestration over pending mempool transactions (Task #2926, Subtask #2927).
   - Added deterministic fail-closed digest mismatch and empty-mempool guards before commit.

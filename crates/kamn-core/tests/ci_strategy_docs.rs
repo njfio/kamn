@@ -522,6 +522,34 @@ fn doc_contains_runtime_local_metrics_scrape_contract_lane_ci_mode_markers() {
 }
 
 #[test]
+fn doc_contains_runtime_libp2p_three_node_discovery_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Libp2p Three-Node Discovery Live Validation Contract Lane"));
+    assert!(DOC.contains(
+        "validate_libp2p_three_node_discovery_live.sh --mode dry-run --output-json /tmp/libp2p-three-node-discovery-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_LIBP2P_THREE_NODE_DISCOVERY_LIVE_OPT_IN=1 bash scripts/runtime/validate_libp2p_three_node_discovery_live.sh --mode run --output-json /tmp/libp2p-three-node-discovery-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_libp2p_three_node_discovery_live_policy.sh --report-file /tmp/libp2p-three-node-discovery-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/libp2p-three-node-discovery-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_libp2p_three_node_discovery_live_contract_lane.sh --output-json /tmp/libp2p-three-node-discovery-live-contract-lane-report.json --policy-output-json /tmp/libp2p-three-node-discovery-live-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_libp2p_three_node_discovery_live.sh"));
+    assert!(DOC.contains("test_check_libp2p_three_node_discovery_live_policy.sh"));
+    assert!(DOC.contains("test_validate_libp2p_three_node_discovery_live_contract_lane.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "libp2p three-node discovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC
+        .contains("libp2p_three_node_discovery_policy_marker_missing:three_node_discovery_status"));
+}
+
+#[test]
 fn doc_contains_runtime_local_observability_scrape_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("## Runtime Local Observability Scrape Contract Lane"));
     assert!(DOC.contains(
