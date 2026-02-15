@@ -37,6 +37,8 @@ const RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON: &str =
     "runtime_transport_profile_live_marker_missing";
 const RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON: &str =
     "runtime_transport_profile_live_provider_missing";
+const RUNTIME_TRANSPORT_PROFILE_COMPILE_MODE_NOT_NATIVE_REASON: &str =
+    "runtime_transport_profile_compile_mode_not_native";
 
 fn production_transport_profile_remediation(reason_code: &'static str) -> &'static str {
     match reason_code {
@@ -51,6 +53,9 @@ fn production_transport_profile_remediation(reason_code: &'static str) -> &'stat
         }
         RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON => {
             "ensure p2p-live-libp2p-provider marker is present and provider wiring is initialized"
+        }
+        RUNTIME_TRANSPORT_PROFILE_COMPILE_MODE_NOT_NATIVE_REASON => {
+            "ensure kamn-node enables kamn-core/libp2p-live-transport so runtime wiring emits p2p-live-libp2p-provider:native"
         }
         _ => "verify runtime transport profile wiring against production policy contract",
     }
@@ -113,6 +118,11 @@ pub(crate) fn classify_production_transport_profile_violation(
     }
     if !has_component("p2p-live-libp2p-provider") {
         return Some(RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON);
+    }
+    if has_component("p2p-live-libp2p-provider:contract-only")
+        || !has_component("p2p-live-libp2p-provider:native")
+    {
+        return Some(RUNTIME_TRANSPORT_PROFILE_COMPILE_MODE_NOT_NATIVE_REASON);
     }
     None
 }

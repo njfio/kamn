@@ -855,6 +855,21 @@ fn functional_production_transport_profile_classifier_rejects_in_memory_fallback
 }
 
 #[test]
+fn functional_production_transport_profile_classifier_rejects_contract_only_compile_mode() {
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-transport-profile:libp2p-live".to_owned(),
+        "p2p-live-libp2p-provider".to_owned(),
+        "p2p-live-libp2p-provider:contract-only".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::full(), true, &components),
+        Some("runtime_transport_profile_compile_mode_not_native")
+    );
+}
+
+#[test]
 fn regression_production_transport_policy_error_detail_includes_remediation_guidance() {
     // Regression: #3673
     let parsed = parse_args(vec![
@@ -921,6 +936,9 @@ fn integration_runtime_full_uses_live_transport_profile_components_by_default() 
     assert!(report
         .components
         .contains(&"p2p-live-libp2p-provider".to_owned()));
+    assert!(report
+        .components
+        .contains(&"p2p-live-libp2p-provider:native".to_owned()));
     assert!(!report
         .components
         .contains(&"p2p-in-memory-transport-fallback".to_owned()));
