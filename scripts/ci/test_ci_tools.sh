@@ -18,6 +18,8 @@ run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
 
 if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
+  bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
@@ -129,6 +131,8 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
 fi
 
 bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
+bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
