@@ -329,6 +329,53 @@ fn integration_kolme_live_strict_managed_external_key_source_policy_passes() {
 }
 
 #[test]
+fn regression_runtime_kolme_live_honors_declared_managed_external_key_source_without_strict_flag() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _key_ref_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+    );
+    let _signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE).as_str()),
+    );
+    let _managed_command_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", None);
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:39000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "managed-external".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+    let error = execute(parsed).expect_err(
+        "declared managed-external key source must be honored without strict flag in local/test execution",
+    );
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_backend_required_missing")),
+        "declared managed-external key source must not silently fall back to env-local signer path"
+    );
+}
+
+#[test]
 fn unit_log_config_parses_level_and_format_inputs() {
     let config = resolve_log_config_from_inputs(Some("debug"), Some("json"))
         .expect("log config inputs should parse");

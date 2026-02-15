@@ -1166,23 +1166,31 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 allow_local_signer_testing_override,
                 cfg!(test),
             )?;
+            let declared_signer_profile = kolme_live_signer_profile
+                .as_deref()
+                .map(normalize_kolme_live_signer_profile_selector)
+                .transpose()?;
+            let declared_signer_key_source = kolme_live_signer_key_source
+                .as_deref()
+                .map(normalize_kolme_live_signer_key_source)
+                .transpose()?;
             let strict_signer_profile = if kolme_live_strict_signer_contracts {
-                Some(normalize_kolme_live_signer_profile_selector(
-                    kolme_live_signer_profile.as_deref().ok_or(
-                        ConfigError::MissingArgumentValue("--kolme-live-signer-profile"),
-                    )?,
-                )?)
+                Some(
+                    declared_signer_profile.ok_or(ConfigError::MissingArgumentValue(
+                        "--kolme-live-signer-profile",
+                    ))?,
+                )
             } else {
-                None
+                declared_signer_profile
             };
             let strict_signer_key_source = if kolme_live_strict_signer_contracts {
-                Some(normalize_kolme_live_signer_key_source(
-                    kolme_live_signer_key_source.as_deref().ok_or(
-                        ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
-                    )?,
-                )?)
+                Some(
+                    declared_signer_key_source.ok_or(ConfigError::MissingArgumentValue(
+                        "--kolme-live-signer-key-source",
+                    ))?,
+                )
             } else {
-                None
+                declared_signer_key_source
             };
             enforce_kolme_live_signer_key_source_policy(
                 kolme_live_strict_signer_contracts,

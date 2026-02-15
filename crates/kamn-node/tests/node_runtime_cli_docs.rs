@@ -160,6 +160,12 @@ fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("managed_signer_backend_required_invalid"));
     assert!(DOC.contains("managed_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_invalid"));
+    assert!(DOC.contains("production_signer_key_source_env_local_forbidden"));
+    assert!(DOC.contains("fallback_signer_secret_present_violation"));
+    assert!(DOC.contains("managed_signer_raw_private_key_forbidden"));
+    assert!(DOC.contains("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true"));
+    assert!(DOC.contains("signer key-source provenance matrix"));
+    assert!(DOC.contains("runtime must not silently fall back to `env-local`"));
     assert!(DOC.contains("/runtime-commit/status"));
     assert!(DOC.contains("max-attempt budget `2`"));
     assert!(DOC.contains("finality-polled"));
