@@ -182,6 +182,133 @@ fn integration_live_socket_partition_rejoin_and_publish_drop_drill_executes_over
 }
 
 #[test]
+fn integration_process_isolated_three_node_partition_rejoin_and_publish_drop_convergence_over_udp()
+{
+    let network_id = unique_network_id("process-isolated-three-node");
+    let sender_a = "peer-live-sender-a";
+    let sender_b = "peer-live-sender-b";
+    let recipient = "peer-live-recipient-three-node";
+    let sender_a_transport = UdpPeerLifecycleTransport::bind_ephemeral(&network_id, sender_a)
+        .expect("sender A transport should build");
+    let sender_b_transport = UdpPeerLifecycleTransport::bind_ephemeral(&network_id, sender_b)
+        .expect("sender B transport should build");
+    let recipient_transport = UdpPeerLifecycleTransport::bind_ephemeral(&network_id, recipient)
+        .expect("recipient transport should build");
+
+    for peer_id in [sender_a, sender_b, recipient] {
+        let transport = match peer_id {
+            id if id == sender_a => &sender_a_transport,
+            id if id == sender_b => &sender_b_transport,
+            _ => &recipient_transport,
+        };
+        transport
+            .advertise(
+                PeerDiscoveryRecord::new(
+                    peer_id,
+                    NodeRole::Processor,
+                    vec!["kamn/blocks/v1".to_owned()],
+                )
+                .expect("discovery record should build"),
+            )
+            .expect("peer should advertise");
+    }
+
+    let mut pipeline = build_pipeline(recipient_transport.clone(), recipient);
+
+    let partition_round = pipeline
+        .reconcile_transport_candidates()
+        .expect("partition round should reconcile");
+    assert!(partition_round.is_empty());
+    let partition_evidence = build_transport_convergence_evidence_bundle(
+        "process-isolated-three-node-partition",
+        &partition_round,
+        &pipeline
+            .list_canonical_commits()
+            .expect("partition commit list should load"),
+    )
+    .expect("partition evidence should build");
+    assert_eq!(partition_evidence.continuity_status, "verified");
+
+    send_candidate_frame(
+        &sender_a_transport,
+        sender_a,
+        recipient,
+        &block_frame_payload(900, "processor", "digest-900", "tx-900"),
+    );
+    send_candidate_frame(
+        &sender_b_transport,
+        sender_b,
+        recipient,
+        &block_frame_payload(901, "processor", "digest-901", "tx-901"),
+    );
+    let rejoin_round = pipeline
+        .reconcile_transport_candidates()
+        .expect("rejoin round should reconcile");
+    assert!(
+        rejoin_round
+            .iter()
+            .any(|outcome| matches!(outcome.decision, CanonicalCandidateDecision::Accepted)),
+        "rejoin round must include at least one accepted candidate"
+    );
+    let rejoin_evidence = build_transport_convergence_evidence_bundle(
+        "process-isolated-three-node-rejoin",
+        &rejoin_round,
+        &pipeline
+            .list_canonical_commits()
+            .expect("rejoin commit list should load"),
+    )
+    .expect("rejoin evidence should build");
+    assert_eq!(
+        rejoin_evidence.schema_version,
+        "kamn.runtime.transport-convergence-evidence.v1"
+    );
+    assert_eq!(rejoin_evidence.continuity_status, "verified");
+
+    send_candidate_frame(
+        &sender_a_transport,
+        sender_a,
+        recipient,
+        &block_frame_payload(903, "processor", "digest-903", "tx-903"),
+    );
+    let post_drop_round = pipeline
+        .reconcile_transport_candidates()
+        .expect("post-drop round should reconcile");
+    assert!(
+        post_drop_round
+            .iter()
+            .any(|outcome| matches!(outcome.decision, CanonicalCandidateDecision::Accepted)),
+        "post-drop round must include an accepted recovery candidate"
+    );
+
+    send_candidate_frame(
+        &sender_b_transport,
+        sender_b,
+        recipient,
+        &block_frame_payload(902, "processor", "digest-902", "tx-902"),
+    );
+    let delayed_round = pipeline
+        .reconcile_transport_candidates()
+        .expect("delayed publish round should reconcile");
+    assert!(
+        delayed_round.iter().any(|outcome| matches!(
+            outcome.decision,
+            CanonicalCandidateDecision::Rejected { ref reason_code }
+                if reason_code == "fork_choice_stale_block_height"
+        )),
+        "delayed publish must fail closed with stale block-height reason code"
+    );
+    let delayed_evidence = build_transport_convergence_evidence_bundle(
+        "process-isolated-three-node-publish-drop",
+        &delayed_round,
+        &pipeline
+            .list_canonical_commits()
+            .expect("publish-drop commit list should load"),
+    )
+    .expect("publish-drop evidence should build");
+    assert_eq!(delayed_evidence.continuity_status, "verified");
+}
+
+#[test]
 fn regression_live_socket_delayed_publish_emits_stale_reason_code() {
     // Regression: #3652
     let network_id = unique_network_id("regression");
