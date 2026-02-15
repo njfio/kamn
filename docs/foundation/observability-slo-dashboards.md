@@ -152,15 +152,23 @@ Expected markers:
 Live validation lane:
 - `scripts/runtime/validate_structured_logging_live.sh`
 - `scripts/runtime/test_validate_structured_logging_live.sh`
+- `scripts/runtime/check_structured_logging_live_policy.sh`
+- `scripts/runtime/test_check_structured_logging_live_policy.sh`
+- `scripts/runtime/validate_structured_logging_live_contract_lane.sh`
+- `scripts/runtime/test_validate_structured_logging_live_contract_lane.sh`
 
 Expected markers:
 - `status=pass`
 - `final_decision=GO`
 - `structured_logging_contract_status=verified`
 - `correlation_contract_status=verified`
+- `structured_logging_policy_status=verified`
+- `structured_logging_contract_lane_status=verified`
+- `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`
 - `docs_contract_status=verified`
 - `fail_closed_status=verified`
 - `fail_closed_reason_code=invalid_log_config_level`
+- `fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status`
 
 ## SLO Evaluation Rules
 - `LatencyP50`: warning when above max threshold.

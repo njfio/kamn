@@ -28,6 +28,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^correlation_contract_status=
   echo "expected correlation contract status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1$'; then
+  echo "expected structured logging reason taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^docs_contract_status=verified$'; then
   echo "expected docs contract status marker" >&2
   exit 1
@@ -57,6 +61,8 @@ if payload.get("structured_logging_contract_status") != "verified":
     raise SystemExit("expected structured_logging_contract_status=verified")
 if payload.get("correlation_contract_status") != "verified":
     raise SystemExit("expected correlation_contract_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker")
 if payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if payload.get("fail_closed_status") != "verified":

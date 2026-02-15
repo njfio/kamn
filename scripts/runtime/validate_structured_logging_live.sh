@@ -70,6 +70,7 @@ report_json="$(mktemp)"
 cat >"$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.structured-logging-live-validation.v1",
+  "reason_taxonomy_version": "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1",
   "status": "pass",
   "final_decision": "GO",
   "structured_logging_contract_status": "verified",
@@ -91,6 +92,7 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "structured_logging_contract_status=verified"
 echo "correlation_contract_status=verified"
+echo "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=invalid_log_config_level"

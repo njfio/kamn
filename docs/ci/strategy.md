@@ -567,6 +567,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `observability_source_marker_missing:legacy_tcp_listener_import`
   - telemetry schema docs-contract marker set remains fail-closed for health/readiness/stream schema_version markers and readiness_reason_code taxonomy.
 
+## Runtime Structured Logging Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_structured_logging_live.sh --output-json /tmp/structured-logging-live-summary.json`
+  - `bash scripts/runtime/check_structured_logging_live_policy.sh --report-file /tmp/structured-logging-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/structured-logging-live-policy-report.json`
+  - `bash scripts/runtime/validate_structured_logging_live_contract_lane.sh --output-json /tmp/structured-logging-live-contract-lane-report.json --policy-output-json /tmp/structured-logging-live-policy-report.json`
+  - `bash scripts/runtime/test_validate_structured_logging_live.sh`
+  - `bash scripts/runtime/test_check_structured_logging_live_policy.sh`
+  - `bash scripts/runtime/test_validate_structured_logging_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - composes bounded cargo selectors already used by `validate_structured_logging_live.sh`.
+  - no external node/network process orchestration is required.
+  - runtime budget stays bounded by `KAMN_STRUCTURED_LOGGING_CONTRACT_MAX_SECONDS`.
+  - tamper drills run in-process and fail closed deterministically.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `structured_logging_policy_marker_missing:structured_logging_contract_status`
+  - `structured_logging_policy_reason_taxonomy_version_mismatch`
+
 ## Runtime Local Retry/Diagnostics Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode dry-run --output-json /tmp/runtime-local-retry-diagnostics-summary.json`

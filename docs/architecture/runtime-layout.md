@@ -34,3 +34,16 @@ Deterministic fail-closed rollout markers include:
 - `signer_rotation_promotion_stalled` for no-progress rotation gate drift.
 - `quorum_evidence_custody_sha256_mismatch` for custody-audit parity drift.
 - `ci_local_promotion_budget_boundary_status=verified` for bounded local/scheduled validation scope.
+
+## Structured Logging Policy Governance
+
+Structured logging schema/correlation drift is enforced through:
+
+- `scripts/runtime/check_structured_logging_live_policy.sh`
+- `scripts/runtime/validate_structured_logging_live_contract_lane.sh`
+
+Deterministic lane markers include:
+
+- `structured_logging_policy_status=verified`
+- `structured_logging_contract_lane_status=verified`
+- `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`

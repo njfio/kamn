@@ -71,11 +71,37 @@ fn doc_contains_structured_logging_live_validation_lane() {
 }
 
 #[test]
+fn doc_contains_structured_logging_contract_lane_and_policy() {
+    assert!(DOC.contains("check_structured_logging_live_policy.sh"));
+    assert!(DOC.contains("test_check_structured_logging_live_policy.sh"));
+    assert!(DOC.contains("validate_structured_logging_live_contract_lane.sh"));
+    assert!(DOC.contains("test_validate_structured_logging_live_contract_lane.sh"));
+    assert!(DOC.contains("structured_logging_policy_status=verified"));
+    assert!(DOC.contains("structured_logging_contract_lane_status=verified"));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1",
+    ));
+}
+
+#[test]
 fn roadmap_tracks_post_roadmap_wave1_structured_logging_live_validation() {
     assert!(ROADMAP.contains("Post-roadmap hardening wave 1 live validation delivered"));
     assert!(ROADMAP.contains("Task #3035, Subtask #3036"));
     assert!(ROADMAP.contains("scripts/runtime/validate_structured_logging_live.sh"));
     assert!(ROADMAP.contains("fail_closed_reason_code=invalid_log_config_level"));
+}
+
+#[test]
+fn roadmap_tracks_wave6_structured_logging_contract_lane_and_policy() {
+    assert!(ROADMAP.contains(
+        "Post-roadmap hardening wave 6 structured logging contract-lane policy delivered"
+    ));
+    assert!(ROADMAP.contains("Task #4641, Subtasks #4645 and #4646"));
+    assert!(ROADMAP.contains("scripts/runtime/validate_structured_logging_live_contract_lane.sh"));
+    assert!(ROADMAP.contains("scripts/runtime/check_structured_logging_live_policy.sh"));
+    assert!(ROADMAP.contains(
+        "fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status"
+    ));
 }
 
 #[test]
