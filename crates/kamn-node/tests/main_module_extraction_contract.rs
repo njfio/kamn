@@ -32,6 +32,10 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare runtime_kolme_live module"
     );
     assert!(
+        main_rs.contains("mod runtime_orchestration;"),
+        "main.rs should declare runtime_orchestration module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
@@ -110,6 +114,7 @@ fn main_module_extraction_contract_removes_inline_signer_payload_impls() {
 #[test]
 fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_impls() {
     let main_rs = read_repo_file("src/main.rs");
+    let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
     assert!(
         !main_rs.contains("KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile("),
         "main.rs should not keep inline Kolme live provider constructor path"
@@ -125,8 +130,29 @@ fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_im
         "main.rs should not keep inline Kolme live finality checker orchestration"
     );
     assert!(
-        main_rs.contains("execute_kolme_live_runtime("),
-        "main.rs should delegate Kolme live runtime branch to extracted module function"
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime("),
+        "runtime_orchestration.rs should own Kolme live runtime branch delegation"
+    );
+}
+
+#[test]
+fn main_module_extraction_contract_removes_inline_runtime_orchestration_impls() {
+    let main_rs = read_repo_file("src/main.rs");
+    assert!(
+        !main_rs.contains("fn execute_daemon_runtime("),
+        "main.rs should not keep inline daemon runtime executor"
+    );
+    assert!(
+        !main_rs.contains("fn classify_full_supervisor_stop_contract_violation("),
+        "main.rs should not keep inline full supervisor stop classifier"
+    );
+    assert!(
+        !main_rs.contains("fn enforce_kolme_live_signer_contract_policy("),
+        "main.rs should not keep inline signer policy enforcement helper"
+    );
+    assert!(
+        !main_rs.contains("fn execute(cli: NodeCli)"),
+        "main.rs should delegate runtime execution to runtime_orchestration module"
     );
 }
 
@@ -136,6 +162,7 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     let report_builder_rs = read_repo_file("src/report_builder.rs");
     let report_render_rs = read_repo_file("src/report_render.rs");
     let runtime_kolme_live_rs = read_repo_file("src/runtime_kolme_live.rs");
+    let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
     let wire_payload_rs = read_repo_file("src/wire_payload.rs");
     assert!(
         signer_rs.contains("pub(crate) fn build_kolme_live_direct_signed_wire_payload("),
@@ -180,5 +207,18 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     assert!(
         runtime_kolme_live_rs.contains("pub(crate) fn execute_kolme_live_runtime("),
         "runtime_kolme_live module should own Kolme live runtime branch execution"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("pub(crate) fn execute(cli: NodeCli)"),
+        "runtime_orchestration module should own runtime mode execution dispatch"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("pub(crate) fn validate_full_supervisor_stop_contract("),
+        "runtime_orchestration module should own full supervisor stop contract validation"
+    );
+    assert!(
+        runtime_orchestration_rs
+            .contains("pub(crate) fn enforce_kolme_live_signer_key_source_policy("),
+        "runtime_orchestration module should own signer key-source policy enforcement"
     );
 }
