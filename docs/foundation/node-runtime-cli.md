@@ -411,6 +411,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - when `--kolme-live-strict-signer-contracts` is present, `--kolme-live-signer-profile` and `--kolme-live-signer-key-source` are both required
   - supported signer profiles: `ops-primary`, `ops-secondary`
   - supported key source markers: `env-local`, `managed-external`
+  - declared signer-profile/key-source markers are honored in local/test execution even without `--kolme-live-strict-signer-contracts`; runtime must not silently fall back to `env-local` when `managed-external` is explicitly declared
   - managed-external key-reference env markers:
     - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
@@ -420,6 +421,8 @@ This document captures node-runtime productionization slices for machine-readabl
     - missing marker fails closed with `managed_signer_public_key_marker_missing`
     - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`
   - managed-external mode rejects raw private-key env markers for the selected profile with deterministic reason code `managed_signer_raw_private_key_forbidden`
+  - fallback private-key env marker `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` must remain unset across signer paths; when present runtime fails closed with `fallback_signer_secret_present_violation`
+  - production-targeted strict contracts reject `--kolme-live-signer-key-source=env-local` with deterministic reason code `production_signer_key_source_env_local_forbidden` unless explicit local override `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true` is set
   - managed-external signer mode requires `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
   - managed-external compatibility marker parsing:
     - `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
@@ -436,6 +439,11 @@ This document captures node-runtime productionization slices for machine-readabl
     - empty profile/source declarations are rejected
     - unsupported profile/source declarations are rejected
     - strict profile declaration must not conflict with `KAMN_KOLME_LIVE_SIGNER_PROFILE` when that env marker is set
+  - signer key-source provenance matrix:
+    - strict + `managed-external`: allowed in production (requires managed signer markers and command contracts)
+    - strict + `env-local`: fail closed in production unless `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true`
+    - local/test + explicit `managed-external`: allowed and audited via managed-signer fail-closed markers
+    - any mode + fallback private-key env marker present: fail closed
 - Provider wiring is fail-closed:
   - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
   - signing profile must match `kolme-fork-secp256k1-v1`
