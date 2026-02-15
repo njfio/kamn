@@ -647,6 +647,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`
+  - `local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status`
+  - `local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch`
 
 ## Runtime Local Observability Scrape Contract Lane
 - Entry commands:

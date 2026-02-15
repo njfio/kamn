@@ -42,12 +42,28 @@ if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected local metrics scrape contract lane mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^metrics_stream_readiness_status=verified$'; then
+  echo "expected local metrics scrape contract lane metrics readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^scrape_latency_budget_status=verified$'; then
+  echo "expected local metrics scrape contract lane scrape latency budget marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^local_metrics_scrape_contract_status=verified$'; then
   echo "expected local metrics scrape contract lane status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^local_metrics_scrape_policy_status=verified$'; then
   echo "expected local metrics scrape contract lane policy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^metrics_emission_reason_taxonomy_version=kamn.runtime.metrics-emission-reason-taxonomy.v1$'; then
+  echo "expected local metrics scrape contract lane reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^metrics_emission_reason_codes_csv=metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch$'; then
+  echo "expected local metrics scrape contract lane reason taxonomy csv marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_metrics_scrape_policy_marker_missing:local_scrape_probe_status$'; then
@@ -67,10 +83,18 @@ if lane_payload.get("status") != "pass":
     raise SystemExit("expected contract lane status=pass")
 if lane_payload.get("final_decision") != "GO":
     raise SystemExit("expected contract lane final_decision=GO")
+if lane_payload.get("metrics_stream_readiness_status") != "verified":
+    raise SystemExit("expected metrics_stream_readiness_status=verified")
+if lane_payload.get("scrape_latency_budget_status") != "verified":
+    raise SystemExit("expected scrape_latency_budget_status=verified")
 if lane_payload.get("local_metrics_scrape_contract_status") != "verified":
     raise SystemExit("expected local_metrics_scrape_contract_status=verified")
 if lane_payload.get("local_metrics_scrape_policy_status") != "verified":
     raise SystemExit("expected local_metrics_scrape_policy_status=verified")
+if lane_payload.get("metrics_emission_reason_taxonomy_version") != "kamn.runtime.metrics-emission-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic metrics_emission_reason_taxonomy_version marker")
+if lane_payload.get("metrics_emission_reason_codes_csv") != "metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch":
+    raise SystemExit("expected deterministic metrics_emission_reason_codes_csv marker")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":

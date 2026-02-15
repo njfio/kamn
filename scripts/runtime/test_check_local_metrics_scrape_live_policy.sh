@@ -18,6 +18,12 @@ cat >"$report_file" <<'JSON'
   "status": "pass",
   "final_decision": "GO",
   "lane_mode": "dry-run",
+  "metrics_stream_readiness_status": "verified",
+  "scrape_latency_budget_status": "verified",
+  "scrape_latency_budget_seconds": 120,
+  "max_observed_scrape_latency_seconds": 0,
+  "metrics_emission_reason_taxonomy_version": "kamn.runtime.metrics-emission-reason-taxonomy.v1",
+  "metrics_emission_reason_codes_csv": "metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch",
   "local_scrape_probe_status": "verified",
   "prometheus_payload_status": "verified",
   "health_endpoint_status": "verified",
@@ -67,6 +73,10 @@ if payload.get("local_metrics_scrape_policy_status") != "verified":
     raise SystemExit("expected local_metrics_scrape_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("metrics_emission_reason_taxonomy_version") != "kamn.runtime.metrics-emission-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic metrics_emission_reason_taxonomy_version marker")
+if payload.get("metrics_emission_reason_codes_csv") != "metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch":
+    raise SystemExit("expected deterministic metrics_emission_reason_codes_csv marker")
 PY
 
 tampered_report="$TMP_DIR/local-metrics-scrape-live-summary.tampered.json"
@@ -99,6 +109,70 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'local_metrics_scrape_policy_marker_missing:local_scrape_probe_status'; then
   echo "expected deterministic mismatch reason code for tampered local metrics scrape policy validation" >&2
+  exit 1
+fi
+
+latency_budget_tampered_report="$TMP_DIR/local-metrics-scrape-live-summary.latency-budget.tampered.json"
+cp "$report_file" "$latency_budget_tampered_report"
+python3 - "$latency_budget_tampered_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["scrape_latency_budget_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+latency_budget_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$latency_budget_tampered_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-metrics-scrape-live-policy.latency-budget.tampered.json" 2>&1
+)"
+latency_budget_tampered_code=$?
+set -e
+if [ "$latency_budget_tampered_code" -eq 0 ]; then
+  echo "expected scrape-latency budget tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$latency_budget_tampered_output" | grep -q 'local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status'; then
+  echo "expected deterministic scrape-latency budget mismatch reason code" >&2
+  exit 1
+fi
+
+taxonomy_tampered_report="$TMP_DIR/local-metrics-scrape-live-summary.taxonomy.tampered.json"
+cp "$report_file" "$taxonomy_tampered_report"
+python3 - "$taxonomy_tampered_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["metrics_emission_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+taxonomy_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$taxonomy_tampered_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-metrics-scrape-live-policy.taxonomy.tampered.json" 2>&1
+)"
+taxonomy_tampered_code=$?
+set -e
+if [ "$taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected metrics-emission taxonomy tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$taxonomy_tampered_output" | grep -q 'local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic metrics-emission taxonomy mismatch reason code" >&2
   exit 1
 fi
 

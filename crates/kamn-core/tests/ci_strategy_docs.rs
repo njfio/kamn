@@ -558,6 +558,12 @@ fn doc_contains_runtime_local_metrics_scrape_contract_lane_ci_mode_markers() {
         "local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:local_scrape_probe_status"));
+    assert!(DOC.contains(
+        "local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status"
+    ));
+    assert!(DOC.contains(
+        "local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch"
+    ));
 }
 
 #[test]
