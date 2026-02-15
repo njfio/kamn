@@ -12,6 +12,7 @@ policy_output_json=""
 max_seconds="${KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_CONTRACT_MAX_SECONDS:-240}"
 ci_fast_gate="PASS"
 mode="dry-run"
+lane_profile="smoke"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,6 +36,10 @@ while [[ $# -gt 0 ]]; do
       mode="${2:-}"
       shift 2
       ;;
+    --lane-profile)
+      lane_profile="${2:-}"
+      shift 2
+      ;;
     *)
       echo "unknown argument: $1" >&2
       exit 1
@@ -56,6 +61,10 @@ if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
 fi
 if [[ "$mode" != "dry-run" && "$mode" != "run" ]]; then
   echo "mode must be dry-run or run" >&2
+  exit 1
+fi
+if [[ "$lane_profile" != "smoke" && "$lane_profile" != "deep" ]]; then
+  echo "lane-profile must be smoke or deep" >&2
   exit 1
 fi
 
@@ -83,6 +92,7 @@ tampered_report="$TMP_DIR/libp2p-convergence-process-isolated-live-summary.tampe
 validation_output="$(
   bash "$VALIDATION_SCRIPT" \
     --mode "$mode" \
+    --lane-profile "$lane_profile" \
     --max-seconds "$max_seconds" \
     --ci-fast-gate "$ci_fast_gate" \
     --output-json "$summary_report"
@@ -97,6 +107,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$validation_output" | grep -q "^lane_mode=$mode$"; then
   echo "expected process-isolated convergence validation lane mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^lane_profile=$lane_profile$"; then
+  echo "expected process-isolated convergence validation lane profile marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_process_isolated_convergence$'; then
@@ -187,8 +201,8 @@ for required_ref in \
     exit 1
   fi
 done
-if ! grep -q "process-isolated convergence run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
-  echo "expected CI strategy docs to include process-isolated convergence run-mode exclusion marker" >&2
+if ! grep -q "process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include process-isolated convergence deep run-mode exclusion marker" >&2
   exit 1
 fi
 if ! grep -q "libp2p_convergence_process_isolated_live_contract.py" "$BLOCK_PIPELINE_DOC"; then
@@ -203,7 +217,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 lane_report="$TMP_DIR/libp2p-convergence-process-isolated-live-contract-lane-report.json"
-python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" <<'PY'
+python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" "$lane_profile" <<'PY'
 import json
 import pathlib
 import sys
@@ -214,6 +228,7 @@ lane_report_file = pathlib.Path(sys.argv[3])
 elapsed_seconds = int(sys.argv[4])
 max_seconds = int(sys.argv[5])
 mode = sys.argv[6]
+lane_profile = sys.argv[7]
 
 if summary_report.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
     raise SystemExit("unexpected process-isolated convergence summary schema")
@@ -229,6 +244,7 @@ lane_report = {
     "status": "pass",
     "final_decision": "GO",
     "lane_mode": mode,
+    "lane_profile": lane_profile,
     "libp2p_process_isolated_convergence_contract_status": "verified",
     "libp2p_process_isolated_convergence_policy_status": policy_report.get(
         "libp2p_process_isolated_convergence_policy_status"
@@ -255,6 +271,7 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "lane_mode=$mode"
+echo "lane_profile=$lane_profile"
 echo "libp2p_process_isolated_convergence_contract_status=verified"
 echo "libp2p_process_isolated_convergence_policy_status=verified"
 echo "docs_contract_status=verified"
