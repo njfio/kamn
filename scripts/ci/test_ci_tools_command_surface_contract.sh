@@ -126,6 +126,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_prometheus_metrics_live_policy.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_prometheus_metrics_live_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_three_node_discovery_live_policy.sh"'
   'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live_contract_lane.sh"'
