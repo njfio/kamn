@@ -651,10 +651,8 @@ if [ "$MODE" = "run" ]; then
     budget_status="within_budget"
   else
     budget_status="exceeded_budget"
-    if [ "$overall_status" = "ok" ]; then
-      overall_status="fail"
-      reason_code="preflight_budget_exceeded"
-    fi
+    overall_status="fail"
+    reason_code="preflight_budget_exceeded"
   fi
 fi
 

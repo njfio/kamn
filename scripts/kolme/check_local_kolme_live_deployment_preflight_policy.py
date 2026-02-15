@@ -373,6 +373,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
 
+    startup_latency_budget_exceeded = (
+        isinstance(elapsed_seconds, int)
+        and elapsed_seconds >= 0
+        and isinstance(max_seconds, int)
+        and max_seconds > 0
+        and elapsed_seconds > max_seconds
+    )
+
     runtime_mode = report.get("runtime_mode")
     if not isinstance(runtime_mode, str) or not runtime_mode.strip():
         reason_codes.append("runtime_mode_missing")
@@ -848,6 +856,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("fail_status_reason_code_mismatch")
 
     if mode == "run":
+        if budget_status == "not_run":
+            reason_codes.append("run_mode_budget_status_not_run")
+        if startup_latency_budget_exceeded and budget_status != "exceeded_budget":
+            reason_codes.append("startup_latency_budget_status_mismatch")
+        elif (
+            isinstance(elapsed_seconds, int)
+            and elapsed_seconds >= 0
+            and isinstance(max_seconds, int)
+            and max_seconds > 0
+            and not startup_latency_budget_exceeded
+            and budget_status != "within_budget"
+        ):
+            reason_codes.append("startup_latency_budget_status_mismatch")
+        if budget_status == "exceeded_budget" and reason_code != "preflight_budget_exceeded":
+            reason_codes.append("startup_latency_budget_reason_code_mismatch")
+        elif budget_status != "exceeded_budget" and reason_code == "preflight_budget_exceeded":
+            reason_codes.append("startup_latency_budget_reason_code_mismatch")
+
         if isinstance(required_approvals, int) and isinstance(received_approvals, int):
             if received_approvals < required_approvals:
                 reason_codes.append("signer_quorum_shortfall")

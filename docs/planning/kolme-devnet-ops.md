@@ -1062,6 +1062,12 @@ Operator checkpoints:
   - verify `--signer-provenance-file` exists and signer key-source markers remain `--signer-key-source managed-external --signer-key-source-contract-version v1`.
 - `reason_code=checkpoint_failed_signer_rotation_freshness_contract`:
   - verify `--signer-rotation-epoch`, `--signer-previous-rotation-epoch`, and `--signer-rotation-freshness-max-delta` satisfy the freshness delta contract.
+- `reason_code=preflight_budget_exceeded`:
+  - startup-latency budget exceeded; increase `--max-seconds` for sanctioned slow paths or reduce preflight command latency before rerunning.
+- `startup_latency_budget_status_mismatch` from policy checker:
+  - summary budget markers drifted; run mode requires `budget_status=within_budget|exceeded_budget` to match `elapsed_seconds` and `max_seconds`.
+- `startup_latency_budget_reason_code_mismatch` from policy checker:
+  - when run-mode `budget_status=exceeded_budget`, reason taxonomy must normalize to `reason_code=preflight_budget_exceeded`.
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
   - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
 

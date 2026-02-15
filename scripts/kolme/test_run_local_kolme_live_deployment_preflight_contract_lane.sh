@@ -129,6 +129,9 @@ required_coverage_markers=(
   "checkpoint_failed_custody_evidence_contract"
   "checkpoint_failed_signer_provenance_contract"
   "checkpoint_failed_signer_rotation_freshness_contract"
+  "preflight_budget_exceeded"
+  "startup_latency_budget_status_mismatch"
+  "startup_latency_budget_reason_code_mismatch"
   "signer_key_source_contract_version"
   "signer_key_source"
   "signer_provenance_file"
@@ -336,6 +339,18 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "reason_code=checkpoint_failed_signer_rotation_freshness_contract" "$docs_file"; then
     echo "expected docs parity to include explicit go/no-go checkpoint reason marker for signer rotation freshness in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=preflight_budget_exceeded" "$docs_file"; then
+    echo "expected docs parity to include explicit startup-latency budget reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "startup_latency_budget_status_mismatch" "$docs_file"; then
+    echo "expected docs parity to include startup-latency budget status mismatch marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "startup_latency_budget_reason_code_mismatch" "$docs_file"; then
+    echo "expected docs parity to include startup-latency budget reason-code mismatch marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2226" "$docs_file"; then
