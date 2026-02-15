@@ -658,6 +658,28 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`
   - `local_observability_scrape_policy_degradation_reason_codes_csv_mismatch`
 
+## Runtime Unified API-Observability Local-Heavy Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
+  - `KAMN_UNIFIED_STACK_LOCAL_HEAVY_OPT_IN=1 bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/unified-api-observability-local-heavy-summary.json`
+  - `bash scripts/runtime/check_unified_api_observability_local_heavy_live_policy.sh --report-file /tmp/unified-api-observability-local-heavy-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/unified-api-observability-local-heavy-policy.json`
+  - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live_contract_lane.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-contract-lane-report.json --policy-output-json /tmp/unified-api-observability-local-heavy-policy-report.json`
+  - `bash scripts/runtime/test_validate_unified_api_observability_local_heavy_live.sh`
+  - `bash scripts/runtime/test_check_unified_api_observability_local_heavy_live_policy.sh`
+  - `bash scripts/runtime/test_validate_unified_api_observability_local_heavy_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested local-heavy command paths and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_UNIFIED_STACK_LOCAL_HEAVY_OPT_IN=1`.
+  - run-mode orchestration is bounded by `KAMN_UNIFIED_API_OBSERVABILITY_LOCAL_HEAVY_MAX_SECONDS` and `KAMN_UNIFIED_API_OBSERVABILITY_LOCAL_HEAVY_COMMAND_MAX_SECONDS`.
+  - local-heavy soak probes are bounded and deterministic via `soak_iterations_requested` and `soak_iterations_executed` markers.
+  - unified API-observability local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch`
+  - `ci_fast_gate_failed`
+
 ## Runtime Service API Axum Ingress Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
