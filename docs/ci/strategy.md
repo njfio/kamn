@@ -706,6 +706,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status`
 
+## Runtime Service API Tranche-1 Wrapper Migration Parity Matrix
+- service api tranche-1 runner migration parity guard stays on PR fast gate:
+  - `bash scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh`
+  - validates migrated wrappers are runner-backed via `scripts/runtime/service_api_contract_lane_runner.sh`:
+    - `scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`
+    - `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh`
+  - enforces tranche shell-wrapper budget:
+    - combined migrated wrapper shell LOC must remain `<= 260`
+  - deterministic fail-closed drift reason marker:
+    - `wrapper_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).

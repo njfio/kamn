@@ -1,0 +1,38 @@
+{
+  "schema_version": "kamn.runtime.service-api-tranche1-wrapper-family-matrix.v1",
+  "max_shell_loc": 260,
+  "wrappers": [
+    {
+      "wrapper": "scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh",
+      "validation_script": "scripts/runtime/validate_service_api_prometheus_metrics_live.sh",
+      "policy_checker": "scripts/runtime/check_service_api_prometheus_metrics_live_policy.sh",
+      "contract_status_key": "service_api_prometheus_metrics_contract_status",
+      "policy_status_key": "service_api_prometheus_metrics_policy_status",
+      "tamper_reason_code": "service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status"
+    },
+    {
+      "wrapper": "scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh",
+      "validation_script": "scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh",
+      "policy_checker": "scripts/runtime/check_service_api_graceful_shutdown_drain_live_policy.sh",
+      "contract_status_key": "service_api_graceful_shutdown_drain_contract_status",
+      "policy_status_key": "service_api_graceful_shutdown_drain_policy_status",
+      "tamper_reason_code": "service_api_graceful_shutdown_drain_policy_marker_missing:websocket_drain_status"
+    },
+    {
+      "wrapper": "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh",
+      "validation_script": "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh",
+      "policy_checker": "scripts/runtime/check_service_api_shutdown_abrupt_close_regression_live_policy.sh",
+      "contract_status_key": "service_api_shutdown_abrupt_close_regression_contract_status",
+      "policy_status_key": "service_api_shutdown_abrupt_close_regression_policy_status",
+      "tamper_reason_code": "service_api_shutdown_abrupt_close_regression_policy_marker_missing:abrupt_close_guard_status"
+    },
+    {
+      "wrapper": "scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh",
+      "validation_script": "scripts/runtime/validate_service_api_validation_negative_matrix_live.sh",
+      "policy_checker": "scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh",
+      "contract_status_key": "service_api_validation_negative_matrix_contract_status",
+      "policy_status_key": "service_api_validation_negative_matrix_policy_status",
+      "tamper_reason_code": "service_api_validation_negative_matrix_policy_marker_missing:replay_guard_status"
+    }
+  ]
+}
