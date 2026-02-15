@@ -12,6 +12,10 @@ pub(super) struct KolmeLiveObservabilityTelemetry {
     pub(super) availability_bps: u64,
     pub(super) health: String,
     pub(super) alert_count: usize,
+    pub(super) reason_code: String,
+    pub(super) transport_checkpoint_failures: u64,
+    pub(super) signer_checkpoint_failures: u64,
+    pub(super) commit_checkpoint_failures: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,16 +36,39 @@ impl std::error::Error for KolmeLiveObservabilityError {}
 pub(super) fn build_kolme_live_observability_telemetry(
     execution_status: &str,
 ) -> Result<KolmeLiveObservabilityTelemetry, KolmeLiveObservabilityError> {
-    let telemetry_tuple = if execution_status.contains("resolution=finality-unavailable")
-        || execution_status.contains("resolution=finality-timeout")
-    {
+    let resolution = status_field(execution_status, "resolution").unwrap_or("unknown");
+    let submit_retry_reason =
+        status_field(execution_status, "submit_retry_reason").unwrap_or("none");
+    let finality_retry_reason =
+        status_field(execution_status, "finality_retry_reason").unwrap_or("none");
+    let signer_quorum_linked =
+        status_bool_field(execution_status, "signer_quorum_linked").unwrap_or(true);
+    let transport_checkpoint_failures =
+        u64::from(submit_retry_reason != "none") + u64::from(finality_retry_reason != "none");
+    let signer_checkpoint_failures = if signer_quorum_linked { 0 } else { 1 };
+    let commit_checkpoint_failures =
+        if resolution == "finality-unavailable" || resolution == "finality-timeout" {
+            1
+        } else {
+            0
+        };
+
+    let reason_code = if commit_checkpoint_failures > 0 {
+        format!("commit_{}", resolution.replace('-', "_"))
+    } else if signer_checkpoint_failures > 0 {
+        "signer_quorum_linkage_violation".to_owned()
+    } else if finality_retry_reason != "none" {
+        format!("transport_finality_retry_{finality_retry_reason}")
+    } else if submit_retry_reason != "none" {
+        format!("transport_submit_retry_{submit_retry_reason}")
+    } else {
+        "none".to_owned()
+    };
+
+    let telemetry_tuple = if commit_checkpoint_failures > 0 {
         (180_u64, 440_u64, 700_u64, 350_u64, 9_600_u64)
-    } else if execution_status.contains("submit_retry_reason=")
-        && !execution_status.contains("submit_retry_reason=none")
-        || execution_status.contains("finality_retry_reason=")
-            && !execution_status.contains("finality_retry_reason=none")
-    {
-        (110_u64, 240_u64, 1_500_u64, 120_u64, 9_920_u64)
+    } else if transport_checkpoint_failures > 0 || signer_checkpoint_failures > 0 {
+        (110_u64, 180_u64, 1_500_u64, 120_u64, 9_960_u64)
     } else {
         (40_u64, 120_u64, 2_200_u64, 40_u64, 9_995_u64)
     };
@@ -70,7 +97,29 @@ pub(super) fn build_kolme_live_observability_telemetry(
         availability_bps,
         health: observability_health_as_str(report.overall_health).to_owned(),
         alert_count: report.alerts.len(),
+        reason_code,
+        transport_checkpoint_failures,
+        signer_checkpoint_failures,
+        commit_checkpoint_failures,
     })
+}
+
+fn status_field<'a>(execution_status: &'a str, key: &str) -> Option<&'a str> {
+    execution_status.split(';').find_map(|segment| {
+        let (field, value) = segment.split_once('=')?;
+        if field == key {
+            return Some(value);
+        }
+        None
+    })
+}
+
+fn status_bool_field(execution_status: &str, key: &str) -> Option<bool> {
+    match status_field(execution_status, key)? {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    }
 }
 
 fn observability_health_as_str(health: ObservabilityHealth) -> &'static str {
@@ -98,6 +147,26 @@ mod tests {
         assert_eq!(telemetry.availability_bps, 9_995);
         assert_eq!(telemetry.health, "healthy");
         assert_eq!(telemetry.alert_count, 0);
+        assert_eq!(telemetry.reason_code, "none");
+        assert_eq!(telemetry.transport_checkpoint_failures, 0);
+        assert_eq!(telemetry.signer_checkpoint_failures, 0);
+        assert_eq!(telemetry.commit_checkpoint_failures, 0);
+    }
+
+    #[test]
+    fn functional_kolme_live_observability_marks_transport_retry_reason_code_and_counts() {
+        let telemetry = build_kolme_live_observability_telemetry(
+            "submitted;commit_id=kolme-commit:ab12cd34;finality=final;resolution=finality-polled;submit_retry_reason=unavailable;finality_retry_reason=unavailable;signer_quorum_linked=true",
+        )
+        .expect("telemetry");
+        assert_eq!(
+            telemetry.reason_code,
+            "transport_finality_retry_unavailable"
+        );
+        assert_eq!(telemetry.transport_checkpoint_failures, 2);
+        assert_eq!(telemetry.signer_checkpoint_failures, 0);
+        assert_eq!(telemetry.commit_checkpoint_failures, 0);
+        assert_eq!(telemetry.health, "degraded");
     }
 
     #[test]
@@ -114,6 +183,10 @@ mod tests {
         assert_eq!(telemetry.availability_bps, 9_600);
         assert_eq!(telemetry.health, "critical");
         assert_eq!(telemetry.alert_count, 5);
+        assert_eq!(telemetry.reason_code, "commit_finality_unavailable");
+        assert_eq!(telemetry.transport_checkpoint_failures, 0);
+        assert_eq!(telemetry.signer_checkpoint_failures, 0);
+        assert_eq!(telemetry.commit_checkpoint_failures, 1);
     }
 
     #[test]

@@ -34,12 +34,20 @@ This document captures the first implementation slice for deterministic observab
   - `kamn_observability_error_rate_bps`
   - `kamn_observability_availability_bps`
   - `kamn_observability_alert_count`
+  - `kamn_observability_transport_checkpoint_failures`
+  - `kamn_observability_signer_checkpoint_failures`
+  - `kamn_observability_commit_checkpoint_failures`
+  - `kamn_observability_reason_code{reason_code="<reason>"}` with deterministic label values.
   - `kamn_observability_health{health="<healthy|degraded|critical>"}`
 - Health payload fields:
   - `source`
   - `runtime_mode`
   - `health`
   - `alert_count`
+  - `reason_code`
+  - `transport_checkpoint_failures`
+  - `signer_checkpoint_failures`
+  - `commit_checkpoint_failures`
   - latency/throughput/error/availability numeric fields
 - Export characteristics:
   - deterministic payloads derived from runtime report telemetry fields.
@@ -58,6 +66,10 @@ This document captures the first implementation slice for deterministic observab
     - `runtime_mode`
     - `health`
     - `alert_count`
+    - `reason_code`
+    - `transport_checkpoint_failures`
+    - `signer_checkpoint_failures`
+    - `commit_checkpoint_failures`
     - `latency_p50_ms`
     - `latency_p99_ms`
     - `throughput_tps`
@@ -85,6 +97,9 @@ Expected markers:
 - `docs_contract_status=verified`
 - `fail_closed_reason_code=observability_endpoint_not_found`
 - `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`
+- `metrics_reason_code_contract_status=verified`
+- `health_stream_reason_code_contract_status=verified`
+- `metrics_checkpoint_counter_contract_status=verified`
 - `performance_budget_status=verified`
 
 ## Structured Runtime Logging Correlation Contract (Issue #3032)

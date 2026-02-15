@@ -83,6 +83,16 @@ This refreshed version separates:
   - architecture/documentation lineage.
 - Remaining work is tracked under the parent story until stacked PR chain merges.
 
+### Runtime observability reason-code/checkpoint projection
+- Active chain: `#3333 -> #3471 -> #3472 -> #3473`.
+- Scope:
+  - include deterministic `reason_code` and checkpoint-failure counters across daemon and `kolme-live` runtime reports,
+  - project the same fields into `/metrics`, `/healthz`, and `/metrics.stream`,
+  - keep report text/json output deterministic while expanding observability payload contracts.
+- Validation:
+  - local-focused targeted tests in `kamn-node` for daemon and `kolme-live` runtime execution status mapping,
+  - endpoint rendering contract tests for metrics/health/stream payload parity.
+
 ### Docs truth synchronization (this tranche)
 - Open chain: `#3333 -> #3424 -> #3425 -> #3426`.
 - Scope:

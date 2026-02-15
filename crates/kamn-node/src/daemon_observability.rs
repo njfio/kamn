@@ -12,6 +12,10 @@ pub(super) struct DaemonObservabilityTelemetry {
     pub(super) availability_bps: u64,
     pub(super) health: String,
     pub(super) alert_count: usize,
+    pub(super) reason_code: String,
+    pub(super) transport_checkpoint_failures: u64,
+    pub(super) signer_checkpoint_failures: u64,
+    pub(super) commit_checkpoint_failures: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +66,7 @@ pub(super) fn build_daemon_observability_telemetry(
     let report = monitor
         .evaluate(sample)
         .map_err(|error| DaemonObservabilityError::Evaluation(error.to_string()))?;
+    let reason_code = daemon_observability_reason_code(completion_reason).to_owned();
 
     Ok(DaemonObservabilityTelemetry {
         latency_p50_ms,
@@ -71,7 +76,21 @@ pub(super) fn build_daemon_observability_telemetry(
         availability_bps,
         health: observability_health_as_str(report.overall_health).to_owned(),
         alert_count: report.alerts.len(),
+        reason_code,
+        transport_checkpoint_failures: 0,
+        signer_checkpoint_failures: 0,
+        commit_checkpoint_failures: if is_timeout { 1 } else { 0 },
     })
+}
+
+fn daemon_observability_reason_code(completion_reason: &str) -> &'static str {
+    if completion_reason.starts_with("graceful-shutdown-timeout:") {
+        "daemon_shutdown_timeout"
+    } else if completion_reason.starts_with("graceful-shutdown:") {
+        "daemon_shutdown_signal"
+    } else {
+        "none"
+    }
 }
 
 fn observability_health_as_str(health: ObservabilityHealth) -> &'static str {
@@ -97,6 +116,10 @@ mod tests {
         assert_eq!(telemetry.availability_bps, 9_990);
         assert_eq!(telemetry.health, "healthy");
         assert_eq!(telemetry.alert_count, 0);
+        assert_eq!(telemetry.reason_code, "none");
+        assert_eq!(telemetry.transport_checkpoint_failures, 0);
+        assert_eq!(telemetry.signer_checkpoint_failures, 0);
+        assert_eq!(telemetry.commit_checkpoint_failures, 0);
     }
 
     #[test]
@@ -114,6 +137,10 @@ mod tests {
         assert_eq!(telemetry.availability_bps, 9_800);
         assert_eq!(telemetry.health, "critical");
         assert_eq!(telemetry.alert_count, 4);
+        assert_eq!(telemetry.reason_code, "daemon_shutdown_timeout");
+        assert_eq!(telemetry.transport_checkpoint_failures, 0);
+        assert_eq!(telemetry.signer_checkpoint_failures, 0);
+        assert_eq!(telemetry.commit_checkpoint_failures, 1);
     }
 
     #[test]

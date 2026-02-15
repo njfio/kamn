@@ -65,6 +65,18 @@ pub(crate) fn build_bootstrap_report(
     let daemon_observability_alert_count = daemon
         .as_ref()
         .map(|daemon| daemon.observability_alert_count);
+    let daemon_observability_reason_code = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_reason_code.clone());
+    let daemon_observability_transport_checkpoint_failures = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_transport_checkpoint_failures);
+    let daemon_observability_signer_checkpoint_failures = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_signer_checkpoint_failures);
+    let daemon_observability_commit_checkpoint_failures = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_commit_checkpoint_failures);
     let daemon_peer_id = daemon.as_ref().and_then(|daemon| daemon.peer_id.clone());
     let daemon_peer_lifecycle_final_state = daemon
         .as_ref()
@@ -120,6 +132,18 @@ pub(crate) fn build_bootstrap_report(
     let kolme_live_observability_alert_count = kolme_live
         .as_ref()
         .map(|execution| execution.observability_alert_count);
+    let kolme_live_observability_reason_code = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_reason_code.clone());
+    let kolme_live_observability_transport_checkpoint_failures = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_transport_checkpoint_failures);
+    let kolme_live_observability_signer_checkpoint_failures = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_signer_checkpoint_failures);
+    let kolme_live_observability_commit_checkpoint_failures = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_commit_checkpoint_failures);
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -142,6 +166,10 @@ pub(crate) fn build_bootstrap_report(
         daemon_observability_availability_bps,
         daemon_observability_health,
         daemon_observability_alert_count,
+        daemon_observability_reason_code,
+        daemon_observability_transport_checkpoint_failures,
+        daemon_observability_signer_checkpoint_failures,
+        daemon_observability_commit_checkpoint_failures,
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
@@ -161,6 +189,10 @@ pub(crate) fn build_bootstrap_report(
         kolme_live_observability_availability_bps,
         kolme_live_observability_health,
         kolme_live_observability_alert_count,
+        kolme_live_observability_reason_code,
+        kolme_live_observability_transport_checkpoint_failures,
+        kolme_live_observability_signer_checkpoint_failures,
+        kolme_live_observability_commit_checkpoint_failures,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),

@@ -30,6 +30,10 @@ pub(crate) struct RuntimeObservabilitySnapshot {
     pub(crate) availability_bps: u64,
     pub(crate) health: String,
     pub(crate) alert_count: usize,
+    pub(crate) reason_code: String,
+    pub(crate) transport_checkpoint_failures: u64,
+    pub(crate) signer_checkpoint_failures: u64,
+    pub(crate) commit_checkpoint_failures: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +54,10 @@ pub(crate) fn build_runtime_observability_snapshot(
         Some(availability_bps),
         Some(health),
         Some(alert_count),
+        Some(reason_code),
+        Some(transport_checkpoint_failures),
+        Some(signer_checkpoint_failures),
+        Some(commit_checkpoint_failures),
     ) = (
         report.daemon_observability_latency_p50_ms,
         report.daemon_observability_latency_p99_ms,
@@ -58,6 +66,10 @@ pub(crate) fn build_runtime_observability_snapshot(
         report.daemon_observability_availability_bps,
         report.daemon_observability_health.as_deref(),
         report.daemon_observability_alert_count,
+        report.daemon_observability_reason_code.as_deref(),
+        report.daemon_observability_transport_checkpoint_failures,
+        report.daemon_observability_signer_checkpoint_failures,
+        report.daemon_observability_commit_checkpoint_failures,
     ) {
         return Some(RuntimeObservabilitySnapshot {
             source: "daemon".to_owned(),
@@ -69,6 +81,10 @@ pub(crate) fn build_runtime_observability_snapshot(
             availability_bps,
             health: health.to_owned(),
             alert_count,
+            reason_code: reason_code.to_owned(),
+            transport_checkpoint_failures,
+            signer_checkpoint_failures,
+            commit_checkpoint_failures,
         });
     }
 
@@ -80,6 +96,10 @@ pub(crate) fn build_runtime_observability_snapshot(
         Some(availability_bps),
         Some(health),
         Some(alert_count),
+        Some(reason_code),
+        Some(transport_checkpoint_failures),
+        Some(signer_checkpoint_failures),
+        Some(commit_checkpoint_failures),
     ) = (
         report.kolme_live_observability_latency_p50_ms,
         report.kolme_live_observability_latency_p99_ms,
@@ -88,6 +108,10 @@ pub(crate) fn build_runtime_observability_snapshot(
         report.kolme_live_observability_availability_bps,
         report.kolme_live_observability_health.as_deref(),
         report.kolme_live_observability_alert_count,
+        report.kolme_live_observability_reason_code.as_deref(),
+        report.kolme_live_observability_transport_checkpoint_failures,
+        report.kolme_live_observability_signer_checkpoint_failures,
+        report.kolme_live_observability_commit_checkpoint_failures,
     ) {
         return Some(RuntimeObservabilitySnapshot {
             source: "kolme-live".to_owned(),
@@ -99,6 +123,10 @@ pub(crate) fn build_runtime_observability_snapshot(
             availability_bps,
             health: health.to_owned(),
             alert_count,
+            reason_code: reason_code.to_owned(),
+            transport_checkpoint_failures,
+            signer_checkpoint_failures,
+            commit_checkpoint_failures,
         });
     }
 
@@ -213,15 +241,19 @@ fn render_observability_endpoint_response_with_paths(
 fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     let health_value = if snapshot.health == "healthy" { 1 } else { 0 };
     format!(
-        "kamn_observability_latency_p50_ms {}\nkamn_observability_latency_p99_ms {}\nkamn_observability_throughput_tps {}\nkamn_observability_error_rate_bps {}\nkamn_observability_availability_bps {}\nkamn_observability_alert_count {}\nkamn_observability_source{{source=\"{}\"}} 1\nkamn_observability_runtime_mode{{runtime_mode=\"{}\"}} 1\nkamn_observability_health{{health=\"{}\"}} {}\n",
+        "kamn_observability_latency_p50_ms {}\nkamn_observability_latency_p99_ms {}\nkamn_observability_throughput_tps {}\nkamn_observability_error_rate_bps {}\nkamn_observability_availability_bps {}\nkamn_observability_alert_count {}\nkamn_observability_transport_checkpoint_failures {}\nkamn_observability_signer_checkpoint_failures {}\nkamn_observability_commit_checkpoint_failures {}\nkamn_observability_source{{source=\"{}\"}} 1\nkamn_observability_runtime_mode{{runtime_mode=\"{}\"}} 1\nkamn_observability_reason_code{{reason_code=\"{}\"}} 1\nkamn_observability_health{{health=\"{}\"}} {}\n",
         snapshot.latency_p50_ms,
         snapshot.latency_p99_ms,
         snapshot.throughput_tps,
         snapshot.error_rate_bps,
         snapshot.availability_bps,
         snapshot.alert_count,
+        snapshot.transport_checkpoint_failures,
+        snapshot.signer_checkpoint_failures,
+        snapshot.commit_checkpoint_failures,
         escape_metrics_label(snapshot.source.as_str()),
         escape_metrics_label(snapshot.runtime_mode.as_str()),
+        escape_metrics_label(snapshot.reason_code.as_str()),
         escape_metrics_label(snapshot.health.as_str()),
         health_value
     )
@@ -229,11 +261,15 @@ fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 
 fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     format!(
-        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
+        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
         snapshot.alert_count,
+        escape_json_string(snapshot.reason_code.as_str()),
+        snapshot.transport_checkpoint_failures,
+        snapshot.signer_checkpoint_failures,
+        snapshot.commit_checkpoint_failures,
         snapshot.latency_p50_ms,
         snapshot.latency_p99_ms,
         snapshot.throughput_tps,
@@ -244,11 +280,15 @@ fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 
 fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     format!(
-        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
+        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
         snapshot.alert_count,
+        escape_json_string(snapshot.reason_code.as_str()),
+        snapshot.transport_checkpoint_failures,
+        snapshot.signer_checkpoint_failures,
+        snapshot.commit_checkpoint_failures,
         snapshot.latency_p50_ms,
         snapshot.latency_p99_ms,
         snapshot.throughput_tps,
@@ -382,6 +422,10 @@ mod tests {
             availability_bps: 9_990,
             health: "healthy".to_owned(),
             alert_count: 0,
+            reason_code: "none".to_owned(),
+            transport_checkpoint_failures: 0,
+            signer_checkpoint_failures: 0,
+            commit_checkpoint_failures: 0,
         };
         let response = render_observability_endpoint_response(&snapshot, "/unknown");
         assert_eq!(response.status_code, 404);
@@ -400,6 +444,10 @@ mod tests {
             availability_bps: 9_990,
             health: "healthy".to_owned(),
             alert_count: 0,
+            reason_code: "none".to_owned(),
+            transport_checkpoint_failures: 0,
+            signer_checkpoint_failures: 0,
+            commit_checkpoint_failures: 0,
         };
         let bind_addr = reserve_loopback_addr();
         let config = ObservabilityEndpointConfig {
