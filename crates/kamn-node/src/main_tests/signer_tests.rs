@@ -616,6 +616,35 @@ fn regression_kolme_live_managed_external_requires_key_reference_env_marker() {
 }
 
 #[test]
+fn regression_kolme_live_signer_preflight_rejects_missing_managed_key_reference() {
+    // Regression: #3539
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _key_ref_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_KEY_REF", None);
+    let _managed_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE).as_str()),
+    );
+    let _backend_command_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+        Some("printf 'signature_hex=00\\nrecovery_id=0\\nsigner_public_key_hex=02\\n'"),
+    );
+    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
+    let error = enforce_kolme_live_signer_preflight(Some("ops-primary"), Some("managed-external"))
+        .expect_err("managed-external preflight must require key reference marker");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_key_reference_missing")),
+        "preflight should fail closed with deterministic key-reference marker reason"
+    );
+}
+
+#[test]
 fn regression_kolme_live_managed_external_rejects_invalid_key_reference_schema() {
     // Regression: #2322
     let _lock = signer_env_lock()
