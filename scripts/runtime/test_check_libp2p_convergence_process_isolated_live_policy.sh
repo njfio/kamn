@@ -33,6 +33,7 @@ cat > "$report_file" <<'JSON'
   "no_shared_state_delivery_count": 0,
   "two_node_discovery_status": "verified",
   "two_node_gossip_status": "verified",
+  "native_compile_mode_status": "verified",
   "three_node_partition_rejoin_status": "verified",
   "three_node_publish_drop_recovery_status": "verified",
   "convergence_reason_code_status": "verified",
@@ -43,6 +44,7 @@ cat > "$report_file" <<'JSON'
     "two_node_connected_delivery_status",
     "two_node_discovery_status",
     "two_node_gossip_status",
+    "native_compile_mode_status",
     "three_node_partition_rejoin_status",
     "three_node_publish_drop_recovery_status",
     "convergence_reason_code_status"
@@ -171,6 +173,7 @@ cat > "$deep_report" <<JSON
   "no_shared_state_delivery_count": 0,
   "two_node_discovery_status": "verified",
   "two_node_gossip_status": "verified",
+  "native_compile_mode_status": "verified",
   "three_node_partition_rejoin_status": "verified",
   "three_node_publish_drop_recovery_status": "verified",
   "convergence_reason_code_status": "verified",
@@ -181,6 +184,7 @@ cat > "$deep_report" <<JSON
     "two_node_connected_delivery_status",
     "two_node_discovery_status",
     "two_node_gossip_status",
+    "native_compile_mode_status",
     "three_node_partition_rejoin_status",
     "three_node_publish_drop_recovery_status",
     "convergence_reason_code_status"

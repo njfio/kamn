@@ -70,6 +70,20 @@ SMOKE_TESTS: list[tuple[str, list[str]]] = [
             "--exact",
         ],
     ),
+    (
+        "native_runtime_marker_contract",
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-node",
+            "--test",
+            "native_libp2p_feature_contract",
+            "dependency_contract_enables_native_libp2p_transport_feature_for_kamn_core",
+            "--",
+            "--exact",
+        ],
+    ),
 ]
 
 DEEP_HARNESS_VALIDATION = (
@@ -215,6 +229,7 @@ def _run_lane(args: argparse.Namespace) -> int:
         "no_shared_state_delivery_count": 0,
         "two_node_discovery_status": "verified",
         "two_node_gossip_status": "verified",
+        "native_compile_mode_status": "verified",
         "three_node_partition_rejoin_status": "verified",
         "three_node_publish_drop_recovery_status": "verified",
         "convergence_reason_code_status": "verified",
@@ -225,6 +240,7 @@ def _run_lane(args: argparse.Namespace) -> int:
             "two_node_connected_delivery_status",
             "two_node_discovery_status",
             "two_node_gossip_status",
+            "native_compile_mode_status",
             "three_node_partition_rejoin_status",
             "three_node_publish_drop_recovery_status",
             "convergence_reason_code_status",
@@ -265,6 +281,7 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("no_shared_state_delivery_count=0")
     print("two_node_discovery_status=verified")
     print("two_node_gossip_status=verified")
+    print("native_compile_mode_status=verified")
     print("three_node_partition_rejoin_status=verified")
     print("three_node_publish_drop_recovery_status=verified")
     print("convergence_reason_code_status=verified")
@@ -315,6 +332,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "no_shared_state_delivery_count",
         "two_node_discovery_status",
         "two_node_gossip_status",
+        "native_compile_mode_status",
         "three_node_partition_rejoin_status",
         "three_node_publish_drop_recovery_status",
         "convergence_reason_code_status",
@@ -356,6 +374,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "two_node_connected_delivery_status",
         "two_node_discovery_status",
         "two_node_gossip_status",
+        "native_compile_mode_status",
         "three_node_partition_rejoin_status",
         "three_node_publish_drop_recovery_status",
         "convergence_reason_code_status",
@@ -412,6 +431,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "two_node_connected_delivery_status",
         "two_node_discovery_status",
         "two_node_gossip_status",
+        "native_compile_mode_status",
         "three_node_partition_rejoin_status",
         "three_node_publish_drop_recovery_status",
         "convergence_reason_code_status",

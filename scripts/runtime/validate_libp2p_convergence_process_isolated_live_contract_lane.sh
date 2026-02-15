@@ -149,6 +149,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^two_node_gossip_status=verif
   echo "expected process-isolated convergence two-node gossip marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^native_compile_mode_status=verified$'; then
+  echo "expected process-isolated convergence native compile-mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^three_node_partition_rejoin_status=verified$'; then
   echo "expected process-isolated convergence three-node partition/rejoin marker" >&2
   exit 1

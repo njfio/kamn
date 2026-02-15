@@ -71,6 +71,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^two_node_gossip_status=verif
   echo "expected process-isolated convergence two-node gossip marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^native_compile_mode_status=verified$'; then
+  echo "expected process-isolated convergence native compile-mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^three_node_partition_rejoin_status=verified$'; then
   echo "expected process-isolated convergence partition/rejoin marker" >&2
   exit 1
@@ -123,6 +127,8 @@ if payload.get("no_shared_state_unexpected_delivery_reason_code") != "no_shared_
     raise SystemExit("expected no-shared-state unexpected-delivery reason marker")
 if payload.get("no_shared_state_delivery_count") != 0:
     raise SystemExit("expected no-shared-state delivery-count marker")
+if payload.get("native_compile_mode_status") != "verified":
+    raise SystemExit("expected native compile-mode marker")
 PY
 
 smoke_run_output="$(
@@ -137,8 +143,8 @@ if ! printf '%s\n' "$smoke_run_output" | grep -q '^execution_reason_code=run_mod
   echo "expected smoke run-mode command execution marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$smoke_run_output" | grep -q '^command_count=2$'; then
-  echo "expected smoke run-mode command_count=2 marker" >&2
+if ! printf '%s\n' "$smoke_run_output" | grep -q '^command_count=3$'; then
+  echo "expected smoke run-mode command_count=3 marker" >&2
   exit 1
 fi
 
