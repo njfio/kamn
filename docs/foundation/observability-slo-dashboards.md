@@ -97,6 +97,8 @@ This document captures the first implementation slice for deterministic observab
     - `availability_bps`
 - Fail-closed behavior:
   - unknown endpoint paths return `404 not found`.
+  - stream reconnect churn preserves deterministic stream schema/reason-code markers across reconnect attempts.
+  - queue-bound request budget remains deterministic: endpoint listener closes once bounded request budget is exhausted.
   - request budget and idle timeout controls remain bounded and deterministic.
 
 Live validation lane:

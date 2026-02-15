@@ -144,6 +144,14 @@ if ! printf '%s\n' "$validation_output" | grep -q '^stream_lifecycle_status=veri
   echo "expected local observability scrape validation stream marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
+  echo "expected local observability scrape validation stream reconnect churn marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^queue_bound_budget_status=verified$'; then
+  echo "expected local observability scrape validation queue-bound budget marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^readiness_probe_status=verified$'; then
   echo "expected local observability scrape validation readiness probe marker" >&2
   exit 1
@@ -237,8 +245,8 @@ if ! grep -q "local observability soak run-mode commands remain excluded from ci
   echo "expected CI strategy docs to include local observability soak run-mode exclusion marker" >&2
   exit 1
 fi
-if ! grep -q "bounded to five targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
-  echo "expected CI strategy docs to include five-test local observability scrape run-mode budget marker" >&2
+if ! grep -q "bounded to seven targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include seven-test local observability scrape run-mode budget marker" >&2
   exit 1
 fi
 
@@ -309,6 +317,12 @@ lane_report = {
     "local_heavy_soak_lane_status": summary_report.get(
         "local_heavy_soak_lane_status"
     ),
+    "stream_reconnect_churn_status": summary_report.get(
+        "stream_reconnect_churn_status"
+    ),
+    "queue_bound_budget_status": summary_report.get(
+        "queue_bound_budget_status"
+    ),
     "soak_iterations_requested": summary_report.get(
         "soak_iterations_requested"
     ),
@@ -356,6 +370,8 @@ if [[ "$mode" == "run" ]]; then
 else
   echo "soak_iterations_executed=0"
 fi
+echo "stream_reconnect_churn_status=verified"
+echo "queue_bound_budget_status=verified"
 echo "local_observability_scrape_contract_status=verified"
 echo "local_observability_scrape_policy_status=verified"
 echo "docs_contract_status=verified"

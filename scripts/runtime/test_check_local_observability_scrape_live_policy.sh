@@ -22,6 +22,8 @@ cat >"$report_file" <<'JSON'
   "scrape_probe_status": "verified",
   "metrics_content_type_status": "verified",
   "stream_lifecycle_status": "verified",
+  "stream_reconnect_churn_status": "verified",
+  "queue_bound_budget_status": "verified",
   "readiness_probe_status": "verified",
   "readiness_failure_drill_status": "verified",
   "readiness_reason_taxonomy_status": "verified",
@@ -106,6 +108,39 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'local_observability_scrape_policy_marker_missing:readiness_failure_drill_status'; then
   echo "expected deterministic mismatch reason code for tampered local observability scrape policy validation" >&2
+  exit 1
+fi
+
+tampered_queue_bound_report="$TMP_DIR/local-observability-scrape-live-summary.queue-bound.tampered.json"
+cp "$report_file" "$tampered_queue_bound_report"
+python3 - "$tampered_queue_bound_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["queue_bound_budget_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_queue_bound_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_queue_bound_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.queue-bound.tampered.json" 2>&1
+)"
+tampered_queue_bound_code=$?
+set -e
+
+if [ "$tampered_queue_bound_code" -eq 0 ]; then
+  echo "expected tampered local observability queue-bound marker report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_queue_bound_output" | grep -q 'local_observability_scrape_policy_marker_missing:queue_bound_budget_status'; then
+  echo "expected deterministic queue-bound marker mismatch reason code for tampered local observability policy validation" >&2
   exit 1
 fi
 

@@ -66,6 +66,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^soak_iterations_executed=0$'; then
   echo "expected local observability scrape contract lane soak executed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
+  echo "expected local observability scrape contract lane stream reconnect churn marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^queue_bound_budget_status=verified$'; then
+  echo "expected local observability scrape contract lane queue-bound marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_observability_scrape_policy_marker_missing:readiness_failure_drill_status$'; then
   echo "expected local observability scrape contract lane fail-closed reason marker" >&2
   exit 1
@@ -95,6 +103,10 @@ if lane_payload.get("soak_iterations_requested") != 1:
     raise SystemExit("expected soak_iterations_requested=1")
 if lane_payload.get("soak_iterations_executed") != 0:
     raise SystemExit("expected soak_iterations_executed=0")
+if lane_payload.get("stream_reconnect_churn_status") != "verified":
+    raise SystemExit("expected stream_reconnect_churn_status=verified")
+if lane_payload.get("queue_bound_budget_status") != "verified":
+    raise SystemExit("expected queue_bound_budget_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
@@ -142,6 +154,14 @@ if ! printf '%s\n' "$soak_lane_output" | grep -q '^soak_iterations_requested=2$'
 fi
 if ! printf '%s\n' "$soak_lane_output" | grep -q '^soak_iterations_executed=0$'; then
   echo "expected local observability scrape contract lane soak executed-iterations marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
+  echo "expected local observability scrape contract lane soak stream reconnect churn marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^queue_bound_budget_status=verified$'; then
+  echo "expected local observability scrape contract lane soak queue-bound marker" >&2
   exit 1
 fi
 

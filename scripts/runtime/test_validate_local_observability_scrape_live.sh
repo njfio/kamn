@@ -56,6 +56,14 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^readiness_reason_taxonomy_statu
   echo "expected local observability scrape dry-run readiness reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
+  echo "expected local observability scrape dry-run stream reconnect churn marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^queue_bound_budget_status=verified$'; then
+  echo "expected local observability scrape dry-run queue-bound budget marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^local_heavy_soak_lane_status=not_enabled$'; then
   echo "expected local observability scrape dry-run soak lane status marker" >&2
   exit 1
@@ -99,6 +107,10 @@ if payload.get("soak_iterations_requested") != 1:
     raise SystemExit("expected local observability scrape dry-run soak_iterations_requested=1")
 if payload.get("soak_iterations_executed") != 0:
     raise SystemExit("expected local observability scrape dry-run soak_iterations_executed=0")
+if payload.get("stream_reconnect_churn_status") != "verified":
+    raise SystemExit("expected local observability scrape dry-run stream_reconnect_churn_status=verified")
+if payload.get("queue_bound_budget_status") != "verified":
+    raise SystemExit("expected local observability scrape dry-run queue_bound_budget_status=verified")
 if payload.get("execution_reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected local observability scrape dry-run reason code")
 if payload.get("command_count") != 0:
@@ -173,6 +185,14 @@ if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^soak_iterations_requested=
 fi
 if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^soak_iterations_executed=0$'; then
   echo "expected local observability scrape soak dry-run executed-iterations marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
+  echo "expected local observability scrape soak dry-run stream reconnect churn marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^queue_bound_budget_status=verified$'; then
+  echo "expected local observability scrape soak dry-run queue-bound budget marker" >&2
   exit 1
 fi
 
