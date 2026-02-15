@@ -1,8 +1,9 @@
 use kamn_core::{
     build_p2p_swarm_deterministic_config, build_runtime_wiring,
-    build_runtime_wiring_with_transport_profile, Libp2pLivePeerLifecycleTransport, NodeConfig,
-    NodeRole, P2pSwarmHarnessMode, P2pTransportError, PeerDiscoveryRecord, PeerGossipFrame,
-    PeerLifecycleEvent, PeerLifecycleState, PeerLifecycleTransport,
+    build_runtime_wiring_with_transport_profile, canonical_libp2p_identify_protocol_id,
+    canonical_libp2p_topic_id, Libp2pLivePeerLifecycleTransport, Libp2pRuntimeEventKind,
+    NodeConfig, NodeRole, P2pSwarmHarnessMode, P2pTransportError, PeerDiscoveryRecord,
+    PeerGossipFrame, PeerLifecycleEvent, PeerLifecycleState, PeerLifecycleTransport,
     PeerLifecycleTransportCoordinator, RuntimeLifecycleError, RuntimeTransportProfile, SyncMode,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -67,6 +68,18 @@ fn unit_live_transport_adapter_reports_harness_startup_profile() {
     assert!(transport.harness_report().started());
     assert_eq!(transport.harness_report().executed_ticks(), 3);
     assert_eq!(transport.listen_address(), "/ip4/127.0.0.1/tcp/9200");
+}
+
+#[test]
+fn unit_libp2p_runtime_protocol_and_topic_ids_are_deterministic() {
+    assert_eq!(
+        canonical_libp2p_identify_protocol_id(),
+        "/kamn/libp2p-live/1.0.0"
+    );
+    assert_eq!(
+        canonical_libp2p_topic_id("messages").expect("topic id should normalize"),
+        "kamn/v1/messages"
+    );
 }
 
 #[test]
@@ -195,6 +208,89 @@ fn integration_live_transport_data_plane_supports_independent_adapter_exchange()
 }
 
 #[test]
+fn functional_live_transport_emits_normalized_runtime_events() {
+    let bootstrap_seed = unique_bootstrap_seed("live-normalized-events");
+    let processor_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            "peer-processor-live-events",
+            "/ip4/127.0.0.1/tcp/9230",
+            bootstrap_seed.as_str(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("processor live transport should initialize");
+    let listener_transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            "peer-listener-live-events",
+            "/ip4/127.0.0.1/tcp/9231",
+            bootstrap_seed.as_str(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("listener live transport should initialize");
+
+    processor_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-processor-live-events",
+                NodeRole::Processor,
+                vec!["messages".to_owned()],
+            )
+            .expect("processor record should build"),
+        )
+        .expect("processor advertise should pass");
+    listener_transport
+        .advertise(
+            PeerDiscoveryRecord::new(
+                "peer-listener-live-events",
+                NodeRole::Listener,
+                vec!["messages".to_owned()],
+            )
+            .expect("listener record should build"),
+        )
+        .expect("listener advertise should pass");
+
+    let discovered = processor_transport
+        .discover("peer-processor-live-events", "messages")
+        .expect("discovery should pass");
+    assert_eq!(discovered.len(), 1);
+    assert_eq!(discovered[0].peer_id, "peer-listener-live-events");
+
+    processor_transport
+        .send(
+            PeerGossipFrame::new(
+                "messages",
+                "peer-processor-live-events",
+                "peer-listener-live-events",
+                "tx-live-events-001",
+            )
+            .expect("gossip frame should build"),
+        )
+        .expect("gossip send should pass");
+
+    let events = processor_transport
+        .drain_runtime_events()
+        .expect("runtime events should drain");
+    assert_eq!(events.len(), 5);
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.kind())
+            .collect::<Vec<Libp2pRuntimeEventKind>>(),
+        vec![
+            Libp2pRuntimeEventKind::PeerAdvertised,
+            Libp2pRuntimeEventKind::PeerAdvertised,
+            Libp2pRuntimeEventKind::PeerDiscovered,
+            Libp2pRuntimeEventKind::GossipPublished,
+            Libp2pRuntimeEventKind::GossipReceived,
+        ]
+    );
+    assert!(events
+        .iter()
+        .all(|event| event.schema_marker() == "kamn.libp2p.runtime-event.v1"));
+}
+
+#[test]
 fn integration_live_transport_invalid_event_retries_are_idempotent() {
     let transport =
         Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::DryRun)
@@ -270,6 +366,14 @@ fn regression_live_transport_invalid_transition_reason_code_stable() {
         .apply_live_transport_signal(PeerLifecycleEvent::HeartbeatRestored)
         .expect_err("heartbeat restore from disconnected must fail");
     assert_eq!(error.reason_code(), "runtime_peer_transition_invalid");
+}
+
+#[test]
+fn regression_libp2p_topic_normalization_invalid_topic_reason_code_stable() {
+    // Regression: #3668
+    let error =
+        canonical_libp2p_topic_id("bad|topic").expect_err("wire-delimited topics must fail closed");
+    assert_eq!(error.reason_code(), "p2p_transport_invalid_topic");
 }
 
 #[test]
