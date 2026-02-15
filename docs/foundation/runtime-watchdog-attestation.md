@@ -83,6 +83,20 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - unscheduled proof-consensus deep-lane execution force-fails via scheduled/manual cadence guard (`Regression: #996`).
   - invalid, replay, and mismatch proof-consensus anomaly artifacts must remain `NO-GO` under policy checks (`Regression: #996`).
 
+## Parser Fuzz Surface Inventory
+- Primary parser mutation surfaces:
+  - `cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact`
+  - `cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact`
+- Combined invariant/fuzz/concurrency contract lane:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json --output-json /tmp/invariant-fuzz-concurrency-policy-report.json`
+- Deterministic artifact contracts:
+  - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
+  - `input_mutation_replay:v1`
+  - `concurrency_mutation_replay:v1`
+- Cost boundary:
+  - parser fuzz and concurrency deep paths remain local-only and excluded from `ci-fast-gate`; PR path uses deterministic contract-lane evidence.
+
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
 - Incident operators execute deterministic response workflow from `docs/foundation/upgrade-rollback-runbook.md`.
