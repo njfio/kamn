@@ -2584,6 +2584,18 @@ Fast-mode CI tooling regression coverage includes:
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
+- Combined shell-surface trend report generator (`test_generate_combined_shell_surface_trend_report.sh`)
+  - generator command:
+    - `bash scripts/ci/generate_combined_shell_surface_trend_report.sh --output-json /tmp/combined-shell-surface-trend-report.json`
+- Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
+  - policy command:
+    - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`
+  - deterministic reason-code surface:
+    - `reason_codes=combined_shell_surface_script_count_delta_fail_exceeded`
+    - `reason_codes=combined_shell_surface_shell_line_total_delta_fail_exceeded`
+    - `reason_codes=combined_shell_surface_ratio_fail_ceiling_exceeded`
+    - `reason_codes=combined_shell_surface_ratio_delta_fail_exceeded`
+    - `reason_codes=combined_shell_surface_budget_status_fail`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`

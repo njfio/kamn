@@ -275,9 +275,28 @@ The checker fails closed when any metric exceeds its configured threshold and em
   - `scripts/runtime/validate_service_api_reason_code_compatibility_live_contract_lane.sh`
   - `scripts/runtime/validate_service_api_serde_payload_parity_live_contract_lane.sh`
 - Latest local budget evidence after migration:
-  - `shell_line_total=31253` (down from `31599`)
-  - `script_count=381`
+  - `shell_line_total=31657` (remains below `32000` cap after #3450 guard tooling additions)
+  - `script_count=383`
   - `violations=none`
+
+## Combined Shell-Surface Trend Guard (`#3450`)
+- Combined trend artifact:
+  - `bash scripts/ci/generate_combined_shell_surface_trend_report.sh --output-json /tmp/combined-shell-surface-trend-report.json`
+  - schema: `kamn.ci.combined-shell-surface-trend-report.v1`
+  - tracked dimensions:
+    - `script_count`
+    - `shell_line_total`
+    - `rust_line_total`
+    - `shell_to_rust_ratio`
+- Combined trend policy checker:
+  - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`
+  - schema: `kamn.ci.combined-shell-surface-trend-policy-report.v1`
+  - fail-closed reason codes:
+    - `combined_shell_surface_script_count_delta_fail_exceeded`
+    - `combined_shell_surface_shell_line_total_delta_fail_exceeded`
+    - `combined_shell_surface_ratio_fail_ceiling_exceeded`
+    - `combined_shell_surface_ratio_delta_fail_exceeded`
+    - `combined_shell_surface_budget_status_fail`
 
 ## Waiver Rules
 Temporary exceptions are allowed through `.ci/script-surface-budget-waiver.json`.
@@ -312,6 +331,8 @@ Run these before opening a PR that modifies CI/lane surfaces:
 ```bash
 bash scripts/ci/check_script_duplication_budget.sh
 bash scripts/ci/test_check_script_duplication_budget.sh
+bash scripts/ci/test_generate_combined_shell_surface_trend_report.sh
+bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh
 bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh
 bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh
 bash scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh
