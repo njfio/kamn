@@ -19,12 +19,13 @@ fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
     }
 }
 
-fn unique_bootstrap_seed(label: &str) -> String {
+fn unique_bootstrap_seed() -> String {
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock should be monotonic")
         .as_nanos();
-    format!("/ip4/127.0.0.1/tcp/99{nonce}/{label}")
+    let port = 20_000 + (nonce % 20_000) as u16;
+    format!("/ip4/127.0.0.1/tcp/{port}")
 }
 
 fn live_swarm_config_for_peer(
@@ -69,11 +70,15 @@ fn functional_libp2p_native_backend_selection_marker_is_stable() {
         resolve_libp2p_live_runtime_backend(),
         Libp2pLiveRuntimeBackend::NativeSocket
     );
+    assert_eq!(
+        resolve_libp2p_live_runtime_backend().marker(),
+        "native-libp2p-swarm"
+    );
 }
 
 #[test]
 fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets() {
-    let bootstrap_seed = unique_bootstrap_seed("native");
+    let bootstrap_seed = unique_bootstrap_seed();
     let processor_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer(
             "peer-native-processor",
@@ -99,7 +104,7 @@ fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets(
     );
     assert_eq!(
         resolve_libp2p_live_runtime_backend().marker(),
-        "native-socket"
+        "native-libp2p-swarm"
     );
 
     let mut processor = PeerLifecycleTransportCoordinator::new(
@@ -145,6 +150,26 @@ fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets(
 }
 
 #[test]
+fn unit_libp2p_native_adapter_rejects_invalid_bootstrap_multiaddr() {
+    let config = build_p2p_swarm_deterministic_config(
+        &config_for(NodeRole::Processor, true),
+        "peer-native-invalid-bootstrap",
+        "/ip4/127.0.0.1/tcp/9540",
+        vec!["/ip4/127.0.0.1/tcp/9541/invalid-proto".to_owned()],
+        vec!["messages".to_owned()],
+        3,
+    )
+    .expect("base config should build");
+
+    let error = Libp2pLivePeerLifecycleTransport::new(config, P2pSwarmHarnessMode::DryRun)
+        .expect_err("invalid bootstrap multiaddr must fail");
+    assert_eq!(
+        error.reason_code(),
+        "p2p_transport_libp2p_runtime_config_invalid"
+    );
+}
+
+#[test]
 fn regression_libp2p_native_runtime_config_error_reason_code_stays_stable() {
     // Regression: #3633
     let config = build_p2p_swarm_deterministic_config(
@@ -168,7 +193,7 @@ fn regression_libp2p_native_runtime_config_error_reason_code_stays_stable() {
 #[test]
 fn performance_libp2p_native_adapter_stays_within_local_heavy_budget() {
     let started = Instant::now();
-    let bootstrap_seed = unique_bootstrap_seed("native-performance");
+    let bootstrap_seed = unique_bootstrap_seed();
     let sender_transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer(
             "peer-native-perf-sender",

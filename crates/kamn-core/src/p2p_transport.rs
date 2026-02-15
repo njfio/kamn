@@ -540,7 +540,7 @@ impl Libp2pLiveRuntimeBackend {
     pub fn marker(self) -> &'static str {
         match self {
             Self::ContractDataPlane => "contract-data-plane",
-            Self::NativeSocket => "native-socket",
+            Self::NativeSocket => "native-libp2p-swarm",
         }
     }
 }
@@ -786,6 +786,11 @@ fn validate_libp2p_native_runtime_config(
         .listen_address()
         .parse::<Multiaddr>()
         .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+    for bootstrap_peer in config.bootstrap_peers() {
+        bootstrap_peer
+            .parse::<Multiaddr>()
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+    }
     for topic in config.gossip_topics() {
         let _ = libp2p::gossipsub::IdentTopic::new(topic.clone());
     }
