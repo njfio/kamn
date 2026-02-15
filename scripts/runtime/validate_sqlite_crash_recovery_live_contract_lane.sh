@@ -119,6 +119,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_codes_
   echo "expected sqlite crash-recovery live validation wal-durability taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_index_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query index marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_latency_budget_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query latency budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation historical-query taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$'; then
+  echo "expected sqlite crash-recovery live validation historical-query taxonomy csv marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -229,6 +245,18 @@ lane_report = {
     "wal_durability_reason_codes_csv": summary_report.get(
         "wal_durability_reason_codes_csv"
     ),
+    "historical_query_index_status": summary_report.get(
+        "historical_query_index_status"
+    ),
+    "historical_query_latency_budget_status": summary_report.get(
+        "historical_query_latency_budget_status"
+    ),
+    "historical_query_reason_taxonomy_version": summary_report.get(
+        "historical_query_reason_taxonomy_version"
+    ),
+    "historical_query_reason_codes_csv": summary_report.get(
+        "historical_query_reason_codes_csv"
+    ),
     "sqlite_crash_recovery_contract_status": "verified",
     "sqlite_crash_recovery_policy_status": policy_report.get("sqlite_crash_recovery_policy_status"),
     "docs_contract_status": "verified",
@@ -255,6 +283,10 @@ echo "wal_append_status=verified"
 echo "wal_checkpoint_status=verified"
 echo "wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1"
 echo "wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
+echo "historical_query_index_status=verified"
+echo "historical_query_latency_budget_status=verified"
+echo "historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1"
+echo "historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch"
 echo "sqlite_crash_recovery_contract_status=verified"
 echo "sqlite_crash_recovery_policy_status=verified"
 echo "docs_contract_status=verified"

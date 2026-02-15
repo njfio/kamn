@@ -60,6 +60,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^wal_durability_reason_codes_csv=wa
   echo "expected sqlite crash-recovery contract lane wal-durability reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_index_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane historical-query index marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_latency_budget_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane historical-query latency budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane historical-query reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$'; then
+  echo "expected sqlite crash-recovery contract lane historical-query reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_recovery_policy_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane policy status marker" >&2
   exit 1
@@ -93,6 +109,14 @@ if lane_payload.get("wal_durability_reason_taxonomy_version") != "kamn.runtime.w
     raise SystemExit("expected deterministic wal_durability_reason_taxonomy_version marker")
 if lane_payload.get("wal_durability_reason_codes_csv") != "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete":
     raise SystemExit("expected deterministic wal_durability_reason_codes_csv marker")
+if lane_payload.get("historical_query_index_status") != "verified":
+    raise SystemExit("expected historical_query_index_status=verified")
+if lane_payload.get("historical_query_latency_budget_status") != "verified":
+    raise SystemExit("expected historical_query_latency_budget_status=verified")
+if lane_payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime.historical-query-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
+if lane_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
+    raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
 if lane_payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified")
 if lane_payload.get("sqlite_crash_recovery_contract_status") != "verified":
@@ -109,6 +133,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified in policy report")
+if policy_payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime.historical-query-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker in policy report")
+if policy_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
+    raise SystemExit("expected deterministic historical_query_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_sqlite_crash_recovery_live_policy.sh" "$CONTRACT_LANE"; then

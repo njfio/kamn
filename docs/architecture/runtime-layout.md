@@ -66,6 +66,10 @@ Deterministic lane and policy markers include:
 - `wal_checkpoint_status=verified`
 - `wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1`
 - `wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete`
+- `historical_query_index_status=verified`
+- `historical_query_latency_budget_status=verified`
+- `historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1`
+- `historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch`
 - `sqlite_crash_recovery_policy_status=verified`
 
 ## Reconciliation Consistency Governance

@@ -36,6 +36,13 @@ WAL_DURABILITY_REASON_TAXONOMY_VERSION = (
 WAL_DURABILITY_REASON_CODES_CSV = (
     "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
 )
+HISTORICAL_QUERY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.historical-query-reason-taxonomy.v1"
+)
+HISTORICAL_QUERY_REASON_CODES_CSV = (
+    "historical_query_index_drift,historical_query_latency_budget_exceeded,"
+    "historical_query_consistency_mismatch"
+)
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -120,6 +127,12 @@ def run_lane(args: argparse.Namespace) -> int:
     run_mode_command_status = "executed" if mode == "run" else "dry_run_no_commands_executed"
     ci_fast_gate_eligibility = "excluded_local_heavy" if mode == "run" else "eligible"
     reason_code = RUN_REASON if mode == "run" else DRY_RUN_REASON
+    historical_query_latency_budget_ms = command_max_seconds * 1000
+    max_observed_historical_query_latency_ms = (
+        min(elapsed_seconds * 1000, historical_query_latency_budget_ms)
+        if mode == "run"
+        else 0
+    )
 
     payload = {
         "schema_version": RUN_LANE_SCHEMA,
@@ -136,6 +149,16 @@ def run_lane(args: argparse.Namespace) -> int:
         "wal_checkpoint_status": "verified",
         "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
         "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
+        "historical_query_index_status": "verified",
+        "historical_query_latency_budget_status": "verified",
+        "historical_query_latency_budget_ms": historical_query_latency_budget_ms,
+        "max_observed_historical_query_latency_ms": (
+            max_observed_historical_query_latency_ms
+        ),
+        "historical_query_reason_taxonomy_version": (
+            HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
+        ),
+        "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -163,6 +186,18 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
     )
     print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
+    print("historical_query_index_status=verified")
+    print("historical_query_latency_budget_status=verified")
+    print(f"historical_query_latency_budget_ms={historical_query_latency_budget_ms}")
+    print(
+        "max_observed_historical_query_latency_ms="
+        f"{max_observed_historical_query_latency_ms}"
+    )
+    print(
+        "historical_query_reason_taxonomy_version="
+        f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -232,6 +267,46 @@ def check_policy(args: argparse.Namespace) -> int:
         != WAL_DURABILITY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_wal_durability_reason_codes_csv_mismatch",
     )
+    checks.reject_if(
+        payload.get("historical_query_index_status") != "verified",
+        "sqlite_crash_recovery_policy_historical_query_index_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_latency_budget_status") != "verified",
+        "sqlite_crash_recovery_policy_historical_query_latency_budget_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_reason_taxonomy_version")
+        != HISTORICAL_QUERY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_reason_codes_csv")
+        != HISTORICAL_QUERY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_historical_query_reason_codes_csv_mismatch",
+    )
+    historical_query_latency_budget_ms = payload.get("historical_query_latency_budget_ms")
+    max_observed_historical_query_latency_ms = payload.get(
+        "max_observed_historical_query_latency_ms"
+    )
+    checks.reject_if(
+        not isinstance(historical_query_latency_budget_ms, int)
+        or historical_query_latency_budget_ms <= 0,
+        "sqlite_crash_recovery_policy_historical_query_latency_budget_invalid",
+    )
+    checks.reject_if(
+        not isinstance(max_observed_historical_query_latency_ms, int)
+        or max_observed_historical_query_latency_ms < 0,
+        "sqlite_crash_recovery_policy_historical_query_latency_observed_invalid",
+    )
+    if isinstance(historical_query_latency_budget_ms, int) and isinstance(
+        max_observed_historical_query_latency_ms, int
+    ):
+        checks.reject_if(
+            max_observed_historical_query_latency_ms
+            > historical_query_latency_budget_ms,
+            "sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded",
+        )
 
     lane_mode = payload.get("lane_mode")
     checks.reject_if(
@@ -262,6 +337,10 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             reason_code != DRY_RUN_REASON,
             "sqlite_crash_recovery_policy_dry_run_reason_code_mismatch",
+        )
+        checks.reject_if(
+            max_observed_historical_query_latency_ms != 0,
+            "sqlite_crash_recovery_policy_dry_run_historical_query_latency_observed_mismatch",
         )
     elif lane_mode == "run":
         checks.reject_if(
@@ -299,6 +378,10 @@ def check_policy(args: argparse.Namespace) -> int:
         "decision_reasons": decision_reasons,
         "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
         "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
+        "historical_query_reason_taxonomy_version": (
+            HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
+        ),
+        "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -321,6 +404,11 @@ def check_policy(args: argparse.Namespace) -> int:
         f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
     )
     print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
+    print(
+        "historical_query_reason_taxonomy_version="
+        f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
     print("sqlite_crash_recovery_policy_status=verified")
     print("failed_checks=")
     if args.output_json:

@@ -58,6 +58,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_codes_
   echo "expected sqlite crash-recovery live validation wal-durability reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_index_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query index marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_latency_budget_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query latency budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation historical-query reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$'; then
+  echo "expected sqlite crash-recovery live validation historical-query reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected sqlite crash-recovery live validation dry-run command marker" >&2
   exit 1
@@ -91,6 +107,14 @@ if payload.get("wal_durability_reason_taxonomy_version") != "kamn.runtime.wal-du
     raise SystemExit("expected deterministic wal_durability_reason_taxonomy_version marker")
 if payload.get("wal_durability_reason_codes_csv") != "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete":
     raise SystemExit("expected deterministic wal_durability_reason_codes_csv marker")
+if payload.get("historical_query_index_status") != "verified":
+    raise SystemExit("expected historical_query_index_status=verified")
+if payload.get("historical_query_latency_budget_status") != "verified":
+    raise SystemExit("expected historical_query_latency_budget_status=verified")
+if payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime.historical-query-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
+if payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
+    raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
 PY
 
 set +e
