@@ -153,6 +153,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - harness accept windows are bounded to 2 seconds to avoid hanging PR runners
 - Heavy local Kolme node tests stay outside `ci-fast-gate` in local/manual lanes.
 
+## Node Runtime Startup Negative-Matrix Fast Lane
+- For `kamn-node` startup signer/profile/mode preflight contract changes, keep PR validation on deterministic local matrix tests:
+  - `cargo test -p kamn-node main_tests::cli_contract_tests::regression_3599_startup_signer_mode_negative_matrix_corpus -- --exact`
+  - `cargo test -p kamn-node cli_tests::regression_3598_startup_paths_have_no_panic_control_flow -- --exact`
+- Deterministic fail-closed startup matrix contracts:
+  - coverage corpus must preserve all required case IDs and fail closed with `startup_negative_matrix_policy_marker_missing` when coverage drifts.
+  - strict signer selector/profile mismatch and fallback-secret violations must fail before network dispatch.
+- This lane is intentionally bounded and cost-effective:
+  - all checks run in-process with deterministic env guards and localhost mock transport only.
+  - no external Kolme node process is required for PR fast-gate validation.
+
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`
