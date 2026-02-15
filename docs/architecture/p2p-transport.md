@@ -104,6 +104,9 @@ deterministic network identity.
   can discover and exchange gossip frames without cloning one shared adapter.
 - Unsupported lifecycle transitions still fail closed through
   `P2pTransportError::Lifecycle(RuntimeLifecycleError::InvalidTransition { ... })`.
+- `P2pTransportError::reason_code()`
+  - exposes deterministic reason-code taxonomy for transport policy checks and
+    repeated invalid-event idempotence guards.
 
 ## Deterministic Guardrails
 
@@ -126,6 +129,10 @@ deterministic network identity.
   `P2pTransportError::MissingKademliaBootstrapSeeds`.
 - Invalid lifecycle transition replay remains fail closed with reason code
   `runtime_peer_transition_invalid`.
+- Repeated invalid lifecycle events under live transport must remain idempotent:
+  - lifecycle state remains unchanged across retries.
+  - `P2pTransportError::reason_code()` remains stable at
+    `runtime_peer_transition_invalid` for invalid transition retries.
 
 ## Peer Lifecycle Proptest Invariants
 
@@ -157,6 +164,8 @@ cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core --test p2p_kademlia_bootstrap
 cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
+cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
+cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants functional_peer_lifecycle_proptest_enforces_legal_transition_graph -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent -- --exact
