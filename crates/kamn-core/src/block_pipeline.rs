@@ -553,6 +553,86 @@ pub struct CanonicalCandidateOutcome {
     pub decision: CanonicalCandidateDecision,
 }
 
+const TRANSPORT_CONVERGENCE_EVIDENCE_SCHEMA_VERSION: &str =
+    "kamn.runtime.transport-convergence-evidence.v1";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Evidence bundle summarizing one transport convergence fault-drill execution.
+pub struct TransportConvergenceEvidenceBundle {
+    /// Versioned schema marker for policy and contract-lane checks.
+    pub schema_version: String,
+    /// Fault-drill case identifier.
+    pub case_id: String,
+    /// Count of accepted canonical candidates.
+    pub accepted_candidate_count: usize,
+    /// Count of rejected canonical candidates.
+    pub rejected_candidate_count: usize,
+    /// Deterministic set of rejection reason codes observed in this case.
+    pub rejected_reason_codes: Vec<String>,
+    /// Persisted canonical commit count after reconciliation.
+    pub persisted_commit_count: usize,
+    /// Highest persisted canonical block height after reconciliation.
+    pub persisted_highest_block_height: Option<u64>,
+    /// Deterministic continuity status marker (`verified` on success).
+    pub continuity_status: String,
+}
+
+/// Builds deterministic convergence evidence for partition/rejoin and publish-drop drills.
+pub fn build_transport_convergence_evidence_bundle(
+    case_id: &str,
+    outcomes: &[CanonicalCandidateOutcome],
+    persisted_commits: &[CanonicalCommitRecord],
+) -> Result<TransportConvergenceEvidenceBundle, BlockPipelineError> {
+    if case_id.trim().is_empty() {
+        return Err(BlockPipelineError::ReplayDrift {
+            reason_code: "transport_convergence_case_id_missing".to_owned(),
+            detail: "transport convergence case id cannot be empty".to_owned(),
+        });
+    }
+
+    let mut accepted_candidate_count = 0usize;
+    let mut rejected_candidate_count = 0usize;
+    let mut rejected_reason_codes = BTreeSet::new();
+    for outcome in outcomes {
+        match &outcome.decision {
+            CanonicalCandidateDecision::Accepted => {
+                accepted_candidate_count += 1;
+            }
+            CanonicalCandidateDecision::Rejected { reason_code } => {
+                rejected_candidate_count += 1;
+                rejected_reason_codes.insert(reason_code.clone());
+            }
+        }
+    }
+
+    let mut highest = None;
+    for record in persisted_commits {
+        if let Some(previous) = highest {
+            if record.block_height <= previous {
+                return Err(BlockPipelineError::ReplayDrift {
+                    reason_code: "transport_convergence_commit_height_regression".to_owned(),
+                    detail: format!(
+                        "persisted convergence commit height regression: previous {previous}, found {}",
+                        record.block_height
+                    ),
+                });
+            }
+        }
+        highest = Some(record.block_height);
+    }
+
+    Ok(TransportConvergenceEvidenceBundle {
+        schema_version: TRANSPORT_CONVERGENCE_EVIDENCE_SCHEMA_VERSION.to_owned(),
+        case_id: case_id.to_owned(),
+        accepted_candidate_count,
+        rejected_candidate_count,
+        rejected_reason_codes: rejected_reason_codes.into_iter().collect(),
+        persisted_commit_count: persisted_commits.len(),
+        persisted_highest_block_height: highest,
+        continuity_status: "verified".to_owned(),
+    })
+}
+
 /// Transport feed abstraction for draining pending mempool candidates.
 pub trait TransportMempoolFeed {
     /// Drains pending transport candidates in implementation-defined order.

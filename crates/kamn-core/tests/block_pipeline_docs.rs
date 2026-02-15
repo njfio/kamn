@@ -8,6 +8,7 @@ fn architecture_doc_contains_block_pipeline_core_components() {
     assert!(DOC.contains("BlockPipelineCommitReport"));
     assert!(DOC.contains("BlockPipelineError"));
     assert!(DOC.contains("SqliteCanonicalCommitStore"));
+    assert!(DOC.contains("build_transport_convergence_evidence_bundle(...)"));
 }
 
 #[test]
@@ -54,4 +55,12 @@ fn regression_doc_tracks_sqlite_canonical_commit_store_fail_closed_markers() {
     assert!(DOC.contains("canonical_commit_store_sqlite_schema_mismatch"));
     assert!(DOC.contains("canonical_commit_store_sqlite_payload_not_utf8"));
     assert!(DOC.contains("canonical_commit_store_sqlite_key_height_mismatch"));
+}
+
+#[test]
+fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
+    // Regression: #3579
+    assert!(DOC.contains("transport_convergence_case_id_missing"));
+    assert!(DOC.contains("transport_convergence_commit_height_regression"));
+    assert!(DOC.contains("block_pipeline_transport_convergence_faults"));
 }

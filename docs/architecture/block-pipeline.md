@@ -33,6 +33,9 @@ production and consensus validation (Task #2926, Subtask #2927).
 - `build_canonical_replay_evidence_bundle(...)`
   - validates restart/replay lineage continuity and emits deterministic
     checkpoint evidence (`kamn.runtime.canonical-replay-evidence.v1`).
+- `build_transport_convergence_evidence_bundle(...)`
+  - emits deterministic partition/rejoin and publish-drop convergence drill
+    evidence (`kamn.runtime.transport-convergence-evidence.v1`).
 - `BlockConsensusRoundInput`
   - listener and approver attestation input envelope for a round.
 - `BlockPipelineCommitReport`
@@ -83,6 +86,10 @@ Processor role runtime wiring now includes:
   `canonical_replay_producer_role_mismatch`,
   `canonical_replay_payload_digest_mismatch`,
   `canonical_replay_transaction_ids_mismatch`.
+- Transport convergence evidence validation fails closed with deterministic
+  reason codes:
+  `transport_convergence_case_id_missing`,
+  `transport_convergence_commit_height_regression`.
 - File-backed canonical persistence rejects malformed or regressive records with
   deterministic reason markers such as:
   `canonical_commit_store_record_malformed`,
@@ -99,6 +106,8 @@ Regression marker:
 - `Regression: #3415` keeps gossip ingress decode/reason-code taxonomy stable.
 - `Regression: #3416` keeps canonical candidate reconciliation ordering and
   reorg reason-code outcomes deterministic.
+- `Regression: #3579` keeps partition/rejoin and publish-drop convergence
+  reason-code outcomes deterministic.
 
 ## Validation Commands
 
@@ -108,6 +117,7 @@ cargo test -p kamn-core --test block_pipeline_gossip_ingest
 cargo test -p kamn-core --test block_pipeline_canonical_reconciliation
 cargo test -p kamn-core --test block_pipeline_transport_fed
 cargo test -p kamn-core --test block_pipeline_sqlite_commit_store
+cargo test -p kamn-core --test block_pipeline_transport_convergence_faults
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
