@@ -8,7 +8,7 @@ use crate::runtime::{
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
     ["tcp", "noise", "yamux", "identify", "kad", "gossipsub"];
@@ -327,7 +327,7 @@ impl<T: PeerLifecycleTransport> PeerLifecycleTransportCoordinator<T> {
 pub struct Libp2pLivePeerLifecycleTransport {
     swarm_config: P2pSwarmDeterministicConfig,
     harness_report: P2pSwarmHarnessReport,
-    delegate: InMemoryPeerLifecycleTransport,
+    live_data_plane: Libp2pLiveDataPlane,
 }
 
 impl Libp2pLivePeerLifecycleTransport {
@@ -338,10 +338,12 @@ impl Libp2pLivePeerLifecycleTransport {
     ) -> Result<Self, P2pTransportError> {
         let task = P2pSwarmHarnessTask::new(config.clone());
         let harness_report = task.start(harness_mode)?;
+        let network_id = build_live_data_plane_network_id(&config);
+        let state = resolve_live_data_plane_state(network_id.as_str())?;
         Ok(Self {
             swarm_config: config,
             harness_report,
-            delegate: InMemoryPeerLifecycleTransport::default(),
+            live_data_plane: Libp2pLiveDataPlane { network_id, state },
         })
     }
 
@@ -359,11 +361,31 @@ impl Libp2pLivePeerLifecycleTransport {
     pub fn listen_address(&self) -> &str {
         self.swarm_config.listen_address()
     }
+
+    /// Returns deterministic live data-plane network identifier.
+    pub fn live_data_plane_network_id(&self) -> &str {
+        self.live_data_plane.network_id.as_str()
+    }
+
+    fn lock_live_data_plane_state(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, Libp2pLiveDataPlaneState>, P2pTransportError> {
+        self.live_data_plane
+            .state
+            .lock()
+            .map_err(|_| P2pTransportError::StateUnavailable)
+    }
 }
 
 impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
-        self.delegate.advertise(record)
+        let mut state = self.lock_live_data_plane_state()?;
+        state
+            .inbox_by_peer
+            .entry(record.peer_id.clone())
+            .or_insert_with(VecDeque::new);
+        state.peers_by_id.insert(record.peer_id.clone(), record);
+        Ok(())
     }
 
     fn discover(
@@ -371,19 +393,90 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         requester_peer_id: &str,
         topic: &str,
     ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
-        self.delegate.discover(requester_peer_id, topic)
+        validate_peer_id(requester_peer_id)?;
+        validate_topic(topic)?;
+        let state = self.lock_live_data_plane_state()?;
+        Ok(state
+            .peers_by_id
+            .values()
+            .filter(|record| record.peer_id != requester_peer_id && record.supports_topic(topic))
+            .cloned()
+            .collect())
     }
 
     fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
-        self.delegate.send(frame)
+        let mut state = self.lock_live_data_plane_state()?;
+        if !state.peers_by_id.contains_key(&frame.sender_peer_id) {
+            return Err(P2pTransportError::UnknownSenderPeer(
+                frame.sender_peer_id.clone(),
+            ));
+        }
+        if !state.peers_by_id.contains_key(&frame.recipient_peer_id) {
+            return Err(P2pTransportError::UnknownRecipientPeer(
+                frame.recipient_peer_id.clone(),
+            ));
+        }
+        state
+            .inbox_by_peer
+            .entry(frame.recipient_peer_id.clone())
+            .or_insert_with(VecDeque::new)
+            .push_back(frame);
+        Ok(())
     }
 
     fn drain_inbox(
         &self,
         recipient_peer_id: &str,
     ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
-        self.delegate.drain_inbox(recipient_peer_id)
+        validate_peer_id(recipient_peer_id)?;
+        let mut state = self.lock_live_data_plane_state()?;
+        let queue = state
+            .inbox_by_peer
+            .entry(recipient_peer_id.to_owned())
+            .or_insert_with(VecDeque::new);
+        Ok(queue.drain(..).collect())
     }
+}
+
+#[derive(Debug, Default)]
+struct Libp2pLiveDataPlaneState {
+    peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
+    inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
+}
+
+#[derive(Debug, Clone)]
+struct Libp2pLiveDataPlane {
+    network_id: String,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+}
+
+fn libp2p_live_data_plane_registry(
+) -> &'static Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>> {
+    static REGISTRY: OnceLock<Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>>> =
+        OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(BTreeMap::new()))
+}
+
+fn resolve_live_data_plane_state(
+    network_id: &str,
+) -> Result<Arc<Mutex<Libp2pLiveDataPlaneState>>, P2pTransportError> {
+    let mut registry = libp2p_live_data_plane_registry()
+        .lock()
+        .map_err(|_| P2pTransportError::StateUnavailable)?;
+    Ok(registry
+        .entry(network_id.to_owned())
+        .or_insert_with(|| Arc::new(Mutex::new(Libp2pLiveDataPlaneState::default())))
+        .clone())
+}
+
+fn build_live_data_plane_network_id(config: &P2pSwarmDeterministicConfig) -> String {
+    let bootstrap_segment = if config.bootstrap_peers().is_empty() {
+        format!("listen={}", config.listen_address())
+    } else {
+        format!("bootstrap={}", config.bootstrap_peers().join(","))
+    };
+    let topic_segment = format!("topics={}", config.gossip_topics().join(","));
+    format!("{bootstrap_segment}|{topic_segment}")
 }
 
 /// Deterministic config used to compose a libp2p swarm behavior stack.

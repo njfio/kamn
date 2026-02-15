@@ -30,6 +30,8 @@ the default fast test lane.
 - `Libp2pLivePeerLifecycleTransport`
   - deterministic live-adapter surface that boots swarm harness startup and
     provides a concrete transport profile for runtime wiring.
+  - executes advertise/discover/send/drain through a dedicated live data-plane
+    state channel (no `InMemoryPeerLifecycleTransport` delegate fallback path).
 - `PeerDiscoveryRecord`
   - normalized peer advertisement payload with role and gossip topic set.
 - `PeerGossipFrame`
@@ -90,6 +92,19 @@ provider marker contracts for local-heavy runtime rehearsal:
   - `p2p-transport-profile:libp2p-live`
   - `p2p-live-libp2p-provider`
 
+## Live Data-Plane Execution
+
+Subtask #3574 moves the live adapter execution path off the in-memory delegate
+wrapper and onto a dedicated live data-plane state registry keyed by
+deterministic network identity.
+
+- `Libp2pLivePeerLifecycleTransport::live_data_plane_network_id()`
+  - exposes the deterministic network identifier used for adapter mesh routing.
+- Independent live adapter instances with matching deterministic network inputs
+  can discover and exchange gossip frames without cloning one shared adapter.
+- Unsupported lifecycle transitions still fail closed through
+  `P2pTransportError::Lifecycle(RuntimeLifecycleError::InvalidTransition { ... })`.
+
 ## Deterministic Guardrails
 
 - Empty peer IDs fail closed with `P2pTransportError::InvalidPeerId`.
@@ -141,6 +156,7 @@ cargo test -p kamn-core --test p2p_transport_runtime
 cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core --test p2p_kademlia_bootstrap
 cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
+cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants functional_peer_lifecycle_proptest_enforces_legal_transition_graph -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent -- --exact
