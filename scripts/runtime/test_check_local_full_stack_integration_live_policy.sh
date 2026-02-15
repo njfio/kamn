@@ -34,6 +34,15 @@ cat >"$TMP_REPORT" <<'JSON'
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
   "runtime_signing_profile": "kolme-fork-secp256k1-v1",
   "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+  "kolme_local_prerequisite_status": "planned",
+  "kolme_local_only_enforced_status": "planned",
+  "kolme_integration_mode_status": "planned",
+  "kolme_integration_policy_status": "planned",
+  "kolme_checkout_path": "/tmp/kolme_fork",
+  "kolme_expected_remote_url": "https://github.com/njfio/kolme_fork.git",
+  "kolme_expected_ref": "refs/heads/main",
+  "kolme_base_url": "http://127.0.0.1:3000",
+  "kolme_fork_chain_version": "v0.15.2",
   "kolme_integration_report_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "kolme_integration_policy_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1",
   "run_mode_command_status": "dry_run_no_commands_executed",
@@ -110,6 +119,37 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'local_full_stack_integration_policy_runtime_commit_finality_status_mismatch'; then
   echo "expected deterministic reason marker for tampered runtime commit finality status" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["kolme_local_prerequisite_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_kolme_marker_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_kolme_marker_code=$?
+set -e
+if [ "$tampered_kolme_marker_code" -eq 0 ]; then
+  echo "expected tampered Kolme local prerequisite marker to fail policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_kolme_marker_output" | grep -q 'local_full_stack_integration_policy_kolme_local_prerequisite_status_mismatch'; then
+  echo "expected deterministic reason marker for tampered Kolme local prerequisite status" >&2
   exit 1
 fi
 
