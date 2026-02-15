@@ -391,6 +391,7 @@ bash "$ROOT_DIR/scripts/runtime/test_validate_live_transport_fault_matrix_live_c
 bash "$ROOT_DIR/scripts/runtime/test_check_local_metrics_scrape_live_policy.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh"
 bash "$ROOT_DIR/scripts/runtime/test_check_local_observability_scrape_live_policy.sh"
+bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh"
 bash "$ROOT_DIR/scripts/runtime/test_check_service_api_serde_payload_parity_live_policy.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_serde_payload_parity_live_contract_lane.sh"
