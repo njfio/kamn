@@ -51,6 +51,17 @@ PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-rep
 LIVE_BUNDLE_SUMMARY_SCHEMA = "kamn.kolme.local-live-node-validation-bundle-summary.v1"
 LIVE_BUNDLE_POLICY_SCHEMA = "kamn.kolme.local-live-node-validation-bundle-policy-report.v1"
 GO_NO_GO_GATE_SCHEMA = "kamn.runtime.go-no-go-gate-report.v1"
+COMBINED_REASON_TAXONOMY_VERSION = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
+COMBINED_TRANSPORT_REASON_CODES = [  # deterministic singleton today; model as list for schema stability.
+    "fork_choice_stale_block_height",
+]
+ALLOWED_COMBINED_KOLME_REASON_CODES = {
+    "not_run",
+    "live_runtime_integration_passed",
+}
+KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION = "v1"
+KOLME_RUNTIME_COMMIT_PROFILE = "real-node-non-synthetic-v1"
+KOLME_RUNTIME_COMMIT_PROFILE_VERSION = "v1"
 
 MILESTONE_ARTIFACT_ARGS = (
     ("deployment_preflight_summary_file", "deployment_preflight_summary_file"),
@@ -250,6 +261,14 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
 
     gate_status = ""
     gate_final_decision = ""
+    combined_reason_taxonomy_version = ""
+    combined_transport_reason_codes: list[str] = []
+    combined_kolme_runtime_reason_code = ""
+    gate_kolme_runtime_commit_failure_taxonomy_version = ""
+    gate_kolme_fixture_profile = ""
+    gate_kolme_fixture_profile_version = ""
+    gate_kolme_fixture_profile_status = ""
+    gate_combined_lane_marker_contract_status = ""
     if gate_report is not None:
         if gate_report.get("schema_version") != GO_NO_GO_GATE_SCHEMA:
             reason_codes.append("milestone_review_go_no_go_gate_schema_mismatch")
@@ -259,6 +278,68 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
         gate_final_decision = str(gate_report.get("final_decision", ""))
         if gate_final_decision != GO_DECISION:
             reason_codes.append("milestone_review_go_no_go_gate_final_decision_mismatch")
+
+        combined_reason_taxonomy_version = str(gate_report.get("combined_reason_taxonomy_version", ""))
+        if combined_reason_taxonomy_version != COMBINED_REASON_TAXONOMY_VERSION:
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch"
+            )
+
+        combined_transport_reason_codes_raw = gate_report.get("combined_transport_reason_codes")
+        if isinstance(combined_transport_reason_codes_raw, list):
+            combined_transport_reason_codes = [
+                value
+                for value in combined_transport_reason_codes_raw
+                if isinstance(value, str) and value
+            ]
+        if combined_transport_reason_codes != COMBINED_TRANSPORT_REASON_CODES:
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_combined_transport_reason_codes_mismatch"
+            )
+
+        combined_kolme_runtime_reason_code = str(
+            gate_report.get("combined_kolme_runtime_reason_code", "")
+        )
+        if combined_kolme_runtime_reason_code not in ALLOWED_COMBINED_KOLME_REASON_CODES:
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_combined_kolme_runtime_reason_code_mismatch"
+            )
+
+        gate_kolme_runtime_commit_failure_taxonomy_version = str(
+            gate_report.get("kolme_runtime_commit_failure_taxonomy_version", "")
+        )
+        if (
+            gate_kolme_runtime_commit_failure_taxonomy_version
+            != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+        ):
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_kolme_runtime_commit_failure_"
+                "taxonomy_version_mismatch"
+            )
+
+        gate_kolme_fixture_profile = str(gate_report.get("kolme_fixture_profile", ""))
+        if gate_kolme_fixture_profile != KOLME_RUNTIME_COMMIT_PROFILE:
+            reason_codes.append("milestone_review_go_no_go_gate_kolme_fixture_profile_mismatch")
+
+        gate_kolme_fixture_profile_version = str(gate_report.get("kolme_fixture_profile_version", ""))
+        if gate_kolme_fixture_profile_version != KOLME_RUNTIME_COMMIT_PROFILE_VERSION:
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_kolme_fixture_profile_version_mismatch"
+            )
+
+        gate_kolme_fixture_profile_status = str(gate_report.get("kolme_fixture_profile_status", ""))
+        if gate_kolme_fixture_profile_status not in {"planned", "verified"}:
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch"
+            )
+
+        gate_combined_lane_marker_contract_status = str(
+            gate_report.get("combined_lane_marker_contract_status", "")
+        )
+        if gate_combined_lane_marker_contract_status != "verified":
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch"
+            )
 
     reason_codes = sorted(set(reason_codes))
     final_decision = GO_DECISION if not reason_codes else NO_GO_DECISION
@@ -284,6 +365,18 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             "live_node_validation_policy_final_decision": live_policy_final_decision,
             "go_no_go_gate_status": gate_status,
             "go_no_go_gate_final_decision": gate_final_decision,
+            "go_no_go_gate_combined_reason_taxonomy_version": combined_reason_taxonomy_version,
+            "go_no_go_gate_combined_transport_reason_codes": combined_transport_reason_codes,
+            "go_no_go_gate_combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
+            "go_no_go_gate_kolme_runtime_commit_failure_taxonomy_version": (
+                gate_kolme_runtime_commit_failure_taxonomy_version
+            ),
+            "go_no_go_gate_kolme_fixture_profile": gate_kolme_fixture_profile,
+            "go_no_go_gate_kolme_fixture_profile_version": gate_kolme_fixture_profile_version,
+            "go_no_go_gate_kolme_fixture_profile_status": gate_kolme_fixture_profile_status,
+            "go_no_go_gate_combined_lane_marker_contract_status": (
+                gate_combined_lane_marker_contract_status
+            ),
             "deployment_preflight_contract_scope": preflight_scope,
             "live_node_validation_contract_scope": live_scope,
             "live_node_validation_runtime_provider_client_contract": live_runtime_provider,
@@ -305,6 +398,24 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             "live_bundle_policy_final_decision_required": GO_DECISION,
             "go_no_go_gate_status_required": "pass",
             "go_no_go_gate_final_decision_required": GO_DECISION,
+            "go_no_go_gate_combined_reason_taxonomy_version_required": (
+                COMBINED_REASON_TAXONOMY_VERSION
+            ),
+            "go_no_go_gate_combined_transport_reason_codes_required": list(
+                COMBINED_TRANSPORT_REASON_CODES
+            ),
+            "go_no_go_gate_combined_kolme_runtime_reason_codes_allowed": sorted(
+                ALLOWED_COMBINED_KOLME_REASON_CODES
+            ),
+            "go_no_go_gate_kolme_runtime_commit_failure_taxonomy_version_required": (
+                KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+            ),
+            "go_no_go_gate_kolme_fixture_profile_required": KOLME_RUNTIME_COMMIT_PROFILE,
+            "go_no_go_gate_kolme_fixture_profile_version_required": (
+                KOLME_RUNTIME_COMMIT_PROFILE_VERSION
+            ),
+            "go_no_go_gate_kolme_fixture_profile_status_allowed": ["planned", "verified"],
+            "go_no_go_gate_combined_lane_marker_contract_status_required": "verified",
         },
     }
 

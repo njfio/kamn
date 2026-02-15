@@ -213,7 +213,17 @@ cat >"$milestone_gate_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
-  "final_decision": "GO"
+  "final_decision": "GO",
+  "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+  "combined_transport_reason_codes": [
+    "fork_choice_stale_block_height"
+  ],
+  "combined_kolme_runtime_reason_code": "not_run",
+  "kolme_runtime_commit_failure_taxonomy_version": "v1",
+  "kolme_fixture_profile": "real-node-non-synthetic-v1",
+  "kolme_fixture_profile_version": "v1",
+  "kolme_fixture_profile_status": "planned",
+  "combined_lane_marker_contract_status": "verified"
 }
 JSON
 
@@ -263,6 +273,25 @@ if contracts.get("linked_artifact_lineage_required") is not True:
     raise SystemExit("expected linked_artifact_lineage_required=true in milestone review contracts")
 if contracts.get("live_bundle_runtime_provider_client_required") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected milestone review runtime provider contract marker")
+if contracts.get("go_no_go_gate_combined_reason_taxonomy_version_required") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
+    raise SystemExit("expected milestone review combined reason taxonomy contract marker")
+if contracts.get("go_no_go_gate_combined_transport_reason_codes_required") != ["fork_choice_stale_block_height"]:
+    raise SystemExit("expected milestone review combined transport reason-code contract marker")
+if contracts.get("go_no_go_gate_combined_kolme_runtime_reason_codes_allowed") != ["live_runtime_integration_passed", "not_run"]:
+    raise SystemExit("expected milestone review allowed combined Kolme reason-code contract marker")
+if contracts.get("go_no_go_gate_combined_lane_marker_contract_status_required") != "verified":
+    raise SystemExit("expected milestone review combined marker contract status contract marker")
+observed = milestone.get("observed")
+if not isinstance(observed, dict):
+    raise SystemExit("expected milestone review observed object")
+if observed.get("go_no_go_gate_combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
+    raise SystemExit("expected observed combined reason taxonomy marker")
+if observed.get("go_no_go_gate_combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
+    raise SystemExit("expected observed combined transport reason codes marker")
+if observed.get("go_no_go_gate_combined_kolme_runtime_reason_code") != "not_run":
+    raise SystemExit("expected observed combined Kolme reason code marker")
+if observed.get("go_no_go_gate_combined_lane_marker_contract_status") != "verified":
+    raise SystemExit("expected observed combined lane marker contract status marker")
 PY
 
 milestone_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_bundle")"
@@ -419,6 +448,61 @@ milestone_missing_runbook_policy_output="$(
 )"
 assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for missing runbook marker bundle"
 assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing runbook marker bundle"
+
+milestone_taxonomy_drift_gate_report="$TMP_DIR/milestone-go-no-go-gate-report.taxonomy-drift.json"
+cp "$milestone_gate_report" "$milestone_taxonomy_drift_gate_report"
+python3 - "$milestone_taxonomy_drift_gate_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["combined_reason_taxonomy_version"] = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+milestone_taxonomy_drift_bundle="$TMP_DIR/gonogo-milestone-taxonomy-drift.json"
+milestone_taxonomy_drift_output="$(
+  bash "$GENERATOR" \
+    --output-file "$milestone_taxonomy_drift_bundle" \
+    --release-candidate "v1.0.0-rc.7" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:milestone-taxonomy-drift" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --deployment-preflight-summary-file "$milestone_preflight_summary" \
+    --deployment-preflight-policy-file "$milestone_preflight_policy" \
+    --live-node-validation-summary-file "$milestone_live_bundle_summary" \
+    --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+    --go-no-go-gate-report-file "$milestone_taxonomy_drift_gate_report"
+)"
+
+assert_eq "$(extract_value "$milestone_taxonomy_drift_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed on combined reason taxonomy drift"
+
+python3 - "$milestone_taxonomy_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for taxonomy drift case")
+if "milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch" not in reason_codes:
+    raise SystemExit("expected combined reason taxonomy mismatch reason code in milestone review bundle")
+if milestone.get("lineage_status") != "fail-closed":
+    raise SystemExit("expected fail-closed lineage status for combined reason taxonomy drift case")
+PY
+
+milestone_taxonomy_drift_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_taxonomy_drift_bundle")"
+assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for taxonomy drift bundle"
+assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for taxonomy drift bundle"
 
 milestone_lineage_tampered_bundle="$TMP_DIR/gonogo-milestone-lineage-tampered.json"
 cp "$milestone_bundle" "$milestone_lineage_tampered_bundle"

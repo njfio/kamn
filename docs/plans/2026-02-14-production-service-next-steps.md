@@ -70,6 +70,22 @@ This refreshed version separates:
 - Delivery includes composed local-heavy integration evidence bundle, release go/no-go linkage, and architecture/documentation lineage.
 - Promotion evidence gate lineage now fails closed when operator runbook markers drift or go missing (`milestone_review_operator_runbook_missing`, `milestone_review_operator_runbook_markers_missing`) in `scripts/deploy/gonogo_evidence_contract.py`.
 - Local validation drill override for runbook-marker regression uses `KAMN_GONOGO_RUNBOOK_DOC_FILE=<path>`.
+- Milestone closure criteria (chain `#3716 -> #3718`) for release promotion now additionally require deterministic combined lane markers in `kamn.runtime.go-no-go-gate-report.v1`:
+  - `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+  - `combined_transport_reason_codes=["fork_choice_stale_block_height"]`
+  - `combined_kolme_runtime_reason_code` in `{"not_run","live_runtime_integration_passed"}`
+  - `kolme_runtime_commit_failure_taxonomy_version=v1`
+  - `kolme_fixture_profile=real-node-non-synthetic-v1` and `kolme_fixture_profile_version=v1`
+  - `combined_lane_marker_contract_status=verified`
+- Milestone bundle reason-code surface fails closed for marker/taxonomy drift via:
+  - `milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch`
+  - `milestone_review_go_no_go_gate_combined_transport_reason_codes_mismatch`
+  - `milestone_review_go_no_go_gate_combined_kolme_runtime_reason_code_mismatch`
+  - `milestone_review_go_no_go_gate_kolme_runtime_commit_failure_taxonomy_version_mismatch`
+  - `milestone_review_go_no_go_gate_kolme_fixture_profile_mismatch`
+  - `milestone_review_go_no_go_gate_kolme_fixture_profile_version_mismatch`
+  - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
+  - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
 
 ### Runtime observability reason-code/checkpoint projection
 - Delivered chain: `#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490`.
