@@ -122,6 +122,27 @@ Fast-gate threshold metadata contract:
 - contract lane command: `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
 - refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata
 
+## Observability Churn Matrix Cost Boundary
+Local-heavy observability churn validation remains bounded and outside merge-critical fast-gate execution:
+
+- validation lane: `scripts/runtime/validate_local_observability_scrape_live.sh`
+- policy checker: `scripts/runtime/check_local_observability_scrape_live_policy.sh`
+- contract lane: `scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh`
+- policy checker regression suite: `scripts/runtime/test_check_local_observability_scrape_live_policy.sh`
+
+Deterministic churn scenario markers required by policy:
+
+- `stream_reconnect_churn_status=verified`
+- `queue_bound_budget_status=verified`
+- `readiness_failure_drill_status=verified`
+- `scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status`
+
+Cost boundary:
+
+- fast-gate executes docs/contract drift checks only.
+- run mode requires explicit local opt-in (`KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`).
+- soak profile (`--lane-profile soak`) is local-only and bounded by configured iteration and timeout controls.
+
 ## Staging Soak Telemetry Policy
 Staging soak/rehearsal evidence for rollout readiness is generated and checked with:
 
