@@ -58,7 +58,7 @@ libp2p I/O integration while preserving low-cost default CI behavior.
 - `Libp2pLiveRuntimeBackend`
   - deterministic backend marker contract:
     - `contract-data-plane`
-    - `native-socket`
+    - `native-libp2p-swarm`
 - `resolve_libp2p_live_runtime_backend()`
   - compile-time resolver used by runtime/reporting contracts.
 - `UdpPeerLifecycleTransport`
