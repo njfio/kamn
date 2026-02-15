@@ -36,6 +36,9 @@ production and consensus validation (Task #2926, Subtask #2927).
 - `build_transport_convergence_evidence_bundle(...)`
   - emits deterministic partition/rejoin and publish-drop convergence drill
     evidence (`kamn.runtime.transport-convergence-evidence.v1`).
+- `UdpPeerLifecycleTransport`
+  - local UDP socket-backed transport adapter used by live convergence drill
+    harness tests.
 - `BlockConsensusRoundInput`
   - listener and approver attestation input envelope for a round.
 - `BlockPipelineCommitReport`
@@ -90,6 +93,15 @@ Processor role runtime wiring now includes:
   reason codes:
   `transport_convergence_case_id_missing`,
   `transport_convergence_commit_height_regression`.
+- Live socket convergence drill transport fails closed with deterministic reason
+  codes:
+  `p2p_transport_live_socket_network_id_invalid`,
+  `p2p_transport_live_socket_bind_address_invalid`,
+  `p2p_transport_live_socket_bind_failed`,
+  `p2p_transport_live_socket_local_address_unavailable`,
+  `p2p_transport_live_socket_send_failed`,
+  `p2p_transport_live_socket_receive_failed`,
+  `p2p_transport_live_socket_frame_malformed`.
 - File-backed canonical persistence rejects malformed or regressive records with
   deterministic reason markers such as:
   `canonical_commit_store_record_malformed`,
@@ -108,6 +120,8 @@ Regression marker:
   reorg reason-code outcomes deterministic.
 - `Regression: #3579` keeps partition/rejoin and publish-drop convergence
   reason-code outcomes deterministic.
+- `Regression: #3652` keeps live socket delayed-delivery stale-height reject
+  reason code deterministic.
 
 ## Validation Commands
 
@@ -118,6 +132,7 @@ cargo test -p kamn-core --test block_pipeline_canonical_reconciliation
 cargo test -p kamn-core --test block_pipeline_transport_fed
 cargo test -p kamn-core --test block_pipeline_sqlite_commit_store
 cargo test -p kamn-core --test block_pipeline_transport_convergence_faults
+cargo test -p kamn-core --test block_pipeline_transport_convergence_live_sockets
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

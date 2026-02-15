@@ -356,6 +356,7 @@ pub use p2p_transport::{
     PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleRegressionCase,
     PeerLifecycleRegressionError, PeerLifecycleRegressionExpectedOutcome,
     PeerLifecycleRegressionOutcome, PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
+    UdpPeerLifecycleTransport,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
