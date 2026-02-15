@@ -41,6 +41,33 @@ fn send_http_get(addr: &str, path: &str) -> String {
     response
 }
 
+fn send_raw_http_request(addr: &str, request: &str) -> String {
+    let mut stream = TcpStream::connect(addr).expect("endpoint should accept connections");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("read timeout should be configurable");
+    stream
+        .write_all(request.as_bytes())
+        .expect("request should write");
+    let mut response = String::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.push_str(
+                    std::str::from_utf8(&chunk[..read_count]).expect("response must be utf-8"),
+                );
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => panic!("response should be readable: {error}"),
+        }
+    }
+    response
+}
+
 fn wait_for_endpoint_ready(addr: &str) {
     let deadline = Instant::now() + Duration::from_secs(2);
     while Instant::now() < deadline {
@@ -592,6 +619,87 @@ fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_str
 }
 
 #[test]
+fn integration_runtime_observability_endpoint_returns_not_found_for_unknown_path() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let unknown_response = send_http_get(bind_addr.as_str(), "/unknown");
+    assert!(unknown_response.contains("HTTP/1.1 404 Not Found"));
+    assert!(unknown_response.contains("not found"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_returns_not_found_for_malformed_request_method() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let malformed_response = send_raw_http_request(
+        bind_addr.as_str(),
+        "POST /metrics HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+    );
+    assert!(malformed_response.contains("HTTP/1.1 404 Not Found"));
+    assert!(malformed_response.contains("not found"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_fails_closed_on_idle_timeout() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let timeout_ms = 200_u64;
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr,
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: timeout_ms,
+    };
+
+    let server = thread::spawn(move || serve_observability_endpoint(&endpoint_config, &snapshot));
+    let server_result = server.join().expect("endpoint thread should complete");
+    let error = server_result.expect_err("idle timeout should fail closed when no requests arrive");
+    assert_eq!(
+        error,
+        "observability endpoint timed out after 200 ms waiting for requests"
+    );
+}
+
+#[test]
 fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unchanged() {
     // Regression: #2830
     let parsed = parse_args(vec![
@@ -655,5 +763,23 @@ fn regression_observability_endpoint_uses_async_metrics_health_stream_adapters()
     assert!(
         source.contains("async fn handle_observability_stream_path("),
         "observability endpoint should expose async stream handler adapter"
+    );
+}
+
+#[test]
+fn regression_observability_endpoint_keeps_async_negative_matrix_contracts() {
+    // Regression: #3514
+    let source = include_str!("../observability_endpoint.rs");
+    assert!(
+        source.contains("handle_observability_not_found_path().await"),
+        "async dispatch must route unsupported paths through deterministic not-found handler"
+    );
+    assert!(
+        source.contains("if method != \"GET\""),
+        "request parser must fail closed on malformed method contracts"
+    );
+    assert!(
+        source.contains("observability endpoint timed out after {} ms waiting for requests"),
+        "async serving loop must preserve deterministic idle-timeout failure contract"
     );
 }

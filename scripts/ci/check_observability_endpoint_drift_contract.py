@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed drift checker for observability endpoint legacy parser and docs parity."""
+"""Fail-closed drift checker for async observability endpoint marker and docs parity."""
 
 from __future__ import annotations
 
@@ -21,17 +21,19 @@ from framework.contract_framework import (  # noqa: E402
 
 SCHEMA_VERSION = "kamn.ci.observability-endpoint-drift-report.v1"
 DOCS_MIGRATION_MARKER = (
-    "Legacy observability endpoint parser path remains synchronous and is "
-    "migration-targeted; drift contracts enforce fail-closed visibility "
-    "until framework ingress replacement lands."
+    "Runtime observability endpoint ingress runs on async tokio listener "
+    "path; drift contracts enforce fail-closed parity for unknown-path, "
+    "malformed-request, and timeout compatibility behavior."
 )
 
 SOURCE_MARKERS: dict[str, str] = {
-    "legacy_tcp_listener_import": "use std::net::{TcpListener, TcpStream};",
-    "legacy_listener_bind": "let listener = TcpListener::bind(config.bind_addr.as_str())",
-    "manual_request_parser": "fn read_http_request_path(",
-    "manual_response_writer": "fn write_http_response(",
-    "serve_entrypoint": "pub(crate) fn serve_observability_endpoint(",
+    "async_io_import": "use tokio::io::{AsyncReadExt, AsyncWriteExt};",
+    "async_listener_bind": "let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())",
+    "async_request_parser": "async fn read_http_request_path_async(",
+    "async_response_writer": "async fn write_http_response_async(",
+    "async_dispatch": "async fn dispatch_observability_endpoint_request(",
+    "async_not_found_handler": "handle_observability_not_found_path().await",
+    "async_idle_timeout_reason": "observability endpoint timed out after {} ms waiting for requests",
 }
 
 MAIN_WIRING_MARKER = "serve_observability_endpoint(&endpoint_config, &snapshot)"
@@ -99,7 +101,7 @@ def _run(args: argparse.Namespace) -> int:
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "final_decision": final_decision,
-        "observability_legacy_parser_contract_status": (
+        "observability_async_ingress_contract_status": (
             "verified" if not missing_source_markers else "rejected"
         ),
         "observability_framework_parity_status": (
@@ -129,8 +131,8 @@ def _run(args: argparse.Namespace) -> int:
     print(f"status={status}")
     print(f"final_decision={final_decision}")
     print(
-        "observability_legacy_parser_contract_status="
-        f"{report['observability_legacy_parser_contract_status']}"
+        "observability_async_ingress_contract_status="
+        f"{report['observability_async_ingress_contract_status']}"
     )
     print(
         "observability_framework_parity_status="

@@ -23,8 +23,8 @@ if ! printf '%s\n' "$check_output" | grep -q '^final_decision=GO$'; then
   echo "expected observability endpoint drift checker final_decision=GO marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$check_output" | grep -q '^observability_legacy_parser_contract_status=verified$'; then
-  echo "expected observability endpoint drift checker legacy-parser status marker" >&2
+if ! printf '%s\n' "$check_output" | grep -q '^observability_async_ingress_contract_status=verified$'; then
+  echo "expected observability endpoint drift checker async-ingress status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$check_output" | grep -q '^observability_framework_parity_status=verified$'; then
@@ -48,8 +48,8 @@ if payload.get("status") != "pass":
     raise SystemExit("expected status=pass")
 if payload.get("final_decision") != "GO":
     raise SystemExit("expected final_decision=GO")
-if payload.get("observability_legacy_parser_contract_status") != "verified":
-    raise SystemExit("expected observability_legacy_parser_contract_status=verified")
+if payload.get("observability_async_ingress_contract_status") != "verified":
+    raise SystemExit("expected observability_async_ingress_contract_status=verified")
 if payload.get("observability_framework_parity_status") != "verified":
     raise SystemExit("expected observability_framework_parity_status=verified")
 if payload.get("docs_migration_contract_status") != "verified":
@@ -67,8 +67,8 @@ import sys
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 text = text.replace(
-    "use std::net::{TcpListener, TcpStream};",
-    "use std::net::{TcpStream};",
+    "async fn dispatch_observability_endpoint_request(",
+    "fn dispatch_observability_endpoint_request(",
     1,
 )
 path.write_text(text, encoding="utf-8")
@@ -84,7 +84,7 @@ if [ "$tampered_source_code" -eq 0 ]; then
   echo "expected observability endpoint drift checker to fail on source marker drift" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_source_output" | grep -q 'observability_source_marker_missing:legacy_tcp_listener_import'; then
+if ! printf '%s\n' "$tampered_source_output" | grep -q 'observability_source_marker_missing:async_dispatch'; then
   echo "expected deterministic source-marker drift reason code" >&2
   exit 1
 fi
@@ -97,7 +97,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-needle = "Legacy observability endpoint parser path remains synchronous and is migration-targeted; drift contracts enforce fail-closed visibility until framework ingress replacement lands."
+needle = "Runtime observability endpoint ingress runs on async tokio listener path; drift contracts enforce fail-closed parity for unknown-path, malformed-request, and timeout compatibility behavior."
 if needle not in text:
     raise SystemExit("expected docs marker not found in baseline copy")
 path.write_text(text.replace(needle, "", 1), encoding="utf-8")

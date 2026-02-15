@@ -41,6 +41,9 @@ pushd "$ROOT_DIR" >/dev/null
 cargo test -p kamn-node functional_observability_endpoint_renders_stream_payload
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_stream_path
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_metrics_and_health_paths
+cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_unknown_path
+cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_malformed_request_method
+cargo test -p kamn-node integration_runtime_observability_endpoint_fails_closed_on_idle_timeout
 popd >/dev/null
 
 if ! grep -q "Runtime Endpoint Stream Contract (Issue #3047)" "$OBSERVABILITY_DOC"; then
@@ -77,9 +80,13 @@ cat >"$report_json" <<JSON
   "status": "pass",
   "final_decision": "GO",
   "runtime_observability_stream_contract_status": "verified",
+  "unknown_path_contract_status": "verified",
+  "malformed_input_contract_status": "verified",
+  "timeout_contract_status": "verified",
   "fail_closed_status": "verified",
   "docs_contract_status": "verified",
   "fail_closed_reason_code": "observability_endpoint_not_found",
+  "fail_closed_reason_codes_csv": "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout",
   "performance_budget_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
@@ -93,7 +100,11 @@ rm -f "$report_json"
 echo "status=pass"
 echo "final_decision=GO"
 echo "runtime_observability_stream_contract_status=verified"
+echo "unknown_path_contract_status=verified"
+echo "malformed_input_contract_status=verified"
+echo "timeout_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_reason_code=observability_endpoint_not_found"
+echo "fail_closed_reason_codes_csv=observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout"
 echo "performance_budget_status=verified"

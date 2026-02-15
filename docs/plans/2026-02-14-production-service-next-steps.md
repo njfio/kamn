@@ -75,6 +75,18 @@ This refreshed version separates:
 - Key validation script: `scripts/runtime/test_validate_local_observability_scrape_live.sh`.
 - Validation marker remains tracked in `main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix` (issue `#3489`).
 
+### Async observability ingress compatibility hardening
+- Active chain: `#3508 -> #3509 -> #3513 -> #3514`.
+- Scope adds deterministic negative-matrix compatibility contracts for:
+  - unknown path (`/unknown`) -> `404 not found`
+  - malformed method/request parsing -> fail-closed route handling
+  - idle-timeout failure path -> deterministic timeout reason string
+- Reference validations:
+  - `scripts/runtime/test_validate_runtime_observability_endpoint_live.sh`
+  - `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`
+  - `scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh`
+  - `scripts/ci/test_check_observability_endpoint_drift_contract.sh`
+
 ### Docs truth synchronization (this tranche)
 - Delivered chain: `#3333 -> #3424 -> #3425 -> #3426`.
 - Scope: keep this document and CI docs-contract guards synchronized with real state as issue chains close.

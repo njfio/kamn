@@ -45,8 +45,24 @@ if ! printf '%s\n' "$lane_output" | grep -q '^runtime_observability_contract_lan
   echo "expected runtime observability endpoint contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^unknown_path_contract_status=verified$'; then
+  echo "expected runtime observability endpoint unknown-path marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^malformed_input_contract_status=verified$'; then
+  echo "expected runtime observability endpoint malformed-input marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^timeout_contract_status=verified$'; then
+  echo "expected runtime observability endpoint timeout marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch$'; then
   echo "expected runtime observability endpoint contract lane fail-closed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_codes_csv=observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout$'; then
+  echo "expected runtime observability endpoint contract lane fail-closed taxonomy marker" >&2
   exit 1
 fi
 
@@ -66,8 +82,16 @@ if lane_payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified")
 if lane_payload.get("runtime_observability_contract_lane_status") != "verified":
     raise SystemExit("expected runtime_observability_contract_lane_status=verified")
+if lane_payload.get("unknown_path_contract_status") != "verified":
+    raise SystemExit("expected unknown_path_contract_status=verified")
+if lane_payload.get("malformed_input_contract_status") != "verified":
+    raise SystemExit("expected malformed_input_contract_status=verified")
+if lane_payload.get("timeout_contract_status") != "verified":
+    raise SystemExit("expected timeout_contract_status=verified")
 if lane_payload.get("fail_closed_reason_code") != "runtime_observability_policy_final_decision_mismatch":
     raise SystemExit("expected deterministic fail-closed reason code marker")
+if lane_payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
+    raise SystemExit("expected deterministic fail-closed reason-code taxonomy marker")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 

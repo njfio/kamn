@@ -196,6 +196,15 @@ lane_report = {
     "runtime_observability_stream_contract_status": summary_report.get(
         "runtime_observability_stream_contract_status"
     ),
+    "unknown_path_contract_status": summary_report.get(
+        "unknown_path_contract_status"
+    ),
+    "malformed_input_contract_status": summary_report.get(
+        "malformed_input_contract_status"
+    ),
+    "timeout_contract_status": summary_report.get(
+        "timeout_contract_status"
+    ),
     "runtime_observability_policy_status": policy_report.get(
         "runtime_observability_policy_status"
     ),
@@ -203,6 +212,7 @@ lane_report = {
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "runtime_observability_policy_final_decision_mismatch",
+    "fail_closed_reason_codes_csv": summary_report.get("fail_closed_reason_codes_csv"),
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
@@ -220,9 +230,13 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "runtime_observability_stream_contract_status=verified"
+echo "unknown_path_contract_status=verified"
+echo "malformed_input_contract_status=verified"
+echo "timeout_contract_status=verified"
 echo "runtime_observability_policy_status=verified"
 echo "runtime_observability_contract_lane_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch"
+echo "fail_closed_reason_codes_csv=observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout"
 echo "performance_budget_status=verified"
