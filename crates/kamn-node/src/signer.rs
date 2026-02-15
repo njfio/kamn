@@ -670,7 +670,7 @@ fn resolve_kolme_live_signer_env_name_set(
         if let Some(env_profile) = profile_from_env {
             if env_profile != strict_profile {
                 return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "strict signer profile mismatch: --kolme-live-signer-profile={strict_profile} conflicts with {KOLME_LIVE_SIGNER_PROFILE_ENV}={env_profile}"
+                    "strict signer profile mismatch: --kolme-live-signer-profile={strict_profile} conflicts with {KOLME_LIVE_SIGNER_PROFILE_ENV}={env_profile} (runtime_signer_profile_selector_mismatch)"
                 )));
             }
         }

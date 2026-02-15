@@ -42,6 +42,7 @@ Primary fail-closed signer reason codes include:
 - `legacy_local_signer_path_override_invalid`
 - `production_signer_key_source_env_local_forbidden`
 - `fallback_signer_secret_present_violation`
+- `runtime_signer_profile_selector_mismatch`
 - `signer_secret_source_precedence_violation`
 - `managed_signer_backend_required_missing`
 - `managed_signer_backend_required_invalid`

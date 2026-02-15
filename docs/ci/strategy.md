@@ -164,6 +164,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed startup matrix contracts:
   - coverage corpus must preserve all required case IDs and fail closed with `startup_negative_matrix_policy_marker_missing` when coverage drifts.
   - strict signer selector/profile mismatch, fallback-secret violations, and strict secret-source precedence violations must fail before network dispatch.
+  - strict selector/profile mismatch failures must preserve `runtime_signer_profile_selector_mismatch`.
 - This lane is intentionally bounded and cost-effective:
   - all checks run in-process with deterministic env guards and localhost mock transport only.
   - no external Kolme node process is required for PR fast-gate validation.
