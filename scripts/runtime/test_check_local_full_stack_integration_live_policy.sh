@@ -27,6 +27,13 @@ cat >"$TMP_REPORT" <<'JSON'
   "full_runtime_status": "verified",
   "native_libp2p_convergence_status": "planned",
   "libp2p_runtime_transport_mode": "libp2p_process_isolated_convergence",
+  "libp2p_native_provider_marker": "p2p-live-libp2p-provider:native",
+  "libp2p_fallback_marker_blocklist": [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only"
+  ],
+  "libp2p_fallback_markers_detected": [],
+  "libp2p_provider_marker_contract_status": "verified",
   "libp2p_convergence_report_schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1",
   "libp2p_convergence_policy_schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1",
   "evidence_bundle_status": "verified",
@@ -193,6 +200,37 @@ if [ "$tampered_reason_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_reason_taxonomy_output" | grep -q 'local_full_stack_integration_policy_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic reason marker for tampered combined reason taxonomy version" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["libp2p_fallback_markers_detected"] = ["p2p-in-memory-transport-fallback"]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_fallback_marker_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_fallback_marker_code=$?
+set -e
+if [ "$tampered_fallback_marker_code" -eq 0 ]; then
+  echo "expected fallback marker drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_fallback_marker_output" | grep -q 'local_full_stack_integration_policy_libp2p_fallback_markers_detected'; then
+  echo "expected deterministic reason marker for libp2p fallback marker drift" >&2
   exit 1
 fi
 

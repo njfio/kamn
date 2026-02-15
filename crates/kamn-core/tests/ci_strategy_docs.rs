@@ -361,6 +361,16 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("reason_codes=delta_threshold_waiver_applied"));
     assert!(DOC.contains("reason_codes=waiver_expired"));
     assert!(DOC.contains("reason_codes=waiver_scope_mismatch"));
+    assert!(DOC.contains("native_libp2p_provider_marker=p2p-live-libp2p-provider:native"));
+    assert!(DOC.contains(
+        "libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only"
+    ));
+    assert!(DOC.contains("libp2p_fallback_markers_detected=none"));
+    assert!(DOC.contains("native_libp2p_provider_marker_contract_status=verified"));
+    assert!(DOC.contains("gate_policy_native_libp2p_provider_marker_mismatch"));
+    assert!(DOC.contains("gate_policy_libp2p_fallback_marker_blocklist_mismatch"));
+    assert!(DOC.contains("gate_policy_libp2p_fallback_markers_detected"));
+    assert!(DOC.contains("gate_policy_native_libp2p_provider_marker_contract_status_mismatch"));
     assert!(DOC.contains("waiver_status=none|applied"));
     assert!(DOC.contains("waived_reason_codes=none|..."));
     assert!(DOC.contains("remediation=..."));

@@ -79,6 +79,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_runtime_transport_mode=libp
   echo "expected local full-stack integration contract lane libp2p runtime transport mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_native_provider_marker=p2p-live-libp2p-provider:native$'; then
+  echo "expected local full-stack integration contract lane native provider marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only$'; then
+  echo "expected local full-stack integration contract lane fallback marker blocklist" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_fallback_markers_detected=none$'; then
+  echo "expected local full-stack integration contract lane empty fallback markers marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_provider_marker_contract_status=verified$'; then
+  echo "expected local full-stack integration contract lane provider marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^kolme_local_prerequisite_status=planned$'; then
   echo "expected local full-stack integration contract lane Kolme local prerequisite marker in dry-run" >&2
   exit 1
@@ -172,6 +188,17 @@ if lane_payload.get("native_libp2p_convergence_status") != "planned":
     raise SystemExit("expected native_libp2p_convergence_status=planned in dry-run")
 if lane_payload.get("libp2p_runtime_transport_mode") != "libp2p_process_isolated_convergence":
     raise SystemExit("expected libp2p_runtime_transport_mode marker")
+if lane_payload.get("libp2p_native_provider_marker") != "p2p-live-libp2p-provider:native":
+    raise SystemExit("expected libp2p_native_provider_marker marker")
+if lane_payload.get("libp2p_fallback_marker_blocklist") != [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]:
+    raise SystemExit("expected libp2p_fallback_marker_blocklist marker")
+if lane_payload.get("libp2p_fallback_markers_detected") != []:
+    raise SystemExit("expected empty libp2p_fallback_markers_detected marker")
+if lane_payload.get("libp2p_provider_marker_contract_status") != "verified":
+    raise SystemExit("expected libp2p_provider_marker_contract_status marker")
 if lane_payload.get("libp2p_convergence_report_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
     raise SystemExit("expected libp2p_convergence_report_schema_version marker")
 if lane_payload.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":

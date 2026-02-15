@@ -33,6 +33,11 @@ LIBP2P_CONVERGENCE_REPORT_SCHEMA = "kamn.runtime.libp2p-convergence-process-isol
 LIBP2P_CONVERGENCE_POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1"
 LIBP2P_RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
 LIBP2P_CONVERGENCE_REASON_CODE = "fork_choice_stale_block_height"
+LIBP2P_NATIVE_PROVIDER_MARKER = "p2p-live-libp2p-provider:native"
+LIBP2P_FALLBACK_MARKER_BLOCKLIST = [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]
 KOLME_INTEGRATION_REPORT_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-summary.v1"
 KOLME_INTEGRATION_POLICY_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1"
 KOLME_PROVIDER_CLIENT_CONTRACT = "KolmeRuntimeCommitLiveProvider"
@@ -197,6 +202,10 @@ def run_lane(args: argparse.Namespace) -> int:
     kolme_runtime_commit_failure_taxonomy = "not_run"
     kolme_fixture_profile = KOLME_RUNTIME_COMMIT_PROFILE
     kolme_fixture_profile_version = KOLME_RUNTIME_COMMIT_PROFILE_VERSION
+    libp2p_native_provider_marker = LIBP2P_NATIVE_PROVIDER_MARKER
+    libp2p_fallback_marker_blocklist = list(LIBP2P_FALLBACK_MARKER_BLOCKLIST)
+    libp2p_fallback_markers_detected: list[str] = []
+    libp2p_provider_marker_contract_status = "verified"
 
     if mode == "run":
         artifact_dir = Path(tempfile.mkdtemp(prefix="local-full-stack-integration-live-"))
@@ -538,6 +547,10 @@ def run_lane(args: argparse.Namespace) -> int:
         "full_runtime_status": "verified",
         "native_libp2p_convergence_status": transport_convergence_status,
         "libp2p_runtime_transport_mode": LIBP2P_RUNTIME_TRANSPORT_MODE,
+        "libp2p_native_provider_marker": libp2p_native_provider_marker,
+        "libp2p_fallback_marker_blocklist": libp2p_fallback_marker_blocklist,
+        "libp2p_fallback_markers_detected": libp2p_fallback_markers_detected,
+        "libp2p_provider_marker_contract_status": libp2p_provider_marker_contract_status,
         "libp2p_convergence_report_schema_version": LIBP2P_CONVERGENCE_REPORT_SCHEMA,
         "libp2p_convergence_policy_schema_version": LIBP2P_CONVERGENCE_POLICY_SCHEMA,
         "evidence_bundle_status": "verified",
@@ -590,6 +603,13 @@ def run_lane(args: argparse.Namespace) -> int:
     print("full_runtime_status=verified")
     print(f"native_libp2p_convergence_status={transport_convergence_status}")
     print(f"libp2p_runtime_transport_mode={LIBP2P_RUNTIME_TRANSPORT_MODE}")
+    print(f"libp2p_native_provider_marker={libp2p_native_provider_marker}")
+    print(f"libp2p_fallback_marker_blocklist={','.join(libp2p_fallback_marker_blocklist)}")
+    print(
+        "libp2p_fallback_markers_detected="
+        f"{'none' if not libp2p_fallback_markers_detected else ','.join(libp2p_fallback_markers_detected)}"
+    )
+    print(f"libp2p_provider_marker_contract_status={libp2p_provider_marker_contract_status}")
     print(f"libp2p_convergence_report_schema_version={LIBP2P_CONVERGENCE_REPORT_SCHEMA}")
     print(f"libp2p_convergence_policy_schema_version={LIBP2P_CONVERGENCE_POLICY_SCHEMA}")
     print("evidence_bundle_status=verified")
@@ -681,6 +701,28 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("libp2p_runtime_transport_mode") != LIBP2P_RUNTIME_TRANSPORT_MODE,
         "local_full_stack_integration_policy_libp2p_transport_mode_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_native_provider_marker") != LIBP2P_NATIVE_PROVIDER_MARKER,
+        "local_full_stack_integration_policy_libp2p_native_provider_marker_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_fallback_marker_blocklist") != LIBP2P_FALLBACK_MARKER_BLOCKLIST,
+        "local_full_stack_integration_policy_libp2p_fallback_marker_blocklist_mismatch",
+    )
+    libp2p_fallback_markers_detected = payload.get("libp2p_fallback_markers_detected")
+    checks.reject_if(
+        not isinstance(libp2p_fallback_markers_detected, list),
+        "local_full_stack_integration_policy_libp2p_fallback_markers_detected_invalid",
+    )
+    if isinstance(libp2p_fallback_markers_detected, list):
+        checks.reject_if(
+            bool(libp2p_fallback_markers_detected),
+            "local_full_stack_integration_policy_libp2p_fallback_markers_detected",
+        )
+    checks.reject_if(
+        payload.get("libp2p_provider_marker_contract_status") != "verified",
+        "local_full_stack_integration_policy_libp2p_provider_marker_contract_status_mismatch",
     )
     checks.reject_if(
         payload.get("libp2p_convergence_report_schema_version") != LIBP2P_CONVERGENCE_REPORT_SCHEMA,

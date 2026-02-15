@@ -10,6 +10,7 @@ RELEASE_MANIFEST_FILE="$ROOT_DIR/scripts/runtime/release_evidence_manifest.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
+TMP_FALLBACK_MARKER_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fallback-marker-fault-report.json"
 TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
 TMP_RUN_REPORT="$TMP_DIR/go-no-go-gate-run-mode-report.json"
 TMP_WAIVER_REPORT="$TMP_DIR/go-no-go-gate-waiver-report.json"
@@ -142,6 +143,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^combined_lane_marker_contract_stat
   echo "expected go/no-go gate lane combined marker contract status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^native_libp2p_provider_marker=p2p-live-libp2p-provider:native$'; then
+  echo "expected go/no-go gate lane native libp2p provider marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only$'; then
+  echo "expected go/no-go gate lane fallback marker blocklist" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_fallback_markers_detected=none$'; then
+  echo "expected go/no-go gate lane empty fallback marker detection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^native_libp2p_provider_marker_contract_status=verified$'; then
+  echo "expected go/no-go gate lane provider marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected go/no-go gate lane dry-run mode marker" >&2
   exit 1
@@ -233,6 +250,19 @@ if payload.get("kolme_fixture_profile_status") != "planned":
     raise SystemExit("expected kolme_fixture_profile_status=planned in dry-run mode")
 if payload.get("combined_lane_marker_contract_status") != "verified":
     raise SystemExit("expected combined_lane_marker_contract_status=verified")
+if payload.get("native_libp2p_provider_marker") != "p2p-live-libp2p-provider:native":
+    raise SystemExit("expected native_libp2p_provider_marker in dry-run go/no-go gate report")
+if payload.get("libp2p_fallback_marker_blocklist") != [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]:
+    raise SystemExit("expected libp2p_fallback_marker_blocklist in dry-run go/no-go gate report")
+if payload.get("libp2p_fallback_markers_detected") != []:
+    raise SystemExit("expected no fallback markers in dry-run go/no-go gate report")
+if payload.get("native_libp2p_provider_marker_contract_status") != "verified":
+    raise SystemExit(
+        "expected native_libp2p_provider_marker_contract_status=verified in dry-run go/no-go gate report"
+    )
 inventory = payload.get("artifact_inventory")
 if not isinstance(inventory, list) or len(inventory) != 6:
     raise SystemExit("expected deterministic artifact inventory list with six required entries")
@@ -353,6 +383,22 @@ if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_lane_marker_contract_
   echo "expected go/no-go gate lane run-mode combined marker contract status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^native_libp2p_provider_marker=p2p-live-libp2p-provider:native$'; then
+  echo "expected go/no-go gate lane run-mode native provider marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only$'; then
+  echo "expected go/no-go gate lane run-mode fallback marker blocklist" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^libp2p_fallback_markers_detected=none$'; then
+  echo "expected go/no-go gate lane run-mode empty fallback marker detection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^native_libp2p_provider_marker_contract_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode provider marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$run_mode_output" | grep -q '^ci_fast_gate_eligible=false$'; then
   echo "expected go/no-go gate lane run-mode fast-gate exclusion marker" >&2
   exit 1
@@ -422,6 +468,19 @@ if payload.get("kolme_fixture_profile_status") != "planned":
     raise SystemExit("expected kolme_fixture_profile_status=planned in run-mode go/no-go gate report")
 if payload.get("combined_lane_marker_contract_status") != "verified":
     raise SystemExit("expected combined_lane_marker_contract_status=verified in run-mode go/no-go gate report")
+if payload.get("native_libp2p_provider_marker") != "p2p-live-libp2p-provider:native":
+    raise SystemExit("expected native_libp2p_provider_marker in run-mode go/no-go gate report")
+if payload.get("libp2p_fallback_marker_blocklist") != [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]:
+    raise SystemExit("expected libp2p_fallback_marker_blocklist in run-mode go/no-go gate report")
+if payload.get("libp2p_fallback_markers_detected") != []:
+    raise SystemExit("expected no fallback markers in run-mode go/no-go gate report")
+if payload.get("native_libp2p_provider_marker_contract_status") != "verified":
+    raise SystemExit(
+        "expected native_libp2p_provider_marker_contract_status=verified in run-mode go/no-go gate report"
+    )
 required_ids = payload.get("required_artifact_ids")
 if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
     [
@@ -470,6 +529,24 @@ if [ "$fault_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$fault_output" | grep -q 'gate_decision_fault_injection_triggered'; then
   echo "expected go/no-go gate lane gate_decision fault reason marker" >&2
+  exit 1
+fi
+
+set +e
+fallback_marker_fault_output="$(
+  bash "$LANE_SCRIPT" \
+    --fault-profile libp2p_fallback_marker \
+    --max-seconds 120 \
+    --output-json "$TMP_FALLBACK_MARKER_FAULT_REPORT" 2>&1
+)"
+fallback_marker_fault_code=$?
+set -e
+if [ "$fallback_marker_fault_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane libp2p fallback marker fault profile to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$fallback_marker_fault_output" | grep -q 'gate_policy_libp2p_fallback_markers_detected'; then
+  echo "expected go/no-go gate lane fallback marker drift reason marker" >&2
   exit 1
 fi
 
@@ -656,6 +733,27 @@ if payload.get("policy_evaluator_status") != "verified":
     raise SystemExit("expected gate decision fault report policy_evaluator_status=verified")
 if payload.get("observed_reason_codes") != ["gate_decision_fault_injection_triggered"]:
     raise SystemExit("expected observed_reason_codes to include deterministic gate-decision marker")
+PY
+
+python3 - "$TMP_FALLBACK_MARKER_FAULT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("status") != "fail":
+    raise SystemExit("expected fallback marker fault report status=fail")
+if payload.get("final_decision") != "NO-GO":
+    raise SystemExit("expected fallback marker fault report final_decision=NO-GO")
+if payload.get("fault_profile") != "libp2p_fallback_marker":
+    raise SystemExit("expected fallback marker fault report fault_profile=libp2p_fallback_marker")
+if payload.get("policy_outcome") != "FAIL":
+    raise SystemExit("expected fallback marker fault report policy_outcome=FAIL")
+reason_codes = payload.get("reason_codes", [])
+if "gate_policy_libp2p_fallback_markers_detected" not in reason_codes:
+    raise SystemExit("expected fallback marker drift reason code in report")
+if payload.get("observed_reason_codes") != []:
+    raise SystemExit("expected fallback marker fault observed_reason_codes to remain empty")
 PY
 
 warn_output="$(
