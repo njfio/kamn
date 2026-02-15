@@ -12,6 +12,9 @@ use crate::transaction::BaselineTransaction;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
 
 /// Input contract for one consensus-validation and block-commit round.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +71,13 @@ pub enum BlockPipelineError {
         /// Deterministic reason code supplied by fork-choice hook.
         reason_code: String,
     },
+    /// Restart/replay lineage drift detected for canonical commit persistence.
+    ReplayDrift {
+        /// Deterministic replay drift reason code.
+        reason_code: String,
+        /// Human-readable drift details.
+        detail: String,
+    },
 }
 
 impl From<ListenerQuorumError> for BlockPipelineError {
@@ -113,6 +123,12 @@ impl Display for BlockPipelineError {
                     f,
                     "block pipeline fork-choice rejected candidate: {reason_code}"
                 )
+            }
+            Self::ReplayDrift {
+                reason_code,
+                detail,
+            } => {
+                write!(f, "block pipeline replay drift: {detail} ({reason_code})")
             }
         }
     }
@@ -455,6 +471,23 @@ impl CanonicalCommitRecord {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Restart/replay evidence bundle for canonical commit lineage continuity.
+pub struct CanonicalReplayEvidenceBundle {
+    /// Versioned schema marker for policy and contract-lane checks.
+    pub schema_version: String,
+    /// Canonical head block height at restart boundary.
+    pub restart_boundary_block_height: u64,
+    /// Canonical head block height after replay checkpoint validation.
+    pub replay_checkpoint_block_height: u64,
+    /// Canonical commit count captured before restart.
+    pub pre_restart_commit_count: usize,
+    /// Canonical commit count observed after restart/replay.
+    pub post_restart_commit_count: usize,
+    /// Deterministic continuity status marker (`verified` on success).
+    pub continuity_status: String,
+}
+
 /// Deterministic decision outcome for one transport candidate reconciliation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CanonicalCandidateDecision {
@@ -676,6 +709,88 @@ impl CanonicalCommitStore for InMemoryCanonicalCommitStore {
 
     fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
         Ok(self.records.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// File-backed canonical commit store for restart/replay persistence checks.
+pub struct FileCanonicalCommitStore {
+    path: PathBuf,
+}
+
+impl FileCanonicalCommitStore {
+    /// Creates file-backed canonical commit store from path.
+    pub fn new(path: PathBuf) -> Result<Self, BlockPipelineError> {
+        if path.as_os_str().is_empty() {
+            return Err(BlockPipelineError::CommitStore(
+                "canonical commit store path is empty (canonical_commit_store_path_invalid)"
+                    .to_owned(),
+            ));
+        }
+        Ok(Self { path })
+    }
+}
+
+impl CanonicalCommitStore for FileCanonicalCommitStore {
+    fn persist_canonical_commit(
+        &mut self,
+        record: CanonicalCommitRecord,
+    ) -> Result<(), BlockPipelineError> {
+        let existing = self.list_canonical_commits()?;
+        if let Some(last) = existing.last() {
+            if record.block_height <= last.block_height {
+                return Err(BlockPipelineError::CommitStore(format!(
+                    "canonical commit block height regression: previous {}, found {} (canonical_commit_store_block_height_regression)",
+                    last.block_height, record.block_height
+                )));
+            }
+        }
+
+        let serialized = serialize_canonical_commit_record(&record)?;
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.path)
+            .map_err(|error| {
+                BlockPipelineError::CommitStore(format!(
+                    "canonical commit store append failed: {error} (canonical_commit_store_io)"
+                ))
+            })?;
+        file.write_all(serialized.as_bytes()).map_err(|error| {
+            BlockPipelineError::CommitStore(format!(
+                "canonical commit store write failed: {error} (canonical_commit_store_io)"
+            ))
+        })
+    }
+
+    fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        if !self.path.exists() {
+            return Ok(Vec::new());
+        }
+
+        let payload = fs::read_to_string(&self.path).map_err(|error| {
+            BlockPipelineError::CommitStore(format!(
+                "canonical commit store read failed: {error} (canonical_commit_store_io)"
+            ))
+        })?;
+        let mut records: Vec<CanonicalCommitRecord> = Vec::new();
+        for raw_line in payload.lines() {
+            let line = raw_line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let record = parse_canonical_commit_record(line)?;
+            if let Some(previous) = records.last() {
+                if record.block_height <= previous.block_height {
+                    return Err(BlockPipelineError::CommitStore(format!(
+                        "canonical commit block height regression in persisted lineage: previous {}, found {} (canonical_commit_store_block_height_regression)",
+                        previous.block_height, record.block_height
+                    )));
+                }
+            }
+            records.push(record);
+        }
+        Ok(records)
     }
 }
 
@@ -910,6 +1025,226 @@ fn sort_canonical_candidates_for_reconciliation(candidates: &mut [CanonicalCommi
             })
             .then_with(|| left.transaction_ids.cmp(&right.transaction_ids))
     });
+}
+
+const CANONICAL_REPLAY_EVIDENCE_SCHEMA_VERSION: &str = "kamn.runtime.canonical-replay-evidence.v1";
+
+/// Validates canonical lineage continuity across restart/replay checkpoints.
+pub fn build_canonical_replay_evidence_bundle(
+    pre_restart: &[CanonicalCommitRecord],
+    post_restart: &[CanonicalCommitRecord],
+) -> Result<CanonicalReplayEvidenceBundle, BlockPipelineError> {
+    let Some(restart_boundary) = pre_restart.last() else {
+        return Err(BlockPipelineError::ReplayDrift {
+            reason_code: "canonical_replay_pre_restart_lineage_empty".to_owned(),
+            detail: "pre-restart canonical lineage cannot be empty".to_owned(),
+        });
+    };
+
+    for (index, expected) in pre_restart.iter().enumerate() {
+        let Some(found) = post_restart.get(index) else {
+            return Err(BlockPipelineError::ReplayDrift {
+                reason_code: "canonical_replay_checkpoint_missing".to_owned(),
+                detail: format!(
+                    "post-restart lineage missing checkpoint at index {index} (expected height {})",
+                    expected.block_height
+                ),
+            });
+        };
+
+        if found.block_height != expected.block_height {
+            return Err(BlockPipelineError::ReplayDrift {
+                reason_code: "canonical_replay_block_height_mismatch".to_owned(),
+                detail: format!(
+                    "canonical replay block height mismatch at index {index}: expected {}, found {}",
+                    expected.block_height, found.block_height
+                ),
+            });
+        }
+        if found.producer_role != expected.producer_role {
+            return Err(BlockPipelineError::ReplayDrift {
+                reason_code: "canonical_replay_producer_role_mismatch".to_owned(),
+                detail: format!(
+                    "canonical replay producer role mismatch at index {index}: expected {}, found {}",
+                    expected.producer_role.as_str(),
+                    found.producer_role.as_str()
+                ),
+            });
+        }
+        if found.payload_digest != expected.payload_digest {
+            return Err(BlockPipelineError::ReplayDrift {
+                reason_code: "canonical_replay_payload_digest_mismatch".to_owned(),
+                detail: format!(
+                    "canonical replay payload digest mismatch at index {index}: expected {}, found {}",
+                    expected.payload_digest, found.payload_digest
+                ),
+            });
+        }
+        if found.transaction_ids != expected.transaction_ids {
+            return Err(BlockPipelineError::ReplayDrift {
+                reason_code: "canonical_replay_transaction_ids_mismatch".to_owned(),
+                detail: format!(
+                    "canonical replay transaction ids mismatch at index {index}: expected {:?}, found {:?}",
+                    expected.transaction_ids, found.transaction_ids
+                ),
+            });
+        }
+    }
+
+    let replay_checkpoint = post_restart
+        .get(pre_restart.len().saturating_sub(1))
+        .ok_or_else(|| BlockPipelineError::ReplayDrift {
+            reason_code: "canonical_replay_checkpoint_missing".to_owned(),
+            detail: "post-restart lineage missing replay checkpoint".to_owned(),
+        })?;
+
+    Ok(CanonicalReplayEvidenceBundle {
+        schema_version: CANONICAL_REPLAY_EVIDENCE_SCHEMA_VERSION.to_owned(),
+        restart_boundary_block_height: restart_boundary.block_height,
+        replay_checkpoint_block_height: replay_checkpoint.block_height,
+        pre_restart_commit_count: pre_restart.len(),
+        post_restart_commit_count: post_restart.len(),
+        continuity_status: "verified".to_owned(),
+    })
+}
+
+fn serialize_canonical_commit_record(
+    record: &CanonicalCommitRecord,
+) -> Result<String, BlockPipelineError> {
+    if record.block_height == 0 {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit block height must be positive (canonical_commit_store_block_height_invalid)"
+                .to_owned(),
+        ));
+    }
+    if record.transaction_ids.is_empty() {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit transaction ids cannot be empty (canonical_commit_store_transaction_ids_invalid)"
+                .to_owned(),
+        ));
+    }
+    validate_canonical_commit_store_field("payload_digest", record.payload_digest.as_str())?;
+    let mut encoded_ids = Vec::with_capacity(record.transaction_ids.len());
+    for tx_id in &record.transaction_ids {
+        validate_canonical_commit_store_field("transaction_id", tx_id.as_str())?;
+        if tx_id.contains(',') {
+            return Err(BlockPipelineError::CommitStore(
+                "canonical commit transaction id cannot contain ',' (canonical_commit_store_transaction_ids_invalid)"
+                    .to_owned(),
+            ));
+        }
+        encoded_ids.push(tx_id.as_str());
+    }
+
+    Ok(format!(
+        "{}|{}|{}|{}\n",
+        record.block_height,
+        record.producer_role.as_str(),
+        record.payload_digest,
+        encoded_ids.join(",")
+    ))
+}
+
+fn parse_canonical_commit_record(line: &str) -> Result<CanonicalCommitRecord, BlockPipelineError> {
+    let mut segments = line.split('|');
+    let block_height_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let producer_role_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let payload_digest = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let transaction_ids_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    if segments.next().is_some() {
+        return Err(BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        )));
+    }
+
+    let block_height = block_height_raw.parse::<u64>().map_err(|_| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit block height is invalid: {block_height_raw} (canonical_commit_store_block_height_invalid)"
+        ))
+    })?;
+    if block_height == 0 {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit block height must be positive (canonical_commit_store_block_height_invalid)"
+                .to_owned(),
+        ));
+    }
+    let producer_role = match producer_role_raw {
+        "processor" => NodeRole::Processor,
+        "listener" => NodeRole::Listener,
+        "approver" => NodeRole::Approver,
+        other => {
+            return Err(BlockPipelineError::CommitStore(format!(
+                "canonical commit producer role is invalid: {other} (canonical_commit_store_producer_role_invalid)"
+            )));
+        }
+    };
+    validate_canonical_commit_store_field("payload_digest", payload_digest)?;
+
+    let mut seen_ids = BTreeSet::new();
+    let mut transaction_ids = Vec::new();
+    for tx_id in transaction_ids_raw.split(',').map(|value| value.trim()) {
+        if tx_id.is_empty() {
+            continue;
+        }
+        validate_canonical_commit_store_field("transaction_id", tx_id)?;
+        if !seen_ids.insert(tx_id.to_owned()) {
+            return Err(BlockPipelineError::CommitStore(format!(
+                "canonical commit transaction id is duplicated: {tx_id} (canonical_commit_store_transaction_ids_invalid)"
+            )));
+        }
+        transaction_ids.push(tx_id.to_owned());
+    }
+    if transaction_ids.is_empty() {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit transaction ids cannot be empty (canonical_commit_store_transaction_ids_invalid)"
+                .to_owned(),
+        ));
+    }
+
+    Ok(CanonicalCommitRecord {
+        block_height,
+        producer_role,
+        payload_digest: payload_digest.to_owned(),
+        transaction_ids,
+    })
+}
+
+fn validate_canonical_commit_store_field(
+    field: &str,
+    value: &str,
+) -> Result<(), BlockPipelineError> {
+    if value.trim().is_empty() {
+        return Err(BlockPipelineError::CommitStore(format!(
+            "canonical commit field is empty: {field} (canonical_commit_store_field_empty)"
+        )));
+    }
+    if value.contains('|') {
+        return Err(BlockPipelineError::CommitStore(format!(
+            "canonical commit field contains reserved separator '|': {field} (canonical_commit_store_field_separator_invalid)"
+        )));
+    }
+    if value.contains('\n') || value.contains('\r') {
+        return Err(BlockPipelineError::CommitStore(format!(
+            "canonical commit field contains line break: {field} (canonical_commit_store_field_line_break)"
+        )));
+    }
+    Ok(())
 }
 
 fn classify_gossip_topic(topic: &str) -> Result<GossipIngressTopicKind, GossipIngressError> {

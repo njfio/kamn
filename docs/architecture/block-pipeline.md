@@ -25,6 +25,11 @@ production and consensus validation (Task #2926, Subtask #2927).
 - `TransportFedBlockPipeline::reconcile_transport_candidates(...)`
   - applies deterministic fork-choice over transport-provided canonical
     candidates and persists accepted records before transaction consensus.
+- `FileCanonicalCommitStore`
+  - persists canonical commit lineage across process restart boundaries.
+- `build_canonical_replay_evidence_bundle(...)`
+  - validates restart/replay lineage continuity and emits deterministic
+    checkpoint evidence (`kamn.runtime.canonical-replay-evidence.v1`).
 - `BlockConsensusRoundInput`
   - listener and approver attestation input envelope for a round.
 - `BlockPipelineCommitReport`
@@ -68,6 +73,18 @@ Processor role runtime wiring now includes:
 - Reconciled canonical candidates surface deterministic reject reasons:
   `fork_choice_stale_block_height`, `fork_choice_duplicate_candidate`,
   `fork_choice_tie_break_loser`.
+- Restart/replay lineage validation fails closed with deterministic reason codes:
+  `canonical_replay_pre_restart_lineage_empty`,
+  `canonical_replay_checkpoint_missing`,
+  `canonical_replay_block_height_mismatch`,
+  `canonical_replay_producer_role_mismatch`,
+  `canonical_replay_payload_digest_mismatch`,
+  `canonical_replay_transaction_ids_mismatch`.
+- File-backed canonical persistence rejects malformed or regressive records with
+  deterministic reason markers such as:
+  `canonical_commit_store_record_malformed`,
+  `canonical_commit_store_block_height_regression`,
+  `canonical_commit_store_transaction_ids_invalid`.
 
 Regression marker:
 - `Regression: #2927` keeps digest mismatch fail-closed before commit.
@@ -81,6 +98,7 @@ Regression marker:
 cargo test -p kamn-core --test block_pipeline
 cargo test -p kamn-core --test block_pipeline_gossip_ingest
 cargo test -p kamn-core --test block_pipeline_canonical_reconciliation
+cargo test -p kamn-core --test block_pipeline_transport_fed
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

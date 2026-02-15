@@ -173,6 +173,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `full_supervisor_invariant_violation:full_supervisor_bootstrap_component_order_mismatch`
   - `full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason`
 
+## Transport-Fed Restart/Replay Canonical Persistence Fast Lane
+- For transport-fed block pipeline canonical persistence/restart drift changes, keep PR checks bounded to:
+  - `cargo test -p kamn-core --test block_pipeline_transport_fed unit_canonical_replay_checkpoint_validator_accepts_matching_lineage -- --exact`
+  - `cargo test -p kamn-core --test block_pipeline_transport_fed unit_canonical_replay_checkpoint_validator_rejects_payload_digest_drift_reason_code -- --exact`
+  - `cargo test -p kamn-core --test block_pipeline_transport_fed integration_transport_fed_restart_replay_preserves_canonical_lineage_across_restart -- --exact`
+  - `cargo test -p kamn-core --test block_pipeline_transport_fed regression_transport_fed_restart_replay_tamper_matrix_emits_deterministic_reason_codes -- --exact`
+- This lane remains cost-effective:
+  - all checks run in-process with deterministic in-memory transport and local temp-file persistence.
+  - no external node/process bootstrap is required.
+  - replay validator performance guard is bounded to sub-second local budget.
+- Deterministic fail-closed restart/replay reason markers:
+  - `canonical_replay_checkpoint_missing`
+  - `canonical_replay_block_height_mismatch`
+  - `canonical_replay_payload_digest_mismatch`
+  - `canonical_replay_transaction_ids_mismatch`
+
 ## Runtime Local Full-Mode Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json`

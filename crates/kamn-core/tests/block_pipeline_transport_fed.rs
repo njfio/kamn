@@ -1,14 +1,18 @@
 use kamn_core::{
-    decode_transport_canonical_candidate_payload, encode_transport_candidate_payload,
-    encode_transport_canonical_candidate_payload, encode_transport_commit_report_payload,
-    BaselineTransaction, BlockConsensusRoundInput, BlockPipelineError, CanonicalCommitRecord,
-    DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
-    InMemoryCanonicalCommitStore, InMemoryPeerLifecycleTransport, InMemoryTransportMempoolFeed,
-    MempoolBlockPipeline, NodeRole, PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
-    TransportCanonicalCandidateFeed, TransportEventMempoolFeed, TransportFedBlockPipeline,
-    TransportMempoolFeed,
+    build_canonical_replay_evidence_bundle, decode_transport_canonical_candidate_payload,
+    encode_transport_candidate_payload, encode_transport_canonical_candidate_payload,
+    encode_transport_commit_report_payload, BaselineTransaction, BlockConsensusRoundInput,
+    BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore, CanonicalReplayEvidenceBundle,
+    DeterministicCompetingBranchForkChoiceHook, FileCanonicalCommitStore, ForkChoiceDecision,
+    ForkChoiceHook, InMemoryCanonicalCommitStore, InMemoryPeerLifecycleTransport,
+    InMemoryTransportMempoolFeed, MempoolBlockPipeline, NodeRole, PeerDiscoveryRecord,
+    PeerGossipFrame, PeerLifecycleTransport, TransportCanonicalCandidateFeed,
+    TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
 };
+use std::fs;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Default)]
 struct RejectAllForkChoiceHook;
@@ -48,6 +52,23 @@ fn build_valid_chain_transactions() -> Vec<BaselineTransaction> {
     let state_hash_two = planner.expected_state_hash().to_owned();
     let tx_two = BaselineTransaction::signed("tx-2", "agent-a", 2, "payload-2", &state_hash_two);
     vec![tx_two, tx_one]
+}
+
+fn sample_canonical_record(height: u64, digest: &str, tx_id: &str) -> CanonicalCommitRecord {
+    CanonicalCommitRecord {
+        block_height: height,
+        producer_role: NodeRole::Processor,
+        payload_digest: digest.to_owned(),
+        transaction_ids: vec![tx_id.to_owned()],
+    }
+}
+
+fn temp_canonical_commit_store_path(tag: &str) -> PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    std::env::temp_dir().join(format!("kamn-canonical-commit-{tag}-{nonce}.log"))
 }
 
 #[test]
@@ -411,4 +432,210 @@ fn functional_transport_event_feed_drains_canonical_candidates_from_block_topic_
         .drain_canonical_candidates()
         .expect("candidate drain should decode block frame");
     assert_eq!(candidates, vec![record]);
+}
+
+#[test]
+fn unit_canonical_replay_checkpoint_validator_accepts_matching_lineage() {
+    let pre_restart = vec![
+        sample_canonical_record(7, "digest-7", "tx-7"),
+        sample_canonical_record(8, "digest-8", "tx-8"),
+    ];
+    let post_restart = pre_restart.clone();
+    let evidence = build_canonical_replay_evidence_bundle(&pre_restart, &post_restart)
+        .expect("matching lineage should validate");
+
+    assert_eq!(
+        evidence.schema_version,
+        "kamn.runtime.canonical-replay-evidence.v1"
+    );
+    assert_eq!(evidence.restart_boundary_block_height, 8);
+    assert_eq!(evidence.replay_checkpoint_block_height, 8);
+    assert_eq!(evidence.continuity_status, "verified");
+}
+
+#[test]
+fn unit_canonical_replay_checkpoint_validator_rejects_payload_digest_drift_reason_code() {
+    let pre_restart = vec![sample_canonical_record(9, "digest-9", "tx-9")];
+    let post_restart = vec![sample_canonical_record(9, "digest-9-tampered", "tx-9")];
+
+    let error = build_canonical_replay_evidence_bundle(&pre_restart, &post_restart)
+        .expect_err("payload drift must fail closed");
+    assert!(
+        matches!(error, BlockPipelineError::ReplayDrift { reason_code, .. }
+            if reason_code == "canonical_replay_payload_digest_mismatch"),
+        "payload drift should emit deterministic reason-code marker"
+    );
+}
+
+#[test]
+fn functional_transport_fed_restart_replay_harness_reports_boundary_and_checkpoint_markers() {
+    let path = temp_canonical_commit_store_path("restart-replay-functional");
+    let _ = fs::remove_file(&path);
+
+    let mut store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    store
+        .persist_canonical_commit(sample_canonical_record(11, "digest-11", "tx-11"))
+        .expect("first record should persist");
+    store
+        .persist_canonical_commit(sample_canonical_record(12, "digest-12", "tx-12"))
+        .expect("second record should persist");
+    let pre_restart = store
+        .list_canonical_commits()
+        .expect("pre-restart list should load");
+
+    let restarted_store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let post_restart = restarted_store
+        .list_canonical_commits()
+        .expect("post-restart list should load");
+    let evidence: CanonicalReplayEvidenceBundle =
+        build_canonical_replay_evidence_bundle(&pre_restart, &post_restart)
+            .expect("restart replay evidence should validate");
+    assert_eq!(evidence.restart_boundary_block_height, 12);
+    assert_eq!(evidence.replay_checkpoint_block_height, 12);
+    assert_eq!(evidence.pre_restart_commit_count, 2);
+    assert_eq!(evidence.post_restart_commit_count, 2);
+
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn integration_transport_fed_restart_replay_preserves_canonical_lineage_across_restart() {
+    let path = temp_canonical_commit_store_path("restart-replay-integration");
+    let _ = fs::remove_file(&path);
+    let topic = "kamn/blocks/v1";
+    let sender = "peer-replay-sender";
+    let recipient = "peer-replay-recipient";
+    let baseline_record = sample_canonical_record(21, "digest-21", "tx-21");
+
+    let mut first_store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    first_store
+        .persist_canonical_commit(baseline_record.clone())
+        .expect("baseline record should persist");
+    let pre_restart = first_store
+        .list_canonical_commits()
+        .expect("pre-restart list should load");
+
+    let transport = InMemoryPeerLifecycleTransport::default();
+    transport
+        .advertise(
+            PeerDiscoveryRecord::new(sender, NodeRole::Approver, vec![topic.to_owned()])
+                .expect("sender discovery record should build"),
+        )
+        .expect("sender should advertise");
+    transport
+        .advertise(
+            PeerDiscoveryRecord::new(recipient, NodeRole::Processor, vec![topic.to_owned()])
+                .expect("recipient discovery record should build"),
+        )
+        .expect("recipient should advertise");
+
+    let payload = encode_transport_canonical_candidate_payload(&baseline_record)
+        .expect("canonical candidate payload should encode");
+    transport
+        .send(
+            PeerGossipFrame::new(topic, sender, recipient, payload.as_str())
+                .expect("gossip frame should build"),
+        )
+        .expect("gossip frame should send");
+
+    let feed = TransportEventMempoolFeed::new(transport, recipient, Some(vec![topic.to_owned()]))
+        .expect("feed should build");
+    let restarted_store = FileCanonicalCommitStore::new(path.clone()).expect("store should build");
+    let hook = DeterministicCompetingBranchForkChoiceHook::with_canonical_head(
+        pre_restart
+            .last()
+            .cloned()
+            .expect("baseline canonical head should exist"),
+    );
+    let mut pipeline = TransportFedBlockPipeline::new(true, 1, 1, feed, restarted_store, hook)
+        .expect("transport-fed pipeline should build");
+
+    let outcomes = pipeline
+        .reconcile_transport_candidates()
+        .expect("reconciliation should succeed");
+    assert_eq!(outcomes.len(), 1);
+    assert_eq!(
+        outcomes[0].decision,
+        kamn_core::CanonicalCandidateDecision::Rejected {
+            reason_code: "fork_choice_duplicate_candidate".to_owned(),
+        }
+    );
+
+    let post_restart = pipeline
+        .list_canonical_commits()
+        .expect("post-restart list should load");
+    let evidence = build_canonical_replay_evidence_bundle(&pre_restart, &post_restart)
+        .expect("replay evidence should validate after duplicate reconciliation");
+    assert_eq!(evidence.continuity_status, "verified");
+    assert_eq!(evidence.post_restart_commit_count, 1);
+
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn regression_transport_fed_restart_replay_tamper_matrix_emits_deterministic_reason_codes() {
+    let baseline = sample_canonical_record(31, "digest-31", "tx-31");
+    let pre_restart = vec![baseline.clone()];
+    let tamper_cases = vec![
+        (
+            vec![],
+            "canonical_replay_checkpoint_missing".to_owned(),
+            "missing checkpoint",
+        ),
+        (
+            vec![sample_canonical_record(99, "digest-31", "tx-31")],
+            "canonical_replay_block_height_mismatch".to_owned(),
+            "height drift",
+        ),
+        (
+            vec![sample_canonical_record(31, "digest-31-tampered", "tx-31")],
+            "canonical_replay_payload_digest_mismatch".to_owned(),
+            "payload digest drift",
+        ),
+        (
+            vec![CanonicalCommitRecord {
+                transaction_ids: vec!["tx-31-tampered".to_owned()],
+                ..baseline.clone()
+            }],
+            "canonical_replay_transaction_ids_mismatch".to_owned(),
+            "transaction id drift",
+        ),
+    ];
+
+    for (tampered_post_restart, expected_reason_code, case_name) in tamper_cases {
+        let error = build_canonical_replay_evidence_bundle(&pre_restart, &tampered_post_restart)
+            .expect_err("tampered replay lineage must fail closed");
+        assert!(
+            matches!(error, BlockPipelineError::ReplayDrift { reason_code, .. }
+                if reason_code == expected_reason_code),
+            "unexpected reason code for tamper case: {case_name}"
+        );
+    }
+}
+
+#[test]
+fn performance_canonical_replay_checkpoint_validator_stays_within_local_budget() {
+    let mut pre_restart = Vec::new();
+    let mut post_restart = Vec::new();
+    for index in 1..=256 {
+        pre_restart.push(sample_canonical_record(
+            index,
+            format!("digest-{index}").as_str(),
+            format!("tx-{index}").as_str(),
+        ));
+        post_restart.push(sample_canonical_record(
+            index,
+            format!("digest-{index}").as_str(),
+            format!("tx-{index}").as_str(),
+        ));
+    }
+
+    let start = Instant::now();
+    let evidence = build_canonical_replay_evidence_bundle(&pre_restart, &post_restart)
+        .expect("large replay lineage should validate");
+    assert_eq!(evidence.pre_restart_commit_count, 256);
+    assert!(
+        start.elapsed() <= Duration::from_secs(1),
+        "canonical replay validator exceeded runtime budget"
+    );
 }
