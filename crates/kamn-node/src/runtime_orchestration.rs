@@ -38,6 +38,35 @@ const RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON: &str =
 const RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON: &str =
     "runtime_transport_profile_live_provider_missing";
 
+fn production_transport_profile_remediation(reason_code: &'static str) -> &'static str {
+    match reason_code {
+        RUNTIME_TRANSPORT_PROFILE_GOSSIP_DISABLED_FOR_PRODUCTION_REASON => {
+            "remove --disable-gossip (or set enable_gossip=true in config), or use non-production runtime modes (planning/recovery-check)"
+        }
+        RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON => {
+            "ensure runtime wiring emits p2p-transport-profile:libp2p-live and remove in-memory fallback markers"
+        }
+        RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON => {
+            "ensure bootstrap uses RuntimeTransportProfile::Libp2pLive for production runtime modes"
+        }
+        RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON => {
+            "ensure p2p-live-libp2p-provider marker is present and provider wiring is initialized"
+        }
+        _ => "verify runtime transport profile wiring against production policy contract",
+    }
+}
+
+fn build_production_transport_profile_violation_detail(
+    runtime_mode: RuntimeMode,
+    reason_code: &'static str,
+) -> String {
+    format!(
+        "runtime mode {} requires live libp2p transport profile wiring; remediation: {}",
+        runtime_mode.as_str(),
+        production_transport_profile_remediation(reason_code),
+    )
+}
+
 fn runtime_mode_requires_live_transport_profile(runtime_mode: RuntimeMode) -> bool {
     matches!(
         runtime_mode.kind,
@@ -106,10 +135,7 @@ fn enforce_production_transport_profile_policy(
         return Err(ConfigError::RuntimeStoreCompatibility {
             store: RUNTIME_TRANSPORT_PROFILE_POLICY_STORE,
             reason_code,
-            detail: format!(
-                "runtime mode {} requires live libp2p transport profile wiring",
-                runtime_mode.as_str()
-            ),
+            detail: build_production_transport_profile_violation_detail(runtime_mode, reason_code),
         });
     }
     Ok(())
