@@ -577,6 +577,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic scrape-failure taxonomy marker (`scrape_failure_taxonomy_status=verified`) and taxonomy csv marker (`scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status`).
   - telemetry degradation taxonomy policy checker markers remain command-surface contract-governed.
 - Deterministic fail-closed marker for policy tamper drills:
+  - `local_observability_scrape_policy_marker_missing:scrape_probe_status`
   - `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`
   - `local_observability_scrape_policy_degradation_reason_codes_csv_mismatch`
 
