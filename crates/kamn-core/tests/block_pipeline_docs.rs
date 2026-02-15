@@ -7,6 +7,7 @@ fn architecture_doc_contains_block_pipeline_core_components() {
     assert!(DOC.contains("BlockConsensusRoundInput"));
     assert!(DOC.contains("BlockPipelineCommitReport"));
     assert!(DOC.contains("BlockPipelineError"));
+    assert!(DOC.contains("SqliteCanonicalCommitStore"));
 }
 
 #[test]
@@ -45,4 +46,12 @@ fn regression_doc_tracks_digest_mismatch_fail_closed_guard() {
     // Regression: #2927
     assert!(DOC.contains("Regression: #2927"));
     assert!(DOC.contains("fail_closed_reason_code=block_pipeline_payload_digest_mismatch"));
+}
+
+#[test]
+fn regression_doc_tracks_sqlite_canonical_commit_store_fail_closed_markers() {
+    // Regression: #3580
+    assert!(DOC.contains("canonical_commit_store_sqlite_schema_mismatch"));
+    assert!(DOC.contains("canonical_commit_store_sqlite_payload_not_utf8"));
+    assert!(DOC.contains("canonical_commit_store_sqlite_key_height_mismatch"));
 }
