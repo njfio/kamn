@@ -41,6 +41,36 @@ fn send_http_get(addr: &str, path: &str) -> String {
     response
 }
 
+fn try_send_http_get(addr: &str, path: &str) -> Result<String, String> {
+    let mut stream =
+        TcpStream::connect(addr).map_err(|error| format!("connect should succeed: {error}"))?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .map_err(|error| format!("read timeout should be configurable: {error}"))?;
+    let request = format!("GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("request should write: {error}"))?;
+    let mut response = String::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.push_str(
+                    std::str::from_utf8(&chunk[..read_count])
+                        .map_err(|error| format!("response must be utf-8: {error}"))?,
+                );
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => return Err(format!("response should be readable: {error}")),
+        }
+    }
+    Ok(response)
+}
+
 fn send_raw_http_request(addr: &str, request: &str) -> String {
     let mut stream = TcpStream::connect(addr).expect("endpoint should accept connections");
     stream
@@ -670,6 +700,74 @@ fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_str
     assert!(
         server_result.is_ok(),
         "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_supports_stream_reconnect_churn_sequence() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let first_stream_response = send_http_get(bind_addr.as_str(), "/metrics.stream");
+    let second_stream_response = send_http_get(bind_addr.as_str(), "/metrics.stream");
+    let readiness_response = send_http_get(bind_addr.as_str(), "/readyz");
+    assert!(first_stream_response.contains("HTTP/1.1 200 OK"));
+    assert!(first_stream_response.contains("kamn.runtime.observability.stream.v1"));
+    assert!(second_stream_response.contains("HTTP/1.1 200 OK"));
+    assert!(second_stream_response.contains("kamn.runtime.observability.stream.v1"));
+    assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response.contains("\"readiness_reason_code\":\"none\""));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_enforces_queue_bound_request_budget() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let first_request_response = send_http_get(bind_addr.as_str(), "/metrics");
+    assert!(first_request_response.contains("HTTP/1.1 200 OK"));
+    assert!(first_request_response.contains("kamn_observability_ready 1"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly once bounded request budget is exhausted"
+    );
+
+    let second_request_result = try_send_http_get(bind_addr.as_str(), "/metrics");
+    assert!(
+        second_request_result.is_err(),
+        "request budget exhaustion should close listener and reject additional requests"
     );
 }
 
