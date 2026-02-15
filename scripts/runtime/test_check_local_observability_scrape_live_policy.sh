@@ -148,6 +148,39 @@ if ! printf '%s\n' "$tampered_queue_bound_output" | grep -q 'local_observability
   exit 1
 fi
 
+tampered_reconnect_report="$TMP_DIR/local-observability-scrape-live-summary.reconnect-churn.tampered.json"
+cp "$report_file" "$tampered_reconnect_report"
+python3 - "$tampered_reconnect_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["stream_reconnect_churn_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_reconnect_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_reconnect_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.reconnect-churn.tampered.json" 2>&1
+)"
+tampered_reconnect_code=$?
+set -e
+
+if [ "$tampered_reconnect_code" -eq 0 ]; then
+  echo "expected tampered local observability reconnect churn marker report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reconnect_output" | grep -q 'local_observability_scrape_policy_marker_missing:stream_reconnect_churn_status'; then
+  echo "expected deterministic reconnect churn marker mismatch reason code for tampered local observability policy validation" >&2
+  exit 1
+fi
+
 tampered_degradation_taxonomy_report="$TMP_DIR/local-observability-scrape-live-summary.degradation-taxonomy.tampered.json"
 cp "$report_file" "$tampered_degradation_taxonomy_report"
 python3 - "$tampered_degradation_taxonomy_report" <<'PY'
