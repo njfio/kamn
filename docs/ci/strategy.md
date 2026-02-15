@@ -310,6 +310,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - runtime commit submission
     - runtime commit finality
     - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
+  - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
   - dry-run mode executes no nested local-heavy commands and emits deterministic `dry_run_no_commands_executed`.

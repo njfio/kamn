@@ -37,6 +37,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Release go/no-go linkage:
   - `scripts/runtime/release_evidence_manifest.json` includes required artifact id `local_full_stack_integration`.
   - release gate runner consumes `validate_local_full_stack_integration_live_contract_lane.sh` and fails closed on missing/tampered evidence linkage.
+- Architecture boundary reference:
+  - `docs/architecture/kolme-live-integration.md`
 
 ## Lane Migration Matrix (Issue #1721)
 
