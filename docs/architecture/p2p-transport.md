@@ -48,8 +48,22 @@ libp2p I/O integration while preserving low-cost default CI behavior.
 - `Libp2pLivePeerLifecycleTransport`
   - deterministic live-adapter surface that boots swarm harness startup and
     provides a concrete transport profile for runtime wiring.
-  - executes advertise/discover/send/drain through a dedicated live data-plane
-    state channel (no `InMemoryPeerLifecycleTransport` delegate fallback path).
+  - compile-mode backend execution:
+    - contract mode executes advertise/discover/send/drain through a dedicated
+      live data-plane state channel (no `InMemoryPeerLifecycleTransport`
+      delegate fallback path).
+    - no `InMemoryPeerLifecycleTransport` delegate fallback path.
+    - `libp2p-live-transport` mode executes over native socket-backed
+      transport.
+- `Libp2pLiveRuntimeBackend`
+  - deterministic backend marker contract:
+    - `contract-data-plane`
+    - `native-socket`
+- `resolve_libp2p_live_runtime_backend()`
+  - compile-time resolver used by runtime/reporting contracts.
+- `UdpPeerLifecycleTransport`
+  - UDP socket-backed transport adapter for local live convergence drills and
+    feature-enabled native runtime delivery paths.
 - `PeerDiscoveryRecord`
   - normalized peer advertisement payload with role and gossip topic set.
 - `PeerGossipFrame`
@@ -115,6 +129,9 @@ provider marker contracts for local-heavy runtime rehearsal:
 - `RuntimeTransportProfile::Libp2pLive`
   - `p2p-transport-profile:libp2p-live`
   - `p2p-live-libp2p-provider`
+  - compile-mode provider marker:
+    - `p2p-live-libp2p-provider:contract-only` (feature disabled)
+    - `p2p-live-libp2p-provider:native` (`libp2p-live-transport` enabled)
 
 ## Live Data-Plane Execution
 
@@ -131,6 +148,14 @@ deterministic network identity.
 - `P2pTransportError::reason_code()`
   - exposes deterministic reason-code taxonomy for transport policy checks and
     repeated invalid-event idempotence guards.
+
+Task #3633 adds a feature-enabled native runtime path:
+
+- `resolve_libp2p_live_runtime_backend()`
+  - returns `Libp2pLiveRuntimeBackend::NativeSocket` when
+    `libp2p-live-transport` is enabled.
+- Feature-enabled live adapter construction validates native libp2p runtime
+  inputs and then routes send/receive/discovery over socket-backed transport.
 
 ## Reconnect Taxonomy
 
@@ -175,6 +200,8 @@ Deterministic reason-code markers:
   `P2pTransportError::InvalidReconnectBackoffWindow`.
 - Swarm config requests with `enable_gossip=false` fail closed with
   `P2pTransportError::GossipTransportDisabled`.
+- Feature-enabled native runtime config validation failures fail closed with
+  `P2pTransportError::Libp2pRuntimeConfigInvalid`.
 - Empty Kademlia seed sets fail closed with
   `P2pTransportError::MissingKademliaBootstrapSeeds`.
 - Invalid lifecycle transition replay remains fail closed with reason code
@@ -215,6 +242,7 @@ cargo test -p kamn-core --test p2p_kademlia_bootstrap
 cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
 cargo test -p kamn-core --test p2p_transport_feature_gates
 cargo test -p kamn-core --test p2p_transport_feature_gates --features libp2p-live-transport
+cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime --features libp2p-live-transport
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact

@@ -348,9 +348,10 @@ pub use operator_dashboard_ui::{
 pub use p2p_transport::{
     build_libp2p_lifecycle_regression_corpus, build_p2p_swarm_deterministic_config,
     compose_kademlia_discovery_bootstrap, compose_libp2p_swarm_behavior_stack,
-    run_libp2p_lifecycle_regression_case, run_libp2p_lifecycle_regression_corpus,
-    InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan,
-    Libp2pLivePeerLifecycleTransport, LiveTransportFaultClass, LiveTransportReconnectDecision,
+    resolve_libp2p_live_runtime_backend, run_libp2p_lifecycle_regression_case,
+    run_libp2p_lifecycle_regression_corpus, InMemoryPeerLifecycleTransport,
+    KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan, Libp2pLivePeerLifecycleTransport,
+    Libp2pLiveRuntimeBackend, LiveTransportFaultClass, LiveTransportReconnectDecision,
     LiveTransportReconnectPolicy, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
     P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask, P2pTransportError,
     PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleRegressionCase,
