@@ -12,3 +12,7 @@ decisioning, and bounded CI smoke versus local-heavy incident validation.
 - #4462 Task: enforce slo threshold contracts and deterministic policy-gate reason taxonomy
 - #4467 Subtask: add red tests for slo threshold drift and gate-mismatch acceptance
 - #4468 Subtask: implement deterministic slo gate reason taxonomy and policy evidence outputs
+- #4460 Story: enforce incident-readiness evidence bundles and deterministic go-no-go convergence governance
+- #4463 Task: implement incident-readiness bundle schema checks and fail-closed evidence validation
+- #4469 Subtask: add red tests for incident-readiness bundle mismatch-tamper acceptance
+- #4470 Subtask: implement deterministic readiness reason taxonomy and normalized bundle evidence outputs
