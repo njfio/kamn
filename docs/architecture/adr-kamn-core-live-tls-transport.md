@@ -66,3 +66,8 @@ Tradeoffs:
 - TLS policy helpers: `crates/kamn-kolme/src/tls_policy.rs`
 - Transport integration tests: `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`
 - Transport docs contract: `crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs`
+
+Regression markers:
+
+- `Regression: #2671`
+- `Regression: #4105`

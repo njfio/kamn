@@ -987,6 +987,8 @@ fn performance_https_transport_timeout_budget_is_bounded() {
 fn regression_https_transport_does_not_use_openssl_subprocess() {
     // Regression: #2671
     const TRANSPORT_SOURCE: &str = include_str!("../src/kolme_runtime_commit/http_transport.rs");
+    const TLS_ADR_SOURCE: &str =
+        include_str!("../../../docs/architecture/adr-kamn-core-live-tls-transport.md");
     assert!(
         !TRANSPORT_SOURCE.contains("Command::new(\"openssl\")"),
         "HTTPS transport must not spawn openssl subprocesses"
@@ -994,6 +996,23 @@ fn regression_https_transport_does_not_use_openssl_subprocess() {
     assert!(
         !TRANSPORT_SOURCE.contains(".arg(\"s_client\")"),
         "HTTPS transport must not depend on openssl s_client subprocess path"
+    );
+    assert!(
+        !TRANSPORT_SOURCE.contains("Command::new("),
+        "HTTPS transport must not spawn subprocess commands in runtime request paths"
+    );
+    assert!(
+        !TRANSPORT_SOURCE.contains("curl"),
+        "HTTPS transport runtime request paths must not depend on curl subprocess fallback"
+    );
+    assert!(
+        TLS_ADR_SOURCE
+            .contains("Subprocess TLS paths (`curl`, `openssl s_client`) are not allowed"),
+        "live TLS ADR must document subprocess fallback prohibition"
+    );
+    assert!(
+        TLS_ADR_SOURCE.contains("Regression: #4105"),
+        "live TLS ADR must include regression marker for subprocess fallback prohibition"
     );
 }
 
