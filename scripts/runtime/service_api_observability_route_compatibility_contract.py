@@ -76,6 +76,7 @@ MATRIX_ROWS: list[dict[str, Any]] = [
     {
         "row_id": "api_healthz_get",
         "surface": "service_api",
+        "route_class": "service_api_health",
         "route": "/healthz",
         "method": "GET",
         "expected_status": 200,
@@ -88,34 +89,63 @@ MATRIX_ROWS: list[dict[str, Any]] = [
     {
         "row_id": "api_metrics_get",
         "surface": "service_api",
+        "route_class": "service_api_metrics",
         "route": "/metrics",
         "method": "GET",
         "expected_status": 200,
-        "expected_content_type": "text/plain",
+        "expected_content_type": "text/plain; version=0.0.4",
         "evidence_test_selector": (
             "main_tests::service_api_endpoint_tests::"
-            "functional_service_api_endpoint_renders_required_route_contracts"
+            "integration_service_api_endpoint_serves_required_http_routes"
         ),
     },
     {
-        "row_id": "api_metrics_post_method_not_allowed",
+        "row_id": "api_websocket_upgrade_required_get",
         "surface": "service_api",
-        "route": "/metrics",
-        "method": "POST",
+        "route_class": "service_api_websocket_upgrade",
+        "route": "/v1/events/ws",
+        "method": "GET",
+        "expected_status": 400,
+        "expected_content_type": "application/json",
+        "evidence_test_selector": (
+            "main_tests::service_api_endpoint_tests::"
+            "unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts"
+        ),
+    },
+    {
+        "row_id": "api_messages_send_delete_method_not_allowed",
+        "surface": "service_api",
+        "route_class": "service_api_method_guard",
+        "route": "/v1/messages/send",
+        "method": "DELETE",
         "expected_status": 405,
         "expected_content_type": "application/json",
         "evidence_test_selector": (
             "main_tests::service_api_endpoint_tests::"
-            "functional_service_api_endpoint_renders_required_route_contracts"
+            "unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts"
+        ),
+    },
+    {
+        "row_id": "api_unknown_path_not_found",
+        "surface": "service_api",
+        "route_class": "service_api_route_not_found",
+        "route": "/v1/nope",
+        "method": "GET",
+        "expected_status": 404,
+        "expected_content_type": "application/json",
+        "evidence_test_selector": (
+            "main_tests::service_api_endpoint_tests::"
+            "unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts"
         ),
     },
     {
         "row_id": "observability_metrics_get",
         "surface": "observability_endpoint",
+        "route_class": "observability_metrics",
         "route": "/metrics",
         "method": "GET",
         "expected_status": 200,
-        "expected_content_type": "text/plain",
+        "expected_content_type": "text/plain; version=0.0.4",
         "evidence_test_selector": (
             "main_tests::observability_endpoint_tests::"
             "integration_runtime_observability_endpoint_serves_metrics_and_health_paths"
@@ -124,6 +154,7 @@ MATRIX_ROWS: list[dict[str, Any]] = [
     {
         "row_id": "observability_health_get",
         "surface": "observability_endpoint",
+        "route_class": "observability_health",
         "route": "/healthz",
         "method": "GET",
         "expected_status": 200,
@@ -134,18 +165,84 @@ MATRIX_ROWS: list[dict[str, Any]] = [
         ),
     },
     {
+        "row_id": "observability_ready_get",
+        "surface": "observability_endpoint",
+        "route_class": "observability_readiness",
+        "route": "/readyz",
+        "method": "GET",
+        "expected_status": 200,
+        "expected_content_type": "application/json",
+        "evidence_test_selector": (
+            "main_tests::observability_endpoint_tests::"
+            "integration_runtime_observability_endpoint_serves_metrics_and_health_paths"
+        ),
+    },
+    {
+        "row_id": "observability_stream_get",
+        "surface": "observability_endpoint",
+        "route_class": "observability_stream",
+        "route": "/metrics.stream",
+        "method": "GET",
+        "expected_status": 200,
+        "expected_content_type": "application/x-ndjson",
+        "evidence_test_selector": (
+            "main_tests::observability_endpoint_tests::"
+            "integration_runtime_observability_endpoint_serves_stream_path"
+        ),
+    },
+    {
         "row_id": "observability_unknown_path_not_found",
         "surface": "observability_endpoint",
+        "route_class": "observability_negative_path",
         "route": "/unknown",
         "method": "GET",
         "expected_status": 404,
-        "expected_content_type": "application/json",
+        "expected_content_type": "text/plain; charset=utf-8",
         "evidence_test_selector": (
             "main_tests::observability_endpoint_tests::"
             "integration_runtime_observability_endpoint_returns_not_found_for_unknown_path"
         ),
     },
+    {
+        "row_id": "observability_metrics_post_not_found",
+        "surface": "observability_endpoint",
+        "route_class": "observability_negative_path",
+        "route": "/metrics",
+        "method": "POST",
+        "expected_status": 404,
+        "expected_content_type": "text/plain; charset=utf-8",
+        "evidence_test_selector": (
+            "main_tests::observability_endpoint_tests::"
+            "integration_runtime_observability_endpoint_returns_not_found_for_malformed_request_method"
+        ),
+    },
 ]
+
+REQUIRED_ROUTE_CLASSES: tuple[str, ...] = (
+    "service_api_health",
+    "service_api_metrics",
+    "service_api_websocket_upgrade",
+    "service_api_method_guard",
+    "service_api_route_not_found",
+    "observability_metrics",
+    "observability_health",
+    "observability_readiness",
+    "observability_stream",
+    "observability_negative_path",
+)
+
+PARITY_CHECKPOINTS: tuple[dict[str, str], ...] = (
+    {
+        "checkpoint_id": "health_route_surface_parity",
+        "service_api_row_id": "api_healthz_get",
+        "observability_row_id": "observability_health_get",
+    },
+    {
+        "checkpoint_id": "metrics_route_surface_parity",
+        "service_api_row_id": "api_metrics_get",
+        "observability_row_id": "observability_metrics_get",
+    },
+)
 
 
 def _dedupe_preserve_order(items: list[str]) -> list[str]:
@@ -197,6 +294,7 @@ def _build_matrix_rows() -> list[dict[str, Any]]:
             {
                 "row_id": row["row_id"],
                 "surface": row["surface"],
+                "route_class": row["route_class"],
                 "route": row["route"],
                 "method": row["method"],
                 "expected_status": row["expected_status"],
@@ -206,6 +304,81 @@ def _build_matrix_rows() -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _build_matrix_row_map(matrix_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    row_map: dict[str, dict[str, Any]] = {}
+    for row in matrix_rows:
+        row_map[str(row["row_id"])] = row
+    return row_map
+
+
+def _compute_route_class_coverage(
+    matrix_rows: list[dict[str, Any]],
+) -> tuple[str, str]:
+    observed_classes = {
+        str(row["route_class"])
+        for row in matrix_rows
+        if isinstance(row.get("route_class"), str) and row.get("route_class")
+    }
+    missing_classes = sorted(set(REQUIRED_ROUTE_CLASSES) - observed_classes)
+    if missing_classes:
+        fail(
+            "service api observability route compatibility matrix missing "
+            f"route classes: {','.join(missing_classes)}"
+        )
+    return "verified", ",".join(sorted(observed_classes))
+
+
+def _compute_route_parity_checkpoints(
+    matrix_rows: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    row_map = _build_matrix_row_map(matrix_rows)
+    checkpoints: list[dict[str, str]] = []
+    for checkpoint in PARITY_CHECKPOINTS:
+        checkpoint_id = checkpoint["checkpoint_id"]
+        service_row_id = checkpoint["service_api_row_id"]
+        observability_row_id = checkpoint["observability_row_id"]
+        service_row = row_map.get(service_row_id)
+        observability_row = row_map.get(observability_row_id)
+        if service_row is None or observability_row is None:
+            fail(
+                "service api observability route compatibility parity checkpoint "
+                f"row missing: {checkpoint_id}"
+            )
+        for field in ("route", "method", "expected_status", "expected_content_type"):
+            if service_row.get(field) != observability_row.get(field):
+                fail(
+                    "service api observability route compatibility parity checkpoint "
+                    f"mismatch: {checkpoint_id}:{field}"
+                )
+        checkpoints.append(
+            {
+                "checkpoint_id": checkpoint_id,
+                "service_api_row_id": service_row_id,
+                "observability_row_id": observability_row_id,
+                "parity_status": "verified",
+            }
+        )
+    return checkpoints
+
+
+def _compute_fail_closed_checkpoint_status(matrix_rows: list[dict[str, Any]]) -> str:
+    service_negative_path = any(
+        row.get("surface") == "service_api" and int(row.get("expected_status", 0)) >= 400
+        for row in matrix_rows
+    )
+    observability_negative_path = any(
+        row.get("surface") == "observability_endpoint"
+        and int(row.get("expected_status", 0)) >= 400
+        for row in matrix_rows
+    )
+    if not service_negative_path or not observability_negative_path:
+        fail(
+            "service api observability route compatibility matrix missing "
+            "fail-closed branch coverage"
+        )
+    return "verified"
 
 
 def _run_lane(args: argparse.Namespace) -> int:
@@ -239,6 +412,11 @@ def _run_lane(args: argparse.Namespace) -> int:
         )
 
     matrix_rows = _build_matrix_rows()
+    route_class_coverage_status, route_classes_csv = _compute_route_class_coverage(
+        matrix_rows
+    )
+    parity_checkpoints = _compute_route_parity_checkpoints(matrix_rows)
+    fail_closed_checkpoint_status = _compute_fail_closed_checkpoint_status(matrix_rows)
     service_api_rows = sum(1 for row in matrix_rows if row["surface"] == "service_api")
     observability_rows = sum(
         1 for row in matrix_rows if row["surface"] == "observability_endpoint"
@@ -253,6 +431,12 @@ def _run_lane(args: argparse.Namespace) -> int:
         "route_compatibility_matrix_status": "verified",
         "service_api_route_matrix_status": "verified",
         "observability_route_matrix_status": "verified",
+        "route_parity_checkpoint_status": "verified",
+        "fail_closed_checkpoint_status": fail_closed_checkpoint_status,
+        "route_class_coverage_status": route_class_coverage_status,
+        "route_classes_csv": route_classes_csv,
+        "parity_checkpoint_count": len(parity_checkpoints),
+        "parity_checkpoints": parity_checkpoints,
         "fail_closed_status": "verified",
         "performance_budget_status": "verified",
         "execution_reason_code": execution_reason_code,
@@ -277,6 +461,9 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("route_compatibility_matrix_status=verified")
     print("service_api_route_matrix_status=verified")
     print("observability_route_matrix_status=verified")
+    print("route_parity_checkpoint_status=verified")
+    print(f"fail_closed_checkpoint_status={fail_closed_checkpoint_status}")
+    print(f"route_class_coverage_status={route_class_coverage_status}")
     print("fail_closed_status=verified")
     print("performance_budget_status=verified")
     print(f"execution_reason_code={execution_reason_code}")
@@ -309,6 +496,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "route_compatibility_matrix_status",
         "service_api_route_matrix_status",
         "observability_route_matrix_status",
+        "route_parity_checkpoint_status",
+        "fail_closed_checkpoint_status",
+        "route_class_coverage_status",
         "fail_closed_status",
         "performance_budget_status",
         "execution_reason_code",
@@ -347,6 +537,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "route_compatibility_matrix_status",
         "service_api_route_matrix_status",
         "observability_route_matrix_status",
+        "route_parity_checkpoint_status",
+        "fail_closed_checkpoint_status",
+        "route_class_coverage_status",
         "fail_closed_status",
         "performance_budget_status",
     ):
@@ -430,6 +623,33 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("compatibility_row_count") != len(MATRIX_ROWS),
         "service_api_observability_route_compatibility_policy_matrix_row_count_mismatch",
     )
+    decision.reject_if(
+        report.get("parity_checkpoint_count") != len(PARITY_CHECKPOINTS),
+        "service_api_observability_route_compatibility_policy_marker_missing:parity_checkpoint_count",
+    )
+    parity_checkpoints = report.get("parity_checkpoints")
+    decision.reject_if(
+        not isinstance(parity_checkpoints, list),
+        "service_api_observability_route_compatibility_policy_marker_missing:parity_checkpoints",
+    )
+    if isinstance(parity_checkpoints, list):
+        for checkpoint in parity_checkpoints:
+            checkpoint_id = (
+                checkpoint.get("checkpoint_id")
+                if isinstance(checkpoint, dict)
+                else "invalid"
+            )
+            if not isinstance(checkpoint, dict):
+                decision.reject_if(
+                    True,
+                    "service_api_observability_route_compatibility_policy_marker_missing:parity_checkpoints",
+                )
+                continue
+            decision.reject_if(
+                checkpoint.get("parity_status") != "verified",
+                "service_api_observability_route_compatibility_policy_marker_missing:"
+                f"parity_status:{checkpoint_id}",
+            )
 
     for expected_row in MATRIX_ROWS:
         row_id = expected_row["row_id"]
@@ -444,6 +664,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         decision.reject_if(
             observed.get("surface") != expected_row["surface"],
             f"service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch:{row_id}",
+        )
+        decision.reject_if(
+            observed.get("route_class") != expected_row["route_class"],
+            f"service_api_observability_route_compatibility_policy_matrix_row_invalid:{row_id}",
         )
         decision.reject_if(
             observed.get("route") != expected_row["route"],
@@ -542,6 +766,17 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
         _check_policy(policy_args)
 
         payload = json.loads(summary_report.read_text(encoding="utf-8"))
+        for required_marker in (
+            "route_parity_checkpoint_status",
+            "fail_closed_checkpoint_status",
+            "route_class_coverage_status",
+        ):
+            if payload.get(required_marker) != "verified":
+                fail(
+                    "service api observability route compatibility report missing "
+                    f"marker: {required_marker}=verified"
+                )
+
         for row in payload.get("matrix_rows", []):
             if row.get("row_id") == "api_healthz_get":
                 row["expected_status"] = 201
@@ -579,6 +814,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "validate_service_api_observability_route_compatibility_live.sh",
             "check_service_api_observability_route_compatibility_live_policy.sh",
             "validate_service_api_observability_route_compatibility_live_contract_lane.sh",
+            "route_parity_checkpoint_status=verified",
+            "fail_closed_checkpoint_status=verified",
+            "route_class_coverage_status=verified",
         ]
         for marker in required_doc_markers:
             if marker not in architecture_text:
@@ -605,6 +843,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "lane_mode": args.mode,
             "service_api_observability_route_compatibility_contract_status": "verified",
             "service_api_observability_route_compatibility_policy_status": "verified",
+            "route_parity_checkpoint_status": "verified",
+            "fail_closed_checkpoint_status": "verified",
+            "fail_closed_tamper_status": "verified",
             "docs_contract_status": "verified",
             "performance_budget_status": "verified",
             "fail_closed_reason_code": tamper_reason_code,
@@ -629,6 +870,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
     print(f"lane_mode={args.mode}")
     print("service_api_observability_route_compatibility_contract_status=verified")
     print("service_api_observability_route_compatibility_policy_status=verified")
+    print("route_parity_checkpoint_status=verified")
+    print("fail_closed_checkpoint_status=verified")
+    print("fail_closed_tamper_status=verified")
     print("docs_contract_status=verified")
     print("performance_budget_status=verified")
     print(
