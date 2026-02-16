@@ -68,6 +68,22 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - panic-replacement taxonomy drift and runtime evidence-output drift force `NO-GO` (`Regression: #4455`).
 
+## Dependency-License Metadata/Docs Mismatch Gate (Issue #4456)
+- Validation commands:
+  - `bash scripts/ci/test_check_workspace_license_policy.sh`
+  - `bash scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh`
+- Required fail-closed mismatch markers:
+  - `license_mismatch`
+  - `license_missing`
+  - `manifest_invalid_toml`
+  - `package_section_missing`
+  - `readme_webpki_roots_reference_missing`
+  - `readme_no_default_features_marker_missing`
+  - `ci_strategy_no_default_features_check_missing`
+- Regression policy:
+  - dependency/license metadata drift or docs mismatch acceptance forces `NO-GO`
+    (`Regression: #4456`).
+
 ## TLS Dependency-Posture Gate (Issues #4480, #4481)
 - Checker command:
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`

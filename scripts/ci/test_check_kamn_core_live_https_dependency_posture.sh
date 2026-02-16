@@ -157,6 +157,60 @@ if ! printf '%s\n' "$readme_failure_output" | grep -q '^reason_codes_csv=readme_
   exit 1
 fi
 
+README_DEP_DRIFT_FIXTURE="$TMP_DIR/README.dep-drift.md"
+cp "$ROOT_DIR/README.md" "$README_DEP_DRIFT_FIXTURE"
+sed -i '/`webpki-roots`/d' "$README_DEP_DRIFT_FIXTURE"
+
+set +e
+readme_dep_drift_output="$(bash "$CHECKER" --readme "$README_DEP_DRIFT_FIXTURE" 2>&1)"
+readme_dep_drift_code=$?
+set -e
+
+if [ "$readme_dep_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when README dependency references drift" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$readme_dep_drift_output" | grep -q 'README must mention dependency `webpki-roots`'; then
+  echo "expected README dependency-reference drift marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$readme_dep_drift_output" | grep -q '^reason_codes_csv=readme_webpki_roots_reference_missing$'; then
+  echo "expected deterministic README dependency-reference reason code from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$readme_dep_drift_output" | grep -q '^reason_codes_value=readme_webpki_roots_reference_missing$'; then
+  echo "expected deterministic README dependency-reference reason value marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$readme_dep_drift_output" | grep -q '^reason_class=violation$'; then
+  echo "expected deterministic reason-class marker from checker on README dependency drift" >&2
+  exit 1
+fi
+
+CI_STRATEGY_DRIFT_FIXTURE="$TMP_DIR/ci-strategy-drift.md"
+cp "$ROOT_DIR/docs/ci/strategy.md" "$CI_STRATEGY_DRIFT_FIXTURE"
+sed -i '/cargo check -p kamn-core --no-default-features/d' "$CI_STRATEGY_DRIFT_FIXTURE"
+
+set +e
+ci_strategy_drift_output="$(bash "$CHECKER" --ci-strategy "$CI_STRATEGY_DRIFT_FIXTURE" 2>&1)"
+ci_strategy_drift_code=$?
+set -e
+
+if [ "$ci_strategy_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when CI strategy dependency posture commands drift" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$ci_strategy_drift_output" | grep -q 'CI strategy must mention no-default-features check command'; then
+  echo "expected CI strategy no-default-features drift marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ci_strategy_drift_output" | grep -q '^reason_codes_csv=ci_strategy_no_default_features_check_missing$'; then
+  echo "expected deterministic CI strategy no-default-features reason code from checker" >&2
+  exit 1
+fi
+
 if [ ! -f "$TLS_HARDENING_DOC" ]; then
   echo "expected tls hardening doc to exist" >&2
   exit 1

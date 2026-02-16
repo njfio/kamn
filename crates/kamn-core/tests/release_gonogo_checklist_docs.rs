@@ -87,6 +87,21 @@ fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gat
 }
 
 #[test]
+fn checklist_contains_dependency_license_metadata_docs_mismatch_gate() {
+    assert!(CHECKLIST.contains("## Dependency-License Metadata/Docs Mismatch Gate (Issue #4456)"));
+    assert!(CHECKLIST.contains("scripts/ci/test_check_workspace_license_policy.sh"));
+    assert!(CHECKLIST.contains("scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"));
+    assert!(CHECKLIST.contains("license_mismatch"));
+    assert!(CHECKLIST.contains("license_missing"));
+    assert!(CHECKLIST.contains("manifest_invalid_toml"));
+    assert!(CHECKLIST.contains("package_section_missing"));
+    assert!(CHECKLIST.contains("readme_webpki_roots_reference_missing"));
+    assert!(CHECKLIST.contains("readme_no_default_features_marker_missing"));
+    assert!(CHECKLIST.contains("ci_strategy_no_default_features_check_missing"));
+    assert!(CHECKLIST.contains("Regression: #4456"));
+}
+
+#[test]
 fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
     assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));
