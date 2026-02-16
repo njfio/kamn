@@ -100,6 +100,17 @@ Execution status now emits deterministic signer readiness markers:
 - `signer_quorum_satisfied`
 - `signer_quorum_linked`
 
+### Signer Key Decode Zeroization Guarantees
+
+- `signer_decode_zeroization_contract_version=v1`
+- Decode-path zeroization markers:
+  - `signer_decode_zeroization_success_path=private_key_hex.zeroize+private_key_bytes.zeroize`
+  - `signer_decode_zeroization_failure_path=decoded.zeroize+private_key_hex.zeroize`
+- Redaction marker:
+  - `signer_decode_error_redaction_policy=raw_private_key_value_never_emitted`
+- Contract command:
+  - `cargo test -p kamn-node --test signer_secret_hygiene_contract -- --nocapture`
+
 ## Validation Evidence
 
 Primary tests:

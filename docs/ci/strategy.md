@@ -3582,6 +3582,16 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `signer.rs` line budget overflow fails with `signer.rs line budget exceeded`.
   - signer extraction ownership marker drift (missing `mod managed_backend`, `mod nonce`, `mod signer_policy`, or missing re-exports) fails the guard target.
 
+### Signer Secret Redaction Regression Guard
+- `signer_secret_redaction_regression_guard_status=active`
+- `signer_secret_redaction_policy=raw_private_key_value_never_emitted`
+- Guard commands:
+  - `cargo test -p kamn-node signer::tests::regression_signer_private_key_decode_failure_redacts_sensitive_input -- --exact --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_hygiene_contract -- --nocapture`
+- Fail-closed policy:
+  - decode-failure regression must verify raw private-key input is absent from error surfaces.
+  - source/docs marker drift for signer decode zeroization and redaction contracts fails the guard target.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.

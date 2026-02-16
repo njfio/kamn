@@ -588,6 +588,34 @@ mod tests {
     }
 
     #[test]
+    fn regression_signer_private_key_decode_failure_redacts_sensitive_input() {
+        // Regression: #3914
+        let sensitive_input = "secretshouldnotappear000";
+        let mut private_key_hex = sensitive_input.to_owned();
+        let error = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+            &mut private_key_hex,
+            TEST_PRIVATE_KEY_ENV,
+        )
+        .expect_err("invalid private key material must fail closed");
+        let message = match &error {
+            ConfigError::RuntimeKolmeLive(message) => message,
+            _ => unreachable!("decode failure should map to RuntimeKolmeLive"),
+        };
+        assert!(
+            message.contains("invalid hex character"),
+            "decode failure must remain deterministic"
+        );
+        assert!(
+            !message.contains(sensitive_input),
+            "decode failure must not echo raw private key input"
+        );
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "private key hex buffer must be scrubbed after decode failure"
+        );
+    }
+
+    #[test]
     fn unit_nonce_retry_classifier_marks_transient_provider_errors() {
         assert_eq!(
             classify_nonce_retry_category(&KolmeRuntimeCommitProviderError::Timeout),
