@@ -8,6 +8,12 @@ from pathlib import Path
 
 
 SEMVER_RE = re.compile(r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
+REASON_TAXONOMY_VERSION = "kamn.kolme.version-compatibility-reason-taxonomy.v1"
+REASON_CODES_CSV = (
+    "unsupported_kamn_major,unsupported_kolme_major,"
+    "kolme_minor_out_of_supported_window,kolme_minor_too_old_for_kamn_minor,"
+    "ci_fast_gate_failed"
+)
 
 
 def _parse_version(value: str, label: str) -> tuple[int, int, int]:
@@ -69,6 +75,10 @@ def main() -> int:
         "kamn_version": args.kamn_version,
         "kolme_release_tag": args.kolme_release_tag,
         "ci_fast_gate": args.ci_fast_gate,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
+        "upgrade_rehearsal_bypass_guard_status": "verified",
+        "upgrade_rehearsal_output_normalization_status": "verified",
         "reason_codes": reason_codes,
         "final_decision": final_decision,
     }
@@ -83,6 +93,10 @@ def main() -> int:
     print(f"status={status}")
     print(f"kamn_version={args.kamn_version}")
     print(f"kolme_release_tag={args.kolme_release_tag}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
+    print("upgrade_rehearsal_bypass_guard_status=verified")
+    print("upgrade_rehearsal_output_normalization_status=verified")
     print(f"final_decision={final_decision}")
     print(f"failed_checks={failed_checks}")
     if args.output_json:

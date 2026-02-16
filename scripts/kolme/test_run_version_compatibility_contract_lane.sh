@@ -99,6 +99,8 @@ required_coverage_markers=(
   "run_block_fallback_reconciliation_contract_lane.sh"
   "generate_fork_compatibility_evidence.py"
   "check_fork_compatibility_policy.py"
+  "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+  "upgrade_rehearsal_bypass_guard_status"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then

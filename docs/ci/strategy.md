@@ -1348,6 +1348,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
     - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
+  - upgrade compatibility governance emits deterministic taxonomy and rehearsal-normalization markers:
+    - `reason_taxonomy_version=kamn.kolme.version-compatibility-reason-taxonomy.v1`
+    - `reason_taxonomy_version=kamn.kolme.fork-compatibility-reason-taxonomy.v1`
+    - `reason_codes_csv=unsupported_kamn_major,unsupported_kolme_major,kolme_minor_out_of_supported_window,kolme_minor_too_old_for_kamn_minor,ci_fast_gate_failed`
+    - `reason_codes_csv=unsupported_upstream_major,unsupported_fork_major,upstream_minor_out_of_supported_window,fork_minor_out_of_supported_window,fork_release_tag_mismatch,fork_ref_missing,ci_fast_gate_failed`
+    - `upgrade_rehearsal_bypass_guard_status=verified`
+    - `upgrade_rehearsal_output_normalization_status=verified`
+  - compatibility policy checker fails closed on taxonomy or rehearsal bypass drift:
+    - `report_reason_taxonomy_version_mismatch`
+    - `report_reason_codes_csv_mismatch`
+    - `report_upgrade_rehearsal_bypass_guard_status_mismatch`
   - signature parity command-surface tests remain aggregate `ci-tools` only (not fast-gate default):
     - `bash scripts/kolme/test_run_signature_parity_matrix.sh`
     - `bash scripts/kolme/test_check_signature_parity_policy.sh`

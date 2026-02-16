@@ -23,6 +23,12 @@ FORK_FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_compatibility/fork_compatibility_
 ROADMAP_DOC = ROOT_DIR / "docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
 MAX_SECONDS = 60
+VERSION_COMPAT_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.version-compatibility-reason-taxonomy.v1"
+)
+FORK_COMPAT_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+)
 
 
 def run_capture(command: list[str]) -> tuple[int, str]:
@@ -113,6 +119,15 @@ def main() -> int:
         if "final_decision=GO" not in go_output:
             print("expected supported Kolme/KAMN version pair to produce GO", file=sys.stderr)
             return 1
+        if (
+            "reason_taxonomy_version="
+            f"{VERSION_COMPAT_REASON_TAXONOMY_VERSION}"
+        ) not in go_output:
+            print("expected version compatibility taxonomy marker for GO path", file=sys.stderr)
+            return 1
+        if "upgrade_rehearsal_bypass_guard_status=verified" not in go_output:
+            print("expected upgrade rehearsal bypass guard marker for GO path", file=sys.stderr)
+            return 1
 
         no_go_code, no_go_output = run_capture(
             [
@@ -133,6 +148,12 @@ def main() -> int:
             return 1
         if "final_decision=NO-GO" not in no_go_output:
             print("expected unsupported Kolme/KAMN version pair to produce NO-GO", file=sys.stderr)
+            return 1
+        if (
+            "reason_taxonomy_version="
+            f"{VERSION_COMPAT_REASON_TAXONOMY_VERSION}"
+        ) not in no_go_output:
+            print("expected version compatibility taxonomy marker for NO-GO path", file=sys.stderr)
             return 1
 
         fork_go_code, fork_go_output = run_capture(
@@ -158,6 +179,15 @@ def main() -> int:
             return fork_go_code
         if "final_decision=GO" not in fork_go_output:
             print("expected synced fork tuple to produce GO", file=sys.stderr)
+            return 1
+        if (
+            "reason_taxonomy_version="
+            f"{FORK_COMPAT_REASON_TAXONOMY_VERSION}"
+        ) not in fork_go_output:
+            print("expected fork compatibility taxonomy marker for GO path", file=sys.stderr)
+            return 1
+        if "upgrade_rehearsal_bypass_guard_status=verified" not in fork_go_output:
+            print("expected upgrade rehearsal bypass guard marker for fork GO path", file=sys.stderr)
             return 1
 
         fork_no_go_code, fork_no_go_output = run_capture(
@@ -216,6 +246,15 @@ def main() -> int:
             return fork_policy_go_code
         if "final_decision=GO" not in fork_policy_go_output:
             print("expected fork policy checker GO path to pass", file=sys.stderr)
+            return 1
+        if (
+            "reason_taxonomy_version="
+            f"{FORK_COMPAT_REASON_TAXONOMY_VERSION}"
+        ) not in fork_policy_go_output:
+            print("expected fork policy checker taxonomy marker for GO path", file=sys.stderr)
+            return 1
+        if "upgrade_rehearsal_bypass_guard_status=verified" not in fork_policy_go_output:
+            print("expected fork policy checker bypass guard marker for GO path", file=sys.stderr)
             return 1
 
         fork_policy_no_go_code, fork_policy_no_go_output = run_capture(
