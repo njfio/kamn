@@ -394,7 +394,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
         P2pTransportError::Libp2pRuntimeAdapterChannelClosed(operation)
     }
 
-    fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
+    pub(super) fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
         if self
             .command_tx
@@ -411,7 +411,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Connect))?
     }
 
-    fn discover(
+    pub(super) fn discover(
         &self,
         requester_peer_id: &str,
         topic: &str,
@@ -433,7 +433,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Discover))?
     }
 
-    fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
+    pub(super) fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
         if self
             .command_tx
@@ -450,7 +450,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Publish))?
     }
 
-    fn drain_inbox(
+    pub(super) fn drain_inbox(
         &self,
         recipient_peer_id: &str,
     ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
@@ -470,7 +470,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Receive))?
     }
 
-    fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
+    pub(super) fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
         if self
             .command_tx
