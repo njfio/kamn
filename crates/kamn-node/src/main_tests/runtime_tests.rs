@@ -383,6 +383,19 @@ fn unit_log_config_parses_level_and_format_inputs() {
 }
 
 #[test]
+fn unit_log_config_parses_bootstrap_level_with_whitespace_and_case_insensitive_inputs() {
+    let config = resolve_log_config_from_inputs(Some(" WARN "), Some(" JSON "))
+        .expect("bootstrap log config inputs should parse after trim/lowercase normalization");
+    assert_eq!(
+        config,
+        NodeLogConfig {
+            level: NodeLogLevel::Warn,
+            format: NodeLogFormat::Json,
+        }
+    );
+}
+
+#[test]
 fn unit_log_renderer_renders_json_event_fields() {
     let line = render_log_event_line(
         NodeLogConfig {
@@ -400,6 +413,52 @@ fn unit_log_renderer_renders_json_event_fields() {
     assert!(line.contains("\"event\":\"kolme.live.submit.start\""));
     assert!(line.contains("\"correlation_id\":\"runtime-commit:abc\""));
     assert!(line.contains("\"provider_hint\":\"local\""));
+}
+
+#[test]
+fn regression_log_renderer_projects_default_correlation_and_reason_fields_when_missing() {
+    // Regression: #4120
+    let line = render_log_event_line(
+        NodeLogConfig {
+            level: NodeLogLevel::Info,
+            format: NodeLogFormat::Json,
+        },
+        NodeLogLevel::Info,
+        "node.runtime.bootstrap.plan.ready",
+        &[("component", "planner")],
+    );
+    assert_eq!(
+        extract_json_string_field(&line, "correlation_id").as_deref(),
+        Some("none"),
+        "structured events must project deterministic fallback correlation marker"
+    );
+    assert_eq!(
+        extract_json_string_field(&line, "reason_code").as_deref(),
+        Some("none"),
+        "structured events must project deterministic fallback reason marker"
+    );
+}
+
+#[test]
+fn regression_log_renderer_text_projects_default_correlation_and_reason_fields_when_missing() {
+    // Regression: #4120
+    let line = render_log_event_line(
+        NodeLogConfig {
+            level: NodeLogLevel::Info,
+            format: NodeLogFormat::Text,
+        },
+        NodeLogLevel::Info,
+        "node.runtime.bootstrap.plan.ready",
+        &[("component", "planner")],
+    );
+    assert!(
+        line.contains("correlation_id=none"),
+        "text events must project deterministic fallback correlation marker"
+    );
+    assert!(
+        line.contains("reason_code=none"),
+        "text events must project deterministic fallback reason marker"
+    );
 }
 
 #[test]

@@ -90,6 +90,33 @@ Regression markers:
 
 - `Regression: #4106`
 
+## Structured Logging Bootstrap Contracts
+
+`kamn-node` logging bootstrap remains deterministic for all runtime modes.
+
+Environment controls:
+
+- `KAMN_NODE_LOG_LEVEL` -> `error|warn|info|debug|trace` (trimmed, case-insensitive)
+- `KAMN_NODE_LOG_FORMAT` -> `text|json` (trimmed, case-insensitive)
+
+Deterministic defaults:
+
+- Level defaults to `info` when unset.
+- Format defaults to `text` when unset.
+- Structured event fields project fallback markers when omitted:
+  - `correlation_id=none`
+  - `reason_code=none`
+
+Validation commands:
+
+- `cargo test -p kamn-node regression_log_renderer_projects_default_correlation_and_reason_fields_when_missing -- --nocapture`
+- `cargo test -p kamn-node regression_log_renderer_text_projects_default_correlation_and_reason_fields_when_missing -- --nocapture`
+- `cargo test -p kamn-node unit_log_config_parses_bootstrap_level_with_whitespace_and_case_insensitive_inputs -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4120`
+
 ## Environment Override Contracts
 
 Environment override names map to the same key contracts regardless of config-file usage.

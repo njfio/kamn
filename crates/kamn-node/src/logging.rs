@@ -4,6 +4,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const KAMN_NODE_LOG_LEVEL_ENV: &str = "KAMN_NODE_LOG_LEVEL";
 pub(crate) const KAMN_NODE_LOG_FORMAT_ENV: &str = "KAMN_NODE_LOG_FORMAT";
+const LOG_FIELD_CORRELATION_ID: &str = "correlation_id";
+const LOG_FIELD_REASON_CODE: &str = "reason_code";
+const LOG_DEFAULT_CORRELATION_ID: &str = "none";
+const LOG_DEFAULT_REASON_CODE: &str = "none";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum NodeLogLevel {
@@ -162,12 +166,13 @@ fn render_text_log_event_line(
     event: &str,
     fields: &[(&str, &str)],
 ) -> String {
+    let normalized_fields = normalize_log_fields(fields);
     let mut line = format!(
         "ts_unix_ms={timestamp_ms} level={} event={}",
         level.as_str(),
         render_text_field_value(event)
     );
-    for (key, value) in fields {
+    for &(key, value) in &normalized_fields {
         line.push(' ');
         line.push_str(key);
         line.push('=');
@@ -182,17 +187,18 @@ fn render_json_log_event_line(
     event: &str,
     fields: &[(&str, &str)],
 ) -> String {
+    let normalized_fields = normalize_log_fields(fields);
     let mut line = format!(
         "{{\"ts_unix_ms\":{timestamp_ms},\"level\":\"{}\",\"event\":\"{}\"",
         level.as_str(),
         escape_json_string(event)
     );
-    if fields.is_empty() {
+    if normalized_fields.is_empty() {
         line.push('}');
         return line;
     }
     line.push_str(",\"fields\":{");
-    for (index, (key, value)) in fields.iter().enumerate() {
+    for (index, (key, value)) in normalized_fields.iter().enumerate() {
         if index > 0 {
             line.push(',');
         }
@@ -204,6 +210,41 @@ fn render_json_log_event_line(
     }
     line.push_str("}}");
     line
+}
+
+fn normalize_log_fields<'a>(fields: &'a [(&'a str, &'a str)]) -> Vec<(&'a str, &'a str)> {
+    let mut normalized = Vec::with_capacity(fields.len() + 2);
+    let mut has_correlation_id = false;
+    let mut has_reason_code = false;
+
+    for &(key, value) in fields {
+        if key == LOG_FIELD_CORRELATION_ID {
+            if value.trim().is_empty() {
+                continue;
+            }
+            has_correlation_id = true;
+            normalized.push((key, value));
+            continue;
+        }
+        if key == LOG_FIELD_REASON_CODE {
+            if value.trim().is_empty() {
+                continue;
+            }
+            has_reason_code = true;
+            normalized.push((key, value));
+            continue;
+        }
+        normalized.push((key, value));
+    }
+
+    if !has_correlation_id {
+        normalized.push((LOG_FIELD_CORRELATION_ID, LOG_DEFAULT_CORRELATION_ID));
+    }
+    if !has_reason_code {
+        normalized.push((LOG_FIELD_REASON_CODE, LOG_DEFAULT_REASON_CODE));
+    }
+
+    normalized
 }
 
 fn render_text_field_value(value: &str) -> String {
