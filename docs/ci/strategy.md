@@ -1272,13 +1272,18 @@ Fast-gate command contract coverage is intentionally split:
 - Staging rehearsal runbook/boundary governance markers:
   - `rehearsal_runbook_contract_parity_status=verified`
   - `rehearsal_boundary_thresholds_schema_version=kamn.release.staging-rehearsal-boundary-thresholds.v1`
+  - `rehearsal_boundary_reason_taxonomy_status=verified`
+  - `rehearsal_boundary_reason_taxonomy_version=kamn.release.staging-rehearsal-boundary-reason-taxonomy.v1`
+  - `rehearsal_boundary_reason_codes_csv=rehearsal_boundary_ci_smoke_seconds_exceeded,rehearsal_boundary_local_heavy_opt_in_missing,rehearsal_runbook_contract_parity_mismatch`
   - `rehearsal_boundary_ci_smoke_max_seconds=120`
   - `rehearsal_boundary_local_heavy_max_seconds=900`
+  - local-heavy run path remains explicit opt-in: `KAMN_STAGING_REHEARSAL_LOCAL_HEAVY_OPT_IN=1`
   - fail-closed drift reason codes:
     - `rehearsal_boundary_ci_smoke_seconds_exceeded`
     - `rehearsal_boundary_local_heavy_opt_in_missing`
     - `rehearsal_runbook_contract_parity_mismatch`
   - `Regression: #4501`
+  - `Regression: #4502`
 - Cost boundary policy:
   - `scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh` remains aggregate-only (`ci-tools`) and excluded from `ci-fast-gate`.
   - `scripts/kolme/test_validate_message_proof_anchoring_live.sh` remains local-heavy/manual-opt-in and excluded from `ci-fast-gate`.

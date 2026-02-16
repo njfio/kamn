@@ -43,6 +43,58 @@ if ! grep -q "staging rehearsal contract lane tests passed." "$TMP_OUT"; then
   echo "expected staging rehearsal contract lane success marker" >&2
   exit 1
 fi
+if ! grep -q "^rehearsal_boundary_reason_taxonomy_status=verified$" "$TMP_OUT"; then
+  echo "expected staging rehearsal contract lane to emit boundary reason taxonomy status marker" >&2
+  exit 1
+fi
+if ! grep -q "^rehearsal_boundary_reason_taxonomy_version=kamn.release.staging-rehearsal-boundary-reason-taxonomy.v1$" "$TMP_OUT"; then
+  echo "expected staging rehearsal contract lane to emit deterministic boundary reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! grep -q "^rehearsal_boundary_reason_codes_csv=rehearsal_boundary_ci_smoke_seconds_exceeded,rehearsal_boundary_local_heavy_opt_in_missing,rehearsal_runbook_contract_parity_mismatch$" "$TMP_OUT"; then
+  echo "expected staging rehearsal contract lane to emit deterministic boundary reason code taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "^ci_smoke_lane_cost_profile=low$" "$TMP_OUT"; then
+  echo "expected staging rehearsal contract lane to declare ci smoke low-cost profile marker" >&2
+  exit 1
+fi
+if ! grep -q "^local_heavy_lane_execution_mode=opt_in$" "$TMP_OUT"; then
+  echo "expected staging rehearsal contract lane to declare local-heavy opt-in execution marker" >&2
+  exit 1
+fi
+
+set +e
+ci_smoke_overflow_output="$(bash "$FAST_SCRIPT" --max-seconds 121 2>&1)"
+ci_smoke_overflow_code=$?
+set -e
+if [ "$ci_smoke_overflow_code" -eq 0 ]; then
+  echo "expected staging rehearsal fast-lane runner to fail when ci smoke max-seconds exceeds boundary" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ci_smoke_overflow_output" | grep -Fq "rehearsal_boundary_ci_smoke_seconds_exceeded"; then
+  echo "expected ci smoke boundary overflow to emit deterministic fail-closed reason code marker" >&2
+  exit 1
+fi
+
+set +e
+missing_opt_in_output="$(bash "$DEEP_SCRIPT" 2>&1)"
+missing_opt_in_code=$?
+set -e
+if [ "$missing_opt_in_code" -eq 0 ]; then
+  echo "expected staging rehearsal deep-lane runner to require explicit local-heavy opt-in" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_opt_in_output" | grep -Fq "rehearsal_boundary_local_heavy_opt_in_missing"; then
+  echo "expected missing local-heavy opt-in to emit deterministic fail-closed reason code marker" >&2
+  exit 1
+fi
+
+deep_opt_in_output="$(KAMN_STAGING_REHEARSAL_LOCAL_HEAVY_OPT_IN=1 bash "$DEEP_SCRIPT")"
+if ! printf '%s\n' "$deep_opt_in_output" | grep -q "staging rehearsal deep lane tests passed."; then
+  echo "expected staging rehearsal deep-lane run to pass when local-heavy opt-in is explicit" >&2
+  exit 1
+fi
 
 if [ ! -L "$FAST_SCRIPT" ]; then
   echo "expected staging rehearsal contract lane wrapper to be a dispatcher symlink" >&2
@@ -195,6 +247,21 @@ if ! grep -Fq "rehearsal_boundary_thresholds_schema_version=kamn.release.staging
   exit 1
 fi
 
+if ! grep -Fq "rehearsal_boundary_reason_taxonomy_status=verified" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal boundary reason taxonomy status marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_reason_taxonomy_version=kamn.release.staging-rehearsal-boundary-reason-taxonomy.v1" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal boundary reason taxonomy version marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_reason_codes_csv=rehearsal_boundary_ci_smoke_seconds_exceeded,rehearsal_boundary_local_heavy_opt_in_missing,rehearsal_runbook_contract_parity_mismatch" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal boundary reason taxonomy reason codes marker" >&2
+  exit 1
+fi
+
 if ! grep -Fq "rehearsal_boundary_ci_smoke_max_seconds=120" "$CI_STRATEGY_DOC"; then
   echo "expected CI strategy doc to include rehearsal smoke boundary max-seconds marker" >&2
   exit 1
@@ -225,6 +292,11 @@ if ! grep -Fq "Regression: #4501" "$CI_STRATEGY_DOC"; then
   exit 1
 fi
 
+if ! grep -Fq "Regression: #4502" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal boundary taxonomy/enforcement regression marker" >&2
+  exit 1
+fi
+
 if ! grep -Fq "rehearsal_runbook_contract_parity_status=verified" "$INCIDENT_READINESS_DOC"; then
   echo "expected incident readiness ops doc to include rehearsal runbook-contract parity marker" >&2
   exit 1
@@ -232,6 +304,21 @@ fi
 
 if ! grep -Fq "rehearsal_boundary_thresholds_schema_version=kamn.release.staging-rehearsal-boundary-thresholds.v1" "$INCIDENT_READINESS_DOC"; then
   echo "expected incident readiness ops doc to include rehearsal boundary thresholds schema marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_reason_taxonomy_status=verified" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal boundary reason taxonomy status marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_reason_taxonomy_version=kamn.release.staging-rehearsal-boundary-reason-taxonomy.v1" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal boundary reason taxonomy version marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_reason_codes_csv=rehearsal_boundary_ci_smoke_seconds_exceeded,rehearsal_boundary_local_heavy_opt_in_missing,rehearsal_runbook_contract_parity_mismatch" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal boundary reason taxonomy reason codes marker" >&2
   exit 1
 fi
 
@@ -254,6 +341,22 @@ if [ -z "$strategy_boundary_local_heavy" ] || [ -z "$incident_boundary_local_hea
 fi
 if [ "$strategy_boundary_local_heavy" != "$incident_boundary_local_heavy" ]; then
   echo "expected rehearsal local-heavy boundary markers to remain parity-aligned across docs" >&2
+  exit 1
+fi
+
+strategy_boundary_reason_taxonomy="$(grep -Eo 'rehearsal_boundary_reason_taxonomy_version=[^ ]+' "$CI_STRATEGY_DOC" | head -n1)"
+incident_boundary_reason_taxonomy="$(grep -Eo 'rehearsal_boundary_reason_taxonomy_version=[^ ]+' "$INCIDENT_READINESS_DOC" | head -n1)"
+if [ -z "$strategy_boundary_reason_taxonomy" ] || [ -z "$incident_boundary_reason_taxonomy" ]; then
+  echo "expected rehearsal boundary reason taxonomy version markers in both CI strategy and incident readiness docs" >&2
+  exit 1
+fi
+if [ "$strategy_boundary_reason_taxonomy" != "$incident_boundary_reason_taxonomy" ]; then
+  echo "expected rehearsal boundary reason taxonomy version markers to remain parity-aligned across docs" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #4502" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal boundary taxonomy/enforcement regression marker" >&2
   exit 1
 fi
 
