@@ -1173,6 +1173,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo check -p kamn-core --no-default-features`
 - Dependency posture checker command:
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
+- Deterministic dependency-posture reason taxonomy markers:
+  - `reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
+  - `reason_codes_csv=none|<csv>`
+  - `reason_codes_value=none|<csv>`
+- Reference hardening policy:
+  - `docs/security/tls-hardening.md`
 - Local-only profile remains fail-closed for runtime network transport calls; this profile is for deterministic/local build validation only.
 - Regression: #2756
 

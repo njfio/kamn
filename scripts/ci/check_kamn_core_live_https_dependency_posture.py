@@ -9,6 +9,9 @@ from pathlib import Path
 import tomllib
 
 SCHEMA_VERSION = "kamn.ci.kamn-core-live-https-dependency-posture-report.v1"
+REASON_TAXONOMY_VERSION = (
+    "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
+)
 EXPECTED_DEPS = ("rustls", "rustls-pemfile", "webpki-roots")
 
 
@@ -66,6 +69,7 @@ def main() -> int:
 
     checks: dict[str, str] = {}
     violations: list[str] = []
+    reason_code_set: set[str] = set()
 
     for required_path, label in (
         (manifest_path, "cargo_manifest"),
@@ -78,6 +82,7 @@ def main() -> int:
         else:
             checks[f"{label}_exists"] = "fail"
             violations.append(f"required file is missing: {required_path}")
+            reason_code_set.add(f"{label}_file_missing")
 
     manifest_data: dict[str, object] = {}
     if manifest_path.exists():
@@ -86,6 +91,7 @@ def main() -> int:
         except tomllib.TOMLDecodeError as exc:
             checks["manifest_parses"] = "fail"
             violations.append(f"failed to parse Cargo manifest: {exc}")
+            reason_code_set.add("cargo_manifest_parse_failed")
         else:
             checks["manifest_parses"] = "pass"
     else:
@@ -110,11 +116,13 @@ def main() -> int:
             violations.append(
                 f"live-https feature must include mapping `{expected_feature}`"
             )
+            reason_code_set.add(f"{key_prefix}_feature_mapping_missing")
 
         dep_config = dependencies.get(dep) if isinstance(dependencies, dict) else None
         if dep_config is None:
             checks[f"{key_prefix}_dependency_declared"] = "fail"
             violations.append(f"dependency `{dep}` must be declared under [dependencies]")
+            reason_code_set.add(f"{key_prefix}_dependency_missing")
             continue
 
         checks[f"{key_prefix}_dependency_declared"] = "pass"
@@ -123,6 +131,7 @@ def main() -> int:
         else:
             checks[f"{key_prefix}_dependency_optional"] = "fail"
             violations.append(f"dependency `{dep}` must declare optional = true")
+            reason_code_set.add(f"{key_prefix}_dependency_optional_flag_mismatch")
 
     if isinstance(dependencies, dict):
         rustls_dep = dependencies.get("rustls")
@@ -133,8 +142,10 @@ def main() -> int:
             violations.append(
                 "dependency `rustls` should disable default features for deterministic profile control"
             )
+            reason_code_set.add("rustls_default_features_not_disabled")
     else:
         checks["rustls_default_features_disabled"] = "fail"
+        reason_code_set.add("cargo_manifest_dependencies_section_missing")
 
     readme_text = read_text(readme_path) if readme_path.exists() else ""
     adr_text = read_text(adr_path) if adr_path.exists() else ""
@@ -147,24 +158,28 @@ def main() -> int:
         else:
             checks[f"readme_mentions_{key_prefix}"] = "fail"
             violations.append(f"README must mention dependency `{dep}`")
+            reason_code_set.add(f"readme_{key_prefix}_reference_missing")
 
     if "docs/architecture/adr-kamn-core-live-tls-transport.md" in readme_text:
         checks["readme_links_adr"] = "pass"
     else:
         checks["readme_links_adr"] = "fail"
         violations.append("README must link live TLS transport ADR")
+        reason_code_set.add("readme_adr_link_missing")
 
     if "cargo check -p kamn-core --no-default-features" in readme_text:
         checks["readme_mentions_no_default_features"] = "pass"
     else:
         checks["readme_mentions_no_default_features"] = "fail"
         violations.append("README must document no-default-features local profile check")
+        reason_code_set.add("readme_no_default_features_marker_missing")
 
     if "Keep these dependencies in `kamn-core` for live HTTPS transport:" in adr_text:
         checks["adr_dependency_section_present"] = "pass"
     else:
         checks["adr_dependency_section_present"] = "fail"
         violations.append("ADR must include accepted dependency posture section")
+        reason_code_set.add("adr_dependency_section_missing")
 
     for dep in EXPECTED_DEPS:
         key_prefix = dep.replace("-", "_")
@@ -173,26 +188,34 @@ def main() -> int:
         else:
             checks[f"adr_mentions_{key_prefix}"] = "fail"
             violations.append(f"ADR must mention dependency `{dep}`")
+            reason_code_set.add(f"adr_{key_prefix}_reference_missing")
 
     if "cargo check -p kamn-core --features live-https" in ci_strategy_text:
         checks["ci_strategy_mentions_live_https_feature_check"] = "pass"
     else:
         checks["ci_strategy_mentions_live_https_feature_check"] = "fail"
         violations.append("CI strategy must mention live-https feature check command")
+        reason_code_set.add("ci_strategy_live_https_feature_check_missing")
 
     if "cargo check -p kamn-core --no-default-features" in ci_strategy_text:
         checks["ci_strategy_mentions_no_default_features_check"] = "pass"
     else:
         checks["ci_strategy_mentions_no_default_features_check"] = "fail"
         violations.append("CI strategy must mention no-default-features check command")
+        reason_code_set.add("ci_strategy_no_default_features_check_missing")
 
     status = "pass" if not violations else "fail"
-    reason_codes = ["none"] if status == "pass" else ["dependency_posture_contract_violation"]
+    reason_codes = ["none"] if status == "pass" else sorted(reason_code_set)
+    reason_codes_csv = "none" if status == "pass" else ",".join(reason_codes)
+    reason_codes_value = reason_codes_csv
 
     report = {
         "schema_version": SCHEMA_VERSION,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
         "status": status,
         "reason_codes": reason_codes,
+        "reason_codes_csv": reason_codes_csv,
+        "reason_codes_value": reason_codes_value,
         "cargo_manifest": str(manifest_path),
         "readme": str(readme_path),
         "adr": str(adr_path),
@@ -209,11 +232,17 @@ def main() -> int:
 
     if status == "pass":
         print("status=ok")
+        print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+        print(f"reason_codes_csv={reason_codes_csv}")
+        print(f"reason_codes_value={reason_codes_value}")
         print("reason_codes=none")
         print("violation_count=0")
         return 0
 
     print("status=fail")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_value}")
     print(f"reason_codes={','.join(reason_codes)}")
     print(f"violation_count={len(violations)}")
     for violation in violations:
