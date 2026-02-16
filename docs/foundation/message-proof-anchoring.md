@@ -32,6 +32,14 @@ This document defines deterministic message proof anchoring behavior aligned wit
   - `ConflictingAnchorIdempotencyKey`
   - `UnknownAnchorIdempotencyKey`
   - `ChainAdapterSubmitFailed`
+- anchoring gate deterministic reason taxonomy markers:
+  - `anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1`
+  - `anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required`
+  - `anchoring_gate_reason_codes_value=none|<csv>`
+- CI/local-heavy boundary markers:
+  - `ci_smoke_local_heavy_boundary_status=verified`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
 
 ## Kolme Integration
 
@@ -46,6 +54,7 @@ This document defines deterministic message proof anchoring behavior aligned wit
 - `nonce` must be greater than zero.
 - `proof_hash` must be non-empty.
 - Conflicting same-message idempotency windows fail closed (`Regression: #2941`).
+- lifecycle-state mismatch anchoring attempts and tampered same-nonce actor payloads fail closed with deterministic reason taxonomy markers (`Regression: #4419`).
 
 ## Local Validation
 
@@ -57,6 +66,8 @@ cargo clippy -p kamn-core -- -D warnings
 cargo test -p kamn-core --test message_proof_anchoring
 cargo test -p kamn-core --test message_proof_anchoring -- functional_anchor_submission_advances_broadcast_to_included_with_typed_outcome
 cargo test -p kamn-core --test message_proof_anchoring -- integration_anchor_retry_is_duplicate_without_reapplying_state_transition
+cargo test -p kamn-core --test message_proof_anchoring -- regression_anchor_submission_rejects_lifecycle_state_mismatch_before_broadcast
+cargo test -p kamn-core --test message_proof_anchoring -- regression_anchor_submission_rejects_tampered_actor_for_same_message_nonce
 cargo test -p kamn-core --test message_proof_anchoring -- regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed
 bash scripts/kolme/run_message_proof_anchoring_contract_lane.sh
 bash scripts/kolme/validate_message_proof_anchoring_live.sh

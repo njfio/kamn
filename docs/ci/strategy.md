@@ -1246,6 +1246,15 @@ Fast-gate command contract coverage is intentionally split:
   - `scripts/kolme/test_validate_continuous_runtime_commit_live.sh`
   - `scripts/kolme/test_validate_did_lifecycle_chain_adapter_live.sh`
   - `scripts/kolme/test_validate_message_proof_anchoring_live.sh`
+- Message-proof anchoring CI boundary contract markers:
+  - `anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1`
+  - `anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required`
+  - `ci_smoke_local_heavy_boundary_status=verified`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
+- Cost boundary policy:
+  - `scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh` remains aggregate-only (`ci-tools`) and excluded from `ci-fast-gate`.
+  - `scripts/kolme/test_validate_message_proof_anchoring_live.sh` remains local-heavy/manual-opt-in and excluded from `ci-fast-gate`.
 
 Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 

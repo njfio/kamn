@@ -110,6 +110,87 @@ fn integration_anchor_retry_is_duplicate_without_reapplying_state_transition() {
 }
 
 #[test]
+fn regression_anchor_submission_rejects_lifecycle_state_mismatch_before_broadcast() {
+    // Regression: #4419
+    let mut lifecycle = MessageLifecycleStore::new();
+    let message_id = "urn:uuid:msg-anchor-regression-state-mismatch";
+    lifecycle
+        .register(
+            message_id,
+            "kamn:did:agent:sender-anchor-1",
+            vec!["kamn:did:agent:recipient-anchor-1".to_owned()],
+            "2026-02-09T00:10:00.000Z",
+            "2026-02-09T00:40:00.000Z",
+        )
+        .expect("register should succeed");
+    lifecycle
+        .transition(message_id, MessageStatus::Signed)
+        .expect("created->signed should succeed");
+
+    let mut anchoring = MessageProofAnchoringService::new();
+    let mut adapter = InMemoryMessageProofChainAdapter::new("kolme-local");
+    let error = anchoring
+        .anchor_message_proof_via_chain_adapter(
+            &mut lifecycle,
+            &mut adapter,
+            MessageProofAnchorRequest {
+                message_id: message_id.to_owned(),
+                actor_did: "kamn:did:agent:sender-anchor-1".to_owned(),
+                nonce: 1,
+                proof_hash: "fnv1a64:proof-anchor-state-mismatch".to_owned(),
+            },
+        )
+        .expect_err("anchor submission must fail closed before broadcast");
+
+    assert_eq!(error.reason_code(), "message_proof_anchor_invalid_state");
+    assert!(matches!(
+        error,
+        MessageProofAnchoringError::InvalidAnchorState { .. }
+    ));
+}
+
+#[test]
+fn regression_anchor_submission_rejects_tampered_actor_for_same_message_nonce() {
+    // Regression: #4419
+    let mut lifecycle = MessageLifecycleStore::new();
+    let message_id = "urn:uuid:msg-anchor-regression-actor-tamper";
+    register_and_advance_broadcast(&mut lifecycle, message_id);
+
+    let mut anchoring = MessageProofAnchoringService::new();
+    let mut adapter = InMemoryMessageProofChainAdapter::new("kolme-local");
+
+    anchoring
+        .anchor_message_proof_via_chain_adapter(
+            &mut lifecycle,
+            &mut adapter,
+            MessageProofAnchorRequest {
+                message_id: message_id.to_owned(),
+                actor_did: "kamn:did:agent:sender-anchor-1".to_owned(),
+                nonce: 11,
+                proof_hash: "fnv1a64:proof-anchor-actor-tamper".to_owned(),
+            },
+        )
+        .expect("first anchor should succeed");
+
+    let tampered_actor = anchoring.anchor_message_proof_via_chain_adapter(
+        &mut lifecycle,
+        &mut adapter,
+        MessageProofAnchorRequest {
+            message_id: message_id.to_owned(),
+            actor_did: "kamn:did:agent:sender-anchor-2".to_owned(),
+            nonce: 11,
+            proof_hash: "fnv1a64:proof-anchor-actor-tamper".to_owned(),
+        },
+    );
+
+    match tampered_actor {
+        Err(MessageProofAnchoringError::ConflictingAnchorIdempotencyKey { .. }) => {}
+        Err(other) => panic!("unexpected anchoring error: {other:?}"),
+        Ok(_) => panic!("tampered actor payload should fail closed"),
+    }
+}
+
+#[test]
 fn regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed() {
     // Regression: #2941
     let mut lifecycle = MessageLifecycleStore::new();

@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_message_proof_anchoring_contract_lane.sh"
+ANCHORING_GATE_REASON_TAXONOMY_VERSION="kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1"
+ANCHORING_GATE_REASON_CODES_CSV="message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required"
 
 output_json=""
 max_seconds=240
@@ -62,6 +64,34 @@ if ! printf '%s\n' "$run_output" | grep -q '^conflict_fail_closed_status=verifie
   echo "expected conflict fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^mismatch_fail_closed_status=verified$'; then
+  echo "expected mismatch fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^tamper_fail_closed_status=verified$'; then
+  echo "expected tamper fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^anchoring_gate_reason_taxonomy_version=$ANCHORING_GATE_REASON_TAXONOMY_VERSION$"; then
+  echo "expected anchoring gate reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^anchoring_gate_reason_codes_csv=$ANCHORING_GATE_REASON_CODES_CSV$"; then
+  echo "expected anchoring gate reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^ci_smoke_local_heavy_boundary_status=verified$'; then
+  echo "expected ci smoke/local-heavy boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^ci_smoke_lane_cost_profile=low$'; then
+  echo "expected ci smoke lane cost profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^local_heavy_lane_execution_mode=opt_in$'; then
+  echo "expected local-heavy lane execution mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$run_output" | grep -q '^performance_budget_status=verified$'; then
   echo "expected performance budget marker" >&2
   exit 1
@@ -72,7 +102,8 @@ set +e
 (
   cd "$ROOT_DIR"
   cargo test -p kamn-core --test message_proof_anchoring_docs -- \
-    regression_doc_marks_conflicting_idempotency_fail_closed_guard
+    regression_doc_marks_conflicting_idempotency_fail_closed_guard \
+    regression_doc_marks_mismatch_tamper_reason_taxonomy_and_ci_boundary_contracts
 ) >"$docs_output_file" 2>&1
 docs_code=$?
 set -e
@@ -98,6 +129,26 @@ fi
 if ! printf '%s\n' "$fail_closed_output" | grep -q '1 passed; 0 failed'; then
   printf '%s\n' "$fail_closed_output" >&2
   echo "expected conflict fail-closed pass-count marker" >&2
+  exit 1
+fi
+
+set +e
+mismatch_tamper_output="$({
+  cd "$ROOT_DIR"
+  cargo test -p kamn-core --test message_proof_anchoring -- \
+    regression_anchor_submission_rejects_lifecycle_state_mismatch_before_broadcast \
+    regression_anchor_submission_rejects_tampered_actor_for_same_message_nonce
+} 2>&1)"
+mismatch_tamper_code=$?
+set -e
+if [ "$mismatch_tamper_code" -ne 0 ]; then
+  printf '%s\n' "$mismatch_tamper_output" >&2
+  echo "expected mismatch/tamper fail-closed drills to pass" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$mismatch_tamper_output" | grep -q '2 passed; 0 failed'; then
+  printf '%s\n' "$mismatch_tamper_output" >&2
+  echo "expected mismatch/tamper pass-count marker" >&2
   exit 1
 fi
 
@@ -137,6 +188,12 @@ cat >"$report_json" <<JSON
   "docs_contract_status": "verified",
   "fail_closed_status": "verified",
   "fail_closed_reason_code": "message_proof_anchor_conflicting_key",
+  "anchoring_gate_reason_taxonomy_version": "${ANCHORING_GATE_REASON_TAXONOMY_VERSION}",
+  "anchoring_gate_reason_codes_csv": "${ANCHORING_GATE_REASON_CODES_CSV}",
+  "anchoring_gate_reason_codes_value": "message_proof_anchor_conflicting_key",
+  "ci_smoke_local_heavy_boundary_status": "verified",
+  "ci_smoke_lane_cost_profile": "low",
+  "local_heavy_lane_execution_mode": "opt_in",
   "performance_budget_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
@@ -153,4 +210,10 @@ echo "evidence_bundle_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=message_proof_anchor_conflicting_key"
+echo "anchoring_gate_reason_taxonomy_version=$ANCHORING_GATE_REASON_TAXONOMY_VERSION"
+echo "anchoring_gate_reason_codes_csv=$ANCHORING_GATE_REASON_CODES_CSV"
+echo "anchoring_gate_reason_codes_value=message_proof_anchor_conflicting_key"
+echo "ci_smoke_local_heavy_boundary_status=verified"
+echo "ci_smoke_lane_cost_profile=low"
+echo "local_heavy_lane_execution_mode=opt_in"
 echo "performance_budget_status=verified"
