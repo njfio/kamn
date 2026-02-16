@@ -637,6 +637,10 @@ fn functional_kolme_live_retry_emits_structured_retry_markers() {
         Some("unavailable")
     );
     assert_eq!(
+        extract_json_string_field(submit_retry_line, "reason_code").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
         extract_json_string_field(submit_retry_line, "decision").as_deref(),
         Some("retry")
     );
@@ -646,6 +650,10 @@ fn functional_kolme_live_retry_emits_structured_retry_markers() {
     );
     assert_eq!(
         extract_json_string_field(finality_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
+        extract_json_string_field(finality_retry_line, "reason_code").as_deref(),
         Some("unavailable")
     );
     assert_eq!(
@@ -740,6 +748,10 @@ fn functional_kolme_live_nonce_retry_emits_structured_retry_marker() {
         .expect("kolme-live retry flow should emit nonce retry marker");
     assert_eq!(
         extract_json_string_field(nonce_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
+        extract_json_string_field(nonce_retry_line, "reason_code").as_deref(),
         Some("unavailable")
     );
 }
@@ -2101,6 +2113,10 @@ fn regression_runtime_kolme_live_submit_retry_exhaustion_emits_terminal_decision
         Some("unavailable")
     );
     assert_eq!(
+        extract_json_string_field(terminal_retry_line, "reason_code").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
         extract_json_string_field(terminal_retry_line, "attempt").as_deref(),
         Some("3")
     );
@@ -2185,6 +2201,10 @@ fn functional_kolme_live_finality_retry_exhaustion_emits_terminal_decision_marke
     );
     assert_eq!(
         extract_json_string_field(terminal_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
+        extract_json_string_field(terminal_retry_line, "reason_code").as_deref(),
         Some("unavailable")
     );
     assert_eq!(
