@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  cat <<'EOF'
+  cat <<'USAGE'
 Usage: check_anti_flake_policy.sh [options]
 
 Evaluates anti-flake merge policy against the flaky quarantine registry.
@@ -12,11 +12,11 @@ Options:
   --max-active-entries <int>      Maximum allowed active quarantine entries.
   --expected-final-decision <GO|NO-GO>
                                   Expected final decision marker.
-  --fast-workflow-file <path>     Fast-gate workflow file for rerun-policy checks.
+  --fast-workflow-file <path>     Fast-gate workflow file for policy checks.
   --deep-workflow-file <path>     Deep-validate workflow file for rerun-policy checks.
   --output-json <path>            Output JSON policy report.
   -h, --help                      Show this help.
-EOF
+USAGE
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -80,6 +80,36 @@ fi
 reason_codes=()
 status="pass"
 final_decision="GO"
+ci_smoke_local_heavy_boundary_status="verified"
+
+# Merge-gate reliability boundary checks: CI smoke remains bounded and local-heavy lane stays opt-in.
+if [ ! -f "$fast_workflow_file" ]; then
+  reason_codes+=("ci_smoke_performance_report_step_missing")
+  reason_codes+=("ci_smoke_threshold_check_step_missing")
+  reason_codes+=("local_heavy_opt_in_boundary_missing")
+  status="fail"
+  final_decision="NO-GO"
+  ci_smoke_local_heavy_boundary_status="violation"
+else
+  if ! grep -Fq "Generate performance smoke report" "$fast_workflow_file"; then
+    reason_codes+=("ci_smoke_performance_report_step_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+  if ! grep -Fq "Check performance thresholds (smoke)" "$fast_workflow_file"; then
+    reason_codes+=("ci_smoke_threshold_check_step_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+  if ! grep -Fq "if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'" "$fast_workflow_file"; then
+    reason_codes+=("local_heavy_opt_in_boundary_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+fi
 
 if [ ! -f "$fast_workflow_file" ]; then
   reason_codes+=("rerun_policy_fast_workflow_missing")
@@ -200,6 +230,7 @@ python3 - \
   "$reason_codes_csv" \
   "$reason_codes_value" \
   "$reason_class" \
+  "$ci_smoke_local_heavy_boundary_status" \
   "$registry_file" \
   "$fast_workflow_file" \
   "$deep_workflow_file" \
@@ -217,12 +248,13 @@ reason_taxonomy_version = sys.argv[4]
 reason_codes_csv = sys.argv[5]
 reason_codes_value = sys.argv[6]
 reason_class = sys.argv[7]
-registry_file = sys.argv[8]
-fast_workflow_file = sys.argv[9]
-deep_workflow_file = sys.argv[10]
-active_entries = int(sys.argv[11])
-max_active_entries = int(sys.argv[12])
-expected_final_decision = sys.argv[13]
+ci_smoke_local_heavy_boundary_status = sys.argv[8]
+registry_file = sys.argv[9]
+fast_workflow_file = sys.argv[10]
+deep_workflow_file = sys.argv[11]
+active_entries = int(sys.argv[12])
+max_active_entries = int(sys.argv[13])
+expected_final_decision = sys.argv[14]
 
 reason_codes = [code for code in reason_codes_csv.split(",") if code]
 payload = {
@@ -234,6 +266,7 @@ payload = {
     "reason_codes_csv": reason_codes_csv,
     "reason_codes_value": reason_codes_value,
     "reason_class": reason_class,
+    "ci_smoke_local_heavy_boundary_status": ci_smoke_local_heavy_boundary_status,
     "registry_file": registry_file,
     "fast_workflow_file": fast_workflow_file,
     "deep_workflow_file": deep_workflow_file,
@@ -251,9 +284,11 @@ echo "anti_flake_policy_reason_codes=$reason_codes_csv"
 echo "anti_flake_policy_reason_codes_csv=$reason_codes_csv"
 echo "anti_flake_policy_reason_codes_value=$reason_codes_value"
 echo "anti_flake_policy_reason_class=$reason_class"
+echo "ci_smoke_local_heavy_boundary_status=$ci_smoke_local_heavy_boundary_status"
 echo "anti_flake_policy_active_entries=$active_entries"
 echo "anti_flake_policy_max_active_entries=$max_active_entries"
 echo "anti_flake_policy_registry_file=$registry_file"
+echo "anti_flake_policy_fast_workflow_file=$fast_workflow_file"
 echo "anti_flake_policy_report_file=$output_json"
 
 if [[ "$final_decision" != "GO" ]]; then
