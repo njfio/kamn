@@ -135,6 +135,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_code
   echo "expected sqlite crash-recovery live validation historical-query taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_drift_detection_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation journal replay drift detection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^checkpoint_divergence_bypass_rejection_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation checkpoint divergence bypass rejection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation journal replay taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected$'; then
+  echo "expected sqlite crash-recovery live validation journal replay taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
   echo "expected sqlite crash-recovery live validation promotion-gate marker" >&2
   exit 1
@@ -277,6 +293,18 @@ lane_report = {
     "historical_query_reason_codes_csv": summary_report.get(
         "historical_query_reason_codes_csv"
     ),
+    "journal_replay_drift_detection_status": summary_report.get(
+        "journal_replay_drift_detection_status"
+    ),
+    "checkpoint_divergence_bypass_rejection_status": summary_report.get(
+        "checkpoint_divergence_bypass_rejection_status"
+    ),
+    "journal_replay_reason_taxonomy_version": summary_report.get(
+        "journal_replay_reason_taxonomy_version"
+    ),
+    "journal_replay_reason_codes_csv": summary_report.get(
+        "journal_replay_reason_codes_csv"
+    ),
     "crash_recovery_promotion_gate_status": summary_report.get(
         "crash_recovery_promotion_gate_status"
     ),
@@ -320,6 +348,10 @@ echo "historical_query_index_status=verified"
 echo "historical_query_latency_budget_status=verified"
 echo "historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1"
 echo "historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch"
+echo "journal_replay_drift_detection_status=verified"
+echo "checkpoint_divergence_bypass_rejection_status=verified"
+echo "journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1"
+echo "journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
 echo "crash_recovery_promotion_gate_status=verified"
 echo "audit_trail_parity_status=verified"
 echo "ci_local_promotion_budget_boundary_status=verified"

@@ -43,6 +43,12 @@ HISTORICAL_QUERY_REASON_CODES_CSV = (
     "historical_query_index_drift,historical_query_latency_budget_exceeded,"
     "historical_query_consistency_mismatch"
 )
+JOURNAL_REPLAY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.journal-replay-reason-taxonomy.v1"
+)
+JOURNAL_REPLAY_REASON_CODES_CSV = (
+    "journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
+)
 DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.durability-governance-reason-taxonomy.v1"
 )
@@ -175,6 +181,12 @@ def run_lane(args: argparse.Namespace) -> int:
             HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
         ),
         "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "journal_replay_drift_detection_status": "verified",
+        "checkpoint_divergence_bypass_rejection_status": "verified",
+        "journal_replay_reason_taxonomy_version": (
+            JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
+        ),
+        "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
         "crash_recovery_promotion_gate_status": "verified",
         "audit_trail_parity_status": "verified",
         "ci_local_promotion_budget_boundary_status": "verified",
@@ -224,6 +236,13 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
     )
     print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print("journal_replay_drift_detection_status=verified")
+    print("checkpoint_divergence_bypass_rejection_status=verified")
+    print(
+        "journal_replay_reason_taxonomy_version="
+        f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
     print("crash_recovery_promotion_gate_status=verified")
     print("audit_trail_parity_status=verified")
     print("ci_local_promotion_budget_boundary_status=verified")
@@ -322,6 +341,24 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("historical_query_reason_codes_csv")
         != HISTORICAL_QUERY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_historical_query_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_drift_detection_status") != "verified",
+        "sqlite_crash_recovery_policy_journal_replay_drift_detection_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("checkpoint_divergence_bypass_rejection_status") != "verified",
+        "sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_reason_taxonomy_version")
+        != JOURNAL_REPLAY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_reason_codes_csv")
+        != JOURNAL_REPLAY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch",
     )
     checks.reject_if(
         payload.get("crash_recovery_promotion_gate_status") != "verified",
@@ -458,6 +495,16 @@ def check_policy(args: argparse.Namespace) -> int:
             HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
         ),
         "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "journal_replay_drift_detection_status": payload.get(
+            "journal_replay_drift_detection_status"
+        ),
+        "checkpoint_divergence_bypass_rejection_status": payload.get(
+            "checkpoint_divergence_bypass_rejection_status"
+        ),
+        "journal_replay_reason_taxonomy_version": (
+            JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
+        ),
+        "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
         "durability_governance_reason_taxonomy_version": (
             DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
         ),
@@ -491,6 +538,13 @@ def check_policy(args: argparse.Namespace) -> int:
         f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
     )
     print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print("journal_replay_drift_detection_status=verified")
+    print("checkpoint_divergence_bypass_rejection_status=verified")
+    print(
+        "journal_replay_reason_taxonomy_version="
+        f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
     print(
         "durability_governance_reason_taxonomy_version="
         f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"

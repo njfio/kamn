@@ -276,6 +276,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic historical-query taxonomy markers:
     `historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1`,
     `historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch`.
+  - lane emits deterministic journal-replay drift/checkpoint-divergence governance markers:
+    `journal_replay_drift_detection_status=verified`,
+    `checkpoint_divergence_bypass_rejection_status=verified`.
+  - lane emits deterministic journal-replay taxonomy markers:
+    `journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1`,
+    `journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected`.
   - lane emits deterministic promotion/audit governance markers:
     `crash_recovery_promotion_gate_status=verified`,
     `audit_trail_parity_status=verified`,
@@ -296,6 +302,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_recovery_policy_historical_query_index_status_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded`
+  - `sqlite_crash_recovery_policy_journal_replay_drift_detection_status_mismatch`
+  - `sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch`
+  - `sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch`
   - `sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch`
   - `sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch`
   - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`
