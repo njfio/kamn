@@ -42,12 +42,32 @@ if ! grep -q "^incident_gonogo_boundary_reason_codes_csv=incident_gonogo_ci_smok
   echo "expected go/no-go evidence contract lane to emit deterministic incident boundary reason-code taxonomy marker" >&2
   exit 1
 fi
+if ! grep -q "^live_gonogo_boundary_reason_taxonomy_status=verified$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit live boundary reason taxonomy status marker" >&2
+  exit 1
+fi
+if ! grep -q "^live_gonogo_boundary_reason_taxonomy_version=kamn.release.gonogo-live-boundary-reason-taxonomy.v1$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit deterministic live boundary reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! grep -q "^live_gonogo_boundary_reason_codes_csv=live_gonogo_ci_smoke_seconds_exceeded,live_gonogo_local_heavy_seconds_exceeded,live_gonogo_local_heavy_opt_in_missing,live_gonogo_evidence_convergence_mismatch$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit deterministic live boundary reason-code taxonomy marker" >&2
+  exit 1
+fi
 if ! grep -q "^incident_gonogo_ci_smoke_max_seconds=120$" "$tmp_out"; then
   echo "expected go/no-go evidence contract lane to emit CI smoke boundary max-seconds marker" >&2
   exit 1
 fi
 if ! grep -q "^incident_gonogo_local_heavy_max_seconds=900$" "$tmp_out"; then
   echo "expected go/no-go evidence contract lane to emit local-heavy boundary max-seconds marker" >&2
+  exit 1
+fi
+if ! grep -q "^live_gonogo_ci_smoke_max_seconds=120$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit live gate CI smoke boundary max-seconds marker" >&2
+  exit 1
+fi
+if ! grep -q "^live_gonogo_local_heavy_max_seconds=900$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit live gate local-heavy boundary max-seconds marker" >&2
   exit 1
 fi
 if ! grep -q "^ci_smoke_lane_cost_profile=low$" "$tmp_out"; then
@@ -113,6 +133,10 @@ if ! printf '%s\n' "$ci_smoke_overflow_output" | grep -Fq "incident_gonogo_ci_sm
   echo "expected ci smoke boundary overflow to emit deterministic fail-closed reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$ci_smoke_overflow_output" | grep -Fq "live_gonogo_ci_smoke_seconds_exceeded"; then
+  echo "expected ci smoke boundary overflow to emit deterministic live-gate fail-closed reason code marker" >&2
+  exit 1
+fi
 
 if ! grep -Fq "run_gonogo_evidence_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute fast-lane contract checks first" >&2
@@ -136,6 +160,10 @@ if ! printf '%s\n' "$missing_opt_in_output" | grep -Fq "incident_gonogo_local_he
   echo "expected missing local-heavy opt-in to emit deterministic fail-closed reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$missing_opt_in_output" | grep -Fq "live_gonogo_local_heavy_opt_in_missing"; then
+  echo "expected missing local-heavy opt-in to emit deterministic live-gate fail-closed reason code marker" >&2
+  exit 1
+fi
 
 set +e
 local_heavy_budget_overflow_output="$(
@@ -149,6 +177,10 @@ if [ "$local_heavy_budget_overflow_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$local_heavy_budget_overflow_output" | grep -Fq "incident_gonogo_local_heavy_seconds_exceeded"; then
   echo "expected local-heavy boundary overflow to emit deterministic fail-closed reason code marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$local_heavy_budget_overflow_output" | grep -Fq "live_gonogo_local_heavy_seconds_exceeded"; then
+  echo "expected local-heavy boundary overflow to emit deterministic live-gate fail-closed reason code marker" >&2
   exit 1
 fi
 
