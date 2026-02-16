@@ -31,10 +31,15 @@ cat >"$report_file" <<'JSON'
   "ingress_resilience_gate_status": "verified",
   "websocket_upgrade_parity_status": "verified",
   "ci_local_promotion_budget_boundary_status": "verified",
+  "admission_saturation_status": "verified",
+  "admission_queue_cap_enforcement_status": "verified",
+  "overload_evidence_normalization_status": "verified",
   "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
   "protocol_compliance_reason_codes_csv": "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected",
   "ingress_resilience_reason_taxonomy_version": "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1",
   "ingress_resilience_reason_codes_csv": "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
+  "admission_reason_taxonomy_version": "kamn.runtime.service-api-admission-reason-taxonomy.v1",
+  "admission_reason_codes_csv": "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift",
   "request_validation_reason_registry_status": "verified",
   "error_envelope_source_contract_status": "verified",
   "request_validation_reason_taxonomy_version": "kamn.runtime.service-api-request-validation-reason-taxonomy.v1",
@@ -99,6 +104,16 @@ if payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.runtime.se
     raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker")
 if payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker")
+if payload.get("admission_saturation_status") != "verified":
+    raise SystemExit("expected deterministic admission_saturation_status marker")
+if payload.get("admission_queue_cap_enforcement_status") != "verified":
+    raise SystemExit("expected deterministic admission_queue_cap_enforcement_status marker")
+if payload.get("overload_evidence_normalization_status") != "verified":
+    raise SystemExit("expected deterministic overload_evidence_normalization_status marker")
+if payload.get("admission_reason_taxonomy_version") != "kamn.runtime.service-api-admission-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
+if payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
+    raise SystemExit("expected deterministic admission_reason_codes_csv marker")
 if payload.get("request_validation_reason_registry_status") != "verified":
     raise SystemExit("expected deterministic request_validation_reason_registry_status marker")
 if payload.get("error_envelope_source_contract_status") != "verified":
@@ -341,6 +356,39 @@ if [ "$tampered_ingress_resilience_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_ingress_resilience_taxonomy_output" | grep -q 'service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for ingress-resilience taxonomy tamper" >&2
+  exit 1
+fi
+
+tampered_admission_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-taxonomy.tampered.json"
+cp "$report_file" "$tampered_admission_taxonomy_report"
+python3 - "$tampered_admission_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-taxonomy.tampered.json" 2>&1
+)"
+tampered_admission_taxonomy_code=$?
+set -e
+
+if [ "$tampered_admission_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered admission taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_taxonomy_output" | grep -q 'service_api_axum_policy_admission_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for admission taxonomy tamper" >&2
   exit 1
 fi
 

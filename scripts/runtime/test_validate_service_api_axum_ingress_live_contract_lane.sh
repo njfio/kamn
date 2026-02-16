@@ -85,6 +85,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_promotion_budget_boundary
   echo "expected service api axum ingress contract lane ci/local promotion budget boundary marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_saturation_status=verified$'; then
+  echo "expected service api axum ingress contract lane admission saturation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_queue_cap_enforcement_status=verified$'; then
+  echo "expected service api axum ingress contract lane queue-cap enforcement marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^overload_evidence_normalization_status=verified$'; then
+  echo "expected service api axum ingress contract lane overload-evidence normalization marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy marker" >&2
   exit 1
@@ -123,6 +135,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^ingress_resilience_reason_taxonomy
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
   echo "expected service api axum ingress contract lane ingress-resilience reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane admission reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift$'; then
+  echo "expected service api axum ingress contract lane admission reason taxonomy csv marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
@@ -186,6 +206,12 @@ if lane_payload.get("websocket_upgrade_parity_status") != "verified":
     raise SystemExit("expected websocket_upgrade_parity_status=verified")
 if lane_payload.get("ci_local_promotion_budget_boundary_status") != "verified":
     raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
+if lane_payload.get("admission_saturation_status") != "verified":
+    raise SystemExit("expected admission_saturation_status=verified")
+if lane_payload.get("admission_queue_cap_enforcement_status") != "verified":
+    raise SystemExit("expected admission_queue_cap_enforcement_status=verified")
+if lane_payload.get("overload_evidence_normalization_status") != "verified":
+    raise SystemExit("expected overload_evidence_normalization_status=verified")
 if lane_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if lane_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
@@ -206,6 +232,10 @@ if lane_payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.runti
     raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker")
 if lane_payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker")
+if lane_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.service-api-admission-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
+if lane_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
+    raise SystemExit("expected deterministic admission_reason_codes_csv marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -248,6 +278,10 @@ if policy_payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.run
     raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker in policy report")
 if policy_payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker in policy report")
+if policy_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.service-api-admission-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_reason_taxonomy_version marker in policy report")
+if policy_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
+    raise SystemExit("expected deterministic admission_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then
