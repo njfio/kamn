@@ -54,6 +54,18 @@ NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
 NATIVE_PAYLOAD_MESSAGES_MARKER = "messages"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
 RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS = 2
+REAL_NODE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1"
+)
+REAL_NODE_REASON_TAXONOMY_CODES = (
+    "runtime_commit_command_profile_mismatch",
+    "runtime_commit_policy_command_profile_mismatch",
+    "runtime_commit_non_synthetic_submit_probe_missing",
+    "runtime_commit_signer_profile_split_brain_detected",
+    "runtime_commit_in_memory_provider_reference_detected",
+    "runtime_signing_profile_mismatch",
+)
+REAL_NODE_REASON_TAXONOMY_CODES_CSV = ",".join(REAL_NODE_REASON_TAXONOMY_CODES)
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -804,8 +816,9 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if observed_final_decision and observed_final_decision != args.expected_final_decision:
         reason_codes.append("observed_final_decision_mismatch")
 
-    final_decision = "GO" if not reason_codes else "NO-GO"
-    return final_decision, reason_codes
+    normalized_reason_codes = sorted(dict.fromkeys(reason_codes))
+    final_decision = "GO" if not normalized_reason_codes else "NO-GO"
+    return final_decision, normalized_reason_codes
 
 
 def main() -> int:
@@ -821,6 +834,7 @@ def main() -> int:
         observed_final_decision = "NO-GO"
 
     final_decision, reason_codes = evaluate(report, args)
+    observed_reason_codes_csv = ",".join(reason_codes) if reason_codes else "none"
     output = {
         "schema_version": "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1",
         "report_file": str(report_path),
@@ -831,6 +845,9 @@ def main() -> int:
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
+        "reason_taxonomy_version": REAL_NODE_REASON_TAXONOMY_VERSION,
+        "reason_taxonomy_codes_csv": REAL_NODE_REASON_TAXONOMY_CODES_CSV,
+        "observed_reason_codes_csv": observed_reason_codes_csv,
         "reason_codes": reason_codes,
         "final_decision": final_decision,
     }
@@ -844,6 +861,9 @@ def main() -> int:
     failed_checks = ",".join(reason_codes) if reason_codes else "none"
     print(f"status={status}")
     print(f"final_decision={final_decision}")
+    print(f"reason_taxonomy_version={REAL_NODE_REASON_TAXONOMY_VERSION}")
+    print(f"reason_taxonomy_codes_csv={REAL_NODE_REASON_TAXONOMY_CODES_CSV}")
+    print(f"observed_reason_codes_csv={observed_reason_codes_csv}")
     print(f"failed_checks={failed_checks}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")

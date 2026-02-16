@@ -2488,6 +2488,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_quorum_profile_linked`
       - `runtime_signer_quorum_satisfied`
       - `runtime_signer_quorum_linked`
+    - strict profile policy reason-taxonomy markers:
+      - `reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1`
+      - `reason_taxonomy_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_non_synthetic_submit_probe_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_in_memory_provider_reference_detected,runtime_signing_profile_mismatch`
+      - `observed_reason_codes_csv=none|<sorted reason csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
