@@ -18,6 +18,15 @@ fn p2p_transport_module_extraction_contract_declares_swarm_stack_module() {
 }
 
 #[test]
+fn p2p_transport_module_extraction_contract_declares_adapter_module() {
+    let p2p_transport_rs = read_src_file("p2p_transport.rs");
+    assert!(
+        p2p_transport_rs.contains("mod adapter;"),
+        "p2p_transport.rs should declare extracted adapter module"
+    );
+}
+
+#[test]
 fn p2p_transport_module_extraction_contract_moves_swarm_stack_types_out_of_root_file() {
     let p2p_transport_rs = read_src_file("p2p_transport.rs");
     assert!(
@@ -35,6 +44,31 @@ fn p2p_transport_module_extraction_contract_moves_swarm_stack_types_out_of_root_
 }
 
 #[test]
+fn p2p_transport_module_extraction_contract_moves_adapter_types_out_of_root_file() {
+    let p2p_transport_rs = read_src_file("p2p_transport.rs");
+    assert!(
+        !p2p_transport_rs.contains("pub struct PeerDiscoveryRecord {"),
+        "p2p_transport.rs should not keep inline PeerDiscoveryRecord definition"
+    );
+    assert!(
+        !p2p_transport_rs.contains("pub struct PeerGossipFrame {"),
+        "p2p_transport.rs should not keep inline PeerGossipFrame definition"
+    );
+    assert!(
+        !p2p_transport_rs.contains("pub trait PeerLifecycleTransport {"),
+        "p2p_transport.rs should not keep inline PeerLifecycleTransport definition"
+    );
+    assert!(
+        !p2p_transport_rs.contains("pub struct InMemoryPeerLifecycleTransport {"),
+        "p2p_transport.rs should not keep inline InMemoryPeerLifecycleTransport definition"
+    );
+    assert!(
+        !p2p_transport_rs.contains("pub struct UdpPeerLifecycleTransport {"),
+        "p2p_transport.rs should not keep inline UdpPeerLifecycleTransport definition"
+    );
+}
+
+#[test]
 fn p2p_transport_module_extraction_contract_keeps_swarm_stack_impls_in_new_module() {
     let swarm_stack_rs = read_src_file("p2p_transport/swarm_stack.rs");
     assert!(
@@ -48,6 +82,31 @@ fn p2p_transport_module_extraction_contract_keeps_swarm_stack_impls_in_new_modul
     assert!(
         swarm_stack_rs.contains("pub struct LiveTransportReconnectPolicy {"),
         "swarm_stack module should own LiveTransportReconnectPolicy"
+    );
+}
+
+#[test]
+fn p2p_transport_module_extraction_contract_keeps_adapter_impls_in_new_module() {
+    let adapter_rs = read_src_file("p2p_transport/adapter.rs");
+    assert!(
+        adapter_rs.contains("pub struct PeerDiscoveryRecord {"),
+        "adapter module should own PeerDiscoveryRecord"
+    );
+    assert!(
+        adapter_rs.contains("pub struct PeerGossipFrame {"),
+        "adapter module should own PeerGossipFrame"
+    );
+    assert!(
+        adapter_rs.contains("pub trait PeerLifecycleTransport {"),
+        "adapter module should own PeerLifecycleTransport"
+    );
+    assert!(
+        adapter_rs.contains("pub struct InMemoryPeerLifecycleTransport {"),
+        "adapter module should own InMemoryPeerLifecycleTransport"
+    );
+    assert!(
+        adapter_rs.contains("pub struct UdpPeerLifecycleTransport {"),
+        "adapter module should own UdpPeerLifecycleTransport"
     );
 }
 
