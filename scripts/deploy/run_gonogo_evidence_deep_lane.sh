@@ -12,6 +12,10 @@ INCIDENT_GONOGO_BOUNDARY_REASON_TAXONOMY_VERSION="kamn.release.gonogo-incident-b
 INCIDENT_GONOGO_BOUNDARY_REASON_CODES_CSV="incident_gonogo_ci_smoke_seconds_exceeded,incident_gonogo_local_heavy_seconds_exceeded,incident_gonogo_local_heavy_opt_in_missing,incident_gonogo_evidence_convergence_mismatch"
 INCIDENT_GONOGO_CI_SMOKE_MAX_SECONDS=120
 INCIDENT_GONOGO_LOCAL_HEAVY_MAX_SECONDS=900
+LIVE_GONOGO_BOUNDARY_REASON_TAXONOMY_VERSION="kamn.release.gonogo-live-boundary-reason-taxonomy.v1"
+LIVE_GONOGO_BOUNDARY_REASON_CODES_CSV="live_gonogo_ci_smoke_seconds_exceeded,live_gonogo_local_heavy_seconds_exceeded,live_gonogo_local_heavy_opt_in_missing,live_gonogo_evidence_convergence_mismatch"
+LIVE_GONOGO_CI_SMOKE_MAX_SECONDS=120
+LIVE_GONOGO_LOCAL_HEAVY_MAX_SECONDS=900
 LOCAL_HEAVY_OPT_IN_ENV="KAMN_GONOGO_GATE_LOCAL_OPT_IN"
 
 MAX_SECONDS="$INCIDENT_GONOGO_LOCAL_HEAVY_MAX_SECONDS"
@@ -42,10 +46,12 @@ if [ "$MAX_SECONDS" -lt 1 ]; then
 fi
 if [ "${!LOCAL_HEAVY_OPT_IN_ENV:-}" != "1" ]; then
   echo "incident_gonogo_local_heavy_opt_in_missing" >&2
+  echo "live_gonogo_local_heavy_opt_in_missing" >&2
   exit 1
 fi
 if [ "$MAX_SECONDS" -gt "$INCIDENT_GONOGO_LOCAL_HEAVY_MAX_SECONDS" ]; then
   echo "incident_gonogo_local_heavy_seconds_exceeded" >&2
+  echo "live_gonogo_local_heavy_seconds_exceeded" >&2
   exit 1
 fi
 
@@ -83,5 +89,10 @@ echo "incident_gonogo_boundary_reason_taxonomy_version=$INCIDENT_GONOGO_BOUNDARY
 echo "incident_gonogo_boundary_reason_codes_csv=$INCIDENT_GONOGO_BOUNDARY_REASON_CODES_CSV"
 echo "incident_gonogo_ci_smoke_max_seconds=$INCIDENT_GONOGO_CI_SMOKE_MAX_SECONDS"
 echo "incident_gonogo_local_heavy_max_seconds=$INCIDENT_GONOGO_LOCAL_HEAVY_MAX_SECONDS"
+echo "live_gonogo_boundary_reason_taxonomy_status=verified"
+echo "live_gonogo_boundary_reason_taxonomy_version=$LIVE_GONOGO_BOUNDARY_REASON_TAXONOMY_VERSION"
+echo "live_gonogo_boundary_reason_codes_csv=$LIVE_GONOGO_BOUNDARY_REASON_CODES_CSV"
+echo "live_gonogo_ci_smoke_max_seconds=$LIVE_GONOGO_CI_SMOKE_MAX_SECONDS"
+echo "live_gonogo_local_heavy_max_seconds=$LIVE_GONOGO_LOCAL_HEAVY_MAX_SECONDS"
 echo "local_heavy_lane_execution_mode=opt_in"
 echo "go/no-go evidence deep lane tests passed."
