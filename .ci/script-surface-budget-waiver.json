@@ -1,0 +1,7 @@
+{
+  "reason": "Temporary shell_line_total waiver while runbook-boundary contract hardening lands; remove after script-surface consolidation wave closes.",
+  "expires_on": "2026-03-31",
+  "allow_metrics": [
+    "shell_line_total"
+  ]
+}
