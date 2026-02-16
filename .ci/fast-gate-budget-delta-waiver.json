@@ -1,0 +1,8 @@
+{
+  "reason": "Temporary fast-gate delta waiver while live go/no-go convergence and boundary-governance contract surfaces are absorbed; remove after baseline refresh.",
+  "expires_on": "2026-04-30",
+  "allow_metrics": [
+    "elapsed_seconds_delta_pct",
+    "runner_minutes_delta_pct"
+  ]
+}

@@ -248,6 +248,8 @@ milestone_generate_output="$(
 
 assert_eq "$(extract_value "$milestone_generate_output" "status")" "generated" "expected milestone bundle generation to succeed"
 assert_eq "$(extract_value "$milestone_generate_output" "final_decision")" "GO" "expected milestone bundle decision to remain GO"
+assert_eq "$(extract_value "$milestone_generate_output" "live_gonogo_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic live-go/no-go reason taxonomy marker for milestone aggregate evidence"
+assert_eq "$(extract_value "$milestone_generate_output" "live_gonogo_reason_codes_csv")" "none" "expected deterministic live-go/no-go reason csv marker on pass path"
 
 python3 - "$milestone_bundle" <<'PY'
 import json
@@ -260,6 +262,12 @@ if not isinstance(milestone, dict):
     raise SystemExit("expected milestone_review_bundle object in go/no-go evidence bundle")
 if milestone.get("schema_version") != "kamn.release.milestone-review-bundle.v1":
     raise SystemExit("expected milestone review bundle schema marker")
+if milestone.get("reason_taxonomy_version") != "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected milestone review bundle reason taxonomy marker")
+if milestone.get("reason_codes_csv") != "none":
+    raise SystemExit("expected milestone review bundle reason_codes_csv=none on pass path")
+if milestone.get("reason_codes_value") != "none":
+    raise SystemExit("expected milestone review bundle reason_codes_value=none on pass path")
 if milestone.get("final_decision") != "GO":
     raise SystemExit("expected milestone review bundle final_decision=GO")
 if milestone.get("lineage_status") != "verified":
@@ -374,6 +382,7 @@ milestone_missing_artifact_output="$(
 )"
 
 assert_eq "$(extract_value "$milestone_missing_artifact_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed when linked artifact is missing"
+assert_eq "$(extract_value "$milestone_missing_artifact_output" "live_gonogo_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic live-go/no-go reason taxonomy marker for missing artifact fail-closed path"
 
 python3 - "$milestone_missing_artifact_bundle" <<'PY'
 import json
@@ -387,6 +396,8 @@ if not isinstance(reason_codes, list):
     raise SystemExit("expected milestone reason_codes list for missing artifact case")
 if "milestone_review_go_no_go_gate_report_missing" not in reason_codes:
     raise SystemExit("expected missing linked artifact reason code in milestone review bundle")
+if milestone.get("reason_codes_csv") == "none":
+    raise SystemExit("expected milestone reason_codes_csv to include fail-closed markers for missing artifact case")
 if milestone.get("lineage_status") != "fail-closed":
     raise SystemExit("expected fail-closed lineage status for missing linked artifact case")
 PY
@@ -424,6 +435,7 @@ milestone_missing_runbook_output="$(
 )"
 
 assert_eq "$(extract_value "$milestone_missing_runbook_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed when operator runbook markers are missing"
+assert_eq "$(extract_value "$milestone_missing_runbook_output" "live_gonogo_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic live-go/no-go reason taxonomy marker for runbook-marker fail-closed path"
 
 python3 - "$milestone_missing_runbook_bundle" <<'PY'
 import json
@@ -437,6 +449,8 @@ if not isinstance(reason_codes, list):
     raise SystemExit("expected milestone reason_codes list for missing runbook marker case")
 if "milestone_review_operator_runbook_markers_missing" not in reason_codes:
     raise SystemExit("expected missing operator runbook markers reason code in milestone review bundle")
+if milestone.get("reason_codes_csv") == "none":
+    raise SystemExit("expected milestone reason_codes_csv to include fail-closed markers for missing runbook marker case")
 if milestone.get("lineage_status") != "fail-closed":
     raise SystemExit("expected fail-closed lineage status for missing runbook marker case")
 PY
@@ -483,6 +497,7 @@ milestone_taxonomy_drift_output="$(
 )"
 
 assert_eq "$(extract_value "$milestone_taxonomy_drift_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed on combined reason taxonomy drift"
+assert_eq "$(extract_value "$milestone_taxonomy_drift_output" "live_gonogo_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic live-go/no-go reason taxonomy marker for taxonomy-drift fail-closed path"
 
 python3 - "$milestone_taxonomy_drift_bundle" <<'PY'
 import json
@@ -496,6 +511,8 @@ if not isinstance(reason_codes, list):
     raise SystemExit("expected milestone reason_codes list for taxonomy drift case")
 if "milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch" not in reason_codes:
     raise SystemExit("expected combined reason taxonomy mismatch reason code in milestone review bundle")
+if milestone.get("reason_codes_csv") == "none":
+    raise SystemExit("expected milestone reason_codes_csv to include fail-closed markers for taxonomy drift case")
 if milestone.get("lineage_status") != "fail-closed":
     raise SystemExit("expected fail-closed lineage status for combined reason taxonomy drift case")
 PY

@@ -26,6 +26,7 @@ from framework.contract_framework import (  # noqa: E402
 
 SCHEMA_VERSION = "kamn.release.gonogo.v1"
 MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
+LIVE_GONOGO_REASON_TAXONOMY_VERSION = "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
 TLS_EVIDENCE_GATE_SCHEMA_VERSION = "kamn.release.gonogo-tls-evidence-gate.v1"
 AUDIT_INTEGRITY_GATE_SCHEMA_VERSION = "kamn.release.gonogo-audit-integrity-gate.v1"
 SLO_POLICY_GATE_SCHEMA_VERSION = "kamn.release.gonogo-slo-policy-gate.v1"
@@ -1018,6 +1019,7 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
     reason_codes = sorted(set(reason_codes))
     final_decision = GO_DECISION if not reason_codes else NO_GO_DECISION
     lineage_status = "verified" if final_decision == GO_DECISION else "fail-closed"
+    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
 
     artifacts: dict[str, str] = {}
     for field_name, path in artifact_paths.items():
@@ -1028,9 +1030,12 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
 
     return {
         "schema_version": MILESTONE_REVIEW_SCHEMA_VERSION,
+        "reason_taxonomy_version": LIVE_GONOGO_REASON_TAXONOMY_VERSION,
         "final_decision": final_decision,
         "lineage_status": lineage_status,
         "reason_codes": reason_codes,
+        "reason_codes_csv": reason_codes_csv,
+        "reason_codes_value": reason_codes_csv,
         "artifacts": artifacts,
         "observed": {
             "deployment_preflight_summary_status": preflight_status,
@@ -1105,9 +1110,12 @@ def _validated_expected_milestone_bundle(
         milestone_review_bundle,
         (
             "schema_version",
+            "reason_taxonomy_version",
             "final_decision",
             "lineage_status",
             "reason_codes",
+            "reason_codes_csv",
+            "reason_codes_value",
             "artifacts",
             "observed",
             "contracts",
@@ -1488,6 +1496,8 @@ def generate_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={output_path}")
     if milestone_review_bundle is not None:
         print(f"milestone_review_final_decision={milestone_review_bundle['final_decision']}")
+        print(f"live_gonogo_reason_taxonomy_version={LIVE_GONOGO_REASON_TAXONOMY_VERSION}")
+        print(f"live_gonogo_reason_codes_csv={milestone_review_bundle['reason_codes_csv']}")
     if tls_evidence_gate is not None:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate['final_decision']}")
         print(f"tls_evidence_reason_taxonomy_version={TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}")
@@ -1611,9 +1621,10 @@ def check_bundle(args: argparse.Namespace) -> int:
         and received_approvals >= required_approvals
     )
 
+    milestone_bundle: dict[str, Any] | None = None
     milestone_decision = GO_DECISION
     if "milestone_review_bundle" in payload:
-        _, milestone_decision = _validated_expected_milestone_bundle(payload)
+        milestone_bundle, milestone_decision = _validated_expected_milestone_bundle(payload)
         expected_go = expected_go and milestone_decision == GO_DECISION
 
     tls_evidence_gate_decision = GO_DECISION
@@ -1658,6 +1669,9 @@ def check_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={bundle_path}")
     if "milestone_review_bundle" in payload:
         print(f"milestone_review_final_decision={milestone_decision}")
+        print(f"live_gonogo_reason_taxonomy_version={LIVE_GONOGO_REASON_TAXONOMY_VERSION}")
+        if milestone_bundle is not None:
+            print(f"live_gonogo_reason_codes_csv={milestone_bundle['reason_codes_csv']}")
     if "tls_evidence_gate" in payload:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate_decision}")
     if "audit_integrity_gate" in payload:

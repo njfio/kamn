@@ -194,6 +194,33 @@ fn checklist_contains_milestone_review_aggregate_lineage_gate() {
 }
 
 #[test]
+fn checklist_contains_live_gonogo_convergence_boundary_governance_gate() {
+    assert!(CHECKLIST.contains(
+        "## Live Go/No-Go Evidence Convergence and Boundary Governance Gate (Issue #4434)"
+    ));
+    assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh --max-seconds 120"));
+    assert!(CHECKLIST.contains(
+        "KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900"
+    ));
+    assert!(CHECKLIST.contains(
+        "live_gonogo_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "live_gonogo_reason_codes_csv=milestone_review_operator_runbook_missing,milestone_review_operator_runbook_markers_missing,milestone_review_deployment_preflight_summary_missing,milestone_review_deployment_preflight_summary_invalid_json,milestone_review_deployment_preflight_summary_schema_mismatch,milestone_review_deployment_preflight_summary_status_mismatch,milestone_review_deployment_preflight_scope_mismatch,milestone_review_deployment_preflight_policy_missing,milestone_review_deployment_preflight_policy_invalid_json,milestone_review_deployment_preflight_policy_schema_mismatch,milestone_review_deployment_preflight_policy_final_decision_mismatch,milestone_review_live_node_validation_summary_missing,milestone_review_live_node_validation_summary_invalid_json,milestone_review_live_node_validation_summary_schema_mismatch,milestone_review_live_node_validation_summary_status_mismatch,milestone_review_live_node_validation_scope_mismatch,milestone_review_live_node_validation_runtime_provider_mismatch,milestone_review_live_node_validation_lineage_contract_mismatch,milestone_review_live_node_validation_artifact_paths_missing,milestone_review_live_node_validation_rollback_lineage_missing,milestone_review_live_node_validation_recovery_lineage_missing,milestone_review_live_node_validation_policy_missing,milestone_review_live_node_validation_policy_invalid_json,milestone_review_live_node_validation_policy_schema_mismatch,milestone_review_live_node_validation_policy_final_decision_mismatch,milestone_review_go_no_go_gate_report_missing,milestone_review_go_no_go_gate_report_invalid_json,milestone_review_go_no_go_gate_schema_mismatch,milestone_review_go_no_go_gate_status_mismatch,milestone_review_go_no_go_gate_final_decision_mismatch,milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch,milestone_review_go_no_go_gate_combined_transport_reason_codes_mismatch,milestone_review_go_no_go_gate_combined_kolme_runtime_reason_code_mismatch,milestone_review_go_no_go_gate_kolme_runtime_commit_failure_taxonomy_version_mismatch,milestone_review_go_no_go_gate_kolme_fixture_profile_mismatch,milestone_review_go_no_go_gate_kolme_fixture_profile_version_mismatch,milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch,milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "live_gonogo_boundary_reason_taxonomy_version=kamn.release.gonogo-live-boundary-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "live_gonogo_boundary_reason_codes_csv=live_gonogo_ci_smoke_seconds_exceeded,live_gonogo_local_heavy_seconds_exceeded,live_gonogo_local_heavy_opt_in_missing,live_gonogo_evidence_convergence_mismatch"
+    ));
+    assert!(CHECKLIST.contains("live_gonogo_ci_smoke_max_seconds=120"));
+    assert!(CHECKLIST.contains("live_gonogo_local_heavy_max_seconds=900"));
+    assert!(CHECKLIST.contains("Regression: #4441"));
+    assert!(CHECKLIST.contains("Regression: #4442"));
+}
+
+#[test]
 fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
     assert!(CHECKLIST.contains("staging_rehearsal_contract.py"));
