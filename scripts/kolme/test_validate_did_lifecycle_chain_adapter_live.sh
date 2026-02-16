@@ -40,6 +40,14 @@ if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_reason_code=did_
   echo "expected fail-closed reason marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^did_registration_reason_taxonomy_version=kamn.kolme.did-registration-reason-taxonomy.v1$'; then
+  echo "expected deterministic did registration reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^did_registration_reason_codes_csv=did_registry_document_did_mismatch,did_registry_submission_key_conflict$'; then
+  echo "expected deterministic did registration reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^performance_budget_status=verified$'; then
   echo "expected performance marker" >&2
   exit 1
@@ -67,6 +75,12 @@ if payload.get("fail_closed_status") != "verified":
     raise SystemExit("expected fail_closed_status=verified")
 if payload.get("fail_closed_reason_code") != "did_registry_submission_key_conflict":
     raise SystemExit("expected fail_closed_reason_code=did_registry_submission_key_conflict")
+if payload.get("did_registration_reason_taxonomy_version") != "kamn.kolme.did-registration-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic did_registration_reason_taxonomy_version")
+if payload.get("did_registration_reason_codes_csv") != "did_registry_document_did_mismatch,did_registry_submission_key_conflict":
+    raise SystemExit("expected deterministic did_registration_reason_codes_csv")
+if payload.get("did_registration_reason_codes_value") != "did_registry_submission_key_conflict":
+    raise SystemExit("expected did_registration_reason_codes_value=did_registry_submission_key_conflict")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 PY

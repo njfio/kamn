@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh"
+DID_REGISTRATION_REASON_TAXONOMY_VERSION="kamn.kolme.did-registration-reason-taxonomy.v1"
+DID_REGISTRATION_REASON_CODES_CSV="did_registry_document_did_mismatch,did_registry_submission_key_conflict"
 
 output_json=""
 max_seconds=240
@@ -62,13 +64,30 @@ if ! printf '%s\n' "$run_output" | grep -q '^conflict_fail_closed_status=verifie
   echo "expected conflict fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^malformed_registration_payload_status=verified$'; then
+  echo "expected malformed registration payload marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^duplicate_registration_payload_drift_status=verified$'; then
+  echo "expected duplicate registration payload drift marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^did_registration_reason_taxonomy_version=$DID_REGISTRATION_REASON_TAXONOMY_VERSION$"; then
+  echo "expected did registration reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^did_registration_reason_codes_csv=$DID_REGISTRATION_REASON_CODES_CSV$"; then
+  echo "expected did registration reason codes marker" >&2
+  exit 1
+fi
 
 docs_output_file="$TMP_DIR/did-lifecycle-docs-validation.out"
 set +e
 (
   cd "$ROOT_DIR"
   cargo test -p kamn-core --test did_registry_transactions_docs -- \
-    regression_doc_marks_lifecycle_chain_submission_conflict_guard
+    regression_doc_marks_lifecycle_chain_submission_conflict_guard \
+    regression_doc_marks_registration_payload_integrity_and_duplicate_drift_guards
 ) >"$docs_output_file" 2>&1
 docs_code=$?
 set -e
@@ -94,6 +113,26 @@ fi
 if ! printf '%s\n' "$fail_closed_output" | grep -q '1 passed; 0 failed'; then
   printf '%s\n' "$fail_closed_output" >&2
   echo "expected conflict fail-closed pass-count marker" >&2
+  exit 1
+fi
+
+set +e
+registration_guards_output="$({
+  cd "$ROOT_DIR"
+  cargo test -p kamn-core --test did_registry_transactions -- \
+    regression_registration_chain_submission_rejects_malformed_document_payload \
+    regression_registration_chain_submission_rejects_duplicate_registration_payload_drift
+} 2>&1)"
+registration_guards_code=$?
+set -e
+if [ "$registration_guards_code" -ne 0 ]; then
+  printf '%s\n' "$registration_guards_output" >&2
+  echo "expected registration payload integrity drills to pass" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$registration_guards_output" | grep -q '2 passed; 0 failed'; then
+  printf '%s\n' "$registration_guards_output" >&2
+  echo "expected registration payload integrity pass-count marker" >&2
   exit 1
 fi
 
@@ -133,6 +172,9 @@ cat >"$report_json" <<JSON
   "docs_contract_status": "verified",
   "fail_closed_status": "verified",
   "fail_closed_reason_code": "did_registry_submission_key_conflict",
+  "did_registration_reason_taxonomy_version": "${DID_REGISTRATION_REASON_TAXONOMY_VERSION}",
+  "did_registration_reason_codes_csv": "${DID_REGISTRATION_REASON_CODES_CSV}",
+  "did_registration_reason_codes_value": "did_registry_submission_key_conflict",
   "performance_budget_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
@@ -149,4 +191,7 @@ echo "evidence_bundle_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=did_registry_submission_key_conflict"
+echo "did_registration_reason_taxonomy_version=$DID_REGISTRATION_REASON_TAXONOMY_VERSION"
+echo "did_registration_reason_codes_csv=$DID_REGISTRATION_REASON_CODES_CSV"
+echo "did_registration_reason_codes_value=did_registry_submission_key_conflict"
 echo "performance_budget_status=verified"

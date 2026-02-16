@@ -54,3 +54,13 @@ fn regression_doc_marks_lifecycle_chain_submission_conflict_guard() {
     // Regression: #2936
     assert!(DOC.contains("Regression: #2936"));
 }
+
+#[test]
+fn regression_doc_marks_registration_payload_integrity_and_duplicate_drift_guards() {
+    // Regression: #4418
+    assert!(DOC.contains("Regression: #4418"));
+    assert!(DOC.contains(
+        "did_registration_reason_taxonomy_version=kamn.kolme.did-registration-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("did_registration_reason_codes_csv=did_registry_document_did_mismatch,did_registry_submission_key_conflict"));
+}

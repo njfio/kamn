@@ -10,6 +10,11 @@ import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+DID_REGISTRATION_REASON_TAXONOMY_VERSION = "kamn.kolme.did-registration-reason-taxonomy.v1"
+DID_REGISTRATION_REASON_CODES = [
+    "did_registry_document_did_mismatch",
+    "did_registry_submission_key_conflict",
+]
 
 
 def parse_args(argv: list[str]) -> tuple[str, int]:
@@ -64,6 +69,8 @@ def main() -> int:
         "functional_lifecycle_chain_submission_through_kolme_adapter_returns_typed_outcome",
         "integration_lifecycle_chain_submission_allows_retry_without_reapplying_mutation",
         "regression_lifecycle_chain_submission_rejects_conflicting_same_nonce_payload",
+        "regression_registration_chain_submission_rejects_malformed_document_payload",
+        "regression_registration_chain_submission_rejects_duplicate_registration_payload_drift",
     ]
     result = subprocess.run(
         command,
@@ -80,7 +87,7 @@ def main() -> int:
         print("did lifecycle chain adapter contract lane failed", file=sys.stderr)
         return 1
 
-    if "3 passed; 0 failed" not in test_output:
+    if "5 passed; 0 failed" not in test_output:
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(
@@ -105,6 +112,11 @@ def main() -> int:
         "lifecycle_chain_contract_status": "verified",
         "duplicate_retry_status": "verified",
         "conflict_fail_closed_status": "verified",
+        "malformed_registration_payload_status": "verified",
+        "duplicate_registration_payload_drift_status": "verified",
+        "did_registration_reason_taxonomy_version": DID_REGISTRATION_REASON_TAXONOMY_VERSION,
+        "did_registration_reason_codes_csv": ",".join(DID_REGISTRATION_REASON_CODES),
+        "did_registration_reason_codes_value": "none",
         "elapsed_seconds": elapsed_seconds,
     }
 
@@ -121,6 +133,17 @@ def main() -> int:
     print("lifecycle_chain_contract_status=verified")
     print("duplicate_retry_status=verified")
     print("conflict_fail_closed_status=verified")
+    print("malformed_registration_payload_status=verified")
+    print("duplicate_registration_payload_drift_status=verified")
+    print(
+        "did_registration_reason_taxonomy_version="
+        f"{DID_REGISTRATION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "did_registration_reason_codes_csv="
+        f"{','.join(DID_REGISTRATION_REASON_CODES)}"
+    )
+    print("did_registration_reason_codes_value=none")
     return 0
 
 
