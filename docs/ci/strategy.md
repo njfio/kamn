@@ -1206,6 +1206,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - execution status includes submit/finality retry metadata markers.
   - structured retry marker events (`kolme.live.submit.retry`, `kolme.live.finality.retry`) retain deterministic `correlation_id` and `reason` fields.
   - daemon transition marker events (`node.runtime.daemon.execute.start`, `node.runtime.daemon.execute.complete`) retain deterministic runtime execution fields.
+- Retry/TLS CI smoke checker commands:
+  - `bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output-json /tmp/kolme-retry-tls-smoke-summary.json`
+  - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-retry-tls-smoke-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-retry-tls-smoke-policy.json`
+  - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
+- retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
