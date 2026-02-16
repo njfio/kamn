@@ -258,6 +258,30 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
+    assert!(CHECKLIST.contains(
+        "## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)"
+    ));
+    assert!(CHECKLIST.contains("cargo test -p kamn-core --test p2p_peer_adapter_reason_projection"));
+    assert!(CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live.sh"));
+    assert!(CHECKLIST.contains("check_libp2p_convergence_process_isolated_live_policy.sh"));
+    assert!(
+        CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh")
+    );
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
+    ));
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted"
+    ));
+    assert!(CHECKLIST.contains("peer_adapter_multi_process_validation_local_heavy_status=required"));
+    assert!(CHECKLIST.contains("Regression: #4320"));
+}
+
+#[test]
 fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
     assert!(CHECKLIST.contains("## Live-Network Pilot Launch and Rollback Evidence Gates"));
     assert!(CHECKLIST.contains("run_live_network_smoke_lane.sh"));
