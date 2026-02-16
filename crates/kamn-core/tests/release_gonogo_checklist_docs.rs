@@ -61,6 +61,32 @@ fn checklist_contains_service_api_protocol_session_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
+    assert!(CHECKLIST
+        .contains("## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)"));
+    assert!(CHECKLIST.contains(
+        "scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json"
+    ));
+    assert!(CHECKLIST.contains(
+        "panic_replacement_reason_taxonomy_version=kamn.ci.production-panic-replacement-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "panic_replacement_reason_codes_csv=scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default"
+    ));
+    assert!(CHECKLIST.contains("panic_replacement_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains(
+        "panic_replacement_reason_class=stable|panic_reachability|unsafe_fallback|mixed|configuration"
+    ));
+    assert!(CHECKLIST.contains("runtime_panic_replacement_evidence_status=verified|violation"));
+    assert!(CHECKLIST.contains("runtime_panic_replacement_evidence_violation_count=<n>"));
+    assert!(CHECKLIST.contains("runtime_panic_replacement_evidence_files_csv=none|<csv>"));
+    assert!(CHECKLIST.contains(
+        "runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
+    ));
+    assert!(CHECKLIST.contains("Regression: #4455"));
+}
+
+#[test]
 fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
     assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));

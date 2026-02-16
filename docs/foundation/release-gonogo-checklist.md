@@ -49,6 +49,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
 
+## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)
+- Checker command:
+  - `scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json`
+- Required deterministic taxonomy markers:
+  - `panic_replacement_reason_taxonomy_version=kamn.ci.production-panic-replacement-reason-taxonomy.v1`
+  - `panic_replacement_reason_codes_csv=scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default`
+  - `panic_replacement_reason_codes_value=none|<csv>`
+  - `panic_replacement_reason_class=stable|panic_reachability|unsafe_fallback|mixed|configuration`
+- Required runtime evidence markers:
+  - `runtime_panic_replacement_evidence_status=verified|violation`
+  - `runtime_panic_replacement_evidence_violation_count=<n>`
+  - `runtime_panic_replacement_evidence_files_csv=none|<csv>`
+  - `runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv`
+- Fail-closed policy:
+  - reachable `.expect(`, `panic!`, `unreachable!`, or unsafe env fallback defaults force `NO-GO`.
+  - missing checker roots must fail closed with `scan_root_not_found`.
+- Regression policy:
+  - panic-replacement taxonomy drift and runtime evidence-output drift force `NO-GO` (`Regression: #4455`).
+
 ## TLS Dependency-Posture Gate (Issues #4480, #4481)
 - Checker command:
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
