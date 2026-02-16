@@ -787,3 +787,19 @@ fn regression_requires_real_fork_wrapper_policy_checker_guard_marker() {
         "real-fork local process wrapper policy checker lane remains fail-closed for schema/contracts/checkpoint drift (`Regression: #1671`)."
     ));
 }
+
+#[test]
+fn plan_contains_runtime_transport_retry_reconnect_failure_taxonomy() {
+    assert!(PLAN.contains("## Runtime Transport Retry-Reconnect Failure Taxonomy (Issue #4508)"));
+    assert!(PLAN.contains("validate_live_transport_fault_matrix_live.sh"));
+    assert!(
+        PLAN.contains("live_transport_fault_matrix_policy_reason_codes_classification_mismatch")
+    );
+    assert!(PLAN.contains("cargo test -p kamn-core --test p2p_peer_integrity_drift_timeout"));
+    assert!(PLAN.contains(
+        "peer sender-integrity drift fixtures must fail closed with `p2p_transport_unknown_sender_peer` (`Regression: #4319`)."
+    ));
+    assert!(PLAN.contains(
+        "retry-timeout classification must remain stable with `p2p_live_reconnect_retry_dial_timeout` before budget exhaustion and `p2p_live_reconnect_retry_budget_exhausted` only when retry budget is reached (`Regression: #4319`)."
+    ));
+}

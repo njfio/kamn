@@ -93,20 +93,24 @@ const REASON_CODE_WS_UPGRADE_HEADER_INVALID: &str = "service_api_ws_upgrade_head
 const REASON_CODE_WS_CONNECTION_HEADER_INVALID: &str = "service_api_ws_connection_header_invalid";
 const REASON_CODE_WS_KEY_HEADER_EMPTY: &str = "service_api_ws_key_header_empty";
 const REASON_CODE_WS_VERSION_HEADER_INVALID: &str = "service_api_ws_version_header_invalid";
+const RESPONSE_HEADER_WS_CONTRACT: &str = "X-KAMN-WebSocket-Contract";
+const WEBSOCKET_CONTRACT_VERSION: &str = "v1";
 #[cfg(test)]
-const REASON_CODE_PAYLOAD_IO_ERROR: &str = "service_api_payload_io_error";
+const REASON_CODE_WS_PROTOCOL_CONTRACT_DRIFT_DETECTED: &str =
+    "service_api_ws_protocol_contract_drift_detected";
 #[cfg(test)]
-const REASON_CODE_PAYLOAD_JSON_SYNTAX_INVALID: &str = "service_api_payload_json_syntax_invalid";
+const REASON_CODE_WS_SESSION_FRAME_TOO_SHORT: &str = "service_api_ws_session_frame_too_short";
 #[cfg(test)]
-const REASON_CODE_PAYLOAD_STRUCTURE_INVALID: &str = "service_api_payload_structure_invalid";
+const REASON_CODE_WS_SESSION_FRAME_OPCODE_INVALID: &str =
+    "service_api_ws_session_frame_opcode_invalid";
 #[cfg(test)]
-const REASON_CODE_PROTOCOL_SESSION_DOCS_MARKER_MISSING: &str =
-    "service_api_protocol_session_docs_marker_missing";
+const REASON_CODE_WS_SESSION_FRAME_MASK_INVALID: &str = "service_api_ws_session_frame_mask_invalid";
 #[cfg(test)]
-const SERVICE_API_PROTOCOL_SESSION_REASON_TAXONOMY_VERSION: &str =
-    "kamn.runtime.service-api.protocol-session-reason-taxonomy.v1";
+const REASON_CODE_WS_SESSION_FRAME_LENGTH_MISMATCH: &str =
+    "service_api_ws_session_frame_length_mismatch";
 #[cfg(test)]
-const SERVICE_API_PROTOCOL_SESSION_REASON_CODES_CSV: &str = "service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing";
+const REASON_CODE_WS_SESSION_FRAME_PAYLOAD_UTF8_INVALID: &str =
+    "service_api_ws_session_frame_payload_utf8_invalid";
 const SERVICE_API_TLS_MODE_ENV: &str = "KAMN_SERVICE_API_TLS_MODE";
 const SERVICE_API_TLS_CERT_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CERT_FILE";
 const SERVICE_API_TLS_KEY_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_KEY_FILE";
@@ -240,127 +244,6 @@ impl ServiceApiReasonedError {
             message: message.into(),
         }
     }
-}
-
-#[cfg(test)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ServiceApiProtocolSessionReasonClass {
-    WebsocketProtocol,
-    PayloadDecode,
-    SessionAuth,
-    RouteContract,
-    DocsContract,
-    Unclassified,
-}
-
-#[cfg(test)]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ServiceApiProtocolSessionReasonProjection {
-    reason_code: String,
-    reason_class: ServiceApiProtocolSessionReasonClass,
-    source_marker: &'static str,
-}
-
-#[cfg(test)]
-impl ServiceApiProtocolSessionReasonProjection {
-    fn new(
-        reason_code: impl Into<String>,
-        reason_class: ServiceApiProtocolSessionReasonClass,
-    ) -> Self {
-        Self {
-            reason_code: reason_code.into(),
-            reason_class,
-            source_marker: "service_api_protocol_session_reason_projection",
-        }
-    }
-
-    pub(crate) fn reason_code(&self) -> &str {
-        self.reason_code.as_str()
-    }
-
-    pub(crate) fn reason_class(&self) -> ServiceApiProtocolSessionReasonClass {
-        self.reason_class
-    }
-
-    pub(crate) fn source_marker(&self) -> &'static str {
-        self.source_marker
-    }
-
-    pub(crate) fn reason_taxonomy_version(&self) -> &'static str {
-        service_api_protocol_session_reason_taxonomy_version()
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn service_api_protocol_session_reason_taxonomy_version() -> &'static str {
-    SERVICE_API_PROTOCOL_SESSION_REASON_TAXONOMY_VERSION
-}
-
-#[cfg(test)]
-pub(crate) fn project_service_api_protocol_session_reason(
-    reason_code: &str,
-) -> ServiceApiProtocolSessionReasonProjection {
-    let normalized = reason_code.trim();
-    let reason_class = match normalized {
-        REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED
-        | REASON_CODE_WS_UPGRADE_HEADER_MISSING
-        | REASON_CODE_WS_CONNECTION_HEADER_MISSING
-        | REASON_CODE_WS_KEY_HEADER_MISSING
-        | REASON_CODE_WS_VERSION_HEADER_MISSING
-        | REASON_CODE_WS_UPGRADE_HEADER_INVALID
-        | REASON_CODE_WS_CONNECTION_HEADER_INVALID
-        | REASON_CODE_WS_KEY_HEADER_EMPTY
-        | REASON_CODE_WS_VERSION_HEADER_INVALID => {
-            ServiceApiProtocolSessionReasonClass::WebsocketProtocol
-        }
-        REASON_CODE_PAYLOAD_IO_ERROR
-        | REASON_CODE_PAYLOAD_JSON_SYNTAX_INVALID
-        | REASON_CODE_PAYLOAD_STRUCTURE_INVALID => {
-            ServiceApiProtocolSessionReasonClass::PayloadDecode
-        }
-        REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING
-        | REASON_CODE_AUTH_SENDER_DID_INVALID
-        | REASON_CODE_AUTH_NONCE_HEADER_MISSING
-        | REASON_CODE_AUTH_NONCE_INVALID
-        | REASON_CODE_AUTH_NONCE_NON_POSITIVE
-        | REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING
-        | REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED
-        | REASON_CODE_AUTH_REPLAY_NONCE_DETECTED => {
-            ServiceApiProtocolSessionReasonClass::SessionAuth
-        }
-        REASON_CODE_METHOD_NOT_ALLOWED | REASON_CODE_ROUTE_NOT_FOUND => {
-            ServiceApiProtocolSessionReasonClass::RouteContract
-        }
-        REASON_CODE_PROTOCOL_SESSION_DOCS_MARKER_MISSING => {
-            ServiceApiProtocolSessionReasonClass::DocsContract
-        }
-        _ => ServiceApiProtocolSessionReasonClass::Unclassified,
-    };
-    ServiceApiProtocolSessionReasonProjection::new(normalized.to_owned(), reason_class)
-}
-
-#[cfg(test)]
-pub(crate) fn validate_service_api_protocol_session_docs_contract(doc: &str) -> Result<(), String> {
-    for marker in service_api_protocol_session_docs_markers() {
-        if !doc.contains(marker.as_str()) {
-            return Err(format!(
-                "{}:missing required protocol/session docs marker: {}",
-                REASON_CODE_PROTOCOL_SESSION_DOCS_MARKER_MISSING, marker
-            ));
-        }
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-fn service_api_protocol_session_docs_markers() -> [String; 3] {
-    [
-        "## Service API Protocol/Session Reason Mapping Gate (Issue #4318)".to_owned(),
-        "service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1".to_owned(),
-        format!(
-            "service_api_protocol_session_reason_codes_csv={SERVICE_API_PROTOCOL_SESSION_REASON_CODES_CSV}"
-        ),
-    ]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1641,9 +1524,10 @@ fn websocket_upgrade_response(upgrade: WebSocketUpgrade, snapshot: ServiceApiSna
     let mut response = upgrade
         .on_upgrade(move |socket| stream_websocket_event(socket, snapshot))
         .into_response();
-    response
-        .headers_mut()
-        .insert("X-KAMN-WebSocket-Contract", HeaderValue::from_static("v1"));
+    response.headers_mut().insert(
+        RESPONSE_HEADER_WS_CONTRACT,
+        HeaderValue::from_static(WEBSOCKET_CONTRACT_VERSION),
+    );
     response
 }
 
@@ -1720,10 +1604,60 @@ pub(crate) fn parse_service_api_payload<T: DeserializeOwned>(payload: &str) -> R
 pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) -> &'static str {
     use serde_json::error::Category;
     match error.classify() {
-        Category::Io => REASON_CODE_PAYLOAD_IO_ERROR,
-        Category::Syntax | Category::Eof => REASON_CODE_PAYLOAD_JSON_SYNTAX_INVALID,
-        Category::Data => REASON_CODE_PAYLOAD_STRUCTURE_INVALID,
+        Category::Io => "service_api_payload_io_error",
+        Category::Syntax | Category::Eof => "service_api_payload_json_syntax_invalid",
+        Category::Data => "service_api_payload_structure_invalid",
     }
+}
+
+#[cfg(test)]
+pub(crate) fn detect_service_api_websocket_protocol_contract_drift(
+    response_header: &str,
+    expected_contract: &str,
+) -> Result<(), &'static str> {
+    let observed_contract = response_header.lines().find_map(|line| {
+        line.split_once(':').and_then(|(name, value)| {
+            if name
+                .trim()
+                .eq_ignore_ascii_case(RESPONSE_HEADER_WS_CONTRACT)
+            {
+                Some(value.trim())
+            } else {
+                None
+            }
+        })
+    });
+
+    match observed_contract {
+        Some(value) if value.eq_ignore_ascii_case(expected_contract) => Ok(()),
+        _ => Err(REASON_CODE_WS_PROTOCOL_CONTRACT_DRIFT_DETECTED),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn validate_service_api_websocket_session_frame(
+    frame: &[u8],
+) -> Result<(), &'static str> {
+    if frame.len() < 2 {
+        return Err(REASON_CODE_WS_SESSION_FRAME_TOO_SHORT);
+    }
+    if frame[0] != 0x81 {
+        return Err(REASON_CODE_WS_SESSION_FRAME_OPCODE_INVALID);
+    }
+    if frame[1] & 0x80 != 0 {
+        return Err(REASON_CODE_WS_SESSION_FRAME_MASK_INVALID);
+    }
+
+    let payload_len = (frame[1] & 0x7f) as usize;
+    if frame.len() != payload_len + 2 {
+        return Err(REASON_CODE_WS_SESSION_FRAME_LENGTH_MISMATCH);
+    }
+
+    if std::str::from_utf8(&frame[2..2 + payload_len]).is_err() {
+        return Err(REASON_CODE_WS_SESSION_FRAME_PAYLOAD_UTF8_INVALID);
+    }
+
+    Ok(())
 }
 
 fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
