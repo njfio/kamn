@@ -291,13 +291,13 @@ fn regression_kolme_live_signer_adapter_rejects_recovered_key_mismatch() {
 #[test]
 fn regression_signer_private_key_parse_path_requires_zeroize_markers() {
     // Regression: #2672
-    const SIGNER_SOURCE: &str = include_str!("../signer.rs");
+    const SIGNER_ADAPTER_SOURCE: &str = include_str!("../signer/signer_adapter.rs");
     assert!(
-        SIGNER_SOURCE.contains("private_key_hex.zeroize()"),
+        SIGNER_ADAPTER_SOURCE.contains("private_key_hex.zeroize()"),
         "signer private key hex buffers must be explicitly zeroized after parsing"
     );
     assert!(
-        SIGNER_SOURCE.contains("private_key_bytes.zeroize()"),
+        SIGNER_ADAPTER_SOURCE.contains("private_key_bytes.zeroize()"),
         "decoded signer private key byte buffers must be explicitly zeroized after key setup"
     );
 }

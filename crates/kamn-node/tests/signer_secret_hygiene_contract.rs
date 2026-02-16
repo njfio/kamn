@@ -1,22 +1,27 @@
 const SIGNER_SOURCE: &str = include_str!("../src/signer.rs");
+const SIGNER_ADAPTER_SOURCE: &str = include_str!("../src/signer/signer_adapter.rs");
 const KOLME_RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/architecture/kolme-runtime-commit.md");
 const CI_STRATEGY_DOC: &str = include_str!("../../../docs/ci/strategy.md");
 
 #[test]
 fn source_declares_signer_decode_zeroization_markers() {
-    let decoded_zeroize_count = SIGNER_SOURCE.matches("decoded.zeroize();").count();
+    let decoded_zeroize_count = SIGNER_ADAPTER_SOURCE.matches("decoded.zeroize();").count();
     assert!(
         decoded_zeroize_count >= 2,
         "signer source must keep explicit decoded buffer zeroization calls"
     );
     assert!(
-        SIGNER_SOURCE.contains("private_key_bytes.zeroize();"),
+        SIGNER_ADAPTER_SOURCE.contains("private_key_bytes.zeroize();"),
         "signer source must keep private key byte buffer zeroization"
     );
     assert!(
-        SIGNER_SOURCE.contains("private_key_hex.zeroize();"),
+        SIGNER_ADAPTER_SOURCE.contains("private_key_hex.zeroize();"),
         "signer source must keep private key hex buffer zeroization"
+    );
+    assert!(
+        SIGNER_SOURCE.contains("pub(crate) use signer_adapter::{"),
+        "signer source must re-export signer_adapter boundary to preserve module ownership"
     );
     assert!(
         SIGNER_SOURCE
