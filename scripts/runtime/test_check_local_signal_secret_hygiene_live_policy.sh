@@ -39,6 +39,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^local_signal_secret_hygiene_poli
   echo "expected local signal/secret hygiene policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1$'; then
+  echo "expected local signal/secret hygiene policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded$'; then
+  echo "expected local signal/secret hygiene policy checker reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -52,6 +60,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected local signal/secret hygiene policy final_decision=GO")
 if payload.get("local_signal_secret_hygiene_policy_status") != "verified":
     raise SystemExit("expected local_signal_secret_hygiene_policy_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-signal-shutdown-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signal shutdown reason taxonomy marker")
+if payload.get("reason_codes_csv") != "local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic signal shutdown reason codes taxonomy marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -97,5 +109,101 @@ reason_codes = [entry for entry in failed_checks.split(",") if entry]
 if "local_signal_secret_hygiene_policy_secret_reason_code_mismatch" not in reason_codes:
     raise SystemExit("expected parser to recover deterministic signal/secret hygiene reason code")
 PY
+
+tampered_signal_shutdown_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_signal_shutdown_report"
+python3 - "$tampered_signal_shutdown_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["signal_shutdown_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_signal_shutdown_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_signal_shutdown_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_signal_shutdown_code=$?
+set -e
+rm -f "$tampered_signal_shutdown_report"
+if [ "$tampered_signal_shutdown_code" -eq 0 ]; then
+  echo "expected signal shutdown drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_signal_shutdown_output" | grep -q 'local_signal_shutdown_path_drift_detected'; then
+  echo "expected deterministic signal shutdown drift reason code" >&2
+  exit 1
+fi
+
+tampered_graceful_drain_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_graceful_drain_report"
+python3 - "$tampered_graceful_drain_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["signal_graceful_drain_status"] = "bypass-accepted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_graceful_drain_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_graceful_drain_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_graceful_drain_code=$?
+set -e
+rm -f "$tampered_graceful_drain_report"
+if [ "$tampered_graceful_drain_code" -eq 0 ]; then
+  echo "expected graceful-drain bypass tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_graceful_drain_output" | grep -q 'local_graceful_drain_bypass_detected'; then
+  echo "expected deterministic graceful-drain bypass reason code" >&2
+  exit 1
+fi
+
+tampered_budget_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_budget_report"
+python3 - "$tampered_budget_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["max_seconds"] = 241
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_budget_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_budget_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_budget_code=$?
+set -e
+rm -f "$tampered_budget_report"
+if [ "$tampered_budget_code" -eq 0 ]; then
+  echo "expected ci-local signal shutdown budget boundary tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_budget_output" | grep -q 'ci_local_signal_shutdown_budget_boundary_exceeded'; then
+  echo "expected deterministic ci-local signal shutdown budget boundary reason code" >&2
+  exit 1
+fi
 
 echo "local signal/secret hygiene live policy tests passed."

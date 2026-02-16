@@ -555,10 +555,21 @@ fn doc_contains_runtime_local_signal_secret_hygiene_contract_lane_ci_mode_marker
     assert!(DOC.contains("test_validate_local_signal_secret_hygiene_live.sh"));
     assert!(DOC.contains("test_check_local_signal_secret_hygiene_live_policy.sh"));
     assert!(DOC.contains("test_validate_local_signal_secret_hygiene_live_contract_lane.sh"));
+    assert!(DOC.contains("ci-local contract-lane boundary rejects `--max-seconds > 240`."));
+    assert!(DOC.contains(
+        "shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("signal_graceful_drain_status=verified"));
     assert!(DOC.contains(
         "local signal/secret hygiene run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("fallback_signer_secret_present_violation"));
+    assert!(DOC.contains("local_signal_shutdown_path_drift_detected"));
+    assert!(DOC.contains("local_graceful_drain_bypass_detected"));
+    assert!(DOC.contains("ci_local_signal_shutdown_budget_boundary_exceeded"));
 }
 
 #[test]

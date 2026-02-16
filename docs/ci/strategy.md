@@ -753,10 +753,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode composes deterministic daemon signal and secret-hygiene checks without external network dependency.
   - run mode is explicit local-only and requires `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_OPT_IN=1`.
+  - ci-local contract-lane boundary rejects `--max-seconds > 240`.
   - local signal/secret hygiene run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - explicit runtime budget cap via `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_MAX_SECONDS`.
+- Deterministic signal shutdown taxonomy markers:
+  - `shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1`
+  - `shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded`
+  - `signal_graceful_drain_status=verified`
 - Deterministic fail-closed marker for policy tamper drills:
   - `fallback_signer_secret_present_violation`
+  - `local_signal_shutdown_path_drift_detected`
+  - `local_graceful_drain_bypass_detected`
+  - `ci_local_signal_shutdown_budget_boundary_exceeded`
   - `signer_secret_source_precedence_violation`
 
 ## Runtime Local Metrics Scrape Contract Lane

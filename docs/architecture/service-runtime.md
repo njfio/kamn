@@ -56,6 +56,27 @@ between completion reason, drain status, and snapshot flush status:
 
 Invalid combinations emit deterministic reason codes and fail closed.
 
+## Local Signal Shutdown Governance Contract
+
+Local signal lifecycle governance composes daemon OS-signal validation with
+signal + secret-hygiene policy checks.
+
+Deterministic shutdown taxonomy markers:
+
+- `signal_graceful_drain_status=verified`
+- `shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1`
+- `shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded`
+
+Fail-closed shutdown drift markers:
+
+- `local_signal_shutdown_path_drift_detected`
+- `local_graceful_drain_bypass_detected`
+- `ci_local_signal_shutdown_budget_boundary_exceeded`
+
+CI-local boundary remains explicit and fail-closed:
+
+- local signal/secret hygiene contract lane rejects `--max-seconds > 240`.
+
 ## Local Retry/Diagnostics Governance Contract
 
 Local retry/backoff diagnostics are enforced through a deterministic summary +
