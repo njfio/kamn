@@ -222,6 +222,22 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_block_commit_persistence_mismatch_tamper_gate() {
+    assert!(CHECKLIST.contains("## Persisted Block Commit Mismatch/Tamper Gate (Issue #4321)"));
+    assert!(
+        CHECKLIST.contains("cargo test -p kamn-core --test block_commit_persistence_tamper_matrix")
+    );
+    assert!(CHECKLIST.contains(
+        "block_commit_persistence_reason_taxonomy_version=kamn.runtime.block-commit-persistence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "block_commit_persistence_reason_codes_csv=canonical_replay_payload_digest_mismatch,canonical_replay_checkpoint_missing,canonical_replay_block_height_mismatch,canonical_replay_transaction_ids_mismatch"
+    ));
+    assert!(CHECKLIST.contains("block_commit_persistence_tamper_detection_status=verified"));
+    assert!(CHECKLIST.contains("Regression: #4321"));
+}
+
+#[test]
 fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
     assert!(CHECKLIST.contains("## Live-Network Pilot Launch and Rollback Evidence Gates"));
     assert!(CHECKLIST.contains("run_live_network_smoke_lane.sh"));
