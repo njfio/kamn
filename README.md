@@ -688,10 +688,14 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_fallback_guard_mode=reject_if_present
 # runtime_signer_fallback_private_key_present=false
 # runtime_signer_raw_private_key_present=false
+# runtime_signer_private_key_env_zeroized=true
+# runtime_signer_private_key_bytes_zeroized=true
 # runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1
 # runtime_signer_attestation_bundle
 # contracts.runtime_signer_fallback_private_key_allowed=false
 # contracts.runtime_signer_managed_external_raw_private_key_allowed=false
+# contracts.runtime_signer_private_key_env_zeroization_required=true
+# contracts.runtime_signer_private_key_bytes_zeroization_required=true
 
 # strict secondary signer summary marker contracts
 # runtime_signer_profile=ops-secondary
@@ -717,6 +721,8 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_managed_external_private_key_command_marker_detected
 # runtime_signing_profile_mismatch
 # runtime_signing_profile_contract_mismatch
+# runtime_signer_private_key_env_zeroization_violation
+# runtime_signer_private_key_bytes_zeroization_violation
 # runtime_signer_fallback_private_key_present_violation
 # runtime_signer_managed_external_raw_private_key_present_violation
 # runtime_signer_attestation_approved_signers_not_unique
@@ -728,6 +734,8 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_signer_profile_split_brain_detected
 # runtime_commit_in_memory_provider_reference_detected
 # runtime_commit_policy_check_in_memory_provider_reference_detected
+# signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1
+# signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation
 
 # strict profile non-synthetic submit probe marker
 # integration_kolme_fork_live_node_submit_reaches_endpoint

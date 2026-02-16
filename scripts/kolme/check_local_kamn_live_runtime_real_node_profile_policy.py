@@ -96,6 +96,16 @@ RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES = (
 RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV = ",".join(
     RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES
 )
+SIGNER_HYGIENE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1"
+)
+SIGNER_HYGIENE_REASON_TAXONOMY_CODES = (
+    "runtime_signer_private_key_env_zeroization_violation",
+    "runtime_signer_private_key_bytes_zeroization_violation",
+)
+SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV = ",".join(
+    SIGNER_HYGIENE_REASON_TAXONOMY_CODES
+)
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -359,6 +369,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_raw_private_key_present_invalid")
     elif expected_signer_key_source == "managed-external" and runtime_signer_raw_private_key_present:
         reason_codes.append("runtime_signer_managed_external_raw_private_key_present_violation")
+
+    runtime_signer_private_key_env_zeroized = report.get(
+        "runtime_signer_private_key_env_zeroized"
+    )
+    if not isinstance(runtime_signer_private_key_env_zeroized, bool):
+        reason_codes.append("runtime_signer_private_key_env_zeroized_invalid")
+    elif runtime_signer_private_key_env_zeroized is not True:
+        reason_codes.append("runtime_signer_private_key_env_zeroization_violation")
+
+    runtime_signer_private_key_bytes_zeroized = report.get(
+        "runtime_signer_private_key_bytes_zeroized"
+    )
+    if not isinstance(runtime_signer_private_key_bytes_zeroized, bool):
+        reason_codes.append("runtime_signer_private_key_bytes_zeroized_invalid")
+    elif runtime_signer_private_key_bytes_zeroized is not True:
+        reason_codes.append("runtime_signer_private_key_bytes_zeroization_violation")
 
     runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
     if (
@@ -689,6 +715,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_fallback_private_key_command_marker_allowed_contract_mismatch")
         if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_managed_external_raw_private_key_allowed_contract_mismatch")
+        if contracts.get("runtime_signer_private_key_env_zeroization_required") is not True:
+            reason_codes.append("runtime_signer_private_key_env_zeroization_required_contract_mismatch")
+        if contracts.get("runtime_signer_private_key_bytes_zeroization_required") is not True:
+            reason_codes.append("runtime_signer_private_key_bytes_zeroization_required_contract_mismatch")
         if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
             reason_codes.append("runtime_signer_attestation_schema_version_contract_mismatch")
         if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
@@ -889,6 +919,12 @@ def main() -> int:
         "runtime_commit_failure_reason_codes_csv": (
             RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV
         ),
+        "signer_hygiene_reason_taxonomy_version": (
+            SIGNER_HYGIENE_REASON_TAXONOMY_VERSION
+        ),
+        "signer_hygiene_reason_codes_csv": (
+            SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV
+        ),
         "observed_reason_codes_csv": observed_reason_codes_csv,
         "reason_codes": reason_codes,
         "final_decision": final_decision,
@@ -920,6 +956,14 @@ def main() -> int:
     print(
         "runtime_commit_failure_reason_codes_csv="
         f"{RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "signer_hygiene_reason_taxonomy_version="
+        f"{SIGNER_HYGIENE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "signer_hygiene_reason_codes_csv="
+        f"{SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV}"
     )
     print(f"observed_reason_codes_csv={observed_reason_codes_csv}")
     print(f"failed_checks={failed_checks}")

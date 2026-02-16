@@ -328,6 +328,12 @@ def main() -> int:
     if summary.get("runtime_signer_raw_private_key_present") is not False:
         print("expected runtime signer raw private key presence marker false in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_private_key_env_zeroized") is not True:
+        print("expected runtime signer private key env zeroization marker true in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_private_key_bytes_zeroized") is not True:
+        print("expected runtime signer private key bytes zeroization marker true in contract-lane summary", file=sys.stderr)
+        return 1
     if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
         print("expected runtime signer attestation schema marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -450,6 +456,12 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
         print("expected contracts managed-external raw private key allowed=false marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_private_key_env_zeroization_required") is not True:
+        print("expected contracts signer private key env zeroization required marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_private_key_bytes_zeroization_required") is not True:
+        print("expected contracts signer private key bytes zeroization required marker in contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
         print("expected contracts runtime signer attestation schema marker in contract-lane summary", file=sys.stderr)
@@ -1028,6 +1040,90 @@ def main() -> int:
         if managed_external_raw_key_violation_policy.get("final_decision") != "NO-GO":
             print(
                 "expected NO-GO final decision for managed-external raw signer key violation policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        zeroization_env_violation_summary_file = negative_path / "zeroization_env_violation_summary.json"
+        zeroization_env_violation_policy_file = negative_path / "zeroization_env_violation_policy.json"
+        zeroization_env_violation_summary = dict(summary)
+        zeroization_env_violation_summary["mode"] = "run"
+        zeroization_env_violation_summary["status"] = "fail"
+        zeroization_env_violation_summary["reason_code"] = "runtime_signer_private_key_env_zeroization_violation"
+        zeroization_env_violation_summary["runtime_signer_private_key_env_zeroized"] = False
+        zeroization_env_violation_summary_file.write_text(
+            json.dumps(zeroization_env_violation_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        zeroization_env_violation_result = run_real_node_policy_check(
+            report_file=zeroization_env_violation_summary_file,
+            output_json=zeroization_env_violation_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if zeroization_env_violation_result.returncode == 0:
+            print("expected signer private key env zeroization violation proof to fail closed", file=sys.stderr)
+            return 1
+        zeroization_env_violation_policy = json.loads(
+            zeroization_env_violation_policy_file.read_text(encoding="utf-8")
+        )
+        zeroization_env_violation_reason_codes = zeroization_env_violation_policy.get("reason_codes")
+        if not isinstance(zeroization_env_violation_reason_codes, list):
+            print(
+                "expected reason_codes list in signer private key env zeroization violation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_private_key_env_zeroization_violation" not in zeroization_env_violation_reason_codes:
+            print(
+                "expected runtime_signer_private_key_env_zeroization_violation in signer private key env zeroization policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if zeroization_env_violation_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for signer private key env zeroization violation policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        zeroization_bytes_violation_summary_file = negative_path / "zeroization_bytes_violation_summary.json"
+        zeroization_bytes_violation_policy_file = negative_path / "zeroization_bytes_violation_policy.json"
+        zeroization_bytes_violation_summary = dict(summary)
+        zeroization_bytes_violation_summary["mode"] = "run"
+        zeroization_bytes_violation_summary["status"] = "fail"
+        zeroization_bytes_violation_summary["reason_code"] = "runtime_signer_private_key_bytes_zeroization_violation"
+        zeroization_bytes_violation_summary["runtime_signer_private_key_bytes_zeroized"] = False
+        zeroization_bytes_violation_summary_file.write_text(
+            json.dumps(zeroization_bytes_violation_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        zeroization_bytes_violation_result = run_real_node_policy_check(
+            report_file=zeroization_bytes_violation_summary_file,
+            output_json=zeroization_bytes_violation_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if zeroization_bytes_violation_result.returncode == 0:
+            print("expected signer private key bytes zeroization violation proof to fail closed", file=sys.stderr)
+            return 1
+        zeroization_bytes_violation_policy = json.loads(
+            zeroization_bytes_violation_policy_file.read_text(encoding="utf-8")
+        )
+        zeroization_bytes_violation_reason_codes = zeroization_bytes_violation_policy.get("reason_codes")
+        if not isinstance(zeroization_bytes_violation_reason_codes, list):
+            print(
+                "expected reason_codes list in signer private key bytes zeroization violation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_private_key_bytes_zeroization_violation" not in zeroization_bytes_violation_reason_codes:
+            print(
+                "expected runtime_signer_private_key_bytes_zeroization_violation in signer private key bytes zeroization policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if zeroization_bytes_violation_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for signer private key bytes zeroization violation policy output",
                 file=sys.stderr,
             )
             return 1
@@ -1622,12 +1718,20 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signer_private_key_env_zeroized=true",
+        "runtime_signer_private_key_bytes_zeroized=true",
+        "contracts.runtime_signer_private_key_env_zeroization_required=true",
+        "contracts.runtime_signer_private_key_bytes_zeroization_required=true",
+        "runtime_signer_private_key_env_zeroization_violation",
+        "runtime_signer_private_key_bytes_zeroization_violation",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
         "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
+        "signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1",
+        "signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation",
         "Regression: #2302",
         "Regression: #2337",
         "Regression: #2325",
@@ -1666,12 +1770,20 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signer_private_key_env_zeroized=true",
+        "runtime_signer_private_key_bytes_zeroized=true",
+        "contracts.runtime_signer_private_key_env_zeroization_required=true",
+        "contracts.runtime_signer_private_key_bytes_zeroization_required=true",
+        "runtime_signer_private_key_env_zeroization_violation",
+        "runtime_signer_private_key_bytes_zeroization_violation",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
         "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
+        "signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1",
+        "signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation",
         "Regression: #2302",
         "Regression: #2337",
         "Regression: #2325",
@@ -1710,12 +1822,20 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signer_private_key_env_zeroized=true",
+        "runtime_signer_private_key_bytes_zeroized=true",
+        "contracts.runtime_signer_private_key_env_zeroization_required=true",
+        "contracts.runtime_signer_private_key_bytes_zeroization_required=true",
+        "runtime_signer_private_key_env_zeroization_violation",
+        "runtime_signer_private_key_bytes_zeroization_violation",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
         "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
+        "signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1",
+        "signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation",
         "Regression: #2302",
         "Regression: #2337",
         "Regression: #2325",

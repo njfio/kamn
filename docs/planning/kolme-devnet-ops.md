@@ -533,6 +533,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
+    - `runtime_signer_private_key_env_zeroized=true`
+    - `runtime_signer_private_key_bytes_zeroized=true`
   - GO proof also supports deterministic secondary signer markers:
     - `runtime_signer_profile=ops-secondary`
     - `runtime_signer_previous_profile=ops-secondary`
@@ -544,6 +546,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO split-brain proof must surface `runtime_commit_signer_profile_split_brain_detected` when runtime command composition includes conflicting signer profile selectors.
   - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
+  - NO-GO signer private-key env zeroization drift proof must surface `runtime_signer_private_key_env_zeroization_violation` when env-loaded signer key material residue is detected.
+  - NO-GO signer private-key bytes zeroization drift proof must surface `runtime_signer_private_key_bytes_zeroization_violation` when decoded signer key-byte residue is detected.
   - NO-GO signer key-source command marker proof must surface `runtime_commit_signer_key_source_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=<env-local|managed-external>`.
   - NO-GO fallback signer key command marker proof must surface `runtime_commit_fallback_private_key_command_marker_detected` when `runtime_commit_command` includes `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=...`.
   - NO-GO managed-external key-reference command marker proof must surface `runtime_commit_managed_external_signer_key_reference_marker_missing` when managed-external command composition omits `KAMN_KOLME_LIVE_SIGNER_KEY_REF=...`.
@@ -558,6 +562,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_split_brain_detected` when `runtime_commit_command` includes conflicting `KAMN_KOLME_LIVE_SIGNER_PROFILE` selectors in one command composition.
+  - signer hygiene reason taxonomy markers remain deterministic:
+    - `signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1`
+    - `signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation`
 - Real-node profile contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
@@ -624,6 +631,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `contracts.runtime_signer_fallback_guard_contract_version=v2`
     - `contracts.runtime_signer_fallback_guard_mode=reject_if_present`
     - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
+    - `contracts.runtime_signer_private_key_env_zeroization_required=true`
+    - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
     - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
   - real-node profile accepts secondary signer summary/contracts markers for failover drills:

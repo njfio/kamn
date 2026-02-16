@@ -21,9 +21,11 @@ TMP_SECONDARY_POLICY_REPORT="$(mktemp)"
 TMP_SECONDARY_KEY_ENV_DRIFT_REPORT="$(mktemp)"
 TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT="$(mktemp)"
 TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT="$(mktemp)"
+TMP_ZEROIZE_ENV_DRIFT_REPORT="$(mktemp)"
+TMP_ZEROIZE_BYTES_DRIFT_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT" "$TMP_ZEROIZE_ENV_DRIFT_REPORT" "$TMP_ZEROIZE_BYTES_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -95,6 +97,10 @@ required_coverage_markers=(
   "runtime_signer_attestation_schema_invalid"
   "runtime_signer_key_source_profile_pair_disallowed"
   "runtime_signer_private_key_env_mismatch"
+  "runtime_signer_private_key_env_zeroization_violation"
+  "runtime_signer_private_key_bytes_zeroization_violation"
+  "signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1"
+  "signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation"
   "runtime_commit_signer_key_source_marker_missing"
   "runtime_commit_managed_external_signer_key_reference_marker_missing"
   "runtime_commit_managed_external_signer_public_key_marker_missing"
@@ -348,6 +354,10 @@ if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in real-node profile contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
     raise SystemExit("expected runtime signer raw private key presence marker false in real-node profile contract-lane summary")
+if summary.get("runtime_signer_private_key_env_zeroized") is not True:
+    raise SystemExit("expected runtime signer private key env zeroization marker true in real-node profile contract-lane summary")
+if summary.get("runtime_signer_private_key_bytes_zeroized") is not True:
+    raise SystemExit("expected runtime signer private key bytes zeroization marker true in real-node profile contract-lane summary")
 if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
     raise SystemExit("expected runtime signer attestation schema marker in real-node profile contract-lane summary")
 attestation_bundle = summary.get("runtime_signer_attestation_bundle")
@@ -412,6 +422,10 @@ if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") i
     )
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts managed-external raw private key allowed=false marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_private_key_env_zeroization_required") is not True:
+    raise SystemExit("expected contracts signer private key env zeroization required marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_private_key_bytes_zeroization_required") is not True:
+    raise SystemExit("expected contracts signer private key bytes zeroization required marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
     raise SystemExit("expected contracts runtime signer attestation schema marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
@@ -491,6 +505,10 @@ if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected secondary signer fallback private key presence marker false in contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
     raise SystemExit("expected secondary signer raw private key presence marker false in contract-lane summary")
+if summary.get("runtime_signer_private_key_env_zeroized") is not True:
+    raise SystemExit("expected secondary signer private key env zeroization marker true in contract-lane summary")
+if summary.get("runtime_signer_private_key_bytes_zeroized") is not True:
+    raise SystemExit("expected secondary signer private key bytes zeroization marker true in contract-lane summary")
 if summary.get("runtime_signer_quorum_linkage_contract_version") != "v1":
     raise SystemExit("expected secondary signer quorum linkage contract version marker in contract-lane summary")
 if summary.get("runtime_signer_quorum_required_approvals") != 1:
@@ -528,6 +546,10 @@ if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") i
     )
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts secondary signer managed-external raw private key allowed=false marker in contract-lane summary")
+if contracts.get("runtime_signer_private_key_env_zeroization_required") is not True:
+    raise SystemExit("expected contracts secondary signer private key env zeroization required marker in contract-lane summary")
+if contracts.get("runtime_signer_private_key_bytes_zeroization_required") is not True:
+    raise SystemExit("expected contracts secondary signer private key bytes zeroization required marker in contract-lane summary")
 if contracts.get("runtime_signer_quorum_linkage_contract_version") != "v1":
     raise SystemExit("expected contracts secondary signer quorum linkage contract version marker in contract-lane summary")
 if contracts.get("runtime_signer_quorum_required_approvals") != 1:
@@ -554,7 +576,7 @@ if policy.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.l
     raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker in secondary signer policy output")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT" "$TMP_ZEROIZE_ENV_DRIFT_REPORT" "$TMP_ZEROIZE_BYTES_DRIFT_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -673,6 +695,26 @@ managed_external_raw_key_contracts["runtime_signer_key_source"] = "managed-exter
 managed_external_raw_key_summary["contracts"] = managed_external_raw_key_contracts
 pathlib.Path(sys.argv[9]).write_text(
     json.dumps(managed_external_raw_key_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+zeroize_env_drift_summary = dict(base_summary)
+zeroize_env_drift_summary["runtime_signer_private_key_env_zeroized"] = False
+zeroize_env_drift_summary["mode"] = "run"
+zeroize_env_drift_summary["status"] = "fail"
+zeroize_env_drift_summary["reason_code"] = "runtime_signer_private_key_env_zeroization_violation"
+pathlib.Path(sys.argv[10]).write_text(
+    json.dumps(zeroize_env_drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+zeroize_bytes_drift_summary = dict(base_summary)
+zeroize_bytes_drift_summary["runtime_signer_private_key_bytes_zeroized"] = False
+zeroize_bytes_drift_summary["mode"] = "run"
+zeroize_bytes_drift_summary["status"] = "fail"
+zeroize_bytes_drift_summary["reason_code"] = "runtime_signer_private_key_bytes_zeroization_violation"
+pathlib.Path(sys.argv[11]).write_text(
+    json.dumps(zeroize_bytes_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
@@ -849,6 +891,46 @@ fi
 
 if ! grep -q "runtime_signer_managed_external_raw_private_key_present_violation" "$TMP_NEGATIVE_ERR"; then
   echo "expected managed-external raw signer key violation reason in negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_ZEROIZE_ENV_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+zeroize_env_exit_code=$?
+set -e
+
+if [ "$zeroize_env_exit_code" -eq 0 ]; then
+  echo "expected signer private key env zeroization drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_private_key_env_zeroization_violation" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer private key env zeroization violation reason in negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_ZEROIZE_BYTES_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+zeroize_bytes_exit_code=$?
+set -e
+
+if [ "$zeroize_bytes_exit_code" -eq 0 ]; then
+  echo "expected signer private key bytes zeroization drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_private_key_bytes_zeroization_violation" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer private key bytes zeroization violation reason in negative proof output" >&2
   exit 1
 fi
 

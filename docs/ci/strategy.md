@@ -2480,6 +2480,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_fallback_guard_mode=reject_if_present`
       - `runtime_signer_fallback_private_key_present=false`
       - `runtime_signer_raw_private_key_present=false`
+      - `runtime_signer_private_key_env_zeroized=true`
+      - `runtime_signer_private_key_bytes_zeroized=true`
+      - `contracts.runtime_signer_private_key_env_zeroization_required=true`
+      - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
       - `runtime_signer_attestation_bundle`
       - `runtime_signer_quorum_linkage_contract_version=v1`
@@ -2495,6 +2499,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fixture_profile_reason_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_command_profile_version_mismatch,runtime_commit_non_synthetic_policy_marker_missing,runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_failure_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1`
       - `runtime_commit_failure_reason_codes_csv=runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing`
+      - `signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1`
+      - `signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation`
       - `observed_reason_codes_csv=none|<sorted reason csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
@@ -2514,6 +2520,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_failover_attestation_previous_profile_not_approved`
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
+      - `runtime_signer_private_key_env_zeroization_violation`
+      - `runtime_signer_private_key_bytes_zeroization_violation`
       - `runtime_commit_signer_key_source_marker_missing`
       - `runtime_commit_fallback_private_key_command_marker_detected`
       - `runtime_commit_managed_external_signer_key_reference_marker_missing`

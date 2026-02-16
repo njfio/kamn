@@ -55,6 +55,10 @@ runtime_signer_attestation_schema_version = sys.argv[47]
 runtime_signing_profile = sys.argv[48]
 runtime_signer_fallback_guard_mode = sys.argv[49]
 runtime_signer_managed_external_raw_private_key_remediation = sys.argv[50]
+runtime_signer_private_key_env_zeroized = (
+    not runtime_signer_fallback_private_key_present and not runtime_signer_raw_private_key_present
+)
+runtime_signer_private_key_bytes_zeroized = runtime_signer_private_key_env_zeroized
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -254,6 +258,8 @@ summary = {
     "runtime_signer_managed_external_raw_private_key_remediation": runtime_signer_managed_external_raw_private_key_remediation,
     "runtime_signer_fallback_private_key_present": runtime_signer_fallback_private_key_present,
     "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
+    "runtime_signer_private_key_env_zeroized": runtime_signer_private_key_env_zeroized,
+    "runtime_signer_private_key_bytes_zeroized": runtime_signer_private_key_bytes_zeroized,
     "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
     "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
     "runtime_signer_quorum_linkage_contract_version": runtime_signer_quorum_linkage_contract_version,
@@ -297,6 +303,8 @@ summary = {
         "runtime_signer_fallback_private_key_allowed": False,
         "runtime_signer_fallback_private_key_command_marker_allowed": False,
         "runtime_signer_managed_external_raw_private_key_allowed": False,
+        "runtime_signer_private_key_env_zeroization_required": True,
+        "runtime_signer_private_key_bytes_zeroization_required": True,
         "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
         "runtime_signer_attestation_signer_uniqueness_required": True,
         "runtime_signer_attestation_threshold_required": True,

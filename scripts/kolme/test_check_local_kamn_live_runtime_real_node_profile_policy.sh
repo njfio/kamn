@@ -95,6 +95,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_managed_external_raw_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_signer_raw_private_key_present": false,
+  "runtime_signer_private_key_env_zeroized": true,
+  "runtime_signer_private_key_bytes_zeroized": true,
   "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "runtime_signer_attestation_bundle": {
     "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -146,6 +148,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_signer_managed_external_raw_private_key_allowed": false,
+    "runtime_signer_private_key_env_zeroization_required": true,
+    "runtime_signer_private_key_bytes_zeroization_required": true,
     "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "runtime_signer_attestation_signer_uniqueness_required": true,
     "runtime_signer_attestation_threshold_required": true,
@@ -258,6 +262,10 @@ if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.l
     raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker")
 if report.get("runtime_commit_failure_reason_codes_csv") != "runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing":
     raise SystemExit("expected deterministic runtime_commit_failure_reason_codes_csv marker")
+if report.get("signer_hygiene_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signer_hygiene_reason_taxonomy_version marker")
+if report.get("signer_hygiene_reason_codes_csv") != "runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation":
+    raise SystemExit("expected deterministic signer_hygiene_reason_codes_csv marker")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
