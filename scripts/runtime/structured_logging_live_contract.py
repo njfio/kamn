@@ -10,8 +10,15 @@ from typing import Any
 
 SUMMARY_SCHEMA_VERSION = "kamn.runtime.structured-logging-live-validation.v1"
 POLICY_SCHEMA_VERSION = "kamn.runtime.structured-logging-live-policy-report.v1"
+TELEMETRY_SCHEMA_VERSION = "kamn.runtime.structured-logging-telemetry.v1"
 REASON_TAXONOMY_VERSION = (
     "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
+)
+TELEMETRY_SCHEMA_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1"
+)
+TELEMETRY_SCHEMA_REASON_CODES_CSV = (
+    "structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected"
 )
 CORRELATION_ERROR_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.correlation-error-reason-taxonomy.v1"
@@ -61,6 +68,8 @@ def _check_policy(args: argparse.Namespace) -> int:
 
     if report.get("schema_version") != SUMMARY_SCHEMA_VERSION:
         reason_codes.append("structured_logging_policy_schema_version_mismatch")
+    if report.get("telemetry_schema_version") != TELEMETRY_SCHEMA_VERSION:
+        reason_codes.append("structured_logging_telemetry_schema_version_mismatch")
 
     if report.get("status") != "pass":
         reason_codes.append("structured_logging_policy_status_mismatch")
@@ -71,6 +80,7 @@ def _check_policy(args: argparse.Namespace) -> int:
 
     required_markers = {
         "structured_logging_contract_status": "verified",
+        "telemetry_schema_contract_status": "verified",
         "correlation_contract_status": "verified",
         "correlation_id_parity_status": "verified",
         "trace_classification_contract_status": "verified",
@@ -84,7 +94,10 @@ def _check_policy(args: argparse.Namespace) -> int:
             reason_codes.append(f"structured_logging_policy_marker_missing:{marker}")
             continue
         if report.get(marker) != expected:
-            reason_codes.append(f"structured_logging_policy_marker_value_mismatch:{marker}")
+            if marker == "correlation_id_parity_status":
+                reason_codes.append("correlation_id_parity_bypass_detected")
+            else:
+                reason_codes.append(f"structured_logging_policy_marker_value_mismatch:{marker}")
 
     if "fail_closed_reason_code" not in report:
         reason_codes.append("structured_logging_policy_marker_missing:fail_closed_reason_code")
@@ -95,6 +108,27 @@ def _check_policy(args: argparse.Namespace) -> int:
         reason_codes.append("structured_logging_policy_marker_missing:reason_taxonomy_version")
     elif report.get("reason_taxonomy_version") != REASON_TAXONOMY_VERSION:
         reason_codes.append("structured_logging_policy_reason_taxonomy_version_mismatch")
+
+    if "telemetry_schema_reason_taxonomy_version" not in report:
+        reason_codes.append(
+            "structured_logging_policy_marker_missing:telemetry_schema_reason_taxonomy_version"
+        )
+    elif (
+        report.get("telemetry_schema_reason_taxonomy_version")
+        != TELEMETRY_SCHEMA_REASON_TAXONOMY_VERSION
+    ):
+        reason_codes.append(
+            "structured_logging_policy_telemetry_schema_reason_taxonomy_version_mismatch"
+        )
+
+    if "telemetry_schema_reason_codes_csv" not in report:
+        reason_codes.append(
+            "structured_logging_policy_marker_missing:telemetry_schema_reason_codes_csv"
+        )
+    elif report.get("telemetry_schema_reason_codes_csv") != TELEMETRY_SCHEMA_REASON_CODES_CSV:
+        reason_codes.append(
+            "structured_logging_policy_telemetry_schema_reason_codes_csv_mismatch"
+        )
 
     if "correlation_error_reason_taxonomy_version" not in report:
         reason_codes.append(
@@ -136,7 +170,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": observed_final_decision,
         "ci_fast_gate": ci_fast_gate,
+        "telemetry_schema_version": TELEMETRY_SCHEMA_VERSION,
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "telemetry_schema_reason_taxonomy_version": (
+            TELEMETRY_SCHEMA_REASON_TAXONOMY_VERSION
+        ),
+        "telemetry_schema_reason_codes_csv": TELEMETRY_SCHEMA_REASON_CODES_CSV,
         "correlation_error_reason_taxonomy_version": (
             CORRELATION_ERROR_REASON_TAXONOMY_VERSION
         ),
@@ -151,7 +190,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         print("status=ok")
         print("final_decision=GO")
         print("structured_logging_policy_status=verified")
+        print(f"telemetry_schema_version={TELEMETRY_SCHEMA_VERSION}")
         print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+        print(
+            "telemetry_schema_reason_taxonomy_version="
+            f"{TELEMETRY_SCHEMA_REASON_TAXONOMY_VERSION}"
+        )
+        print(
+            "telemetry_schema_reason_codes_csv="
+            f"{TELEMETRY_SCHEMA_REASON_CODES_CSV}"
+        )
         print(
             "correlation_error_reason_taxonomy_version="
             f"{CORRELATION_ERROR_REASON_TAXONOMY_VERSION}"

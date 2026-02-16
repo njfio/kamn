@@ -686,10 +686,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - no external node/network process orchestration is required.
   - runtime budget stays bounded by `KAMN_STRUCTURED_LOGGING_CONTRACT_MAX_SECONDS`.
   - tamper drills run in-process and fail closed deterministically.
+- Deterministic telemetry schema + correlation parity markers:
+  - `telemetry_schema_version=kamn.runtime.structured-logging-telemetry.v1`
+  - `telemetry_schema_contract_status=verified`
+  - `telemetry_schema_reason_taxonomy_version=kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1`
+  - `telemetry_schema_reason_codes_csv=structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected`
 - Deterministic fail-closed marker for policy tamper drills:
   - `structured_logging_policy_marker_missing:structured_logging_contract_status`
   - `structured_logging_policy_reason_taxonomy_version_mismatch`
+  - `structured_logging_telemetry_schema_version_mismatch`
+  - `structured_logging_policy_telemetry_schema_reason_taxonomy_version_mismatch`
   - `structured_logging_policy_marker_value_mismatch:trace_classification_contract_status`
+  - `correlation_id_parity_bypass_detected`
   - `structured_logging_policy_correlation_error_reason_taxonomy_version_mismatch`
 
 ## Runtime Local Retry/Diagnostics Contract Lane

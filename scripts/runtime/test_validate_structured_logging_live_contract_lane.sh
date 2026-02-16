@@ -45,6 +45,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^structured_logging_contract_lane_s
   echo "expected structured logging contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^telemetry_schema_version=kamn.runtime.structured-logging-telemetry.v1$'; then
+  echo "expected structured logging contract lane telemetry schema version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^telemetry_schema_contract_status=verified$'; then
+  echo "expected structured logging contract lane telemetry schema contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^correlation_id_parity_status=verified$'; then
   echo "expected structured logging contract lane correlation parity marker" >&2
   exit 1
@@ -59,6 +67,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^log_classification_gate_status=ver
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1$'; then
   echo "expected structured logging contract lane reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^telemetry_schema_reason_taxonomy_version=kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1$'; then
+  echo "expected structured logging contract lane telemetry schema reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^telemetry_schema_reason_codes_csv=structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected$'; then
+  echo "expected structured logging contract lane telemetry schema reason codes marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1$'; then
@@ -90,6 +106,10 @@ if lane_payload.get("structured_logging_policy_status") != "verified":
     raise SystemExit("expected structured_logging_policy_status=verified")
 if lane_payload.get("structured_logging_contract_lane_status") != "verified":
     raise SystemExit("expected structured_logging_contract_lane_status=verified")
+if lane_payload.get("telemetry_schema_version") != "kamn.runtime.structured-logging-telemetry.v1":
+    raise SystemExit("expected deterministic telemetry_schema_version marker")
+if lane_payload.get("telemetry_schema_contract_status") != "verified":
+    raise SystemExit("expected telemetry_schema_contract_status=verified")
 if lane_payload.get("correlation_id_parity_status") != "verified":
     raise SystemExit("expected correlation_id_parity_status=verified")
 if lane_payload.get("trace_classification_contract_status") != "verified":
@@ -98,6 +118,10 @@ if lane_payload.get("log_classification_gate_status") != "verified":
     raise SystemExit("expected log_classification_gate_status=verified")
 if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if lane_payload.get("telemetry_schema_reason_taxonomy_version") != "kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic telemetry_schema_reason_taxonomy_version marker")
+if lane_payload.get("telemetry_schema_reason_codes_csv") != "structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected":
+    raise SystemExit("expected deterministic telemetry_schema_reason_codes_csv marker")
 if lane_payload.get("correlation_error_reason_taxonomy_version") != "kamn.runtime.correlation-error-reason-taxonomy.v1":
     raise SystemExit("expected deterministic correlation_error_reason_taxonomy_version marker")
 if lane_payload.get("correlation_error_reason_codes_csv") != "correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped":
@@ -114,6 +138,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("structured_logging_policy_status") != "verified":
     raise SystemExit("expected structured_logging_policy_status=verified in policy report")
+if policy_payload.get("telemetry_schema_reason_taxonomy_version") != "kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic telemetry schema reason taxonomy marker in policy report")
+if policy_payload.get("telemetry_schema_reason_codes_csv") != "structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected":
+    raise SystemExit("expected deterministic telemetry schema reason codes marker in policy report")
 PY
 
 if ! grep -q "check_structured_logging_live_policy.sh" "$CONTRACT_LANE"; then

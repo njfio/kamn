@@ -103,6 +103,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn
   echo "expected structured logging live validation reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^telemetry_schema_version=kamn.runtime.structured-logging-telemetry.v1$'; then
+  echo "expected structured logging live validation telemetry schema version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^telemetry_schema_contract_status=verified$'; then
+  echo "expected structured logging live validation telemetry schema contract status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^telemetry_schema_reason_taxonomy_version=kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1$'; then
+  echo "expected structured logging live validation telemetry schema reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^telemetry_schema_reason_codes_csv=structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected$'; then
+  echo "expected structured logging live validation telemetry schema reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1$'; then
   echo "expected structured logging live validation correlation reason taxonomy marker" >&2
   exit 1
@@ -237,6 +253,10 @@ lane_report = {
     "structured_logging_contract_status": summary_report.get(
         "structured_logging_contract_status"
     ),
+    "telemetry_schema_version": summary_report.get("telemetry_schema_version"),
+    "telemetry_schema_contract_status": summary_report.get(
+        "telemetry_schema_contract_status"
+    ),
     "correlation_contract_status": summary_report.get("correlation_contract_status"),
     "structured_logging_policy_status": policy_report.get(
         "structured_logging_policy_status"
@@ -250,6 +270,12 @@ lane_report = {
         "log_classification_gate_status"
     ),
     "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
+    "telemetry_schema_reason_taxonomy_version": summary_report.get(
+        "telemetry_schema_reason_taxonomy_version"
+    ),
+    "telemetry_schema_reason_codes_csv": summary_report.get(
+        "telemetry_schema_reason_codes_csv"
+    ),
     "correlation_error_reason_taxonomy_version": summary_report.get(
         "correlation_error_reason_taxonomy_version"
     ),
@@ -276,6 +302,8 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "structured_logging_contract_status=verified"
+echo "telemetry_schema_version=kamn.runtime.structured-logging-telemetry.v1"
+echo "telemetry_schema_contract_status=verified"
 echo "correlation_contract_status=verified"
 echo "structured_logging_policy_status=verified"
 echo "structured_logging_contract_lane_status=verified"
@@ -283,6 +311,8 @@ echo "correlation_id_parity_status=verified"
 echo "trace_classification_contract_status=verified"
 echo "log_classification_gate_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1"
+echo "telemetry_schema_reason_taxonomy_version=kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1"
+echo "telemetry_schema_reason_codes_csv=structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected"
 echo "correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1"
 echo "correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped"
 echo "docs_contract_status=verified"
