@@ -76,6 +76,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^historical_query_reason_codes_csv=
   echo "expected sqlite crash-recovery contract lane historical-query reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^journal_replay_drift_detection_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane journal replay drift detection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^checkpoint_divergence_bypass_rejection_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane checkpoint divergence bypass rejection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane journal replay reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected$'; then
+  echo "expected sqlite crash-recovery contract lane journal replay reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane promotion-gate marker" >&2
   exit 1
@@ -137,6 +153,14 @@ if lane_payload.get("historical_query_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker")
 if lane_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker")
+if lane_payload.get("journal_replay_drift_detection_status") != "verified":
+    raise SystemExit("expected deterministic journal_replay_drift_detection_status marker")
+if lane_payload.get("checkpoint_divergence_bypass_rejection_status") != "verified":
+    raise SystemExit("expected deterministic checkpoint_divergence_bypass_rejection_status marker")
+if lane_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.journal-replay-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker")
+if lane_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
+    raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker")
 if lane_payload.get("crash_recovery_promotion_gate_status") != "verified":
     raise SystemExit("expected crash_recovery_promotion_gate_status=verified")
 if lane_payload.get("audit_trail_parity_status") != "verified":
@@ -167,6 +191,10 @@ if policy_payload.get("historical_query_reason_taxonomy_version") != "kamn.runti
     raise SystemExit("expected deterministic historical_query_reason_taxonomy_version marker in policy report")
 if policy_payload.get("historical_query_reason_codes_csv") != "historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch":
     raise SystemExit("expected deterministic historical_query_reason_codes_csv marker in policy report")
+if policy_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.journal-replay-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker in policy report")
+if policy_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
+    raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker in policy report")
 if policy_payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker in policy report")
 if policy_payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
