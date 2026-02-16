@@ -28,11 +28,20 @@ for snippet in "${required_workflow_snippets[@]}"; do
 done
 
 required_doc_snippets=(
-  "check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --output-json /tmp/anti-flake-policy-report.json"
+  "check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --fast-workflow-file .github/workflows/ci-fast-gate.yml --deep-workflow-file .github/workflows/ci-deep-validate.yml --output-json /tmp/anti-flake-policy-report.json"
+  "anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1"
   "anti_flake_policy_status=pass|fail"
   "anti_flake_policy_final_decision=GO|NO-GO"
+  "anti_flake_policy_reason_codes_csv=none|<csv>"
+  "anti_flake_policy_reason_codes_value=none|<csv>"
+  "anti_flake_policy_reason_class=stable|budgeted|violation"
+  "ci_smoke_local_heavy_boundary_status=verified|violation"
+  "ci_smoke_performance_report_step_missing"
+  "ci_smoke_threshold_check_step_missing"
+  "local_heavy_opt_in_boundary_missing"
   "active_flaky_entries_exceed_max"
   "expected_final_decision_mismatch"
+  "rerun_policy_bounded_retry_missing"
 )
 
 for snippet in "${required_doc_snippets[@]}"; do
