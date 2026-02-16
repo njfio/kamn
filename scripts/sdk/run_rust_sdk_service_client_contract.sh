@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REQUEST_ERROR_REASON_TAXONOMY_VERSION="kamn.sdk.rust-http-request-error-reason-taxonomy.v1"
 REQUEST_ERROR_REASON_CODES_CSV="service_api_auth_sender_did_header_missing,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_route_not_found,service_api_method_not_allowed,service_api_legacy_unauthorized,service_api_legacy_conflict,service_api_legacy_bad_request,service_api_legacy_error_unknown"
+SUBSCRIPTION_REASON_TAXONOMY_VERSION="kamn.sdk.websocket-subscription-reason-taxonomy.v1"
+SUBSCRIPTION_REASON_CODES_CSV="service_api_websocket_upgrade_required,service_api_auth_sender_did_header_missing,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected,service_api_route_not_found,service_api_method_not_allowed"
 
 output_json=""
 max_seconds=180
@@ -83,6 +85,10 @@ cat >"$report_json" <<JSON
   "request_error_reason_codes_csv": "${REQUEST_ERROR_REASON_CODES_CSV}",
   "request_error_reason_codes_value": "${REQUEST_ERROR_REASON_CODES_CSV}",
   "request_error_taxonomy_status": "verified",
+  "subscription_reason_taxonomy_version": "${SUBSCRIPTION_REASON_TAXONOMY_VERSION}",
+  "subscription_reason_codes_csv": "${SUBSCRIPTION_REASON_CODES_CSV}",
+  "subscription_reason_codes_value": "${SUBSCRIPTION_REASON_CODES_CSV}",
+  "subscription_taxonomy_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
 JSON
@@ -99,3 +105,6 @@ echo "regression_guard_status=verified"
 echo "request_error_reason_taxonomy_version=${REQUEST_ERROR_REASON_TAXONOMY_VERSION}"
 echo "request_error_reason_codes_csv=${REQUEST_ERROR_REASON_CODES_CSV}"
 echo "request_error_taxonomy_status=verified"
+echo "subscription_reason_taxonomy_version=${SUBSCRIPTION_REASON_TAXONOMY_VERSION}"
+echo "subscription_reason_codes_csv=${SUBSCRIPTION_REASON_CODES_CSV}"
+echo "subscription_taxonomy_status=verified"
