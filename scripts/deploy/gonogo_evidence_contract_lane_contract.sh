@@ -277,4 +277,50 @@ if ! printf '%s\n' "$audit_policy_output" | grep -q "^final_decision=GO$"; then
   exit 1
 fi
 
+slo_policy_report="$TMP_DIR/slo-policy-report.json"
+cat >"$slo_policy_report" <<'JSON'
+{
+  "schema_version": "kamn.deploy.slo-rollback-report.v1",
+  "status": "pass",
+  "final_decision": "GO",
+  "reason_key": "deployment_slo_rollback_reason_codes:GO:v1",
+  "reason_codes": []
+}
+JSON
+
+slo_policy_bundle_file="$TMP_DIR/gonogo-slo-policy-contract.json"
+slo_policy_generator_output="$(
+  bash "$GENERATOR" \
+    --output-file "$slo_policy_bundle_file" \
+    --release-candidate "v1.0.0-contract-slo-policy" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:contract-slo-policy" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --slo-policy-report-file "$slo_policy_report" \
+    --slo-policy-max-age-seconds 1800
+)"
+if ! printf '%s\n' "$slo_policy_generator_output" | grep -q "^slo_policy_gate_final_decision=GO$"; then
+  echo "expected SLO policy gate decision marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$slo_policy_generator_output" | grep -q "^final_decision=GO$"; then
+  echo "expected SLO policy contract lane bundle decision to be GO" >&2
+  exit 1
+fi
+
+slo_policy_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$slo_policy_bundle_file")"
+if ! printf '%s\n' "$slo_policy_policy_output" | grep -q "^slo_policy_gate_final_decision=GO$"; then
+  echo "expected SLO policy gate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$slo_policy_policy_output" | grep -q "^final_decision=GO$"; then
+  echo "expected SLO policy contract lane policy check decision to be GO" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence contract lane tests passed."
