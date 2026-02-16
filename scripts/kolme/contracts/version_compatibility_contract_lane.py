@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -18,16 +19,32 @@ RUNTIME_COMMIT_LANE = ROOT_DIR / "scripts/kolme/run_runtime_commit_contract_lane
 RUNTIME_COMMIT_REPLAY_LANE = ROOT_DIR / "scripts/kolme/run_runtime_commit_replay_contract_lane.sh"
 NONCE_BROADCAST_PARITY_LANE = ROOT_DIR / "scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh"
 BLOCK_FALLBACK_LANE = ROOT_DIR / "scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"
+LOCAL_RUNTIME_COMMIT_LIVE_LANE = ROOT_DIR / "scripts/kolme/run_local_runtime_commit_live_lane.sh"
+LOCAL_RUNTIME_COMMIT_POLICY_CHECKER = (
+    ROOT_DIR / "scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
+)
+LIVE_HTTPS_DEPENDENCY_POSTURE_CHECKER = (
+    ROOT_DIR / "scripts/ci/check_kamn_core_live_https_dependency_posture.sh"
+)
+FAST_GATE_WORKFLOW = ROOT_DIR / ".github/workflows/ci-fast-gate.yml"
+CI_TOOLS_SCRIPT = ROOT_DIR / "scripts/ci/test_ci_tools.sh"
 FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_compatibility/version_compatibility_cases.json"
 FORK_FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_compatibility/fork_compatibility_cases.json"
 ROADMAP_DOC = ROOT_DIR / "docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
+CI_STRATEGY_DOC = ROOT_DIR / "docs/ci/strategy.md"
 MAX_SECONDS = 60
 VERSION_COMPAT_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.version-compatibility-reason-taxonomy.v1"
 )
 FORK_COMPAT_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+)
+LIVE_HTTPS_POSTURE_REASON_TAXONOMY_VERSION = (
+    "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
+)
+LOCAL_HEAVY_RUNTIME_COMMIT_RUN_MODE_COMMAND = (
+    "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run"
 )
 
 
@@ -47,6 +64,22 @@ def require_executable(path: Path, message: str) -> bool:
         print(message, file=sys.stderr)
         return False
     return True
+
+
+def extract_ci_tools_fast_mode_block(ci_tools_text: str) -> str:
+    lines = ci_tools_text.splitlines()
+    fast_mode_lines: list[str] = []
+    in_fast_mode = False
+    for line in lines:
+        if line.strip() == 'if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then':
+            in_fast_mode = True
+            continue
+        if in_fast_mode and line.strip() == "exit 0":
+            in_fast_mode = False
+            break
+        if in_fast_mode:
+            fast_mode_lines.append(line)
+    return "\n".join(fast_mode_lines)
 
 
 def main() -> int:
@@ -82,6 +115,21 @@ def main() -> int:
     if not require_executable(
         BLOCK_FALLBACK_LANE,
         "expected Kolme block fallback reconciliation contract lane script to be executable",
+    ):
+        return 1
+    if not require_executable(
+        LOCAL_RUNTIME_COMMIT_LIVE_LANE,
+        "expected local runtime commit live lane script to be executable",
+    ):
+        return 1
+    if not require_executable(
+        LOCAL_RUNTIME_COMMIT_POLICY_CHECKER,
+        "expected local runtime commit live policy checker to be executable",
+    ):
+        return 1
+    if not require_executable(
+        LIVE_HTTPS_DEPENDENCY_POSTURE_CHECKER,
+        "expected kamn-core live HTTPS dependency posture checker to be executable",
     ):
         return 1
 
@@ -320,8 +368,164 @@ def main() -> int:
                 print(lane_result.stderr or f"lane failed: {lane}", file=sys.stderr)
                 return lane_result.returncode
 
+        retry_tls_summary_file = temp_path / "retry-tls-smoke-summary.json"
+        retry_tls_policy_file = temp_path / "retry-tls-smoke-policy.json"
+        retry_tls_summary_code, retry_tls_summary_output = run_capture(
+            [
+                "bash",
+                str(LOCAL_RUNTIME_COMMIT_LIVE_LANE),
+                "--mode",
+                "dry-run",
+                "--output-json",
+                str(retry_tls_summary_file),
+            ]
+        )
+        if retry_tls_summary_code != 0:
+            print(retry_tls_summary_output, file=sys.stderr)
+            return retry_tls_summary_code
+        if "reason_code=dry_run_no_commands_executed" not in retry_tls_summary_output:
+            print(
+                "expected retry/TLS smoke summary lane to emit dry_run_no_commands_executed",
+                file=sys.stderr,
+            )
+            return 1
+        if "local_only_enforced=true" not in retry_tls_summary_output:
+            print(
+                "expected retry/TLS smoke summary lane to enforce local-only boundary marker",
+                file=sys.stderr,
+            )
+            return 1
+
+        retry_tls_policy_code, retry_tls_policy_output = run_capture(
+            [
+                "python3",
+                str(LOCAL_RUNTIME_COMMIT_POLICY_CHECKER),
+                "--report-file",
+                str(retry_tls_summary_file),
+                "--expected-final-decision",
+                "GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "dry_run_no_commands_executed",
+                "--output-json",
+                str(retry_tls_policy_file),
+            ]
+        )
+        if retry_tls_policy_code != 0:
+            print(retry_tls_policy_output, file=sys.stderr)
+            return retry_tls_policy_code
+        if "final_decision=GO" not in retry_tls_policy_output:
+            print(
+                "expected retry/TLS smoke policy checker to produce GO in dry-run mode",
+                file=sys.stderr,
+            )
+            return 1
+
+        retry_tls_summary_payload = json.loads(
+            retry_tls_summary_file.read_text(encoding="utf-8")
+        )
+        if retry_tls_summary_payload.get("finality_retry_contract_version") != "v1":
+            print(
+                "expected retry/TLS smoke summary to include finality_retry_contract_version=v1",
+                file=sys.stderr,
+            )
+            return 1
+        retry_max_attempts = retry_tls_summary_payload.get("finality_retry_max_attempts")
+        if not isinstance(retry_max_attempts, int) or retry_max_attempts <= 0:
+            print(
+                "expected retry/TLS smoke summary to include positive finality_retry_max_attempts",
+                file=sys.stderr,
+            )
+            return 1
+        retry_backoff_seconds = retry_tls_summary_payload.get("finality_retry_backoff_seconds")
+        if not isinstance(retry_backoff_seconds, int) or retry_backoff_seconds < 0:
+            print(
+                "expected retry/TLS smoke summary to include non-negative finality_retry_backoff_seconds",
+                file=sys.stderr,
+            )
+            return 1
+        if retry_tls_summary_payload.get("local_only_enforced") is not True:
+            print(
+                "expected retry/TLS smoke summary local_only_enforced marker to be true",
+                file=sys.stderr,
+            )
+            return 1
+
+        retry_tls_policy_payload = json.loads(
+            retry_tls_policy_file.read_text(encoding="utf-8")
+        )
+        if retry_tls_policy_payload.get("final_decision") != "GO":
+            print(
+                "expected retry/TLS smoke policy payload final_decision=GO",
+                file=sys.stderr,
+            )
+            return 1
+        retry_tls_reason_codes = retry_tls_policy_payload.get("reason_codes")
+        if retry_tls_reason_codes != []:
+            print(
+                "expected retry/TLS smoke policy payload reason_codes=[] for dry-run GO path",
+                file=sys.stderr,
+            )
+            return 1
+
+        https_posture_report_file = temp_path / "live-https-dependency-posture-report.json"
+        https_posture_code, https_posture_output = run_capture(
+            [
+                "bash",
+                str(LIVE_HTTPS_DEPENDENCY_POSTURE_CHECKER),
+                "--output-json",
+                str(https_posture_report_file),
+            ]
+        )
+        if https_posture_code != 0:
+            print(https_posture_output, file=sys.stderr)
+            return https_posture_code
+        if "status=ok" not in https_posture_output:
+            print(
+                "expected live HTTPS dependency posture checker status=ok marker",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "reason_taxonomy_version="
+            f"{LIVE_HTTPS_POSTURE_REASON_TAXONOMY_VERSION}"
+        ) not in https_posture_output:
+            print(
+                "expected live HTTPS dependency posture checker taxonomy marker",
+                file=sys.stderr,
+            )
+            return 1
+
+        https_posture_payload = json.loads(
+            https_posture_report_file.read_text(encoding="utf-8")
+        )
+        if https_posture_payload.get("status") != "pass":
+            print(
+                "expected live HTTPS dependency posture report status=pass",
+                file=sys.stderr,
+            )
+            return 1
+        if https_posture_payload.get("reason_codes_value") != "none":
+            print(
+                "expected live HTTPS dependency posture report reason_codes_value=none",
+                file=sys.stderr,
+            )
+            return 1
+        if https_posture_payload.get("reason_codes_csv") != "none":
+            print(
+                "expected live HTTPS dependency posture report reason_codes_csv=none",
+                file=sys.stderr,
+            )
+            return 1
+
     roadmap_doc_text = ROADMAP_DOC.read_text(encoding="utf-8")
     gonogo_doc_text = GONOGO_DOC.read_text(encoding="utf-8")
+    ci_strategy_doc_text = CI_STRATEGY_DOC.read_text(encoding="utf-8")
+    fast_gate_workflow_text = FAST_GATE_WORKFLOW.read_text(encoding="utf-8")
+    ci_tools_fast_mode_block = extract_ci_tools_fast_mode_block(
+        CI_TOOLS_SCRIPT.read_text(encoding="utf-8")
+    )
     if "validate_version_compatibility.py" not in roadmap_doc_text:
         print("expected Kolme roadmap doc to reference version validator command", file=sys.stderr)
         return 1
@@ -357,6 +561,27 @@ def main() -> int:
         return 1
     if "check_fork_compatibility_policy.py" not in gonogo_doc_text:
         print("expected release go/no-go doc to reference fork compatibility policy checker command", file=sys.stderr)
+        return 1
+    if (
+        "retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+        not in ci_strategy_doc_text
+    ):
+        print(
+            "expected CI strategy doc retry/TLS local-heavy exclusion marker",
+            file=sys.stderr,
+        )
+        return 1
+    if LOCAL_HEAVY_RUNTIME_COMMIT_RUN_MODE_COMMAND in fast_gate_workflow_text:
+        print(
+            "expected local-heavy runtime-commit run-mode command to remain excluded from ci-fast-gate workflow",
+            file=sys.stderr,
+        )
+        return 1
+    if LOCAL_HEAVY_RUNTIME_COMMIT_RUN_MODE_COMMAND in ci_tools_fast_mode_block:
+        print(
+            "expected local-heavy runtime-commit run-mode command to remain excluded from ci-tools fast mode",
+            file=sys.stderr,
+        )
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
