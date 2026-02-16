@@ -39,6 +39,12 @@ OBSERVABILITY_REASON_CODES_CSV = (
     "runtime_observability_stream_parity_bypass_detected,"
     "ci_local_observability_endpoint_budget_boundary_exceeded"
 )
+OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV = (
+    "observability_endpoint_tls_certificate_file_read_failed,"
+    "observability_endpoint_tls_key_file_parse_failed,"
+    "observability_endpoint_tls_mode_invalid,"
+    "observability_endpoint_tls_plain_http_handshake_rejected"
+)
 CI_LOCAL_OBSERVABILITY_ENDPOINT_BUDGET_MAX_SECONDS = 240
 
 REQUIRED_REPORT_FIELDS = [
@@ -52,8 +58,10 @@ REQUIRED_REPORT_FIELDS = [
     "malformed_input_contract_status",
     "timeout_contract_status",
     "observability_tls_route_contract_status",
+    "observability_tls_negative_matrix_status",
     "reason_taxonomy_version",
     "reason_codes_csv",
+    "observability_tls_negative_matrix_reason_codes_csv",
     "fail_closed_status",
     "docs_contract_status",
     "fail_closed_reason_code",
@@ -69,6 +77,7 @@ REQUIRED_VERIFIED_FIELDS = [
     "malformed_input_contract_status",
     "timeout_contract_status",
     "observability_tls_route_contract_status",
+    "observability_tls_negative_matrix_status",
     "fail_closed_status",
     "docs_contract_status",
     "performance_budget_status",
@@ -138,6 +147,11 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("reason_codes_csv") != OBSERVABILITY_REASON_CODES_CSV,
         "runtime_observability_policy_reason_codes_csv_mismatch",
     )
+    decision.reject_if(
+        report.get("observability_tls_negative_matrix_reason_codes_csv")
+        != OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV,
+        "runtime_observability_policy_tls_negative_matrix_reason_codes_csv_mismatch",
+    )
 
     decision.reject_if(
         report.get("fail_closed_reason_code") != EXPECTED_FAIL_CLOSED_REASON_CODE,
@@ -178,6 +192,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "reason_taxonomy_version": OBSERVABILITY_REASON_TAXONOMY_VERSION,
         "reason_codes_csv": OBSERVABILITY_REASON_CODES_CSV,
+        "observability_tls_negative_matrix_reason_codes_csv": OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
         "fail_closed_reason_codes_csv": report.get("fail_closed_reason_codes_csv"),
@@ -196,6 +211,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"runtime_observability_policy_status={policy_status}")
     print(f"reason_taxonomy_version={OBSERVABILITY_REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={OBSERVABILITY_REASON_CODES_CSV}")
+    print(
+        "observability_tls_negative_matrix_reason_codes_csv="
+        f"{OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV}"
+    )
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
