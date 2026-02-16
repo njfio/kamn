@@ -1167,9 +1167,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
   - `bash scripts/ci/test_missing_docs_graduation_batch_report_contract.sh`
+  - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - Throughput + velocity policy commands:
   - `python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json`
   - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
+- Deterministic missing-docs velocity taxonomy markers:
+  - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1`
+  - `reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed`
+  - `reason_codes_value=<deterministic reason key>`
+- CI-local boundary enforcement:
+  - threshold validation fails closed when `velocity_window_commits > 240`.
+  - boundary violation marker: `reason_codes_value=ci_local_docs_velocity_window_boundary_exceeded`.
 - Baseline and threshold source of truth:
   - `fixtures/ci/kamn_core_missing_docs_velocity_baseline.json`
   - `.ci/kamn-core-missing-docs-velocity-thresholds.json`
@@ -1179,6 +1187,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - First-batch graduation report drift guard:
   - report contract enforces deterministic markers for `bootstrap`,
     `key_recovery`, and `kolme_runtime_commit` evidence lineage.
+- Rustdoc navigation parity drift guard:
+  - `scripts/ci/check_kamn_core_missing_docs_policy.sh` emits deterministic markers on README rustdoc-link drift:
+    - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
+    - `reason_codes_csv=rustdoc_navigation_parity_drift`
+    - `reason_code=rustdoc_navigation_parity_drift`
 - Regression: #2126
 - Regression: #2127
 

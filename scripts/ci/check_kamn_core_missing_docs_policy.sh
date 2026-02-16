@@ -15,6 +15,8 @@ VELOCITY_BASELINE_PATH="${KAMN_MISSING_DOCS_VELOCITY_BASELINE_PATH:-$ROOT_DIR/fi
 VELOCITY_THRESHOLD_PATH="${KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH:-$ROOT_DIR/.ci/kamn-core-missing-docs-velocity-thresholds.json}"
 VELOCITY_CADENCE_DOC_PATH="${KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md}"
 GRADUATION_BATCH_REPORT_PATH="${KAMN_MISSING_DOCS_GRADUATION_BATCH_REPORT_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md}"
+POLICY_REASON_TAXONOMY_VERSION="kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1"
+POLICY_REASON_CODES_CSV="rustdoc_navigation_parity_drift"
 
 require_file() {
   local file="$1"
@@ -23,6 +25,16 @@ require_file() {
     echo "missing-docs policy contract failed: missing ${name} at '${file}'." >&2
     exit 1
   fi
+}
+
+fail_with_reason() {
+  local reason_code="$1"
+  local message="$2"
+  echo "reason_taxonomy_version=$POLICY_REASON_TAXONOMY_VERSION" >&2
+  echo "reason_codes_csv=$POLICY_REASON_CODES_CSV" >&2
+  echo "reason_code=$reason_code" >&2
+  echo "$message" >&2
+  exit 1
 }
 
 require_file "$CORE_LIB_PATH" "kamn-core lib"
@@ -122,8 +134,9 @@ if ! grep -Fq "docs/architecture/kamn-core-module-map.md" "$README_PATH"; then
 fi
 
 if ! grep -Fq "docs/developer/rustdoc-publishing.md" "$README_PATH"; then
-  echo "missing-docs policy contract failed: README must link rustdoc publishing guide." >&2
-  exit 1
+  fail_with_reason \
+    "rustdoc_navigation_parity_drift" \
+    "missing-docs policy contract failed: README must link rustdoc publishing guide."
 fi
 
 if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$PLAN_DOC_PATH"; then

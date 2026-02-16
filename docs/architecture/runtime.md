@@ -56,3 +56,27 @@ Phase parity entrypoints:
 - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --max-seconds 240 --output-json /tmp/local-full-stack-integration-summary.json`
 - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
 - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --mode dry-run --max-seconds 240 --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
+
+## Docs Governance and Rustdoc Navigation Parity
+
+Issue lineage:
+- Task: `#4524`
+- Subtasks: `#4531`, `#4532`
+
+Docs graduation velocity governance markers:
+- `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1`
+- `reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed`
+- `reason_codes_value=<deterministic reason key>`
+
+CI-local docs velocity boundary:
+- policy validation fails closed when `velocity_window_commits > 240`.
+- boundary marker: `reason_codes_value=ci_local_docs_velocity_window_boundary_exceeded`.
+
+Rustdoc navigation parity drift markers:
+- `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
+- `reason_codes_csv=rustdoc_navigation_parity_drift`
+- `reason_code=rustdoc_navigation_parity_drift`
+
+Docs governance entrypoints:
+- `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
+- `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
