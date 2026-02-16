@@ -1320,6 +1320,7 @@ pub(crate) fn resolve_kolme_live_nonce(
 ) -> Result<u64, ConfigError> {
     let request = KolmeApiNextNonceRequest::new(pubkey)
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    let nonce_correlation_id = format!("kolme.live.nonce:{pubkey}");
     let mut attempt = 0_u32;
     loop {
         attempt += 1;
@@ -1333,10 +1334,12 @@ pub(crate) fn resolve_kolme_live_nonce(
                         log_warn(
                             "kolme.live.nonce.retry",
                             &[
+                                ("correlation_id", nonce_correlation_id.as_str()),
                                 ("pubkey", pubkey),
                                 ("attempt", attempt_label.as_str()),
                                 ("max_attempts", max_attempts_label.as_str()),
                                 ("reason", reason_code),
+                                ("reason_code", reason_code),
                             ],
                         )?;
                         maybe_sleep_nonce_retry_backoff(attempt);

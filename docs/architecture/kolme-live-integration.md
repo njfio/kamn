@@ -101,3 +101,29 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `managed_signer_provider_handshake_rejected`
   - `managed_signer_backend_error`
   - `managed_signer_raw_private_key_forbidden`
+
+## Structured Runtime Logging Taxonomy (Task #4121)
+
+- Bootstrap logging contract:
+  - runtime logs normalize `correlation_id` and `reason_code` fields.
+  - when omitted, deterministic fallback markers are projected as `none`.
+- Retry taxonomy contract:
+  - nonce, submit, and finality retry markers emit both `reason` and
+    canonical `reason_code`.
+  - `reason` and `reason_code` values must match for retry-class events.
+- Correlation contract:
+  - submit/finality lifecycle markers share request-idempotency
+    correlation IDs.
+  - nonce retry markers project a deterministic pubkey-scoped correlation
+    marker (`kolme.live.nonce:<pubkey>`).
+- Terminal decision contract:
+  - retry terminal markers include `terminal_decision` and canonical
+    `reason_code`.
+  - finality degraded outcomes map `reason_code` to the final resolution
+    marker (`finality-unavailable`, `finality-timeout`, etc.).
+
+Validation commands:
+
+- `cargo test -p kamn-node functional_kolme_live_retry_emits_structured_retry_markers -- --nocapture`
+- `cargo test -p kamn-node functional_kolme_live_nonce_retry_emits_structured_retry_marker -- --nocapture`
+- `cargo test -p kamn-node retry_exhaustion_emits_terminal_decision_marker -- --nocapture`
