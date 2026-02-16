@@ -120,6 +120,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - TLS evidence completeness/freshness drift forces `NO-GO` (`Regression: #4477`).
 
+## Audit-Trail Integrity/Tamper Convergence Gate (Issue #4466)
+- Audit policy report command:
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-policy-report.json`
+- Go/no-go bundle command:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-audit-integrity.json --release-candidate v1.0.0-rc.11 --schema-target-version 1.0.0 --runtime-image-digest sha256:audit-integrity-go --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --audit-integrity-report-file /tmp/sqlite-crash-recovery-live-policy-report.json --audit-integrity-max-age-seconds 1800`
+- Go/no-go policy checker command:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-audit-integrity.json`
+- Required deterministic audit-integrity gate markers:
+  - `audit_integrity_reason_taxonomy_version=kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1`
+  - `audit_integrity_reason_codes_csv=gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded`
+  - `audit_integrity_reason_codes_value=none|<csv>`
+  - `audit_integrity_gate_final_decision=GO|NO-GO`
+- Fail-closed drills:
+  - missing audit-integrity policy report must reject with `gonogo_audit_integrity_file_missing`.
+  - unstable source taxonomy/reason-code markers must reject with deterministic audit-integrity mismatch reason codes.
+  - tampered audit-integrity gate payload must reject with `audit integrity gate convergence mismatch`.
+- Regression policy:
+  - audit-trail integrity evidence drift and tamper acceptance force `NO-GO` (`Regression: #4466`).
+
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
