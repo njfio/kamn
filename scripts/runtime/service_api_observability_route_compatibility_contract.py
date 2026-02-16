@@ -39,6 +39,37 @@ CONTRACT_LANE_SCHEMA = (
 MATRIX_SCHEMA = (
     "kamn.runtime.service-api-observability-route-compatibility-matrix.v1"
 )
+POLICY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1"
+)
+POLICY_REASON_CODES_CSV = ",".join(
+    [
+        "ci_fast_gate_failed",
+        "service_api_observability_route_compatibility_policy_command_count_invalid",
+        "service_api_observability_route_compatibility_policy_command_count_mismatch",
+        "service_api_observability_route_compatibility_policy_elapsed_seconds_invalid",
+        "service_api_observability_route_compatibility_policy_execution_reason_code_mismatch",
+        "service_api_observability_route_compatibility_policy_final_decision_invalid",
+        "service_api_observability_route_compatibility_policy_final_decision_mismatch",
+        "service_api_observability_route_compatibility_policy_lane_mode_invalid",
+        "service_api_observability_route_compatibility_policy_marker_missing",
+        "service_api_observability_route_compatibility_policy_matrix_row_compatibility_marker_missing",
+        "service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_row_count_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_row_duplicate",
+        "service_api_observability_route_compatibility_policy_matrix_row_id_invalid",
+        "service_api_observability_route_compatibility_policy_matrix_row_invalid",
+        "service_api_observability_route_compatibility_policy_matrix_row_method_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_row_missing",
+        "service_api_observability_route_compatibility_policy_matrix_row_route_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_row_status_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch",
+        "service_api_observability_route_compatibility_policy_matrix_rows_invalid",
+        "service_api_observability_route_compatibility_policy_matrix_schema_mismatch",
+        "service_api_observability_route_compatibility_policy_schema_mismatch",
+        "service_api_observability_route_compatibility_policy_status_invalid",
+    ]
+)
 ARCHITECTURE_DOC = ROOT_DIR / "docs/architecture/service-runtime.md"
 
 MATRIX_ROWS: list[dict[str, Any]] = [
@@ -445,9 +476,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         "status": status,
         "final_decision": final_decision,
         "service_api_observability_route_compatibility_policy_status": policy_status,
+        "reason_taxonomy_version": POLICY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": POLICY_REASON_CODES_CSV,
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
+        "reason_codes_value": ",".join(reason_codes),
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -465,7 +499,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_observability_route_compatibility_policy_status="
         f"{policy_status}"
     )
+    print(f"reason_taxonomy_version={POLICY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={POLICY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 
