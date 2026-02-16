@@ -125,6 +125,55 @@ This document captures the initial runtime-network foundation slice for peer lif
   - invalid lifecycle event argument -> `ConfigError::InvalidDaemonLifecycleEvent`
   - invalid transition from lifecycle state machine -> `ConfigError::RuntimeDaemonLifecycle`
 
+## Signer Module Ownership Mapping
+- `crates/kamn-node/src/signer.rs` owns orchestration for direct signed payload assembly and
+  signer selection wiring.
+- `crates/kamn-node/src/signer/signer_policy.rs` owns signer profile normalization, key-source
+  resolution, quorum linkage checks, and preflight policy contracts.
+- `crates/kamn-node/src/signer/managed_backend.rs` owns managed-external signer backend command
+  orchestration, response parsing/provenance validation, and deterministic backend reason-taxonomy
+  failures.
+- `crates/kamn-node/src/signer/nonce.rs` owns nonce fetch retry classification, bounded
+  deterministic backoff, and nonce provider error mapping.
+- Public signer API contracts used by runtime flows remain stable:
+  - `resolve_kolme_live_managed_signer_required_marker(...)`
+  - `sign_kolme_live_managed_external_message(...)`
+  - `resolve_kolme_live_nonce(...)`
+- Regression safety commands:
+  - `cargo test -p kamn-node signer -- --nocapture`
+  - `cargo test -p kamn-node main_tests::signer_tests -- --nocapture`
+
+## Transport and Block Pipeline Module Ownership Mapping
+- `crates/kamn-core/src/p2p_transport.rs` owns transport orchestration entry points.
+- `crates/kamn-core/src/p2p_transport/validation.rs` owns transport payload and state validation
+  helpers.
+- `crates/kamn-core/src/p2p_transport/lifecycle_regression.rs` owns regression-focused lifecycle
+  contracts and guard checks.
+- `crates/kamn-core/src/p2p_transport/error.rs` owns fail-closed transport error mapping helpers.
+- `crates/kamn-core/src/p2p_transport/runtime_event.rs` owns deterministic libp2p runtime event
+  schema normalization and behavior-failure reason classification.
+- `crates/kamn-core/src/p2p_transport/swarm_stack.rs` owns deterministic swarm-stack composition,
+  reconnect/backoff policy, and harness configuration/runtime contract types.
+- `crates/kamn-core/src/p2p_transport/native_runtime.rs` owns feature-gated native libp2p runtime
+  adapter loop command handling, swarm event ingestion, and runtime channel-close fail-closed
+  bridge behavior.
+- `crates/kamn-core/src/block_pipeline.rs` owns block pipeline orchestration and commit flow entry
+  points.
+- `crates/kamn-core/src/block_pipeline/validation.rs` owns block payload validation helpers.
+- `crates/kamn-core/src/block_pipeline/gossip_ingress.rs` owns gossip ingress normalization and
+  staging helpers.
+- `crates/kamn-core/src/block_pipeline/fork_choice.rs` owns fork-choice decision contracts and
+  deterministic competing-branch selection policy.
+- `crates/kamn-core/src/block_pipeline/evidence.rs` owns canonical replay/convergence evidence
+  schema contracts and continuity-validation helpers.
+- `crates/kamn-core/src/block_pipeline/commit_store.rs` owns canonical commit-store persistence
+  contracts (in-memory/file/sqlite), lineage serialization/parsing, and sqlite schema guards.
+- Regression safety commands:
+  - `cargo test -p kamn-core --test p2p_transport_runtime -- --nocapture`
+  - `cargo test -p kamn-core --test p2p_block_module_extraction_contract -- --nocapture`
+  - `cargo test -p kamn-core --test block_pipeline -- --nocapture`
+  - `cargo test -p kamn-core --test block_pipeline_sqlite_commit_store -- --nocapture`
+
 ## Production Transport Profile Mapping
 - Production-targeted runtime modes:
   - `daemon`
