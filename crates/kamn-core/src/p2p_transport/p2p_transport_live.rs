@@ -268,10 +268,10 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
 }
 
 #[derive(Debug, Default)]
-struct Libp2pLiveDataPlaneState {
-    peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
-    inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
-    runtime_events: VecDeque<Libp2pRuntimeEvent>,
+pub(super) struct Libp2pLiveDataPlaneState {
+    pub(super) peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
+    pub(super) inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
+    pub(super) runtime_events: VecDeque<Libp2pRuntimeEvent>,
 }
 
 #[cfg(not(feature = "libp2p-live-transport"))]
@@ -470,7 +470,9 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Receive))?
     }
 
-    pub(super) fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
+    pub(super) fn drain_runtime_events(
+        &self,
+    ) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
         if self
             .command_tx
@@ -1480,7 +1482,7 @@ impl P2pSwarmHarnessTask {
 }
 
 #[cfg(feature = "libp2p-live-transport")]
-fn build_libp2p_runtime_swarm(
+pub(super) fn build_libp2p_runtime_swarm(
     config: &P2pSwarmDeterministicConfig,
 ) -> Result<Swarm<Libp2pDeterministicRuntimeBehaviour>, P2pTransportError> {
     let swarm = SwarmBuilder::with_new_identity()
@@ -1522,7 +1524,7 @@ fn build_libp2p_runtime_swarm(
 }
 
 #[cfg(feature = "libp2p-live-transport")]
-fn apply_libp2p_runtime_network_config(
+pub(super) fn apply_libp2p_runtime_network_config(
     swarm: &mut Swarm<Libp2pDeterministicRuntimeBehaviour>,
     config: &P2pSwarmDeterministicConfig,
 ) -> Result<(), P2pTransportError> {
@@ -1543,7 +1545,7 @@ fn apply_libp2p_runtime_network_config(
 }
 
 #[cfg(feature = "libp2p-live-transport")]
-fn validate_libp2p_runtime_stack_composition(
+pub(super) fn validate_libp2p_runtime_stack_composition(
     config: &P2pSwarmDeterministicConfig,
 ) -> Result<(), P2pTransportError> {
     let config = config.clone();
@@ -1558,43 +1560,6 @@ fn validate_libp2p_runtime_stack_composition(
         apply_libp2p_runtime_network_config(&mut swarm, &config)?;
         Ok(())
     })
-}
-
-/// Deterministic p2p discovery and gossip transport error variants.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Libp2pRuntimeAdapterOperation {
-    /// Connect/advertise operation over adapter command bridge.
-    Connect,
-    /// Discover operation over adapter command bridge.
-    Discover,
-    /// Publish/send operation over adapter command bridge.
-    Publish,
-    /// Receive/drain inbox operation over adapter command bridge.
-    Receive,
-    /// Runtime-event drain operation over adapter command bridge.
-    EventDrain,
-}
-
-impl Libp2pRuntimeAdapterOperation {
-    pub(super) fn channel_closed_reason_code(self) -> &'static str {
-        match self {
-            Self::Connect => "p2p_libp2p_runtime_connect_channel_closed",
-            Self::Discover => "p2p_libp2p_runtime_discover_channel_closed",
-            Self::Publish => "p2p_libp2p_runtime_publish_channel_closed",
-            Self::Receive => "p2p_libp2p_runtime_receive_channel_closed",
-            Self::EventDrain => "p2p_libp2p_runtime_event_drain_channel_closed",
-        }
-    }
-
-    pub(super) fn as_str(self) -> &'static str {
-        match self {
-            Self::Connect => "connect",
-            Self::Discover => "discover",
-            Self::Publish => "publish",
-            Self::Receive => "receive",
-            Self::EventDrain => "event-drain",
-        }
-    }
 }
 
 #[cfg(feature = "libp2p-live-transport")]

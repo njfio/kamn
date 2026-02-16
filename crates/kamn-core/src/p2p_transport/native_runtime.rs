@@ -1,4 +1,10 @@
 #[cfg(feature = "libp2p-live-transport")]
+use super::p2p_transport_live::{
+    apply_libp2p_runtime_network_config, build_libp2p_runtime_swarm,
+    runtime_channel_closed_behavior_failure_class, validate_libp2p_runtime_stack_composition,
+    Libp2pLiveDataPlaneState,
+};
+#[cfg(feature = "libp2p-live-transport")]
 use libp2p::{futures::StreamExt, gossipsub, swarm::Swarm};
 #[cfg(feature = "libp2p-live-transport")]
 use std::collections::VecDeque;
@@ -51,16 +57,16 @@ enum Libp2pNativeSwarmCommand {
 #[derive(Debug, Clone)]
 pub(super) struct Libp2pNativeRuntimeAdapterLoop {
     command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
-    state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
 #[cfg(feature = "libp2p-live-transport")]
 impl Libp2pNativeRuntimeAdapterLoop {
     pub(super) fn start(
         config: super::P2pSwarmDeterministicConfig,
-        state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+        state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
     ) -> Result<Self, super::P2pTransportError> {
-        super::validate_libp2p_runtime_stack_composition(&config)?;
+        validate_libp2p_runtime_stack_composition(&config)?;
         let local_peer_id = config.local_peer_id().to_owned();
         let (swarm_command_tx, swarm_command_rx) = std::sync::mpsc::channel();
         let swarm_config = config.clone();
@@ -90,7 +96,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
     }
 
     fn emit_channel_closed_runtime_event(&self, operation: super::Libp2pRuntimeAdapterOperation) {
-        let class = super::runtime_channel_closed_behavior_failure_class(operation);
+        let class = runtime_channel_closed_behavior_failure_class(operation);
         let event = match super::Libp2pRuntimeEvent::behavior_failure(class, None, None) {
             Ok(event) => event,
             Err(_) => return,
@@ -209,9 +215,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
     }
 
     #[cfg(test)]
-    pub(super) fn build_closed_for_test(
-        state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
-    ) -> Self {
+    pub(super) fn build_closed_for_test(state: Arc<Mutex<Libp2pLiveDataPlaneState>>) -> Self {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
         drop(command_rx);
         Self { command_tx, state }
@@ -222,7 +226,7 @@ impl Libp2pNativeRuntimeAdapterLoop {
 fn run_libp2p_native_runtime_adapter_loop(
     command_rx: std::sync::mpsc::Receiver<Libp2pNativeRuntimeAdapterLoopCommand>,
     swarm_command_tx: std::sync::mpsc::Sender<Libp2pNativeSwarmCommand>,
-    state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 ) {
     while let Ok(command) = command_rx.recv() {
         match command {
@@ -373,7 +377,7 @@ fn run_libp2p_native_runtime_adapter_loop(
 fn run_libp2p_native_swarm_loop(
     config: super::P2pSwarmDeterministicConfig,
     swarm_command_rx: std::sync::mpsc::Receiver<Libp2pNativeSwarmCommand>,
-    state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 ) {
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_io()
@@ -384,11 +388,11 @@ fn run_libp2p_native_swarm_loop(
         Err(_) => return,
     };
     runtime.block_on(async move {
-        let mut swarm = match super::build_libp2p_runtime_swarm(&config) {
+        let mut swarm = match build_libp2p_runtime_swarm(&config) {
             Ok(swarm) => swarm,
             Err(_) => return,
         };
-        if super::apply_libp2p_runtime_network_config(&mut swarm, &config).is_err() {
+        if apply_libp2p_runtime_network_config(&mut swarm, &config).is_err() {
             return;
         }
         let local_peer_id = config.local_peer_id().to_owned();
@@ -442,7 +446,7 @@ fn publish_libp2p_gossip_frame(
 #[cfg(feature = "libp2p-live-transport")]
 fn apply_libp2p_swarm_event_to_live_state(
     event: libp2p::swarm::SwarmEvent<super::Libp2pDeterministicRuntimeBehaviourEvent>,
-    state: Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
     local_peer_id: &str,
 ) {
     let libp2p::swarm::SwarmEvent::Behaviour(

@@ -409,7 +409,6 @@ impl P2pSwarmHarnessTask {
         let mut behavior_components = behavior_components;
         #[cfg(feature = "libp2p-live-transport")]
         if started {
-            super::validate_libp2p_runtime_stack_composition(&self.config)?;
             behavior_components.push("libp2p-runtime-swarm");
         }
         Ok(P2pSwarmHarnessReport {
