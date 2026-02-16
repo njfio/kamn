@@ -55,7 +55,7 @@ fn functional_retry_timeout_fault_class_emits_timeout_reason_code() {
 fn integration_retry_fault_matrix_classification_is_stable() {
     let policy = LiveTransportReconnectPolicy::new(1, 8, 6)
         .expect("policy should build with deterministic bounds");
-    let faults = vec![
+    let faults = [
         (LiveTransportFaultClass::DialTimeout, 1),
         (LiveTransportFaultClass::DiscoveryUnavailable, 2),
         (LiveTransportFaultClass::StreamChurn, 3),
