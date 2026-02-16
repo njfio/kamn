@@ -50,6 +50,10 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+if [ "$max_seconds" -gt 240 ]; then
+  echo "max-seconds must be <= 240 for ci-local contract lane" >&2
+  exit 1
+fi
 if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
   echo "ci-fast-gate must be PASS or FAIL" >&2
   exit 1
@@ -99,6 +103,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^signal_shutdown_status=verif
   echo "expected local signal/secret hygiene live validation signal marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^signal_graceful_drain_status=verified$'; then
+  echo "expected local signal/secret hygiene live validation graceful-drain marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1$'; then
+  echo "expected local signal/secret hygiene live validation shutdown reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded$'; then
+  echo "expected local signal/secret hygiene live validation shutdown reason codes taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^secret_hygiene_policy_status=verified$'; then
   echo "expected local signal/secret hygiene live validation policy marker" >&2
   exit 1
@@ -121,6 +137,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^local_signal_secret_hygiene_policy_status=verified$'; then
   echo "expected local signal/secret hygiene policy checker status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1$'; then
+  echo "expected local signal/secret hygiene policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded$'; then
+  echo "expected local signal/secret hygiene policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -223,6 +247,9 @@ lane_report = {
     "local_signal_secret_hygiene_policy_status": policy_report.get(
         "local_signal_secret_hygiene_policy_status"
     ),
+    "signal_graceful_drain_status": summary_report.get("signal_graceful_drain_status"),
+    "reason_taxonomy_version": summary_report.get("shutdown_reason_taxonomy_version"),
+    "reason_codes_csv": summary_report.get("shutdown_reason_codes_csv"),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "fallback_signer_secret_present_violation",
@@ -245,6 +272,9 @@ echo "final_decision=GO"
 echo "lane_mode=$mode"
 echo "local_signal_secret_hygiene_contract_status=verified"
 echo "local_signal_secret_hygiene_policy_status=verified"
+echo "signal_graceful_drain_status=verified"
+echo "reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1"
+echo "reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=fallback_signer_secret_present_violation"

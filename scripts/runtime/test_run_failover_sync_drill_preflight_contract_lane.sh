@@ -37,6 +37,16 @@ if payload.get("lane") != "preflight":
     raise SystemExit("expected preflight lane report")
 if payload.get("status") != "pass":
     raise SystemExit("expected preflight lane to pass")
+if payload.get("failover_promotion_gate_status") != "verified":
+    raise SystemExit("expected failover_promotion_gate_status=verified")
+if payload.get("live_node_drift_parity_status") != "verified":
+    raise SystemExit("expected live_node_drift_parity_status=verified")
+if payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
+if payload.get("failover_readiness_reason_taxonomy_version") != "kamn.runtime.failover-readiness-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic failover_readiness_reason_taxonomy_version marker")
+if payload.get("failover_readiness_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic failover_readiness_reason_codes_csv marker")
 PY
 
 set +e
@@ -58,6 +68,70 @@ fi
 # Regression: #788
 if ! printf '%s\n' "$over_budget_output" | grep -q "exceeded runtime budget"; then
   echo "expected failover/sync preflight budget overrun signal" >&2
+  exit 1
+fi
+
+set +e
+drift_output="$(
+  bash "$PREFLIGHT_LANE" \
+    --skip-suite \
+    --simulate-live-node-drift \
+    --max-seconds 5 \
+    --output-json "$TMP_REPORT" 2>&1
+)"
+drift_code=$?
+set -e
+
+if [ "$drift_code" -eq 0 ]; then
+  echo "expected failover/sync preflight live-node drift simulation to fail closed" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$drift_output" | grep -q "live_node_drift_marker_parity_mismatch"; then
+  echo "expected failover/sync preflight live-node drift mismatch reason marker" >&2
+  exit 1
+fi
+
+set +e
+stall_output="$(
+  bash "$PREFLIGHT_LANE" \
+    --skip-suite \
+    --simulate-failover-stall \
+    --max-seconds 5 \
+    --output-json "$TMP_REPORT" 2>&1
+)"
+stall_code=$?
+set -e
+
+if [ "$stall_code" -eq 0 ]; then
+  echo "expected failover/sync preflight failover stall simulation to fail closed" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$stall_output" | grep -q "failover_readiness_progress_stalled"; then
+  echo "expected failover/sync preflight failover stall reason marker" >&2
+  exit 1
+fi
+
+set +e
+ci_boundary_output="$(
+  bash "$PREFLIGHT_LANE" \
+    --skip-suite \
+    --simulate-delay-seconds 1 \
+    --max-seconds 5 \
+    --ci-local-promotion-max-seconds 0 \
+    --output-json "$TMP_REPORT" 2>&1
+)"
+ci_boundary_code=$?
+set -e
+
+if [ "$ci_boundary_code" -eq 0 ]; then
+  echo "expected failover/sync preflight ci-local promotion boundary to fail closed" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$ci_boundary_output" | grep -q "ci_local_promotion_budget_boundary_exceeded"; then
+  echo "expected failover/sync preflight ci-local promotion boundary reason marker" >&2
   exit 1
 fi
 

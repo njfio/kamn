@@ -58,6 +58,34 @@ import json
 import sys
 from pathlib import Path
 
+REASON_TAXONOMY_VERSION = (
+    "kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1"
+)
+REASON_CODES_CSV = ",".join(
+    [
+        "combined_shell_surface_budget_status_fail",
+        "combined_shell_surface_delta_ratio_invalid",
+        "combined_shell_surface_delta_script_count_invalid",
+        "combined_shell_surface_delta_shell_line_total_invalid",
+        "combined_shell_surface_ratio_delta_fail_exceeded",
+        "combined_shell_surface_ratio_delta_warn_exceeded",
+        "combined_shell_surface_ratio_fail_ceiling_exceeded",
+        "combined_shell_surface_ratio_invalid",
+        "combined_shell_surface_ratio_warn_ceiling_exceeded",
+        "combined_shell_surface_report_schema_mismatch",
+        "combined_shell_surface_rust_line_total_invalid",
+        "combined_shell_surface_script_count_delta_fail_exceeded",
+        "combined_shell_surface_script_count_delta_warn_exceeded",
+        "combined_shell_surface_script_count_invalid",
+        "combined_shell_surface_shell_line_total_delta_fail_exceeded",
+        "combined_shell_surface_shell_line_total_delta_warn_exceeded",
+        "combined_shell_surface_shell_line_total_invalid",
+        "combined_shell_surface_threshold_order_invalid",
+        "combined_shell_surface_threshold_schema_mismatch",
+        "combined_shell_surface_threshold_value_invalid",
+    ]
+)
+
 report_path = Path(sys.argv[1])
 threshold_path = Path(sys.argv[2])
 output_path = Path(sys.argv[3])
@@ -106,6 +134,15 @@ except Exception:
     warn_shell_line_total_increase = fail_shell_line_total_increase = 0
     warn_shell_to_rust_ratio = fail_shell_to_rust_ratio = 0.0
     warn_shell_to_rust_ratio_increase = fail_shell_to_rust_ratio_increase = 0.0
+
+if warn_script_count_increase >= fail_script_count_increase:
+    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+if warn_shell_line_total_increase >= fail_shell_line_total_increase:
+    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+if warn_shell_to_rust_ratio >= fail_shell_to_rust_ratio:
+    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+if warn_shell_to_rust_ratio_increase >= fail_shell_to_rust_ratio_increase:
+    reason_codes.append("combined_shell_surface_threshold_order_invalid")
 
 if not isinstance(script_count, int):
     reason_codes.append("combined_shell_surface_script_count_invalid")
@@ -170,7 +207,10 @@ policy_report = {
     "status": status,
     "policy_decision": policy_decision,
     "trend_status": trend_status,
+    "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+    "reason_codes_csv": REASON_CODES_CSV,
     "reason_codes": all_reason_codes,
+    "reason_codes_value": "none" if not all_reason_codes else ",".join(all_reason_codes),
     "remediation": remediation,
     "current": {
         "script_count": script_count,
@@ -201,7 +241,10 @@ reason_marker = "none" if not all_reason_codes else ",".join(all_reason_codes)
 print(f"status={status}")
 print(f"policy_decision={policy_decision}")
 print(f"trend_status={trend_status}")
+print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+print(f"reason_codes_csv={REASON_CODES_CSV}")
 print(f"reason_codes={reason_marker}")
+print(f"reason_codes_value={reason_marker}")
 print(f"script_count={script_count}")
 print(f"shell_line_total={shell_line_total}")
 print(f"rust_line_total={rust_line_total}")

@@ -12,6 +12,31 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
+- Validation command:
+  - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_unified_api_observability_local_heavy_live_policy.sh --report-file /tmp/unified-api-observability-local-heavy-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/unified-api-observability-local-heavy-policy.json`
+- Required deterministic payload markers:
+  - `reason_taxonomy_version=kamn.runtime.unified-api-observability-local-heavy-policy-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,unified_api_observability_local_heavy_policy_artifact_paths_invalid,unified_api_observability_local_heavy_policy_ci_fast_gate_mismatch,unified_api_observability_local_heavy_policy_command_budget_exceeded,unified_api_observability_local_heavy_policy_command_count_invalid,unified_api_observability_local_heavy_policy_command_max_seconds_invalid,unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch,unified_api_observability_local_heavy_policy_compatibility_policy_schema_mismatch,unified_api_observability_local_heavy_policy_compatibility_policy_status_mismatch,unified_api_observability_local_heavy_policy_compatibility_report_schema_mismatch,unified_api_observability_local_heavy_policy_dry_run_command_count_mismatch,unified_api_observability_local_heavy_policy_dry_run_command_status_mismatch,unified_api_observability_local_heavy_policy_dry_run_eligibility_mismatch,unified_api_observability_local_heavy_policy_dry_run_reason_code_mismatch,unified_api_observability_local_heavy_policy_dry_run_soak_iterations_executed_mismatch,unified_api_observability_local_heavy_policy_dry_run_soak_status_mismatch,unified_api_observability_local_heavy_policy_elapsed_seconds_invalid,unified_api_observability_local_heavy_policy_fast_gate_exclusion_reason_mismatch,unified_api_observability_local_heavy_policy_fast_gate_exclusion_status_mismatch,unified_api_observability_local_heavy_policy_final_decision_invalid,unified_api_observability_local_heavy_policy_final_decision_mismatch,unified_api_observability_local_heavy_policy_lane_mode_invalid,unified_api_observability_local_heavy_policy_max_seconds_invalid,unified_api_observability_local_heavy_policy_observability_policy_schema_mismatch,unified_api_observability_local_heavy_policy_observability_policy_status_mismatch,unified_api_observability_local_heavy_policy_observability_report_schema_mismatch,unified_api_observability_local_heavy_policy_observability_soak_status_mismatch,unified_api_observability_local_heavy_policy_run_mode_command_count_mismatch,unified_api_observability_local_heavy_policy_run_mode_command_status_mismatch,unified_api_observability_local_heavy_policy_run_mode_exclusion_mismatch,unified_api_observability_local_heavy_policy_run_mode_reason_code_mismatch,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_executed_invalid,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_mismatch,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_requested_invalid,unified_api_observability_local_heavy_policy_run_mode_soak_status_mismatch,unified_api_observability_local_heavy_policy_runtime_budget_exceeded,unified_api_observability_local_heavy_policy_runtime_budget_status_mismatch,unified_api_observability_local_heavy_policy_schema_mismatch,unified_api_observability_local_heavy_policy_soak_iterations_executed_invalid,unified_api_observability_local_heavy_policy_soak_iterations_requested_invalid,unified_api_observability_local_heavy_policy_status_mismatch`
+  - `reason_codes_value=none|<csv>`
+- Fail-closed drill requirement:
+  - tampered compatibility matrix status must reject with `unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch`.
+
+## Transport Retry-Reconnect Failure Taxonomy Gate (Issue #4508)
+- Validation command:
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-summary.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_live_transport_fault_matrix_live_policy.sh --report-file /tmp/live-transport-fault-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/live-transport-fault-matrix-live-policy.json`
+- Required deterministic payload markers:
+  - `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`
+  - `reason_codes_value=none|<csv>`
+- Fail-closed drill requirements:
+  - partition/rejoin tamper must reject with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
+  - unstable reason classification tamper must reject with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
+
 ## Kolme Signer Custody Gate (Issue #2240)
 - Deployment preflight lane command:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
@@ -332,6 +357,13 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
 - Runtime commit replay policy checker:
   - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
+  - deterministic recovery taxonomy markers:
+    - `recovery_reason_taxonomy_version=kamn.kolme.runtime-commit-recovery-reason-taxonomy.v1`
+    - `recovery_reason_codes_csv=recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+    - `recovery_reason_codes_value=none|recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+  - deterministic retransmission evidence markers:
+    - `retransmission_evidence_contract_version=v1`
+    - `nonce_idempotency_contract_version=v1`
 - Runtime commit replay matrix runner:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit adapter replay/finality fast lane:
@@ -341,6 +373,12 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - adapter reason-code checks include:
     - `receipt_provider_mismatch`
     - `receipt_not_final`
+- Runtime commit submit/finality evidence policy checker:
+  - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+  - deterministic submit/finality taxonomy markers:
+    - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+    - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
@@ -351,7 +389,9 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - fork release-tag drift remains blocked (`Regression: #1401`).
   - fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
+  - runtime commit replay recovery/nonce-idempotency taxonomy drift forces `NO-GO` (`Regression: #4422`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
+  - submit/finality success-reason mismatches force `NO-GO` (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`) (`Regression: #4420`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.
@@ -562,6 +602,17 @@ Post-cutover launch gates require deterministic SLO evidence export with stale/p
   - `scripts/canary/post_cutover_slo_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
+- Deterministic alert-governance markers:
+  - `alert_rule_promotion_gate_status=verified`
+  - `burn_rate_parity_status=verified`
+  - `ci_local_promotion_budget_boundary_status=verified`
+  - `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
+  - `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+- Runtime budget controls:
+  - `KAMN_POST_CUTOVER_SLO_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS`
+  - `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY`
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
   - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`).

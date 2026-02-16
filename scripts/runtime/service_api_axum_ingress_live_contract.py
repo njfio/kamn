@@ -30,6 +30,43 @@ EXPECTED_API_MAX_REQUESTS_DEFAULT = 1
 EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS = 5_000
 EXPECTED_API_CONCURRENCY_LIMIT_DEFAULT = 32
 EXPECTED_API_RATE_LIMIT_PER_SECOND_DEFAULT = 120
+EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+)
+EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV = (
+    "method_path_contract_mismatch,payload_shape_contract_mismatch,"
+    "route_contract_bypass_detected"
+)
+EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1"
+)
+EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV = (
+    "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
+EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-admission-reason-taxonomy.v1"
+)
+EXPECTED_ADMISSION_REASON_CODES_CSV = (
+    "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,"
+    "admission_evidence_normalization_drift"
+)
+EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+)
+EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV = (
+    "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,"
+    "service_api_method_not_allowed,service_api_route_not_found,"
+    "service_api_payload_json_syntax_invalid,"
+    "service_api_payload_structure_invalid"
+)
+EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+)
+EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV = (
+    "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,"
+    "service_api_route_not_found"
+)
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -41,6 +78,29 @@ REQUIRED_REPORT_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "request_validation_status",
+    "error_envelope_field_status",
+    "method_path_classification_status",
+    "ingress_resilience_gate_status",
+    "websocket_upgrade_parity_status",
+    "ci_local_promotion_budget_boundary_status",
+    "admission_saturation_status",
+    "admission_queue_cap_enforcement_status",
+    "overload_evidence_normalization_status",
+    "protocol_compliance_status",
+    "route_contract_parity_status",
+    "protocol_compliance_reason_taxonomy_version",
+    "protocol_compliance_reason_codes_csv",
+    "ingress_resilience_reason_taxonomy_version",
+    "ingress_resilience_reason_codes_csv",
+    "admission_reason_taxonomy_version",
+    "admission_reason_codes_csv",
+    "request_validation_reason_registry_status",
+    "error_envelope_source_contract_status",
+    "request_validation_reason_taxonomy_version",
+    "request_validation_reason_codes_csv",
+    "error_envelope_reason_taxonomy_version",
+    "error_envelope_reason_codes_csv",
     "api_max_requests_default",
     "api_idle_timeout_default_ms",
     "body_size_limit_bytes",
@@ -60,6 +120,19 @@ REQUIRED_VERIFIED_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "request_validation_status",
+    "error_envelope_field_status",
+    "method_path_classification_status",
+    "ingress_resilience_gate_status",
+    "websocket_upgrade_parity_status",
+    "ci_local_promotion_budget_boundary_status",
+    "admission_saturation_status",
+    "admission_queue_cap_enforcement_status",
+    "overload_evidence_normalization_status",
+    "protocol_compliance_status",
+    "route_contract_parity_status",
+    "request_validation_reason_registry_status",
+    "error_envelope_source_contract_status",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -164,6 +237,56 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_api_rate_limit_per_second_default_mismatch",
     )
     decision.reject_if(
+        report.get("protocol_compliance_reason_taxonomy_version")
+        != EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("protocol_compliance_reason_codes_csv")
+        != EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV,
+        "service_api_axum_policy_protocol_compliance_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("ingress_resilience_reason_taxonomy_version")
+        != EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("ingress_resilience_reason_codes_csv")
+        != EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV,
+        "service_api_axum_policy_ingress_resilience_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("admission_reason_taxonomy_version")
+        != EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_admission_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("admission_reason_codes_csv")
+        != EXPECTED_ADMISSION_REASON_CODES_CSV,
+        "service_api_axum_policy_admission_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("request_validation_reason_taxonomy_version")
+        != EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("request_validation_reason_codes_csv")
+        != EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV,
+        "service_api_axum_policy_request_validation_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("error_envelope_reason_taxonomy_version")
+        != EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_error_envelope_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("error_envelope_reason_codes_csv")
+        != EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV,
+        "service_api_axum_policy_error_envelope_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "service_api_axum_policy_elapsed_seconds_invalid",
     )
@@ -184,6 +307,47 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
+        "protocol_compliance_reason_taxonomy_version": (
+            EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION
+        ),
+        "protocol_compliance_reason_codes_csv": (
+            EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV
+        ),
+        "ingress_resilience_reason_taxonomy_version": (
+            EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION
+        ),
+        "ingress_resilience_reason_codes_csv": (
+            EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV
+        ),
+        "admission_saturation_status": report.get("admission_saturation_status"),
+        "admission_queue_cap_enforcement_status": (
+            report.get("admission_queue_cap_enforcement_status")
+        ),
+        "overload_evidence_normalization_status": (
+            report.get("overload_evidence_normalization_status")
+        ),
+        "admission_reason_taxonomy_version": (
+            EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION
+        ),
+        "admission_reason_codes_csv": EXPECTED_ADMISSION_REASON_CODES_CSV,
+        "request_validation_reason_registry_status": (
+            report.get("request_validation_reason_registry_status")
+        ),
+        "error_envelope_source_contract_status": (
+            report.get("error_envelope_source_contract_status")
+        ),
+        "request_validation_reason_taxonomy_version": (
+            EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION
+        ),
+        "request_validation_reason_codes_csv": (
+            EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV
+        ),
+        "error_envelope_reason_taxonomy_version": (
+            EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION
+        ),
+        "error_envelope_reason_codes_csv": (
+            EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV
+        ),
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }

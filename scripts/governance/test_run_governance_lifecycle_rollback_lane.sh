@@ -62,6 +62,14 @@ if [ "$(extract_value "$go_output" "reason_key")" != "governance_lifecycle_rollb
   echo "expected governance lifecycle/rollback GO path reason_key marker" >&2
   exit 1
 fi
+if [ "$(extract_value "$go_output" "reason_taxonomy_version")" != "kamn.governance.lifecycle-rollback-reason-taxonomy.v1" ]; then
+  echo "expected governance lifecycle/rollback GO path reason taxonomy version marker" >&2
+  exit 1
+fi
+if [ "$(extract_value "$go_output" "reason_taxonomy_codes_csv")" != "docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded" ]; then
+  echo "expected governance lifecycle/rollback GO path reason taxonomy codes marker" >&2
+  exit 1
+fi
 
 if ! grep -q '"schema_version": "kamn.governance.lifecycle-rollback-report.v1"' "$go_report"; then
   echo "expected governance lifecycle/rollback report schema marker" >&2

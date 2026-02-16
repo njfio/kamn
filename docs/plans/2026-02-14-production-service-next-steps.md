@@ -112,8 +112,62 @@ This refreshed version separates:
 - Scope: keep this document and CI docs-contract guards synchronized with real state as issue chains close.
 
 ## Active Open Chains
-- None in this document scope as of 2026-02-15.
-- New production gaps should be decomposed under `#3333` with a new epic/story/task/subtask chain before implementation work starts.
+- Legacy R26 umbrella chain remains active with refreshed truth scope:
+  - `#3626` (epic, refreshed 2026-02-15), with active stories:
+    - `#3630` TLS completion + release-governance integration.
+    - `#3631` anti-flake merge gate reliability.
+    - `#3632` unified API-observability contract hardening (post-migration governance).
+- New R26.5 closure tranche opened for remaining production-service operational gaps:
+  - Milestone: `R26.5 Observability and transport resilience hardening` (`#37`).
+  - Epic chain: `#3333 -> #3772`.
+  - Story chains:
+    - `#3772 -> #3773` tracing standardization + observability-serving hardening.
+    - `#3772 -> #3774` shared Kolme transport retry/reconnect hardening.
+  - Task chains:
+    - `#3773 -> #3775 -> (#3782, #3783)`.
+    - `#3773 -> #3781 -> (#3789, #3788)`.
+    - `#3773 -> #3776 -> (#3784, #3785)`.
+    - `#3774 -> #3778 -> (#3790, #3791)`.
+    - `#3774 -> #3779 -> (#3793, #3792)`.
+    - `#3774 -> #3780 -> (#3794, #3795)`.
+- New production gaps continue to be decomposed under `#3333` with epic/story/task/subtask hierarchy before implementation work starts.
+
+### R27.49 Partition-Healing / Convergence Governance
+- Active chain: `#4593 -> #4594 -> #4596 -> (#4600, #4601)`.
+- Current delivered markers and policy contracts for partition/rejoin reconciliation governance include:
+  - `transport_evidence_schema_version=kamn.runtime.libp2p-transport-transition-evidence.v1`
+  - `transport_evidence_normalization_status=verified`
+  - `transport_evidence_source_contract_status=verified`
+  - `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
+  - `reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed`
+- Deterministic fail-closed drift markers now include:
+  - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+- Active failover governance chain under the same tranche:
+  - `#4593 -> #4595 -> #4599 -> (#4606, #4607)`.
+  - delivered failover preflight governance markers:
+    - `failover_promotion_gate_status=verified`
+    - `live_node_drift_parity_status=verified`
+    - `ci_local_promotion_budget_boundary_status=verified`
+    - `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`
+    - `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+  - deterministic fail-closed drill reasons for parity/budget drift:
+    - `failover_readiness_progress_stalled`
+    - `live_node_drift_marker_parity_mismatch`
+    - `ci_local_promotion_budget_boundary_exceeded`
+
+### R27.53 Closure Tranche (`#4653`)
+- Delivered chain: `#4653 -> (#4654, #4655) -> (#4656, #4657, #4658, #4659) -> (#4660-#4667)`.
+- Closure highlights:
+  - deployment preflight startup-budget governance now fails closed with deterministic taxonomy:
+    - `preflight_budget_exceeded`
+    - `startup_latency_budget_status_mismatch`
+    - `startup_latency_budget_reason_code_mismatch`
+  - managed-signer rollout governance now fails closed for promotion/custody drift:
+    - `signer_rotation_promotion_stalled`
+    - `quorum_evidence_custody_sha256_mismatch`
+  - ci-local promotion budget boundary enforced by managed-signer contract lane:
+    - `ci_local_promotion_budget_boundary_status=verified`
 
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.
@@ -123,10 +177,10 @@ This refreshed version separates:
 
 ### Script-Surface Trend Governance Refresh (Task #3740)
 - Combined shell-surface baseline refreshed to current post-migration snapshot:
-  - `fixtures/ci/combined_shell_surface_trend_baseline.json` (`script_count=399`, `shell_line_total=33055`, `rust_line_total=115247`, `shell_to_rust_ratio=0.286819`).
+  - `fixtures/ci/combined_shell_surface_trend_baseline.json` (`script_count=408`, `shell_line_total=33972`, `rust_line_total=115293`, `shell_to_rust_ratio=0.294658`).
 - Script-surface budget envelope refreshed for current dispatcher-migration state:
   - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=34000`).
-  - `.ci/script-surface-baseline.env` (`SCRIPT_COUNT_BASELINE=399`, `SHELL_LINE_TOTAL_BASELINE=33055`).
+  - `.ci/script-surface-baseline.env` (`SCRIPT_COUNT_BASELINE=408`, `SHELL_LINE_TOTAL_BASELINE=33972`).
 - Combined trend gate remains fail-closed for future drift using:
   - `scripts/ci/check_combined_shell_surface_trend_policy.sh`
   - `fixtures/ci/combined_shell_surface_trend_thresholds.json`

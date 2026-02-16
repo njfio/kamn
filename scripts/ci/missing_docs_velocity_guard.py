@@ -13,6 +13,23 @@ THROUGHPUT_REPORT_SCHEMA_VERSION = "kamn.ci.kamn-core-missing-docs-throughput-re
 VELOCITY_BASELINE_SCHEMA_VERSION = "kamn.ci.kamn-core-missing-docs-velocity-baseline.v1"
 VELOCITY_THRESHOLD_SCHEMA_VERSION = "kamn.ci.kamn-core-missing-docs-velocity-thresholds.v1"
 VELOCITY_POLICY_SCHEMA_VERSION = "kamn.ci.kamn-core-missing-docs-velocity-policy.v1"
+VELOCITY_REASON_TAXONOMY_VERSION = (
+    "kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1"
+)
+VELOCITY_REASON_CODES_CSV = ",".join(
+    [
+        "allowlist_fully_graduated",
+        "baseline_window_not_elapsed",
+        "ci_local_docs_velocity_window_boundary_exceeded",
+        "multiple_policy_violations",
+        "stagnation_window_exceeded",
+        "velocity_target_met",
+        "velocity_threshold_config_invalid",
+        "velocity_window_under_threshold",
+        "window_not_elapsed",
+    ]
+)
+CI_LOCAL_MAX_VELOCITY_WINDOW_COMMITS = 240
 DEFAULT_CRATE_NAME = "kamn-core"
 
 
@@ -144,6 +161,8 @@ def validate_thresholds(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if velocity_window_commits <= 0:
         raise ValueError("velocity thresholds velocity_window_commits must be positive")
+    if velocity_window_commits > CI_LOCAL_MAX_VELOCITY_WINDOW_COMMITS:
+        raise ValueError("ci_local_docs_velocity_window_boundary_exceeded")
 
     min_modules_per_100_commits = require_number(
         payload, "min_modules_per_100_commits", label="velocity thresholds"
@@ -264,7 +283,10 @@ def evaluate_velocity_policy(
         "crate": DEFAULT_CRATE_NAME,
         "status": status,
         "final_decision": final_decision,
+        "reason_taxonomy_version": VELOCITY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": VELOCITY_REASON_CODES_CSV,
         "reason_key": reason_key,
+        "reason_codes_value": reason_key,
         "report_file": str(report_file),
         "baseline_file": str(baseline_file),
         "threshold_file": str(threshold_file),
@@ -320,7 +342,13 @@ def command_check(args: argparse.Namespace) -> int:
     output_stream = sys.stdout if exit_code == 0 else sys.stderr
     print(f"status={policy['status']}", file=output_stream)
     print(f"final_decision={policy['final_decision']}", file=output_stream)
+    print(
+        f"reason_taxonomy_version={policy['reason_taxonomy_version']}",
+        file=output_stream,
+    )
+    print(f"reason_codes_csv={policy['reason_codes_csv']}", file=output_stream)
     print(f"reason_key={policy['reason_key']}", file=output_stream)
+    print(f"reason_codes_value={policy['reason_codes_value']}", file=output_stream)
     print(f"commit_delta={policy['commit_delta']}", file=output_stream)
     print(f"graduated_module_delta={policy['graduated_module_delta']}", file=output_stream)
     print(
@@ -358,8 +386,19 @@ def main() -> int:
         if args.command == "check":
             return command_check(args)
     except ValueError as error:
+        reason_code = (
+            "ci_local_docs_velocity_window_boundary_exceeded"
+            if str(error) == "ci_local_docs_velocity_window_boundary_exceeded"
+            else "velocity_threshold_config_invalid"
+        )
         print("status=fail", file=sys.stderr)
         print("final_decision=HOLD", file=sys.stderr)
+        print(
+            f"reason_taxonomy_version={VELOCITY_REASON_TAXONOMY_VERSION}",
+            file=sys.stderr,
+        )
+        print(f"reason_codes_csv={VELOCITY_REASON_CODES_CSV}", file=sys.stderr)
+        print(f"reason_codes_value={reason_code}", file=sys.stderr)
         print(f"missing-docs velocity guard failed: {error}", file=sys.stderr)
         return 1
     raise AssertionError(f"unsupported command: {args.command}")

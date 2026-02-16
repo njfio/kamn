@@ -19,6 +19,13 @@ DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 FOUNDATION_DOC = ROOT_DIR / "docs/foundation/kolme-runtime-commit-client.md"
 CI_STRATEGY_DOC = ROOT_DIR / "docs/ci/strategy.md"
 README_FILE = ROOT_DIR / "README.md"
+SUBMIT_FINALITY_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
+)
+SUBMIT_FINALITY_REASON_CODES_CSV = (
+    "submit_finality_reason_mismatch_for_finality_enabled_run,"
+    "submit_finality_reason_mismatch_for_submit_only_run"
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -152,6 +159,11 @@ def main() -> int:
         "live_finality_retry_exhausted_failed",
         "finality_retry_failure_class_mismatch_for_timeout_reason",
         "finality_retry_attempts_used_mismatch_for_timeout_reason",
+        "submit_finality_reason_taxonomy_version",
+        "submit_finality_reason_codes_csv",
+        "submit_finality_reason_codes_value",
+        "submit_finality_reason_mismatch_for_finality_enabled_run",
+        "submit_finality_reason_mismatch_for_submit_only_run",
         "Regression: #2099",
     )
     for marker in required_doc_markers:
@@ -391,6 +403,38 @@ def main() -> int:
         print("expected native_payload_messages_marker_present=true", file=sys.stderr)
         return 1
 
+    policy_payload = json_load(Path(args.policy_output_json))
+    if policy_payload.get("schema_version") != "kamn.kolme.local-runtime-commit-live-policy-report.v1":
+        print("unexpected runtime-commit live finality evidence policy schema", file=sys.stderr)
+        return 1
+    if policy_payload.get("final_decision") != "GO":
+        print(
+            "expected runtime-commit live finality evidence policy final_decision GO",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        policy_payload.get("submit_finality_reason_taxonomy_version")
+        != SUBMIT_FINALITY_REASON_TAXONOMY_VERSION
+    ):
+        print(
+            "expected submit_finality_reason_taxonomy_version in policy output",
+            file=sys.stderr,
+        )
+        return 1
+    if policy_payload.get("submit_finality_reason_codes_csv") != SUBMIT_FINALITY_REASON_CODES_CSV:
+        print(
+            "expected submit_finality_reason_codes_csv in policy output",
+            file=sys.stderr,
+        )
+        return 1
+    if policy_payload.get("submit_finality_reason_codes_value") != "none":
+        print(
+            "expected submit_finality_reason_codes_value=none in policy output",
+            file=sys.stderr,
+        )
+        return 1
+
     with tempfile.TemporaryDirectory(prefix="runtime-commit-finality-negative-") as temp_dir:
         negative_root = Path(temp_dir)
         linkage_drift_summary_file = negative_root / "linkage_drift_summary.json"
@@ -597,6 +641,94 @@ def main() -> int:
         if "finality_retry_failure_class_mismatch_for_timeout_reason" not in retry_drift_reason_codes:
             print(
                 "expected finality_retry_failure_class_mismatch_for_timeout_reason in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            retry_drift_policy.get("submit_finality_reason_taxonomy_version")
+            != SUBMIT_FINALITY_REASON_TAXONOMY_VERSION
+        ):
+            print(
+                "expected submit/finality taxonomy version in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if retry_drift_policy.get("submit_finality_reason_codes_csv") != SUBMIT_FINALITY_REASON_CODES_CSV:
+            print(
+                "expected submit/finality taxonomy ordering in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if retry_drift_policy.get("submit_finality_reason_codes_value") != "none":
+            print(
+                "expected submit/finality taxonomy value=none in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        submit_finality_drift_summary_file = negative_root / "submit_finality_drift_summary.json"
+        submit_finality_drift_policy_file = negative_root / "submit_finality_drift_policy.json"
+        submit_finality_drift_summary = dict(summary_payload)
+        submit_finality_drift_summary["status"] = "ok"
+        submit_finality_drift_summary["reason_code"] = "live_runtime_commit_command_passed"
+        submit_finality_drift_summary["finality_enabled"] = True
+        submit_finality_drift_summary["finality_evidence_marker_present"] = True
+        submit_finality_drift_summary["finality_retry_attempts_used"] = 1
+        submit_finality_drift_summary["finality_retry_exhausted"] = False
+        submit_finality_drift_summary["finality_retry_failure_class"] = "none"
+        submit_finality_drift_summary_file.write_text(
+            json.dumps(submit_finality_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        submit_finality_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(submit_finality_drift_summary_file),
+                "--expected-final-decision",
+                "GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--output-json",
+                str(submit_finality_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if submit_finality_drift_result.returncode == 0:
+            print("expected submit/finality mismatch proof to fail closed", file=sys.stderr)
+            return 1
+        submit_finality_drift_policy = json.loads(
+            submit_finality_drift_policy_file.read_text(encoding="utf-8")
+        )
+        submit_finality_drift_reason_codes = submit_finality_drift_policy.get("reason_codes")
+        if not isinstance(submit_finality_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in submit/finality mismatch policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "submit_finality_reason_mismatch_for_finality_enabled_run"
+            not in submit_finality_drift_reason_codes
+        ):
+            print(
+                "expected submit_finality_reason_mismatch_for_finality_enabled_run in policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            submit_finality_drift_policy.get("submit_finality_reason_codes_value")
+            != "submit_finality_reason_mismatch_for_finality_enabled_run"
+        ):
+            print(
+                "expected normalized submit/finality taxonomy value in mismatch output",
                 file=sys.stderr,
             )
             return 1

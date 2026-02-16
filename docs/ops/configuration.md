@@ -82,6 +82,34 @@ Examples:
 
 Invalid override values fail closed with typed `ConfigError` variants.
 
+## Runtime Commit Submit/Finality Policy Controls
+
+The local Kolme runtime-commit live validation lane exposes bounded submit/finality
+controls that must stay deterministic for release gating.
+
+Primary controls:
+
+- `--finality-max-seconds`
+- `--finality-retry-max-attempts`
+- `--finality-retry-backoff-seconds`
+- `--max-seconds`
+- `--skip-preflight` (explicit override; run mode is still local-only gated)
+
+Policy checker:
+
+- `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+
+Deterministic submit/finality reason taxonomy markers:
+
+- `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+- `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+- `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+
+Fail-closed mismatch reasons:
+
+- `submit_finality_reason_mismatch_for_finality_enabled_run`
+- `submit_finality_reason_mismatch_for_submit_only_run`
+
 ## Validation Evidence
 
 Implemented and validated by `kamn-node` tests:

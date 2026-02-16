@@ -50,6 +50,10 @@ register/resolve/update/revoke transaction behavior.
 - lifecycle finality tracking:
   - `record_lifecycle_finality(did, nonce, key, sequence, status, receipt)`
   - `lifecycle_finality(did, nonce)`
+- DID registration reason taxonomy markers:
+  - `did_registration_reason_taxonomy_version=kamn.kolme.did-registration-reason-taxonomy.v1`
+  - `did_registration_reason_codes_csv=did_registry_document_did_mismatch,did_registry_submission_key_conflict`
+  - `did_registration_reason_codes_value=none|did_registry_document_did_mismatch|did_registry_submission_key_conflict`
 - Kolme-backed lifecycle integration path:
   - `KolmeDidLifecycleChainAdapter`
   - maps lifecycle mutation submissions into deterministic `KolmeRuntimeCommitRequest` payloads
@@ -68,6 +72,7 @@ register/resolve/update/revoke transaction behavior.
 - chain adapter submission contract remains deterministic through `InMemoryDidRegistrationChainAdapter` for low-cost CI verification.
 - Lifecycle mutation nonce replay, unauthorized actor mutation, and invalid revoke/recover transitions fail closed (`Regression: #889`).
 - Lifecycle mutation submission rejects conflicting payloads for same DID+nonce idempotency window (`Regression: #2936`).
+- Registration chain submission rejects malformed DID payloads (`did_registry_document_did_mismatch`) and duplicate payload drift (`did_registry_submission_key_conflict`) with deterministic reason taxonomy outputs (`Regression: #4418`).
 
 ## Local Validation
 Run from repository root:
@@ -81,6 +86,8 @@ cargo test -p kamn-core --test did_registry_transactions -- functional_chain_sub
 cargo test -p kamn-core --test did_registry_transactions -- integration_chain_submission_adapter_deduplicates_retry_outcomes
 cargo test -p kamn-core --test did_registry_transactions -- regression_chain_submission_adapter_exposes_rejected_outcome_without_panicking
 cargo test -p kamn-core --test did_registry_transactions -- regression_register_finality_rejects_stale_or_conflicting_updates
+cargo test -p kamn-core --test did_registry_transactions -- regression_registration_chain_submission_rejects_malformed_document_payload
+cargo test -p kamn-core --test did_registry_transactions -- regression_registration_chain_submission_rejects_duplicate_registration_payload_drift
 cargo test -p kamn-core --test did_registry_transactions -- functional_lifecycle_rotate_mutation_updates_document_and_emits_allowed_reason_code
 cargo test -p kamn-core --test did_registry_transactions -- integration_lifecycle_revoke_then_recover_restores_active_resolution
 cargo test -p kamn-core --test did_registry_transactions -- regression_lifecycle_replayed_or_unauthorized_mutation_fails_closed

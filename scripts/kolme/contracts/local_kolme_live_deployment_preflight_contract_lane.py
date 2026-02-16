@@ -480,6 +480,9 @@ def main() -> int:
         warning_edge_summary["mode"] = "run"
         warning_edge_summary["status"] = "ok"
         warning_edge_summary["reason_code"] = "deployment_preflight_passed"
+        warning_edge_summary["elapsed_seconds"] = 1
+        warning_edge_summary["max_seconds"] = 12
+        warning_edge_summary["budget_status"] = "within_budget"
         warning_edge_summary["signer_secret_present"] = True
         warning_edge_summary["signer_secret_hex_valid"] = True
         warning_edge_summary["required_approvals"] = 2
@@ -617,6 +620,71 @@ def main() -> int:
             return 1
         if warning_edge_policy_payload.get("final_decision") != "GO":
             print("expected runtime signer drift warning-edge policy final_decision GO", file=sys.stderr)
+            return 1
+
+        startup_budget_bypass_report = temp_path / "startup_budget_bypass_summary.json"
+        startup_budget_bypass_policy = temp_path / "startup_budget_bypass_policy.json"
+        startup_budget_bypass_summary = dict(warning_edge_summary)
+        startup_budget_bypass_summary["elapsed_seconds"] = 13
+        startup_budget_bypass_summary["max_seconds"] = 12
+        startup_budget_bypass_summary["budget_status"] = "within_budget"
+        startup_budget_bypass_report.write_text(
+            json.dumps(startup_budget_bypass_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        startup_budget_bypass_result = run_policy_check(
+            report_file=startup_budget_bypass_report,
+            output_json=startup_budget_bypass_policy,
+            expected_final_decision="GO",
+            required_reason_code="deployment_preflight_passed",
+        )
+        if startup_budget_bypass_result.returncode == 0:
+            print("expected startup-latency budget bypass proof to fail closed", file=sys.stderr)
+            return 1
+        startup_budget_bypass_payload = json.loads(startup_budget_bypass_policy.read_text(encoding="utf-8"))
+        startup_budget_bypass_reason_codes = startup_budget_bypass_payload.get("reason_codes")
+        if not isinstance(startup_budget_bypass_reason_codes, list):
+            print("expected startup-latency budget bypass policy reason-code list", file=sys.stderr)
+            return 1
+        if "startup_latency_budget_status_mismatch" not in startup_budget_bypass_reason_codes:
+            print("expected startup-latency budget status mismatch reason in budget-bypass policy output", file=sys.stderr)
+            return 1
+
+        startup_budget_reason_mismatch_report = temp_path / "startup_budget_reason_mismatch_summary.json"
+        startup_budget_reason_mismatch_policy = temp_path / "startup_budget_reason_mismatch_policy.json"
+        startup_budget_reason_mismatch_summary = dict(warning_edge_summary)
+        startup_budget_reason_mismatch_summary["status"] = "fail"
+        startup_budget_reason_mismatch_summary["reason_code"] = "checkpoint_failed_signer_quorum_contract"
+        startup_budget_reason_mismatch_summary["elapsed_seconds"] = 13
+        startup_budget_reason_mismatch_summary["max_seconds"] = 12
+        startup_budget_reason_mismatch_summary["budget_status"] = "exceeded_budget"
+        startup_budget_reason_mismatch_report.write_text(
+            json.dumps(startup_budget_reason_mismatch_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        startup_budget_reason_mismatch_result = run_policy_check(
+            report_file=startup_budget_reason_mismatch_report,
+            output_json=startup_budget_reason_mismatch_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_quorum_contract",
+        )
+        if startup_budget_reason_mismatch_result.returncode == 0:
+            print("expected startup-latency budget reason mismatch proof to fail closed", file=sys.stderr)
+            return 1
+        startup_budget_reason_mismatch_payload = json.loads(
+            startup_budget_reason_mismatch_policy.read_text(encoding="utf-8")
+        )
+        startup_budget_reason_mismatch_codes = startup_budget_reason_mismatch_payload.get("reason_codes")
+        if not isinstance(startup_budget_reason_mismatch_codes, list):
+            print("expected startup-latency budget reason mismatch policy reason-code list", file=sys.stderr)
+            return 1
+        if "startup_latency_budget_reason_code_mismatch" not in startup_budget_reason_mismatch_codes:
+            print(
+                "expected startup-latency budget reason-code mismatch marker in budget-reason policy output (expected reason_code=preflight_budget_exceeded when budget_status=exceeded_budget)",
+                file=sys.stderr,
+            )
             return 1
 
         quorum_negative_report = temp_path / "signer_quorum_negative_summary.json"

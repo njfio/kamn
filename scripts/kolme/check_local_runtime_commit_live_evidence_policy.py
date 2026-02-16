@@ -5,6 +5,14 @@ import argparse
 import json
 from pathlib import Path
 
+SUBMIT_FINALITY_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
+)
+SUBMIT_FINALITY_REASON_CODES = (
+    "submit_finality_reason_mismatch_for_finality_enabled_run",
+    "submit_finality_reason_mismatch_for_submit_only_run",
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -32,8 +40,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
+def evaluate(
+    report: dict[str, object], args: argparse.Namespace
+) -> tuple[str, list[str], str]:
     reason_codes: list[str] = []
+    submit_finality_reason_codes: list[str] = []
     in_memory_provider_marker = "InMemoryKolmeRuntimeCommitClient"
 
     if report.get("schema_version") != "kamn.kolme.local-runtime-commit-live-summary.v1":
@@ -284,6 +295,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("dry_run_reason_code_mismatch")
         if mode == "run" and reason_code == "dry_run_no_commands_executed":
             reason_codes.append("run_reason_code_mismatch")
+        if (
+            mode == "run"
+            and finality_enabled is True
+            and reason_code != "live_runtime_commit_and_finality_commands_passed"
+        ):
+            reason_codes.append("submit_finality_reason_mismatch_for_finality_enabled_run")
+            submit_finality_reason_codes.append(
+                "submit_finality_reason_mismatch_for_finality_enabled_run"
+            )
+        if (
+            mode == "run"
+            and finality_enabled is False
+            and reason_code != "live_runtime_commit_command_passed"
+        ):
+            reason_codes.append("submit_finality_reason_mismatch_for_submit_only_run")
+            submit_finality_reason_codes.append(
+                "submit_finality_reason_mismatch_for_submit_only_run"
+            )
         if mode == "run" and submit_evidence_marker_present is not True:
             reason_codes.append("submit_evidence_marker_missing")
         if mode == "run" and replay_evidence_marker_present is not True:
@@ -394,8 +423,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if observed_final_decision and observed_final_decision != args.expected_final_decision:
         reason_codes.append("observed_final_decision_mismatch")
 
+    submit_finality_reason_codes_value = (
+        ",".join(sorted(set(submit_finality_reason_codes))) if submit_finality_reason_codes else "none"
+    )
     final_decision = "GO" if not reason_codes else "NO-GO"
-    return final_decision, reason_codes
+    return final_decision, reason_codes, submit_finality_reason_codes_value
 
 
 def main() -> int:
@@ -410,7 +442,7 @@ def main() -> int:
     elif observed_status == "fail":
         observed_final_decision = "NO-GO"
 
-    final_decision, reason_codes = evaluate(report, args)
+    final_decision, reason_codes, submit_finality_reason_codes_value = evaluate(report, args)
     output = {
         "schema_version": "kamn.kolme.local-runtime-commit-live-policy-report.v1",
         "report_file": str(report_path),
@@ -434,6 +466,9 @@ def main() -> int:
         "observed_provider_signing_profile_contract_version": report.get(
             "provider_signing_profile_contract_version"
         ),
+        "submit_finality_reason_taxonomy_version": SUBMIT_FINALITY_REASON_TAXONOMY_VERSION,
+        "submit_finality_reason_codes_csv": ",".join(SUBMIT_FINALITY_REASON_CODES),
+        "submit_finality_reason_codes_value": submit_finality_reason_codes_value,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
         "reason_codes": reason_codes,
@@ -450,6 +485,9 @@ def main() -> int:
     print(f"status={status}")
     print(f"final_decision={final_decision}")
     print(f"failed_checks={failed_checks}")
+    print(f"submit_finality_reason_taxonomy_version={SUBMIT_FINALITY_REASON_TAXONOMY_VERSION}")
+    print(f"submit_finality_reason_codes_csv={','.join(SUBMIT_FINALITY_REASON_CODES)}")
+    print(f"submit_finality_reason_codes_value={submit_finality_reason_codes_value}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
 

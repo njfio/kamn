@@ -25,6 +25,22 @@ from framework.contract_framework import (  # noqa: E402
 REPORT_SCHEMA = "kamn.runtime.service-api-reason-code-compatibility-live-validation.v1"
 POLICY_SCHEMA = "kamn.runtime.service-api-reason-code-compatibility-live-policy-report.v1"
 EXPECTED_FAIL_CLOSED_REASON_CODE = "service_api_payload_structure_invalid"
+EXPECTED_API_ERROR_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-error-reason-taxonomy.v1"
+)
+EXPECTED_API_ERROR_REASON_CODES_CSV = (
+    "service_api_auth_sender_did_header_missing,"
+    "service_api_auth_replay_nonce_detected,"
+    "service_api_ws_upgrade_header_missing,"
+    "service_api_ws_version_header_invalid,"
+    "service_api_payload_json_syntax_invalid,"
+    "service_api_payload_structure_invalid,"
+    "service_api_payload_io_error"
+)
+EXPECTED_TIMEOUT_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-timeout-reason-taxonomy.v1"
+)
+EXPECTED_TIMEOUT_REASON_CODES_CSV = "service_api_request_read_failed"
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -37,6 +53,13 @@ REQUIRED_REPORT_FIELDS = [
     "regression_corpus_status",
     "regression_drift_diagnostics_status",
     "regression_corpus_scenario_count",
+    "api_error_reason_taxonomy_status",
+    "timeout_classification_status",
+    "endpoint_parity_gate_normalization_status",
+    "api_error_reason_taxonomy_version",
+    "api_error_reason_codes_csv",
+    "timeout_reason_taxonomy_version",
+    "timeout_reason_codes_csv",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",
@@ -53,6 +76,9 @@ REQUIRED_VERIFIED_FIELDS = [
     "python_sdk_reason_code_status",
     "regression_corpus_status",
     "regression_drift_diagnostics_status",
+    "api_error_reason_taxonomy_status",
+    "timeout_classification_status",
+    "endpoint_parity_gate_normalization_status",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",
@@ -125,6 +151,26 @@ def _check_policy(args: argparse.Namespace) -> int:
         not _is_positive_int(report.get("regression_corpus_scenario_count")),
         "service_api_reason_code_policy_regression_corpus_scenario_count_invalid",
     )
+    decision.reject_if(
+        report.get("api_error_reason_taxonomy_version")
+        != EXPECTED_API_ERROR_REASON_TAXONOMY_VERSION,
+        "service_api_reason_code_policy_api_error_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("api_error_reason_codes_csv")
+        != EXPECTED_API_ERROR_REASON_CODES_CSV,
+        "service_api_reason_code_policy_api_error_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("timeout_reason_taxonomy_version")
+        != EXPECTED_TIMEOUT_REASON_TAXONOMY_VERSION,
+        "service_api_reason_code_policy_timeout_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("timeout_reason_codes_csv")
+        != EXPECTED_TIMEOUT_REASON_CODES_CSV,
+        "service_api_reason_code_policy_timeout_reason_codes_csv_mismatch",
+    )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 
     final_decision, reason_codes = decision.finalize("none")
@@ -142,6 +188,23 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
+        "api_error_reason_taxonomy_status": report.get(
+            "api_error_reason_taxonomy_status"
+        ),
+        "timeout_classification_status": report.get(
+            "timeout_classification_status"
+        ),
+        "endpoint_parity_gate_normalization_status": report.get(
+            "endpoint_parity_gate_normalization_status"
+        ),
+        "api_error_reason_taxonomy_version": (
+            EXPECTED_API_ERROR_REASON_TAXONOMY_VERSION
+        ),
+        "api_error_reason_codes_csv": EXPECTED_API_ERROR_REASON_CODES_CSV,
+        "timeout_reason_taxonomy_version": (
+            EXPECTED_TIMEOUT_REASON_TAXONOMY_VERSION
+        ),
+        "timeout_reason_codes_csv": EXPECTED_TIMEOUT_REASON_CODES_CSV,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }

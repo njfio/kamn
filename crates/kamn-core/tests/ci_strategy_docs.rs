@@ -482,7 +482,19 @@ fn doc_contains_runtime_observability_endpoint_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("ci-fast-gate mode: fast"));
     assert!(DOC.contains("local-dev mode: local"));
     assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains("ci-local contract-lane boundary rejects `--max-seconds > 240`."));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("endpoint_readiness_status=verified"));
+    assert!(DOC.contains("stream_parity_status=verified"));
     assert!(DOC.contains("observability_source_marker_missing:legacy_tcp_listener_import"));
+    assert!(DOC.contains("runtime_observability_endpoint_readiness_progress_stalled"));
+    assert!(DOC.contains("runtime_observability_stream_parity_bypass_detected"));
+    assert!(DOC.contains("ci_local_observability_endpoint_budget_boundary_exceeded"));
 }
 
 #[test]
@@ -504,10 +516,25 @@ fn doc_contains_runtime_local_retry_diagnostics_contract_lane_ci_mode_markers() 
     assert!(DOC.contains("test_check_local_retry_diagnostics_live_policy.sh"));
     assert!(DOC.contains("test_validate_local_retry_diagnostics_live_contract_lane.sh"));
     assert!(DOC.contains(
+        "ci-local contract-lane budget remains fail-closed and rejects `--max-seconds > 240`."
+    ));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("retry_readiness_status=verified"));
+    assert!(DOC.contains("retry_backoff_status=verified"));
+    assert!(DOC.contains("retry_jitter_parity_status=verified"));
+    assert!(DOC.contains(
         "local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC
         .contains("local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status"));
+    assert!(DOC.contains("local_retry_readiness_progress_stalled"));
+    assert!(DOC.contains("local_retry_backoff_jitter_parity_bypass_detected"));
+    assert!(DOC.contains("ci_local_network_budget_boundary_exceeded"));
 }
 
 #[test]
@@ -528,10 +555,21 @@ fn doc_contains_runtime_local_signal_secret_hygiene_contract_lane_ci_mode_marker
     assert!(DOC.contains("test_validate_local_signal_secret_hygiene_live.sh"));
     assert!(DOC.contains("test_check_local_signal_secret_hygiene_live_policy.sh"));
     assert!(DOC.contains("test_validate_local_signal_secret_hygiene_live_contract_lane.sh"));
+    assert!(DOC.contains("ci-local contract-lane boundary rejects `--max-seconds > 240`."));
+    assert!(DOC.contains(
+        "shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("signal_graceful_drain_status=verified"));
     assert!(DOC.contains(
         "local signal/secret hygiene run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("fallback_signer_secret_present_violation"));
+    assert!(DOC.contains("local_signal_shutdown_path_drift_detected"));
+    assert!(DOC.contains("local_graceful_drain_bypass_detected"));
+    assert!(DOC.contains("ci_local_signal_shutdown_budget_boundary_exceeded"));
 }
 
 #[test]
@@ -558,6 +596,9 @@ fn doc_contains_runtime_local_metrics_scrape_contract_lane_ci_mode_markers() {
         "local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:local_scrape_probe_status"));
+    assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status"));
+    assert!(DOC
+        .contains("local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch"));
 }
 
 #[test]
@@ -823,11 +864,49 @@ fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers()
 }
 
 #[test]
+fn doc_contains_runtime_local_full_mode_live_validation_runtime_error_taxonomy_markers() {
+    assert!(DOC.contains("## Runtime Local Full-Mode Live Validation Contract Lane"));
+    assert!(DOC.contains(
+        "validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_local_full_runtime_live_policy.sh --report-file /tmp/local-full-runtime-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-runtime-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_local_full_runtime_live_contract_lane.sh --output-json /tmp/local-full-runtime-live-contract-lane-report.json --policy-output-json /tmp/local-full-runtime-live-policy.json"
+    ));
+    assert!(DOC.contains("runtime_shutdown_gate_status=verified"));
+    assert!(DOC.contains("runtime_fallback_classification_status=verified"));
+    assert!(DOC.contains(
+        "runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("ci_local_runtime_extraction_budget_boundary_status=verified"));
+    assert!(DOC.contains("runtime_full_shutdown_gate_drift_detected"));
+    assert!(DOC.contains("runtime_fallback_classification_unstable"));
+    assert!(DOC.contains("ci_local_runtime_extraction_budget_boundary_exceeded"));
+}
+
+#[test]
 fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
     assert!(DOC.contains("local_heavy_runtime_budget_status"));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("runtime_phase_module_parity_status=verified"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_status=verified"));
     assert!(DOC.contains("elapsed_seconds"));
     assert!(DOC.contains("max_seconds"));
     assert!(DOC.contains("command_max_seconds"));
     assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_status_mismatch"));
     assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_exceeded"));
+    assert!(DOC.contains("runtime_phase_module_parity_drift_detected"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_unstable"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_exceeded"));
 }

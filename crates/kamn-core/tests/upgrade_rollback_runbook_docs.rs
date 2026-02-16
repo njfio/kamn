@@ -184,6 +184,16 @@ fn regression_requires_governance_lifecycle_rollback_fail_closed_guard() {
 }
 
 #[test]
+fn regression_requires_governance_lifecycle_rollback_gate_and_runbook_parity_guard() {
+    // Regression: #4576
+    assert!(RUNBOOK.contains(
+        "rollback gate drift and runbook marker parity bypass acceptance must fail closed (`Regression: #4576`)."
+    ));
+    assert!(RUNBOOK.contains("rollback_gate_progress_stalled"));
+    assert!(RUNBOOK.contains("runbook_marker_parity_bypass_detected"));
+}
+
+#[test]
 fn regression_requires_signer_incident_recovery_fail_closed_guard() {
     // Regression: #989
     assert!(RUNBOOK.contains(

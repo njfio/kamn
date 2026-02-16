@@ -496,6 +496,7 @@ def check_bundle(args: argparse.Namespace) -> int:
     )
     if signer_profile_drift_within_bound != derived_signer_profile_drift_within_bound:
         fail(
+            "signer_profile_drift_threshold_mismatch: "
             "signer profile drift threshold mismatch: "
             f"declared signer_profile_drift_within_bound={signer_profile_drift_within_bound} "
             f"but signer_profile_drift_events={signer_profile_drift_events} "

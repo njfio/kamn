@@ -56,8 +56,36 @@ if ! printf '%s\n' "$lane_output" | grep -q '^three_node_convergence_status=veri
   echo "expected local full-runtime contract lane three-node convergence marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_shutdown_gate_status=verified$'; then
+  echo "expected local full-runtime contract lane runtime shutdown gate marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^runtime_transport_mode_status=verified$'; then
   echo "expected local full-runtime contract lane runtime transport mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_fallback_classification_status=verified$'; then
+  echo "expected local full-runtime contract lane runtime fallback classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime contract lane runtime error reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime contract lane runtime error reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime contract lane policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime contract lane policy reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_runtime_extraction_budget_boundary_status=verified$'; then
+  echo "expected local full-runtime contract lane ci-local extraction budget boundary marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_full_runtime_policy_fast_gate_exclusion_mismatch$'; then
@@ -85,8 +113,22 @@ if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("three_node_convergence_status") != "verified":
     raise SystemExit("expected three_node_convergence_status=verified")
+if lane_payload.get("runtime_shutdown_gate_status") != "verified":
+    raise SystemExit("expected runtime_shutdown_gate_status=verified")
 if lane_payload.get("runtime_transport_mode_status") != "verified":
     raise SystemExit("expected runtime_transport_mode_status=verified")
+if lane_payload.get("runtime_fallback_classification_status") != "verified":
+    raise SystemExit("expected runtime_fallback_classification_status=verified")
+if lane_payload.get("runtime_error_reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected runtime_error_reason_taxonomy_version marker")
+if lane_payload.get("runtime_error_reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected runtime_error_reason_codes_csv marker")
+if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected reason_taxonomy_version marker")
+if lane_payload.get("reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected reason_codes_csv marker")
+if lane_payload.get("ci_local_runtime_extraction_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_runtime_extraction_budget_boundary_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 
@@ -97,6 +139,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("local_full_runtime_policy_status") != "verified":
     raise SystemExit("expected local_full_runtime_policy_status=verified in policy report")
+if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected policy reason_taxonomy_version marker")
+if policy_payload.get("reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected policy reason_codes_csv marker")
 PY
 
 if ! grep -q "check_local_full_runtime_live_policy.sh" "$CONTRACT_LANE"; then
@@ -122,6 +168,23 @@ if [ "$invalid_ci_fast_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_ci_fast_gate_output" | grep -q 'ci-fast-gate must be PASS or FAIL'; then
   echo "expected deterministic invalid ci-fast-gate marker for local full-runtime contract lane" >&2
+  exit 1
+fi
+
+set +e
+invalid_budget_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --max-seconds 241 2>&1
+)"
+invalid_budget_code=$?
+set -e
+if [ "$invalid_budget_code" -eq 0 ]; then
+  echo "expected local full-runtime contract lane to reject ci-local extraction budget overrun" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_budget_output" | grep -q 'max-seconds must be <= 240 for ci-local contract lane'; then
+  echo "expected deterministic ci-local extraction budget boundary marker for local full-runtime contract lane" >&2
   exit 1
 fi
 

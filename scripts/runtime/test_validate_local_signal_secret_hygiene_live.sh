@@ -33,6 +33,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^signal_shutdown_status=verif
   echo "expected local signal/secret hygiene validation signal marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^signal_graceful_drain_status=verified$'; then
+  echo "expected local signal/secret hygiene validation graceful-drain marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1$'; then
+  echo "expected local signal/secret hygiene validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded$'; then
+  echo "expected local signal/secret hygiene validation reason codes taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^secret_hygiene_status=verified$'; then
   echo "expected local signal/secret hygiene validation secret-hygiene marker" >&2
   exit 1
@@ -60,12 +72,22 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected local signal/secret hygiene validation final_decision=GO")
 if payload.get("signal_shutdown_status") != "verified":
     raise SystemExit("expected signal_shutdown_status=verified")
+if payload.get("signal_graceful_drain_status") != "verified":
+    raise SystemExit("expected signal_graceful_drain_status=verified")
+if payload.get("shutdown_reason_taxonomy_version") != "kamn.runtime.local-signal-shutdown-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic shutdown reason taxonomy marker")
+if payload.get("shutdown_reason_codes_csv") != "local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic shutdown reason codes taxonomy marker")
 if payload.get("secret_hygiene_status") != "verified":
     raise SystemExit("expected secret_hygiene_status=verified")
 if payload.get("secret_hygiene_policy_status") != "verified":
     raise SystemExit("expected secret_hygiene_policy_status=verified")
 if payload.get("fallback_secret_fail_closed_reason_code") != "fallback_signer_secret_present_violation":
     raise SystemExit("expected deterministic fallback secret fail-closed reason code marker")
+if payload.get("ci_local_signal_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_signal_budget_boundary_status=verified")
+if payload.get("max_seconds") != 240:
+    raise SystemExit("expected max_seconds=240")
 PY
 
 echo "local signal/secret hygiene live validation tests passed."

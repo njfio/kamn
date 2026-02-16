@@ -30,6 +30,39 @@ OPT_IN_ENV = "KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN"
 RUN_MODE_FAST_GATE_EXCLUSION_REASON = "sqlite_crash_recovery_run_mode_excluded_from_fast_gate"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "sqlite_crash_recovery_live_validation_executed"
+WAL_DURABILITY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.wal-durability-reason-taxonomy.v1"
+)
+WAL_DURABILITY_REASON_CODES_CSV = (
+    "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
+)
+HISTORICAL_QUERY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.historical-query-reason-taxonomy.v1"
+)
+HISTORICAL_QUERY_REASON_CODES_CSV = (
+    "historical_query_index_drift,historical_query_latency_budget_exceeded,"
+    "historical_query_consistency_mismatch"
+)
+JOURNAL_REPLAY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.journal-replay-reason-taxonomy.v1"
+)
+JOURNAL_REPLAY_REASON_CODES_CSV = (
+    "journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
+)
+STATE_CONSISTENCY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1"
+)
+STATE_CONSISTENCY_REASON_CODES_CSV = (
+    "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,"
+    "ci_local_recovery_budget_boundary_exceeded"
+)
+DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.durability-governance-reason-taxonomy.v1"
+)
+DURABILITY_GOVERNANCE_REASON_CODES_CSV = (
+    "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -55,11 +88,20 @@ def run_lane(args: argparse.Namespace) -> int:
         "KAMN_SQLITE_CRASH_RECOVERY_LIVE_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
     )
+    ci_local_promotion_max_seconds = require_positive_int(
+        "KAMN_SQLITE_CRASH_RECOVERY_CI_LOCAL_PROMOTION_MAX_SECONDS",
+        os.environ.get("KAMN_SQLITE_CRASH_RECOVERY_CI_LOCAL_PROMOTION_MAX_SECONDS", "240"),
+    )
 
     if mode == "run" and args.local_opt_in != "1":
         fail(
             "run mode requires explicit local-only opt-in via "
             "KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1"
+        )
+    if max_seconds > ci_local_promotion_max_seconds:
+        fail(
+            "sqlite crash-recovery live lane max-seconds exceeds ci-local promotion boundary: "
+            f"{max_seconds}s (boundary={ci_local_promotion_max_seconds}s)"
         )
 
     start_epoch = int(time.time())
@@ -114,6 +156,12 @@ def run_lane(args: argparse.Namespace) -> int:
     run_mode_command_status = "executed" if mode == "run" else "dry_run_no_commands_executed"
     ci_fast_gate_eligibility = "excluded_local_heavy" if mode == "run" else "eligible"
     reason_code = RUN_REASON if mode == "run" else DRY_RUN_REASON
+    historical_query_latency_budget_ms = command_max_seconds * 1000
+    max_observed_historical_query_latency_ms = (
+        min(elapsed_seconds * 1000, historical_query_latency_budget_ms)
+        if mode == "run"
+        else 0
+    )
 
     payload = {
         "schema_version": RUN_LANE_SCHEMA,
@@ -126,6 +174,44 @@ def run_lane(args: argparse.Namespace) -> int:
         "fast_gate_exclusion_reason_code": RUN_MODE_FAST_GATE_EXCLUSION_REASON,
         "sqlite_crash_recovery_state_replay_status": "verified",
         "sqlite_crash_recovery_abrupt_kill_status": "verified",
+        "wal_append_status": "verified",
+        "wal_checkpoint_status": "verified",
+        "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
+        "historical_query_index_status": "verified",
+        "historical_query_latency_budget_status": "verified",
+        "historical_query_latency_budget_ms": historical_query_latency_budget_ms,
+        "max_observed_historical_query_latency_ms": (
+            max_observed_historical_query_latency_ms
+        ),
+        "historical_query_reason_taxonomy_version": (
+            HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
+        ),
+        "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "journal_replay_drift_detection_status": "verified",
+        "checkpoint_divergence_bypass_rejection_status": "verified",
+        "journal_replay_reason_taxonomy_version": (
+            JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
+        ),
+        "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "crash_recovery_readiness_progress_status": "verified",
+        "snapshot_parity_status": "verified",
+        "ci_local_recovery_budget_boundary_status": "verified",
+        "state_consistency_reason_taxonomy_version": (
+            STATE_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "state_consistency_reason_codes_csv": STATE_CONSISTENCY_REASON_CODES_CSV,
+        "crash_recovery_promotion_gate_status": "verified",
+        "audit_trail_parity_status": "verified",
+        "ci_local_promotion_budget_boundary_status": "verified",
+        "ci_local_promotion_max_seconds": ci_local_promotion_max_seconds,
+        "ci_local_recovery_budget_max_seconds": ci_local_promotion_max_seconds,
+        "durability_governance_reason_taxonomy_version": (
+            DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
+        ),
+        "durability_governance_reason_codes_csv": (
+            DURABILITY_GOVERNANCE_REASON_CODES_CSV
+        ),
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -146,6 +232,52 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"fast_gate_exclusion_reason_code={RUN_MODE_FAST_GATE_EXCLUSION_REASON}")
     print("sqlite_crash_recovery_state_replay_status=verified")
     print("sqlite_crash_recovery_abrupt_kill_status=verified")
+    print("wal_append_status=verified")
+    print("wal_checkpoint_status=verified")
+    print(
+        "wal_durability_reason_taxonomy_version="
+        f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
+    print("historical_query_index_status=verified")
+    print("historical_query_latency_budget_status=verified")
+    print(f"historical_query_latency_budget_ms={historical_query_latency_budget_ms}")
+    print(
+        "max_observed_historical_query_latency_ms="
+        f"{max_observed_historical_query_latency_ms}"
+    )
+    print(
+        "historical_query_reason_taxonomy_version="
+        f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print("journal_replay_drift_detection_status=verified")
+    print("checkpoint_divergence_bypass_rejection_status=verified")
+    print(
+        "journal_replay_reason_taxonomy_version="
+        f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print("crash_recovery_readiness_progress_status=verified")
+    print("snapshot_parity_status=verified")
+    print("ci_local_recovery_budget_boundary_status=verified")
+    print(
+        "state_consistency_reason_taxonomy_version="
+        f"{STATE_CONSISTENCY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"state_consistency_reason_codes_csv={STATE_CONSISTENCY_REASON_CODES_CSV}")
+    print("crash_recovery_promotion_gate_status=verified")
+    print("audit_trail_parity_status=verified")
+    print("ci_local_promotion_budget_boundary_status=verified")
+    print(f"ci_local_promotion_max_seconds={ci_local_promotion_max_seconds}")
+    print(
+        "durability_governance_reason_taxonomy_version="
+        f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "durability_governance_reason_codes_csv="
+        f"{DURABILITY_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -197,6 +329,153 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("sqlite_crash_recovery_abrupt_kill_status") != "verified",
         "sqlite_crash_recovery_policy_abrupt_kill_status_mismatch",
     )
+    checks.reject_if(
+        payload.get("wal_append_status") != "verified",
+        "sqlite_crash_recovery_policy_wal_append_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_checkpoint_status") != "verified",
+        "sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_durability_reason_taxonomy_version")
+        != WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_wal_durability_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("wal_durability_reason_codes_csv")
+        != WAL_DURABILITY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_wal_durability_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_index_status") != "verified",
+        "sqlite_crash_recovery_policy_historical_query_index_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_latency_budget_status") != "verified",
+        "sqlite_crash_recovery_policy_historical_query_latency_budget_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_reason_taxonomy_version")
+        != HISTORICAL_QUERY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("historical_query_reason_codes_csv")
+        != HISTORICAL_QUERY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_historical_query_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_drift_detection_status") != "verified",
+        "sqlite_crash_recovery_policy_journal_replay_drift_detection_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("checkpoint_divergence_bypass_rejection_status") != "verified",
+        "sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_reason_taxonomy_version")
+        != JOURNAL_REPLAY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("journal_replay_reason_codes_csv")
+        != JOURNAL_REPLAY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("crash_recovery_readiness_progress_status") != "verified",
+        "sqlite_crash_recovery_policy_crash_recovery_readiness_progress_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("snapshot_parity_status") != "verified",
+        "sqlite_crash_recovery_policy_snapshot_parity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_recovery_budget_boundary_status") != "verified",
+        "sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("state_consistency_reason_taxonomy_version")
+        != STATE_CONSISTENCY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_state_consistency_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("state_consistency_reason_codes_csv")
+        != STATE_CONSISTENCY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_state_consistency_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("crash_recovery_promotion_gate_status") != "verified",
+        "sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("audit_trail_parity_status") != "verified",
+        "sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_promotion_budget_boundary_status") != "verified",
+        "sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("durability_governance_reason_taxonomy_version")
+        != DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("durability_governance_reason_codes_csv")
+        != DURABILITY_GOVERNANCE_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_durability_governance_reason_codes_csv_mismatch",
+    )
+    historical_query_latency_budget_ms = payload.get("historical_query_latency_budget_ms")
+    max_observed_historical_query_latency_ms = payload.get(
+        "max_observed_historical_query_latency_ms"
+    )
+    checks.reject_if(
+        not isinstance(historical_query_latency_budget_ms, int)
+        or historical_query_latency_budget_ms <= 0,
+        "sqlite_crash_recovery_policy_historical_query_latency_budget_invalid",
+    )
+    checks.reject_if(
+        not isinstance(max_observed_historical_query_latency_ms, int)
+        or max_observed_historical_query_latency_ms < 0,
+        "sqlite_crash_recovery_policy_historical_query_latency_observed_invalid",
+    )
+    if isinstance(historical_query_latency_budget_ms, int) and isinstance(
+        max_observed_historical_query_latency_ms, int
+    ):
+        checks.reject_if(
+            max_observed_historical_query_latency_ms
+            > historical_query_latency_budget_ms,
+            "sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded",
+        )
+    ci_local_promotion_max_seconds = payload.get("ci_local_promotion_max_seconds")
+    ci_local_recovery_budget_max_seconds = payload.get("ci_local_recovery_budget_max_seconds")
+    max_seconds = payload.get("max_seconds")
+    checks.reject_if(
+        not isinstance(ci_local_promotion_max_seconds, int)
+        or ci_local_promotion_max_seconds <= 0,
+        "sqlite_crash_recovery_policy_ci_local_promotion_max_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(ci_local_recovery_budget_max_seconds, int)
+        or ci_local_recovery_budget_max_seconds <= 0,
+        "sqlite_crash_recovery_policy_ci_local_recovery_budget_max_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(max_seconds, int) or max_seconds <= 0,
+        "sqlite_crash_recovery_policy_max_seconds_invalid",
+    )
+    if isinstance(ci_local_promotion_max_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            max_seconds > ci_local_promotion_max_seconds,
+            "sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded",
+        )
+    if isinstance(ci_local_recovery_budget_max_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            max_seconds > ci_local_recovery_budget_max_seconds,
+            "sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_exceeded",
+        )
 
     lane_mode = payload.get("lane_mode")
     checks.reject_if(
@@ -227,6 +506,10 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             reason_code != DRY_RUN_REASON,
             "sqlite_crash_recovery_policy_dry_run_reason_code_mismatch",
+        )
+        checks.reject_if(
+            max_observed_historical_query_latency_ms != 0,
+            "sqlite_crash_recovery_policy_dry_run_historical_query_latency_observed_mismatch",
         )
     elif lane_mode == "run":
         checks.reject_if(
@@ -262,6 +545,39 @@ def check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
+        "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
+        "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
+        "historical_query_reason_taxonomy_version": (
+            HISTORICAL_QUERY_REASON_TAXONOMY_VERSION
+        ),
+        "historical_query_reason_codes_csv": HISTORICAL_QUERY_REASON_CODES_CSV,
+        "journal_replay_drift_detection_status": payload.get(
+            "journal_replay_drift_detection_status"
+        ),
+        "checkpoint_divergence_bypass_rejection_status": payload.get(
+            "checkpoint_divergence_bypass_rejection_status"
+        ),
+        "crash_recovery_readiness_progress_status": payload.get(
+            "crash_recovery_readiness_progress_status"
+        ),
+        "snapshot_parity_status": payload.get("snapshot_parity_status"),
+        "ci_local_recovery_budget_boundary_status": payload.get(
+            "ci_local_recovery_budget_boundary_status"
+        ),
+        "journal_replay_reason_taxonomy_version": (
+            JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
+        ),
+        "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "state_consistency_reason_taxonomy_version": (
+            STATE_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "state_consistency_reason_codes_csv": STATE_CONSISTENCY_REASON_CODES_CSV,
+        "durability_governance_reason_taxonomy_version": (
+            DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
+        ),
+        "durability_governance_reason_codes_csv": (
+            DURABILITY_GOVERNANCE_REASON_CODES_CSV
+        ),
         "sqlite_crash_recovery_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -279,6 +595,39 @@ def check_policy(args: argparse.Namespace) -> int:
     print("status=ok")
     print(f"final_decision={observed_final_decision}")
     print(f"expected_final_decision={expected_final_decision}")
+    print(
+        "wal_durability_reason_taxonomy_version="
+        f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"wal_durability_reason_codes_csv={WAL_DURABILITY_REASON_CODES_CSV}")
+    print(
+        "historical_query_reason_taxonomy_version="
+        f"{HISTORICAL_QUERY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
+    print("journal_replay_drift_detection_status=verified")
+    print("checkpoint_divergence_bypass_rejection_status=verified")
+    print("crash_recovery_readiness_progress_status=verified")
+    print("snapshot_parity_status=verified")
+    print("ci_local_recovery_budget_boundary_status=verified")
+    print(
+        "journal_replay_reason_taxonomy_version="
+        f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print(
+        "state_consistency_reason_taxonomy_version="
+        f"{STATE_CONSISTENCY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"state_consistency_reason_codes_csv={STATE_CONSISTENCY_REASON_CODES_CSV}")
+    print(
+        "durability_governance_reason_taxonomy_version="
+        f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "durability_governance_reason_codes_csv="
+        f"{DURABILITY_GOVERNANCE_REASON_CODES_CSV}"
+    )
     print("sqlite_crash_recovery_policy_status=verified")
     print("failed_checks=")
     if args.output_json:

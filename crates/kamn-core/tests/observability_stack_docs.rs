@@ -36,6 +36,17 @@ fn doc_contains_slo_alert_policy_checker_contract() {
     assert!(DOC.contains("slo_alert_reason_codes:GO:v1"));
     assert!(DOC.contains("slo_alert_reason_codes:NO-GO:v1"));
     assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_MAX_SECONDS"));
+    assert!(DOC.contains(
+        "alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1",
+    ));
+    assert!(DOC.contains(
+        "alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
+    ));
+    assert!(DOC.contains("alert_rule_promotion_gate_status=verified"));
+    assert!(DOC.contains("burn_rate_parity_status=verified"));
+    assert!(DOC.contains("ci_local_promotion_budget_boundary_status=verified"));
+    assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY"));
 }
 
 #[test]
@@ -71,11 +82,52 @@ fn doc_contains_structured_logging_live_validation_lane() {
 }
 
 #[test]
+fn doc_contains_structured_logging_contract_lane_and_policy() {
+    assert!(DOC.contains("check_structured_logging_live_policy.sh"));
+    assert!(DOC.contains("test_check_structured_logging_live_policy.sh"));
+    assert!(DOC.contains("validate_structured_logging_live_contract_lane.sh"));
+    assert!(DOC.contains("test_validate_structured_logging_live_contract_lane.sh"));
+    assert!(DOC.contains("structured_logging_policy_status=verified"));
+    assert!(DOC.contains("structured_logging_contract_lane_status=verified"));
+    assert!(DOC.contains("correlation_id_parity_status=verified"));
+    assert!(DOC.contains("trace_classification_contract_status=verified"));
+    assert!(DOC.contains("log_classification_gate_status=verified"));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1",
+    ));
+    assert!(DOC.contains(
+        "correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1",
+    ));
+    assert!(DOC.contains(
+        "correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped",
+    ));
+}
+
+#[test]
 fn roadmap_tracks_post_roadmap_wave1_structured_logging_live_validation() {
     assert!(ROADMAP.contains("Post-roadmap hardening wave 1 live validation delivered"));
     assert!(ROADMAP.contains("Task #3035, Subtask #3036"));
     assert!(ROADMAP.contains("scripts/runtime/validate_structured_logging_live.sh"));
     assert!(ROADMAP.contains("fail_closed_reason_code=invalid_log_config_level"));
+}
+
+#[test]
+fn roadmap_tracks_wave6_structured_logging_contract_lane_and_policy() {
+    assert!(ROADMAP.contains(
+        "Post-roadmap hardening wave 6 structured logging contract-lane policy delivered"
+    ));
+    assert!(ROADMAP.contains("Task #4641, Subtasks #4645 and #4646"));
+    assert!(ROADMAP.contains("scripts/runtime/validate_structured_logging_live_contract_lane.sh"));
+    assert!(ROADMAP.contains("scripts/runtime/check_structured_logging_live_policy.sh"));
+    assert!(ROADMAP.contains(
+        "fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status"
+    ));
+    assert!(ROADMAP.contains("correlation_id_parity_status=verified"));
+    assert!(ROADMAP.contains("trace_classification_contract_status=verified"));
+    assert!(ROADMAP.contains("log_classification_gate_status=verified"));
+    assert!(ROADMAP.contains(
+        "correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1"
+    ));
 }
 
 #[test]

@@ -60,6 +60,11 @@ cat >"$TMP_REPORT" <<'JSON'
   "kolme_integration_report_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "kolme_integration_policy_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1",
   "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+  "runtime_phase_parity_reason_taxonomy_version": "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1",
+  "runtime_phase_parity_reason_codes_csv": "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded",
+  "runtime_phase_module_parity_status": "verified",
+  "runtime_extraction_evidence_output_status": "verified",
+  "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
   "combined_transport_reason_codes": ["fork_choice_stale_block_height"],
   "combined_kolme_runtime_reason_code": "not_run",
   "kolme_runtime_commit_failure_taxonomy_version": "v1",
@@ -97,6 +102,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^local_full_stack_integration_pol
   echo "expected local full-stack integration policy status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration policy reason codes marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -112,6 +125,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected local full-stack integration policy final_decision=GO")
 if payload.get("local_full_stack_integration_policy_status") != "verified":
     raise SystemExit("expected local_full_stack_integration_policy_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime phase extraction parity reason taxonomy marker")
+if payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic runtime phase extraction parity reason codes marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -298,6 +315,68 @@ if [ "$tampered_fallback_marker_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_fallback_marker_output" | grep -q 'local_full_stack_integration_policy_libp2p_fallback_markers_detected'; then
   echo "expected deterministic reason marker for libp2p fallback marker drift" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_phase_module_parity_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_phase_parity_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_phase_parity_code=$?
+set -e
+if [ "$tampered_phase_parity_code" -eq 0 ]; then
+  echo "expected runtime phase module parity drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_phase_parity_output" | grep -q 'runtime_phase_module_parity_drift_detected'; then
+  echo "expected deterministic runtime phase module parity drift reason marker" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["max_seconds"] = 241
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_phase_budget_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_phase_budget_code=$?
+set -e
+if [ "$tampered_phase_budget_code" -eq 0 ]; then
+  echo "expected runtime phase parity budget overrun to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_phase_budget_output" | grep -q 'ci_local_runtime_phase_parity_budget_boundary_exceeded'; then
+  echo "expected deterministic runtime phase parity budget boundary reason marker" >&2
   exit 1
 fi
 

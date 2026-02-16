@@ -28,6 +28,15 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.local-retry-diagnostics-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-retry-diagnostics-live-policy-report.v1"
 OPT_IN_ENV = "KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN"
+RETRY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
+)
+RETRY_REASON_CODES_CSV = (
+    "local_retry_readiness_progress_stalled,"
+    "local_retry_backoff_jitter_parity_bypass_detected,"
+    "ci_local_network_budget_boundary_exceeded"
+)
+CI_LOCAL_NETWORK_BUDGET_MAX_SECONDS = 240
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -126,9 +135,15 @@ def _run_lane(args: argparse.Namespace) -> int:
         "final_decision": "GO",
         "lane_mode": mode,
         "retry_contract_status": "verified",
+        "retry_readiness_status": "verified",
+        "retry_backoff_status": "verified",
+        "retry_jitter_parity_status": "verified",
         "correlation_diagnostics_status": "verified",
+        "reason_taxonomy_version": RETRY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": RETRY_REASON_CODES_CSV,
         "fail_closed_status": "verified",
         "ci_fast_gate_exclusion_status": "verified",
+        "ci_local_network_budget_boundary_status": "verified",
         "performance_budget_status": "verified",
         "execution_reason_code": execution_reason_code,
         "command_count": len(commands),
@@ -146,9 +161,15 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("final_decision=GO")
     print(f"lane_mode={mode}")
     print("retry_contract_status=verified")
+    print("retry_readiness_status=verified")
+    print("retry_backoff_status=verified")
+    print("retry_jitter_parity_status=verified")
     print("correlation_diagnostics_status=verified")
+    print(f"reason_taxonomy_version={RETRY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={RETRY_REASON_CODES_CSV}")
     print("fail_closed_status=verified")
     print("ci_fast_gate_exclusion_status=verified")
+    print("ci_local_network_budget_boundary_status=verified")
     print("performance_budget_status=verified")
     print(f"execution_reason_code={execution_reason_code}")
     print(f"command_count={len(commands)}")
@@ -180,9 +201,15 @@ def _check_policy(args: argparse.Namespace) -> int:
         "final_decision",
         "lane_mode",
         "retry_contract_status",
+        "retry_readiness_status",
+        "retry_backoff_status",
+        "retry_jitter_parity_status",
         "correlation_diagnostics_status",
+        "reason_taxonomy_version",
+        "reason_codes_csv",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
+        "ci_local_network_budget_boundary_status",
         "performance_budget_status",
         "execution_reason_code",
         "command_count",
@@ -212,15 +239,34 @@ def _check_policy(args: argparse.Namespace) -> int:
 
     for field_name in (
         "retry_contract_status",
+        "retry_backoff_status",
         "correlation_diagnostics_status",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
+        "ci_local_network_budget_boundary_status",
         "performance_budget_status",
     ):
         decision.reject_if(
             report.get(field_name) != "verified",
             f"local_retry_diagnostics_policy_marker_missing:{field_name}",
         )
+
+    decision.reject_if(
+        report.get("retry_readiness_status") != "verified",
+        "local_retry_readiness_progress_stalled",
+    )
+    decision.reject_if(
+        report.get("retry_jitter_parity_status") != "verified",
+        "local_retry_backoff_jitter_parity_bypass_detected",
+    )
+    decision.reject_if(
+        report.get("reason_taxonomy_version") != RETRY_REASON_TAXONOMY_VERSION,
+        "local_retry_diagnostics_policy_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("reason_codes_csv") != RETRY_REASON_CODES_CSV,
+        "local_retry_diagnostics_policy_reason_codes_csv_mismatch",
+    )
 
     lane_mode = report.get("lane_mode")
     decision.reject_if(
@@ -258,6 +304,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "local_retry_diagnostics_policy_elapsed_seconds_invalid",
     )
+    report_max_seconds = report.get("max_seconds")
+    decision.reject_if(
+        not _is_non_negative_int(report_max_seconds),
+        "local_retry_diagnostics_policy_max_seconds_invalid",
+    )
+    if isinstance(report_max_seconds, int):
+        decision.reject_if(
+            report_max_seconds > CI_LOCAL_NETWORK_BUDGET_MAX_SECONDS,
+            "ci_local_network_budget_boundary_exceeded",
+        )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 
     final_decision, reason_codes = decision.finalize("none")
@@ -273,6 +329,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
+        "reason_taxonomy_version": RETRY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": RETRY_REASON_CODES_CSV,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }
@@ -286,6 +344,8 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"local_retry_diagnostics_policy_status={policy_status}")
+    print(f"reason_taxonomy_version={RETRY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={RETRY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")

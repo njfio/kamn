@@ -24,6 +24,13 @@ cat >"$report_file" <<'JSON'
   "regression_corpus_status": "verified",
   "regression_drift_diagnostics_status": "verified",
   "regression_corpus_scenario_count": 4,
+  "api_error_reason_taxonomy_status": "verified",
+  "timeout_classification_status": "verified",
+  "endpoint_parity_gate_normalization_status": "verified",
+  "api_error_reason_taxonomy_version": "kamn.runtime.service-api-error-reason-taxonomy.v1",
+  "api_error_reason_codes_csv": "service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error",
+  "timeout_reason_taxonomy_version": "kamn.runtime.service-api-timeout-reason-taxonomy.v1",
+  "timeout_reason_codes_csv": "service_api_request_read_failed",
   "route_error_mapping_status": "verified",
   "replay_error_mapping_status": "verified",
   "websocket_error_mapping_status": "verified",
@@ -71,6 +78,20 @@ if payload.get("service_api_reason_code_policy_status") != "verified":
     raise SystemExit("expected service_api_reason_code_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("api_error_reason_taxonomy_status") != "verified":
+    raise SystemExit("expected api_error_reason_taxonomy_status=verified")
+if payload.get("timeout_classification_status") != "verified":
+    raise SystemExit("expected timeout_classification_status=verified")
+if payload.get("endpoint_parity_gate_normalization_status") != "verified":
+    raise SystemExit("expected endpoint_parity_gate_normalization_status=verified")
+if payload.get("api_error_reason_taxonomy_version") != "kamn.runtime.service-api-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic api_error_reason_taxonomy_version marker")
+if payload.get("api_error_reason_codes_csv") != "service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error":
+    raise SystemExit("expected deterministic api_error_reason_codes_csv marker")
+if payload.get("timeout_reason_taxonomy_version") != "kamn.runtime.service-api-timeout-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic timeout_reason_taxonomy_version marker")
+if payload.get("timeout_reason_codes_csv") != "service_api_request_read_failed":
+    raise SystemExit("expected deterministic timeout_reason_codes_csv marker")
 PY
 
 tampered_report="$TMP_DIR/service-api-reason-code-compatibility-live-summary.tampered.json"
@@ -169,6 +190,39 @@ if [ "$tampered_corpus_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_corpus_output" | grep -q 'service_api_reason_code_policy_marker_missing:regression_corpus_status'; then
   echo "expected deterministic mismatch reason code for tampered regression corpus marker" >&2
+  exit 1
+fi
+
+tampered_timeout_taxonomy_report="$TMP_DIR/service-api-reason-code-compatibility-live-summary.timeout-taxonomy.tampered.json"
+cp "$report_file" "$tampered_timeout_taxonomy_report"
+python3 - "$tampered_timeout_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["timeout_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_timeout_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_timeout_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-reason-code-compatibility-live-policy.timeout-taxonomy.tampered.json" 2>&1
+)"
+tampered_timeout_taxonomy_code=$?
+set -e
+
+if [ "$tampered_timeout_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered timeout taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_timeout_taxonomy_output" | grep -q 'service_api_reason_code_policy_timeout_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for timeout taxonomy tamper" >&2
   exit 1
 fi
 

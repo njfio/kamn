@@ -56,6 +56,58 @@ between completion reason, drain status, and snapshot flush status:
 
 Invalid combinations emit deterministic reason codes and fail closed.
 
+## Local Signal Shutdown Governance Contract
+
+Local signal lifecycle governance composes daemon OS-signal validation with
+signal + secret-hygiene policy checks.
+
+Deterministic shutdown taxonomy markers:
+
+- `signal_graceful_drain_status=verified`
+- `shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1`
+- `shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded`
+
+Fail-closed shutdown drift markers:
+
+- `local_signal_shutdown_path_drift_detected`
+- `local_graceful_drain_bypass_detected`
+- `ci_local_signal_shutdown_budget_boundary_exceeded`
+
+CI-local boundary remains explicit and fail-closed:
+
+- local signal/secret hygiene contract lane rejects `--max-seconds > 240`.
+
+## Local Retry/Diagnostics Governance Contract
+
+Local retry/backoff diagnostics are enforced through a deterministic summary +
+policy + contract-lane chain:
+
+- summary lane:
+  - `scripts/runtime/validate_local_retry_diagnostics_live.sh`
+- policy checker:
+  - `scripts/runtime/check_local_retry_diagnostics_live_policy.sh`
+- composed lane:
+  - `scripts/runtime/validate_local_retry_diagnostics_live_contract_lane.sh`
+
+Deterministic retry governance markers:
+
+- `retry_readiness_status=verified`
+- `retry_backoff_status=verified`
+- `retry_jitter_parity_status=verified`
+- `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1`
+- `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded`
+
+Fail-closed drift/budget markers:
+
+- `local_retry_readiness_progress_stalled`
+- `local_retry_backoff_jitter_parity_bypass_detected`
+- `ci_local_network_budget_boundary_exceeded`
+
+CI-local budget is explicitly bounded and fail-closed:
+
+- contract lane rejects `--max-seconds > 240`.
+- run-mode local-heavy checks remain opt-in and excluded from fast-gate paths.
+
 ## Observability Route Topology Contract
 
 Observability serving is on the unified axum route stack and no longer uses a
@@ -73,6 +125,26 @@ hand-rolled parser/listener path.
   - `GET` requests with non-empty body indicators (`Content-Length > 0` or
     `Transfer-Encoding`) resolve to deterministic `404 not found`
   - request budget and idle timeout remain deterministic and fail closed
+
+### Observability Governance Taxonomy
+
+Runtime observability endpoint policy checking enforces deterministic readiness +
+stream parity governance markers:
+
+- `endpoint_readiness_status=verified`
+- `stream_parity_status=verified`
+- `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
+- `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
+
+Fail-closed reason taxonomy includes:
+
+- `runtime_observability_endpoint_readiness_progress_stalled`
+- `runtime_observability_stream_parity_bypass_detected`
+- `ci_local_observability_endpoint_budget_boundary_exceeded`
+
+CI-local boundary remains explicit and fail-closed:
+
+- observability endpoint contract lane rejects `--max-seconds > 240`.
 
 ## Service API + Observability Route Compatibility Matrix Contract
 

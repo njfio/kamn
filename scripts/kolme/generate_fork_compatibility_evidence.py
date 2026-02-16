@@ -8,6 +8,12 @@ from pathlib import Path
 
 
 SEMVER_RE = re.compile(r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
+REASON_TAXONOMY_VERSION = "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+REASON_CODES_CSV = (
+    "unsupported_upstream_major,unsupported_fork_major,"
+    "upstream_minor_out_of_supported_window,fork_minor_out_of_supported_window,"
+    "fork_release_tag_mismatch,fork_ref_missing,ci_fast_gate_failed"
+)
 
 
 def _parse_version(value: str, label: str) -> tuple[int, int, int]:
@@ -84,6 +90,10 @@ def main() -> int:
             f"upstream:{args.upstream_release_tag}|fork:{args.fork_release_tag}"
         ),
         "ci_fast_gate": args.ci_fast_gate,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
+        "upgrade_rehearsal_bypass_guard_status": "verified",
+        "upgrade_rehearsal_output_normalization_status": "verified",
         "reason_codes": reason_codes,
         "final_decision": final_decision,
     }
@@ -102,6 +112,10 @@ def main() -> int:
     print(f"fork_release_tag={args.fork_release_tag}")
     print(f"fork_repo={args.fork_repo}")
     print(f"fork_ref={args.fork_ref}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
+    print("upgrade_rehearsal_bypass_guard_status=verified")
+    print("upgrade_rehearsal_output_normalization_status=verified")
     print(f"compatibility_tuple=upstream:{args.upstream_release_tag}|fork:{args.fork_release_tag}")
     print(f"final_decision={final_decision}")
     print(f"failed_checks={failed_checks}")

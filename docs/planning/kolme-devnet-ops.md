@@ -36,6 +36,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - local checkout/remote/ref/base-url/fork-chain prerequisite markers
     - local-only enforcement and nested run-mode policy reason-code marker `live_runtime_integration_passed`
     - combined reason taxonomy marker `kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+    - runtime phase parity reason taxonomy marker `kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`
+    - runtime phase parity reason codes marker `runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+    - runtime phase parity governance markers:
+      - `runtime_phase_module_parity_status=verified`
+      - `runtime_extraction_evidence_output_status=verified`
+      - `ci_local_runtime_phase_parity_budget_boundary_status=verified`
     - combined transport reason marker `fork_choice_stale_block_height`
     - combined Kolme runtime reason marker (`not_run` in dry-run, `live_runtime_integration_passed` in run mode)
     - combined lane marker contract status marker `combined_lane_marker_contract_status=verified`
@@ -43,6 +49,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - deterministic Kolme fixture profile markers (`real-node-non-synthetic-v1`, profile version `v1`)
 - Deterministic tamper reason:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `runtime_phase_module_parity_drift_detected`
+  - `runtime_extraction_evidence_output_unstable`
+  - `ci_local_runtime_phase_parity_budget_boundary_exceeded`
 - Release go/no-go linkage:
   - `scripts/runtime/release_evidence_manifest.json` includes required artifact ids:
     `local_full_stack_integration`,
@@ -533,6 +542,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
+    - `runtime_signer_private_key_env_zeroized=true`
+    - `runtime_signer_private_key_bytes_zeroized=true`
+    - `runtime_signer_key_loading_panic_free=true`
+    - `runtime_signer_key_loading_error_classification_version=v1`
+    - `runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+    - `runtime_signer_key_loading_error_classification=none`
   - GO proof also supports deterministic secondary signer markers:
     - `runtime_signer_profile=ops-secondary`
     - `runtime_signer_previous_profile=ops-secondary`
@@ -544,6 +559,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO split-brain proof must surface `runtime_commit_signer_profile_split_brain_detected` when runtime command composition includes conflicting signer profile selectors.
   - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
+  - NO-GO signer private-key env zeroization drift proof must surface `runtime_signer_private_key_env_zeroization_violation` when env-loaded signer key material residue is detected.
+  - NO-GO signer private-key bytes zeroization drift proof must surface `runtime_signer_private_key_bytes_zeroization_violation` when decoded signer key-byte residue is detected.
+  - NO-GO key-loading panic-free drift proof must surface `runtime_signer_key_loading_panic_violation` when signer key-loading panic-free marker drifts from `true`.
+  - NO-GO key-loading classification drift proof must surface `runtime_signer_key_loading_error_classification_violation` when key-loading error classification markers drift from deterministic expected values.
   - NO-GO signer key-source command marker proof must surface `runtime_commit_signer_key_source_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=<env-local|managed-external>`.
   - NO-GO fallback signer key command marker proof must surface `runtime_commit_fallback_private_key_command_marker_detected` when `runtime_commit_command` includes `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=...`.
   - NO-GO managed-external key-reference command marker proof must surface `runtime_commit_managed_external_signer_key_reference_marker_missing` when managed-external command composition omits `KAMN_KOLME_LIVE_SIGNER_KEY_REF=...`.
@@ -558,6 +577,14 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_split_brain_detected` when `runtime_commit_command` includes conflicting `KAMN_KOLME_LIVE_SIGNER_PROFILE` selectors in one command composition.
+  - signer hygiene reason taxonomy markers remain deterministic:
+    - `signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1`
+    - `signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation`
+  - key-loading reason taxonomy markers remain deterministic:
+    - `key_loading_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1`
+    - `key_loading_reason_codes_csv=runtime_signer_key_loading_panic_violation,runtime_signer_key_loading_error_classification_violation`
+    - `key_loading_error_classification_version=v1`
+    - `key_loading_error_classifications_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
 - Real-node profile contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
@@ -624,6 +651,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `contracts.runtime_signer_fallback_guard_contract_version=v2`
     - `contracts.runtime_signer_fallback_guard_mode=reject_if_present`
     - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
+    - `contracts.runtime_signer_private_key_env_zeroization_required=true`
+    - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
+    - `contracts.runtime_signer_key_loading_panic_free_required=true`
+    - `contracts.runtime_signer_key_loading_error_classification_version=v1`
+    - `contracts.runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+    - `contracts.runtime_signer_key_loading_error_classification_stable_required=true`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
     - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
   - real-node profile accepts secondary signer summary/contracts markers for failover drills:
@@ -937,8 +970,15 @@ JSON`
   - `managed_signer_missing_key_source_fail_closed_status=verified`
   - `managed_signer_invalid_profile_fail_closed_status=verified`
   - `managed_signer_stale_rotation_fail_closed_status=verified`
+  - `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
+  - `managed_signer_custody_audit_parity_fail_closed_status=verified`
   - `managed_signer_reason_code_status=verified`
+  - `managed_signer_rotation_reason_taxonomy_status=verified`
+  - `managed_signer_rehearsal_output_normalization_status=verified`
+  - `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
+  - `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
   - `execution_scope=local-scheduled`
+  - `ci_local_promotion_budget_boundary_status=verified`
 - Fault-injection matrix and deterministic fail-closed reason codes:
   - missing managed-external key source:
     - checkpoint: `checkpoint_failed_signer_provenance_contract`
@@ -949,9 +989,18 @@ JSON`
   - stale signer rotation metadata:
     - checkpoint: `checkpoint_failed_signer_rotation_freshness_contract`
     - policy reason: `signer_rotation_epoch_stale`
+  - rotation promotion stalled:
+    - checkpoint: `deployment_preflight_passed`
+    - policy reason: `signer_rotation_promotion_stalled`
+    - normalized rehearsal drift reason: `signer_rotation_rehearsal_drift_detected`
+  - custody-audit parity drift:
+    - checkpoint: `deployment_preflight_passed`
+    - policy reason: `quorum_evidence_custody_sha256_mismatch`
+    - normalized custody continuity bypass reason: `custody_continuity_bypass_detected`
 - Cost policy:
   - lane runtime is bounded via `--max-seconds`.
   - lane is local/scheduled by default (`ci_fast_gate_eligible=false`).
+  - ci-local promotion budget boundary remains fail-closed for oversized `--max-seconds` inputs.
   - lane composes existing deployment preflight runner/policy checker and does not call external infrastructure.
 
 ## Staging Soak Telemetry Lane (Issue #2422)
@@ -1062,6 +1111,12 @@ Operator checkpoints:
   - verify `--signer-provenance-file` exists and signer key-source markers remain `--signer-key-source managed-external --signer-key-source-contract-version v1`.
 - `reason_code=checkpoint_failed_signer_rotation_freshness_contract`:
   - verify `--signer-rotation-epoch`, `--signer-previous-rotation-epoch`, and `--signer-rotation-freshness-max-delta` satisfy the freshness delta contract.
+- `reason_code=preflight_budget_exceeded`:
+  - startup-latency budget exceeded; increase `--max-seconds` for sanctioned slow paths or reduce preflight command latency before rerunning.
+- `startup_latency_budget_status_mismatch` from policy checker:
+  - summary budget markers drifted; run mode requires `budget_status=within_budget|exceeded_budget` to match `elapsed_seconds` and `max_seconds`.
+- `startup_latency_budget_reason_code_mismatch` from policy checker:
+  - when run-mode `budget_status=exceeded_budget`, reason taxonomy must normalize to `reason_code=preflight_budget_exceeded`.
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
   - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
 
@@ -1438,6 +1493,11 @@ Operator checkpoints:
   - request/finality linkage drift fails closed with deterministic reasons (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
   - provider drift fails closed when in-memory provider usage is detected in summary marker surfaces (`provider_in_memory_reference_detected`).
   - finality retry exhaustion reasons are deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) and drift fails closed with checker reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
+  - submit/finality success-reason taxonomy remains deterministic in policy outputs:
+    - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+    - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+  - submit/finality success-reason drift remains fail-closed with deterministic checker reasons (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`).
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
@@ -1591,9 +1651,16 @@ Operator checkpoints:
   - `three_node_role_set_status=verified`
   - `transport_propagation_status=verified`
   - `canonical_convergence_status=verified`
+  - `runtime_shutdown_gate_status=verified`
   - `runtime_transport_mode=libp2p_transport_fed`
+  - `runtime_fallback_classification_status=verified`
+  - `runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1`
+  - `runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded`
+  - `ci_local_runtime_extraction_budget_boundary_status=verified`
 - Deterministic fail-closed policy reason markers:
-  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `runtime_full_shutdown_gate_drift_detected`
+  - `runtime_fallback_classification_unstable`
+  - `ci_local_runtime_extraction_budget_boundary_exceeded`
   - `local_full_runtime_policy_three_node_role_set_status_mismatch`
   - `local_full_runtime_policy_canonical_convergence_status_mismatch`
 
@@ -1699,6 +1766,7 @@ Operator checkpoints:
 - local runtime-commit live proof lane preflight health probe and default live-provider ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - local runtime-commit live proof lane evidence policy remains fail-closed for missing live-provider command marker contracts (`Regression: #2095`).
 - local runtime-commit submit/finality evidence marker policy and contract lane parity remains fail-closed (`Regression: #2099`).
+- local runtime-commit submit/finality success-reason taxonomy mismatch remains fail-closed across policy and contract-lane proofs (`Regression: #4420`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
 - local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).
@@ -1711,6 +1779,20 @@ Operator checkpoints:
 - localhost signed replay-nonce bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1629`).
 - localhost signed admission bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1632`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
+
+## Runtime Transport Retry-Reconnect Failure Taxonomy (Issue #4508)
+
+- Entry commands:
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-summary.json`
+  - `bash scripts/runtime/check_live_transport_fault_matrix_live_policy.sh --report-file /tmp/live-transport-fault-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/live-transport-fault-matrix-live-policy.json`
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live_contract_lane.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-contract-lane-report.json --policy-output-json /tmp/live-transport-fault-matrix-live-policy.json`
+- Deterministic taxonomy/normalization markers:
+  - `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`
+  - `reason_codes_value=none|<csv>`
+- Drift failure requirements:
+  - partition/rejoin tamper must fail closed with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
+  - unstable reason classification tamper must fail closed with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
 
 ## Local Validation
 

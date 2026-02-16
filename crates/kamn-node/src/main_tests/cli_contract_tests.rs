@@ -664,9 +664,9 @@ fn regression_kolme_live_strict_signer_contracts_reject_profile_selector_env_mis
         matches!(
             build_kolme_live_signer_adapter(Some("ops-primary"), Some("env-local")),
             Err(ConfigError::RuntimeKolmeLive(message))
-            if message.contains("strict signer profile mismatch")
+            if message.contains("runtime_signer_profile_selector_mismatch")
         ),
-        "strict signer contracts must reject selector/env profile mismatch"
+        "strict signer contracts must reject selector/env profile mismatch with deterministic reason code"
     );
 }
 
@@ -712,9 +712,9 @@ fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_net
         matches!(
             execute(parsed),
             Err(ConfigError::RuntimeKolmeLive(message))
-            if message.contains("strict signer profile mismatch")
+            if message.contains("runtime_signer_profile_selector_mismatch")
         ),
-        "runtime must fail closed before network submit when strict signer selector conflicts with env marker"
+        "runtime must fail closed before network submit with deterministic selector/env mismatch reason code"
     );
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(

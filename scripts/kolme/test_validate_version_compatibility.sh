@@ -42,6 +42,14 @@ go_output="$(
 )"
 assert_eq "$(extract_value "$go_output" "status")" "ok" "expected supported version pair to pass"
 assert_eq "$(extract_value "$go_output" "final_decision")" "GO" "expected GO for supported version pair"
+if ! printf '%s\n' "$go_output" | grep -q '^reason_taxonomy_version=kamn.kolme.version-compatibility-reason-taxonomy.v1$'; then
+  echo "expected deterministic version-compatibility reason taxonomy marker for supported version pair" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$go_output" | grep -q '^upgrade_rehearsal_bypass_guard_status=verified$'; then
+  echo "expected deterministic upgrade-rehearsal bypass guard marker for supported version pair" >&2
+  exit 1
+fi
 
 set +e
 no_go_output="$(
@@ -66,6 +74,10 @@ if ! printf '%s\n' "$no_go_output" | grep -q "kolme_minor_too_old_for_kamn_minor
   echo "expected explicit minor-version compatibility reason" >&2
   exit 1
 fi
+if ! printf '%s\n' "$no_go_output" | grep -q '^reason_taxonomy_version=kamn.kolme.version-compatibility-reason-taxonomy.v1$'; then
+  echo "expected deterministic version-compatibility reason taxonomy marker for unsupported version pair" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -77,6 +89,12 @@ if payload.get("schema_version") != "kamn.kolme.version-compatibility-report.v1"
     raise SystemExit("unexpected version compatibility report schema")
 if payload.get("final_decision") != "NO-GO":
     raise SystemExit("expected persisted NO-GO decision in report")
+if payload.get("reason_taxonomy_version") != "kamn.kolme.version-compatibility-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in report")
+if payload.get("reason_codes_csv") != "unsupported_kamn_major,unsupported_kolme_major,kolme_minor_out_of_supported_window,kolme_minor_too_old_for_kamn_minor,ci_fast_gate_failed":
+    raise SystemExit("expected deterministic reason_codes_csv marker in report")
+if payload.get("upgrade_rehearsal_bypass_guard_status") != "verified":
+    raise SystemExit("expected deterministic upgrade_rehearsal_bypass_guard_status marker in report")
 PY
 
 # Regression: #775

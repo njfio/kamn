@@ -321,6 +321,13 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - finality retry evidence markers: `finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`.
   - retry exhaustion reason codes are deterministic: `live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`.
   - retry reason-code drift remains fail-closed with explicit checker reasons: `finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`.
+  - submit/finality success-reason taxonomy markers are deterministic in policy outputs:
+    - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+    - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+  - submit/finality reason-code mismatch remains fail-closed with deterministic checker reasons:
+    - `submit_finality_reason_mismatch_for_finality_enabled_run`
+    - `submit_finality_reason_mismatch_for_submit_only_run`
   - native payload markers `native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, and `native_payload_messages_marker_present` must pass when strict real-node evidence checks are enabled.
   - default live command composition emits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1` and policy fails closed when the signing-profile marker is absent.
   - runner enforces `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1` on custom live-command overrides and rejects simulated signing-profile references.
@@ -431,6 +438,7 @@ cargo test -p kamn-core
 - local runtime-commit live evidence policy markers for `KolmeRuntimeCommitLiveProvider` path remain fail-closed (`Regression: #2095`).
 - `kamn-node` kolme-live runtime profile guardrails reject in-memory provider-hint fallback and invalid signing-profile drift (`Regression: #2175`).
 - local runtime-commit submit/finality evidence marker policy and contract lane parity remain fail-closed (`Regression: #2099`).
+- local runtime-commit submit/finality success-reason taxonomy mismatch remains fail-closed (`Regression: #4420`).
 - local KAMN live runtime integration runtime-step contract composition remains fail-closed for missing runtime policy evidence artifacts (`Regression: #2101`).
 - typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
 - provider response field parser extraction parity drift remains fail-closed (`Regression: #1745`).

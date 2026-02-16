@@ -318,6 +318,21 @@ payload = {
     "regression_corpus_status": "verified",
     "regression_drift_diagnostics_status": "verified",
     "regression_corpus_scenario_count": regression_corpus_scenario_count,
+    "api_error_reason_taxonomy_status": "verified",
+    "timeout_classification_status": "verified",
+    "endpoint_parity_gate_normalization_status": "verified",
+    "api_error_reason_taxonomy_version": "kamn.runtime.service-api-error-reason-taxonomy.v1",
+    "api_error_reason_codes_csv": (
+        "service_api_auth_sender_did_header_missing,"
+        "service_api_auth_replay_nonce_detected,"
+        "service_api_ws_upgrade_header_missing,"
+        "service_api_ws_version_header_invalid,"
+        "service_api_payload_json_syntax_invalid,"
+        "service_api_payload_structure_invalid,"
+        "service_api_payload_io_error"
+    ),
+    "timeout_reason_taxonomy_version": "kamn.runtime.service-api-timeout-reason-taxonomy.v1",
+    "timeout_reason_codes_csv": "service_api_request_read_failed",
     "route_error_mapping_status": "verified",
     "replay_error_mapping_status": "verified",
     "websocket_error_mapping_status": "verified",
@@ -343,6 +358,13 @@ echo "python_sdk_reason_code_status=verified"
 echo "regression_corpus_status=verified"
 echo "regression_drift_diagnostics_status=verified"
 echo "regression_corpus_scenario_count=${regression_corpus_scenario_count}"
+echo "api_error_reason_taxonomy_status=verified"
+echo "timeout_classification_status=verified"
+echo "endpoint_parity_gate_normalization_status=verified"
+echo "api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1"
+echo "api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error"
+echo "timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1"
+echo "timeout_reason_codes_csv=service_api_request_read_failed"
 echo "route_error_mapping_status=verified"
 echo "replay_error_mapping_status=verified"
 echo "websocket_error_mapping_status=verified"

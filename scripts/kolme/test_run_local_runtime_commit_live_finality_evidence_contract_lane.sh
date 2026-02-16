@@ -81,6 +81,11 @@ required_markers=(
   "live_finality_retry_exhausted_failed"
   "finality_retry_failure_class_mismatch_for_timeout_reason"
   "finality_retry_attempts_used_mismatch_for_timeout_reason"
+  "submit_finality_reason_taxonomy_version"
+  "submit_finality_reason_codes_csv"
+  "submit_finality_reason_codes_value"
+  "submit_finality_reason_mismatch_for_finality_enabled_run"
+  "submit_finality_reason_mismatch_for_submit_only_run"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -118,6 +123,11 @@ required_doc_markers=(
   "finality_retry_failure_class"
   "live_finality_retry_exhausted_timeout"
   "live_finality_retry_exhausted_failed"
+  "submit_finality_reason_taxonomy_version"
+  "submit_finality_reason_codes_csv"
+  "submit_finality_reason_codes_value"
+  "submit_finality_reason_mismatch_for_finality_enabled_run"
+  "submit_finality_reason_mismatch_for_submit_only_run"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -221,6 +231,12 @@ if policy.get("schema_version") != "kamn.kolme.local-runtime-commit-live-policy-
     raise SystemExit("unexpected runtime-commit live finality evidence policy schema")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected runtime-commit live finality evidence policy final_decision GO")
+if policy.get("submit_finality_reason_taxonomy_version") != "kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1":
+    raise SystemExit("expected submit_finality_reason_taxonomy_version in runtime-commit live finality evidence policy")
+if policy.get("submit_finality_reason_codes_csv") != "submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run":
+    raise SystemExit("expected deterministic submit_finality_reason_codes_csv in runtime-commit live finality evidence policy")
+if policy.get("submit_finality_reason_codes_value") != "none":
+    raise SystemExit("expected submit_finality_reason_codes_value=none in runtime-commit live finality evidence policy")
 PY
 
 TMP_LINKAGE_DRIFT_REPORT="$(mktemp)"
@@ -281,7 +297,8 @@ if ! grep -q "replay_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
 fi
 
 TMP_RETRY_DRIFT_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR" "$TMP_RETRY_DRIFT_REPORT"' EXIT
+TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR" "$TMP_RETRY_DRIFT_REPORT" "$TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT"' EXIT
 
 python3 - "$TMP_REPORT" "$TMP_RETRY_DRIFT_REPORT" <<'PY'
 import json
@@ -319,6 +336,50 @@ fi
 
 if ! grep -q "finality_retry_failure_class_mismatch_for_timeout_reason" "$TMP_NEGATIVE_ERR"; then
   echo "expected finality_retry_failure_class_mismatch_for_timeout_reason in retry drift output" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" "$TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+base_summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+drift_summary = dict(base_summary)
+drift_summary["status"] = "ok"
+drift_summary["reason_code"] = "live_runtime_commit_command_passed"
+drift_summary["finality_enabled"] = True
+drift_summary["finality_evidence_marker_present"] = True
+drift_summary["finality_retry_attempts_used"] = 1
+drift_summary["finality_retry_exhausted"] = False
+drift_summary["finality_retry_failure_class"] = "none"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+submit_finality_reason_drift_exit_code=$?
+set -e
+
+if [ "$submit_finality_reason_drift_exit_code" -eq 0 ]; then
+  echo "expected submit/finality reason mismatch proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "submit_finality_reason_mismatch_for_finality_enabled_run" "$TMP_NEGATIVE_ERR"; then
+  echo "expected submit_finality_reason_mismatch_for_finality_enabled_run in mismatch proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "submit_finality_reason_codes_value=submit_finality_reason_mismatch_for_finality_enabled_run" "$TMP_NEGATIVE_ERR"; then
+  echo "expected normalized submit/finality reason taxonomy value in mismatch proof output" >&2
   exit 1
 fi
 

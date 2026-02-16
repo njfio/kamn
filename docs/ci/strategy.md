@@ -163,7 +163,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo test -p kamn-node cli_tests::regression_3598_startup_paths_have_no_panic_control_flow -- --exact`
 - Deterministic fail-closed startup matrix contracts:
   - coverage corpus must preserve all required case IDs and fail closed with `startup_negative_matrix_policy_marker_missing` when coverage drifts.
-  - strict signer selector/profile mismatch and fallback-secret violations must fail before network dispatch.
+  - strict signer selector/profile mismatch, fallback-secret violations, and strict secret-source precedence violations must fail before network dispatch.
+  - strict selector/profile mismatch failures must preserve `runtime_signer_profile_selector_mismatch`.
 - This lane is intentionally bounded and cost-effective:
   - all checks run in-process with deterministic env guards and localhost mock transport only.
   - no external Kolme node process is required for PR fast-gate validation.
@@ -239,16 +240,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic three-node role-set marker (`three_node_role_set_status=verified`).
   - lane emits deterministic transport propagation marker (`transport_propagation_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic runtime shutdown gate marker (`runtime_shutdown_gate_status=verified`).
   - lane emits deterministic runtime transport mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic runtime fallback classification marker (`runtime_fallback_classification_status=verified`).
+  - lane emits deterministic runtime error taxonomy markers:
+    `runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1`,
+    `runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded`.
+  - lane emits deterministic ci-local extraction budget marker (`ci_local_runtime_extraction_budget_boundary_status=verified`).
   - policy checker fails closed on transport/convergence marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1`.
   - run mode executes four targeted full-runtime/transport convergence checks with bounded per-command budgets.
+  - lane fails closed when `--max-seconds` exceeds the ci-local extraction budget boundary (`240` seconds).
   - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
-  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `runtime_full_shutdown_gate_drift_detected`
+  - `runtime_fallback_classification_unstable`
+  - `ci_local_runtime_extraction_budget_boundary_exceeded`
 
 ## Runtime Sqlite Crash-Recovery Live Validation Contract Lane
 - Entry commands:
@@ -265,6 +275,36 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Crash-recovery evidence contracts:
   - lane emits deterministic markers for replay integrity (`sqlite_crash_recovery_state_replay_status=verified`).
   - lane emits deterministic markers for abrupt-kill recovery coverage (`sqlite_crash_recovery_abrupt_kill_status=verified`).
+  - lane emits deterministic WAL durability markers (`wal_append_status=verified`, `wal_checkpoint_status=verified`).
+  - lane emits deterministic WAL durability taxonomy markers:
+    `wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1`,
+    `wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete`.
+  - lane emits deterministic historical-query governance markers:
+    `historical_query_index_status=verified`,
+    `historical_query_latency_budget_status=verified`.
+  - lane emits deterministic historical-query taxonomy markers:
+    `historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1`,
+    `historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch`.
+  - lane emits deterministic journal-replay drift/checkpoint-divergence governance markers:
+    `journal_replay_drift_detection_status=verified`,
+    `checkpoint_divergence_bypass_rejection_status=verified`.
+  - lane emits deterministic journal-replay taxonomy markers:
+    `journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1`,
+    `journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected`.
+  - lane emits deterministic crash-recovery readiness and snapshot parity governance markers:
+    `crash_recovery_readiness_progress_status=verified`,
+    `snapshot_parity_status=verified`,
+    `ci_local_recovery_budget_boundary_status=verified`.
+  - lane emits deterministic state-consistency taxonomy markers:
+    `state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1`,
+    `state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded`.
+  - lane emits deterministic promotion/audit governance markers:
+    `crash_recovery_promotion_gate_status=verified`,
+    `audit_trail_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`.
+  - lane emits deterministic durability-governance taxonomy markers:
+    `durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1`,
+    `durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
@@ -273,6 +313,54 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - sqlite crash-recovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
+  - `sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch`
+  - `sqlite_crash_recovery_policy_wal_durability_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_historical_query_index_status_mismatch`
+  - `sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded`
+  - `sqlite_crash_recovery_policy_journal_replay_drift_detection_status_mismatch`
+  - `sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch`
+  - `sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_crash_recovery_readiness_progress_status_mismatch`
+  - `sqlite_crash_recovery_policy_snapshot_parity_status_mismatch`
+  - `sqlite_crash_recovery_policy_state_consistency_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_state_consistency_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_status_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_exceeded`
+  - `sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch`
+  - `sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch`
+  - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded`
+
+## Runtime Failover Sync-Drill Governance Contract Lanes
+- Entry commands:
+  - `bash scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh --output-json /tmp/failover-sync-preflight-report.json`
+  - `bash scripts/runtime/run_failover_sync_drill_suite.sh --event-name pull_request --output-json /tmp/failover-sync-drill-suite-report.json`
+  - `bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_suite.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Failover/sync evidence contracts:
+  - preflight lane emits deterministic failover governance markers:
+    `failover_promotion_gate_status=verified`,
+    `live_node_drift_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`.
+  - preflight lane emits deterministic taxonomy markers:
+    `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`,
+    `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
+  - suite lane integration preserves preflight marker parity in `lane_report`.
+  - deep lane remains scheduled-only (`KAMN_FAILOVER_SYNC_DEEP_CADENCE=scheduled`) and is selected for `schedule`/`workflow_dispatch`.
+- Cost controls:
+  - preflight lane remains bounded by `--max-seconds` and deterministic ci/local promotion boundary `--ci-local-promotion-max-seconds`.
+  - PR cadence defaults to preflight lane; deep drills stay scheduled/local-heavy to keep fast-gate costs low.
+  - failover/sync suite routing remains deterministic via `scripts/runtime/select_failover_sync_drill_lane.sh`.
+- Deterministic fail-closed marker coverage:
+  - `failover_readiness_progress_stalled`
+  - `live_node_drift_marker_parity_mismatch`
+  - `ci_local_promotion_budget_boundary_exceeded`
 
 ## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
 - Entry commands:
@@ -291,13 +379,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic rejoin marker (`block_reconciliation_rejoin_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
   - lane emits deterministic transport-mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic transport evidence normalization markers:
+    `transport_evidence_schema_version=kamn.runtime.libp2p-transport-transition-evidence.v1`,
+    `transport_evidence_normalization_status=verified`,
+    `transport_evidence_source_contract_status=verified`.
   - lane emits deterministic recovery criteria markers:
     `head_alignment_status=verified`,
     `quorum_restore_status=verified`,
     `replay_stabilization_status=verified`,
     `publish_drop_recovery_status=verified`,
     `peer_churn_recovery_status=verified`.
-  - lane emits deterministic reconciliation taxonomy marker (`reconciliation_reason_taxonomy_status=verified`).
+  - lane emits deterministic reconciliation taxonomy markers:
+    `reconciliation_reason_taxonomy_status=verified`,
+    `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`,
+    `reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed`.
+  - lane emits deterministic snapshot-vs-WAL consistency markers:
+    `snapshot_wal_reconciliation_status=verified`,
+    `consistency_classification_status=verified`.
+  - lane emits deterministic reconciliation-consistency taxonomy markers:
+    `reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1`,
+    `reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch`.
   - lane emits deterministic reconciliation reason-code matrix marker (`reconciliation_reason_codes=none|...`) covering:
     `reconciliation_partition_transition_failed`,
     `reconciliation_rejoin_transition_failed`,
@@ -313,6 +414,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
 
 ## Runtime Libp2p Three-Node Discovery Live Validation Contract Lane
 - Entry commands:
@@ -361,15 +466,32 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic replay recovery marker (`replay_recovery_status=verified`).
   - lane emits deterministic peer-churn recovery marker (`peer_churn_recovery_status=verified`).
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_live_fault_matrix`).
-  - lane emits deterministic taxonomy marker (`reason_taxonomy_status=verified`) with reason-code matrix (`reason_codes=none|...`).
+  - lane emits deterministic taxonomy markers:
+    `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`,
+    `reason_taxonomy_status=verified`.
+  - contract lane emits deterministic evidence-convergence marker (`evidence_convergence_status=verified`).
+  - contract lane emits deterministic boundary-governance marker (`boundary_governance_status=verified`).
+  - contract lane emits deterministic resilience gate taxonomy markers:
+    `resilience_gate_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1`,
+    `resilience_gate_reason_codes_csv=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch`.
+  - policy checker emits deterministic reason-code taxonomy marker:
+    `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`.
+  - policy checker and contract lane emit normalized marker `reason_codes_value=none|<csv>` for deterministic machine parsing.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LIVE_TRANSPORT_FAULT_MATRIX_OPT_IN=1`.
+  - contract lane enforces a CI smoke/local-heavy budget boundary (`max-seconds <= 240`) and fails closed with `live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded` when exceeded.
+  - contract lane enforces local-heavy CI scope in run mode (`--ci-fast-gate FAIL`) and fails closed with `live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch` on mismatch.
   - run mode executes four bounded targeted `cargo test` selectors for partition/rejoin, publish-drop, replay, and peer-churn drills.
   - live transport fault matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+  - `live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch`
+  - `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`
+  - `live_transport_fault_matrix_contract_evidence_convergence_mismatch`
+  - `live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded`
+  - `live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch`
 
 ## Runtime Libp2p Process-Isolated Convergence Validation Contract Lane
 - Entry commands:
@@ -394,6 +516,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
   - lane emits deterministic three-node publish-drop recovery marker (`three_node_publish_drop_recovery_status=verified`).
   - lane emits deterministic convergence reason-code marker (`convergence_reason_code_status=verified`) with reason-code matrix (`convergence_reason_codes=fork_choice_stale_block_height`).
+  - lane emits deterministic convergence reason taxonomy markers:
+    `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`,
+    `convergence_reason_codes_csv=fork_choice_stale_block_height`.
+  - lane emits deterministic transport classification normalization markers:
+    `transport_classification_normalization_status=verified`,
+    `fork_choice_stale_height_classification_status=verified`.
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_process_isolated_convergence`).
   - lane emits deterministic profile split markers (`lane_profile=smoke|deep`, `smoke_lane_status=verified`, `deep_lane_status=skipped_local_only|verified`).
   - policy checker fails closed on schema/marker drift and decision mismatches.
@@ -409,6 +537,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`
+  - `libp2p_process_isolated_convergence_policy_convergence_reason_taxonomy_version_mismatch`
+  - `libp2p_process_isolated_convergence_policy_fork_choice_stale_height_classification_status_mismatch`
 
 ## Process Harness Primitive Contract
 - Entry commands:
@@ -487,6 +617,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
     - nested Kolme local-only enforcement and run-mode policy markers
     - deterministic combined reason taxonomy version (`kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`)
+    - deterministic runtime phase extraction parity taxonomy:
+      `runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`,
+      `runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+    - deterministic runtime phase parity governance markers:
+      `runtime_phase_module_parity_status=verified`,
+      `runtime_extraction_evidence_output_status=verified`,
+      `ci_local_runtime_phase_parity_budget_boundary_status=verified`
     - deterministic transport reason taxonomy (`fork_choice_stale_block_height`)
     - deterministic Kolme fixture profile (`real-node-non-synthetic-v1`, profile version `v1`)
   - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
@@ -500,9 +637,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - budget drift is fail-closed when lane runtime markers exceed configured max budget.
+  - ci-local phase parity budget boundary rejects `--max-seconds > 240`.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `runtime_phase_module_parity_drift_detected`
+  - `runtime_extraction_evidence_output_unstable`
+  - `ci_local_runtime_phase_parity_budget_boundary_exceeded`
   - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`
@@ -560,11 +701,50 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - reuses bounded local cargo integration tests from `validate_runtime_observability_endpoint_live.sh`
   - no external network dependency or remote runtime process orchestration
   - explicit runtime budget cap via `KAMN_RUNTIME_OBSERVABILITY_ENDPOINT_CONTRACT_MAX_SECONDS`
+  - ci-local contract-lane boundary rejects `--max-seconds > 240`.
   - deterministic fail-closed policy tamper drill executed in-process
+- Deterministic observability governance markers:
+  - `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
+  - `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
+  - `endpoint_readiness_status=verified`
+  - `stream_parity_status=verified`
 - Deterministic fail-closed marker for drift tamper drills:
   - `observability_source_marker_missing:async_dispatch`
   - `observability_source_marker_missing:legacy_tcp_listener_import`
+  - `runtime_observability_endpoint_readiness_progress_stalled`
+  - `runtime_observability_stream_parity_bypass_detected`
+  - `ci_local_observability_endpoint_budget_boundary_exceeded`
   - telemetry schema docs-contract marker set remains fail-closed for health/readiness/stream schema_version markers and readiness_reason_code taxonomy.
+
+## Runtime Structured Logging Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_structured_logging_live.sh --output-json /tmp/structured-logging-live-summary.json`
+  - `bash scripts/runtime/check_structured_logging_live_policy.sh --report-file /tmp/structured-logging-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/structured-logging-live-policy-report.json`
+  - `bash scripts/runtime/validate_structured_logging_live_contract_lane.sh --output-json /tmp/structured-logging-live-contract-lane-report.json --policy-output-json /tmp/structured-logging-live-policy-report.json`
+  - `bash scripts/runtime/test_validate_structured_logging_live.sh`
+  - `bash scripts/runtime/test_check_structured_logging_live_policy.sh`
+  - `bash scripts/runtime/test_validate_structured_logging_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - composes bounded cargo selectors already used by `validate_structured_logging_live.sh`.
+  - no external node/network process orchestration is required.
+  - runtime budget stays bounded by `KAMN_STRUCTURED_LOGGING_CONTRACT_MAX_SECONDS`.
+  - tamper drills run in-process and fail closed deterministically.
+- Deterministic telemetry schema + correlation parity markers:
+  - `telemetry_schema_version=kamn.runtime.structured-logging-telemetry.v1`
+  - `telemetry_schema_contract_status=verified`
+  - `telemetry_schema_reason_taxonomy_version=kamn.runtime.structured-logging-telemetry-schema-reason-taxonomy.v1`
+  - `telemetry_schema_reason_codes_csv=structured_logging_telemetry_schema_version_mismatch,correlation_id_parity_bypass_detected`
+- Deterministic fail-closed marker for policy tamper drills:
+  - `structured_logging_policy_marker_missing:structured_logging_contract_status`
+  - `structured_logging_policy_reason_taxonomy_version_mismatch`
+  - `structured_logging_telemetry_schema_version_mismatch`
+  - `structured_logging_policy_telemetry_schema_reason_taxonomy_version_mismatch`
+  - `structured_logging_policy_marker_value_mismatch:trace_classification_contract_status`
+  - `correlation_id_parity_bypass_detected`
+  - `structured_logging_policy_correlation_error_reason_taxonomy_version_mismatch`
 
 ## Runtime Local Retry/Diagnostics Contract Lane
 - Entry commands:
@@ -581,9 +761,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested retry/diagnostics lane commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN=1`.
+  - ci-local contract-lane budget remains fail-closed and rejects `--max-seconds > 240`.
   - local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic retry taxonomy markers:
+  - `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1`
+  - `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded`
+  - `retry_readiness_status=verified`
+  - `retry_backoff_status=verified`
+  - `retry_jitter_parity_status=verified`
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status`
+  - `local_retry_readiness_progress_stalled`
+  - `local_retry_backoff_jitter_parity_bypass_detected`
+  - `ci_local_network_budget_boundary_exceeded`
 
 ## Runtime Local Signal/Secret Hygiene Contract Lane
 - Entry commands:
@@ -600,10 +790,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode composes deterministic daemon signal and secret-hygiene checks without external network dependency.
   - run mode is explicit local-only and requires `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_OPT_IN=1`.
+  - ci-local contract-lane boundary rejects `--max-seconds > 240`.
   - local signal/secret hygiene run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - explicit runtime budget cap via `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_MAX_SECONDS`.
+- Deterministic signal shutdown taxonomy markers:
+  - `shutdown_reason_taxonomy_version=kamn.runtime.local-signal-shutdown-reason-taxonomy.v1`
+  - `shutdown_reason_codes_csv=local_signal_shutdown_path_drift_detected,local_graceful_drain_bypass_detected,ci_local_signal_shutdown_budget_boundary_exceeded`
+  - `signal_graceful_drain_status=verified`
 - Deterministic fail-closed marker for policy tamper drills:
   - `fallback_signer_secret_present_violation`
+  - `local_signal_shutdown_path_drift_detected`
+  - `local_graceful_drain_bypass_detected`
+  - `ci_local_signal_shutdown_budget_boundary_exceeded`
+  - `signer_secret_source_precedence_violation`
 
 ## Runtime Local Metrics Scrape Contract Lane
 - Entry commands:
@@ -623,6 +822,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`
+  - `local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status`
+  - `local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch`
 
 ## Runtime Local Observability Scrape Contract Lane
 - Entry commands:
@@ -658,6 +859,34 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`
   - `local_observability_scrape_policy_degradation_reason_codes_csv_mismatch`
 
+## Runtime Unified API-Observability Local-Heavy Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
+  - `KAMN_UNIFIED_STACK_LOCAL_HEAVY_OPT_IN=1 bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/unified-api-observability-local-heavy-summary.json`
+  - `bash scripts/runtime/check_unified_api_observability_local_heavy_live_policy.sh --report-file /tmp/unified-api-observability-local-heavy-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/unified-api-observability-local-heavy-policy.json`
+  - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live_contract_lane.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-contract-lane-report.json --policy-output-json /tmp/unified-api-observability-local-heavy-policy-report.json`
+  - `bash scripts/runtime/test_validate_unified_api_observability_local_heavy_live.sh`
+  - `bash scripts/runtime/test_check_unified_api_observability_local_heavy_live_policy.sh`
+  - `bash scripts/runtime/test_validate_unified_api_observability_local_heavy_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested local-heavy command paths and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_UNIFIED_STACK_LOCAL_HEAVY_OPT_IN=1`.
+  - run-mode orchestration is bounded by `KAMN_UNIFIED_API_OBSERVABILITY_LOCAL_HEAVY_MAX_SECONDS` and `KAMN_UNIFIED_API_OBSERVABILITY_LOCAL_HEAVY_COMMAND_MAX_SECONDS`.
+  - local-heavy soak probes are bounded and deterministic via `soak_iterations_requested` and `soak_iterations_executed` markers.
+  - policy checker emits deterministic payload failure reason taxonomy markers:
+    `reason_taxonomy_version=kamn.runtime.unified-api-observability-local-heavy-policy-reason-taxonomy.v1`,
+    `reason_codes_csv=ci_fast_gate_failed,unified_api_observability_local_heavy_policy_artifact_paths_invalid,unified_api_observability_local_heavy_policy_ci_fast_gate_mismatch,unified_api_observability_local_heavy_policy_command_budget_exceeded,unified_api_observability_local_heavy_policy_command_count_invalid,unified_api_observability_local_heavy_policy_command_max_seconds_invalid,unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch,unified_api_observability_local_heavy_policy_compatibility_policy_schema_mismatch,unified_api_observability_local_heavy_policy_compatibility_policy_status_mismatch,unified_api_observability_local_heavy_policy_compatibility_report_schema_mismatch,unified_api_observability_local_heavy_policy_dry_run_command_count_mismatch,unified_api_observability_local_heavy_policy_dry_run_command_status_mismatch,unified_api_observability_local_heavy_policy_dry_run_eligibility_mismatch,unified_api_observability_local_heavy_policy_dry_run_reason_code_mismatch,unified_api_observability_local_heavy_policy_dry_run_soak_iterations_executed_mismatch,unified_api_observability_local_heavy_policy_dry_run_soak_status_mismatch,unified_api_observability_local_heavy_policy_elapsed_seconds_invalid,unified_api_observability_local_heavy_policy_fast_gate_exclusion_reason_mismatch,unified_api_observability_local_heavy_policy_fast_gate_exclusion_status_mismatch,unified_api_observability_local_heavy_policy_final_decision_invalid,unified_api_observability_local_heavy_policy_final_decision_mismatch,unified_api_observability_local_heavy_policy_lane_mode_invalid,unified_api_observability_local_heavy_policy_max_seconds_invalid,unified_api_observability_local_heavy_policy_observability_policy_schema_mismatch,unified_api_observability_local_heavy_policy_observability_policy_status_mismatch,unified_api_observability_local_heavy_policy_observability_report_schema_mismatch,unified_api_observability_local_heavy_policy_observability_soak_status_mismatch,unified_api_observability_local_heavy_policy_run_mode_command_count_mismatch,unified_api_observability_local_heavy_policy_run_mode_command_status_mismatch,unified_api_observability_local_heavy_policy_run_mode_exclusion_mismatch,unified_api_observability_local_heavy_policy_run_mode_reason_code_mismatch,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_executed_invalid,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_mismatch,unified_api_observability_local_heavy_policy_run_mode_soak_iterations_requested_invalid,unified_api_observability_local_heavy_policy_run_mode_soak_status_mismatch,unified_api_observability_local_heavy_policy_runtime_budget_exceeded,unified_api_observability_local_heavy_policy_runtime_budget_status_mismatch,unified_api_observability_local_heavy_policy_schema_mismatch,unified_api_observability_local_heavy_policy_soak_iterations_executed_invalid,unified_api_observability_local_heavy_policy_soak_iterations_requested_invalid,unified_api_observability_local_heavy_policy_status_mismatch`.
+  - policy checker and contract lane emit normalized marker `reason_codes_value=none|<csv>` for deterministic machine parsing.
+  - unified API-observability local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch`
+  - `unified_api_observability_local_heavy_policy_ci_fast_gate_mismatch`
+  - `unified_api_observability_local_heavy_policy_schema_mismatch`
+  - `ci_fast_gate_failed`
+
 ## Runtime Service API Axum Ingress Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
@@ -672,12 +901,73 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
   - uses only localhost process-level probes against `runtime-mode api`.
   - no external Kolme node, remote service, or internet dependency.
+  - protocol-compliance evidence remains deterministic via:
+    `protocol_compliance_status=verified`,
+    `route_contract_parity_status=verified`,
+    `protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1`,
+    `protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected`.
+  - request-validation and error-envelope taxonomy parity remains deterministic via:
+    `request_validation_status=verified`,
+    `error_envelope_field_status=verified`,
+    `method_path_classification_status=verified`,
+    `request_validation_reason_registry_status=verified`,
+    `error_envelope_source_contract_status=verified`,
+    `request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1`,
+    `request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid`,
+    `error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1`,
+    `error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found`.
+  - ingress resilience governance remains deterministic via:
+    `ingress_resilience_gate_status=verified`,
+    `websocket_upgrade_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`,
+    `ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1`,
+    `ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
+  - admission saturation and queue-cap governance remains deterministic via:
+    `admission_saturation_status=verified`,
+    `admission_queue_cap_enforcement_status=verified`,
+    `overload_evidence_normalization_status=verified`,
+    `admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1`,
+    `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`.
   - ingress limit config matrix defaults remain parity-checked against source constants and API docs (`api_max_requests_default=1`, `api_idle_timeout_default_ms=5000`, `body_size_limit_bytes=65536`, `api_concurrency_limit_default=32`, `api_rate_limit_per_second_default=120`).
   - runtime budget is bounded via `KAMN_SERVICE_API_AXUM_INGRESS_CONTRACT_MAX_SECONDS`.
   - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_axum_policy_marker_missing:concurrency_status`
+  - `service_api_axum_policy_marker_missing:websocket_upgrade_parity_status`
+  - `service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
+
+## Runtime Service API Websocket Live Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_websocket_live.sh --output-json /tmp/service-api-websocket-live-summary.json`
+  - `bash scripts/runtime/check_service_api_websocket_live_policy.sh --report-file /tmp/service-api-websocket-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-websocket-live-policy.json`
+  - `bash scripts/runtime/validate_service_api_websocket_live_contract_lane.sh --output-json /tmp/service-api-websocket-live-contract-lane-report.json --policy-output-json /tmp/service-api-websocket-live-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+  - `bash scripts/runtime/test_check_service_api_websocket_live_policy.sh`
+  - `bash scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
+  - uses only localhost process-level probes against `runtime-mode api`.
+  - no external Kolme node, remote service, or internet dependency.
+  - websocket lifecycle governance remains deterministic via:
+    `websocket_upgrade_status=verified`,
+    `websocket_session_lifecycle_status=verified`,
+    `websocket_heartbeat_timeout_status=verified`,
+    `websocket_idle_timeout_contract_status=verified`,
+    `websocket_reason_registry_status=verified`,
+    `websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1`,
+    `websocket_lifecycle_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing`.
+  - runtime budget is bounded via `KAMN_SERVICE_API_WEBSOCKET_CONTRACT_MAX_SECONDS`.
+  - service api websocket live contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_websocket_policy_marker_missing:websocket_session_lifecycle_status`
+  - `service_api_websocket_policy_websocket_lifecycle_reason_taxonomy_version_mismatch`
 
 ## Runtime Service API Serde Payload Parity Contract Lane
 - Entry commands:
@@ -714,11 +1004,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - source-marker checks run locally and avoid external network dependencies.
   - includes SDK parity marker checks for structured envelope decoding in `crates/kamn-sdk/src/service.rs` and `kamn_sdk.py`.
   - structured-error regression corpus is sourced from `fixtures/runtime/service_api_structured_error_regression_corpus.json` and must preserve representative classes: `auth`, `validation`, `replay`, and `transport`.
+  - api error taxonomy and timeout classification governance remains deterministic via:
+    `api_error_reason_taxonomy_status=verified`,
+    `timeout_classification_status=verified`,
+    `endpoint_parity_gate_normalization_status=verified`,
+    `api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1`,
+    `api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error`,
+    `timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1`,
+    `timeout_reason_codes_csv=service_api_request_read_failed`.
   - runtime budget is bounded via `KAMN_SERVICE_API_REASON_CODE_CONTRACT_MAX_SECONDS`.
   - service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_reason_code_policy_marker_missing:route_error_mapping_status`
   - `service_api_reason_code_policy_marker_missing:error_envelope_field_status`
+  - `service_api_reason_code_policy_timeout_reason_taxonomy_version_mismatch`
 
 ## Runtime Service API Validation Negative-Matrix Contract Lane
 - Entry commands:
@@ -813,6 +1112,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - no external network dependencies; lane coverage is local cargo test selectors plus deterministic policy validation.
   - runtime budget is bounded via `KAMN_SERVICE_API_OBSERVABILITY_ROUTE_COMPATIBILITY_CONTRACT_MAX_SECONDS`.
   - route compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic policy taxonomy markers:
+  - `reason_taxonomy_version=kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,service_api_observability_route_compatibility_policy_command_count_invalid,service_api_observability_route_compatibility_policy_command_count_mismatch,service_api_observability_route_compatibility_policy_elapsed_seconds_invalid,service_api_observability_route_compatibility_policy_execution_reason_code_mismatch,service_api_observability_route_compatibility_policy_final_decision_invalid,service_api_observability_route_compatibility_policy_final_decision_mismatch,service_api_observability_route_compatibility_policy_lane_mode_invalid,service_api_observability_route_compatibility_policy_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_compatibility_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch,service_api_observability_route_compatibility_policy_matrix_row_count_mismatch,service_api_observability_route_compatibility_policy_matrix_row_duplicate,service_api_observability_route_compatibility_policy_matrix_row_id_invalid,service_api_observability_route_compatibility_policy_matrix_row_invalid,service_api_observability_route_compatibility_policy_matrix_row_method_mismatch,service_api_observability_route_compatibility_policy_matrix_row_missing,service_api_observability_route_compatibility_policy_matrix_row_route_mismatch,service_api_observability_route_compatibility_policy_matrix_row_status_mismatch,service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch,service_api_observability_route_compatibility_policy_matrix_rows_invalid,service_api_observability_route_compatibility_policy_matrix_schema_mismatch,service_api_observability_route_compatibility_policy_schema_mismatch,service_api_observability_route_compatibility_policy_status_invalid`
+  - normalized marker: `reason_codes_value=none|<csv>`
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get`
 
@@ -834,8 +1137,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - enforces tranche shell-wrapper budget:
     - combined wrapper symlink shell LOC must remain `<= 8`
     - combined implementation shell LOC must remain `<= 260`
+  - deterministic parity taxonomy markers:
+    - `reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1`
+    - `reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink`
+  - deterministic dispatcher fallback taxonomy markers:
+    - `dispatch_status=fail`
+    - `fallback_reason_taxonomy_version=kamn.runtime.service-api-tranche2-dispatch-fallback-reason-taxonomy.v1`
+    - `fallback_reason_codes_csv=dispatcher_impl_missing,dispatcher_impl_not_executable,dispatcher_unknown_wrapper`
+  - normalized evidence output:
+    - checker supports `--output-json` and writes schema `kamn.runtime.service-api-tranche2-wrapper-family-parity-report.v1`
+    - fail/pass reports include `reason_codes` (list) and `reason_codes_value` (`none|<csv>`) for deterministic machine parsing
+    - dispatcher supports `--fallback-output-json` and writes schema `kamn.runtime.service-api-tranche2-dispatch-fallback-report.v1`
+    - fallback reports include `dispatch_status`, `fallback_reason_code`, and `fallback_reason_detail` markers for fail-closed classification review
   - deterministic fail-closed drift reason marker:
     - `impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
+    - `impl_contract_status_marker_missing:scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh`
+    - `fallback_reason_code=dispatcher_unknown_wrapper`
 
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
@@ -877,9 +1194,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
   - `bash scripts/ci/test_missing_docs_graduation_batch_report_contract.sh`
+  - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - Throughput + velocity policy commands:
   - `python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json`
   - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
+- Deterministic missing-docs velocity taxonomy markers:
+  - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1`
+  - `reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed`
+  - `reason_codes_value=<deterministic reason key>`
+- CI-local boundary enforcement:
+  - threshold validation fails closed when `velocity_window_commits > 240`.
+  - boundary violation marker: `reason_codes_value=ci_local_docs_velocity_window_boundary_exceeded`.
 - Baseline and threshold source of truth:
   - `fixtures/ci/kamn_core_missing_docs_velocity_baseline.json`
   - `.ci/kamn-core-missing-docs-velocity-thresholds.json`
@@ -889,6 +1214,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - First-batch graduation report drift guard:
   - report contract enforces deterministic markers for `bootstrap`,
     `key_recovery`, and `kolme_runtime_commit` evidence lineage.
+- Rustdoc navigation parity drift guard:
+  - `scripts/ci/check_kamn_core_missing_docs_policy.sh` emits deterministic markers on README rustdoc-link drift:
+    - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
+    - `reason_codes_csv=rustdoc_navigation_parity_drift`
+    - `reason_code=rustdoc_navigation_parity_drift`
 - Regression: #2126
 - Regression: #2127
 
@@ -1195,6 +1525,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
     - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
+  - upgrade compatibility governance emits deterministic taxonomy and rehearsal-normalization markers:
+    - `reason_taxonomy_version=kamn.kolme.version-compatibility-reason-taxonomy.v1`
+    - `reason_taxonomy_version=kamn.kolme.fork-compatibility-reason-taxonomy.v1`
+    - `reason_codes_csv=unsupported_kamn_major,unsupported_kolme_major,kolme_minor_out_of_supported_window,kolme_minor_too_old_for_kamn_minor,ci_fast_gate_failed`
+    - `reason_codes_csv=unsupported_upstream_major,unsupported_fork_major,upstream_minor_out_of_supported_window,fork_minor_out_of_supported_window,fork_release_tag_mismatch,fork_ref_missing,ci_fast_gate_failed`
+    - `upgrade_rehearsal_bypass_guard_status=verified`
+    - `upgrade_rehearsal_output_normalization_status=verified`
+  - compatibility policy checker fails closed on taxonomy or rehearsal bypass drift:
+    - `report_reason_taxonomy_version_mismatch`
+    - `report_reason_codes_csv_mismatch`
+    - `report_upgrade_rehearsal_bypass_guard_status_mismatch`
   - signature parity command-surface tests remain aggregate `ci-tools` only (not fast-gate default):
     - `bash scripts/kolme/test_run_signature_parity_matrix.sh`
     - `bash scripts/kolme/test_check_signature_parity_policy.sh`
@@ -2248,6 +2589,18 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_fallback_guard_mode=reject_if_present`
       - `runtime_signer_fallback_private_key_present=false`
       - `runtime_signer_raw_private_key_present=false`
+      - `runtime_signer_private_key_env_zeroized=true`
+      - `runtime_signer_private_key_bytes_zeroized=true`
+      - `runtime_signer_key_loading_panic_free=true`
+      - `runtime_signer_key_loading_error_classification_version=v1`
+      - `runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+      - `runtime_signer_key_loading_error_classification=none`
+      - `contracts.runtime_signer_private_key_env_zeroization_required=true`
+      - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
+      - `contracts.runtime_signer_key_loading_panic_free_required=true`
+      - `contracts.runtime_signer_key_loading_error_classification_version=v1`
+      - `contracts.runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+      - `contracts.runtime_signer_key_loading_error_classification_stable_required=true`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
       - `runtime_signer_attestation_bundle`
       - `runtime_signer_quorum_linkage_contract_version=v1`
@@ -2256,6 +2609,20 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_quorum_profile_linked`
       - `runtime_signer_quorum_satisfied`
       - `runtime_signer_quorum_linked`
+    - strict profile policy reason-taxonomy markers:
+      - `reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1`
+      - `reason_taxonomy_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_non_synthetic_submit_probe_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_in_memory_provider_reference_detected,runtime_signing_profile_mismatch`
+      - `fixture_profile_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1`
+      - `fixture_profile_reason_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_command_profile_version_mismatch,runtime_commit_non_synthetic_policy_marker_missing,runtime_commit_non_synthetic_submit_probe_missing`
+      - `runtime_commit_failure_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1`
+      - `runtime_commit_failure_reason_codes_csv=runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing`
+      - `signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1`
+      - `signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation`
+      - `key_loading_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1`
+      - `key_loading_reason_codes_csv=runtime_signer_key_loading_panic_violation,runtime_signer_key_loading_error_classification_violation`
+      - `key_loading_error_classification_version=v1`
+      - `key_loading_error_classifications_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+      - `observed_reason_codes_csv=none|<sorted reason csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
@@ -2274,6 +2641,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_failover_attestation_previous_profile_not_approved`
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
+      - `runtime_signer_private_key_env_zeroization_violation`
+      - `runtime_signer_private_key_bytes_zeroization_violation`
+      - `runtime_signer_key_loading_panic_violation`
+      - `runtime_signer_key_loading_error_classification_violation`
       - `runtime_commit_signer_key_source_marker_missing`
       - `runtime_commit_fallback_private_key_command_marker_detected`
       - `runtime_commit_managed_external_signer_key_reference_marker_missing`
@@ -2432,12 +2803,17 @@ JSON`
       - `checkpoint_failed_custody_evidence_contract`
       - `checkpoint_failed_signer_provenance_contract`
       - `checkpoint_failed_signer_rotation_freshness_contract`
+      - `preflight_budget_exceeded`
       - `reason_code=checkpoint_failed_signer_secret_contract`
       - `reason_code=checkpoint_failed_signer_quorum_contract`
       - `reason_code=checkpoint_failed_quorum_evidence_contract`
       - `reason_code=checkpoint_failed_custody_evidence_contract`
       - `reason_code=checkpoint_failed_signer_provenance_contract`
       - `reason_code=checkpoint_failed_signer_rotation_freshness_contract`
+      - `reason_code=preflight_budget_exceeded`
+      - `run_mode_budget_status_not_run`
+      - `startup_latency_budget_status_mismatch`
+      - `startup_latency_budget_reason_code_mismatch`
       - `signer_quorum_shortfall`
       - `signer_quorum_minimum_not_met`
       - `quorum_evidence_missing`
@@ -2450,6 +2826,7 @@ JSON`
       - `quorum_evidence_rotation_metadata_invalid`
       - `quorum_evidence_approvals_mismatch`
       - `quorum_evidence_custody_sha256_mismatch`
+      - `custody_continuity_bypass_detected`
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
       - `runtime_signer_attestation_schema_invalid`
@@ -2468,6 +2845,10 @@ JSON`
       - `signer_provenance_missing`
       - `signer_provenance_sha256_invalid`
       - `signer_rotation_epoch_stale`
+      - `signer_rotation_rehearsal_drift_detected`
+      - `signer_profile_drift_threshold_mismatch`
+      - `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
+      - `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
     - fallback retirement docs parity remains fail-closed across README/CI/devnet runbooks (`Regression: #2337`).
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
@@ -2562,6 +2943,11 @@ JSON`
     - linkage drift reason codes are deterministic and fail-closed (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
     - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) are required for run-mode policy evaluation.
     - retry exhaustion reason codes remain deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) with fail-closed drift reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
+    - submit/finality success-reason taxonomy markers are deterministic in policy outputs:
+      - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+      - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+      - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+    - submit/finality reason-code drift remains fail-closed (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`).
     - strict real-node marker checks additionally require native payload evidence markers (`native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, `native_payload_messages_marker_present`) and use `--require-native-payload-evidence`.
   - local native API parity live-proof run-mode commands remain excluded from ci-fast-gate.
     - wrapper routing stays manifest-backed:
@@ -2643,8 +3029,26 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
 - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+  - alert-governance taxonomy markers stay deterministic:
+    - `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
+    - `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+  - burn-rate and promotion gate markers remain fail-closed:
+    - `alert_rule_promotion_gate_status=verified`
+    - `burn_rate_parity_status=verified`
+    - `ci_local_promotion_budget_boundary_status=verified`
+  - ci-local budget boundary remains bounded by `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`.
+  - deep lane remains local-only via `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY=true`.
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+  - rollback-governance taxonomy markers remain deterministic:
+    - `reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
+    - `reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded`
+  - rollback gate and runbook-marker parity bypass guards remain fail-closed:
+    - `rollback_gate_progress_stalled`
+    - `runbook_marker_parity_bypass_detected`
+  - ci-local promotion budget boundary remains bounded:
+    - `ci_local_promotion_budget_boundary_status=verified`
+    - `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS <= 240`
 - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 
 Regression policy:
@@ -2692,6 +3096,7 @@ Regression policy:
 - local runtime-commit live preflight health-probe and default live-provider ignored-test dispatch parity remains fail-closed (`Regression: #1829`).
 - local runtime-commit live evidence policy marker parity remains fail-closed for missing `KolmeRuntimeCommitLiveProvider` command markers (`Regression: #2095`).
 - local runtime-commit submit/finality evidence marker policy and contract lane command-surface parity remains fail-closed (`Regression: #2099`).
+- local runtime-commit submit/finality success-reason taxonomy mismatch remains fail-closed (`Regression: #4420`).
 - local native API parity live-proof run-mode exclusion parity remains fail-closed (`Regression: #1467`).
 - native parity fast/local command matrix docs parity remains fail-closed (`Regression: #1468`).
 - local probe fork-info chain_version query and native parity broadcast method drift remains fail-closed (`Regression: #1482`).
@@ -2891,12 +3296,19 @@ Fast-mode CI tooling regression coverage includes:
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`
+  - deterministic taxonomy markers:
+    - `reason_taxonomy_version=kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1`
+    - `reason_codes_csv=combined_shell_surface_budget_status_fail,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid`
+  - normalized reason markers:
+    - `reason_codes=none|<csv>`
+    - `reason_codes_value=none|<csv>`
   - deterministic reason-code surface:
     - `reason_codes=combined_shell_surface_script_count_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_shell_line_total_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_ratio_fail_ceiling_exceeded`
     - `reason_codes=combined_shell_surface_ratio_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_budget_status_fail`
+    - `reason_codes=combined_shell_surface_threshold_order_invalid`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`

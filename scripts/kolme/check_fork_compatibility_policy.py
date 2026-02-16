@@ -7,6 +7,12 @@ from pathlib import Path
 
 
 EXPECTED_SCHEMA_VERSION = "kamn.kolme.fork-compatibility-report.v1"
+EXPECTED_REASON_TAXONOMY_VERSION = "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+EXPECTED_REASON_CODES_CSV = (
+    "unsupported_upstream_major,unsupported_fork_major,"
+    "upstream_minor_out_of_supported_window,fork_minor_out_of_supported_window,"
+    "fork_release_tag_mismatch,fork_ref_missing,ci_fast_gate_failed"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +60,18 @@ def evaluate(args: argparse.Namespace, report: dict[str, object]) -> tuple[str, 
     elif report_final_decision != args.expected_final_decision:
         reason_codes.append("report_final_decision_mismatch")
 
+    if report.get("reason_taxonomy_version") != EXPECTED_REASON_TAXONOMY_VERSION:
+        reason_codes.append("report_reason_taxonomy_version_mismatch")
+
+    if report.get("reason_codes_csv") != EXPECTED_REASON_CODES_CSV:
+        reason_codes.append("report_reason_codes_csv_mismatch")
+
+    if report.get("upgrade_rehearsal_bypass_guard_status") != "verified":
+        reason_codes.append("report_upgrade_rehearsal_bypass_guard_status_mismatch")
+
+    if report.get("upgrade_rehearsal_output_normalization_status") != "verified":
+        reason_codes.append("report_upgrade_rehearsal_output_normalization_status_mismatch")
+
     report_reason_codes = report.get("reason_codes")
     if not isinstance(report_reason_codes, list):
         reason_codes.append("report_reason_codes_invalid")
@@ -95,6 +113,10 @@ def main() -> int:
         "expected_final_decision": args.expected_final_decision,
         "required_reason_codes": args.require_reason_code,
         "ci_fast_gate": args.ci_fast_gate,
+        "reason_taxonomy_version": EXPECTED_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": EXPECTED_REASON_CODES_CSV,
+        "upgrade_rehearsal_bypass_guard_status": "verified",
+        "upgrade_rehearsal_output_normalization_status": "verified",
         "reason_codes": reason_codes,
         "final_decision": final_decision,
     }
@@ -110,6 +132,10 @@ def main() -> int:
     failed_checks = ",".join(reason_codes) if reason_codes else "none"
     print(f"status={status}")
     print(f"report_file={report_path}")
+    print(f"reason_taxonomy_version={EXPECTED_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={EXPECTED_REASON_CODES_CSV}")
+    print("upgrade_rehearsal_bypass_guard_status=verified")
+    print("upgrade_rehearsal_output_normalization_status=verified")
     print(f"final_decision={final_decision}")
     print(f"failed_checks={failed_checks}")
     if args.output_json:

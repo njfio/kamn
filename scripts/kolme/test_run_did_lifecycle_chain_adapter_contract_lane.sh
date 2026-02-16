@@ -68,6 +68,8 @@ required_impl_markers=(
   "functional_lifecycle_chain_submission_through_kolme_adapter_returns_typed_outcome"
   "integration_lifecycle_chain_submission_allows_retry_without_reapplying_mutation"
   "regression_lifecycle_chain_submission_rejects_conflicting_same_nonce_payload"
+  "regression_registration_chain_submission_rejects_malformed_document_payload"
+  "regression_registration_chain_submission_rejects_duplicate_registration_payload_drift"
   "kamn.kolme.did-lifecycle-chain.contract.v1"
 )
 for marker in "${required_impl_markers[@]}"; do
@@ -98,6 +100,22 @@ if ! printf '%s\n' "$run_output" | grep -q '^conflict_fail_closed_status=verifie
   echo "expected conflict fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^malformed_registration_payload_status=verified$'; then
+  echo "expected malformed registration payload marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^duplicate_registration_payload_drift_status=verified$'; then
+  echo "expected duplicate registration payload drift marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^did_registration_reason_taxonomy_version=kamn.kolme.did-registration-reason-taxonomy.v1$'; then
+  echo "expected deterministic did registration reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^did_registration_reason_codes_csv=did_registry_document_did_mismatch,did_registry_submission_key_conflict$'; then
+  echo "expected deterministic did registration reason codes csv marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -117,6 +135,16 @@ if payload.get("duplicate_retry_status") != "verified":
     raise SystemExit("expected duplicate_retry_status=verified")
 if payload.get("conflict_fail_closed_status") != "verified":
     raise SystemExit("expected conflict_fail_closed_status=verified")
+if payload.get("malformed_registration_payload_status") != "verified":
+    raise SystemExit("expected malformed_registration_payload_status=verified")
+if payload.get("duplicate_registration_payload_drift_status") != "verified":
+    raise SystemExit("expected duplicate_registration_payload_drift_status=verified")
+if payload.get("did_registration_reason_taxonomy_version") != "kamn.kolme.did-registration-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic did_registration_reason_taxonomy_version in contract-lane report")
+if payload.get("did_registration_reason_codes_csv") != "did_registry_document_did_mismatch,did_registry_submission_key_conflict":
+    raise SystemExit("expected deterministic did_registration_reason_codes_csv in contract-lane report")
+if payload.get("did_registration_reason_codes_value") != "none":
+    raise SystemExit("expected did_registration_reason_codes_value=none in GO contract-lane report")
 PY
 
 set +e

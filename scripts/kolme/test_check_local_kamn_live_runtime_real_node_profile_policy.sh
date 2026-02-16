@@ -25,6 +25,8 @@ TMP_REPORT_FAILOVER_ATTESTATION_QUORUM_INSUFFICIENT="$TMP_DIR/failover-attestati
 TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
 TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
 TMP_REPORT_QUORUM_LINKAGE_DRIFT="$TMP_DIR/quorum-linkage-drift-report.json"
+TMP_REPORT_KEY_LOADING_PANIC_DRIFT="$TMP_DIR/key-loading-panic-drift-report.json"
+TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT="$TMP_DIR/key-loading-classification-drift-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
 TMP_REPORT_SIMULATED="$TMP_DIR/simulated-signing-profile-report.json"
@@ -95,6 +97,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_managed_external_raw_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_signer_raw_private_key_present": false,
+  "runtime_signer_private_key_env_zeroized": true,
+  "runtime_signer_private_key_bytes_zeroized": true,
+  "runtime_signer_key_loading_panic_free": true,
+  "runtime_signer_key_loading_error_classification_version": "v1",
+  "runtime_signer_key_loading_error_classification_allowed_csv": "none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch",
+  "runtime_signer_key_loading_error_classification": "none",
   "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "runtime_signer_attestation_bundle": {
     "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -146,6 +154,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_signer_managed_external_raw_private_key_allowed": false,
+    "runtime_signer_private_key_env_zeroization_required": true,
+    "runtime_signer_private_key_bytes_zeroization_required": true,
+    "runtime_signer_key_loading_panic_free_required": true,
+    "runtime_signer_key_loading_error_classification_version": "v1",
+    "runtime_signer_key_loading_error_classification_stable_required": true,
+    "runtime_signer_key_loading_error_classification_allowed_csv": "none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch",
     "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "runtime_signer_attestation_signer_uniqueness_required": true,
     "runtime_signer_attestation_threshold_required": true,
@@ -244,6 +258,32 @@ if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for valid real-node profile report")
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid real-node profile report")
+if report.get("reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if report.get("reason_taxonomy_codes_csv") != "runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_non_synthetic_submit_probe_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_in_memory_provider_reference_detected,runtime_signing_profile_mismatch":
+    raise SystemExit("expected deterministic reason_taxonomy_codes_csv marker")
+if report.get("observed_reason_codes_csv") != "none":
+    raise SystemExit("expected observed_reason_codes_csv=none for GO real-node profile report")
+if report.get("fixture_profile_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic fixture_profile_reason_taxonomy_version marker")
+if report.get("fixture_profile_reason_codes_csv") != "runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_command_profile_version_mismatch,runtime_commit_non_synthetic_policy_marker_missing,runtime_commit_non_synthetic_submit_probe_missing":
+    raise SystemExit("expected deterministic fixture_profile_reason_codes_csv marker")
+if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker")
+if report.get("runtime_commit_failure_reason_codes_csv") != "runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_codes_csv marker")
+if report.get("signer_hygiene_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signer_hygiene_reason_taxonomy_version marker")
+if report.get("signer_hygiene_reason_codes_csv") != "runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation":
+    raise SystemExit("expected deterministic signer_hygiene_reason_codes_csv marker")
+if report.get("key_loading_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic key_loading_reason_taxonomy_version marker")
+if report.get("key_loading_reason_codes_csv") != "runtime_signer_key_loading_panic_violation,runtime_signer_key_loading_error_classification_violation":
+    raise SystemExit("expected deterministic key_loading_reason_codes_csv marker")
+if report.get("key_loading_error_classification_version") != "v1":
+    raise SystemExit("expected deterministic key_loading_error_classification_version marker")
+if report.get("key_loading_error_classifications_csv") != "none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch":
+    raise SystemExit("expected deterministic key_loading_error_classifications_csv marker")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
@@ -303,6 +343,16 @@ if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for valid secondary real-node profile report")
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid secondary real-node profile report")
+if report.get("reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker for secondary profile")
+if report.get("observed_reason_codes_csv") != "none":
+    raise SystemExit("expected observed_reason_codes_csv=none for GO secondary real-node profile report")
+if report.get("fixture_profile_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic fixture_profile_reason_taxonomy_version marker for secondary profile")
+if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker for secondary profile")
+if report.get("key_loading_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic key_loading_reason_taxonomy_version marker for secondary profile")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_MANAGED" <<'PY'
@@ -874,6 +924,70 @@ fi
 
 if ! grep -q "runtime_signer_quorum_linkage_drift" "$TMP_ERR"; then
   echo "expected signer quorum linkage drift reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" <<'PY'
+import json
+import pathlib
+import sys
+
+base_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+
+panic_drift_report = dict(base_report)
+panic_drift_report["runtime_signer_key_loading_panic_free"] = False
+panic_drift_report["runtime_signer_key_loading_error_classification"] = "panic-drift"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(panic_drift_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+classification_drift_report = dict(base_report)
+classification_drift_report["runtime_signer_key_loading_panic_free"] = True
+classification_drift_report["runtime_signer_key_loading_error_classification"] = "unstable-classification-marker"
+pathlib.Path(sys.argv[3]).write_text(
+    json.dumps(classification_drift_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+key_loading_panic_drift_exit_code=$?
+set -e
+
+if [ "$key_loading_panic_drift_exit_code" -eq 0 ]; then
+  echo "expected key-loading panic-free drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_loading_panic_violation" "$TMP_ERR"; then
+  echo "expected key-loading panic violation reason for policy failure" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+key_loading_classification_drift_exit_code=$?
+set -e
+
+if [ "$key_loading_classification_drift_exit_code" -eq 0 ]; then
+  echo "expected key-loading error classification drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_loading_error_classification_violation" "$TMP_ERR"; then
+  echo "expected key-loading error classification violation reason for policy failure" >&2
   exit 1
 fi
 

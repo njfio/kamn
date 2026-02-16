@@ -40,6 +40,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^local_full_runtime_policy_status
   echo "expected local full-runtime policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime policy checker reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -53,6 +61,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected local full-runtime policy final_decision=GO")
 if payload.get("local_full_runtime_policy_status") != "verified":
     raise SystemExit("expected local_full_runtime_policy_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic local full-runtime reason taxonomy marker")
+if payload.get("reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic local full-runtime reason codes taxonomy marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -124,8 +136,72 @@ if [ "$tampered_transport_code" -eq 0 ]; then
   echo "expected transport-mode tampered local full-runtime report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_transport_output" | grep -q 'local_full_runtime_policy_runtime_transport_mode_mismatch'; then
-  echo "expected deterministic runtime transport-mode mismatch reason for local full-runtime report" >&2
+if ! printf '%s\n' "$tampered_transport_output" | grep -q 'runtime_fallback_classification_unstable'; then
+  echo "expected deterministic runtime fallback classification reason for local full-runtime report" >&2
+  exit 1
+fi
+
+tampered_shutdown_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_shutdown_report"
+python3 - "$tampered_shutdown_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["full_runtime_shutdown_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_shutdown_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_shutdown_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_shutdown_code=$?
+set -e
+rm -f "$tampered_shutdown_report"
+if [ "$tampered_shutdown_code" -eq 0 ]; then
+  echo "expected shutdown-status tampered local full-runtime report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_shutdown_output" | grep -q 'runtime_full_shutdown_gate_drift_detected'; then
+  echo "expected deterministic runtime shutdown gate drift reason for local full-runtime report" >&2
+  exit 1
+fi
+
+tampered_budget_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_budget_report"
+python3 - "$tampered_budget_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["max_seconds"] = 241
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_budget_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_budget_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_budget_code=$?
+set -e
+rm -f "$tampered_budget_report"
+if [ "$tampered_budget_code" -eq 0 ]; then
+  echo "expected ci-local runtime extraction budget tampered report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_budget_output" | grep -q 'ci_local_runtime_extraction_budget_boundary_exceeded'; then
+  echo "expected deterministic ci-local runtime extraction budget reason code" >&2
   exit 1
 fi
 

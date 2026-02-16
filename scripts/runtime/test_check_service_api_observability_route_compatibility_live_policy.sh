@@ -33,7 +33,10 @@ for marker in \
   '^status=ok$' \
   '^final_decision=GO$' \
   '^service_api_observability_route_compatibility_policy_status=verified$' \
-  '^reason_codes=none$'; do
+  '^reason_codes=none$' \
+  '^reason_codes_value=none$' \
+  '^reason_taxonomy_version=kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1$' \
+  '^reason_codes_csv=ci_fast_gate_failed,service_api_observability_route_compatibility_policy_command_count_invalid,service_api_observability_route_compatibility_policy_command_count_mismatch,service_api_observability_route_compatibility_policy_elapsed_seconds_invalid,service_api_observability_route_compatibility_policy_execution_reason_code_mismatch,service_api_observability_route_compatibility_policy_final_decision_invalid,service_api_observability_route_compatibility_policy_final_decision_mismatch,service_api_observability_route_compatibility_policy_lane_mode_invalid,service_api_observability_route_compatibility_policy_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_compatibility_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch,service_api_observability_route_compatibility_policy_matrix_row_count_mismatch,service_api_observability_route_compatibility_policy_matrix_row_duplicate,service_api_observability_route_compatibility_policy_matrix_row_id_invalid,service_api_observability_route_compatibility_policy_matrix_row_invalid,service_api_observability_route_compatibility_policy_matrix_row_method_mismatch,service_api_observability_route_compatibility_policy_matrix_row_missing,service_api_observability_route_compatibility_policy_matrix_row_route_mismatch,service_api_observability_route_compatibility_policy_matrix_row_status_mismatch,service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch,service_api_observability_route_compatibility_policy_matrix_rows_invalid,service_api_observability_route_compatibility_policy_matrix_schema_mismatch,service_api_observability_route_compatibility_policy_schema_mismatch,service_api_observability_route_compatibility_policy_status_invalid$'; do
   if ! printf '%s\n' "$policy_output" | grep -q "$marker"; then
     echo "expected service api observability route compatibility policy marker: $marker" >&2
     exit 1
@@ -54,6 +57,12 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if payload.get("service_api_observability_route_compatibility_policy_status") != "verified":
     raise SystemExit("expected compatibility policy status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason taxonomy marker in compatibility policy report")
+if payload.get("reason_codes_csv") != "ci_fast_gate_failed,service_api_observability_route_compatibility_policy_command_count_invalid,service_api_observability_route_compatibility_policy_command_count_mismatch,service_api_observability_route_compatibility_policy_elapsed_seconds_invalid,service_api_observability_route_compatibility_policy_execution_reason_code_mismatch,service_api_observability_route_compatibility_policy_final_decision_invalid,service_api_observability_route_compatibility_policy_final_decision_mismatch,service_api_observability_route_compatibility_policy_lane_mode_invalid,service_api_observability_route_compatibility_policy_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_compatibility_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch,service_api_observability_route_compatibility_policy_matrix_row_count_mismatch,service_api_observability_route_compatibility_policy_matrix_row_duplicate,service_api_observability_route_compatibility_policy_matrix_row_id_invalid,service_api_observability_route_compatibility_policy_matrix_row_invalid,service_api_observability_route_compatibility_policy_matrix_row_method_mismatch,service_api_observability_route_compatibility_policy_matrix_row_missing,service_api_observability_route_compatibility_policy_matrix_row_route_mismatch,service_api_observability_route_compatibility_policy_matrix_row_status_mismatch,service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch,service_api_observability_route_compatibility_policy_matrix_rows_invalid,service_api_observability_route_compatibility_policy_matrix_schema_mismatch,service_api_observability_route_compatibility_policy_schema_mismatch,service_api_observability_route_compatibility_policy_status_invalid":
+    raise SystemExit("expected deterministic reason code taxonomy marker in compatibility policy report")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected reason_codes_value=none in compatibility policy report")
 PY
 
 tampered_report="$TMP_DIR/service-api-observability-route-compatibility-summary.tampered.json"
@@ -87,6 +96,14 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get'; then
   echo "expected deterministic mismatch reason code for tampered service api observability route compatibility policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_taxonomy_version=kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1$'; then
+  echo "expected deterministic reason taxonomy marker for tampered service api observability route compatibility policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get$'; then
+  echo "expected deterministic normalized reason_codes_value marker for tampered service api observability route compatibility policy validation" >&2
   exit 1
 fi
 

@@ -233,4 +233,35 @@ if ! printf '%s\n' "$tampered_mttr_output" | grep -q "mttr bound mismatch"; then
   exit 1
 fi
 
+tampered_signer_drift_bundle="$TMP_DIR/rehearsal-tampered-signer-drift.json"
+cp "$go_bundle" "$tampered_signer_drift_bundle"
+python3 - "$tampered_signer_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["rehearsal"]["signer_profile_drift_events"] = 3
+payload["rehearsal"]["max_signer_profile_drift_events"] = 0
+payload["rehearsal"]["signer_profile_drift_within_bound"] = True
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_signer_drift_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_signer_drift_bundle" 2>&1)"
+tampered_signer_drift_code=$?
+set -e
+
+if [ "$tampered_signer_drift_code" -eq 0 ]; then
+  echo "expected tampered signer drift rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+
+# Regression: #4574
+if ! printf '%s\n' "$tampered_signer_drift_output" | grep -q "signer_profile_drift_threshold_mismatch"; then
+  echo "expected signer drift threshold mismatch reason code for tampered signer drift rehearsal bundle" >&2
+  exit 1
+fi
+
 echo "staging rehearsal bundle tests passed."

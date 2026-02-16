@@ -25,7 +25,8 @@ fi
 parity_output="$(
   python3 "$CHECKER" \
     --root-dir "$ROOT_DIR" \
-    --matrix-file "$MATRIX_FILE"
+    --matrix-file "$MATRIX_FILE" \
+    --output-json "$TMP_DIR/service-api-tranche2-wrapper-family-parity.report.json"
 )"
 if ! printf '%s\n' "$parity_output" | grep -q '^status=pass$'; then
   echo "expected service api tranche-2 parity checker status=pass" >&2
@@ -39,6 +40,37 @@ if ! printf '%s\n' "$parity_output" | grep -q '^reason_codes=none$'; then
   echo "expected service api tranche-2 parity checker reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$parity_output" | grep -q '^reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1$'; then
+  echo "expected service api tranche-2 parity checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$parity_output" | grep -q '^reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink$'; then
+  echo "expected service api tranche-2 parity checker reason taxonomy codes marker" >&2
+  exit 1
+fi
+
+python3 - "$TMP_DIR/service-api-tranche2-wrapper-family-parity.report.json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.service-api-tranche2-wrapper-family-parity-report.v1":
+    raise SystemExit("expected deterministic schema version for service api tranche-2 parity report")
+if payload.get("status") != "pass":
+    raise SystemExit("expected status=pass in service api tranche-2 parity report")
+if payload.get("service_api_tranche2_wrapper_family_status") != "verified":
+    raise SystemExit("expected verified wrapper family status in service api tranche-2 parity report")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1":
+    raise SystemExit("expected reason taxonomy version in service api tranche-2 parity report")
+if payload.get("reason_codes_csv") != "impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink":
+    raise SystemExit("expected deterministic reason code taxonomy set in service api tranche-2 parity report")
+if payload.get("reason_codes") != []:
+    raise SystemExit("expected empty reason_codes list in service api tranche-2 parity report")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected reason_codes_value=none in service api tranche-2 parity report")
+PY
 
 while IFS=$'\t' read -r wrapper impl contract_key policy_key tamper_reason; do
   wrapper_path="$ROOT_DIR/$wrapper"
@@ -120,7 +152,7 @@ if ! grep -q "service api tranche-2 wrapper retirement parity guard" "$STRATEGY_
 fi
 
 set +e
-unknown_wrapper_output="$(bash "$DISPATCHER" --lane-wrapper validate_service_api_unknown_contract_lane.sh --resolve-impl-path 2>&1)"
+unknown_wrapper_output="$(bash "$DISPATCHER" --lane-wrapper validate_service_api_unknown_contract_lane.sh --resolve-impl-path --fallback-output-json "$TMP_DIR/service-api-tranche2-dispatch-fallback.report.json" 2>&1)"
 unknown_wrapper_code=$?
 set -e
 if [ "$unknown_wrapper_code" -eq 0 ]; then
@@ -131,6 +163,42 @@ if ! printf '%s\n' "$unknown_wrapper_output" | grep -q 'unknown service api tran
   echo "expected deterministic unknown-wrapper reason marker for service api tranche-2 dispatcher" >&2
   exit 1
 fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^dispatch_status=fail$'; then
+  echo "expected deterministic dispatcher fallback status marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_taxonomy_version=kamn.runtime.service-api-tranche2-dispatch-fallback-reason-taxonomy.v1$'; then
+  echo "expected deterministic dispatcher fallback taxonomy marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_codes_csv=dispatcher_impl_missing,dispatcher_impl_not_executable,dispatcher_unknown_wrapper$'; then
+  echo "expected deterministic dispatcher fallback reason code set marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_code=dispatcher_unknown_wrapper$'; then
+  echo "expected deterministic dispatcher fallback reason code marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+python3 - "$TMP_DIR/service-api-tranche2-dispatch-fallback.report.json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.service-api-tranche2-dispatch-fallback-report.v1":
+    raise SystemExit("expected deterministic schema version in service api tranche-2 dispatcher fallback report")
+if payload.get("dispatch_status") != "fail":
+    raise SystemExit("expected dispatch_status=fail in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_taxonomy_version") != "kamn.runtime.service-api-tranche2-dispatch-fallback-reason-taxonomy.v1":
+    raise SystemExit("expected fallback taxonomy version in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_codes_csv") != "dispatcher_impl_missing,dispatcher_impl_not_executable,dispatcher_unknown_wrapper":
+    raise SystemExit("expected deterministic fallback reason code set in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_code") != "dispatcher_unknown_wrapper":
+    raise SystemExit("expected fallback_reason_code=dispatcher_unknown_wrapper in service api tranche-2 dispatcher fallback report")
+if "unknown service api tranche-2 wrapper for dispatch" not in str(payload.get("fallback_reason_detail", "")):
+    raise SystemExit("expected unknown-wrapper detail marker in service api tranche-2 dispatcher fallback report")
+PY
 
 tampered_matrix="$TMP_DIR/service-api-tranche2-wrapper-family-matrix.tampered.json"
 cp "$MATRIX_FILE" "$tampered_matrix"
@@ -149,7 +217,8 @@ set +e
 tampered_output="$(
   python3 "$CHECKER" \
     --root-dir "$ROOT_DIR" \
-    --matrix-file "$tampered_matrix" 2>&1
+    --matrix-file "$tampered_matrix" \
+    --output-json "$TMP_DIR/service-api-tranche2-wrapper-family-parity.tampered.report.json" 2>&1
 )"
 tampered_code=$?
 set -e
@@ -160,6 +229,67 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh'; then
   echo "expected deterministic policy-checker drift reason code for tampered service api tranche-2 matrix" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1$'; then
+  echo "expected tampered service api tranche-2 matrix output to emit reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink$'; then
+  echo "expected tampered service api tranche-2 matrix output to emit deterministic taxonomy code set" >&2
+  exit 1
+fi
+
+python3 - "$TMP_DIR/service-api-tranche2-wrapper-family-parity.tampered.report.json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("status") != "fail":
+    raise SystemExit("expected status=fail in tampered service api tranche-2 parity report")
+if payload.get("service_api_tranche2_wrapper_family_status") != "rejected":
+    raise SystemExit("expected rejected wrapper family status in tampered service api tranche-2 parity report")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1":
+    raise SystemExit("expected reason taxonomy version in tampered service api tranche-2 parity report")
+reason_codes = payload.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected reason_codes list in tampered service api tranche-2 parity report")
+if "impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh" not in reason_codes:
+    raise SystemExit("expected tampered service api tranche-2 parity report to include policy checker drift reason code")
+if payload.get("reason_codes_value") != "impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh":
+    raise SystemExit("expected tampered service api tranche-2 parity report normalized reason_codes_value marker")
+PY
+
+tampered_second_wrapper_matrix="$TMP_DIR/service-api-tranche2-wrapper-family-matrix.second-wrapper.tampered.json"
+cp "$MATRIX_FILE" "$tampered_second_wrapper_matrix"
+python3 - "$tampered_second_wrapper_matrix" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["wrappers"][1]["contract_status_key"] = "service_api_graceful_shutdown_drain_contract_status_drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_second_wrapper_output="$(
+  python3 "$CHECKER" \
+    --root-dir "$ROOT_DIR" \
+    --matrix-file "$tampered_second_wrapper_matrix" 2>&1
+)"
+tampered_second_wrapper_code=$?
+set -e
+
+if [ "$tampered_second_wrapper_code" -eq 0 ]; then
+  echo "expected second-wrapper tampered service api tranche-2 matrix to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_second_wrapper_output" | grep -q 'impl_contract_status_marker_missing:scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh'; then
+  echo "expected deterministic second-wrapper contract-status drift reason code for tampered service api tranche-2 matrix" >&2
   exit 1
 fi
 

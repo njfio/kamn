@@ -688,10 +688,22 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_fallback_guard_mode=reject_if_present
 # runtime_signer_fallback_private_key_present=false
 # runtime_signer_raw_private_key_present=false
+# runtime_signer_private_key_env_zeroized=true
+# runtime_signer_private_key_bytes_zeroized=true
+# runtime_signer_key_loading_panic_free=true
+# runtime_signer_key_loading_error_classification_version=v1
+# runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch
+# runtime_signer_key_loading_error_classification=none
 # runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1
 # runtime_signer_attestation_bundle
 # contracts.runtime_signer_fallback_private_key_allowed=false
 # contracts.runtime_signer_managed_external_raw_private_key_allowed=false
+# contracts.runtime_signer_private_key_env_zeroization_required=true
+# contracts.runtime_signer_private_key_bytes_zeroization_required=true
+# contracts.runtime_signer_key_loading_panic_free_required=true
+# contracts.runtime_signer_key_loading_error_classification_version=v1
+# contracts.runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch
+# contracts.runtime_signer_key_loading_error_classification_stable_required=true
 
 # strict secondary signer summary marker contracts
 # runtime_signer_profile=ops-secondary
@@ -717,6 +729,10 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_managed_external_private_key_command_marker_detected
 # runtime_signing_profile_mismatch
 # runtime_signing_profile_contract_mismatch
+# runtime_signer_private_key_env_zeroization_violation
+# runtime_signer_private_key_bytes_zeroization_violation
+# runtime_signer_key_loading_panic_violation
+# runtime_signer_key_loading_error_classification_violation
 # runtime_signer_fallback_private_key_present_violation
 # runtime_signer_managed_external_raw_private_key_present_violation
 # runtime_signer_attestation_approved_signers_not_unique
@@ -728,6 +744,12 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_signer_profile_split_brain_detected
 # runtime_commit_in_memory_provider_reference_detected
 # runtime_commit_policy_check_in_memory_provider_reference_detected
+# signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1
+# signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation
+# key_loading_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1
+# key_loading_reason_codes_csv=runtime_signer_key_loading_panic_violation,runtime_signer_key_loading_error_classification_violation
+# key_loading_error_classification_version=v1
+# key_loading_error_classifications_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch
 
 # strict profile non-synthetic submit probe marker
 # integration_kolme_fork_live_node_submit_reaches_endpoint
@@ -893,12 +915,17 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # checkpoint_failed_custody_evidence_contract
 # checkpoint_failed_signer_provenance_contract
 # checkpoint_failed_signer_rotation_freshness_contract
+# preflight_budget_exceeded
 # reason_code=checkpoint_failed_signer_secret_contract
 # reason_code=checkpoint_failed_signer_quorum_contract
 # reason_code=checkpoint_failed_quorum_evidence_contract
 # reason_code=checkpoint_failed_custody_evidence_contract
 # reason_code=checkpoint_failed_signer_provenance_contract
 # reason_code=checkpoint_failed_signer_rotation_freshness_contract
+# reason_code=preflight_budget_exceeded
+# run_mode_budget_status_not_run
+# startup_latency_budget_status_mismatch
+# startup_latency_budget_reason_code_mismatch
 # signer_quorum_shortfall
 # signer_quorum_minimum_not_met
 # quorum_evidence_missing
@@ -1004,8 +1031,15 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # managed_signer_missing_key_source_fail_closed_status=verified
 # managed_signer_invalid_profile_fail_closed_status=verified
 # managed_signer_stale_rotation_fail_closed_status=verified
+# managed_signer_rotation_promotion_stalled_fail_closed_status=verified
+# managed_signer_custody_audit_parity_fail_closed_status=verified
 # managed_signer_reason_code_status=verified
+# managed_signer_rotation_reason_taxonomy_status=verified
+# managed_signer_rehearsal_output_normalization_status=verified
+# managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1
+# managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected
 # execution_scope=local-scheduled
+# ci_local_promotion_budget_boundary_status=verified
 # baseline pass marker: deployment_preflight_passed
 # missing key-source fail-closed markers
 # checkpoint_failed_signer_provenance_contract
@@ -1016,6 +1050,12 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # stale-rotation fail-closed markers
 # checkpoint_failed_signer_rotation_freshness_contract
 # signer_rotation_epoch_stale
+# rotation-promotion stall fail-closed markers
+# signer_rotation_promotion_stalled
+# signer_rotation_rehearsal_drift_detected
+# custody-audit parity fail-closed markers
+# quorum_evidence_custody_sha256_mismatch
+# custody_continuity_bypass_detected
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`

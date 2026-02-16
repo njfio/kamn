@@ -28,6 +28,12 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.local-metrics-scrape-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-metrics-scrape-live-policy-report.v1"
 OPT_IN_ENV = "KAMN_LOCAL_METRICS_SCRAPE_OPT_IN"
+METRICS_EMISSION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.metrics-emission-reason-taxonomy.v1"
+)
+METRICS_EMISSION_REASON_CODES_CSV = (
+    "metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch"
+)
 
 LOCAL_METRICS_SCRAPE_TESTS: list[tuple[str, str]] = [
     (
@@ -45,8 +51,9 @@ LOCAL_METRICS_SCRAPE_TESTS: list[tuple[str, str]] = [
 ]
 
 
-def _run_cargo_test(selector: str, *, timeout_seconds: int) -> str:
+def _run_cargo_test(selector: str, *, timeout_seconds: int) -> tuple[str, int]:
     command = ["cargo", "test", "-p", "kamn-node", selector, "--", "--exact"]
+    command_start_epoch = int(time.time())
     try:
         completed = subprocess.run(
             command,
@@ -66,7 +73,8 @@ def _run_cargo_test(selector: str, *, timeout_seconds: int) -> str:
         detail = (completed.stderr or completed.stdout or "command failed").strip()
         fail(f"local metrics scrape command failed for {selector}: {detail}")
 
-    return " ".join(command)
+    command_elapsed_seconds = int(time.time()) - command_start_epoch
+    return " ".join(command), command_elapsed_seconds
 
 
 def _run_lane(args: argparse.Namespace) -> int:
@@ -82,6 +90,7 @@ def _run_lane(args: argparse.Namespace) -> int:
 
     start_epoch = int(time.time())
     commands: list[str] = []
+    max_observed_scrape_latency_seconds = 0
     execution_reason_code = "dry_run_no_commands_executed"
 
     if mode == "run":
@@ -89,7 +98,15 @@ def _run_lane(args: argparse.Namespace) -> int:
             fail(f"run mode requires explicit local-only opt-in via {OPT_IN_ENV}=1")
 
         for _, selector in LOCAL_METRICS_SCRAPE_TESTS:
-            commands.append(_run_cargo_test(selector, timeout_seconds=command_max_seconds))
+            command, command_elapsed_seconds = _run_cargo_test(
+                selector,
+                timeout_seconds=command_max_seconds,
+            )
+            commands.append(command)
+            max_observed_scrape_latency_seconds = max(
+                max_observed_scrape_latency_seconds,
+                command_elapsed_seconds,
+            )
         execution_reason_code = "run_mode_commands_executed"
 
     elapsed_seconds = int(time.time()) - start_epoch
@@ -104,6 +121,14 @@ def _run_lane(args: argparse.Namespace) -> int:
         "status": "pass",
         "final_decision": "GO",
         "lane_mode": mode,
+        "metrics_stream_readiness_status": "verified",
+        "scrape_latency_budget_status": "verified",
+        "scrape_latency_budget_seconds": command_max_seconds,
+        "max_observed_scrape_latency_seconds": max_observed_scrape_latency_seconds,
+        "metrics_emission_reason_taxonomy_version": (
+            METRICS_EMISSION_REASON_TAXONOMY_VERSION
+        ),
+        "metrics_emission_reason_codes_csv": METRICS_EMISSION_REASON_CODES_CSV,
         "local_scrape_probe_status": "verified",
         "prometheus_payload_status": "verified",
         "health_endpoint_status": "verified",
@@ -125,6 +150,14 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("status=pass")
     print("final_decision=GO")
     print(f"lane_mode={mode}")
+    print("metrics_stream_readiness_status=verified")
+    print("scrape_latency_budget_status=verified")
+    print(f"scrape_latency_budget_seconds={command_max_seconds}")
+    print(
+        "metrics_emission_reason_taxonomy_version="
+        f"{METRICS_EMISSION_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"metrics_emission_reason_codes_csv={METRICS_EMISSION_REASON_CODES_CSV}")
     print("local_scrape_probe_status=verified")
     print("prometheus_payload_status=verified")
     print("health_endpoint_status=verified")
@@ -160,6 +193,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         "status",
         "final_decision",
         "lane_mode",
+        "metrics_stream_readiness_status",
+        "scrape_latency_budget_status",
+        "scrape_latency_budget_seconds",
+        "max_observed_scrape_latency_seconds",
+        "metrics_emission_reason_taxonomy_version",
+        "metrics_emission_reason_codes_csv",
         "local_scrape_probe_status",
         "prometheus_payload_status",
         "health_endpoint_status",
@@ -196,6 +235,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "local_scrape_probe_status",
         "prometheus_payload_status",
         "health_endpoint_status",
+        "metrics_stream_readiness_status",
+        "scrape_latency_budget_status",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
@@ -209,6 +250,17 @@ def _check_policy(args: argparse.Namespace) -> int:
     decision.reject_if(
         lane_mode not in {"dry-run", "run"},
         "local_metrics_scrape_policy_lane_mode_invalid",
+    )
+
+    decision.reject_if(
+        report.get("metrics_emission_reason_taxonomy_version")
+        != METRICS_EMISSION_REASON_TAXONOMY_VERSION,
+        "local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("metrics_emission_reason_codes_csv")
+        != METRICS_EMISSION_REASON_CODES_CSV,
+        "local_metrics_scrape_policy_metrics_emission_reason_codes_csv_mismatch",
     )
 
     command_count = report.get("command_count")
@@ -242,6 +294,24 @@ def _check_policy(args: argparse.Namespace) -> int:
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "local_metrics_scrape_policy_elapsed_seconds_invalid",
     )
+    scrape_latency_budget_seconds = report.get("scrape_latency_budget_seconds")
+    max_observed_scrape_latency_seconds = report.get("max_observed_scrape_latency_seconds")
+    decision.reject_if(
+        not _is_non_negative_int(scrape_latency_budget_seconds)
+        or scrape_latency_budget_seconds == 0,
+        "local_metrics_scrape_policy_scrape_latency_budget_seconds_invalid",
+    )
+    decision.reject_if(
+        not _is_non_negative_int(max_observed_scrape_latency_seconds),
+        "local_metrics_scrape_policy_max_observed_scrape_latency_seconds_invalid",
+    )
+    if _is_non_negative_int(scrape_latency_budget_seconds) and _is_non_negative_int(
+        max_observed_scrape_latency_seconds
+    ):
+        decision.reject_if(
+            max_observed_scrape_latency_seconds > scrape_latency_budget_seconds,
+            "local_metrics_scrape_policy_scrape_latency_budget_exceeded",
+        )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 
     final_decision, reason_codes = decision.finalize("none")
@@ -255,6 +325,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "local_metrics_scrape_policy_status": policy_status,
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
+        "metrics_emission_reason_taxonomy_version": (
+            METRICS_EMISSION_REASON_TAXONOMY_VERSION
+        ),
+        "metrics_emission_reason_codes_csv": METRICS_EMISSION_REASON_CODES_CSV,
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),

@@ -11,11 +11,13 @@ TMP_TIMEOUT_REPORT="$(mktemp)"
 TMP_TIMEOUT_CLASS_DRIFT_REPORT="$(mktemp)"
 TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT="$(mktemp)"
 TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT="$(mktemp)"
+TMP_FINALITY_REASON_MISMATCH_REPORT="$(mktemp)"
+TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT="$(mktemp)"
 TMP_PROVIDER_DRIFT_REPORT="$(mktemp)"
 TMP_SIGNER_ADAPTER_DRIFT_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_FINALITY_REASON_MISMATCH_REPORT" "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
 
 extract_value() {
   local output="$1"
@@ -32,6 +34,9 @@ assert_eq() {
     exit 1
   fi
 }
+
+EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION="kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
+EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV="submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local runtime-commit live evidence policy checker to be executable" >&2
@@ -107,6 +112,44 @@ source["finality_retry_failure_class"] = "timeout"
 pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
+python3 - "$TMP_REPORT" "$TMP_FINALITY_REASON_MISMATCH_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["status"] = "ok"
+source["reason_code"] = "live_runtime_commit_command_passed"
+source["finality_enabled"] = True
+source["finality_evidence_marker_present"] = True
+source["finality_retry_attempts_used"] = 1
+source["finality_retry_exhausted"] = False
+source["finality_retry_failure_class"] = "none"
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 - "$TMP_REPORT" "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["status"] = "ok"
+source["reason_code"] = "live_runtime_commit_and_finality_commands_passed"
+source["finality_enabled"] = False
+source["finality_evidence_marker_present"] = False
+source["finality_retry_attempts_used"] = 0
+source["finality_retry_exhausted"] = False
+source["finality_retry_failure_class"] = "none"
+source["request_finality_evidence_linked"] = False
+source["finality_evidence_artifact_path"] = ""
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
 python3 - "$TMP_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" <<'PY'
 from __future__ import annotations
 
@@ -141,6 +184,21 @@ timeout_checker_output="$(
 )"
 assert_eq "$(extract_value "$timeout_checker_output" "status")" "ok" "expected checker to accept deterministic timeout retry exhaustion mapping"
 assert_eq "$(extract_value "$timeout_checker_output" "failed_checks")" "none" "expected timeout retry exhaustion mapping to have zero policy violations"
+assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_taxonomy_version")" "$EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION" "expected deterministic submit/finality reason taxonomy version"
+assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_codes_csv")" "$EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV" "expected deterministic submit/finality reason code taxonomy ordering"
+assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_codes_value")" "none" "expected deterministic submit/finality reason code value for timeout mapping"
+
+timeout_checker_output_repeat="$(
+  python3 "$CHECKER" \
+    --report-file "$TMP_TIMEOUT_REPORT" \
+    --expected-final-decision NO-GO \
+    --ci-fast-gate PASS \
+    --require-reason-code live_finality_retry_exhausted_timeout \
+    --output-json "$TMP_POLICY_REPORT"
+)"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_taxonomy_version")" "$EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION" "expected stable submit/finality reason taxonomy version across repeated runs"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_codes_csv")" "$EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV" "expected stable submit/finality reason taxonomy ordering across repeated runs"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_codes_value")" "none" "expected stable submit/finality reason classification value across repeated runs"
 
 python3 - "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" <<'PY'
 from __future__ import annotations
@@ -229,6 +287,50 @@ if [ "$timeout_finality_flag_drift_code" -eq 0 ]; then
 fi
 if ! grep -q "finality_retry_timeout_reason_without_finality" "$TMP_ERR"; then
   echo "expected timeout retry reason-without-finality drift reason from checker output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_FINALITY_REASON_MISMATCH_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_ERR" 2>&1
+finality_reason_mismatch_code=$?
+set -e
+
+if [ "$finality_reason_mismatch_code" -eq 0 ]; then
+  echo "expected checker to fail closed when finality-enabled run uses submit-only success reason code" >&2
+  exit 1
+fi
+if ! grep -q "submit_finality_reason_mismatch_for_finality_enabled_run" "$TMP_ERR"; then
+  echo "expected finality-enabled reason mismatch marker from checker output" >&2
+  exit 1
+fi
+
+if ! grep -q "submit_finality_reason_codes_value=submit_finality_reason_mismatch_for_finality_enabled_run" "$TMP_ERR"; then
+  echo "expected normalized finality-enabled reason taxonomy value from checker output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_ERR" 2>&1
+submit_only_reason_mismatch_code=$?
+set -e
+
+if [ "$submit_only_reason_mismatch_code" -eq 0 ]; then
+  echo "expected checker to fail closed when submit-only run uses finality-enabled success reason code" >&2
+  exit 1
+fi
+if ! grep -q "submit_finality_reason_mismatch_for_submit_only_run" "$TMP_ERR"; then
+  echo "expected submit-only reason mismatch marker from checker output" >&2
+  exit 1
+fi
+
+if ! grep -q "submit_finality_reason_codes_value=submit_finality_reason_mismatch_for_submit_only_run" "$TMP_ERR"; then
+  echo "expected normalized submit-only reason taxonomy value from checker output" >&2
   exit 1
 fi
 

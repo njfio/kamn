@@ -12,6 +12,16 @@ import sys
 import tempfile
 import time
 
+CI_LOCAL_PROMOTION_MAX_SECONDS = 240
+EXPECTED_REASON_TAXONOMY_VERSION = (
+    "kamn.governance.lifecycle-rollback-reason-taxonomy.v1"
+)
+EXPECTED_REASON_TAXONOMY_CODES_CSV = (
+    "docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,"
+    "rollback_contract_missing,rollback_gate_progress_stalled,"
+    "runbook_marker_parity_bypass_detected,runtime_budget_exceeded"
+)
+
 
 def usage() -> None:
     """Print usage text."""
@@ -93,6 +103,11 @@ def main(argv: list[str]) -> int:
     if not max_runtime_raw.isdigit():
         return fail("KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS must be an integer >= 0")
     max_runtime = int(max_runtime_raw)
+    if max_runtime > CI_LOCAL_PROMOTION_MAX_SECONDS:
+        return fail(
+            "ci-local promotion budget boundary exceeded: "
+            f"{max_runtime}s > {CI_LOCAL_PROMOTION_MAX_SECONDS}s"
+        )
     start_epoch = int(time.time())
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -110,6 +125,10 @@ def main(argv: list[str]) -> int:
             return fail("expected governance lifecycle/rollback contract GO path to produce GO decision")
         if "reason_key=governance_lifecycle_rollback_reason_codes:GO:v1" not in go_output:
             return fail("expected governance lifecycle/rollback GO path reason_key marker")
+        if f"reason_taxonomy_version={EXPECTED_REASON_TAXONOMY_VERSION}" not in go_output:
+            return fail("expected governance lifecycle/rollback GO path reason taxonomy marker")
+        if f"reason_taxonomy_codes_csv={EXPECTED_REASON_TAXONOMY_CODES_CSV}" not in go_output:
+            return fail("expected governance lifecycle/rollback GO path reason taxonomy codes marker")
 
         go_policy_code, go_policy_output = run_capture(
             ["bash", str(policy_checker), "--report-file", str(go_report)],
@@ -168,6 +187,9 @@ def main(argv: list[str]) -> int:
         print(f"output_file={output_file}")
         print(f"final_decision={extract_value(go_output, 'final_decision')}")
         print(f"reason_key={extract_value(go_output, 'reason_key')}")
+        print("ci_local_promotion_budget_boundary_status=verified")
+        print(f"reason_taxonomy_version={EXPECTED_REASON_TAXONOMY_VERSION}")
+        print(f"reason_taxonomy_codes_csv={EXPECTED_REASON_TAXONOMY_CODES_CSV}")
         print("governance lifecycle/rollback contract lane tests passed.")
         return 0
 

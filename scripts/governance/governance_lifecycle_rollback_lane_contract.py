@@ -21,6 +21,17 @@ GOVERNANCE_DOC = ROOT_DIR / "docs/foundation/governance-proposal-vote-execution.
 ROLLBACK_DOC = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
 LIFECYCLE_TEST = ROOT_DIR / "crates/kamn-core/tests/governance_workflow.rs"
 ROLLBACK_TEST = ROOT_DIR / "crates/kamn-core/tests/upgrade_orchestration.rs"
+REASON_TAXONOMY_VERSION = "kamn.governance.lifecycle-rollback-reason-taxonomy.v1"
+REASON_TAXONOMY_CODES = (
+    "docs_contract_missing",
+    "governance_lifecycle_lane_failed",
+    "lifecycle_contract_missing",
+    "rollback_contract_missing",
+    "rollback_gate_progress_stalled",
+    "runbook_marker_parity_bypass_detected",
+    "runtime_budget_exceeded",
+)
+REASON_TAXONOMY_CODES_CSV = ",".join(REASON_TAXONOMY_CODES)
 
 
 def usage() -> None:
@@ -160,9 +171,13 @@ def main(argv: list[str]) -> int:
         "check_governance_lifecycle_rollback_policy.sh",
         "run_governance_lifecycle_rollback_contract_lane.sh",
         "kamn.governance.lifecycle-rollback-report.v1",
+        "kamn.governance.lifecycle-rollback-reason-taxonomy.v1",
         "governance_lifecycle_rollback_reason_codes:GO:v1",
         "governance_lifecycle_rollback_reason_codes:NO-GO:v1",
         "illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).",
+        "rollback gate drift and runbook marker parity bypass acceptance must fail closed (`Regression: #4576`).",
+        "rollback_gate_progress_stalled",
+        "runbook_marker_parity_bypass_detected",
     )
 
     governance_text = GOVERNANCE_DOC.read_text(encoding="utf-8")
@@ -181,12 +196,14 @@ def main(argv: list[str]) -> int:
     decision_reasons: list[str] = []
     if lane_failed:
         decision_reasons.append("governance_lifecycle_lane_failed")
+        decision_reasons.append("rollback_gate_progress_stalled")
     if not lifecycle_contract_present:
         decision_reasons.append("lifecycle_contract_missing")
     if not rollback_contract_present:
         decision_reasons.append("rollback_contract_missing")
     if not docs_contract_present:
         decision_reasons.append("docs_contract_missing")
+        decision_reasons.append("runbook_marker_parity_bypass_detected")
     if not runtime_budget_ok:
         decision_reasons.append("runtime_budget_exceeded")
 
@@ -206,6 +223,8 @@ def main(argv: list[str]) -> int:
             "runtime_budget_ok": runtime_budget_ok,
         },
         "commands": commands,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_taxonomy_codes_csv": REASON_TAXONOMY_CODES_CSV,
         "decision_reasons": decision_reasons,
         "final_decision": final_decision,
         "reason_key": reason_key,
@@ -216,6 +235,8 @@ def main(argv: list[str]) -> int:
     print(f"output_file={output_file}")
     print(f"final_decision={final_decision}")
     print(f"reason_key={reason_key}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_taxonomy_codes_csv={REASON_TAXONOMY_CODES_CSV}")
     print(f"runtime_seconds={runtime_seconds}")
     print(f"max_runtime_seconds={max_runtime_seconds}")
     return 0

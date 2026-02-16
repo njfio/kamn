@@ -34,6 +34,15 @@ SECRET_REPORT_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 SECRET_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
 EXPECTED_FALLBACK_REASON_CODE = "fallback_signer_secret_present_violation"
 OPT_IN_ENV = "KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_OPT_IN"
+SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.local-signal-shutdown-reason-taxonomy.v1"
+)
+SIGNAL_SHUTDOWN_REASON_CODES_CSV = (
+    "local_signal_shutdown_path_drift_detected,"
+    "local_graceful_drain_bypass_detected,"
+    "ci_local_signal_shutdown_budget_boundary_exceeded"
+)
+CI_LOCAL_SIGNAL_SHUTDOWN_BUDGET_MAX_SECONDS = 240
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -85,6 +94,11 @@ def _run_lane(args: argparse.Namespace) -> int:
         "KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_MAX_SECONDS",
         args.max_seconds,
     )
+    if max_seconds > CI_LOCAL_SIGNAL_SHUTDOWN_BUDGET_MAX_SECONDS:
+        fail(
+            "max-seconds must be <= "
+            f"{CI_LOCAL_SIGNAL_SHUTDOWN_BUDGET_MAX_SECONDS} for ci-local signal shutdown lane"
+        )
     signal_max_seconds = require_positive_int(
         "KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_SIGNAL_MAX_SECONDS",
         args.signal_max_seconds,
@@ -161,6 +175,21 @@ def _run_lane(args: argparse.Namespace) -> int:
         signal_report = load_json(signal_report_file)
         if signal_report.get("schema_version") != SIGNAL_REPORT_SCHEMA:
             fail("signal validation report schema mismatch")
+        completion_reason_marker = signal_report.get("completion_reason_marker")
+        if not isinstance(completion_reason_marker, str) or not (
+            completion_reason_marker.startswith("graceful-shutdown:")
+            or completion_reason_marker.startswith("graceful-shutdown-timeout:")
+        ):
+            fail(
+                "signal validation report completion reason must be graceful-shutdown:* or "
+                f"graceful-shutdown-timeout:* (observed: {completion_reason_marker!r})"
+            )
+        failure_reason_marker = signal_report.get("failure_reason_marker")
+        if failure_reason_marker != "invalid-runtime-mode":
+            fail(
+                "signal validation report failure reason marker mismatch: "
+                f"expected invalid-runtime-mode, observed {failure_reason_marker!r}"
+            )
 
         secret_lane_command = [
             "bash",
@@ -266,13 +295,19 @@ def _run_lane(args: argparse.Namespace) -> int:
             "final_decision": "GO",
             "lane_mode": mode,
             "signal_shutdown_status": "verified",
+            "signal_graceful_drain_status": "verified",
+            "signal_shutdown_completion_reason_marker": completion_reason_marker,
+            "signal_shutdown_failure_reason_marker": failure_reason_marker,
             "signal_failure_case_status": "verified",
+            "shutdown_reason_taxonomy_version": SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION,
+            "shutdown_reason_codes_csv": SIGNAL_SHUTDOWN_REASON_CODES_CSV,
             "secret_hygiene_status": "verified",
             "secret_hygiene_policy_status": "verified",
             "secret_hygiene_reason_code": observed_secret_reason_code,
             "secret_hygiene_expected_reason_code": expected_secret_reason_code,
             "fallback_secret_guard_status": "verified",
             "fallback_secret_fail_closed_reason_code": EXPECTED_FALLBACK_REASON_CODE,
+            "ci_local_signal_budget_boundary_status": "verified",
             "ci_fast_gate_exclusion_status": "verified",
             "performance_budget_status": "verified",
             "command_count": len(commands),
@@ -291,11 +326,15 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("final_decision=GO")
     print(f"lane_mode={mode}")
     print("signal_shutdown_status=verified")
+    print("signal_graceful_drain_status=verified")
     print("signal_failure_case_status=verified")
+    print(f"shutdown_reason_taxonomy_version={SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION}")
+    print(f"shutdown_reason_codes_csv={SIGNAL_SHUTDOWN_REASON_CODES_CSV}")
     print("secret_hygiene_status=verified")
     print("secret_hygiene_policy_status=verified")
     print("fallback_secret_guard_status=verified")
     print(f"fallback_secret_fail_closed_reason_code={EXPECTED_FALLBACK_REASON_CODE}")
+    print("ci_local_signal_budget_boundary_status=verified")
     print("ci_fast_gate_exclusion_status=verified")
     print("performance_budget_status=verified")
     if output_json is not None:
@@ -322,17 +361,24 @@ def _check_policy(args: argparse.Namespace) -> int:
         "final_decision",
         "lane_mode",
         "signal_shutdown_status",
+        "signal_graceful_drain_status",
+        "signal_shutdown_completion_reason_marker",
+        "signal_shutdown_failure_reason_marker",
         "signal_failure_case_status",
+        "shutdown_reason_taxonomy_version",
+        "shutdown_reason_codes_csv",
         "secret_hygiene_status",
         "secret_hygiene_policy_status",
         "secret_hygiene_reason_code",
         "secret_hygiene_expected_reason_code",
         "fallback_secret_guard_status",
         "fallback_secret_fail_closed_reason_code",
+        "ci_local_signal_budget_boundary_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
         "command_count",
         "elapsed_seconds",
+        "max_seconds",
     ]
     missing_fields = [field_name for field_name in required_fields if field_name not in report]
     if missing_fields:
@@ -357,11 +403,11 @@ def _check_policy(args: argparse.Namespace) -> int:
     )
 
     for field_name in (
-        "signal_shutdown_status",
         "signal_failure_case_status",
         "secret_hygiene_status",
         "secret_hygiene_policy_status",
         "fallback_secret_guard_status",
+        "ci_local_signal_budget_boundary_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
     ):
@@ -369,6 +415,40 @@ def _check_policy(args: argparse.Namespace) -> int:
             report.get(field_name) != "verified",
             f"local_signal_secret_hygiene_policy_marker_missing:{field_name}",
         )
+    decision.reject_if(
+        report.get("signal_shutdown_status") != "verified",
+        "local_signal_shutdown_path_drift_detected",
+    )
+    decision.reject_if(
+        report.get("signal_graceful_drain_status") != "verified",
+        "local_graceful_drain_bypass_detected",
+    )
+    completion_reason_marker = report.get("signal_shutdown_completion_reason_marker")
+    decision.reject_if(
+        not isinstance(completion_reason_marker, str) or not completion_reason_marker,
+        "local_signal_secret_hygiene_policy_signal_completion_reason_marker_invalid",
+    )
+    if isinstance(completion_reason_marker, str):
+        decision.reject_if(
+            not (
+                completion_reason_marker.startswith("graceful-shutdown:")
+                or completion_reason_marker.startswith("graceful-shutdown-timeout:")
+            ),
+            "local_graceful_drain_bypass_detected",
+        )
+    decision.reject_if(
+        report.get("signal_shutdown_failure_reason_marker") != "invalid-runtime-mode",
+        "local_signal_secret_hygiene_policy_signal_failure_reason_marker_mismatch",
+    )
+    decision.reject_if(
+        report.get("shutdown_reason_taxonomy_version")
+        != SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION,
+        "local_signal_secret_hygiene_policy_shutdown_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("shutdown_reason_codes_csv") != SIGNAL_SHUTDOWN_REASON_CODES_CSV,
+        "local_signal_secret_hygiene_policy_shutdown_reason_codes_csv_mismatch",
+    )
 
     lane_mode = report.get("lane_mode")
     decision.reject_if(
@@ -399,6 +479,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "local_signal_secret_hygiene_policy_elapsed_seconds_invalid",
     )
+    report_max_seconds = report.get("max_seconds")
+    decision.reject_if(
+        not _is_non_negative_int(report_max_seconds) or report_max_seconds <= 0,
+        "local_signal_secret_hygiene_policy_max_seconds_invalid",
+    )
+    if isinstance(report_max_seconds, int):
+        decision.reject_if(
+            report_max_seconds > CI_LOCAL_SIGNAL_SHUTDOWN_BUDGET_MAX_SECONDS,
+            "ci_local_signal_shutdown_budget_boundary_exceeded",
+        )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 
     final_decision, reason_codes = decision.finalize("none")
@@ -413,6 +503,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
+        "reason_taxonomy_version": SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": SIGNAL_SHUTDOWN_REASON_CODES_CSV,
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -427,6 +519,9 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"local_signal_secret_hygiene_policy_status={policy_status}")
+    print(f"reason_taxonomy_version={SIGNAL_SHUTDOWN_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={SIGNAL_SHUTDOWN_REASON_CODES_CSV}")
+    print(f"reason_codes={reason_codes_csv}")
     print(f"failed_checks={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")

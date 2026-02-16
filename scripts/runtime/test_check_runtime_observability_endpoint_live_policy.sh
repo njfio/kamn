@@ -41,6 +41,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^runtime_observability_policy_sta
   echo "expected runtime observability endpoint live policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
+  echo "expected runtime observability endpoint live policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
+  echo "expected runtime observability endpoint live policy checker reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -58,6 +66,10 @@ if payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime observability endpoint reason taxonomy marker")
+if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic runtime observability endpoint reason codes taxonomy marker")
 if payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
     raise SystemExit("expected deterministic fail-closed reason-code taxonomy")
 PY
@@ -158,6 +170,102 @@ if [ "$tampered_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'runtime_observability_policy_fail_closed_reason_codes_csv_mismatch'; then
   echo "expected deterministic fail-closed taxonomy mismatch reason code" >&2
+  exit 1
+fi
+
+tampered_readiness_report="$TMP_DIR/runtime-observability-endpoint-live-summary.readiness.tampered.json"
+cp "$summary_report" "$tampered_readiness_report"
+python3 - "$tampered_readiness_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["endpoint_readiness_status"] = "stalled"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_readiness_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_readiness_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.readiness.tampered.json" 2>&1
+)"
+tampered_readiness_code=$?
+set -e
+if [ "$tampered_readiness_code" -eq 0 ]; then
+  echo "expected readiness drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_readiness_output" | grep -q 'runtime_observability_endpoint_readiness_progress_stalled'; then
+  echo "expected deterministic runtime observability endpoint readiness drift reason code" >&2
+  exit 1
+fi
+
+tampered_stream_parity_report="$TMP_DIR/runtime-observability-endpoint-live-summary.stream-parity.tampered.json"
+cp "$summary_report" "$tampered_stream_parity_report"
+python3 - "$tampered_stream_parity_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["stream_parity_status"] = "bypass-accepted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_stream_parity_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_stream_parity_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.stream-parity.tampered.json" 2>&1
+)"
+tampered_stream_parity_code=$?
+set -e
+if [ "$tampered_stream_parity_code" -eq 0 ]; then
+  echo "expected stream parity drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_stream_parity_output" | grep -q 'runtime_observability_stream_parity_bypass_detected'; then
+  echo "expected deterministic runtime observability stream parity drift reason code" >&2
+  exit 1
+fi
+
+tampered_budget_report="$TMP_DIR/runtime-observability-endpoint-live-summary.ci-budget.tampered.json"
+cp "$summary_report" "$tampered_budget_report"
+python3 - "$tampered_budget_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["max_seconds"] = 241
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_budget_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_budget_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.ci-budget.tampered.json" 2>&1
+)"
+tampered_budget_code=$?
+set -e
+if [ "$tampered_budget_code" -eq 0 ]; then
+  echo "expected ci-local budget boundary tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_budget_output" | grep -q 'ci_local_observability_endpoint_budget_boundary_exceeded'; then
+  echo "expected deterministic ci-local budget boundary reason code" >&2
   exit 1
 fi
 

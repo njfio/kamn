@@ -14,7 +14,9 @@ TMP_CUSTODY="$(mktemp)"
 TMP_PROVENANCE="$(mktemp)"
 TMP_QUORUM="$(mktemp)"
 TMP_QUORUM_SINGLE="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM" "$TMP_QUORUM_SINGLE"' EXIT
+TMP_FAKE_BIN="$(mktemp -d)"
+TMP_FAKE_DATE_STATE="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM" "$TMP_QUORUM_SINGLE" "$TMP_FAKE_DATE_STATE"; rm -rf "$TMP_FAKE_BIN"' EXIT
 
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
 printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" >"$TMP_PROVENANCE"
@@ -73,6 +75,30 @@ assert_eq() {
     exit 1
   fi
 }
+
+cat >"$TMP_FAKE_BIN/date" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_file="${KAMN_TEST_FAKE_DATE_STATE:-}"
+if [ -z "$state_file" ]; then
+  echo "KAMN_TEST_FAKE_DATE_STATE must be set for fake date wrapper" >&2
+  exit 1
+fi
+
+if [ "${1:-}" = "+%s" ]; then
+  if [ ! -s "$state_file" ]; then
+    printf '%s\n' "1000" >"$state_file"
+    printf '%s\n' "1000"
+  else
+    printf '%s\n' "1003"
+  fi
+  exit 0
+fi
+
+exec /bin/date "$@"
+EOF
+chmod +x "$TMP_FAKE_BIN/date"
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2
@@ -516,6 +542,53 @@ if ! grep -q "signer rotation metadata exceeded freshness threshold" "$TMP_ERR";
   echo "expected deterministic signer rotation stale message from deployment preflight lane" >&2
   exit 1
 fi
+
+rm -f "$TMP_FAKE_DATE_STATE"
+set +e
+PATH="$TMP_FAKE_BIN:$PATH" \
+KAMN_TEST_FAKE_DATE_STATE="$TMP_FAKE_DATE_STATE" \
+bash "$RUNNER" \
+  --mode run \
+  --max-seconds 1 \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+budget_normalization_exit_code=$?
+set -e
+
+if [ "$budget_normalization_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when startup-latency budget is exceeded" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=preflight_budget_exceeded" "$TMP_ERR"; then
+  echo "expected deterministic startup-latency budget reason code from deployment preflight lane" >&2
+  exit 1
+fi
+
+if ! grep -q "budget_status=exceeded_budget" "$TMP_ERR"; then
+  echo "expected deterministic startup-latency budget status marker from deployment preflight lane" >&2
+  exit 1
+fi
+
+if grep -q "reason_code=checkpoint_failed_signer_secret_contract" "$TMP_ERR"; then
+  echo "expected startup-latency budget reason code to normalize checkpoint reason output when budget is exceeded" >&2
+  exit 1
+fi
+
+python3 - "$TMP_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if summary.get("status") != "fail":
+    raise SystemExit("expected deployment preflight run summary status fail when startup-latency budget is exceeded")
+if summary.get("reason_code") != "preflight_budget_exceeded":
+    raise SystemExit("expected deployment preflight run summary reason code preflight_budget_exceeded when startup-latency budget is exceeded")
+if summary.get("budget_status") != "exceeded_budget":
+    raise SystemExit("expected deployment preflight run summary budget_status exceeded_budget when startup-latency budget is exceeded")
+PY
 
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
 bash "$RUNNER" \

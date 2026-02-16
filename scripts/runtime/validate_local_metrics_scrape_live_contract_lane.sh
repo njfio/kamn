@@ -98,6 +98,14 @@ if ! printf '%s\n' "$validation_output" | grep -q "^lane_mode=$mode$"; then
   echo "expected local metrics scrape validation lane mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^metrics_stream_readiness_status=verified$'; then
+  echo "expected local metrics scrape validation metrics readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^scrape_latency_budget_status=verified$'; then
+  echo "expected local metrics scrape validation scrape latency budget marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^local_scrape_probe_status=verified$'; then
   echo "expected local metrics scrape validation local-scrape marker" >&2
   exit 1
@@ -112,6 +120,14 @@ if ! printf '%s\n' "$validation_output" | grep -q '^health_endpoint_status=verif
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
   echo "expected local metrics scrape validation fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^metrics_emission_reason_taxonomy_version=kamn.runtime.metrics-emission-reason-taxonomy.v1$'; then
+  echo "expected local metrics scrape validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^metrics_emission_reason_codes_csv=metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch$'; then
+  echo "expected local metrics scrape validation reason taxonomy csv marker" >&2
   exit 1
 fi
 
@@ -229,6 +245,16 @@ lane_report = {
     "status": "pass",
     "final_decision": "GO",
     "lane_mode": mode,
+    "metrics_stream_readiness_status": summary_report.get(
+        "metrics_stream_readiness_status"
+    ),
+    "scrape_latency_budget_status": summary_report.get("scrape_latency_budget_status"),
+    "metrics_emission_reason_taxonomy_version": summary_report.get(
+        "metrics_emission_reason_taxonomy_version"
+    ),
+    "metrics_emission_reason_codes_csv": summary_report.get(
+        "metrics_emission_reason_codes_csv"
+    ),
     "local_metrics_scrape_contract_status": "verified",
     "local_metrics_scrape_policy_status": policy_report.get(
         "local_metrics_scrape_policy_status"
@@ -253,6 +279,10 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "lane_mode=$mode"
+echo "metrics_stream_readiness_status=verified"
+echo "scrape_latency_budget_status=verified"
+echo "metrics_emission_reason_taxonomy_version=kamn.runtime.metrics-emission-reason-taxonomy.v1"
+echo "metrics_emission_reason_codes_csv=metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch"
 echo "local_metrics_scrape_contract_status=verified"
 echo "local_metrics_scrape_policy_status=verified"
 echo "docs_contract_status=verified"

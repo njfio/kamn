@@ -29,6 +29,25 @@ RUN_LANE_SCHEMA = "kamn.runtime.live-transport-fault-matrix-report.v1"
 POLICY_SCHEMA = "kamn.runtime.live-transport-fault-matrix-policy-report.v1"
 RUNTIME_TRANSPORT_MODE = "libp2p_live_fault_matrix"
 REASON_TAXONOMY_VERSION = "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
+POLICY_REASON_CODES_CSV = ",".join(
+    [
+        "ci_fast_gate_failed",
+        "live_transport_fault_matrix_policy_command_count_invalid",
+        "live_transport_fault_matrix_policy_command_count_mismatch",
+        "live_transport_fault_matrix_policy_elapsed_seconds_invalid",
+        "live_transport_fault_matrix_policy_execution_reason_code_mismatch",
+        "live_transport_fault_matrix_policy_final_decision_invalid",
+        "live_transport_fault_matrix_policy_final_decision_mismatch",
+        "live_transport_fault_matrix_policy_lane_mode_invalid",
+        "live_transport_fault_matrix_policy_marker_missing",
+        "live_transport_fault_matrix_policy_reason_codes_classification_mismatch",
+        "live_transport_fault_matrix_policy_reason_codes_invalid",
+        "live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch",
+        "live_transport_fault_matrix_policy_runtime_transport_mode_mismatch",
+        "live_transport_fault_matrix_policy_schema_mismatch",
+        "live_transport_fault_matrix_policy_status_invalid",
+    ]
+)
 OPT_IN_ENV = "KAMN_LIVE_TRANSPORT_FAULT_MATRIX_OPT_IN"
 
 FAULT_MATRIX_TESTS: list[tuple[str, list[str]]] = [
@@ -169,6 +188,7 @@ def _run_lane(args: argparse.Namespace) -> int:
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
         "reason_taxonomy_status": "verified",
         "reason_codes": ["none"],
+        "reason_codes_value": "none",
         "performance_budget_status": "verified",
         "execution_reason_code": execution_reason_code,
         "command_count": len(commands),
@@ -196,8 +216,10 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("publish_drop_recovery_status=verified")
     print("replay_recovery_status=verified")
     print("peer_churn_recovery_status=verified")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
     print("reason_taxonomy_status=verified")
     print("reason_codes=none")
+    print("reason_codes_value=none")
     print("performance_budget_status=verified")
     print(f"execution_reason_code={execution_reason_code}")
     print(f"command_count={len(commands)}")
@@ -234,8 +256,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "publish_drop_recovery_status",
         "replay_recovery_status",
         "peer_churn_recovery_status",
+        "reason_taxonomy_version",
         "reason_taxonomy_status",
         "reason_codes",
+        "reason_codes_value",
         "execution_reason_code",
         "command_count",
         "elapsed_seconds",
@@ -280,14 +304,29 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("runtime_transport_mode") != RUNTIME_TRANSPORT_MODE,
         "live_transport_fault_matrix_policy_runtime_transport_mode_mismatch",
     )
-
-    reason_codes = report.get("reason_codes")
     decision.reject_if(
-        not isinstance(reason_codes, list)
-        or not reason_codes
-        or any(not isinstance(code, str) or not code for code in reason_codes),
+        report.get("reason_taxonomy_version") != REASON_TAXONOMY_VERSION,
+        "live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch",
+    )
+
+    observed_reason_codes = report.get("reason_codes")
+    decision.reject_if(
+        not isinstance(observed_reason_codes, list)
+        or not observed_reason_codes
+        or any(not isinstance(code, str) or not code for code in observed_reason_codes),
         "live_transport_fault_matrix_policy_reason_codes_invalid",
     )
+    if (
+        isinstance(observed_reason_codes, list)
+        and observed_reason_codes
+        and all(isinstance(code, str) and code for code in observed_reason_codes)
+    ):
+        expected_reason_codes_value = ",".join(observed_reason_codes)
+        decision.reject_if(
+            observed_reason_codes != ["none"]
+            or report.get("reason_codes_value") != expected_reason_codes_value,
+            "live_transport_fault_matrix_policy_reason_codes_classification_mismatch",
+        )
 
     lane_mode = report.get("lane_mode")
     decision.reject_if(
@@ -328,7 +367,7 @@ def _check_policy(args: argparse.Namespace) -> int:
     )
     decision.reject_if(
         ci_fast_gate != "PASS",
-        "live_transport_fault_matrix_policy_ci_fast_gate_failed",
+        "ci_fast_gate_failed",
     )
 
     final_decision, reason_codes = decision.finalize("none")
@@ -340,9 +379,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         "status": status,
         "final_decision": final_decision,
         "live_transport_fault_matrix_policy_status": policy_status,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": POLICY_REASON_CODES_CSV,
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
+        "reason_codes_value": ",".join(reason_codes),
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -357,7 +399,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"live_transport_fault_matrix_policy_status={policy_status}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={POLICY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 

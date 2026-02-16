@@ -41,8 +41,13 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Updated observability documentation contracts in `docs/foundation/observability-slo-dashboards.md`.
 - Post-roadmap hardening wave 1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_structured_logging_live.sh` and `scripts/runtime/test_validate_structured_logging_live.sh` (Task #3035, Subtask #3036).
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `structured_logging_contract_status=verified`, `correlation_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `structured_logging_contract_status=verified`, `correlation_contract_status=verified`, `correlation_id_parity_status=verified`, `trace_classification_contract_status=verified`, `log_classification_gate_status=verified`, `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`, `correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1`, `correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for invalid log config drill: `fail_closed_reason_code=invalid_log_config_level`.
+- Post-roadmap hardening wave 6 structured logging contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_structured_logging_live_contract_lane.sh` and `scripts/runtime/test_validate_structured_logging_live_contract_lane.sh` (Task #4641, Subtasks #4645 and #4646).
+  - Policy checker: `scripts/runtime/check_structured_logging_live_policy.sh` and `scripts/runtime/test_check_structured_logging_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `structured_logging_policy_status=verified`, `structured_logging_contract_lane_status=verified`, `correlation_id_parity_status=verified`, `trace_classification_contract_status=verified`, `log_classification_gate_status=verified`, `reason_taxonomy_version=kamn.runtime.structured-logging-live-fail-closed-reason-taxonomy.v1`, `correlation_error_reason_taxonomy_version=kamn.runtime.correlation-error-reason-taxonomy.v1`, `correlation_error_reason_codes_csv=correlation_id_missing,correlation_id_mismatch,trace_classification_unmapped`, `docs_contract_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for policy tamper drill behavior: `fail_closed_reason_code=structured_logging_policy_marker_missing:structured_logging_contract_status`.
 - Post-roadmap hardening wave 1 nonce-retry live validation delivered:
   - Runtime lane: `scripts/runtime/validate_nonce_retry_live.sh` and `scripts/runtime/test_validate_nonce_retry_live.sh` (Task #3042, Subtask #3043).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `nonce_retry_contract_status=verified`, `nonce_malformed_fail_closed_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
@@ -105,7 +110,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Contract lane: `scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh` and `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh` (Subtask #3067).
   - Contract report schema: `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`.
   - Baseline startup pass marker: `deployment_preflight_passed`.
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `execution_scope=local-scheduled`, `performance_budget_status=verified`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`, `managed_signer_custody_audit_parity_fail_closed_status=verified`, `managed_signer_rotation_reason_taxonomy_status=verified`, `managed_signer_rehearsal_output_normalization_status=verified`, `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`, `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`, `execution_scope=local-scheduled`, `ci_local_promotion_budget_boundary_status=verified`, `performance_budget_status=verified`.
   - Signer key-source profile matrix validation delivered (Task #3108, Subtask #3109):
     - matrix markers: `signer_key_source_profile_matrix_status=verified`, `signer_key_source_production_reject_status=verified`, `signer_key_source_local_override_allow_status=verified`, `signer_fallback_private_key_reject_status=verified`.
     - production strict env-local fail-closed reason code: `production_signer_key_source_env_local_forbidden`.
@@ -115,6 +120,8 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
     - invalid signer profile: `checkpoint_failed_signer_profile_contract` + `signer_profile_mismatch`
     - stale signer rotation metadata: `checkpoint_failed_signer_rotation_freshness_contract` + `signer_rotation_epoch_stale`
+    - rotation promotion stalled: `deployment_preflight_passed` + `signer_rotation_promotion_stalled` + `signer_rotation_rehearsal_drift_detected`
+    - custody-audit parity drift: `deployment_preflight_passed` + `quorum_evidence_custody_sha256_mismatch` + `custody_continuity_bypass_detected`
 - Post-roadmap hardening wave 4 local-live managed-signer runtime+finality validation delivered (Story #3088):
   - Local-live composition lane delivered and validated (Task #3102, Task #3104):
     - `scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
@@ -194,8 +201,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 2.3 initial slice delivered: realtime websocket event route with deterministic upgrade/frame contract and fail-closed upgrade/auth/replay guards (Task #2916, Subtask #2917).
 - Phase 2.3 live validation delivered:
-  - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh` and `scripts/runtime/test_validate_service_api_websocket_live.sh` (Task #2918, Subtask #2919).
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `fail_closed_status=verified`, `probe_status=verified`.
+  - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh`, `scripts/runtime/validate_service_api_websocket_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_websocket_live.sh`, `scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_websocket_live_policy.sh` (Task #2918, Subtask #2919).
+  - Policy checker: `scripts/runtime/check_service_api_websocket_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `websocket_session_lifecycle_status=verified`, `websocket_heartbeat_timeout_status=verified`, `websocket_idle_timeout_contract_status=verified`, `service_api_websocket_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 2.4 axum ingress contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_axum_ingress_live.sh`, `scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh` (Task #3308).
@@ -251,8 +259,8 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Phase 2.11 local metrics scrape contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_local_metrics_scrape_live.sh`, `scripts/runtime/validate_local_metrics_scrape_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh`, `scripts/runtime/test_check_local_metrics_scrape_live_policy.sh` (Task #3271).
   - Policy checker: `scripts/runtime/check_local_metrics_scrape_live_policy.sh`.
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `local_scrape_probe_status=verified`, `prometheus_payload_status=verified`, `health_endpoint_status=verified`, `local_metrics_scrape_policy_status=verified`, `performance_budget_status=verified`.
-  - Fail-closed validation confirmed for tamper and local scrape guard drills: `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `metrics_stream_readiness_status=verified`, `scrape_latency_budget_status=verified`, `metrics_emission_reason_taxonomy_version=kamn.runtime.metrics-emission-reason-taxonomy.v1`, `metrics_emission_reason_codes_csv=metrics_stream_not_ready,metrics_scrape_latency_exceeded,metrics_payload_schema_mismatch`, `local_scrape_probe_status=verified`, `prometheus_payload_status=verified`, `health_endpoint_status=verified`, `local_metrics_scrape_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and local scrape guard drills: `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`, `local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status`, `local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch`.
 - Phase 2.12 local observability scrape contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_local_observability_scrape_live.sh`, `scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh`, `scripts/runtime/test_check_local_observability_scrape_live_policy.sh` (Task #3335, Subtask #3336).
   - Policy checker: `scripts/runtime/check_local_observability_scrape_live_policy.sh`.

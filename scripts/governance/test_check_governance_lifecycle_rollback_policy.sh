@@ -35,6 +35,14 @@ if [ "$(extract_value "$go_policy_output" "final_decision")" != "GO" ]; then
   echo "expected governance lifecycle/rollback GO policy check final_decision=GO" >&2
   exit 1
 fi
+if [ "$(extract_value "$go_policy_output" "reason_taxonomy_version")" != "kamn.governance.lifecycle-rollback-reason-taxonomy.v1" ]; then
+  echo "expected governance lifecycle/rollback GO policy check reason taxonomy version marker" >&2
+  exit 1
+fi
+if [ "$(extract_value "$go_policy_output" "reason_taxonomy_codes_csv")" != "docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded" ]; then
+  echo "expected governance lifecycle/rollback GO policy check reason taxonomy codes marker" >&2
+  exit 1
+fi
 
 no_go_report="$TMP_DIR/governance-lifecycle-rollback-no-go.json"
 KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS=true \
@@ -44,6 +52,25 @@ KAMN_GOVERNANCE_LIFECYCLE_FORCE_DOCS_CONTRACT_MISSING=true \
 no_go_policy_output="$(bash "$POLICY_CHECKER" --report-file "$no_go_report")"
 if [ "$(extract_value "$no_go_policy_output" "final_decision")" != "NO-GO" ]; then
   echo "expected governance lifecycle/rollback NO-GO policy check final_decision=NO-GO" >&2
+  exit 1
+fi
+if ! grep -q '"runbook_marker_parity_bypass_detected"' "$no_go_report"; then
+  echo "expected governance lifecycle/rollback NO-GO report to include runbook_marker_parity_bypass_detected reason marker" >&2
+  exit 1
+fi
+
+rollback_gate_drift_report="$TMP_DIR/governance-lifecycle-rollback-gate-drift.json"
+KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS=true \
+KAMN_GOVERNANCE_LIFECYCLE_FORCE_LANE_FAILURE=true \
+  bash "$LANE_SCRIPT" --output-file "$rollback_gate_drift_report" >/dev/null
+
+rollback_gate_drift_policy_output="$(bash "$POLICY_CHECKER" --report-file "$rollback_gate_drift_report")"
+if [ "$(extract_value "$rollback_gate_drift_policy_output" "final_decision")" != "NO-GO" ]; then
+  echo "expected governance lifecycle/rollback gate drift policy check final_decision=NO-GO" >&2
+  exit 1
+fi
+if ! grep -q '"rollback_gate_progress_stalled"' "$rollback_gate_drift_report"; then
+  echo "expected governance lifecycle/rollback gate drift report to include rollback_gate_progress_stalled reason marker" >&2
   exit 1
 fi
 

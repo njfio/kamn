@@ -670,7 +670,7 @@ fn resolve_kolme_live_signer_env_name_set(
         if let Some(env_profile) = profile_from_env {
             if env_profile != strict_profile {
                 return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "strict signer profile mismatch: --kolme-live-signer-profile={strict_profile} conflicts with {KOLME_LIVE_SIGNER_PROFILE_ENV}={env_profile}"
+                    "strict signer profile mismatch: --kolme-live-signer-profile={strict_profile} conflicts with {KOLME_LIVE_SIGNER_PROFILE_ENV}={env_profile} (runtime_signer_profile_selector_mismatch)"
                 )));
             }
         }
@@ -785,6 +785,10 @@ pub(crate) fn enforce_kolme_live_signer_preflight(
     let readiness = evaluate_kolme_live_signer_preflight_readiness(&signer_selection)?;
     let provider = EnvKolmeLiveSignerSecretProvider;
     provider.ensure_no_fallback_private_key_path()?;
+    ensure_kolme_live_strict_signer_secret_source_precedence(
+        strict_signer_profile,
+        &signer_selection,
+    )?;
     if signer_selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
         ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
         let _managed_signer_required_marker = resolve_kolme_live_managed_signer_required_marker()?;
@@ -1132,7 +1136,39 @@ fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecret
         )));
     }
     let private_key_hex = provider.read_private_key_hex(&selection)?;
+    ensure_kolme_live_strict_signer_secret_source_precedence(strict_signer_profile, &selection)?;
     Ok((private_key_hex, selection))
+}
+
+fn ensure_kolme_live_strict_signer_secret_source_precedence(
+    strict_signer_profile: Option<&str>,
+    selection: &KolmeLiveSignerSelection,
+) -> Result<(), ConfigError> {
+    if strict_signer_profile.is_none()
+        || selection.key_source != KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL
+    {
+        return Ok(());
+    }
+    let non_selected_private_key_env = match selection.profile {
+        KOLME_LIVE_SIGNER_PROFILE_PRIMARY => KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV,
+        KOLME_LIVE_SIGNER_PROFILE_SECONDARY => KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV,
+        _ => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "unsupported signer profile for strict secret-source precedence checks: {} (signer_secret_source_precedence_violation)",
+                selection.profile
+            )))
+        }
+    };
+    match env::var(non_selected_private_key_env) {
+        Ok(_) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{non_selected_private_key_env} must remain unset when --kolme-live-signer-profile={} and --kolme-live-signer-key-source={} select {} (signer_secret_source_precedence_violation)",
+            selection.profile, selection.key_source, selection.private_key_env
+        ))),
+        Err(env::VarError::NotPresent) => Ok(()),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{non_selected_private_key_env} must be valid utf-8 when present under strict signer source contracts (signer_secret_source_precedence_violation)"
+        ))),
+    }
 }
 
 fn ensure_kolme_live_managed_external_private_key_env_unset(
@@ -1428,6 +1464,8 @@ mod tests {
 
     const TEST_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+    const TEST_PRIVATE_KEY_HEX_SECONDARY: &str =
+        "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
 
     fn test_signer_env_lock() -> &'static Mutex<()> {
@@ -1554,6 +1592,62 @@ mod tests {
         assert!(
             started.elapsed() < Duration::from_secs(2),
             "private key parse + zeroization loop exceeded 2s for 2k iterations"
+        );
+    }
+
+    #[test]
+    fn regression_strict_signer_secret_source_precedence_rejects_dual_private_key_envs() {
+        // Regression: #4660
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _primary_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_PRIVATE_KEY_HEX),
+        );
+        let _secondary_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            Some(TEST_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        let _fallback_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
+        let error =
+            super::read_kolme_live_signer_private_key_hex(Some("ops-primary"), Some("env-local"))
+                .expect_err("strict signer contracts must reject dual private key env sources");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("signer_secret_source_precedence_violation")),
+            "strict signer contracts must fail closed with precedence violation reason"
+        );
+    }
+
+    #[test]
+    fn regression_strict_secondary_profile_requires_secondary_secret_even_with_primary_present() {
+        // Regression: #4660
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_PRIVATE_KEY_HEX),
+        );
+        let _secondary_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY", None);
+        let _fallback_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
+        let error =
+            super::read_kolme_live_signer_private_key_hex(Some("ops-secondary"), Some("env-local"))
+                .expect_err(
+                    "strict secondary signer contracts must require secondary private key env",
+                );
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY must be set")),
+            "secondary strict profile must not bypass selected-secret requirement via primary key env"
         );
     }
 

@@ -51,6 +51,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^local_retry_diagnostics_contract_s
   echo "expected local retry/diagnostics contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^retry_readiness_status=verified$'; then
+  echo "expected local retry/diagnostics contract lane retry readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^retry_jitter_parity_status=verified$'; then
+  echo "expected local retry/diagnostics contract lane retry jitter parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+  echo "expected local retry/diagnostics contract lane reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+  echo "expected local retry/diagnostics contract lane reason codes taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status$'; then
   echo "expected local retry/diagnostics contract lane fail-closed reason marker" >&2
   exit 1
@@ -72,6 +88,14 @@ if lane_payload.get("local_retry_diagnostics_policy_status") != "verified":
     raise SystemExit("expected local_retry_diagnostics_policy_status=verified")
 if lane_payload.get("local_retry_diagnostics_contract_status") != "verified":
     raise SystemExit("expected local_retry_diagnostics_contract_status=verified")
+if lane_payload.get("retry_readiness_status") != "verified":
+    raise SystemExit("expected retry_readiness_status=verified")
+if lane_payload.get("retry_jitter_parity_status") != "verified":
+    raise SystemExit("expected retry_jitter_parity_status=verified")
+if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if lane_payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic reason_codes_csv marker")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
@@ -84,6 +108,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("local_retry_diagnostics_policy_status") != "verified":
     raise SystemExit("expected local_retry_diagnostics_policy_status=verified in policy report")
+if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in policy report")
+if policy_payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_local_retry_diagnostics_live_policy.sh" "$CONTRACT_LANE"; then
@@ -109,6 +137,23 @@ if [ "$invalid_ci_fast_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_ci_fast_gate_output" | grep -q 'ci-fast-gate must be PASS or FAIL'; then
   echo "expected deterministic invalid ci-fast-gate marker for local retry/diagnostics contract lane" >&2
+  exit 1
+fi
+
+set +e
+budget_boundary_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --max-seconds 241 2>&1
+)"
+budget_boundary_code=$?
+set -e
+if [ "$budget_boundary_code" -eq 0 ]; then
+  echo "expected local retry/diagnostics contract lane to reject max-seconds beyond ci-local boundary" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$budget_boundary_output" | grep -q 'max-seconds must be <= 240 for ci-local contract lane'; then
+  echo "expected deterministic ci-local network budget boundary marker for local retry/diagnostics contract lane" >&2
   exit 1
 fi
 

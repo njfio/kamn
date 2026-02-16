@@ -46,6 +46,14 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2
   echo "expected live transport fault matrix runtime transport marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1$'; then
+  echo "expected live transport fault matrix reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected live transport fault matrix normalized reason codes value marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -61,8 +69,12 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected final_decision=GO")
 if payload.get("runtime_transport_mode") != "libp2p_live_fault_matrix":
     raise SystemExit("expected runtime transport mode marker")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason taxonomy version marker")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected deterministic reason_codes=['none']")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected reason_codes_value=none")
 PY
 
 set +e

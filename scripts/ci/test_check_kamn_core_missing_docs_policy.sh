@@ -95,7 +95,22 @@ expect_failure "rustdoc publishing command drift should fail"
 
 reset_fixtures
 sed -i '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
-expect_failure "README rustdoc link drift should fail"
+if run_checker >"$TMP_DIR/rustdoc-link-drift.out" 2>"$TMP_DIR/rustdoc-link-drift.err"; then
+  echo "README rustdoc link drift should fail: expected failure but checker succeeded." >&2
+  exit 1
+fi
+if ! grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1$' "$TMP_DIR/rustdoc-link-drift.err"; then
+  echo "README rustdoc link drift should emit deterministic reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q '^reason_codes_csv=rustdoc_navigation_parity_drift$' "$TMP_DIR/rustdoc-link-drift.err"; then
+  echo "README rustdoc link drift should emit deterministic reason code set marker" >&2
+  exit 1
+fi
+if ! grep -q '^reason_code=rustdoc_navigation_parity_drift$' "$TMP_DIR/rustdoc-link-drift.err"; then
+  echo "README rustdoc link drift should emit deterministic reason code marker" >&2
+  exit 1
+fi
 
 reset_fixtures
 sed -i '/Regression: #2127/d' "$VELOCITY_CADENCE_DOC_FIXTURE"

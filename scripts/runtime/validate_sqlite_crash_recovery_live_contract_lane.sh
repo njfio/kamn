@@ -103,6 +103,94 @@ if ! printf '%s\n' "$validation_output" | grep -q '^sqlite_crash_recovery_abrupt
   echo "expected sqlite crash-recovery live validation abrupt-kill marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_append_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation wal-append marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_checkpoint_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation wal-checkpoint marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation wal-durability taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete$'; then
+  echo "expected sqlite crash-recovery live validation wal-durability taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_index_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query index marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_latency_budget_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation historical-query latency budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation historical-query taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$'; then
+  echo "expected sqlite crash-recovery live validation historical-query taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_drift_detection_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation journal replay drift detection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^checkpoint_divergence_bypass_rejection_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation checkpoint divergence bypass rejection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation journal replay taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected$'; then
+  echo "expected sqlite crash-recovery live validation journal replay taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation readiness-progress marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^snapshot_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation snapshot-parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_recovery_budget_boundary_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation ci-local recovery budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation state-consistency taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded$'; then
+  echo "expected sqlite crash-recovery live validation state-consistency taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation promotion-gate marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^audit_trail_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation audit-trail parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_promotion_budget_boundary_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation ci-local promotion budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation durability-governance taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+  echo "expected sqlite crash-recovery live validation durability-governance taxonomy csv marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -205,6 +293,64 @@ lane_report = {
     "status": "pass",
     "final_decision": "GO",
     "lane_mode": mode,
+    "wal_append_status": summary_report.get("wal_append_status"),
+    "wal_checkpoint_status": summary_report.get("wal_checkpoint_status"),
+    "wal_durability_reason_taxonomy_version": summary_report.get(
+        "wal_durability_reason_taxonomy_version"
+    ),
+    "wal_durability_reason_codes_csv": summary_report.get(
+        "wal_durability_reason_codes_csv"
+    ),
+    "historical_query_index_status": summary_report.get(
+        "historical_query_index_status"
+    ),
+    "historical_query_latency_budget_status": summary_report.get(
+        "historical_query_latency_budget_status"
+    ),
+    "historical_query_reason_taxonomy_version": summary_report.get(
+        "historical_query_reason_taxonomy_version"
+    ),
+    "historical_query_reason_codes_csv": summary_report.get(
+        "historical_query_reason_codes_csv"
+    ),
+    "journal_replay_drift_detection_status": summary_report.get(
+        "journal_replay_drift_detection_status"
+    ),
+    "checkpoint_divergence_bypass_rejection_status": summary_report.get(
+        "checkpoint_divergence_bypass_rejection_status"
+    ),
+    "journal_replay_reason_taxonomy_version": summary_report.get(
+        "journal_replay_reason_taxonomy_version"
+    ),
+    "journal_replay_reason_codes_csv": summary_report.get(
+        "journal_replay_reason_codes_csv"
+    ),
+    "crash_recovery_readiness_progress_status": summary_report.get(
+        "crash_recovery_readiness_progress_status"
+    ),
+    "snapshot_parity_status": summary_report.get("snapshot_parity_status"),
+    "ci_local_recovery_budget_boundary_status": summary_report.get(
+        "ci_local_recovery_budget_boundary_status"
+    ),
+    "state_consistency_reason_taxonomy_version": summary_report.get(
+        "state_consistency_reason_taxonomy_version"
+    ),
+    "state_consistency_reason_codes_csv": summary_report.get(
+        "state_consistency_reason_codes_csv"
+    ),
+    "crash_recovery_promotion_gate_status": summary_report.get(
+        "crash_recovery_promotion_gate_status"
+    ),
+    "audit_trail_parity_status": summary_report.get("audit_trail_parity_status"),
+    "ci_local_promotion_budget_boundary_status": summary_report.get(
+        "ci_local_promotion_budget_boundary_status"
+    ),
+    "durability_governance_reason_taxonomy_version": summary_report.get(
+        "durability_governance_reason_taxonomy_version"
+    ),
+    "durability_governance_reason_codes_csv": summary_report.get(
+        "durability_governance_reason_codes_csv"
+    ),
     "sqlite_crash_recovery_contract_status": "verified",
     "sqlite_crash_recovery_policy_status": policy_report.get("sqlite_crash_recovery_policy_status"),
     "docs_contract_status": "verified",
@@ -227,6 +373,28 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "lane_mode=$mode"
+echo "wal_append_status=verified"
+echo "wal_checkpoint_status=verified"
+echo "wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1"
+echo "wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
+echo "historical_query_index_status=verified"
+echo "historical_query_latency_budget_status=verified"
+echo "historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1"
+echo "historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch"
+echo "journal_replay_drift_detection_status=verified"
+echo "checkpoint_divergence_bypass_rejection_status=verified"
+echo "journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1"
+echo "journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
+echo "crash_recovery_readiness_progress_status=verified"
+echo "snapshot_parity_status=verified"
+echo "ci_local_recovery_budget_boundary_status=verified"
+echo "state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1"
+echo "state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded"
+echo "crash_recovery_promotion_gate_status=verified"
+echo "audit_trail_parity_status=verified"
+echo "ci_local_promotion_budget_boundary_status=verified"
+echo "durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1"
+echo "durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
 echo "sqlite_crash_recovery_contract_status=verified"
 echo "sqlite_crash_recovery_policy_status=verified"
 echo "docs_contract_status=verified"

@@ -31,21 +31,35 @@ EXPECTED_FAIL_CLOSED_REASON_CODES_CSV = (
     "observability_endpoint_malformed_request,"
     "observability_endpoint_idle_timeout"
 )
+OBSERVABILITY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+)
+OBSERVABILITY_REASON_CODES_CSV = (
+    "runtime_observability_endpoint_readiness_progress_stalled,"
+    "runtime_observability_stream_parity_bypass_detected,"
+    "ci_local_observability_endpoint_budget_boundary_exceeded"
+)
+CI_LOCAL_OBSERVABILITY_ENDPOINT_BUDGET_MAX_SECONDS = 240
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
     "status",
     "final_decision",
     "runtime_observability_stream_contract_status",
+    "endpoint_readiness_status",
+    "stream_parity_status",
     "unknown_path_contract_status",
     "malformed_input_contract_status",
     "timeout_contract_status",
+    "reason_taxonomy_version",
+    "reason_codes_csv",
     "fail_closed_status",
     "docs_contract_status",
     "fail_closed_reason_code",
     "fail_closed_reason_codes_csv",
     "performance_budget_status",
     "elapsed_seconds",
+    "max_seconds",
 ]
 
 REQUIRED_VERIFIED_FIELDS = [
@@ -106,6 +120,22 @@ def _check_policy(args: argparse.Namespace) -> int:
             report.get(field_name) != "verified",
             f"runtime_observability_policy_marker_missing:{field_name}",
         )
+    decision.reject_if(
+        report.get("endpoint_readiness_status") != "verified",
+        "runtime_observability_endpoint_readiness_progress_stalled",
+    )
+    decision.reject_if(
+        report.get("stream_parity_status") != "verified",
+        "runtime_observability_stream_parity_bypass_detected",
+    )
+    decision.reject_if(
+        report.get("reason_taxonomy_version") != OBSERVABILITY_REASON_TAXONOMY_VERSION,
+        "runtime_observability_policy_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("reason_codes_csv") != OBSERVABILITY_REASON_CODES_CSV,
+        "runtime_observability_policy_reason_codes_csv_mismatch",
+    )
 
     decision.reject_if(
         report.get("fail_closed_reason_code") != EXPECTED_FAIL_CLOSED_REASON_CODE,
@@ -119,6 +149,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "runtime_observability_policy_elapsed_seconds_invalid",
     )
+    report_max_seconds = report.get("max_seconds")
+    decision.reject_if(
+        not _is_non_negative_int(report_max_seconds) or report_max_seconds <= 0,
+        "runtime_observability_policy_max_seconds_invalid",
+    )
+    if isinstance(report_max_seconds, int):
+        decision.reject_if(
+            report_max_seconds > CI_LOCAL_OBSERVABILITY_ENDPOINT_BUDGET_MAX_SECONDS,
+            "ci_local_observability_endpoint_budget_boundary_exceeded",
+        )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 
     final_decision, reason_codes = decision.finalize("none")
@@ -134,6 +174,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "reason_codes": reason_codes,
+        "reason_taxonomy_version": OBSERVABILITY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": OBSERVABILITY_REASON_CODES_CSV,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
         "fail_closed_reason_codes_csv": report.get("fail_closed_reason_codes_csv"),
@@ -150,6 +192,8 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"runtime_observability_policy_status={policy_status}")
+    print(f"reason_taxonomy_version={OBSERVABILITY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={OBSERVABILITY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")

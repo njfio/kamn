@@ -15,6 +15,10 @@ TMP_REPORT_PRODUCTION_KEY_SOURCE="$TMP_DIR/production-key-source-report.json"
 TMP_REPORT_DRIFT_MALFORMED="$TMP_DIR/drift-malformed-report.json"
 TMP_REPORT_MATRIX_WARN="$TMP_DIR/drift-matrix-warn-report.json"
 TMP_REPORT_MATRIX_FAIL="$TMP_DIR/drift-matrix-fail-report.json"
+TMP_REPORT_BUDGET_BYPASS="$TMP_DIR/budget-bypass-report.json"
+TMP_REPORT_BUDGET_REASON_MISMATCH="$TMP_DIR/budget-reason-mismatch-report.json"
+TMP_REPORT_ROTATION_STALLED="$TMP_DIR/rotation-stalled-report.json"
+TMP_REPORT_CUSTODY_BYPASS="$TMP_DIR/custody-bypass-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -308,7 +312,7 @@ if not isinstance(matrix_reason_codes, list):
     raise SystemExit("expected runtime signer drift admission matrix reason-code list in deployment preflight policy report")
 PY
 
-python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" <<'PY'
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
 import json
 import pathlib
 import sys
@@ -318,6 +322,9 @@ warn_report = dict(report)
 warn_report["mode"] = "run"
 warn_report["status"] = "ok"
 warn_report["reason_code"] = "deployment_preflight_passed"
+warn_report["elapsed_seconds"] = 1
+warn_report["max_seconds"] = 12
+warn_report["budget_status"] = "within_budget"
 warn_report["signer_secret_present"] = True
 warn_report["signer_secret_hex_valid"] = True
 warn_report["required_approvals"] = 2
@@ -424,6 +431,25 @@ fail_report["checks"] = [
 
 pathlib.Path(sys.argv[2]).write_text(json.dumps(warn_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 pathlib.Path(sys.argv[3]).write_text(json.dumps(fail_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+budget_bypass_report = dict(warn_report)
+budget_bypass_report["elapsed_seconds"] = 13
+budget_bypass_report["max_seconds"] = 12
+budget_bypass_report["budget_status"] = "within_budget"
+pathlib.Path(sys.argv[4]).write_text(
+    json.dumps(budget_bypass_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+budget_reason_mismatch_report = dict(fail_report)
+budget_reason_mismatch_report["elapsed_seconds"] = 13
+budget_reason_mismatch_report["max_seconds"] = 12
+budget_reason_mismatch_report["budget_status"] = "exceeded_budget"
+budget_reason_mismatch_report["reason_code"] = "checkpoint_failed_signer_quorum_contract"
+pathlib.Path(sys.argv[5]).write_text(
+    json.dumps(budget_reason_mismatch_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
 PY
 
 python3 "$CHECKER" \
@@ -468,6 +494,113 @@ fi
 
 if ! grep -q "runtime_signer_drift_quorum_fail_threshold_exceeded" "$TMP_ERR"; then
   echo "expected runtime signer drift quorum fail-threshold reason for hard-fail deployment matrix report" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_BUDGET_BYPASS" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code deployment_preflight_passed \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+budget_bypass_exit_code=$?
+set -e
+
+if [ "$budget_bypass_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when startup-latency budget bypass is accepted" >&2
+  exit 1
+fi
+
+if ! grep -q "startup_latency_budget_status_mismatch" "$TMP_ERR"; then
+  echo "expected startup_latency_budget_status_mismatch reason for deployment preflight budget bypass failure" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_BUDGET_REASON_MISMATCH" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+budget_reason_mismatch_exit_code=$?
+set -e
+
+if [ "$budget_reason_mismatch_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when exceeded startup-latency budget reason code is not normalized" >&2
+  exit 1
+fi
+
+if ! grep -q "startup_latency_budget_reason_code_mismatch" "$TMP_ERR"; then
+  echo "expected startup_latency_budget_reason_code_mismatch reason for deployment preflight budget taxonomy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_ROTATION_STALLED" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["signer_rotation_epoch"] = 1
+report["signer_previous_rotation_epoch"] = 1
+report["signer_rotation_delta_epochs"] = 0
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_ROTATION_STALLED" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-reason-code deployment_preflight_passed \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+rotation_stalled_exit_code=$?
+set -e
+
+if [ "$rotation_stalled_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when signer-rotation rehearsal drift is accepted" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_rotation_rehearsal_drift_detected" "$TMP_ERR"; then
+  echo "expected signer_rotation_rehearsal_drift_detected reason for deployment preflight rotation rehearsal drift failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_CUSTODY_BYPASS" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["quorum_evidence_custody_sha256_match"] = False
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_CUSTODY_BYPASS" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-reason-code deployment_preflight_passed \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+custody_bypass_exit_code=$?
+set -e
+
+if [ "$custody_bypass_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when custody continuity bypass is accepted" >&2
+  exit 1
+fi
+
+if ! grep -q "custody_continuity_bypass_detected" "$TMP_ERR"; then
+  echo "expected custody_continuity_bypass_detected reason for deployment preflight custody continuity bypass failure" >&2
   exit 1
 fi
 

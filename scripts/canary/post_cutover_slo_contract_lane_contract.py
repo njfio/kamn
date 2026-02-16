@@ -49,6 +49,15 @@ def main(argv: list[str]) -> int:
     if not max_runtime_raw.isdigit():
         return fail("KAMN_POST_CUTOVER_SLO_MAX_SECONDS must be an integer >= 0")
     max_runtime = int(max_runtime_raw)
+    ci_local_promotion_budget_raw = os.getenv(
+        "KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS",
+        "90",
+    )
+    if not ci_local_promotion_budget_raw.isdigit():
+        return fail(
+            "KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS must be an integer >= 0"
+        )
+    ci_local_promotion_budget = int(ci_local_promotion_budget_raw)
 
     root_dir = Path(__file__).resolve().parents[2]
     generator = root_dir / "scripts/canary/generate_post_cutover_slo_evidence_bundle.sh"
@@ -93,6 +102,18 @@ def main(argv: list[str]) -> int:
             return fail(
                 "expected post-cutover SLO contract lane bundle reason_key to be GO schema marker"
             )
+        if "alert_rule_promotion_gate_status=verified" not in generator_output:
+            return fail(
+                "expected post-cutover SLO contract lane bundle alert-rule promotion gate marker"
+            )
+        if "burn_rate_parity_status=verified" not in generator_output:
+            return fail(
+                "expected post-cutover SLO contract lane bundle burn-rate parity marker"
+            )
+        if "ci_local_promotion_budget_boundary_status=verified" not in generator_output:
+            return fail(
+                "expected post-cutover SLO contract lane bundle ci-local promotion budget marker"
+            )
 
         policy_code, policy_output = run_capture(
             ["bash", str(policy_checker), "--bundle-file", str(bundle_file)],
@@ -103,6 +124,18 @@ def main(argv: list[str]) -> int:
         if "reason_key=slo_alert_reason_codes:GO:v1" not in policy_output:
             return fail(
                 "expected post-cutover SLO contract lane policy reason_key to be GO schema marker"
+            )
+        if "alert_rule_promotion_gate_status=verified" not in policy_output:
+            return fail(
+                "expected post-cutover SLO contract lane policy alert-rule promotion gate marker"
+            )
+        if "burn_rate_parity_status=verified" not in policy_output:
+            return fail(
+                "expected post-cutover SLO contract lane policy burn-rate parity marker"
+            )
+        if "ci_local_promotion_budget_boundary_status=verified" not in policy_output:
+            return fail(
+                "expected post-cutover SLO contract lane policy ci-local promotion budget marker"
             )
 
         tampered_bundle = Path(temp_dir) / "post-cutover-slo-alert-drift.json"
@@ -135,11 +168,40 @@ def main(argv: list[str]) -> int:
                 "expected explicit alert key drift failure from post-cutover SLO policy checker"
             )
 
+        tampered_burn_rate_bundle = Path(temp_dir) / "post-cutover-slo-burn-rate-drift.json"
+        shutil.copyfile(bundle_file, tampered_burn_rate_bundle)
+        burn_rate_payload = json.loads(
+            tampered_burn_rate_bundle.read_text(encoding="utf-8")
+        )
+        burn_rate_payload["burn_rate_parity_status"] = "drifted"
+        tampered_burn_rate_bundle.write_text(
+            json.dumps(burn_rate_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        burn_rate_tampered_code, burn_rate_tampered_output = run_capture(
+            ["bash", str(policy_checker), "--bundle-file", str(tampered_burn_rate_bundle)],
+            cwd=root_dir,
+        )
+        if burn_rate_tampered_code == 0:
+            return fail(
+                "expected post-cutover SLO contract lane burn-rate parity tamper to fail policy checker"
+            )
+        if "burn_rate_parity_status mismatch" not in burn_rate_tampered_output:
+            return fail(
+                "expected explicit burn-rate parity drift failure from post-cutover SLO policy checker"
+            )
+
     runtime_seconds = int(time.monotonic() - start_time)
     if runtime_seconds > max_runtime:
         return fail(
             "post-cutover SLO contract lane exceeded runtime budget "
             f"({runtime_seconds}s > {max_runtime}s)"
+        )
+    if runtime_seconds > ci_local_promotion_budget:
+        return fail(
+            "ci-local promotion budget boundary exceeded "
+            f"({runtime_seconds}s > {ci_local_promotion_budget}s)"
         )
 
     print("post-cutover SLO contract lane tests passed.")

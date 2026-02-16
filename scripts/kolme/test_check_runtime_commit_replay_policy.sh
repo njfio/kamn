@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/kolme/check_runtime_commit_replay_policy.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
+EXPECTED_RECOVERY_REASON_TAXONOMY_VERSION="kamn.kolme.runtime-commit-recovery-reason-taxonomy.v1"
+EXPECTED_RECOVERY_REASON_CODES_CSV="recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected"
 
 extract_value() {
   local output="$1"
@@ -45,6 +47,11 @@ go_output="$(
 assert_eq "$(extract_value "$go_output" "status")" "ok" "expected GO case to report ok status"
 assert_eq "$(extract_value "$go_output" "final_decision")" "GO" "expected GO case to produce GO"
 assert_eq "$(extract_value "$go_output" "failed_checks")" "none" "expected GO case to have no failed checks"
+assert_eq "$(extract_value "$go_output" "recovery_reason_taxonomy_version")" "$EXPECTED_RECOVERY_REASON_TAXONOMY_VERSION" "expected deterministic recovery taxonomy version for GO case"
+assert_eq "$(extract_value "$go_output" "recovery_reason_codes_csv")" "$EXPECTED_RECOVERY_REASON_CODES_CSV" "expected deterministic recovery taxonomy code ordering"
+assert_eq "$(extract_value "$go_output" "recovery_reason_codes_value")" "none" "expected deterministic recovery taxonomy value for GO case"
+assert_eq "$(extract_value "$go_output" "retransmission_evidence_contract_version")" "v1" "expected deterministic retransmission evidence contract version for GO case"
+assert_eq "$(extract_value "$go_output" "nonce_idempotency_contract_version")" "v1" "expected deterministic nonce/idempotency contract version for GO case"
 
 set +e
 no_go_output="$(
@@ -80,6 +87,9 @@ if ! printf '%s\n' "$no_go_output" | grep -q "replay_detected"; then
   echo "expected NO-GO case to include replay_detected reason code" >&2
   exit 1
 fi
+assert_eq "$(extract_value "$no_go_output" "recovery_reason_taxonomy_version")" "$EXPECTED_RECOVERY_REASON_TAXONOMY_VERSION" "expected deterministic recovery taxonomy version for NO-GO case"
+assert_eq "$(extract_value "$no_go_output" "recovery_reason_codes_csv")" "$EXPECTED_RECOVERY_REASON_CODES_CSV" "expected deterministic recovery taxonomy ordering for NO-GO case"
+assert_eq "$(extract_value "$no_go_output" "recovery_reason_codes_value")" "recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected" "expected deterministic recovery taxonomy value for NO-GO case"
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -95,6 +105,16 @@ required = {"receipt_provider_mismatch", "receipt_commit_id_mismatch", "replay_d
 reasons = set(payload.get("reason_codes", []))
 if not required.issubset(reasons):
     raise SystemExit("missing expected runtime commit replay fail reasons in report")
+if payload.get("recovery_reason_taxonomy_version") != "kamn.kolme.runtime-commit-recovery-reason-taxonomy.v1":
+    raise SystemExit("expected recovery_reason_taxonomy_version in policy report")
+if payload.get("recovery_reason_codes_csv") != "recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected":
+    raise SystemExit("expected deterministic recovery_reason_codes_csv in policy report")
+if payload.get("recovery_reason_codes_value") != "recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected":
+    raise SystemExit("expected deterministic recovery_reason_codes_value in policy report")
+if payload.get("retransmission_evidence_contract_version") != "v1":
+    raise SystemExit("expected retransmission_evidence_contract_version=v1 in policy report")
+if payload.get("nonce_idempotency_contract_version") != "v1":
+    raise SystemExit("expected nonce_idempotency_contract_version=v1 in policy report")
 PY
 
 echo "runtime commit replay policy checker tests passed."
