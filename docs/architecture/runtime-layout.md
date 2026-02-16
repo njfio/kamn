@@ -97,6 +97,28 @@ Deterministic lane and policy markers include:
 - `reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1`
 - `reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch`
 
+## Failover Sync-Drill Governance
+
+Failover promotion gate progress and live-node drift-marker parity drift are enforced through:
+
+- `scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh`
+- `scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh`
+- `scripts/runtime/run_failover_sync_drill_suite.sh`
+
+Deterministic lane markers include:
+
+- `failover_promotion_gate_status=verified`
+- `live_node_drift_parity_status=verified`
+- `ci_local_promotion_budget_boundary_status=verified`
+- `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`
+- `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+
+Deterministic fail-closed simulation reasons include:
+
+- `failover_readiness_progress_stalled`
+- `live_node_drift_marker_parity_mismatch`
+- `ci_local_promotion_budget_boundary_exceeded`
+
 ## Service API Protocol Compliance Governance
 
 Service API ingress protocol-compliance and route-contract parity drift are enforced through:

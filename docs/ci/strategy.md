@@ -301,6 +301,35 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded`
 
+## Runtime Failover Sync-Drill Governance Contract Lanes
+- Entry commands:
+  - `bash scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh --output-json /tmp/failover-sync-preflight-report.json`
+  - `bash scripts/runtime/run_failover_sync_drill_suite.sh --event-name pull_request --output-json /tmp/failover-sync-drill-suite-report.json`
+  - `bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_suite.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Failover/sync evidence contracts:
+  - preflight lane emits deterministic failover governance markers:
+    `failover_promotion_gate_status=verified`,
+    `live_node_drift_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`.
+  - preflight lane emits deterministic taxonomy markers:
+    `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`,
+    `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
+  - suite lane integration preserves preflight marker parity in `lane_report`.
+  - deep lane remains scheduled-only (`KAMN_FAILOVER_SYNC_DEEP_CADENCE=scheduled`) and is selected for `schedule`/`workflow_dispatch`.
+- Cost controls:
+  - preflight lane remains bounded by `--max-seconds` and deterministic ci/local promotion boundary `--ci-local-promotion-max-seconds`.
+  - PR cadence defaults to preflight lane; deep drills stay scheduled/local-heavy to keep fast-gate costs low.
+  - failover/sync suite routing remains deterministic via `scripts/runtime/select_failover_sync_drill_lane.sh`.
+- Deterministic fail-closed marker coverage:
+  - `failover_readiness_progress_stalled`
+  - `live_node_drift_marker_parity_mismatch`
+  - `ci_local_promotion_budget_boundary_exceeded`
+
 ## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode dry-run --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`

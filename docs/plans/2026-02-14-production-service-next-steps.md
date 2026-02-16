@@ -143,6 +143,18 @@ This refreshed version separates:
 - Deterministic fail-closed drift markers now include:
   - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+- Active failover governance chain under the same tranche:
+  - `#4593 -> #4595 -> #4599 -> (#4606, #4607)`.
+  - delivered failover preflight governance markers:
+    - `failover_promotion_gate_status=verified`
+    - `live_node_drift_parity_status=verified`
+    - `ci_local_promotion_budget_boundary_status=verified`
+    - `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`
+    - `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+  - deterministic fail-closed drill reasons for parity/budget drift:
+    - `failover_readiness_progress_stalled`
+    - `live_node_drift_marker_parity_mismatch`
+    - `ci_local_promotion_budget_boundary_exceeded`
 
 ### R27.53 Closure Tranche (`#4653`)
 - Delivered chain: `#4653 -> (#4654, #4655) -> (#4656, #4657, #4658, #4659) -> (#4660-#4667)`.
