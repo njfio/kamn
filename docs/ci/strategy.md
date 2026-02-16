@@ -664,10 +664,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - reuses bounded local cargo integration tests from `validate_runtime_observability_endpoint_live.sh`
   - no external network dependency or remote runtime process orchestration
   - explicit runtime budget cap via `KAMN_RUNTIME_OBSERVABILITY_ENDPOINT_CONTRACT_MAX_SECONDS`
+  - ci-local contract-lane boundary rejects `--max-seconds > 240`.
   - deterministic fail-closed policy tamper drill executed in-process
+- Deterministic observability governance markers:
+  - `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
+  - `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
+  - `endpoint_readiness_status=verified`
+  - `stream_parity_status=verified`
 - Deterministic fail-closed marker for drift tamper drills:
   - `observability_source_marker_missing:async_dispatch`
   - `observability_source_marker_missing:legacy_tcp_listener_import`
+  - `runtime_observability_endpoint_readiness_progress_stalled`
+  - `runtime_observability_stream_parity_bypass_detected`
+  - `ci_local_observability_endpoint_budget_boundary_exceeded`
   - telemetry schema docs-contract marker set remains fail-closed for health/readiness/stream schema_version markers and readiness_reason_code taxonomy.
 
 ## Runtime Structured Logging Contract Lane

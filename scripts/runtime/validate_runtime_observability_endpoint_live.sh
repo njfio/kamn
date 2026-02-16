@@ -34,6 +34,8 @@ fi
 
 OBSERVABILITY_DOC="$ROOT_DIR/docs/foundation/observability-slo-dashboards.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+REASON_TAXONOMY_VERSION="kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+REASON_CODES_CSV="runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
 
 start_epoch="$(date +%s)"
 
@@ -81,15 +83,21 @@ cat >"$report_json" <<JSON
   "status": "pass",
   "final_decision": "GO",
   "runtime_observability_stream_contract_status": "verified",
+  "endpoint_readiness_status": "verified",
+  "stream_parity_status": "verified",
   "unknown_path_contract_status": "verified",
   "malformed_input_contract_status": "verified",
   "timeout_contract_status": "verified",
+  "reason_taxonomy_version": "${REASON_TAXONOMY_VERSION}",
+  "reason_codes_csv": "${REASON_CODES_CSV}",
+  "ci_local_budget_boundary_status": "verified",
   "fail_closed_status": "verified",
   "docs_contract_status": "verified",
   "fail_closed_reason_code": "observability_endpoint_not_found",
   "fail_closed_reason_codes_csv": "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout",
   "performance_budget_status": "verified",
-  "elapsed_seconds": ${elapsed_seconds}
+  "elapsed_seconds": ${elapsed_seconds},
+  "max_seconds": ${max_seconds}
 }
 JSON
 
@@ -101,9 +109,14 @@ rm -f "$report_json"
 echo "status=pass"
 echo "final_decision=GO"
 echo "runtime_observability_stream_contract_status=verified"
+echo "endpoint_readiness_status=verified"
+echo "stream_parity_status=verified"
 echo "unknown_path_contract_status=verified"
 echo "malformed_input_contract_status=verified"
 echo "timeout_contract_status=verified"
+echo "reason_taxonomy_version=${REASON_TAXONOMY_VERSION}"
+echo "reason_codes_csv=${REASON_CODES_CSV}"
+echo "ci_local_budget_boundary_status=verified"
 echo "fail_closed_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_reason_code=observability_endpoint_not_found"

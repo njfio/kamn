@@ -482,7 +482,19 @@ fn doc_contains_runtime_observability_endpoint_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("ci-fast-gate mode: fast"));
     assert!(DOC.contains("local-dev mode: local"));
     assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains("ci-local contract-lane boundary rejects `--max-seconds > 240`."));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("endpoint_readiness_status=verified"));
+    assert!(DOC.contains("stream_parity_status=verified"));
     assert!(DOC.contains("observability_source_marker_missing:legacy_tcp_listener_import"));
+    assert!(DOC.contains("runtime_observability_endpoint_readiness_progress_stalled"));
+    assert!(DOC.contains("runtime_observability_stream_parity_bypass_detected"));
+    assert!(DOC.contains("ci_local_observability_endpoint_budget_boundary_exceeded"));
 }
 
 #[test]

@@ -105,6 +105,26 @@ hand-rolled parser/listener path.
     `Transfer-Encoding`) resolve to deterministic `404 not found`
   - request budget and idle timeout remain deterministic and fail closed
 
+### Observability Governance Taxonomy
+
+Runtime observability endpoint policy checking enforces deterministic readiness +
+stream parity governance markers:
+
+- `endpoint_readiness_status=verified`
+- `stream_parity_status=verified`
+- `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
+- `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
+
+Fail-closed reason taxonomy includes:
+
+- `runtime_observability_endpoint_readiness_progress_stalled`
+- `runtime_observability_stream_parity_bypass_detected`
+- `ci_local_observability_endpoint_budget_boundary_exceeded`
+
+CI-local boundary remains explicit and fail-closed:
+
+- observability endpoint contract lane rejects `--max-seconds > 240`.
+
 ## Service API + Observability Route Compatibility Matrix Contract
 
 Compatibility between service API routes and observability routes is enforced by

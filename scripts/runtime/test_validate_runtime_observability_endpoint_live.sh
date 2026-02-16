@@ -24,6 +24,14 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_observability_stream
   echo "expected runtime observability stream contract marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^endpoint_readiness_status=verified$'; then
+  echo "expected endpoint readiness status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^stream_parity_status=verified$'; then
+  echo "expected stream parity status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^unknown_path_contract_status=verified$'; then
   echo "expected unknown-path contract marker" >&2
   exit 1
@@ -34,6 +42,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^malformed_input_contract_sta
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^timeout_contract_status=verified$'; then
   echo "expected timeout contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
+  echo "expected reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
+  echo "expected reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_budget_boundary_status=verified$'; then
+  echo "expected ci-local budget boundary marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
@@ -59,12 +79,22 @@ if payload.get("schema_version") != "kamn.runtime.observability-endpoint-live-va
     raise SystemExit("unexpected runtime observability endpoint live schema")
 if payload.get("runtime_observability_stream_contract_status") != "verified":
     raise SystemExit("expected runtime_observability_stream_contract_status=verified")
+if payload.get("endpoint_readiness_status") != "verified":
+    raise SystemExit("expected endpoint_readiness_status=verified")
+if payload.get("stream_parity_status") != "verified":
+    raise SystemExit("expected stream_parity_status=verified")
 if payload.get("unknown_path_contract_status") != "verified":
     raise SystemExit("expected unknown_path_contract_status=verified")
 if payload.get("malformed_input_contract_status") != "verified":
     raise SystemExit("expected malformed_input_contract_status=verified")
 if payload.get("timeout_contract_status") != "verified":
     raise SystemExit("expected timeout_contract_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic reason_codes_csv marker")
+if payload.get("ci_local_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_budget_boundary_status=verified")
 if payload.get("fail_closed_status") != "verified":
     raise SystemExit("expected fail_closed_status=verified")
 if payload.get("docs_contract_status") != "verified":
@@ -73,6 +103,8 @@ if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 if payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
     raise SystemExit("expected deterministic fail_closed_reason_codes_csv taxonomy")
+if payload.get("max_seconds") != 120:
+    raise SystemExit("expected max_seconds=120 in validation report")
 PY
 
 set +e

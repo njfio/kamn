@@ -45,6 +45,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^runtime_observability_contract_lan
   echo "expected runtime observability endpoint contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^endpoint_readiness_status=verified$'; then
+  echo "expected runtime observability endpoint endpoint-readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^stream_parity_status=verified$'; then
+  echo "expected runtime observability endpoint stream-parity marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^unknown_path_contract_status=verified$'; then
   echo "expected runtime observability endpoint unknown-path marker" >&2
   exit 1
@@ -55,6 +63,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^malformed_input_contract_status=ve
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^timeout_contract_status=verified$'; then
   echo "expected runtime observability endpoint timeout marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
+  echo "expected runtime observability endpoint reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
+  echo "expected runtime observability endpoint reason codes taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch$'; then
@@ -82,12 +98,20 @@ if lane_payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified")
 if lane_payload.get("runtime_observability_contract_lane_status") != "verified":
     raise SystemExit("expected runtime_observability_contract_lane_status=verified")
+if lane_payload.get("endpoint_readiness_status") != "verified":
+    raise SystemExit("expected endpoint_readiness_status=verified")
+if lane_payload.get("stream_parity_status") != "verified":
+    raise SystemExit("expected stream_parity_status=verified")
 if lane_payload.get("unknown_path_contract_status") != "verified":
     raise SystemExit("expected unknown_path_contract_status=verified")
 if lane_payload.get("malformed_input_contract_status") != "verified":
     raise SystemExit("expected malformed_input_contract_status=verified")
 if lane_payload.get("timeout_contract_status") != "verified":
     raise SystemExit("expected timeout_contract_status=verified")
+if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker")
+if lane_payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic reason_codes_csv marker")
 if lane_payload.get("fail_closed_reason_code") != "runtime_observability_policy_final_decision_mismatch":
     raise SystemExit("expected deterministic fail-closed reason code marker")
 if lane_payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
@@ -102,6 +126,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified in policy report")
+if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in policy report")
+if policy_payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_runtime_observability_endpoint_live_policy.sh" "$CONTRACT_LANE"; then
@@ -110,6 +138,22 @@ if ! grep -q "check_runtime_observability_endpoint_live_policy.sh" "$CONTRACT_LA
 fi
 if ! grep -q "validate_runtime_observability_endpoint_live.sh" "$CONTRACT_LANE"; then
   echo "expected runtime observability endpoint contract lane to compose validation lane" >&2
+  exit 1
+fi
+
+set +e
+boundary_output="$(
+  bash "$CONTRACT_LANE" \
+    --max-seconds 241 2>&1
+)"
+boundary_code=$?
+set -e
+if [ "$boundary_code" -eq 0 ]; then
+  echo "expected runtime observability endpoint contract lane to reject max-seconds beyond ci-local boundary" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$boundary_output" | grep -q 'max-seconds must be <= 240 for ci-local contract lane'; then
+  echo "expected deterministic ci-local boundary marker for runtime observability endpoint contract lane" >&2
   exit 1
 fi
 

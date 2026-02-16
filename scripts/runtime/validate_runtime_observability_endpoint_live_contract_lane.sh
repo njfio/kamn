@@ -45,6 +45,10 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+if [ "$max_seconds" -gt 240 ]; then
+  echo "max-seconds must be <= 240 for ci-local contract lane" >&2
+  exit 1
+fi
 if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
   echo "ci-fast-gate must be PASS or FAIL" >&2
   exit 1
@@ -85,6 +89,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
   echo "expected runtime observability endpoint live validation GO marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^endpoint_readiness_status=verified$'; then
+  echo "expected runtime observability endpoint live validation endpoint readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^stream_parity_status=verified$'; then
+  echo "expected runtime observability endpoint live validation stream parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
+  echo "expected runtime observability endpoint live validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
+  echo "expected runtime observability endpoint live validation reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -103,6 +123,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^runtime_observability_policy_status=verified$'; then
   echo "expected runtime observability endpoint policy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
+  echo "expected runtime observability endpoint policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
+  echo "expected runtime observability endpoint policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -196,6 +224,8 @@ lane_report = {
     "runtime_observability_stream_contract_status": summary_report.get(
         "runtime_observability_stream_contract_status"
     ),
+    "endpoint_readiness_status": summary_report.get("endpoint_readiness_status"),
+    "stream_parity_status": summary_report.get("stream_parity_status"),
     "unknown_path_contract_status": summary_report.get(
         "unknown_path_contract_status"
     ),
@@ -208,6 +238,8 @@ lane_report = {
     "runtime_observability_policy_status": policy_report.get(
         "runtime_observability_policy_status"
     ),
+    "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
+    "reason_codes_csv": summary_report.get("reason_codes_csv"),
     "runtime_observability_contract_lane_status": "verified",
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
@@ -230,9 +262,13 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "runtime_observability_stream_contract_status=verified"
+echo "endpoint_readiness_status=verified"
+echo "stream_parity_status=verified"
 echo "unknown_path_contract_status=verified"
 echo "malformed_input_contract_status=verified"
 echo "timeout_contract_status=verified"
+echo "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+echo "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
 echo "runtime_observability_policy_status=verified"
 echo "runtime_observability_contract_lane_status=verified"
 echo "docs_contract_status=verified"
