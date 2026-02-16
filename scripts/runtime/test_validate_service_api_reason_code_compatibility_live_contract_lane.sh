@@ -65,6 +65,34 @@ if ! printf '%s\n' "$lane_output" | grep -q '^regression_drift_diagnostics_statu
   echo "expected service api reason-code compatibility contract lane regression drift marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^api_error_reason_taxonomy_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane api-error taxonomy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^timeout_classification_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane timeout-classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^endpoint_parity_gate_normalization_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane endpoint parity normalization marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1$'; then
+  echo "expected service api reason-code compatibility contract lane api-error reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error$'; then
+  echo "expected service api reason-code compatibility contract lane api-error reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1$'; then
+  echo "expected service api reason-code compatibility contract lane timeout reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^timeout_reason_codes_csv=service_api_request_read_failed$'; then
+  echo "expected service api reason-code compatibility contract lane timeout reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^regression_corpus_scenario_count=[1-9][0-9]*$'; then
   echo "expected service api reason-code compatibility contract lane regression corpus count marker" >&2
   exit 1
@@ -100,6 +128,20 @@ if lane_payload.get("regression_corpus_status") != "verified":
     raise SystemExit("expected regression_corpus_status=verified")
 if lane_payload.get("regression_drift_diagnostics_status") != "verified":
     raise SystemExit("expected regression_drift_diagnostics_status=verified")
+if lane_payload.get("api_error_reason_taxonomy_status") != "verified":
+    raise SystemExit("expected api_error_reason_taxonomy_status=verified")
+if lane_payload.get("timeout_classification_status") != "verified":
+    raise SystemExit("expected timeout_classification_status=verified")
+if lane_payload.get("endpoint_parity_gate_normalization_status") != "verified":
+    raise SystemExit("expected endpoint_parity_gate_normalization_status=verified")
+if lane_payload.get("api_error_reason_taxonomy_version") != "kamn.runtime.service-api-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic api_error_reason_taxonomy_version marker")
+if lane_payload.get("api_error_reason_codes_csv") != "service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error":
+    raise SystemExit("expected deterministic api_error_reason_codes_csv marker")
+if lane_payload.get("timeout_reason_taxonomy_version") != "kamn.runtime.service-api-timeout-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic timeout_reason_taxonomy_version marker")
+if lane_payload.get("timeout_reason_codes_csv") != "service_api_request_read_failed":
+    raise SystemExit("expected deterministic timeout_reason_codes_csv marker")
 scenario_count = lane_payload.get("regression_corpus_scenario_count")
 if not isinstance(scenario_count, int) or scenario_count <= 0:
     raise SystemExit("expected regression_corpus_scenario_count to be positive integer")
@@ -115,6 +157,14 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("service_api_reason_code_policy_status") != "verified":
     raise SystemExit("expected service_api_reason_code_policy_status=verified in policy report")
+if policy_payload.get("api_error_reason_taxonomy_version") != "kamn.runtime.service-api-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic api_error_reason_taxonomy_version marker in policy report")
+if policy_payload.get("api_error_reason_codes_csv") != "service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error":
+    raise SystemExit("expected deterministic api_error_reason_codes_csv marker in policy report")
+if policy_payload.get("timeout_reason_taxonomy_version") != "kamn.runtime.service-api-timeout-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic timeout_reason_taxonomy_version marker in policy report")
+if policy_payload.get("timeout_reason_codes_csv") != "service_api_request_read_failed":
+    raise SystemExit("expected deterministic timeout_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_reason_code_compatibility_live_policy.sh" "$CONTRACT_LANE"; then
