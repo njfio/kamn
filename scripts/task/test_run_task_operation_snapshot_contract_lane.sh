@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/task/run_task_operation_snapshot_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/task/run_task_operation_snapshot_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/task/task_operation_snapshot_contract_lane_contract.sh"
+DEEP_IMPL="$ROOT_DIR/scripts/task/run_task_operation_snapshot_deep_lane_impl.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/task_task_operation_snapshot_contract_lane.json"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/task_task_operation_snapshot_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
@@ -19,6 +21,10 @@ if [ ! -x "$DEEP_SCRIPT" ]; then
 fi
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected task operation snapshot shared contract-lane module to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DEEP_IMPL" ]; then
+  echo "expected task operation snapshot deep-lane implementation module to be executable" >&2
   exit 1
 fi
 
@@ -62,13 +68,24 @@ if ! grep -q "task_escrow_transition_contracts" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
-if ! grep -Fq "run_task_operation_snapshot_contract_lane.sh" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to execute task operation snapshot fast-lane checks first" >&2
+if [ ! -L "$DEEP_SCRIPT" ]; then
+  echo "expected task operation snapshot deep lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "performance_task_operation_snapshot_store_deep_lane_stress -- --ignored" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to run ignored task operation snapshot stress test" >&2
+if [ "$(readlink "$DEEP_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected task operation snapshot deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected task operation snapshot deep wrapper to resolve deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_task_operation_snapshot_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected task operation snapshot deep manifest to dispatch deep implementation module" >&2
   exit 1
 fi
 
