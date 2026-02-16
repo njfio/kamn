@@ -53,6 +53,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^docs_ingress_limit_matrix_status=v
   echo "expected service api axum ingress contract lane docs parity marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_status=verified$'; then
+  echo "expected service api axum ingress contract lane protocol compliance marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^route_contract_parity_status=verified$'; then
+  echo "expected service api axum ingress contract lane route-contract parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected$'; then
+  echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
   echo "expected service api axum ingress contract lane max-requests default marker" >&2
   exit 1
@@ -73,7 +89,7 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^api_rate_limit_per_second_default
   echo "expected service api axum ingress contract lane rate-limit default marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:concurrency_status$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:route_contract_parity_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
 fi
@@ -98,6 +114,14 @@ if lane_payload.get("ingress_limit_config_status") != "verified":
     raise SystemExit("expected ingress_limit_config_status=verified")
 if lane_payload.get("docs_ingress_limit_matrix_status") != "verified":
     raise SystemExit("expected docs_ingress_limit_matrix_status=verified")
+if lane_payload.get("protocol_compliance_status") != "verified":
+    raise SystemExit("expected protocol_compliance_status=verified")
+if lane_payload.get("route_contract_parity_status") != "verified":
+    raise SystemExit("expected route_contract_parity_status=verified")
+if lane_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
+if lane_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
+    raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -120,6 +144,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("service_api_axum_ingress_policy_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_policy_status=verified in policy report")
+if policy_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker in policy report")
+if policy_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
+    raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then

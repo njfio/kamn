@@ -30,6 +30,13 @@ EXPECTED_API_MAX_REQUESTS_DEFAULT = 1
 EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS = 5_000
 EXPECTED_API_CONCURRENCY_LIMIT_DEFAULT = 32
 EXPECTED_API_RATE_LIMIT_PER_SECOND_DEFAULT = 120
+EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+)
+EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV = (
+    "method_path_contract_mismatch,payload_shape_contract_mismatch,"
+    "route_contract_bypass_detected"
+)
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -41,6 +48,10 @@ REQUIRED_REPORT_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "protocol_compliance_status",
+    "route_contract_parity_status",
+    "protocol_compliance_reason_taxonomy_version",
+    "protocol_compliance_reason_codes_csv",
     "api_max_requests_default",
     "api_idle_timeout_default_ms",
     "body_size_limit_bytes",
@@ -60,6 +71,8 @@ REQUIRED_VERIFIED_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "protocol_compliance_status",
+    "route_contract_parity_status",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -164,6 +177,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_api_rate_limit_per_second_default_mismatch",
     )
     decision.reject_if(
+        report.get("protocol_compliance_reason_taxonomy_version")
+        != EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("protocol_compliance_reason_codes_csv")
+        != EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV,
+        "service_api_axum_policy_protocol_compliance_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "service_api_axum_policy_elapsed_seconds_invalid",
     )
@@ -184,6 +207,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
+        "protocol_compliance_reason_taxonomy_version": (
+            EXPECTED_PROTOCOL_COMPLIANCE_REASON_TAXONOMY_VERSION
+        ),
+        "protocol_compliance_reason_codes_csv": (
+            EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV
+        ),
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }

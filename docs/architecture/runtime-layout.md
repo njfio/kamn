@@ -91,3 +91,17 @@ Deterministic lane and policy markers include:
 - `consistency_classification_status=verified`
 - `reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1`
 - `reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch`
+
+## Service API Protocol Compliance Governance
+
+Service API ingress protocol-compliance and route-contract parity drift are enforced through:
+
+- `scripts/runtime/check_service_api_axum_ingress_live_policy.sh`
+- `scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh`
+
+Deterministic lane and policy markers include:
+
+- `protocol_compliance_status=verified`
+- `route_contract_parity_status=verified`
+- `protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1`
+- `protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected`

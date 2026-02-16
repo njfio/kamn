@@ -19,8 +19,8 @@ POLICY_STATUS_KEY="service_api_axum_ingress_policy_status"
 SUMMARY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-validation.v1"
 POLICY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-policy-report.v1"
 LANE_REPORT_SCHEMA="kamn.runtime.service-api-axum-ingress-live-contract-lane-report.v1"
-TAMPER_FIELD="concurrency_status"
-TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:concurrency_status"
+TAMPER_FIELD="route_contract_parity_status"
+TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:route_contract_parity_status"
 ROADMAP_TASK_MARKER="Task #3308"
 ROADMAP_CONTRACT_SCRIPT_REF="scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh"
 ROADMAP_POLICY_SCRIPT_REF="scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
@@ -35,6 +35,10 @@ VALIDATION_REQUIRED_MARKERS=(
   "websocket_status=verified"
   "ingress_limit_config_status=verified"
   "docs_ingress_limit_matrix_status=verified"
+  "protocol_compliance_status=verified"
+  "route_contract_parity_status=verified"
+  "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+  "protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
 )
 VALIDATION_REQUIRED_REGEX_MARKERS=(
   '^api_max_requests_default=[1-9][0-9]*$'
@@ -62,6 +66,10 @@ STRATEGY_REQUIRED_MARKERS=(
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status
   docs_ingress_limit_matrix_status
+  protocol_compliance_status
+  route_contract_parity_status
+  protocol_compliance_reason_taxonomy_version
+  protocol_compliance_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
   body_size_limit_bytes
@@ -71,6 +79,10 @@ LANE_REPORT_SUMMARY_FIELDS=(
 OUTPUT_SUMMARY_FIELDS=(
   ingress_limit_config_status
   docs_ingress_limit_matrix_status
+  protocol_compliance_status
+  route_contract_parity_status
+  protocol_compliance_reason_taxonomy_version
+  protocol_compliance_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
   body_size_limit_bytes

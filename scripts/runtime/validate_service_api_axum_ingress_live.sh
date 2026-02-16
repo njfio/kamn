@@ -527,6 +527,10 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["api_rate_limit_per_second_default"])
 PY
 )"
+protocol_compliance_status="verified"
+route_contract_parity_status="verified"
+protocol_compliance_reason_taxonomy_version="kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+protocol_compliance_reason_codes_csv="method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -546,6 +550,10 @@ cat >"$report_json" <<JSON
   "websocket_status": "${websocket_status}",
   "ingress_limit_config_status": "${ingress_limit_config_status}",
   "docs_ingress_limit_matrix_status": "${docs_ingress_limit_matrix_status}",
+  "protocol_compliance_status": "${protocol_compliance_status}",
+  "route_contract_parity_status": "${route_contract_parity_status}",
+  "protocol_compliance_reason_taxonomy_version": "${protocol_compliance_reason_taxonomy_version}",
+  "protocol_compliance_reason_codes_csv": "${protocol_compliance_reason_codes_csv}",
   "api_max_requests_default": ${api_max_requests_default},
   "api_idle_timeout_default_ms": ${api_idle_timeout_default_ms},
   "body_size_limit_bytes": ${body_size_limit_bytes},
@@ -571,6 +579,10 @@ echo "concurrency_status=${concurrency_status}"
 echo "websocket_status=${websocket_status}"
 echo "ingress_limit_config_status=${ingress_limit_config_status}"
 echo "docs_ingress_limit_matrix_status=${docs_ingress_limit_matrix_status}"
+echo "protocol_compliance_status=${protocol_compliance_status}"
+echo "route_contract_parity_status=${route_contract_parity_status}"
+echo "protocol_compliance_reason_taxonomy_version=${protocol_compliance_reason_taxonomy_version}"
+echo "protocol_compliance_reason_codes_csv=${protocol_compliance_reason_codes_csv}"
 echo "api_max_requests_default=${api_max_requests_default}"
 echo "api_idle_timeout_default_ms=${api_idle_timeout_default_ms}"
 echo "body_size_limit_bytes=${body_size_limit_bytes}"

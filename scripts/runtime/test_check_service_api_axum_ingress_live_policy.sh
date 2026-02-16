@@ -23,6 +23,10 @@ cat >"$report_file" <<'JSON'
   "websocket_status": "verified",
   "ingress_limit_config_status": "verified",
   "docs_ingress_limit_matrix_status": "verified",
+  "protocol_compliance_status": "verified",
+  "route_contract_parity_status": "verified",
+  "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
+  "protocol_compliance_reason_codes_csv": "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected",
   "api_max_requests_default": 1,
   "api_idle_timeout_default_ms": 5000,
   "body_size_limit_bytes": 65536,
@@ -73,6 +77,10 @@ if payload.get("service_api_axum_ingress_policy_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
+if payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
+    raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker")
 PY
 
 tampered_report="$TMP_DIR/service-api-axum-ingress-live-summary.tampered.json"
@@ -105,6 +113,72 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'service_api_axum_policy_marker_missing:concurrency_status'; then
   echo "expected deterministic mismatch reason code for tampered policy validation" >&2
+  exit 1
+fi
+
+tampered_route_parity_report="$TMP_DIR/service-api-axum-ingress-live-summary.route-parity.tampered.json"
+cp "$report_file" "$tampered_route_parity_report"
+python3 - "$tampered_route_parity_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["route_contract_parity_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_route_parity_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_route_parity_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.route-parity.tampered.json" 2>&1
+)"
+tampered_route_parity_code=$?
+set -e
+
+if [ "$tampered_route_parity_code" -eq 0 ]; then
+  echo "expected tampered service api route-contract parity to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_route_parity_output" | grep -q 'service_api_axum_policy_marker_missing:route_contract_parity_status'; then
+  echo "expected deterministic mismatch reason code for tampered route-contract parity" >&2
+  exit 1
+fi
+
+tampered_protocol_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.protocol-taxonomy.tampered.json"
+cp "$report_file" "$tampered_protocol_taxonomy_report"
+python3 - "$tampered_protocol_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["protocol_compliance_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_protocol_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_protocol_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.protocol-taxonomy.tampered.json" 2>&1
+)"
+tampered_protocol_taxonomy_code=$?
+set -e
+
+if [ "$tampered_protocol_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered service api protocol taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_protocol_taxonomy_output" | grep -q 'service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered protocol taxonomy" >&2
   exit 1
 fi
 
