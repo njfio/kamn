@@ -80,6 +80,10 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^queue_bound_budget_status=verif
   echo "expected local observability scrape dry-run queue-bound budget marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected local observability scrape dry-run observability TLS route marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^local_heavy_soak_lane_status=not_enabled$'; then
   echo "expected local observability scrape dry-run soak lane status marker" >&2
   exit 1
@@ -127,6 +131,8 @@ if payload.get("stream_reconnect_churn_status") != "verified":
     raise SystemExit("expected local observability scrape dry-run stream_reconnect_churn_status=verified")
 if payload.get("queue_bound_budget_status") != "verified":
     raise SystemExit("expected local observability scrape dry-run queue_bound_budget_status=verified")
+if payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected local observability scrape dry-run observability_tls_route_contract_status=verified")
 if payload.get("degradation_taxonomy_status") != "verified":
     raise SystemExit("expected local observability scrape dry-run degradation_taxonomy_status=verified")
 if payload.get("degradation_reason_codes_csv") != "none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded":
@@ -219,6 +225,10 @@ if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^queue_bound_budget_status=
   echo "expected local observability scrape soak dry-run queue-bound budget marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected local observability scrape soak dry-run observability TLS route marker" >&2
+  exit 1
+fi
 
 python3 - "$soak_dry_run_report" <<'PY'
 import json
@@ -234,6 +244,8 @@ if payload.get("soak_iterations_requested") != 2:
     raise SystemExit("expected local observability scrape soak dry-run soak_iterations_requested=2")
 if payload.get("soak_iterations_executed") != 0:
     raise SystemExit("expected local observability scrape soak dry-run soak_iterations_executed=0")
+if payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected local observability scrape soak dry-run observability_tls_route_contract_status=verified")
 PY
 
 soak_policy_report="$TMP_DIR/local-observability-scrape-live-policy.soak-dry-run.json"

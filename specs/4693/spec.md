@@ -1,45 +1,49 @@
 # Issue #4693 Spec
 
 - Title: `Task: decompose p2p transport and block pipeline monoliths with deterministic module contracts`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
-- Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-block-pipeline/index.md`
+- Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
+- Parent: `#4310`
 
 ## Problem Statement
-`crates/kamn-core/src/p2p_transport.rs` and `crates/kamn-core/src/block_pipeline.rs` remain oversized and multi-responsibility, which increases maintenance burden and regression risk during transport/pipeline evolution.
+`crates/kamn-core/src/p2p_transport.rs` and `crates/kamn-core/src/block_pipeline.rs` remain the largest files in the codebase and aggregate multiple responsibilities, raising review and regression risk.
 
 ## Scope
 In:
-- Extract cohesive transport/pipeline responsibilities into dedicated modules.
-- Preserve deterministic fail-closed behavior and reason codes.
-- Preserve runtime behavior via parity/regression tests.
-- Document ownership boundaries and verification commands.
+- Extract clear module ownership boundaries for `p2p_transport` and `block_pipeline`.
+- Preserve deterministic reason taxonomy and fail-closed behavior.
+- Add extraction boundary regression checks.
+- Update runtime network docs with new ownership mapping and verification references.
 
 Out:
-- Protocol redesign or wire-format changes.
-- New transport providers or consensus model changes.
+- Wire/protocol redesign.
+- New transport providers or runtime modes.
 
 ## Acceptance Criteria
-- AC-1: Given `p2p_transport` extraction, when reviewing module ownership, then transport adapter/coordinator/validation/lifecycle/error/runtime-event/swarm-stack/native-runtime responsibilities are delegated to dedicated submodules.
-- AC-2: Given `block_pipeline` extraction, when reviewing module ownership, then validation, gossip ingress, fork-choice, evidence, and commit-store responsibilities are delegated to dedicated submodules.
-- AC-3: Given existing transport/pipeline tests, when running scoped suites, then behavior remains parity-stable with deterministic fail-closed reason taxonomy.
-- AC-4: Given docs updates, when reviewing runtime-network contracts, then transport/pipeline module ownership and verification commands are explicit.
+- AC-1: `p2p_transport.rs` delegates major live/libp2p runtime responsibilities to focused submodules while preserving existing public API.
+- AC-2: `block_pipeline.rs` delegates ingress/store/fork-choice support responsibilities to focused submodules while preserving existing public API.
+- AC-3: Deterministic fail-closed reason-code behavior for transport and block-pipeline paths remains unchanged.
+- AC-4: Extraction boundaries are covered by regression/contract tests and documented in runtime-network docs.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Integration/Conformance | `rg -n "mod adapter|mod coordinator|mod validation|mod lifecycle_regression|mod error|mod runtime_event|mod swarm_stack|mod native_runtime" crates/kamn-core/src/p2p_transport.rs` | p2p transport responsibilities delegated to dedicated modules |
-| C-02 | AC-2 | Integration/Conformance | `rg -n "mod validation|mod gossip_ingress|mod fork_choice|mod evidence|mod commit_store" crates/kamn-core/src/block_pipeline.rs` | block pipeline responsibilities delegated to dedicated modules |
-| C-03 | AC-3 | Functional/Regression | `cargo test -p kamn-core --test p2p_transport_runtime -- --nocapture` and `cargo test -p kamn-core --test block_pipeline -- --nocapture` | scoped transport/pipeline behavior remains stable |
-| C-04 | AC-4 | Docs/Regression | docs review for transport/pipeline module ownership and command references | runtime-network docs include decomposition ownership map |
+| C-01 | AC-1 | Regression | `cargo test -p kamn-core --test transport_pipeline_module_extraction_contract p2p_transport_module_boundaries_decompose_live_runtime_sections -- --exact` | p2p transport root declares focused submodules and no regression to monolithic ownership |
+| C-02 | AC-2 | Regression | `cargo test -p kamn-core --test transport_pipeline_module_extraction_contract block_pipeline_module_boundaries_decompose_ingress_and_store_sections -- --exact` | block pipeline root declares focused submodules and no regression to monolithic ownership |
+| C-03 | AC-3 | Unit | `cargo test -p kamn-core p2p_transport::tests::transport_error_reason_code_remains_deterministic -- --exact` | transport reason-code taxonomy remains stable |
+| C-04 | AC-3 | Unit | `cargo test -p kamn-core block_pipeline::tests::block_pipeline_error_reason_code_extracts_commit_store_marker -- --exact` | block pipeline fail-closed reason extraction remains stable |
+| C-05 | AC-3 | Functional/Integration | `cargo test -p kamn-core p2p_transport::tests::coordinator_connect_and_advertise_transitions_to_active_state -- --exact` | lifecycle/advertise behavior preserved |
+| C-06 | AC-3 | Functional/Integration | `cargo test -p kamn-core block_pipeline::tests::regression_consensus_round_rejects_empty_mempool -- --exact` | pipeline fail-closed empty mempool behavior preserved |
+| C-07 | AC-4 | Docs/Conformance | `cargo test -p kamn-core --test runtime_network_docs` | docs reflect ownership and verification contracts |
 
 ## Test Mapping
-- C-01: `crates/kamn-core/src/p2p_transport/*.rs` extraction module wiring + runtime tests.
-- C-02: `crates/kamn-core/src/block_pipeline/*.rs` extraction module wiring + pipeline tests.
-- C-03: `cargo test -p kamn-core --test p2p_transport_runtime -- --nocapture`; `cargo test -p kamn-core --test block_pipeline -- --nocapture`; `cargo test -p kamn-core --test block_pipeline_sqlite_commit_store -- --nocapture`.
-- C-04: `docs/foundation/runtime-network.md` update.
+- `crates/kamn-core/tests/transport_pipeline_module_extraction_contract.rs`
+- `crates/kamn-core/src/p2p_transport.rs`
+- `crates/kamn-core/src/block_pipeline.rs`
+- `docs/foundation/runtime-network.md`
 
 ## Success Metrics
-- `p2p_transport.rs` and `block_pipeline.rs` line surfaces are reduced with explicit ownership boundaries.
-- Scoped transport/pipeline suites pass without behavior drift.
-- Deterministic fail-closed reason taxonomy remains preserved.
+- `p2p_transport.rs` and `block_pipeline.rs` line counts are reduced through extracted module ownership boundaries.
+- Existing deterministic reason-code tests pass without behavior changes.
+- Extraction-contract test(s) and runtime-network docs checks pass.

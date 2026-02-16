@@ -152,6 +152,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^queue_bound_budget_status=ve
   echo "expected local observability scrape validation queue-bound budget marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected local observability scrape validation observability TLS route marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^readiness_probe_status=verified$'; then
   echo "expected local observability scrape validation readiness probe marker" >&2
   exit 1
@@ -261,8 +265,8 @@ if ! grep -q "local observability soak run-mode commands remain excluded from ci
   echo "expected CI strategy docs to include local observability soak run-mode exclusion marker" >&2
   exit 1
 fi
-if ! grep -q "bounded to seven targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
-  echo "expected CI strategy docs to include seven-test local observability scrape run-mode budget marker" >&2
+if ! grep -q "bounded to eight targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include eight-test local observability scrape run-mode budget marker" >&2
   exit 1
 fi
 if ! grep -q "telemetry degradation taxonomy policy checker markers remain command-surface contract-governed" "$STRATEGY_DOC"; then
@@ -347,6 +351,9 @@ lane_report = {
     "queue_bound_budget_status": summary_report.get(
         "queue_bound_budget_status"
     ),
+    "observability_tls_route_contract_status": summary_report.get(
+        "observability_tls_route_contract_status"
+    ),
     "soak_iterations_requested": summary_report.get(
         "soak_iterations_requested"
     ),
@@ -396,6 +403,7 @@ else
 fi
 echo "stream_reconnect_churn_status=verified"
 echo "queue_bound_budget_status=verified"
+echo "observability_tls_route_contract_status=verified"
 echo "local_observability_scrape_contract_status=verified"
 echo "local_observability_scrape_policy_status=verified"
 echo "docs_contract_status=verified"

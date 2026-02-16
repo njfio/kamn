@@ -1,6 +1,10 @@
 use super::*;
 use crate::daemon_test_env_lock;
-use crate::observability_endpoint::RuntimeObservabilitySnapshot;
+use crate::observability_endpoint::{
+    set_observability_endpoint_tls_mode_override_for_current_thread_for_tests,
+    ObservabilityEndpointTlsModeOverride, RuntimeObservabilitySnapshot,
+};
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Barrier};
@@ -12,6 +16,60 @@ fn reserve_loopback_addr() -> String {
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()
+}
+
+#[derive(Debug)]
+struct TestSkipServerVerification(Arc<rustls::crypto::CryptoProvider>);
+
+impl TestSkipServerVerification {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(Arc::new(rustls::crypto::ring::default_provider())))
+    }
+}
+
+impl rustls::client::danger::ServerCertVerifier for TestSkipServerVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        self.0.signature_verification_algorithms.supported_schemes()
+    }
 }
 
 fn send_http_get(addr: &str, path: &str) -> String {
@@ -40,6 +98,54 @@ fn send_http_get(addr: &str, path: &str) -> String {
         }
     }
     response
+}
+
+fn send_https_get(addr: &str, path: &str) -> String {
+    try_send_https_get(addr, path).expect("tls request should succeed")
+}
+
+fn try_send_https_get(addr: &str, path: &str) -> Result<String, String> {
+    let client_config = rustls::ClientConfig::builder()
+        .dangerous()
+        .with_custom_certificate_verifier(TestSkipServerVerification::new())
+        .with_no_client_auth();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost".to_owned())
+        .map_err(|error| format!("server name should parse: {error}"))?;
+    let connection = rustls::ClientConnection::new(Arc::new(client_config), server_name)
+        .map_err(|error| format!("tls client connection should initialize: {error}"))?;
+    let tcp_stream =
+        TcpStream::connect(addr).map_err(|error| format!("tls connect should succeed: {error}"))?;
+    tcp_stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .map_err(|error| format!("tls read timeout should be configurable: {error}"))?;
+    let mut stream = rustls::StreamOwned::new(connection, tcp_stream);
+
+    let request = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("tls request should write: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("tls request should flush: {error}"))?;
+
+    let mut response = String::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.push_str(
+                    std::str::from_utf8(&chunk[..read_count])
+                        .map_err(|error| format!("response must be utf-8: {error}"))?,
+                );
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => return Err(format!("tls response should be readable: {error}")),
+        }
+    }
+    Ok(response)
 }
 
 fn try_send_http_get(addr: &str, path: &str) -> Result<String, String> {
@@ -147,6 +253,49 @@ fn wait_for_endpoint_ready(addr: &str) {
         thread::sleep(Duration::from_millis(10));
     }
     panic!("endpoint did not become ready within timeout");
+}
+
+fn wait_for_https_endpoint_ready(addr: &str) {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline {
+        if try_send_https_get(addr, "/readyz")
+            .map(|response| response.contains("HTTP/1.1"))
+            .unwrap_or(false)
+        {
+            return;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    panic!("tls endpoint did not become ready within timeout");
+}
+
+struct ObservabilityEndpointTlsModeOverrideGuard;
+
+impl Drop for ObservabilityEndpointTlsModeOverrideGuard {
+    fn drop(&mut self) {
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
+    }
+}
+
+fn set_tls_mode_override_for_current_thread(
+    mode: ObservabilityEndpointTlsModeOverride,
+) -> ObservabilityEndpointTlsModeOverrideGuard {
+    set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(mode));
+    ObservabilityEndpointTlsModeOverrideGuard
+}
+
+fn observability_tls_temp_path(label: &str) -> String {
+    let entropy = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    std::env::temp_dir()
+        .join(format!(
+            "kamn-observability-tls-{label}-{}-{entropy}.pem",
+            std::process::id()
+        ))
+        .to_string_lossy()
+        .to_string()
 }
 
 fn sample_observability_snapshot() -> RuntimeObservabilitySnapshot {
@@ -641,6 +790,190 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
     assert!(
         server_result.is_ok(),
         "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_tls_mode_serves_required_https_routes() {
+    let (cert_file, key_file) =
+        super::service_api_endpoint_tests::write_test_service_api_tls_materials();
+
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_cert_file = cert_file.clone();
+    let server_key_file = key_file.clone();
+    let server_snapshot = snapshot.clone();
+    let server = thread::spawn(move || {
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(
+            ObservabilityEndpointTlsModeOverride::Require {
+                cert_file: server_cert_file,
+                key_file: server_key_file,
+            },
+        ));
+        let result = serve_observability_endpoint(&endpoint_config, &server_snapshot);
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
+        result
+    });
+    wait_for_https_endpoint_ready(bind_addr.as_str());
+
+    let metrics_response = send_https_get(bind_addr.as_str(), "/metrics");
+    let health_response = send_https_get(bind_addr.as_str(), "/healthz");
+    let readiness_response = send_https_get(bind_addr.as_str(), "/readyz");
+
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(metrics_response.contains("text/plain; version=0.0.4"));
+    assert!(metrics_response.contains("kamn_observability_latency_p50_ms 25"));
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(health_response.contains("\"schema_version\":\"kamn.runtime.observability.health.v1\""));
+    assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response
+        .contains("\"schema_version\":\"kamn.runtime.observability.readiness.v1\""));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "tls endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn regression_runtime_observability_endpoint_tls_mode_rejects_missing_cert_file() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let missing_cert_file = observability_tls_temp_path("missing-cert");
+    let missing_key_file = observability_tls_temp_path("missing-key");
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr,
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+    };
+    let _tls_override =
+        set_tls_mode_override_for_current_thread(ObservabilityEndpointTlsModeOverride::Require {
+            cert_file: missing_cert_file,
+            key_file: missing_key_file,
+        });
+
+    let error = serve_observability_endpoint(&endpoint_config, &snapshot)
+        .expect_err("missing observability tls cert should fail closed");
+    assert!(
+        error.contains("observability endpoint tls certificate file read failed"),
+        "unexpected tls missing-cert marker: {error}"
+    );
+}
+
+#[test]
+fn regression_runtime_observability_endpoint_tls_mode_rejects_invalid_key_file() {
+    let (cert_file, key_file) =
+        super::service_api_endpoint_tests::write_test_service_api_tls_materials();
+    std::fs::write(
+        key_file.as_str(),
+        b"invalid-observability-tls-private-key\n",
+    )
+    .expect("invalid observability tls key material should write");
+
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr,
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+    };
+    let _tls_override =
+        set_tls_mode_override_for_current_thread(ObservabilityEndpointTlsModeOverride::Require {
+            cert_file,
+            key_file,
+        });
+
+    let error = serve_observability_endpoint(&endpoint_config, &snapshot)
+        .expect_err("invalid observability tls key should fail closed");
+    assert!(
+        error.contains("observability endpoint tls key file parse failed"),
+        "unexpected tls invalid-key marker: {error}"
+    );
+}
+
+#[test]
+fn regression_runtime_observability_endpoint_tls_mode_rejects_invalid_mode_value() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr,
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+    };
+    let _tls_override = set_tls_mode_override_for_current_thread(
+        ObservabilityEndpointTlsModeOverride::InvalidMode {
+            mode: "invalid-mode".to_owned(),
+        },
+    );
+
+    let error = serve_observability_endpoint(&endpoint_config, &snapshot)
+        .expect_err("invalid observability tls mode should fail closed");
+    assert!(
+        error.contains("observability endpoint tls mode is invalid: invalid-mode"),
+        "unexpected tls invalid-mode marker: {error}"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_tls_mode_rejects_plain_http_handshake() {
+    let (cert_file, key_file) =
+        super::service_api_endpoint_tests::write_test_service_api_tls_materials();
+
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_cert_file = cert_file.clone();
+    let server_key_file = key_file.clone();
+    let server_snapshot = snapshot.clone();
+    let server = thread::spawn(move || {
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(
+            ObservabilityEndpointTlsModeOverride::Require {
+                cert_file: server_cert_file,
+                key_file: server_key_file,
+            },
+        ));
+        let result = serve_observability_endpoint(&endpoint_config, &server_snapshot);
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
+        result
+    });
+    wait_for_https_endpoint_ready(bind_addr.as_str());
+
+    let plain_http_result = try_send_http_get(bind_addr.as_str(), "/metrics");
+    if let Ok(plain_http_response) = plain_http_result {
+        assert!(
+            !plain_http_response.contains("HTTP/1.1 200 OK"),
+            "plain HTTP request to TLS observability endpoint must not succeed: {plain_http_response}"
+        );
+    }
+    let metrics_response = send_https_get(bind_addr.as_str(), "/metrics");
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "tls endpoint server should stop cleanly after handshake-rejection contract checks"
     );
 }
 

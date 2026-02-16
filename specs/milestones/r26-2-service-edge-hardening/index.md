@@ -9,6 +9,13 @@
 Deliver service-edge hardening by converging TLS activation, API/observability endpoint hardening, and signer monolith decomposition into auditable module boundaries.
 
 ## Issue Map
+- Story `#3630`: add TLS termination for service and observability endpoints
+  - Task `#3643`: enable TLS on observability routes with endpoint compatibility coverage
+    - Subtask `#3658`: add observability-over-TLS integration checks and local-heavy lane
+    - Subtask `#3805`: add observability TLS negative-matrix fail-closed coverage
+  - Task `#3644`: ship TLS go-no-go validation lanes and operational runbooks
+    - Subtask `#3765`: wire TLS go-no-go lane into release gate with deterministic reason taxonomy
+    - Subtask `#3806`: extend TLS rollout/rollback runbook checkpoint contracts
 - Story `#3632`: harden unified API-observability stack contracts and local-heavy governance
   - Task `#3650`: validate unified API-observability stack compatibility and performance
     - Subtask `#3764`: add local-heavy unified-stack performance lane with policy evidence

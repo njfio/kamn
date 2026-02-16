@@ -1,35 +1,25 @@
 # Issue #4693 Tasks
 
 - Issue: `#4693`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
-- T1 (Red, Functional/Regression): add/retain failing assertions for transport/pipeline ownership drift and reason-code drift.
-- T2 (Green, Refactor): extract next `p2p_transport` responsibility slice into dedicated module(s) with stable exports.
-- T3 (Green, Refactor): extract next `block_pipeline` responsibility slice into dedicated module(s) with stable exports.
-- T4 (Regression): run scoped kamn-core transport/pipeline tests and resolve drift.
-- T5 (Docs): update runtime-network ownership mapping for transport/pipeline boundaries.
-- T6 (Verify): run
+- T1 (Red): completed extraction-boundary contract tests for `p2p_transport` and `block_pipeline` root module declarations.
+- T2 (Green): completed extraction of `p2p_transport` live/libp2p runtime responsibilities into focused submodule(s) and preserved API parity.
+- T3 (Green): completed extraction of `block_pipeline` ingress/store/fork-choice responsibilities into focused submodule(s) and preserved API parity.
+- T4 (Regression): validated deterministic transport/pipeline fail-closed reason-code selectors remain unchanged.
+- T5 (Docs): updated runtime-network ownership mapping + verification references.
+- T6 (Verify): ran
   - `cargo fmt --check`
-  - `cargo test -p kamn-core --test p2p_transport_runtime -- --nocapture`
-  - `cargo test -p kamn-core --test block_pipeline -- --nocapture`
-
-## Current Slice Status
-- T1: ✅ completed via `cargo test -p kamn-core --test p2p_block_module_extraction_contract -- --nocapture` red failure before extraction.
-- T2: ✅ completed for transport ownership extraction into:
-  - `crates/kamn-core/src/p2p_transport/adapter.rs`
-  - `crates/kamn-core/src/p2p_transport/coordinator.rs`
-  - `crates/kamn-core/src/p2p_transport/runtime_event.rs`
-  - `crates/kamn-core/src/p2p_transport/swarm_stack.rs`
-  - `crates/kamn-core/src/p2p_transport/native_runtime.rs`
-- T3: ✅ completed for fork-choice and canonical commit-store ownership extraction into:
-  - `crates/kamn-core/src/block_pipeline/fork_choice.rs`
-  - `crates/kamn-core/src/block_pipeline/evidence.rs`
-  - `crates/kamn-core/src/block_pipeline/commit_store.rs`
-- T4: ✅ completed for current slices with scoped transport/pipeline/fork-choice/commit-store regression suites.
-- T5: ✅ completed for current slices with ownership map updates in `docs/foundation/runtime-network.md`.
-- T6: ✅ completed for current slices (`cargo fmt --check`, scoped tests, and `cargo clippy -p kamn-core -- -D warnings`).
+  - `cargo clippy -p kamn-core -- -D warnings`
+  - `cargo test -p kamn-core --test transport_pipeline_module_extraction_contract`
+  - `cargo test -p kamn-core p2p_transport::tests::transport_error_reason_code_remains_deterministic -- --exact`
+  - `cargo test -p kamn-core p2p_transport::tests::coordinator_connect_and_advertise_transitions_to_active_state -- --exact`
+  - `cargo test -p kamn-core block_pipeline::tests::block_pipeline_error_reason_code_extracts_commit_store_marker -- --exact`
+  - `cargo test -p kamn-core block_pipeline::tests::regression_consensus_round_rejects_empty_mempool -- --exact`
+  - `cargo test -p kamn-core --test runtime_network_docs`
 
 ## Completion Evidence
-- Core monolith files are reduced with explicit extracted module ownership.
-- Scoped transport/pipeline suites pass with deterministic fail-closed behavior preserved.
+- Monolith roots reduced via module extraction with stable API.
+- Deterministic fail-closed reason taxonomy preserved by regression selectors.
+- Docs and extraction contracts verified.

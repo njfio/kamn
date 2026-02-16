@@ -97,12 +97,24 @@ if ! printf '%s\n' "$validation_output" | grep -q '^stream_parity_status=verifie
   echo "expected runtime observability endpoint live validation stream parity marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected runtime observability endpoint live validation TLS route marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_negative_matrix_status=verified$'; then
+  echo "expected runtime observability endpoint live validation TLS negative matrix marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
   echo "expected runtime observability endpoint live validation reason taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
   echo "expected runtime observability endpoint live validation reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
+  echo "expected runtime observability endpoint live validation TLS negative matrix reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -131,6 +143,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.run
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
   echo "expected runtime observability endpoint policy checker reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
+  echo "expected runtime observability endpoint policy checker TLS negative matrix reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -235,11 +251,20 @@ lane_report = {
     "timeout_contract_status": summary_report.get(
         "timeout_contract_status"
     ),
+    "observability_tls_route_contract_status": summary_report.get(
+        "observability_tls_route_contract_status"
+    ),
+    "observability_tls_negative_matrix_status": summary_report.get(
+        "observability_tls_negative_matrix_status"
+    ),
     "runtime_observability_policy_status": policy_report.get(
         "runtime_observability_policy_status"
     ),
     "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
     "reason_codes_csv": summary_report.get("reason_codes_csv"),
+    "observability_tls_negative_matrix_reason_codes_csv": summary_report.get(
+        "observability_tls_negative_matrix_reason_codes_csv"
+    ),
     "runtime_observability_contract_lane_status": "verified",
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
@@ -267,8 +292,11 @@ echo "stream_parity_status=verified"
 echo "unknown_path_contract_status=verified"
 echo "malformed_input_contract_status=verified"
 echo "timeout_contract_status=verified"
+echo "observability_tls_route_contract_status=verified"
+echo "observability_tls_negative_matrix_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
 echo "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
+echo "observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected"
 echo "runtime_observability_policy_status=verified"
 echo "runtime_observability_contract_lane_status=verified"
 echo "docs_contract_status=verified"

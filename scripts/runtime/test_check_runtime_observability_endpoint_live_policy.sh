@@ -22,6 +22,18 @@ tampered_report="$TMP_DIR/runtime-observability-endpoint-live-summary.tampered.j
 
 bash "$VALIDATION_SCRIPT" --output-json "$summary_report" >/dev/null
 
+python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected observability_tls_route_contract_status=verified")
+if payload.get("observability_tls_negative_matrix_status") != "verified":
+    raise SystemExit("expected observability_tls_negative_matrix_status=verified")
+PY
+
 policy_output="$(
   bash "$POLICY_CHECKER" \
     --report-file "$summary_report" \
@@ -49,6 +61,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observa
   echo "expected runtime observability endpoint live policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
+  echo "expected runtime observability endpoint live policy checker TLS negative matrix taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -70,6 +86,8 @@ if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoin
     raise SystemExit("expected deterministic runtime observability endpoint reason taxonomy marker")
 if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
     raise SystemExit("expected deterministic runtime observability endpoint reason codes taxonomy marker")
+if payload.get("observability_tls_negative_matrix_reason_codes_csv") != "observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected":
+    raise SystemExit("expected deterministic runtime observability endpoint TLS negative matrix taxonomy marker")
 if payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
     raise SystemExit("expected deterministic fail-closed reason-code taxonomy")
 PY
@@ -106,7 +124,7 @@ if ! printf '%s\n' "$tampered_output" | grep -q 'runtime_observability_policy_fi
   exit 1
 fi
 
-for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status; do
+for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status observability_tls_route_contract_status observability_tls_negative_matrix_status; do
   tampered_marker_report="$TMP_DIR/runtime-observability-endpoint-live-summary.${marker_field}.json"
   cp "$summary_report" "$tampered_marker_report"
   python3 - "$tampered_marker_report" "$marker_field" <<'PY'
@@ -170,6 +188,38 @@ if [ "$tampered_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'runtime_observability_policy_fail_closed_reason_codes_csv_mismatch'; then
   echo "expected deterministic fail-closed taxonomy mismatch reason code" >&2
+  exit 1
+fi
+
+tampered_tls_negative_matrix_taxonomy_report="$TMP_DIR/runtime-observability-endpoint-live-summary.tls-negative-matrix-taxonomy.json"
+cp "$summary_report" "$tampered_tls_negative_matrix_taxonomy_report"
+python3 - "$tampered_tls_negative_matrix_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["observability_tls_negative_matrix_reason_codes_csv"] = "observability_endpoint_tls_certificate_file_read_failed"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_tls_negative_matrix_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_tls_negative_matrix_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.tls-negative-matrix-taxonomy.json" 2>&1
+)"
+tampered_tls_negative_matrix_taxonomy_code=$?
+set -e
+if [ "$tampered_tls_negative_matrix_taxonomy_code" -eq 0 ]; then
+  echo "expected observability TLS negative matrix taxonomy tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_tls_negative_matrix_taxonomy_output" | grep -q 'runtime_observability_policy_tls_negative_matrix_reason_codes_csv_mismatch'; then
+  echo "expected deterministic observability TLS negative matrix taxonomy mismatch reason code" >&2
   exit 1
 fi
 

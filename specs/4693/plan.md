@@ -1,45 +1,33 @@
 # Issue #4693 Plan
 
 - Issue: `#4693`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
-- Continue staged extraction pattern already used in runtime/signer decomposition:
-  - move cohesive helpers into `p2p_transport/` and `block_pipeline/` modules,
-  - keep outer orchestrator functions in root file,
-  - preserve callsites and reason-taxonomy strings.
-- Keep each extraction slice test-backed and small enough for deterministic review.
+- Add extraction-boundary regression tests (RED) for `p2p_transport` and `block_pipeline` root module declarations.
+- Extract `p2p_transport` live/libp2p runtime internals into dedicated submodule(s), preserving root API through re-exports.
+- Extract `block_pipeline` ingress/store/fork-choice support internals into dedicated submodule(s), preserving root API through re-exports.
+- Update runtime-network docs with explicit ownership mapping and verification commands.
 
 ## Affected Modules
 - `crates/kamn-core/src/p2p_transport.rs`
-- `crates/kamn-core/src/p2p_transport/adapter.rs`
-- `crates/kamn-core/src/p2p_transport/coordinator.rs`
-- `crates/kamn-core/src/p2p_transport/validation.rs`
-- `crates/kamn-core/src/p2p_transport/lifecycle_regression.rs`
-- `crates/kamn-core/src/p2p_transport/error.rs`
-- `crates/kamn-core/src/p2p_transport/runtime_event.rs`
-- `crates/kamn-core/src/p2p_transport/swarm_stack.rs`
-- `crates/kamn-core/src/p2p_transport/native_runtime.rs`
+- `crates/kamn-core/src/p2p_transport/*.rs` (new)
 - `crates/kamn-core/src/block_pipeline.rs`
-- `crates/kamn-core/src/block_pipeline/validation.rs`
-- `crates/kamn-core/src/block_pipeline/gossip_ingress.rs`
-- `crates/kamn-core/src/block_pipeline/fork_choice.rs`
-- `crates/kamn-core/src/block_pipeline/evidence.rs`
-- `crates/kamn-core/src/block_pipeline/commit_store.rs`
-- `crates/kamn-core/tests/p2p_block_module_extraction_contract.rs`
+- `crates/kamn-core/src/block_pipeline/*.rs` (new)
+- `crates/kamn-core/tests/transport_pipeline_module_extraction_contract.rs` (new)
 - `docs/foundation/runtime-network.md`
 
 ## Risks and Mitigations
-- Risk: extraction breaks implicit transport/pipeline invariants.
-- Mitigation: keep strict parity assertions in scoped runtime tests.
-- Risk: reason-code drift in fail-closed paths.
-- Mitigation: avoid string changes and run regression-focused tests.
-- Risk: partial extraction leaves ownership ambiguous.
-- Mitigation: document explicit module ownership in docs and issue evidence.
+- Risk: extraction introduces visibility/import drift.
+- Mitigation: preserve API via explicit re-exports and run targeted selectors before full gate checks.
+- Risk: deterministic reason-code behavior regresses.
+- Mitigation: run existing reason-code regression selectors and keep error surface unchanged.
+- Risk: feature-gated libp2p code path compile drift.
+- Mitigation: keep feature-gated code grouped in extracted submodule and run clippy/tests on `kamn-core` crate.
 
 ## Interface Contract
-- Public runtime APIs remain stable; extraction is internal module ownership refactoring.
-- Existing transport and pipeline tests continue to gate behavior parity.
+- No external API or wire contract changes.
+- Public exports from `kamn-core::p2p_transport` and `kamn-core::block_pipeline` remain stable.
 
 ## ADR
-- No ADR required: no dependency, protocol, or public API contract change.
+- Not required (no dependency/protocol change).
