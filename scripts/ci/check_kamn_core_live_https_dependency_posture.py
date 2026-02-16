@@ -208,11 +208,13 @@ def main() -> int:
     reason_codes = ["none"] if status == "pass" else sorted(reason_code_set)
     reason_codes_csv = "none" if status == "pass" else ",".join(reason_codes)
     reason_codes_value = reason_codes_csv
+    reason_class = "stable" if status == "pass" else "violation"
 
     report = {
         "schema_version": SCHEMA_VERSION,
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
         "status": status,
+        "reason_class": reason_class,
         "reason_codes": reason_codes,
         "reason_codes_csv": reason_codes_csv,
         "reason_codes_value": reason_codes_value,
@@ -235,6 +237,7 @@ def main() -> int:
         print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
         print(f"reason_codes_csv={reason_codes_csv}")
         print(f"reason_codes_value={reason_codes_value}")
+        print(f"reason_class={reason_class}")
         print("reason_codes=none")
         print("violation_count=0")
         return 0
@@ -243,6 +246,7 @@ def main() -> int:
     print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={reason_codes_csv}")
     print(f"reason_codes_value={reason_codes_value}")
+    print(f"reason_class={reason_class}")
     print(f"reason_codes={','.join(reason_codes)}")
     print(f"violation_count={len(violations)}")
     for violation in violations:
