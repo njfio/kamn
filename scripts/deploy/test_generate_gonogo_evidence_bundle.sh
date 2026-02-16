@@ -666,4 +666,125 @@ if ! printf '%s\n' "$tls_tampered_output" | grep -q "tls evidence gate convergen
   exit 1
 fi
 
+audit_integrity_report="$TMP_DIR/audit-integrity-policy-report.json"
+cat >"$audit_integrity_report" <<'JSON'
+{
+  "schema_version": "kamn.runtime.sqlite-crash-recovery-live-policy-report.v1",
+  "status": "ok",
+  "final_decision": "GO",
+  "sqlite_crash_recovery_policy_status": "verified",
+  "durability_governance_reason_taxonomy_version": "kamn.runtime.durability-governance-reason-taxonomy.v1",
+  "durability_governance_reason_codes_csv": "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
+}
+JSON
+
+audit_bundle="$TMP_DIR/gonogo-audit-integrity-go.json"
+audit_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$audit_bundle" \
+    --release-candidate "v1.0.0-rc.11" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:audit-integrity-go" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --audit-integrity-report-file "$audit_integrity_report" \
+    --audit-integrity-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$audit_generate_output" "audit_integrity_gate_final_decision")" "GO" "expected audit-integrity gate decision to be GO"
+assert_eq "$(extract_value "$audit_generate_output" "audit_integrity_reason_taxonomy_version")" "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1" "expected deterministic audit-integrity reason taxonomy marker"
+assert_eq "$(extract_value "$audit_generate_output" "audit_integrity_reason_codes_csv")" "none" "expected deterministic audit-integrity reason codes csv marker on pass path"
+assert_eq "$(extract_value "$audit_generate_output" "final_decision")" "GO" "expected final decision to remain GO for converged audit-integrity evidence"
+
+python3 - "$audit_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+gate = payload.get("audit_integrity_gate")
+if not isinstance(gate, dict):
+    raise SystemExit("expected audit_integrity_gate object in go/no-go evidence bundle")
+if gate.get("schema_version") != "kamn.release.gonogo-audit-integrity-gate.v1":
+    raise SystemExit("expected audit-integrity gate schema marker")
+if gate.get("reason_taxonomy_version") != "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected audit-integrity gate reason taxonomy marker")
+if gate.get("final_decision") != "GO":
+    raise SystemExit("expected audit-integrity gate final_decision=GO")
+PY
+
+audit_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$audit_bundle")"
+assert_eq "$(extract_value "$audit_policy_output" "status")" "ok" "expected audit-integrity converged bundle policy check to pass"
+assert_eq "$(extract_value "$audit_policy_output" "audit_integrity_gate_final_decision")" "GO" "expected audit-integrity gate policy decision to remain GO"
+assert_eq "$(extract_value "$audit_policy_output" "final_decision")" "GO" "expected policy checker final decision to remain GO for converged audit-integrity evidence"
+
+audit_unstable_report="$TMP_DIR/audit-integrity-unstable-report.json"
+cp "$audit_integrity_report" "$audit_unstable_report"
+python3 - "$audit_unstable_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["durability_governance_reason_taxonomy_version"] = "kamn.runtime.durability-governance-reason-taxonomy.v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+audit_unstable_bundle="$TMP_DIR/gonogo-audit-integrity-unstable.json"
+audit_unstable_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$audit_unstable_bundle" \
+    --release-candidate "v1.0.0-rc.12" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:audit-integrity-unstable" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --audit-integrity-report-file "$audit_unstable_report" \
+    --audit-integrity-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$audit_unstable_generate_output" "audit_integrity_gate_final_decision")" "NO-GO" "expected audit-integrity gate to fail closed for unstable taxonomy outputs"
+assert_eq "$(extract_value "$audit_unstable_generate_output" "audit_integrity_reason_codes_csv")" "gonogo_audit_integrity_reason_taxonomy_version_mismatch" "expected deterministic unstable audit-integrity taxonomy mismatch reason code"
+assert_eq "$(extract_value "$audit_unstable_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for unstable audit-integrity outputs"
+
+audit_unstable_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$audit_unstable_bundle")"
+assert_eq "$(extract_value "$audit_unstable_policy_output" "status")" "ok" "expected unstable audit-integrity bundle policy check to pass deterministically"
+assert_eq "$(extract_value "$audit_unstable_policy_output" "audit_integrity_gate_final_decision")" "NO-GO" "expected unstable audit-integrity gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$audit_unstable_policy_output" "final_decision")" "NO-GO" "expected unstable audit-integrity bundle policy decision to remain NO-GO"
+
+audit_tampered_bundle="$TMP_DIR/gonogo-audit-integrity-tampered.json"
+cp "$audit_bundle" "$audit_tampered_bundle"
+python3 - "$audit_tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["audit_integrity_gate"]["observed"]["audit_integrity_report_status"] = "fail"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+audit_tampered_output="$(bash "$POLICY_CHECKER" --bundle-file "$audit_tampered_bundle" 2>&1)"
+audit_tampered_code=$?
+set -e
+
+if [ "$audit_tampered_code" -eq 0 ]; then
+  echo "expected policy checker to fail for tampered audit-integrity gate markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$audit_tampered_output" | grep -q "audit integrity gate convergence mismatch"; then
+  echo "expected deterministic audit-integrity gate convergence mismatch error from policy checker" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence bundle tests passed."

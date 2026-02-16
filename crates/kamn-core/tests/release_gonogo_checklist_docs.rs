@@ -131,6 +131,23 @@ fn checklist_contains_tls_evidence_completeness_freshness_gate() {
 }
 
 #[test]
+fn checklist_contains_audit_integrity_convergence_gate() {
+    assert!(CHECKLIST.contains("## Audit-Trail Integrity/Tamper Convergence Gate (Issue #4466)"));
+    assert!(CHECKLIST.contains(
+        "--audit-integrity-report-file /tmp/sqlite-crash-recovery-live-policy-report.json"
+    ));
+    assert!(CHECKLIST.contains("--audit-integrity-max-age-seconds 1800"));
+    assert!(CHECKLIST.contains(
+        "audit_integrity_reason_taxonomy_version=kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "audit_integrity_reason_codes_csv=gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded"
+    ));
+    assert!(CHECKLIST.contains("audit_integrity_gate_final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("Regression: #4466"));
+}
+
+#[test]
 fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
     assert!(CHECKLIST.contains("## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)"));
     assert!(CHECKLIST.contains("run_local_live_node_validation_bundle_lane.sh"));
