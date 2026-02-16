@@ -12,6 +12,7 @@ Options:
   --max-active-entries <int>      Maximum allowed active quarantine entries.
   --expected-final-decision <GO|NO-GO>
                                   Expected final decision marker.
+  --fast-workflow-file <path>     Fast-gate workflow file for boundary checks.
   --output-json <path>            Output JSON policy report.
   -h, --help                      Show this help.
 EOF
@@ -22,7 +23,9 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 registry_file=".ci/flaky-tests.txt"
 max_active_entries=0
 expected_final_decision="GO"
+fast_workflow_file=".github/workflows/ci-fast-gate.yml"
 output_json="/tmp/anti-flake-policy-report.json"
+reason_taxonomy_version="kamn.ci.merge-gate-reliability-reason-taxonomy.v1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -36,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --expected-final-decision)
       expected_final_decision="${2:-}"
+      shift 2
+      ;;
+    --fast-workflow-file)
+      fast_workflow_file="${2:-}"
       shift 2
       ;;
     --output-json)
@@ -67,6 +74,35 @@ fi
 reason_codes=()
 status="pass"
 final_decision="GO"
+ci_smoke_local_heavy_boundary_status="verified"
+
+if [ ! -f "$fast_workflow_file" ]; then
+  reason_codes+=("ci_smoke_performance_report_step_missing")
+  reason_codes+=("ci_smoke_threshold_check_step_missing")
+  reason_codes+=("local_heavy_opt_in_boundary_missing")
+  status="fail"
+  final_decision="NO-GO"
+  ci_smoke_local_heavy_boundary_status="violation"
+else
+  if ! grep -Fq "Generate performance smoke report" "$fast_workflow_file"; then
+    reason_codes+=("ci_smoke_performance_report_step_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+  if ! grep -Fq "Check performance thresholds (smoke)" "$fast_workflow_file"; then
+    reason_codes+=("ci_smoke_threshold_check_step_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+  if ! grep -Fq "if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'" "$fast_workflow_file"; then
+    reason_codes+=("local_heavy_opt_in_boundary_missing")
+    status="fail"
+    final_decision="NO-GO"
+    ci_smoke_local_heavy_boundary_status="violation"
+  fi
+fi
 
 if [ ! -f "$registry_file" ]; then
   reason_codes+=("registry_file_missing")
@@ -105,26 +141,44 @@ if [[ "$final_decision" = "GO" ]]; then
 fi
 
 if [[ "$final_decision" != "$expected_final_decision" ]]; then
-  reason_codes=("expected_final_decision_mismatch")
+  reason_codes+=("expected_final_decision_mismatch")
   status="fail"
   final_decision="NO-GO"
 fi
 
-if [ "${#reason_codes[@]}" -eq 0 ]; then
+reason_codes_csv="$(printf '%s\n' "${reason_codes[@]}" | sed '/^$/d' | sort -u | paste -sd, -)"
+if [ -z "$reason_codes_csv" ]; then
   reason_codes=("policy_evaluation_incomplete")
   status="fail"
   final_decision="NO-GO"
+  reason_codes_csv="policy_evaluation_incomplete"
 fi
 
 mkdir -p "$(dirname "$output_json")"
 
-reason_codes_csv="$(IFS=,; echo "${reason_codes[*]}")"
+reason_codes_value="$reason_codes_csv"
+reason_class="violation"
+if [[ "$final_decision" = "GO" ]]; then
+  if [[ "$reason_codes_csv" = "no_active_flaky_entries" ]]; then
+    reason_class="stable"
+  elif [[ "$reason_codes_csv" = "active_flaky_entries_within_budget" ]]; then
+    reason_class="budgeted"
+  else
+    reason_class="stable"
+  fi
+fi
+
 python3 - \
   "$output_json" \
   "$status" \
   "$final_decision" \
+  "$reason_taxonomy_version" \
   "$reason_codes_csv" \
+  "$reason_codes_value" \
+  "$reason_class" \
+  "$ci_smoke_local_heavy_boundary_status" \
   "$registry_file" \
+  "$fast_workflow_file" \
   "$active_entries" \
   "$max_active_entries" \
   "$expected_final_decision" <<'PY'
@@ -135,19 +189,30 @@ import sys
 output_json = pathlib.Path(sys.argv[1])
 status = sys.argv[2]
 final_decision = sys.argv[3]
-reason_codes_csv = sys.argv[4]
-registry_file = sys.argv[5]
-active_entries = int(sys.argv[6])
-max_active_entries = int(sys.argv[7])
-expected_final_decision = sys.argv[8]
+reason_taxonomy_version = sys.argv[4]
+reason_codes_csv = sys.argv[5]
+reason_codes_value = sys.argv[6]
+reason_class = sys.argv[7]
+ci_smoke_local_heavy_boundary_status = sys.argv[8]
+registry_file = sys.argv[9]
+fast_workflow_file = sys.argv[10]
+active_entries = int(sys.argv[11])
+max_active_entries = int(sys.argv[12])
+expected_final_decision = sys.argv[13]
 
 reason_codes = [code for code in reason_codes_csv.split(",") if code]
 payload = {
     "schema_version": "kamn.ci.anti-flake-policy-report.v1",
+    "reason_taxonomy_version": reason_taxonomy_version,
     "status": status,
     "final_decision": final_decision,
     "reason_codes": reason_codes,
+    "reason_codes_csv": reason_codes_csv,
+    "reason_codes_value": reason_codes_value,
+    "reason_class": reason_class,
+    "ci_smoke_local_heavy_boundary_status": ci_smoke_local_heavy_boundary_status,
     "registry_file": registry_file,
+    "fast_workflow_file": fast_workflow_file,
     "active_entries": active_entries,
     "max_active_entries": max_active_entries,
     "expected_final_decision": expected_final_decision,
@@ -157,10 +222,16 @@ PY
 
 echo "anti_flake_policy_status=$status"
 echo "anti_flake_policy_final_decision=$final_decision"
+echo "anti_flake_policy_reason_taxonomy_version=$reason_taxonomy_version"
 echo "anti_flake_policy_reason_codes=$reason_codes_csv"
+echo "anti_flake_policy_reason_codes_csv=$reason_codes_csv"
+echo "anti_flake_policy_reason_codes_value=$reason_codes_value"
+echo "anti_flake_policy_reason_class=$reason_class"
+echo "ci_smoke_local_heavy_boundary_status=$ci_smoke_local_heavy_boundary_status"
 echo "anti_flake_policy_active_entries=$active_entries"
 echo "anti_flake_policy_max_active_entries=$max_active_entries"
 echo "anti_flake_policy_registry_file=$registry_file"
+echo "anti_flake_policy_fast_workflow_file=$fast_workflow_file"
 echo "anti_flake_policy_report_file=$output_json"
 
 if [[ "$final_decision" != "GO" ]]; then
