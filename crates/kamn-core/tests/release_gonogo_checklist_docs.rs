@@ -148,6 +148,21 @@ fn checklist_contains_audit_integrity_convergence_gate() {
 }
 
 #[test]
+fn checklist_contains_slo_threshold_policy_gate_convergence() {
+    assert!(CHECKLIST.contains("## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)"));
+    assert!(CHECKLIST.contains("--slo-policy-report-file /tmp/deployment-slo-rollback-report.json"));
+    assert!(CHECKLIST.contains("--slo-policy-max-age-seconds 1800"));
+    assert!(CHECKLIST.contains(
+        "slo_policy_reason_taxonomy_version=kamn.release.gonogo-slo-threshold-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "slo_policy_reason_codes_csv=gonogo_slo_policy_file_missing,gonogo_slo_policy_invalid_json,gonogo_slo_policy_schema_mismatch,gonogo_slo_policy_status_not_pass,gonogo_slo_policy_final_decision_not_go,gonogo_slo_policy_reason_key_mismatch,gonogo_slo_policy_reason_codes_not_empty,gonogo_slo_policy_freshness_window_exceeded"
+    ));
+    assert!(CHECKLIST.contains("slo_policy_gate_final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("Regression: #4468"));
+}
+
+#[test]
 fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
     assert!(CHECKLIST.contains("## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)"));
     assert!(CHECKLIST.contains("run_local_live_node_validation_bundle_lane.sh"));

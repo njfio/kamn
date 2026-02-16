@@ -67,6 +67,11 @@ if ! grep -q -- "--audit-integrity-report-file" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
+if ! grep -q -- "--slo-policy-report-file" "$SHARED_CONTRACT"; then
+  echo "expected go/no-go evidence shared contract module to exercise SLO policy gate arguments" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_gonogo_evidence_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute fast-lane contract checks first" >&2
   exit 1
