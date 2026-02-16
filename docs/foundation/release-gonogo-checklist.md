@@ -30,7 +30,6 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - tampered actor payload for same message+nonce idempotency window must reject with `message_proof_anchor_conflicting_key`.
 - Regression policy:
   - mismatch/tamper acceptance drift forces `NO-GO` (`Regression: #4419`).
-
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
