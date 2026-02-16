@@ -54,6 +54,25 @@ fn checklist_contains_machine_readable_bundle_contract() {
 }
 
 #[test]
+fn checklist_contains_tls_evidence_completeness_freshness_gate() {
+    assert!(
+        CHECKLIST.contains("## TLS Evidence Completeness/Freshness Convergence Gate (Issue #4477)")
+    );
+    assert!(CHECKLIST.contains(
+        "--tls-evidence-report-file /tmp/kamn-core-live-https-dependency-posture-report.json"
+    ));
+    assert!(CHECKLIST.contains("--tls-evidence-max-age-seconds 1800"));
+    assert!(CHECKLIST.contains(
+        "tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "tls_evidence_reason_codes_csv=gonogo_tls_evidence_file_missing,gonogo_tls_evidence_invalid_json,gonogo_tls_evidence_schema_mismatch,gonogo_tls_evidence_status_not_pass,gonogo_tls_evidence_reason_taxonomy_version_mismatch,gonogo_tls_evidence_freshness_window_exceeded"
+    ));
+    assert!(CHECKLIST.contains("tls_evidence_gate_final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("Regression: #4477"));
+}
+
+#[test]
 fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
     assert!(CHECKLIST.contains("## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)"));
     assert!(CHECKLIST.contains("run_local_live_node_validation_bundle_lane.sh"));
