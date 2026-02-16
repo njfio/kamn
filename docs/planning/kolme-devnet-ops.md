@@ -1481,6 +1481,15 @@ Operator checkpoints:
   - replay marker contract field (`replay_evidence_contract_version`) remains fail-closed in policy checks
   - request/finality linkage markers (`request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, `request_finality_evidence_linked`) remain fail-closed in policy checks
   - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) remain fail-closed in policy checks
+  - runtime retry marker emissions remain deterministic and bounded:
+    - retry events: `kolme.live.submit.retry`, `kolme.live.finality.retry`
+    - terminal events: `kolme.live.submit.retry.terminal`, `kolme.live.finality.retry.terminal`
+    - retry events include marker fields `attempt`, `max_attempts`, `reason`, `decision=retry`, `jitter_seed`, `backoff_ms`
+    - terminal events include marker fields `attempt`, `max_attempts`, `reason`, `decision=stop|fail-fast`
+    - deterministic terminal decision marker values:
+      - `terminal_decision=attempt_ceiling_reached`
+      - `terminal_decision=malformed_response_fail_fast`
+    - execution status includes `submit_retry_terminal_decision`, `finality_retry_terminal_decision`, and `retry_jitter_seed`
   - live-provider marker contracts (`provider_contract_enforcement_mode`, `provider_live_contract_marker`, `provider_live_contract_marker_present`, `provider_in_memory_reference_detected`) remain fail-closed in policy checks
   - real-signing marker contracts (`provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`, `provider_signing_curve_contract=secp256k1`, `provider_signing_profile_contract_version=v1`) remain fail-closed in policy checks
   - provider mismatch remains fail-closed with deterministic reason `provider_client_contract_mismatch`.
@@ -1493,6 +1502,7 @@ Operator checkpoints:
   - request/finality linkage drift fails closed with deterministic reasons (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
   - provider drift fails closed when in-memory provider usage is detected in summary marker surfaces (`provider_in_memory_reference_detected`).
   - finality retry exhaustion reasons are deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) and drift fails closed with checker reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
+  - runtime retry marker decision/jitter taxonomy remains deterministic and fail-closed (`Regression: #4110`).
   - submit/finality success-reason taxonomy remains deterministic in policy outputs:
     - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
     - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
