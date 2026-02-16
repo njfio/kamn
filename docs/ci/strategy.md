@@ -3288,20 +3288,30 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 
 ## Anti-Flake Merge Gate Policy
 - Merge-gate policy command:
-  - `bash scripts/ci/check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --output-json /tmp/anti-flake-policy-report.json`
+  - `bash scripts/ci/check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --fast-workflow-file .github/workflows/ci-fast-gate.yml --deep-workflow-file .github/workflows/ci-deep-validate.yml --output-json /tmp/anti-flake-policy-report.json`
 - Policy report schema:
   - `kamn.ci.anti-flake-policy-report.v1`
-- Deterministic status markers:
+- Deterministic taxonomy/status markers:
+  - `anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1`
   - `anti_flake_policy_status=pass|fail`
   - `anti_flake_policy_final_decision=GO|NO-GO`
   - `anti_flake_policy_reason_codes=<comma-delimited>`
+  - `anti_flake_policy_reason_codes_csv=none|<csv>`
+  - `anti_flake_policy_reason_codes_value=none|<csv>`
+  - `anti_flake_policy_reason_class=stable|budgeted|violation`
 - Deterministic reason-code surface:
+  - `anti_flake_policy_reason_codes_csv=no_active_flaky_entries,active_flaky_entries_within_budget,active_flaky_entries_exceed_max,registry_validation_failed,registry_file_missing,expected_final_decision_mismatch,rerun_policy_fast_workflow_missing,rerun_policy_deep_workflow_missing,rerun_policy_bounded_retry_missing,rerun_policy_invariant_non_retry_missing,rerun_policy_excessive_retry_detected`
   - `no_active_flaky_entries`
   - `active_flaky_entries_within_budget`
   - `active_flaky_entries_exceed_max`
   - `registry_validation_failed`
   - `registry_file_missing`
   - `expected_final_decision_mismatch`
+  - `rerun_policy_fast_workflow_missing`
+  - `rerun_policy_deep_workflow_missing`
+  - `rerun_policy_bounded_retry_missing`
+  - `rerun_policy_invariant_non_retry_missing`
+  - `rerun_policy_excessive_retry_detected`
 - Merge gate wiring:
   - `ci-fast-gate` runs anti-flake policy enforcement after registry format validation and uploads `ci-anti-flake-policy-report.json` as artifact telemetry.
 
