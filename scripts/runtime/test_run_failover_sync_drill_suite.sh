@@ -35,6 +35,17 @@ if payload.get("selected_lane") != "preflight":
     raise SystemExit("expected preflight lane for pull_request event")
 if payload.get("status") != "pass":
     raise SystemExit("expected preflight suite status to pass")
+lane_report = payload.get("lane_report", {})
+if lane_report.get("failover_promotion_gate_status") != "verified":
+    raise SystemExit("expected failover_promotion_gate_status=verified in preflight lane report")
+if lane_report.get("live_node_drift_parity_status") != "verified":
+    raise SystemExit("expected live_node_drift_parity_status=verified in preflight lane report")
+if lane_report.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified in preflight lane report")
+if lane_report.get("failover_readiness_reason_taxonomy_version") != "kamn.runtime.failover-readiness-reason-taxonomy.v1":
+    raise SystemExit("expected failover_readiness_reason_taxonomy_version marker in preflight lane report")
+if lane_report.get("failover_readiness_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic failover_readiness_reason_codes_csv marker in preflight lane report")
 PY
 
 deep_output="$(
