@@ -117,6 +117,27 @@ Regression marker:
 
 - `Regression: #4120`
 
+## Runtime Output Emission Contracts
+
+Critical runtime and signer paths avoid ad-hoc stdio macros and keep output
+behavior deterministic.
+
+Output policy:
+
+- `src/main.rs` must not use `println!` or `eprintln!` for runtime report/error output.
+- Runtime report output is emitted through bounded stdio writer helpers.
+- Failure paths continue to emit structured error events (`node.runtime.execute.failed`)
+  with deterministic `reason_code` projection.
+
+Validation commands:
+
+- `cargo test -p kamn-node --test runtime_output_contract integration_runtime_output_contract_enforces_main_entrypoint_path -- --nocapture`
+- `cargo test -p kamn-node --test runtime_output_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4122`
+
 ## Environment Override Contracts
 
 Environment override names map to the same key contracts regardless of config-file usage.

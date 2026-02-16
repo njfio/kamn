@@ -4,6 +4,7 @@ use kamn_core::{
     RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeTransportProfile, SyncMode,
 };
 use std::env;
+use std::io::Write;
 use std::process::ExitCode;
 
 mod cli;
@@ -549,7 +550,7 @@ fn run() -> Result<(), ConfigError> {
             ("execution_id", execution_id.as_str()),
         ],
     )?;
-    println!("{}", render_bootstrap_report(&report, output_mode));
+    emit_bootstrap_report_output(&report, output_mode)?;
     if let Some(endpoint_config) = service_api_endpoint_config {
         if report.runtime_mode != "api" && report.runtime_mode != "full" {
             return Err(ConfigError::RuntimeDaemonLifecycle(
@@ -620,6 +621,35 @@ fn run() -> Result<(), ConfigError> {
     Ok(())
 }
 
+fn emit_bootstrap_report_output(
+    report: &NodeBootstrapReport,
+    output_mode: OutputMode,
+) -> Result<(), ConfigError> {
+    let rendered = render_bootstrap_report(report, output_mode);
+    write_stdout_line(rendered.as_str())
+}
+
+fn write_stdout_line(line: &str) -> Result<(), ConfigError> {
+    write_line_to_stream(line, &mut std::io::stdout())
+}
+
+fn write_stderr_line(line: &str) -> Result<(), ConfigError> {
+    write_line_to_stream(line, &mut std::io::stderr())
+}
+
+fn write_line_to_stream(line: &str, stream: &mut impl Write) -> Result<(), ConfigError> {
+    stream
+        .write_all(line.as_bytes())
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    stream
+        .write_all(b"\n")
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    stream
+        .flush()
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    Ok(())
+}
+
 async fn run_async() -> Result<(), ConfigError> {
     tokio::task::spawn_blocking(run)
         .await
@@ -636,7 +666,7 @@ async fn main() -> ExitCode {
                 "node.runtime.execute.failed",
                 &[("error", error_message.as_str())],
             );
-            eprintln!("{error}");
+            let _ = write_stderr_line(error_message.as_str());
             ExitCode::FAILURE
         }
     }
