@@ -3592,6 +3592,19 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - decode-failure regression must verify raw private-key input is absent from error surfaces.
   - source/docs marker drift for signer decode zeroization and redaction contracts fails the guard target.
 
+### Signer Secret Lifecycle Policy Contract
+- `signer_secret_lifecycle_policy_contract_status=active`
+- `signer_secret_lifecycle_policy_contract_version=v1`
+- `signer_secret_lifecycle_forbidden_reason_code=fallback_signer_secret_present_violation`
+- `signer_secret_lifecycle_required_markers_csv=signer_secret_redaction_regression_guard_status,signer_secret_redaction_policy,fallback_signer_secret_present_violation,signer_secret_source_precedence_violation`
+- Guard commands:
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract -- --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract policy_checker_rejects_fallback_secret_violation_reason_code -- --exact --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract policy_checker_rejects_missing_required_lifecycle_markers -- --exact --nocapture`
+- Fail-closed policy:
+  - fallback signer secret reason code remains forbidden in lifecycle policy checks.
+  - lifecycle marker completeness and docs parity drift fail the contract target.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.

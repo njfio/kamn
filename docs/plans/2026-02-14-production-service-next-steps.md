@@ -132,6 +132,16 @@ This refreshed version separates:
     - `#3774 -> #3780 -> (#3794, #3795)`.
 - New production gaps continue to be decomposed under `#3333` with epic/story/task/subtask hierarchy before implementation work starts.
 
+### R26.2 Signer Secret-Lifecycle Contract Closure
+- Closure chain: `#3911 -> #3915 -> (#3916, #3917)`.
+- Deterministic closure markers:
+  - `signer_secret_hardening_closure_chain=#3911->#3915->(#3916,#3917)`
+  - `signer_secret_lifecycle_policy_contract_status=active`
+  - `signer_secret_lifecycle_policy_contract_version=v1`
+  - `signer_secret_lifecycle_docs_contract_status=active`
+  - `signer_secret_lifecycle_contract_guard_command=cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract -- --nocapture`
+- Closure criteria remains fail-closed on fallback secret reason-code drift and missing lifecycle marker declarations across CI/docs.
+
 ### R27.49 Partition-Healing / Convergence Governance
 - Active chain: `#4593 -> #4594 -> #4596 -> (#4600, #4601)`.
 - Current delivered markers and policy contracts for partition/rejoin reconciliation governance include:
