@@ -1,9 +1,9 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, ServiceApiAgentGetBody, ServiceApiChannelCreateBody,
-    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiTaskCreateBody,
-    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
+    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection,
+    ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
 use kamn_core::baseline_signature_for_fields;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
@@ -1855,5 +1855,166 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket version rejection"
+    );
+}
+
+#[test]
+fn unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic() {
+    let first = project_service_api_lifecycle_rejection("service_api_ingress_rate_limit_exceeded")
+        .expect("known lifecycle reason code should project");
+    let second = project_service_api_lifecycle_rejection("service_api_ingress_rate_limit_exceeded")
+        .expect("known lifecycle reason code should project");
+    assert_eq!(first, second);
+}
+
+#[test]
+fn functional_service_api_endpoint_lifecycle_rejection_projection_maps_limiter_classes() {
+    let concurrency =
+        project_service_api_lifecycle_rejection("service_api_ingress_concurrency_limit_exceeded")
+            .expect("concurrency limiter reason must project");
+    assert_eq!(
+        concurrency,
+        ServiceApiLifecycleRejectionProjection {
+            rejection_class: "async-lifecycle-limiter",
+            reason_code: "service_api_ingress_concurrency_limit_exceeded",
+            status_code: 429,
+            error_label: "too-many-requests",
+            outcome: "concurrency-limit",
+        }
+    );
+
+    let sender_suspended =
+        project_service_api_lifecycle_rejection("service_api_ingress_sender_suspended")
+            .expect("sender suspension reason must project");
+    assert_eq!(sender_suspended.rejection_class, "sender-admission-limiter");
+    assert_eq!(sender_suspended.status_code, 429);
+    assert_eq!(sender_suspended.error_label, "too-many-requests");
+    assert_eq!(sender_suspended.outcome, "anti-spam");
+}
+
+#[test]
+fn integration_service_api_endpoint_lifecycle_projection_matches_live_concurrency_rejection() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34067".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let worker_count = 4_usize;
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: worker_count as u64,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: 1,
+        rate_limit_per_second: 1_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:test-client-lifecycle-projection";
+    let message_body = "{\"message\":\"lifecycle-projection-check\"}";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let barrier = Arc::new(Barrier::new(worker_count));
+    let mut clients = Vec::with_capacity(worker_count);
+    for request_index in 0..worker_count {
+        let client_bind_addr = bind_addr.clone();
+        let barrier = barrier.clone();
+        let state_hash = state_hash.clone();
+        clients.push(thread::spawn(move || {
+            let nonce = 810 + request_index as u64;
+            let signature =
+                baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+            let nonce_text = nonce.to_string();
+            barrier.wait();
+            send_http_request_with_headers(
+                client_bind_addr.as_str(),
+                "POST",
+                "/v1/messages/send",
+                message_body,
+                &[
+                    ("X-KAMN-Sender-DID", sender_did),
+                    ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                    ("X-KAMN-Request-Signature", signature.as_str()),
+                ],
+            )
+        }));
+    }
+
+    let responses = clients
+        .into_iter()
+        .map(|client| client.join().expect("client request should complete"))
+        .collect::<Vec<String>>();
+    let rejection = responses
+        .iter()
+        .find(|response| response.contains("HTTP/1.1 429 Too Many Requests"))
+        .expect("expected at least one lifecycle limiter rejection");
+    let rejection_payload = parse_error_envelope_from_http_response(rejection);
+    let projection =
+        project_service_api_lifecycle_rejection(rejection_payload.reason_code.as_str())
+            .expect("live rejection reason should have projection");
+    assert_eq!(projection.rejection_class, "async-lifecycle-limiter");
+    assert_eq!(
+        projection.reason_code,
+        "service_api_ingress_concurrency_limit_exceeded"
+    );
+    assert_eq!(projection.status_code, 429);
+    assert_eq!(projection.error_label, "too-many-requests");
+    assert_eq!(projection.outcome, "concurrency-limit");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after lifecycle projection integration budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_lifecycle_projection_sender_suspension_class_stays_stable() {
+    // Regression: #4316
+    let projection =
+        project_service_api_lifecycle_rejection("service_api_ingress_sender_suspended")
+            .expect("sender suspension projection should exist");
+    assert_eq!(projection.rejection_class, "sender-admission-limiter");
+    assert_eq!(projection.status_code, 429);
+    assert_eq!(projection.outcome, "anti-spam");
+}
+
+#[test]
+fn performance_service_api_endpoint_lifecycle_projection_loop_stays_within_local_budget() {
+    let started = Instant::now();
+    let reason_codes = [
+        "service_api_ingress_concurrency_limit_exceeded",
+        "service_api_ingress_rate_limit_exceeded",
+        "service_api_ingress_sender_rate_limit_exceeded",
+        "service_api_ingress_sender_suspended",
+    ];
+
+    for idx in 0..60_000_u32 {
+        let reason_code = reason_codes[idx as usize % reason_codes.len()];
+        let projection = project_service_api_lifecycle_rejection(reason_code)
+            .expect("known lifecycle reason should project");
+        assert_eq!(projection.reason_code, reason_code);
+    }
+
+    assert!(
+        started.elapsed() <= Duration::from_secs(2),
+        "lifecycle projection loop exceeded local budget"
     );
 }
