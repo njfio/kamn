@@ -903,11 +903,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - source-marker checks run locally and avoid external network dependencies.
   - includes SDK parity marker checks for structured envelope decoding in `crates/kamn-sdk/src/service.rs` and `kamn_sdk.py`.
   - structured-error regression corpus is sourced from `fixtures/runtime/service_api_structured_error_regression_corpus.json` and must preserve representative classes: `auth`, `validation`, `replay`, and `transport`.
+  - api error taxonomy and timeout classification governance remains deterministic via:
+    `api_error_reason_taxonomy_status=verified`,
+    `timeout_classification_status=verified`,
+    `endpoint_parity_gate_normalization_status=verified`,
+    `api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1`,
+    `api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error`,
+    `timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1`,
+    `timeout_reason_codes_csv=service_api_request_read_failed`.
   - runtime budget is bounded via `KAMN_SERVICE_API_REASON_CODE_CONTRACT_MAX_SECONDS`.
   - service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_reason_code_policy_marker_missing:route_error_mapping_status`
   - `service_api_reason_code_policy_marker_missing:error_envelope_field_status`
+  - `service_api_reason_code_policy_timeout_reason_taxonomy_version_mismatch`
 
 ## Runtime Service API Validation Negative-Matrix Contract Lane
 - Entry commands:

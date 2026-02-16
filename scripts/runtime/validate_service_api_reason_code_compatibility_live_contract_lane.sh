@@ -35,6 +35,13 @@ VALIDATION_REQUIRED_MARKERS=(
   "python_sdk_reason_code_status=verified"
   "regression_corpus_status=verified"
   "regression_drift_diagnostics_status=verified"
+  "api_error_reason_taxonomy_status=verified"
+  "timeout_classification_status=verified"
+  "endpoint_parity_gate_normalization_status=verified"
+  "api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1"
+  "api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error"
+  "timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1"
+  "timeout_reason_codes_csv=service_api_request_read_failed"
   "route_error_mapping_status=verified"
   "replay_error_mapping_status=verified"
   "websocket_error_mapping_status=verified"
@@ -57,6 +64,7 @@ STRATEGY_REQUIRED_REFS=(
 )
 STRATEGY_REQUIRED_MARKERS=(
   "service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode."
+  "api error taxonomy and timeout classification governance remains deterministic via:"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   error_envelope_field_status
@@ -65,6 +73,13 @@ LANE_REPORT_SUMMARY_FIELDS=(
   regression_corpus_status
   regression_drift_diagnostics_status
   regression_corpus_scenario_count
+  api_error_reason_taxonomy_status
+  timeout_classification_status
+  endpoint_parity_gate_normalization_status
+  api_error_reason_taxonomy_version
+  api_error_reason_codes_csv
+  timeout_reason_taxonomy_version
+  timeout_reason_codes_csv
 )
 OUTPUT_SUMMARY_FIELDS=(
   error_envelope_field_status
@@ -73,6 +88,13 @@ OUTPUT_SUMMARY_FIELDS=(
   regression_corpus_status
   regression_drift_diagnostics_status
   regression_corpus_scenario_count
+  api_error_reason_taxonomy_status
+  timeout_classification_status
+  endpoint_parity_gate_normalization_status
+  api_error_reason_taxonomy_version
+  api_error_reason_codes_csv
+  timeout_reason_taxonomy_version
+  timeout_reason_codes_csv
 )
 
 service_api_contract_lane_run "$@"

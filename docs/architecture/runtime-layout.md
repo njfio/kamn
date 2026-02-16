@@ -152,6 +152,23 @@ Deterministic lane and policy markers include:
 - `admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1`
 - `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`
 
+## Service API Reason-Code Compatibility Governance
+
+Service API error/timeout taxonomy parity and endpoint-gate normalization drift are enforced through:
+
+- `scripts/runtime/check_service_api_reason_code_compatibility_live_policy.sh`
+- `scripts/runtime/validate_service_api_reason_code_compatibility_live_contract_lane.sh`
+
+Deterministic lane and policy markers include:
+
+- `api_error_reason_taxonomy_status=verified`
+- `timeout_classification_status=verified`
+- `endpoint_parity_gate_normalization_status=verified`
+- `api_error_reason_taxonomy_version=kamn.runtime.service-api-error-reason-taxonomy.v1`
+- `api_error_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_replay_nonce_detected,service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error`
+- `timeout_reason_taxonomy_version=kamn.runtime.service-api-timeout-reason-taxonomy.v1`
+- `timeout_reason_codes_csv=service_api_request_read_failed`
+
 ## Service API Websocket Lifecycle Governance
 
 Service API websocket lifecycle and timeout taxonomy drift are enforced through:
