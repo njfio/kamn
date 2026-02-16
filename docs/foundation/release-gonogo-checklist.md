@@ -71,6 +71,16 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - partition/rejoin tamper must reject with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
   - unstable reason classification tamper must reject with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
 
+## Persisted Block Commit Mismatch/Tamper Gate (Issue #4321)
+- Replay tamper matrix selector:
+  - `cargo test -p kamn-core --test block_commit_persistence_tamper_matrix`
+- Required deterministic payload markers:
+  - `block_commit_persistence_reason_taxonomy_version=kamn.runtime.block-commit-persistence-reason-taxonomy.v1`
+  - `block_commit_persistence_reason_codes_csv=canonical_replay_payload_digest_mismatch,canonical_replay_checkpoint_missing,canonical_replay_block_height_mismatch,canonical_replay_transaction_ids_mismatch`
+  - `block_commit_persistence_tamper_detection_status=verified`
+- Fail-closed drift policy:
+  - persisted digest/checkpoint/finality mismatch acceptance drift or tampered commit artifact acceptance forces `NO-GO` (`Regression: #4321`).
+
 ## Kolme Signer Custody Gate (Issue #2240)
 - Deployment preflight lane command:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`

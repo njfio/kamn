@@ -1,7 +1,7 @@
 # Issue #4321 Plan
 
 - Issue: `#4321`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add a dedicated replay tamper matrix test module for persisted block commit drift scenarios.

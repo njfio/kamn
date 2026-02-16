@@ -1,7 +1,7 @@
 # Issue #4321 Spec
 
 - Title: `Subtask: add red tests for persisted block digest-finality mismatch rejection and tamper detection`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
 - Parent: `#4314`
