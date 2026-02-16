@@ -230,4 +230,51 @@ if ! printf '%s\n' "$milestone_missing_runbook_policy_output" | grep -q "^final_
   exit 1
 fi
 
+audit_integrity_report="$TMP_DIR/audit-integrity-policy-report.json"
+cat >"$audit_integrity_report" <<'JSON'
+{
+  "schema_version": "kamn.runtime.sqlite-crash-recovery-live-policy-report.v1",
+  "status": "ok",
+  "final_decision": "GO",
+  "sqlite_crash_recovery_policy_status": "verified",
+  "durability_governance_reason_taxonomy_version": "kamn.runtime.durability-governance-reason-taxonomy.v1",
+  "durability_governance_reason_codes_csv": "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
+}
+JSON
+
+audit_bundle_file="$TMP_DIR/gonogo-audit-integrity-contract.json"
+audit_generator_output="$(
+  bash "$GENERATOR" \
+    --output-file "$audit_bundle_file" \
+    --release-candidate "v1.0.0-contract-audit" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:contract-audit" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --audit-integrity-report-file "$audit_integrity_report" \
+    --audit-integrity-max-age-seconds 1800
+)"
+if ! printf '%s\n' "$audit_generator_output" | grep -q "^audit_integrity_gate_final_decision=GO$"; then
+  echo "expected audit-integrity gate decision marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$audit_generator_output" | grep -q "^final_decision=GO$"; then
+  echo "expected audit-integrity contract lane bundle decision to be GO" >&2
+  exit 1
+fi
+
+audit_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$audit_bundle_file")"
+if ! printf '%s\n' "$audit_policy_output" | grep -q "^audit_integrity_gate_final_decision=GO$"; then
+  echo "expected audit-integrity gate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$audit_policy_output" | grep -q "^final_decision=GO$"; then
+  echo "expected audit-integrity contract lane policy check decision to be GO" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence contract lane tests passed."

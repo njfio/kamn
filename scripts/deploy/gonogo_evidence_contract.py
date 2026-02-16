@@ -27,6 +27,7 @@ from framework.contract_framework import (  # noqa: E402
 SCHEMA_VERSION = "kamn.release.gonogo.v1"
 MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
 TLS_EVIDENCE_GATE_SCHEMA_VERSION = "kamn.release.gonogo-tls-evidence-gate.v1"
+AUDIT_INTEGRITY_GATE_SCHEMA_VERSION = "kamn.release.gonogo-audit-integrity-gate.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 DEFAULT_OPERATOR_RUNBOOK_DOC = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
@@ -54,6 +55,20 @@ TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION = (
     "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1"
 )
 DEFAULT_TLS_EVIDENCE_MAX_AGE_SECONDS = 1800
+AUDIT_INTEGRITY_SOURCE_SCHEMA_VERSION = (
+    "kamn.runtime.sqlite-crash-recovery-live-policy-report.v1"
+)
+AUDIT_INTEGRITY_SOURCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.durability-governance-reason-taxonomy.v1"
+)
+AUDIT_INTEGRITY_SOURCE_REASON_CODES_CSV = (
+    "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
+AUDIT_INTEGRITY_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1"
+)
+DEFAULT_AUDIT_INTEGRITY_MAX_AGE_SECONDS = 1800
 
 PREFLIGHT_SUMMARY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
@@ -260,6 +275,148 @@ def _build_tls_evidence_gate(
             "tls_evidence_report_status_required": "pass",
             "tls_evidence_report_reason_codes_required": ["none"],
             "tls_evidence_max_age_seconds_required": max_age_seconds,
+        },
+    }
+
+
+def _optional_audit_integrity_gate_inputs(args: argparse.Namespace) -> tuple[Path, int] | None:
+    raw_report_file = getattr(args, "audit_integrity_report_file", "")
+    raw_max_age = getattr(args, "audit_integrity_max_age_seconds", "")
+
+    report_file = raw_report_file.strip() if isinstance(raw_report_file, str) else ""
+    max_age_value = raw_max_age.strip() if isinstance(raw_max_age, str) else ""
+
+    if not report_file and not max_age_value:
+        return None
+    if not report_file:
+        fail(
+            "--audit-integrity-report-file is required when "
+            "--audit-integrity-max-age-seconds is provided"
+        )
+
+    if not max_age_value:
+        max_age_seconds = DEFAULT_AUDIT_INTEGRITY_MAX_AGE_SECONDS
+    else:
+        max_age_seconds = parse_int("audit-integrity-max-age-seconds", max_age_value)
+        if max_age_seconds < 1:
+            fail("audit-integrity-max-age-seconds must be >= 1")
+
+    return Path(report_file).resolve(), max_age_seconds
+
+
+def _build_audit_integrity_gate(
+    report_path: Path, max_age_seconds: int, reference_time: datetime
+) -> dict[str, Any]:
+    reason_codes: list[str] = []
+    report_payload: dict[str, Any] | None = None
+    report_schema_version = ""
+    report_status = ""
+    report_final_decision = ""
+    report_policy_status = ""
+    report_reason_taxonomy_version = ""
+    report_reason_codes_csv = ""
+    report_mtime_utc = ""
+    report_age_seconds = -1
+
+    if max_age_seconds < 1:
+        reason_codes.append("gonogo_audit_integrity_max_age_invalid")
+
+    if not report_path.is_file():
+        reason_codes.append("gonogo_audit_integrity_file_missing")
+    else:
+        mtime_utc = datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+        report_mtime_utc = mtime_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        report_age_seconds = max(
+            0, int((reference_time - mtime_utc).total_seconds())
+        )
+        if max_age_seconds >= 1 and report_age_seconds > max_age_seconds:
+            reason_codes.append("gonogo_audit_integrity_freshness_window_exceeded")
+
+        try:
+            payload = load_json(report_path)
+        except ContractError:
+            reason_codes.append("gonogo_audit_integrity_invalid_json")
+        else:
+            if not isinstance(payload, dict):
+                reason_codes.append("gonogo_audit_integrity_invalid_json")
+            else:
+                report_payload = payload
+
+    if report_payload is not None:
+        report_schema_version = str(report_payload.get("schema_version", ""))
+        report_status = str(report_payload.get("status", ""))
+        report_final_decision = str(report_payload.get("final_decision", ""))
+        report_policy_status = str(
+            report_payload.get("sqlite_crash_recovery_policy_status", "")
+        )
+        report_reason_taxonomy_version = str(
+            report_payload.get("durability_governance_reason_taxonomy_version", "")
+        )
+        report_reason_codes_csv = str(
+            report_payload.get("durability_governance_reason_codes_csv", "")
+        )
+
+        if report_schema_version != AUDIT_INTEGRITY_SOURCE_SCHEMA_VERSION:
+            reason_codes.append("gonogo_audit_integrity_schema_mismatch")
+        if report_status != "ok":
+            reason_codes.append("gonogo_audit_integrity_status_not_ok")
+        if report_final_decision != GO_DECISION:
+            reason_codes.append("gonogo_audit_integrity_final_decision_not_go")
+        if report_policy_status != "verified":
+            reason_codes.append("gonogo_audit_integrity_policy_status_not_verified")
+        if (
+            report_reason_taxonomy_version
+            != AUDIT_INTEGRITY_SOURCE_REASON_TAXONOMY_VERSION
+        ):
+            reason_codes.append(
+                "gonogo_audit_integrity_reason_taxonomy_version_mismatch"
+            )
+        if report_reason_codes_csv != AUDIT_INTEGRITY_SOURCE_REASON_CODES_CSV:
+            reason_codes.append("gonogo_audit_integrity_reason_codes_csv_mismatch")
+
+    reason_codes = sorted(set(reason_codes))
+    final_decision = GO_DECISION if not reason_codes else NO_GO_DECISION
+    gate_status = "verified" if final_decision == GO_DECISION else "fail-closed"
+    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
+
+    return {
+        "schema_version": AUDIT_INTEGRITY_GATE_SCHEMA_VERSION,
+        "reason_taxonomy_version": AUDIT_INTEGRITY_GATE_REASON_TAXONOMY_VERSION,
+        "final_decision": final_decision,
+        "status": gate_status,
+        "reason_codes": reason_codes,
+        "reason_codes_csv": reason_codes_csv,
+        "reason_codes_value": reason_codes_csv,
+        "artifacts": {
+            "audit_integrity_report_file": str(report_path),
+            "audit_integrity_report_sha256": _artifact_sha256(report_path),
+        },
+        "observed": {
+            "audit_integrity_report_schema_version": report_schema_version,
+            "audit_integrity_report_status": report_status,
+            "audit_integrity_report_final_decision": report_final_decision,
+            "audit_integrity_report_policy_status": report_policy_status,
+            "audit_integrity_report_reason_taxonomy_version": (
+                report_reason_taxonomy_version
+            ),
+            "audit_integrity_report_reason_codes_csv": report_reason_codes_csv,
+            "audit_integrity_report_mtime_utc": report_mtime_utc,
+            "audit_integrity_report_age_seconds": report_age_seconds,
+        },
+        "contracts": {
+            "audit_integrity_report_schema_version_required": (
+                AUDIT_INTEGRITY_SOURCE_SCHEMA_VERSION
+            ),
+            "audit_integrity_report_status_required": "ok",
+            "audit_integrity_report_final_decision_required": GO_DECISION,
+            "audit_integrity_report_policy_status_required": "verified",
+            "audit_integrity_report_reason_taxonomy_version_required": (
+                AUDIT_INTEGRITY_SOURCE_REASON_TAXONOMY_VERSION
+            ),
+            "audit_integrity_report_reason_codes_csv_required": (
+                AUDIT_INTEGRITY_SOURCE_REASON_CODES_CSV
+            ),
+            "audit_integrity_max_age_seconds_required": max_age_seconds,
         },
     }
 
@@ -662,6 +819,62 @@ def _validated_expected_tls_evidence_gate(
     return expected_gate, expected_decision
 
 
+def _validated_expected_audit_integrity_gate(
+    payload: dict[str, object], reference_time: datetime
+) -> tuple[dict[str, Any], str]:
+    audit_integrity_gate = payload.get("audit_integrity_gate")
+    if not isinstance(audit_integrity_gate, dict):
+        fail("bundle field 'audit_integrity_gate' must be an object when provided")
+
+    require_keys(
+        audit_integrity_gate,
+        (
+            "schema_version",
+            "reason_taxonomy_version",
+            "final_decision",
+            "status",
+            "reason_codes",
+            "reason_codes_csv",
+            "reason_codes_value",
+            "artifacts",
+            "observed",
+            "contracts",
+        ),
+    )
+
+    artifacts = audit_integrity_gate.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("audit_integrity_gate.artifacts must be an object")
+    report_file = artifacts.get("audit_integrity_report_file")
+    if not isinstance(report_file, str) or not report_file.strip():
+        fail(
+            "audit_integrity_gate.artifacts.audit_integrity_report_file must be a non-empty string"
+        )
+
+    contracts = audit_integrity_gate.get("contracts")
+    if not isinstance(contracts, dict):
+        fail("audit_integrity_gate.contracts must be an object")
+    max_age_seconds = contracts.get("audit_integrity_max_age_seconds_required")
+    if not isinstance(max_age_seconds, int):
+        fail(
+            "audit_integrity_gate.contracts.audit_integrity_max_age_seconds_required must be an integer"
+        )
+
+    expected_gate = _build_audit_integrity_gate(
+        Path(report_file).resolve(), max_age_seconds, reference_time
+    )
+    if audit_integrity_gate != expected_gate:
+        fail(
+            "audit integrity gate convergence mismatch: "
+            "expected deterministic audit integrity markers and decision surface"
+        )
+
+    expected_decision = expected_gate["final_decision"]
+    if not isinstance(expected_decision, str):
+        fail("audit integrity gate final decision must be a string")
+    return expected_gate, expected_decision
+
+
 def generate_bundle(args: argparse.Namespace) -> int:
     required_values = (
         args.output_file,
@@ -747,6 +960,16 @@ def generate_bundle(args: argparse.Namespace) -> int:
         payload["tls_evidence_gate"] = tls_evidence_gate
         expected_go = expected_go and tls_evidence_gate["final_decision"] == GO_DECISION
 
+    audit_integrity_gate = None
+    audit_integrity_gate_inputs = _optional_audit_integrity_gate_inputs(args)
+    if audit_integrity_gate_inputs is not None:
+        audit_report_file, audit_max_age_seconds = audit_integrity_gate_inputs
+        audit_integrity_gate = _build_audit_integrity_gate(
+            audit_report_file, audit_max_age_seconds, generated_at_dt
+        )
+        payload["audit_integrity_gate"] = audit_integrity_gate
+        expected_go = expected_go and audit_integrity_gate["final_decision"] == GO_DECISION
+
     final_decision = GO_DECISION if expected_go else NO_GO_DECISION
     payload["final_decision"] = final_decision
 
@@ -761,6 +984,19 @@ def generate_bundle(args: argparse.Namespace) -> int:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate['final_decision']}")
         print(f"tls_evidence_reason_taxonomy_version={TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}")
         print(f"tls_evidence_reason_codes_csv={tls_evidence_gate['reason_codes_csv']}")
+    if audit_integrity_gate is not None:
+        print(
+            "audit_integrity_gate_final_decision="
+            f"{audit_integrity_gate['final_decision']}"
+        )
+        print(
+            "audit_integrity_reason_taxonomy_version="
+            f"{AUDIT_INTEGRITY_GATE_REASON_TAXONOMY_VERSION}"
+        )
+        print(
+            "audit_integrity_reason_codes_csv="
+            f"{audit_integrity_gate['reason_codes_csv']}"
+        )
     print(f"final_decision={final_decision}")
     return 0
 
@@ -859,6 +1095,13 @@ def check_bundle(args: argparse.Namespace) -> int:
         )
         expected_go = expected_go and tls_evidence_gate_decision == GO_DECISION
 
+    audit_integrity_gate_decision = GO_DECISION
+    if "audit_integrity_gate" in payload:
+        _, audit_integrity_gate_decision = _validated_expected_audit_integrity_gate(
+            payload, generated_at
+        )
+        expected_go = expected_go and audit_integrity_gate_decision == GO_DECISION
+
     expected_decision = GO_DECISION if expected_go else NO_GO_DECISION
     actual_decision = payload["final_decision"]
     if actual_decision not in {GO_DECISION, NO_GO_DECISION}:
@@ -875,6 +1118,8 @@ def check_bundle(args: argparse.Namespace) -> int:
         print(f"milestone_review_final_decision={milestone_decision}")
     if "tls_evidence_gate" in payload:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate_decision}")
+    if "audit_integrity_gate" in payload:
+        print(f"audit_integrity_gate_final_decision={audit_integrity_gate_decision}")
     print(f"final_decision={actual_decision}")
     print(f"required_approvals={required_approvals}")
     print(f"received_approvals={received_approvals}")
@@ -905,6 +1150,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--go-no-go-gate-report-file", default="")
     generate.add_argument("--tls-evidence-report-file", default="")
     generate.add_argument("--tls-evidence-max-age-seconds", default="")
+    generate.add_argument("--audit-integrity-report-file", default="")
+    generate.add_argument("--audit-integrity-max-age-seconds", default="")
     generate.set_defaults(handler=generate_bundle)
 
     check = subparsers.add_parser("check")

@@ -122,6 +122,39 @@ Regression markers:
 
 - `Regression: #4106`
 
+## Audit Integrity Go/No-Go Policy Controls (Issue #4465)
+
+Release go/no-go validation supports an optional audit-integrity evidence gate using sqlite
+crash-recovery policy output as the source report.
+
+Generator controls:
+
+- `--audit-integrity-report-file <path>`
+- `--audit-integrity-max-age-seconds <seconds>`
+
+Deterministic audit-integrity taxonomy marker:
+
+- `audit_integrity_reason_taxonomy_version=kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1`
+
+Fail-closed mismatch reasons:
+
+- `gonogo_audit_integrity_reason_taxonomy_version_mismatch`
+- `gonogo_audit_integrity_reason_codes_csv_mismatch`
+
+Tamper convergence contract:
+
+- checker must fail closed on `audit integrity gate convergence mismatch` when bundled
+  audit-integrity payload markers drift from deterministic rebuild.
+
+Validation commands:
+
+- `bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh`
+- `bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh`
+
+Regression marker:
+
+- `Regression: #4465`
+
 ## Structured Logging Bootstrap Contracts
 
 `kamn-node` logging bootstrap remains deterministic for all runtime modes.
