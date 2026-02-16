@@ -1,6 +1,6 @@
 # Plan: Issue #4471
 
-Status: In Progress
+Status: Completed
 Issue: #4471
 
 ## Approach
