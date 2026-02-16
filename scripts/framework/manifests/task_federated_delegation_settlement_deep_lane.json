@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "task.federated_delegation_settlement.deep",
+  "evidence_key": "federated_delegation_settlement_deep_lane:v1",
+  "reason_key": "federated_delegation_settlement_deep_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/task/run_federated_delegation_settlement_deep_lane_impl.sh"
+    ]
+  }
+}

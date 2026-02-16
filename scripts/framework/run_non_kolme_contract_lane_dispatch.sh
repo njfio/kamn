@@ -5,6 +5,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT_NAME="$(basename "$0")"
 WRAPPER_NAME="$SCRIPT_NAME"
 RESOLVE_MANIFEST_ONLY=0
+FALLBACK_REASON_TAXONOMY_VERSION="kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1"
+FALLBACK_REASON_CODES_CSV="dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped"
+
+emit_fallback_error() {
+  local reason_code="$1"
+  local reason_detail="$2"
+  echo "dispatch_status=fail" >&2
+  echo "fallback_reason_taxonomy_version=$FALLBACK_REASON_TAXONOMY_VERSION" >&2
+  echo "fallback_reason_codes_csv=$FALLBACK_REASON_CODES_CSV" >&2
+  echo "fallback_reason_code=$reason_code" >&2
+  echo "fallback_reason_detail=$reason_detail" >&2
+}
 
 usage() {
   cat <<'USAGE'
@@ -133,6 +145,8 @@ resolve_manifest_name() {
     run_secure_provider_key_lifecycle_contract_lane.sh) echo "signer_secure_provider_key_lifecycle_contract_lane.json" ;;
     run_staging_rehearsal_contract_lane.sh) echo "deploy_staging_rehearsal_contract_lane.json" ;;
     run_task_operation_snapshot_contract_lane.sh) echo "task_task_operation_snapshot_contract_lane.json" ;;
+    run_task_operation_snapshot_deep_lane.sh) echo "task_task_operation_snapshot_deep_lane.json" ;;
+    run_federated_delegation_settlement_deep_lane.sh) echo "task_federated_delegation_settlement_deep_lane.json" ;;
     run_concurrency_state_mutation_contract_lane.sh) echo "runtime_concurrency_state_mutation_contract_lane.json" ;;
     run_concurrency_state_mutation_deep_lane.sh) echo "runtime_concurrency_state_mutation_deep_lane.json" ;;
     run_failover_sync_drill_preflight_contract_lane.sh) echo "runtime_failover_sync_drill_preflight_contract_lane.json" ;;
@@ -199,6 +213,8 @@ resolve_phase_name() {
     run_runtime_snapshot_deep_lane.sh) echo "deep" ;;
     run_watchdog_proof_consensus_deep_lane.sh) echo "deep" ;;
     run_zk_witness_mutation_deep_lane.sh) echo "deep" ;;
+    run_task_operation_snapshot_deep_lane.sh) echo "deep" ;;
+    run_federated_delegation_settlement_deep_lane.sh) echo "deep" ;;
     run_signer_incident_recovery_lane.sh) echo "run" ;;
     *) echo "contract" ;;
   esac
@@ -206,13 +222,17 @@ resolve_phase_name() {
 
 MANIFEST_FILE="$(resolve_manifest_name "$WRAPPER_NAME" || true)"
 if [[ -z "$MANIFEST_FILE" ]]; then
-  echo "unknown lane wrapper for dispatch: $WRAPPER_NAME" >&2
+  emit_fallback_error \
+    "dispatcher_unknown_wrapper" \
+    "unknown lane wrapper for dispatch: $WRAPPER_NAME"
   exit 1
 fi
 
 MANIFEST_PATH="$ROOT_DIR/scripts/framework/manifests/$MANIFEST_FILE"
 if [[ ! -f "$MANIFEST_PATH" ]]; then
-  echo "resolved manifest does not exist: $MANIFEST_PATH" >&2
+  emit_fallback_error \
+    "dispatcher_manifest_missing" \
+    "resolved manifest does not exist: $MANIFEST_PATH"
   exit 1
 fi
 
@@ -221,7 +241,13 @@ if [[ "$RESOLVE_MANIFEST_ONLY" -eq 1 ]]; then
   exit 0
 fi
 
-PHASE_NAME="$(resolve_phase_name "$WRAPPER_NAME")"
+PHASE_NAME="$(resolve_phase_name "$WRAPPER_NAME" || true)"
+if [[ -z "$PHASE_NAME" ]]; then
+  emit_fallback_error \
+    "dispatcher_phase_unmapped" \
+    "unable to resolve lane phase for wrapper: $WRAPPER_NAME"
+  exit 1
+fi
 
 exec bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
   --manifest "$MANIFEST_PATH" \

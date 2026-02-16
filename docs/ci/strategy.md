@@ -1550,7 +1550,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - selector outputs:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
-    - unknown/full fallback remains disabled for this non-Kolme wave-19 path set
+    - unknown-wrapper fallback emits deterministic taxonomy markers for this non-Kolme wave-19 path set:
+      - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
+      - `fallback_reason_codes_csv=dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped`
+      - `fallback_reason_code=dispatcher_unknown_wrapper`
 - Non-Kolme wave trend-test LOC soft-budget fixture/checker changes map to CI contract scope:
   - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json`
   - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json`
@@ -2554,6 +2557,26 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/sdk/run_localhost_signed_demo_contract_lane.sh`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2741
+  - Non-Kolme wave-19 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
+    - `bash scripts/framework/test_non_kolme_wave19_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+    - shared dispatcher:
+      - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
+    - wave-19 lightweight wrappers are symlinked to shared dispatcher:
+      - `scripts/runtime/run_concurrency_state_mutation_deep_lane.sh`
+      - `scripts/runtime/run_runtime_snapshot_deep_lane.sh`
+      - `scripts/runtime/run_zk_witness_mutation_deep_lane.sh`
+      - `scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh`
+      - `scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh`
+      - `scripts/runtime/run_failover_sync_drill_deep_lane.sh`
+      - `scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh`
+      - `scripts/task/run_task_operation_snapshot_deep_lane.sh`
+      - `scripts/task/run_federated_delegation_settlement_deep_lane.sh`
+    - unknown-wrapper fallback diagnostics are deterministic:
+      - `dispatch_status=fail`
+      - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
+      - `fallback_reason_codes_csv=dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped`
+      - `fallback_reason_code=dispatcher_unknown_wrapper`
+    - Regression: #4341
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
