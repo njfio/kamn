@@ -11,6 +11,8 @@ Deliver service-edge hardening by converging TLS activation, API/observability e
 ## Issue Map
 - Story `#3628`: decompose signer monolith into modular signing adapter and policy layers
   - Task `#3636`: extract signer adapter module for crypto and key-source operations
+    - Subtask `#3653`: extract signer_adapter for key-source and crypto paths
+    - Subtask `#3811`: enforce signer_adapter API boundary and re-export drift contracts
   - Task `#3637`: extract signer policy module for profile normalization and quorum checks
     - Subtask `#3654`: extract signer_policy with deterministic quorum and profile checks
     - Subtask `#3807`: add signer_policy reason-taxonomy drift and docs parity contracts
