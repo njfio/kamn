@@ -29,6 +29,7 @@ MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
 TLS_EVIDENCE_GATE_SCHEMA_VERSION = "kamn.release.gonogo-tls-evidence-gate.v1"
 AUDIT_INTEGRITY_GATE_SCHEMA_VERSION = "kamn.release.gonogo-audit-integrity-gate.v1"
 SLO_POLICY_GATE_SCHEMA_VERSION = "kamn.release.gonogo-slo-policy-gate.v1"
+INCIDENT_READINESS_GATE_SCHEMA_VERSION = "kamn.release.gonogo-incident-readiness-gate.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 DEFAULT_OPERATOR_RUNBOOK_DOC = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
@@ -76,6 +77,24 @@ SLO_POLICY_GATE_REASON_TAXONOMY_VERSION = (
     "kamn.release.gonogo-slo-threshold-convergence-reason-taxonomy.v1"
 )
 DEFAULT_SLO_POLICY_MAX_AGE_SECONDS = 1800
+INCIDENT_READINESS_SOURCE_SCHEMA_VERSION = "kamn.release.staging-rehearsal.v1"
+INCIDENT_READINESS_SOURCE_OUTPUT_CONTRACT_VERSION = (
+    "kamn.release.staging-rehearsal-output-contract.v1"
+)
+INCIDENT_READINESS_SOURCE_REASON_TAXONOMY_SCHEMA_VERSION = (
+    "kamn.release.staging-rehearsal-reason-taxonomy.v1"
+)
+INCIDENT_READINESS_SOURCE_NORMALIZED_EVIDENCE_SCHEMA_VERSION = (
+    "kamn.release.staging-rehearsal-evidence-normalization.v1"
+)
+INCIDENT_READINESS_SOURCE_STAGED_SIGNOFF_SCHEMA_VERSION = (
+    "kamn.release.staged-rehearsal-signoff.v1"
+)
+INCIDENT_READINESS_SOURCE_REASON_CODES = ["all rehearsal gates satisfied"]
+INCIDENT_READINESS_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.release.gonogo-incident-readiness-convergence-reason-taxonomy.v1"
+)
+DEFAULT_INCIDENT_READINESS_MAX_AGE_SECONDS = 1800
 
 PREFLIGHT_SUMMARY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
@@ -548,6 +567,227 @@ def _build_slo_policy_gate(
             "slo_policy_report_reason_key_required": SLO_POLICY_SOURCE_REASON_KEY,
             "slo_policy_report_reason_codes_required": [],
             "slo_policy_max_age_seconds_required": max_age_seconds,
+        },
+    }
+
+
+def _optional_incident_readiness_gate_inputs(
+    args: argparse.Namespace,
+) -> tuple[Path, int] | None:
+    raw_report_file = getattr(args, "incident_readiness_report_file", "")
+    raw_max_age = getattr(args, "incident_readiness_max_age_seconds", "")
+
+    report_file = raw_report_file.strip() if isinstance(raw_report_file, str) else ""
+    max_age_value = raw_max_age.strip() if isinstance(raw_max_age, str) else ""
+
+    if not report_file and not max_age_value:
+        return None
+    if not report_file:
+        fail(
+            "--incident-readiness-report-file is required when "
+            "--incident-readiness-max-age-seconds is provided"
+        )
+
+    if not max_age_value:
+        max_age_seconds = DEFAULT_INCIDENT_READINESS_MAX_AGE_SECONDS
+    else:
+        max_age_seconds = parse_int("incident-readiness-max-age-seconds", max_age_value)
+        if max_age_seconds < 1:
+            fail("incident-readiness-max-age-seconds must be >= 1")
+
+    return Path(report_file).resolve(), max_age_seconds
+
+
+def _build_incident_readiness_gate(
+    report_path: Path, max_age_seconds: int, reference_time: datetime
+) -> dict[str, Any]:
+    reason_codes: list[str] = []
+    report_payload: dict[str, Any] | None = None
+    report_schema_version = ""
+    report_final_decision = ""
+    report_evidence_output_contract_version = ""
+    report_reason_taxonomy_schema_version = ""
+    report_normalized_evidence_schema_version = ""
+    report_staged_signoff_schema_version = ""
+    report_staged_signoff_lineage_status = ""
+    report_reason_codes: list[str] = []
+    report_reason_codes_csv = ""
+    report_mtime_utc = ""
+    report_age_seconds = -1
+
+    if max_age_seconds < 1:
+        reason_codes.append("gonogo_incident_readiness_max_age_invalid")
+
+    if not report_path.is_file():
+        reason_codes.append("gonogo_incident_readiness_file_missing")
+    else:
+        mtime_utc = datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+        report_mtime_utc = mtime_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        report_age_seconds = max(
+            0, int((reference_time - mtime_utc).total_seconds())
+        )
+        if max_age_seconds >= 1 and report_age_seconds > max_age_seconds:
+            reason_codes.append("gonogo_incident_readiness_freshness_window_exceeded")
+
+        try:
+            payload = load_json(report_path)
+        except ContractError:
+            reason_codes.append("gonogo_incident_readiness_invalid_json")
+        else:
+            if not isinstance(payload, dict):
+                reason_codes.append("gonogo_incident_readiness_invalid_json")
+            else:
+                report_payload = payload
+
+    if report_payload is not None:
+        report_schema_version = str(report_payload.get("schema_version", ""))
+        report_final_decision = str(report_payload.get("final_decision", ""))
+        report_evidence_output_contract_version = str(
+            report_payload.get("evidence_output_contract_version", "")
+        )
+
+        reason_taxonomy = report_payload.get("reason_taxonomy")
+        if isinstance(reason_taxonomy, dict):
+            report_reason_taxonomy_schema_version = str(
+                reason_taxonomy.get("schema_version", "")
+            )
+        else:
+            reason_codes.append(
+                "gonogo_incident_readiness_reason_taxonomy_schema_mismatch"
+            )
+
+        normalized_evidence = report_payload.get("normalized_evidence")
+        if isinstance(normalized_evidence, dict):
+            report_normalized_evidence_schema_version = str(
+                normalized_evidence.get("schema_version", "")
+            )
+        else:
+            reason_codes.append(
+                "gonogo_incident_readiness_normalized_evidence_schema_mismatch"
+            )
+
+        staged_signoff = report_payload.get("staged_rehearsal_signoff")
+        if isinstance(staged_signoff, dict):
+            report_staged_signoff_schema_version = str(
+                staged_signoff.get("schema_version", "")
+            )
+            report_staged_signoff_lineage_status = str(
+                staged_signoff.get("lineage_status", "")
+            )
+        else:
+            reason_codes.append("gonogo_incident_readiness_staged_signoff_schema_mismatch")
+            reason_codes.append("gonogo_incident_readiness_staged_signoff_status_not_verified")
+
+        raw_reason_codes = report_payload.get("decision_reasons")
+        if isinstance(raw_reason_codes, list):
+            report_reason_codes = [
+                value for value in raw_reason_codes if isinstance(value, str) and value
+            ]
+            report_reason_codes_csv = ",".join(report_reason_codes)
+        else:
+            reason_codes.append("gonogo_incident_readiness_reason_codes_unexpected")
+
+        if report_schema_version != INCIDENT_READINESS_SOURCE_SCHEMA_VERSION:
+            reason_codes.append("gonogo_incident_readiness_schema_mismatch")
+        if report_final_decision != GO_DECISION:
+            reason_codes.append("gonogo_incident_readiness_final_decision_not_go")
+        if (
+            report_evidence_output_contract_version
+            != INCIDENT_READINESS_SOURCE_OUTPUT_CONTRACT_VERSION
+        ):
+            reason_codes.append(
+                "gonogo_incident_readiness_output_contract_version_mismatch"
+            )
+        if (
+            report_reason_taxonomy_schema_version
+            != INCIDENT_READINESS_SOURCE_REASON_TAXONOMY_SCHEMA_VERSION
+        ):
+            reason_codes.append(
+                "gonogo_incident_readiness_reason_taxonomy_schema_mismatch"
+            )
+        if (
+            report_normalized_evidence_schema_version
+            != INCIDENT_READINESS_SOURCE_NORMALIZED_EVIDENCE_SCHEMA_VERSION
+        ):
+            reason_codes.append(
+                "gonogo_incident_readiness_normalized_evidence_schema_mismatch"
+            )
+        if (
+            report_staged_signoff_schema_version
+            != INCIDENT_READINESS_SOURCE_STAGED_SIGNOFF_SCHEMA_VERSION
+        ):
+            reason_codes.append(
+                "gonogo_incident_readiness_staged_signoff_schema_mismatch"
+            )
+        if report_staged_signoff_lineage_status != "verified":
+            reason_codes.append("gonogo_incident_readiness_staged_signoff_status_not_verified")
+        if report_reason_codes != INCIDENT_READINESS_SOURCE_REASON_CODES:
+            reason_codes.append("gonogo_incident_readiness_reason_codes_unexpected")
+
+    reason_codes = sorted(set(reason_codes))
+    final_decision = GO_DECISION if not reason_codes else NO_GO_DECISION
+    gate_status = "verified" if final_decision == GO_DECISION else "fail-closed"
+    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
+
+    return {
+        "schema_version": INCIDENT_READINESS_GATE_SCHEMA_VERSION,
+        "reason_taxonomy_version": INCIDENT_READINESS_GATE_REASON_TAXONOMY_VERSION,
+        "final_decision": final_decision,
+        "status": gate_status,
+        "reason_codes": reason_codes,
+        "reason_codes_csv": reason_codes_csv,
+        "reason_codes_value": reason_codes_csv,
+        "artifacts": {
+            "incident_readiness_report_file": str(report_path),
+            "incident_readiness_report_sha256": _artifact_sha256(report_path),
+        },
+        "observed": {
+            "incident_readiness_report_schema_version": report_schema_version,
+            "incident_readiness_report_final_decision": report_final_decision,
+            "incident_readiness_report_evidence_output_contract_version": (
+                report_evidence_output_contract_version
+            ),
+            "incident_readiness_report_reason_taxonomy_schema_version": (
+                report_reason_taxonomy_schema_version
+            ),
+            "incident_readiness_report_normalized_evidence_schema_version": (
+                report_normalized_evidence_schema_version
+            ),
+            "incident_readiness_report_staged_signoff_schema_version": (
+                report_staged_signoff_schema_version
+            ),
+            "incident_readiness_report_staged_signoff_lineage_status": (
+                report_staged_signoff_lineage_status
+            ),
+            "incident_readiness_report_reason_codes": report_reason_codes,
+            "incident_readiness_report_reason_codes_csv": report_reason_codes_csv,
+            "incident_readiness_report_mtime_utc": report_mtime_utc,
+            "incident_readiness_report_age_seconds": report_age_seconds,
+        },
+        "contracts": {
+            "incident_readiness_report_schema_version_required": (
+                INCIDENT_READINESS_SOURCE_SCHEMA_VERSION
+            ),
+            "incident_readiness_report_final_decision_required": GO_DECISION,
+            "incident_readiness_report_evidence_output_contract_version_required": (
+                INCIDENT_READINESS_SOURCE_OUTPUT_CONTRACT_VERSION
+            ),
+            "incident_readiness_report_reason_taxonomy_schema_version_required": (
+                INCIDENT_READINESS_SOURCE_REASON_TAXONOMY_SCHEMA_VERSION
+            ),
+            "incident_readiness_report_normalized_evidence_schema_version_required": (
+                INCIDENT_READINESS_SOURCE_NORMALIZED_EVIDENCE_SCHEMA_VERSION
+            ),
+            "incident_readiness_report_staged_signoff_schema_version_required": (
+                INCIDENT_READINESS_SOURCE_STAGED_SIGNOFF_SCHEMA_VERSION
+            ),
+            "incident_readiness_report_staged_signoff_lineage_status_required": (
+                "verified"
+            ),
+            "incident_readiness_report_reason_codes_required": (
+                list(INCIDENT_READINESS_SOURCE_REASON_CODES)
+            ),
+            "incident_readiness_max_age_seconds_required": max_age_seconds,
         },
     }
 
@@ -1060,6 +1300,62 @@ def _validated_expected_slo_policy_gate(
     return expected_gate, expected_decision
 
 
+def _validated_expected_incident_readiness_gate(
+    payload: dict[str, object], reference_time: datetime
+) -> tuple[dict[str, Any], str]:
+    incident_readiness_gate = payload.get("incident_readiness_gate")
+    if not isinstance(incident_readiness_gate, dict):
+        fail("bundle field 'incident_readiness_gate' must be an object when provided")
+
+    require_keys(
+        incident_readiness_gate,
+        (
+            "schema_version",
+            "reason_taxonomy_version",
+            "final_decision",
+            "status",
+            "reason_codes",
+            "reason_codes_csv",
+            "reason_codes_value",
+            "artifacts",
+            "observed",
+            "contracts",
+        ),
+    )
+
+    artifacts = incident_readiness_gate.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("incident_readiness_gate.artifacts must be an object")
+    report_file = artifacts.get("incident_readiness_report_file")
+    if not isinstance(report_file, str) or not report_file.strip():
+        fail(
+            "incident_readiness_gate.artifacts.incident_readiness_report_file must be a non-empty string"
+        )
+
+    contracts = incident_readiness_gate.get("contracts")
+    if not isinstance(contracts, dict):
+        fail("incident_readiness_gate.contracts must be an object")
+    max_age_seconds = contracts.get("incident_readiness_max_age_seconds_required")
+    if not isinstance(max_age_seconds, int):
+        fail(
+            "incident_readiness_gate.contracts.incident_readiness_max_age_seconds_required must be an integer"
+        )
+
+    expected_gate = _build_incident_readiness_gate(
+        Path(report_file).resolve(), max_age_seconds, reference_time
+    )
+    if incident_readiness_gate != expected_gate:
+        fail(
+            "incident readiness gate convergence mismatch: "
+            "expected deterministic readiness bundle schema markers and decision surface"
+        )
+
+    expected_decision = expected_gate["final_decision"]
+    if not isinstance(expected_decision, str):
+        fail("incident readiness gate final decision must be a string")
+    return expected_gate, expected_decision
+
+
 def generate_bundle(args: argparse.Namespace) -> int:
     required_values = (
         args.output_file,
@@ -1165,6 +1461,23 @@ def generate_bundle(args: argparse.Namespace) -> int:
         payload["slo_policy_gate"] = slo_policy_gate
         expected_go = expected_go and slo_policy_gate["final_decision"] == GO_DECISION
 
+    incident_readiness_gate = None
+    incident_readiness_gate_inputs = _optional_incident_readiness_gate_inputs(args)
+    if incident_readiness_gate_inputs is not None:
+        (
+            incident_readiness_report_file,
+            incident_readiness_max_age_seconds,
+        ) = incident_readiness_gate_inputs
+        incident_readiness_gate = _build_incident_readiness_gate(
+            incident_readiness_report_file,
+            incident_readiness_max_age_seconds,
+            generated_at_dt,
+        )
+        payload["incident_readiness_gate"] = incident_readiness_gate
+        expected_go = (
+            expected_go and incident_readiness_gate["final_decision"] == GO_DECISION
+        )
+
     final_decision = GO_DECISION if expected_go else NO_GO_DECISION
     payload["final_decision"] = final_decision
 
@@ -1199,6 +1512,19 @@ def generate_bundle(args: argparse.Namespace) -> int:
             f"{SLO_POLICY_GATE_REASON_TAXONOMY_VERSION}"
         )
         print(f"slo_policy_reason_codes_csv={slo_policy_gate['reason_codes_csv']}")
+    if incident_readiness_gate is not None:
+        print(
+            "incident_readiness_gate_final_decision="
+            f"{incident_readiness_gate['final_decision']}"
+        )
+        print(
+            "incident_readiness_reason_taxonomy_version="
+            f"{INCIDENT_READINESS_GATE_REASON_TAXONOMY_VERSION}"
+        )
+        print(
+            "incident_readiness_reason_codes_csv="
+            f"{incident_readiness_gate['reason_codes_csv']}"
+        )
     print(f"final_decision={final_decision}")
     return 0
 
@@ -1311,6 +1637,13 @@ def check_bundle(args: argparse.Namespace) -> int:
         )
         expected_go = expected_go and slo_policy_gate_decision == GO_DECISION
 
+    incident_readiness_gate_decision = GO_DECISION
+    if "incident_readiness_gate" in payload:
+        _, incident_readiness_gate_decision = _validated_expected_incident_readiness_gate(
+            payload, generated_at
+        )
+        expected_go = expected_go and incident_readiness_gate_decision == GO_DECISION
+
     expected_decision = GO_DECISION if expected_go else NO_GO_DECISION
     actual_decision = payload["final_decision"]
     if actual_decision not in {GO_DECISION, NO_GO_DECISION}:
@@ -1331,6 +1664,11 @@ def check_bundle(args: argparse.Namespace) -> int:
         print(f"audit_integrity_gate_final_decision={audit_integrity_gate_decision}")
     if "slo_policy_gate" in payload:
         print(f"slo_policy_gate_final_decision={slo_policy_gate_decision}")
+    if "incident_readiness_gate" in payload:
+        print(
+            "incident_readiness_gate_final_decision="
+            f"{incident_readiness_gate_decision}"
+        )
     print(f"final_decision={actual_decision}")
     print(f"required_approvals={required_approvals}")
     print(f"received_approvals={received_approvals}")
@@ -1365,6 +1703,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--audit-integrity-max-age-seconds", default="")
     generate.add_argument("--slo-policy-report-file", default="")
     generate.add_argument("--slo-policy-max-age-seconds", default="")
+    generate.add_argument("--incident-readiness-report-file", default="")
+    generate.add_argument("--incident-readiness-max-age-seconds", default="")
     generate.set_defaults(handler=generate_bundle)
 
     check = subparsers.add_parser("check")
