@@ -17,6 +17,13 @@ def is_excluded(path: Path) -> bool:
     )
 
 
+def has_unsafe_env_fallback_default(line: str) -> bool:
+    compact = line.replace(" ", "")
+    has_env_var = "std::env::var(" in compact or "env::var(" in compact
+    has_default_fallback = ".unwrap_or(" in compact or ".unwrap_or_else(" in compact
+    return has_env_var and has_default_fallback
+
+
 def find_violations(root: Path) -> list[dict[str, object]]:
     violations: list[dict[str, object]] = []
     for rust_file in sorted(root.rglob("*.rs")):
@@ -29,7 +36,12 @@ def find_violations(root: Path) -> list[dict[str, object]]:
                 cutoff = line_no - 1
                 break
         for line_no, line in enumerate(lines[:cutoff], start=1):
-            if ".expect(" in line:
+            if (
+                ".expect(" in line
+                or "panic!(" in line
+                or "unreachable!(" in line
+                or has_unsafe_env_fallback_default(line)
+            ):
                 violations.append(
                     {
                         "file": rust_file.as_posix(),
