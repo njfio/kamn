@@ -15,6 +15,9 @@ tmp_tampered_historical_query_latency=""
 tmp_tampered_journal_replay_drift=""
 tmp_tampered_journal_replay_taxonomy=""
 tmp_tampered_checkpoint_divergence_bypass=""
+tmp_tampered_recovery_readiness_progress=""
+tmp_tampered_snapshot_parity=""
+tmp_tampered_state_consistency_taxonomy=""
 tmp_tampered_promotion_gate=""
 tmp_tampered_audit_parity=""
 tmp_tampered_durability_taxonomy=""
@@ -44,6 +47,15 @@ cleanup() {
   fi
   if [[ -n "$tmp_tampered_checkpoint_divergence_bypass" ]]; then
     rm -f "$tmp_tampered_checkpoint_divergence_bypass"
+  fi
+  if [[ -n "$tmp_tampered_recovery_readiness_progress" ]]; then
+    rm -f "$tmp_tampered_recovery_readiness_progress"
+  fi
+  if [[ -n "$tmp_tampered_snapshot_parity" ]]; then
+    rm -f "$tmp_tampered_snapshot_parity"
+  fi
+  if [[ -n "$tmp_tampered_state_consistency_taxonomy" ]]; then
+    rm -f "$tmp_tampered_state_consistency_taxonomy"
   fi
   if [[ -n "$tmp_tampered_promotion_gate" ]]; then
     rm -f "$tmp_tampered_promotion_gate"
@@ -119,6 +131,16 @@ if payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.journa
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker")
 if payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker")
+if payload.get("crash_recovery_readiness_progress_status") != "verified":
+    raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
+if payload.get("snapshot_parity_status") != "verified":
+    raise SystemExit("expected deterministic snapshot_parity_status marker")
+if payload.get("ci_local_recovery_budget_boundary_status") != "verified":
+    raise SystemExit("expected deterministic ci_local_recovery_budget_boundary_status marker")
+if payload.get("state_consistency_reason_taxonomy_version") != "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic state_consistency_reason_taxonomy_version marker")
+if payload.get("state_consistency_reason_codes_csv") != "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic state_consistency_reason_codes_csv marker")
 if payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker")
 if payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
@@ -369,6 +391,99 @@ if [ "$checkpoint_divergence_bypass_tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$checkpoint_divergence_bypass_tampered_output" | grep -q 'sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch'; then
   echo "expected deterministic checkpoint divergence bypass mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_recovery_readiness_progress="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_recovery_readiness_progress"
+python3 - "$tmp_tampered_recovery_readiness_progress" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["crash_recovery_readiness_progress_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+recovery_readiness_progress_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_recovery_readiness_progress" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+recovery_readiness_progress_tampered_code=$?
+set -e
+if [ "$recovery_readiness_progress_tampered_code" -eq 0 ]; then
+  echo "expected crash-recovery readiness progress stall bypass sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$recovery_readiness_progress_tampered_output" | grep -q 'sqlite_crash_recovery_policy_crash_recovery_readiness_progress_status_mismatch'; then
+  echo "expected deterministic crash-recovery readiness progress mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_snapshot_parity="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_snapshot_parity"
+python3 - "$tmp_tampered_snapshot_parity" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["snapshot_parity_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+snapshot_parity_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_snapshot_parity" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+snapshot_parity_tampered_code=$?
+set -e
+if [ "$snapshot_parity_tampered_code" -eq 0 ]; then
+  echo "expected snapshot parity drift bypass sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$snapshot_parity_tampered_output" | grep -q 'sqlite_crash_recovery_policy_snapshot_parity_status_mismatch'; then
+  echo "expected deterministic snapshot parity mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_state_consistency_taxonomy="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_state_consistency_taxonomy"
+python3 - "$tmp_tampered_state_consistency_taxonomy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["state_consistency_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+state_consistency_taxonomy_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_state_consistency_taxonomy" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+state_consistency_taxonomy_tampered_code=$?
+set -e
+if [ "$state_consistency_taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected state-consistency taxonomy drift sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$state_consistency_taxonomy_tampered_output" | grep -q 'sqlite_crash_recovery_policy_state_consistency_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic state-consistency taxonomy mismatch reason for tampered sqlite crash-recovery report" >&2
   exit 1
 fi
 

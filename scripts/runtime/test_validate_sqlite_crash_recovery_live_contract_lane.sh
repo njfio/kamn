@@ -92,6 +92,26 @@ if ! printf '%s\n' "$lane_output" | grep -q '^journal_replay_reason_codes_csv=jo
   echo "expected sqlite crash-recovery contract lane journal replay reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane crash-recovery readiness progress marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^snapshot_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane snapshot parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_recovery_budget_boundary_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane ci-local recovery budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane state-consistency reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded$'; then
+  echo "expected sqlite crash-recovery contract lane state-consistency reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane promotion-gate marker" >&2
   exit 1
@@ -161,6 +181,16 @@ if lane_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.j
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker")
 if lane_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker")
+if lane_payload.get("crash_recovery_readiness_progress_status") != "verified":
+    raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
+if lane_payload.get("snapshot_parity_status") != "verified":
+    raise SystemExit("expected deterministic snapshot_parity_status marker")
+if lane_payload.get("ci_local_recovery_budget_boundary_status") != "verified":
+    raise SystemExit("expected deterministic ci_local_recovery_budget_boundary_status marker")
+if lane_payload.get("state_consistency_reason_taxonomy_version") != "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic state_consistency_reason_taxonomy_version marker")
+if lane_payload.get("state_consistency_reason_codes_csv") != "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic state_consistency_reason_codes_csv marker")
 if lane_payload.get("crash_recovery_promotion_gate_status") != "verified":
     raise SystemExit("expected crash_recovery_promotion_gate_status=verified")
 if lane_payload.get("audit_trail_parity_status") != "verified":
@@ -195,6 +225,10 @@ if policy_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker in policy report")
 if policy_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker in policy report")
+if policy_payload.get("state_consistency_reason_taxonomy_version") != "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic state_consistency_reason_taxonomy_version marker in policy report")
+if policy_payload.get("state_consistency_reason_codes_csv") != "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic state_consistency_reason_codes_csv marker in policy report")
 if policy_payload.get("durability_governance_reason_taxonomy_version") != "kamn.runtime.durability-governance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker in policy report")
 if policy_payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
