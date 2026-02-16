@@ -8,6 +8,7 @@ CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_signed_to_kolme_demo_cont
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_signed_to_kolme_demo_policy.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
+RELEASE_GONOGO_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
 TMP_DIR="$(mktemp -d)"
 TMP_SUMMARY_DRY_RUN="$TMP_DIR/signed_to_kolme_demo_dry_run_summary.json"
 TMP_POLICY_DRY_RUN="$TMP_DIR/signed_to_kolme_demo_dry_run_policy.json"
@@ -76,6 +77,26 @@ fi
 
 if ! grep -q "Regression: #2388" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include runtime submit/finality regression marker" >&2
+  exit 1
+fi
+
+if [ ! -f "$RELEASE_GONOGO_DOC" ]; then
+  echo "expected release go/no-go checklist doc to exist" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_signed_to_kolme_demo_policy.py" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to reference signed-to-Kolme demo policy checker" >&2
+  exit 1
+fi
+
+if ! grep -q "signed_message_commit_evidence_mismatch" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-message/commit mismatch marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #4497" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-message/commit mismatch regression marker" >&2
   exit 1
 fi
 
@@ -160,5 +181,91 @@ if summary.get("reason_code") != "signed_to_kolme_demo_passed":
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected signed-to-Kolme run policy final_decision GO")
 PY
+
+# Regression: #4497
+TMP_MISMATCH_SIGNED_CHECK="$TMP_DIR/signed_to_kolme_demo_mismatch_signed_check.json"
+TMP_MISMATCH_INTEGRATION_CHECK="$TMP_DIR/signed_to_kolme_demo_mismatch_integration_check.json"
+TMP_MISMATCH_POLICY="$TMP_DIR/signed_to_kolme_demo_mismatch_policy.json"
+TMP_MISMATCH_ERR="$TMP_DIR/signed_to_kolme_demo_mismatch.err"
+
+python3 - "$TMP_SUMMARY_RUN" "$TMP_MISMATCH_SIGNED_CHECK" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+summary["mode"] = "run"
+summary["status"] = "ok"
+summary["reason_code"] = "signed_to_kolme_demo_passed"
+for check in summary.get("checks", []):
+    if not isinstance(check, dict):
+        continue
+    if check.get("id") == "localhost_signed_demo_contract":
+        check["status"] = "fail"
+        check["reason_code"] = "localhost_signed_demo_contract_failed"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_MISMATCH_SIGNED_CHECK" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_MISMATCH_POLICY" >"$TMP_MISMATCH_ERR" 2>&1
+mismatch_signed_check_code=$?
+set -e
+if [ "$mismatch_signed_check_code" -eq 0 ]; then
+  echo "expected checker to fail when signed-message checkpoint failure is accepted alongside commit evidence success" >&2
+  exit 1
+fi
+if ! grep -q "signed_message_commit_evidence_mismatch" "$TMP_MISMATCH_ERR"; then
+  echo "expected deterministic signed_message_commit_evidence_mismatch marker for signed-check mismatch" >&2
+  exit 1
+fi
+
+python3 - "$TMP_SUMMARY_RUN" "$TMP_MISMATCH_INTEGRATION_CHECK" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+summary["mode"] = "run"
+summary["status"] = "ok"
+summary["reason_code"] = "signed_to_kolme_demo_passed"
+for check in summary.get("checks", []):
+    if not isinstance(check, dict):
+        continue
+    if check.get("id") == "local_kamn_runtime_integration_run":
+        check["status"] = "fail"
+        check["reason_code"] = "local_kamn_runtime_integration_run_failed"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_MISMATCH_INTEGRATION_CHECK" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_MISMATCH_POLICY" >"$TMP_MISMATCH_ERR" 2>&1
+mismatch_integration_check_code=$?
+set -e
+if [ "$mismatch_integration_check_code" -eq 0 ]; then
+  echo "expected checker to fail when integration checkpoint failure is accepted alongside commit evidence success" >&2
+  exit 1
+fi
+if ! grep -q "signed_message_commit_evidence_mismatch" "$TMP_MISMATCH_ERR"; then
+  echo "expected deterministic signed_message_commit_evidence_mismatch marker for integration-check mismatch" >&2
+  exit 1
+fi
 
 echo "local signed-to-Kolme demo contract lane tests passed."

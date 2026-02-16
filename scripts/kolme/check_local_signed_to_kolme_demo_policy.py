@@ -98,6 +98,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_commit_live_policy_report_path_missing")
 
     checks = report.get("checks")
+    check_status_by_id: dict[str, str] = {}
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
     else:
@@ -125,6 +126,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
                 reason_codes.append(f"check_reason_code_invalid:{check_id}")
+            if check_id not in check_status_by_id and check_status in ("planned", "pass", "fail", "skipped"):
+                check_status_by_id[check_id] = str(check_status)
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
@@ -172,6 +175,27 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append("runtime_commit_finality_evidence_marker_missing")
             if runtime_commit_submit_finality_linked is not True:
                 reason_codes.append("runtime_commit_submit_finality_linkage_missing")
+            expected_checkpoint_ids = [
+                "localhost_signed_demo_contract",
+                "localhost_signed_integration_contract",
+                "local_kamn_runtime_integration_run",
+            ]
+            if (
+                runtime_commit_live_status == "ok"
+                and runtime_commit_submit_evidence_marker_present is True
+                and runtime_commit_finality_evidence_marker_present is True
+                and runtime_commit_submit_finality_linked is True
+                and all(check_id in check_status_by_id for check_id in expected_checkpoint_ids)
+            ):
+                mismatched_checkpoint_ids = [
+                    check_id
+                    for check_id in expected_checkpoint_ids
+                    if check_status_by_id.get(check_id) != "pass"
+                ]
+                if mismatched_checkpoint_ids:
+                    reason_codes.append("signed_message_commit_evidence_mismatch")
+                    for check_id in sorted(mismatched_checkpoint_ids):
+                        reason_codes.append(f"signed_message_commit_evidence_mismatch:{check_id}")
     elif status == "fail":
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "signed_to_kolme_demo_passed"):
