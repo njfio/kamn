@@ -208,6 +208,20 @@ This refreshed version separates:
   - `scripts/ci/check_combined_shell_surface_trend_policy.sh`
   - `fixtures/ci/combined_shell_surface_trend_thresholds.json`
 
+### R27.32 Wrapper Migration Tranche (Issue #4341)
+- Selected task deep-lane wrappers were migrated to manifest-dispatch execution:
+  - `scripts/task/run_task_operation_snapshot_deep_lane.sh`
+  - `scripts/task/run_federated_delegation_settlement_deep_lane.sh`
+- New deep-lane implementation modules and manifests anchor the migration:
+  - `scripts/task/run_task_operation_snapshot_deep_lane_impl.sh`
+  - `scripts/task/run_federated_delegation_settlement_deep_lane_impl.sh`
+  - `scripts/framework/manifests/task_task_operation_snapshot_deep_lane.json`
+  - `scripts/framework/manifests/task_federated_delegation_settlement_deep_lane.json`
+- Non-Kolme dispatcher unknown-wrapper fallback is now deterministic:
+  - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
+  - `fallback_reason_codes_csv=dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped`
+  - `fallback_reason_code=dispatcher_unknown_wrapper`
+
 ## Validation Commands (Low-Cost Truth Guard)
 - `bash scripts/ci/test_ci_strategy_contract.sh`
 - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
