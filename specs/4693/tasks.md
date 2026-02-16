@@ -18,6 +18,7 @@
 - T1: ✅ completed via `cargo test -p kamn-core --test p2p_block_module_extraction_contract -- --nocapture` red failure before extraction.
 - T2: ✅ completed for transport ownership extraction into:
   - `crates/kamn-core/src/p2p_transport/adapter.rs`
+  - `crates/kamn-core/src/p2p_transport/coordinator.rs`
   - `crates/kamn-core/src/p2p_transport/runtime_event.rs`
   - `crates/kamn-core/src/p2p_transport/swarm_stack.rs`
   - `crates/kamn-core/src/p2p_transport/native_runtime.rs`

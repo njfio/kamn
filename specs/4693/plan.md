@@ -13,6 +13,7 @@
 ## Affected Modules
 - `crates/kamn-core/src/p2p_transport.rs`
 - `crates/kamn-core/src/p2p_transport/adapter.rs`
+- `crates/kamn-core/src/p2p_transport/coordinator.rs`
 - `crates/kamn-core/src/p2p_transport/validation.rs`
 - `crates/kamn-core/src/p2p_transport/lifecycle_regression.rs`
 - `crates/kamn-core/src/p2p_transport/error.rs`

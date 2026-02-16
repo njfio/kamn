@@ -152,6 +152,8 @@ This document captures the initial runtime-network foundation slice for peer lif
 - `crates/kamn-core/src/p2p_transport/error.rs` owns fail-closed transport error mapping helpers.
 - `crates/kamn-core/src/p2p_transport/adapter.rs` owns discovery frame models, transport adapter
   traits, and deterministic in-memory/udp adapter implementations.
+- `crates/kamn-core/src/p2p_transport/coordinator.rs` owns lifecycle-to-transport coordination
+  transitions for connect, discovery, broadcast, and inbound drain orchestration.
 - `crates/kamn-core/src/p2p_transport/runtime_event.rs` owns deterministic libp2p runtime event
   schema normalization and behavior-failure reason classification.
 - `crates/kamn-core/src/p2p_transport/swarm_stack.rs` owns deterministic swarm-stack composition,

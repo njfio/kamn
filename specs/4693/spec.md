@@ -20,7 +20,7 @@ Out:
 - New transport providers or consensus model changes.
 
 ## Acceptance Criteria
-- AC-1: Given `p2p_transport` extraction, when reviewing module ownership, then transport adapter/validation/lifecycle/error/runtime-event/swarm-stack/native-runtime responsibilities are delegated to dedicated submodules.
+- AC-1: Given `p2p_transport` extraction, when reviewing module ownership, then transport adapter/coordinator/validation/lifecycle/error/runtime-event/swarm-stack/native-runtime responsibilities are delegated to dedicated submodules.
 - AC-2: Given `block_pipeline` extraction, when reviewing module ownership, then validation, gossip ingress, fork-choice, evidence, and commit-store responsibilities are delegated to dedicated submodules.
 - AC-3: Given existing transport/pipeline tests, when running scoped suites, then behavior remains parity-stable with deterministic fail-closed reason taxonomy.
 - AC-4: Given docs updates, when reviewing runtime-network contracts, then transport/pipeline module ownership and verification commands are explicit.
@@ -28,7 +28,7 @@ Out:
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Integration/Conformance | `rg -n "mod adapter|mod validation|mod lifecycle_regression|mod error|mod runtime_event|mod swarm_stack|mod native_runtime" crates/kamn-core/src/p2p_transport.rs` | p2p transport responsibilities delegated to dedicated modules |
+| C-01 | AC-1 | Integration/Conformance | `rg -n "mod adapter|mod coordinator|mod validation|mod lifecycle_regression|mod error|mod runtime_event|mod swarm_stack|mod native_runtime" crates/kamn-core/src/p2p_transport.rs` | p2p transport responsibilities delegated to dedicated modules |
 | C-02 | AC-2 | Integration/Conformance | `rg -n "mod validation|mod gossip_ingress|mod fork_choice|mod evidence|mod commit_store" crates/kamn-core/src/block_pipeline.rs` | block pipeline responsibilities delegated to dedicated modules |
 | C-03 | AC-3 | Functional/Regression | `cargo test -p kamn-core --test p2p_transport_runtime -- --nocapture` and `cargo test -p kamn-core --test block_pipeline -- --nocapture` | scoped transport/pipeline behavior remains stable |
 | C-04 | AC-4 | Docs/Regression | docs review for transport/pipeline module ownership and command references | runtime-network docs include decomposition ownership map |

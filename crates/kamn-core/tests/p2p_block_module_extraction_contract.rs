@@ -27,6 +27,15 @@ fn p2p_transport_module_extraction_contract_declares_adapter_module() {
 }
 
 #[test]
+fn p2p_transport_module_extraction_contract_declares_coordinator_module() {
+    let p2p_transport_rs = read_src_file("p2p_transport.rs");
+    assert!(
+        p2p_transport_rs.contains("mod coordinator;"),
+        "p2p_transport.rs should declare extracted coordinator module"
+    );
+}
+
+#[test]
 fn p2p_transport_module_extraction_contract_moves_swarm_stack_types_out_of_root_file() {
     let p2p_transport_rs = read_src_file("p2p_transport.rs");
     assert!(
@@ -69,6 +78,16 @@ fn p2p_transport_module_extraction_contract_moves_adapter_types_out_of_root_file
 }
 
 #[test]
+fn p2p_transport_module_extraction_contract_moves_coordinator_type_out_of_root_file() {
+    let p2p_transport_rs = read_src_file("p2p_transport.rs");
+    assert!(
+        !p2p_transport_rs
+            .contains("pub struct PeerLifecycleTransportCoordinator<T: PeerLifecycleTransport> {"),
+        "p2p_transport.rs should not keep inline PeerLifecycleTransportCoordinator definition"
+    );
+}
+
+#[test]
 fn p2p_transport_module_extraction_contract_keeps_swarm_stack_impls_in_new_module() {
     let swarm_stack_rs = read_src_file("p2p_transport/swarm_stack.rs");
     assert!(
@@ -107,6 +126,16 @@ fn p2p_transport_module_extraction_contract_keeps_adapter_impls_in_new_module() 
     assert!(
         adapter_rs.contains("pub struct UdpPeerLifecycleTransport {"),
         "adapter module should own UdpPeerLifecycleTransport"
+    );
+}
+
+#[test]
+fn p2p_transport_module_extraction_contract_keeps_coordinator_impls_in_new_module() {
+    let coordinator_rs = read_src_file("p2p_transport/coordinator.rs");
+    assert!(
+        coordinator_rs
+            .contains("pub struct PeerLifecycleTransportCoordinator<T: PeerLifecycleTransport> {"),
+        "coordinator module should own PeerLifecycleTransportCoordinator"
     );
 }
 
