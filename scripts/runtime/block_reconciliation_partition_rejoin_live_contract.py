@@ -37,9 +37,22 @@ TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
 RECONCILIATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1"
 )
+RECONCILIATION_REASON_CODES_CSV = (
+    "reconciliation_partition_transition_failed,"
+    "reconciliation_rejoin_transition_failed,"
+    "reconciliation_publish_drop_recovery_failed,"
+    "reconciliation_peer_churn_recovery_failed,"
+    "reconciliation_split_head_unresolved,"
+    "reconciliation_replay_instability,"
+    "reconciliation_fixture_contract_failed,"
+    "reconciliation_unclassified_scenario_failed,"
+    "reconciliation_runtime_budget_exceeded,"
+    "reconciliation_ci_fast_gate_failed"
+)
 RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1"
 )
+TRANSPORT_EVIDENCE_SCHEMA_VERSION = "kamn.runtime.libp2p-transport-transition-evidence.v1"
 RECONCILIATION_CONSISTENCY_REASON_CODES_CSV = (
     "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,"
     "consistency_classification_mismatch"
@@ -247,8 +260,12 @@ def run_lane(args: argparse.Namespace) -> int:
         "block_reconciliation_rejoin_status": "verified",
         "canonical_convergence_status": "verified",
         "runtime_transport_mode": TRANSPORT_RUNTIME_MODE,
+        "transport_evidence_schema_version": TRANSPORT_EVIDENCE_SCHEMA_VERSION,
+        "transport_evidence_normalization_status": "verified",
+        "transport_evidence_source_contract_status": "verified",
         "transport_state_transition_status": "verified",
         "reconciliation_reason_taxonomy_version": RECONCILIATION_REASON_TAXONOMY_VERSION,
+        "reconciliation_reason_codes_csv": RECONCILIATION_REASON_CODES_CSV,
         "reconciliation_reason_taxonomy_status": "verified",
         "snapshot_wal_reconciliation_status": "verified",
         "consistency_classification_status": "verified",
@@ -293,6 +310,11 @@ def run_lane(args: argparse.Namespace) -> int:
     print("block_reconciliation_rejoin_status=verified")
     print("canonical_convergence_status=verified")
     print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
+    print(f"transport_evidence_schema_version={TRANSPORT_EVIDENCE_SCHEMA_VERSION}")
+    print("transport_evidence_normalization_status=verified")
+    print("transport_evidence_source_contract_status=verified")
+    print(f"reconciliation_reason_taxonomy_version={RECONCILIATION_REASON_TAXONOMY_VERSION}")
+    print(f"reconciliation_reason_codes_csv={RECONCILIATION_REASON_CODES_CSV}")
     print("reconciliation_reason_taxonomy_status=verified")
     print("snapshot_wal_reconciliation_status=verified")
     print("consistency_classification_status=verified")
@@ -376,6 +398,19 @@ def check_policy(args: argparse.Namespace) -> int:
         "block_reconciliation_partition_rejoin_policy_transport_mode_mismatch",
     )
     checks.reject_if(
+        payload.get("transport_evidence_schema_version")
+        != TRANSPORT_EVIDENCE_SCHEMA_VERSION,
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_schema_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("transport_evidence_normalization_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("transport_evidence_source_contract_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_source_contract_status_mismatch",
+    )
+    checks.reject_if(
         payload.get("transport_state_transition_status") != "verified",
         "block_reconciliation_partition_rejoin_policy_transport_transition_status_mismatch",
     )
@@ -383,6 +418,11 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("reconciliation_reason_taxonomy_version")
         != RECONCILIATION_REASON_TAXONOMY_VERSION,
         "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("reconciliation_reason_codes_csv")
+        != RECONCILIATION_REASON_CODES_CSV,
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch",
     )
     checks.reject_if(
         payload.get("reconciliation_reason_taxonomy_status") != "verified",
@@ -523,6 +563,11 @@ def check_policy(args: argparse.Namespace) -> int:
         "observed_final_decision": observed_final_decision,
         "failed_checks": failed_checks,
         "ci_fast_gate": ci_fast_gate,
+        "transport_evidence_schema_version": TRANSPORT_EVIDENCE_SCHEMA_VERSION,
+        "transport_evidence_normalization_status": "verified",
+        "transport_evidence_source_contract_status": "verified",
+        "reconciliation_reason_taxonomy_version": RECONCILIATION_REASON_TAXONOMY_VERSION,
+        "reconciliation_reason_codes_csv": RECONCILIATION_REASON_CODES_CSV,
         "reconciliation_consistency_reason_taxonomy_version": (
             RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION
         ),

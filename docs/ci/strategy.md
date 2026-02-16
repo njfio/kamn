@@ -318,13 +318,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic rejoin marker (`block_reconciliation_rejoin_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
   - lane emits deterministic transport-mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic transport evidence normalization markers:
+    `transport_evidence_schema_version=kamn.runtime.libp2p-transport-transition-evidence.v1`,
+    `transport_evidence_normalization_status=verified`,
+    `transport_evidence_source_contract_status=verified`.
   - lane emits deterministic recovery criteria markers:
     `head_alignment_status=verified`,
     `quorum_restore_status=verified`,
     `replay_stabilization_status=verified`,
     `publish_drop_recovery_status=verified`,
     `peer_churn_recovery_status=verified`.
-  - lane emits deterministic reconciliation taxonomy marker (`reconciliation_reason_taxonomy_status=verified`).
+  - lane emits deterministic reconciliation taxonomy markers:
+    `reconciliation_reason_taxonomy_status=verified`,
+    `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`,
+    `reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed`.
   - lane emits deterministic snapshot-vs-WAL consistency markers:
     `snapshot_wal_reconciliation_status=verified`,
     `consistency_classification_status=verified`.
@@ -346,6 +353,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
   - `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
 

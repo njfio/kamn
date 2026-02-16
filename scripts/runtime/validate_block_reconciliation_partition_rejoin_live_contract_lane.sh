@@ -233,10 +233,20 @@ if policy_report.get("final_decision") != "GO":
     raise SystemExit("expected block reconciliation partition/rejoin policy final_decision=GO")
 if summary_report.get("runtime_transport_mode") != "libp2p_transport_fed":
     raise SystemExit("expected summary runtime_transport_mode=libp2p_transport_fed")
+if summary_report.get("transport_evidence_schema_version") != "kamn.runtime.libp2p-transport-transition-evidence.v1":
+    raise SystemExit("expected summary transport_evidence_schema_version marker")
+if summary_report.get("transport_evidence_normalization_status") != "verified":
+    raise SystemExit("expected summary transport_evidence_normalization_status=verified")
+if summary_report.get("transport_evidence_source_contract_status") != "verified":
+    raise SystemExit("expected summary transport_evidence_source_contract_status=verified")
 if summary_report.get("transport_state_transition_status") != "verified":
     raise SystemExit("expected summary transport_state_transition_status=verified")
 if summary_report.get("reconciliation_reason_taxonomy_status") != "verified":
     raise SystemExit("expected summary reconciliation_reason_taxonomy_status=verified")
+if summary_report.get("reconciliation_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1":
+    raise SystemExit("expected summary reconciliation_reason_taxonomy_version marker")
+if summary_report.get("reconciliation_reason_codes_csv") != "reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed":
+    raise SystemExit("expected summary reconciliation_reason_codes_csv marker")
 if summary_report.get("reconciliation_reason_codes") != ["none"]:
     raise SystemExit("expected summary reconciliation_reason_codes=['none']")
 if summary_report.get("snapshot_wal_reconciliation_status") != "verified":
@@ -259,7 +269,20 @@ lane_report = {
     ),
     "docs_contract_status": "verified",
     "runtime_transport_mode_status": "verified",
+    "transport_evidence_schema_version": summary_report.get("transport_evidence_schema_version"),
+    "transport_evidence_normalization_status": summary_report.get(
+        "transport_evidence_normalization_status"
+    ),
+    "transport_evidence_source_contract_status": summary_report.get(
+        "transport_evidence_source_contract_status"
+    ),
     "reconciliation_reason_taxonomy_status": "verified",
+    "reconciliation_reason_taxonomy_version": summary_report.get(
+        "reconciliation_reason_taxonomy_version"
+    ),
+    "reconciliation_reason_codes_csv": summary_report.get(
+        "reconciliation_reason_codes_csv"
+    ),
     "snapshot_wal_reconciliation_status": summary_report.get(
         "snapshot_wal_reconciliation_status"
     ),
@@ -295,7 +318,11 @@ echo "block_reconciliation_partition_rejoin_contract_status=verified"
 echo "block_reconciliation_partition_rejoin_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
+echo "transport_evidence_normalization_status=verified"
+echo "transport_evidence_schema_version=kamn.runtime.libp2p-transport-transition-evidence.v1"
 echo "reconciliation_reason_taxonomy_status=verified"
+echo "reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1"
+echo "reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed"
 echo "snapshot_wal_reconciliation_status=verified"
 echo "consistency_classification_status=verified"
 echo "reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1"

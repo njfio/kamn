@@ -132,6 +132,18 @@ This refreshed version separates:
     - `#3774 -> #3780 -> (#3794, #3795)`.
 - New production gaps continue to be decomposed under `#3333` with epic/story/task/subtask hierarchy before implementation work starts.
 
+### R27.49 Partition-Healing / Convergence Governance
+- Active chain: `#4593 -> #4594 -> #4596 -> (#4600, #4601)`.
+- Current delivered markers and policy contracts for partition/rejoin reconciliation governance include:
+  - `transport_evidence_schema_version=kamn.runtime.libp2p-transport-transition-evidence.v1`
+  - `transport_evidence_normalization_status=verified`
+  - `transport_evidence_source_contract_status=verified`
+  - `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
+  - `reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed`
+- Deterministic fail-closed drift markers now include:
+  - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+
 ### R27.53 Closure Tranche (`#4653`)
 - Delivered chain: `#4653 -> (#4654, #4655) -> (#4656, #4657, #4658, #4659) -> (#4660-#4667)`.
 - Closure highlights:

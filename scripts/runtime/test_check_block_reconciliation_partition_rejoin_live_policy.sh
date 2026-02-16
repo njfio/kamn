@@ -11,7 +11,9 @@ TMP_TAMPERED_TRANSPORT="$(mktemp)"
 TMP_TAMPERED_RECOVERY="$(mktemp)"
 TMP_TAMPERED_TAXONOMY="$(mktemp)"
 TMP_TAMPERED_CONSISTENCY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY" "$TMP_TAMPERED_TAXONOMY" "$TMP_TAMPERED_CONSISTENCY"' EXIT
+TMP_TAMPERED_TRANSPORT_EVIDENCE="$(mktemp)"
+TMP_TAMPERED_REASON_CODES_CSV="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY" "$TMP_TAMPERED_TAXONOMY" "$TMP_TAMPERED_CONSISTENCY" "$TMP_TAMPERED_TRANSPORT_EVIDENCE" "$TMP_TAMPERED_REASON_CODES_CSV"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected block reconciliation partition/rejoin validation script to be executable" >&2
@@ -56,6 +58,16 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected block reconciliation partition/rejoin policy final_decision=GO")
 if payload.get("block_reconciliation_partition_rejoin_policy_status") != "verified":
     raise SystemExit("expected block_reconciliation_partition_rejoin_policy_status=verified")
+if payload.get("reconciliation_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_reason_taxonomy_version marker")
+if payload.get("reconciliation_reason_codes_csv") != "reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed":
+    raise SystemExit("expected deterministic reconciliation_reason_codes_csv marker")
+if payload.get("transport_evidence_schema_version") != "kamn.runtime.libp2p-transport-transition-evidence.v1":
+    raise SystemExit("expected deterministic transport_evidence_schema_version marker")
+if payload.get("transport_evidence_normalization_status") != "verified":
+    raise SystemExit("expected deterministic transport_evidence_normalization_status=verified")
+if payload.get("transport_evidence_source_contract_status") != "verified":
+    raise SystemExit("expected deterministic transport_evidence_source_contract_status=verified")
 if payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker")
 if payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
@@ -133,6 +145,36 @@ if [ "$tampered_transport_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_transport_output" | grep -q 'block_reconciliation_partition_rejoin_policy_transport_mode_mismatch'; then
   echo "expected deterministic transport-mode mismatch reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_TRANSPORT_EVIDENCE"
+python3 - "$TMP_TAMPERED_TRANSPORT_EVIDENCE" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["transport_evidence_normalization_status"] = "tampered"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_transport_evidence_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_TRANSPORT_EVIDENCE" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_transport_evidence_code=$?
+set -e
+if [ "$tampered_transport_evidence_code" -eq 0 ]; then
+  echo "expected transport-evidence tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_transport_evidence_output" | grep -q 'block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch'; then
+  echo "expected deterministic transport-evidence mismatch reason for block reconciliation partition/rejoin report" >&2
   exit 1
 fi
 
@@ -224,6 +266,36 @@ if [ "$tampered_consistency_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_consistency_output" | grep -q 'block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch'; then
   echo "expected deterministic consistency-classification mismatch reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_REASON_CODES_CSV"
+python3 - "$TMP_TAMPERED_REASON_CODES_CSV" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reconciliation_reason_codes_csv"] = "tampered-reasons"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_reason_codes_csv_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_REASON_CODES_CSV" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_reason_codes_csv_code=$?
+set -e
+if [ "$tampered_reason_codes_csv_code" -eq 0 ]; then
+  echo "expected reconciliation-reason-csv tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reason_codes_csv_output" | grep -q 'block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch'; then
+  echo "expected deterministic reconciliation-reason-csv mismatch reason for block reconciliation partition/rejoin report" >&2
   exit 1
 fi
 
