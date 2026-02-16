@@ -1,15 +1,15 @@
 # Issue #4693 Tasks
 
 - Issue: `#4693`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
-- T1 (Red): add extraction-boundary contract tests for `p2p_transport` and `block_pipeline` root module declarations.
-- T2 (Green): extract `p2p_transport` live/libp2p runtime responsibilities into focused submodule(s) and preserve API parity.
-- T3 (Green): extract `block_pipeline` ingress/store/fork-choice responsibilities into focused submodule(s) and preserve API parity.
-- T4 (Regression): validate deterministic transport/pipeline fail-closed reason-code selectors remain unchanged.
-- T5 (Docs): update runtime-network ownership mapping + verification references.
-- T6 (Verify): run
+- T1 (Red): completed extraction-boundary contract tests for `p2p_transport` and `block_pipeline` root module declarations.
+- T2 (Green): completed extraction of `p2p_transport` live/libp2p runtime responsibilities into focused submodule(s) and preserved API parity.
+- T3 (Green): completed extraction of `block_pipeline` ingress/store/fork-choice responsibilities into focused submodule(s) and preserved API parity.
+- T4 (Regression): validated deterministic transport/pipeline fail-closed reason-code selectors remain unchanged.
+- T5 (Docs): updated runtime-network ownership mapping + verification references.
+- T6 (Verify): ran
   - `cargo fmt --check`
   - `cargo clippy -p kamn-core -- -D warnings`
   - `cargo test -p kamn-core --test transport_pipeline_module_extraction_contract`

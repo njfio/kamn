@@ -1,7 +1,7 @@
 # Issue #4693 Plan
 
 - Issue: `#4693`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add extraction-boundary regression tests (RED) for `p2p_transport` and `block_pipeline` root module declarations.

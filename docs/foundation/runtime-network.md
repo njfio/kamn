@@ -167,6 +167,24 @@ This document captures the initial runtime-network foundation slice for peer lif
     - ensure `kamn-node` enables `kamn-core/libp2p-live-transport`
     - ensure runtime wiring emits `p2p-live-libp2p-provider:native`
 
+## Transport and Pipeline Module Ownership (Issue #4693)
+- `p2p_transport` root ownership:
+  - `crates/kamn-core/src/p2p_transport.rs`
+  - maintains public transport API, deterministic error taxonomy, lifecycle coordinator, and shared transport validation helpers.
+- `p2p_transport` extracted live/libp2p ownership:
+  - `crates/kamn-core/src/p2p_transport/p2p_transport_live.rs`
+  - owns live backend selection, libp2p runtime adapter loop, reconnect policy matrix, swarm/harness composition, and runtime event behavior mapping.
+- `block_pipeline` root ownership:
+  - `crates/kamn-core/src/block_pipeline.rs`
+  - maintains consensus round orchestration, replay-evidence assembly, and exported block-pipeline API surface.
+- `block_pipeline` extracted support ownership:
+  - `crates/kamn-core/src/block_pipeline/block_pipeline_support.rs`
+  - owns ingress decoding/normalization, transport feed adapters, canonical commit-store backends, and fork-choice strategy contracts.
+- Extraction verification commands:
+  - `cargo test -p kamn-core --test transport_pipeline_module_extraction_contract`
+  - `cargo test -p kamn-core p2p_transport::tests::transport_error_reason_code_remains_deterministic -- --exact`
+  - `cargo test -p kamn-core block_pipeline::tests::block_pipeline_error_reason_code_extracts_commit_store_marker -- --exact`
+
 ## Node Observability Ingress Runtime Mapping
 - `kamn-node` observability export serving path is runtime-aligned and async-driven:
   - sync wrapper: `serve_observability_endpoint(...)`
