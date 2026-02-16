@@ -9,6 +9,10 @@
 Deliver service-edge hardening by converging TLS activation, API/observability endpoint hardening, and signer monolith decomposition into auditable module boundaries.
 
 ## Issue Map
+- Story `#3632`: harden unified API-observability stack contracts and local-heavy governance
+  - Task `#3650`: validate unified API-observability stack compatibility and performance
+    - Subtask `#3764`: add local-heavy unified-stack performance lane with policy evidence
+    - Subtask `#3809`: expand unified API-observability compatibility matrix and parity markers
 - Story `#3628`: decompose signer monolith into modular signing adapter and policy layers
   - Task `#3636`: extract signer adapter module for crypto and key-source operations
     - Subtask `#3653`: extract signer_adapter for key-source and crypto paths
