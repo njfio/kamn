@@ -1503,6 +1503,11 @@ Operator checkpoints:
   - provider drift fails closed when in-memory provider usage is detected in summary marker surfaces (`provider_in_memory_reference_detected`).
   - finality retry exhaustion reasons are deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) and drift fails closed with checker reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
   - runtime retry marker decision/jitter taxonomy remains deterministic and fail-closed (`Regression: #4110`).
+  - retry/TLS smoke closure markers remain deterministic and fail-closed:
+    - `retry_tls_smoke_contract_status=verified`
+    - `retry_tls_live_https_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
+    - `retry_tls_submit_finality_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - submit/finality success-reason taxonomy remains deterministic in policy outputs:
     - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
     - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`

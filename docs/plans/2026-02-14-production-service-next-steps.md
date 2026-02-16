@@ -169,6 +169,19 @@ This refreshed version separates:
   - ci-local promotion budget boundary enforced by managed-signer contract lane:
     - `ci_local_promotion_budget_boundary_status=verified`
 
+### R27.16 Retry/TLS CI Smoke Closure
+- Delivered chain: `#4100 -> #4104 -> (#4111, #4112)`.
+- Closure highlights:
+  - retry/TLS smoke governance coverage is now embedded in the fast-gate Kolme version-compatibility contract lane through dry-run runtime-commit + policy checks and live HTTPS dependency-posture checks.
+  - deterministic closure markers:
+    - `retry_tls_smoke_contract_status=verified`
+    - `retry_tls_live_https_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
+    - `retry_tls_submit_finality_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+  - retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - documentation lineage for marker parity is maintained across:
+    - `docs/ci/strategy.md`
+    - `docs/planning/kolme-devnet-ops.md`
+
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.
 - Deterministic dry-run contract checks remain in PR path.

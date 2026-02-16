@@ -37,6 +37,12 @@ required_markers = (
     "#3772 -> #3774",
     "`#3773 -> #3775 -> (#3782, #3783)`.",
     "`#3774 -> #3780 -> (#3794, #3795)`.",
+    "R27.16 Retry/TLS CI Smoke Closure",
+    "#4100 -> #4104 -> (#4111, #4112)",
+    "retry_tls_smoke_contract_status=verified",
+    "retry_tls_live_https_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
+    "retry_tls_submit_finality_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1",
+    "retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.",
     "Historical Baseline (Superseded)",
 )
 for marker in required_markers:
