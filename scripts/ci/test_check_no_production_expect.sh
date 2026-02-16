@@ -43,6 +43,75 @@ fi
 
 rm -f "$TMP_DIR/failing.rs"
 
+cat <<'RS' > "$TMP_DIR/panic_macro.rs"
+fn panic_macro_path() {
+    panic!("panic macro should fail in production path");
+}
+RS
+
+set +e
+panic_macro_output="$(python3 "$PY_CHECKER" --root "$TMP_DIR" 2>&1)"
+panic_macro_code=$?
+set -e
+
+if [ "$panic_macro_code" -eq 0 ]; then
+  echo "expected checker to fail when production panic! is present" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$panic_macro_output" | grep -q "status=fail"; then
+  echo "expected checker to emit status=fail for production panic! violation" >&2
+  exit 1
+fi
+
+rm -f "$TMP_DIR/panic_macro.rs"
+
+cat <<'RS' > "$TMP_DIR/unreachable_macro.rs"
+fn unreachable_macro_path() {
+    unreachable!("unreachable macro should fail in production path");
+}
+RS
+
+set +e
+unreachable_macro_output="$(python3 "$PY_CHECKER" --root "$TMP_DIR" 2>&1)"
+unreachable_macro_code=$?
+set -e
+
+if [ "$unreachable_macro_code" -eq 0 ]; then
+  echo "expected checker to fail when production unreachable! is present" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$unreachable_macro_output" | grep -q "status=fail"; then
+  echo "expected checker to emit status=fail for production unreachable! violation" >&2
+  exit 1
+fi
+
+rm -f "$TMP_DIR/unreachable_macro.rs"
+
+cat <<'RS' > "$TMP_DIR/unsafe_fallback.rs"
+fn unsafe_fallback_path() -> String {
+    std::env::var("KAMN_SIGNER_SECRET").unwrap_or("dev-fallback-secret".to_string())
+}
+RS
+
+set +e
+unsafe_fallback_output="$(python3 "$PY_CHECKER" --root "$TMP_DIR" 2>&1)"
+unsafe_fallback_code=$?
+set -e
+
+if [ "$unsafe_fallback_code" -eq 0 ]; then
+  echo "expected checker to fail when production unsafe fallback default is present" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$unsafe_fallback_output" | grep -q "status=fail"; then
+  echo "expected checker to emit status=fail for production unsafe fallback violation" >&2
+  exit 1
+fi
+
+rm -f "$TMP_DIR/unsafe_fallback.rs"
+
 cat <<'RS' > "$TMP_DIR/cfg_test_only.rs"
 fn safe_path() -> Result<(), String> {
     std::env::var("X").map(|_| ()).map_err(|e| e.to_string())
