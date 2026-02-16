@@ -1,9 +1,10 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, ServiceApiAgentGetBody, ServiceApiChannelCreateBody,
-    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiTaskCreateBody,
-    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    detect_service_api_websocket_protocol_contract_drift, parse_service_api_payload,
+    validate_service_api_websocket_session_frame, ServiceApiAgentGetBody,
+    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
+    ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
 use kamn_core::baseline_signature_for_fields;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
@@ -403,6 +404,18 @@ fn parse_websocket_response(response: &[u8]) -> (String, String) {
         .expect("websocket payload should be utf-8")
         .to_owned();
     (header, payload)
+}
+
+fn split_websocket_response(response: &[u8]) -> (String, &[u8]) {
+    let header_end = response
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .map(|index| index + 4)
+        .expect("websocket response should include header terminator");
+    let header = std::str::from_utf8(&response[..header_end])
+        .expect("websocket header should be utf-8")
+        .to_owned();
+    (header, &response[header_end..])
 }
 
 fn wait_for_endpoint_ready(addr: &str) {
@@ -1855,5 +1868,145 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket version rejection"
+    );
+}
+
+#[test]
+fn unit_service_api_endpoint_websocket_protocol_drift_is_detected() {
+    let response_header = "\
+HTTP/1.1 101 Switching Protocols\r\n\
+Upgrade: websocket\r\n\
+Connection: Upgrade\r\n\
+X-KAMN-WebSocket-Contract: v2\r\n\
+\r\n";
+    let drift = detect_service_api_websocket_protocol_contract_drift(response_header, "v1");
+    assert_eq!(
+        drift,
+        Err("service_api_ws_protocol_contract_drift_detected")
+    );
+}
+
+#[test]
+fn functional_service_api_endpoint_websocket_session_rejects_invalid_frame_opcode() {
+    let invalid_binary_frame = [0x82, 0x01, b'{'];
+    let rejection = validate_service_api_websocket_session_frame(&invalid_binary_frame);
+    assert_eq!(
+        rejection,
+        Err("service_api_ws_session_frame_opcode_invalid")
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_websocket_session_contract_checks_live_upgrade_frame() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34058".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-client-contract-1";
+    let nonce = 31_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "31"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ],
+    );
+    let (header, frame) = split_websocket_response(&response);
+    assert!(header.contains("HTTP/1.1 101 Switching Protocols"));
+    assert_eq!(
+        detect_service_api_websocket_protocol_contract_drift(header.as_str(), "v1"),
+        Ok(())
+    );
+    assert_eq!(validate_service_api_websocket_session_frame(frame), Ok(()));
+    let (_, payload) = parse_websocket_response(&response);
+    assert!(payload.contains("\"event\":\"state-transition\""));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after websocket session contract checks"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_protocol_contract_drift_remains_fail_closed() {
+    // Regression: #4317
+    let response_header = "\
+HTTP/1.1 101 Switching Protocols\r\n\
+Upgrade: websocket\r\n\
+Connection: Upgrade\r\n\
+X-KAMN-WebSocket-Contract: v2\r\n\
+\r\n";
+    assert_eq!(
+        detect_service_api_websocket_protocol_contract_drift(response_header, "v1"),
+        Err("service_api_ws_protocol_contract_drift_detected")
+    );
+}
+
+#[test]
+fn performance_service_api_endpoint_websocket_session_checker_loop_stays_within_local_budget() {
+    let started = Instant::now();
+    let response_header = "\
+HTTP/1.1 101 Switching Protocols\r\n\
+Upgrade: websocket\r\n\
+Connection: Upgrade\r\n\
+X-KAMN-WebSocket-Contract: v1\r\n\
+\r\n";
+    let payload = br#"{"event":"state-transition","sequence":1}"#;
+    assert!(
+        payload.len() <= 125,
+        "test websocket payload must remain short"
+    );
+    let mut valid_frame = Vec::with_capacity(payload.len() + 2);
+    valid_frame.push(0x81);
+    valid_frame.push(payload.len() as u8);
+    valid_frame.extend_from_slice(payload);
+
+    for _ in 0..50_000_u32 {
+        assert_eq!(
+            detect_service_api_websocket_protocol_contract_drift(response_header, "v1"),
+            Ok(())
+        );
+        assert_eq!(
+            validate_service_api_websocket_session_frame(valid_frame.as_slice()),
+            Ok(())
+        );
+    }
+
+    assert!(
+        started.elapsed() <= Duration::from_secs(2),
+        "websocket protocol/session checker loop exceeded local budget"
     );
 }
