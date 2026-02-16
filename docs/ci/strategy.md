@@ -3250,12 +3250,19 @@ Fast-mode CI tooling regression coverage includes:
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`
+  - deterministic taxonomy markers:
+    - `reason_taxonomy_version=kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1`
+    - `reason_codes_csv=combined_shell_surface_budget_status_fail,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid`
+  - normalized reason markers:
+    - `reason_codes=none|<csv>`
+    - `reason_codes_value=none|<csv>`
   - deterministic reason-code surface:
     - `reason_codes=combined_shell_surface_script_count_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_shell_line_total_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_ratio_fail_ceiling_exceeded`
     - `reason_codes=combined_shell_surface_ratio_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_budget_status_fail`
+    - `reason_codes=combined_shell_surface_threshold_order_invalid`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
