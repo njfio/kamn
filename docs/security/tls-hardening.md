@@ -14,6 +14,7 @@ for `kamn-core` live HTTPS dependency posture governance.
 - Normalized reason markers:
   - `reason_codes_csv=none|<csv>`
   - `reason_codes_value=none|<csv>`
+  - `reason_class=stable|violation`
 
 ## Deterministic Fail-Closed Reasons
 

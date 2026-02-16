@@ -1,20 +1,7 @@
-# R27.30 Milestone: Async API Runtime, Networked Peer Transport, and Durable Block-Pipeline Governance
+# R27.30 Async API runtime, networked peer transport, and durable block-pipeline governance
 
-- Milestone: `R27.30 Async API runtime, networked peer transport, and durable block-pipeline governance`
-- GitHub milestone number: `64`
-- Scope: close P1/P2 hardening work for async runtime API behavior, peer transport integrity, and durable block commit governance under deterministic fail-closed contracts.
+Milestone scope for async runtime API hardening, networked peer transport realism, and durable block-pipeline governance.
 
-## Linked Hierarchy
-- Epic: `#4308`
-- Stories: `#4309`, `#4310`
-- Tasks/Subtasks: tracked under the story hierarchy and mapped to per-issue specs in `specs/<issue-id>/`.
-
-## Definition of Done
-- Every linked issue has accepted spec artifacts (`spec.md`, `plan.md`, `tasks.md`).
-- ACs and conformance cases are mapped to tests with passing evidence.
-- Runtime/docs updates are included in the same PR when behavior or ownership changes.
-
-## Verification Baseline
-- `cargo fmt --check`
-- `cargo clippy -- -D warnings`
-- Targeted issue conformance selectors in each issue spec
+## Linked Issues
+- #4310 Story: networked peer transport and durable block commit-fidelity contracts
+- #4314 Task: durable block commit persistence with digest/finality fail-closed governance
