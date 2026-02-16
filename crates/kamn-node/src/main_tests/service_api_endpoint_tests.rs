@@ -1,7 +1,10 @@
 use super::*;
 use crate::service_api_endpoint::{
-    parse_service_api_payload, ServiceApiAgentGetBody, ServiceApiChannelCreateBody,
-    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiTaskCreateBody,
+    parse_service_api_payload, project_service_api_protocol_session_reason,
+    service_api_protocol_session_reason_taxonomy_version,
+    validate_service_api_protocol_session_docs_contract, ServiceApiAgentGetBody,
+    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
+    ServiceApiProtocolSessionReasonClass, ServiceApiTaskCreateBody,
     DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
     DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
@@ -1855,5 +1858,97 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket version rejection"
+    );
+}
+
+#[test]
+fn unit_service_api_protocol_session_reason_projection_is_deterministic() {
+    let projection =
+        project_service_api_protocol_session_reason("service_api_ws_upgrade_header_missing");
+    assert_eq!(
+        projection.reason_code(),
+        "service_api_ws_upgrade_header_missing"
+    );
+    assert_eq!(
+        projection.reason_class(),
+        ServiceApiProtocolSessionReasonClass::WebsocketProtocol
+    );
+    assert_eq!(
+        projection.source_marker(),
+        "service_api_protocol_session_reason_projection"
+    );
+    assert_eq!(
+        projection.reason_taxonomy_version(),
+        service_api_protocol_session_reason_taxonomy_version()
+    );
+}
+
+#[test]
+fn functional_service_api_protocol_session_docs_contract_validation_passes_release_checklist() {
+    let release_checklist = include_str!("../../../../docs/foundation/release-gonogo-checklist.md");
+    validate_service_api_protocol_session_docs_contract(release_checklist)
+        .expect("release checklist should satisfy protocol/session docs contract markers");
+}
+
+#[test]
+fn integration_service_api_protocol_session_reason_projection_and_docs_contract_flow() {
+    let release_checklist = include_str!("../../../../docs/foundation/release-gonogo-checklist.md");
+    validate_service_api_protocol_session_docs_contract(release_checklist)
+        .expect("docs contract should pass for release checklist");
+
+    let ws_projection =
+        project_service_api_protocol_session_reason("service_api_ws_key_header_empty");
+    let payload_projection =
+        project_service_api_protocol_session_reason("service_api_payload_json_syntax_invalid");
+    let auth_projection =
+        project_service_api_protocol_session_reason("service_api_auth_replay_nonce_detected");
+
+    assert_eq!(
+        ws_projection.reason_class(),
+        ServiceApiProtocolSessionReasonClass::WebsocketProtocol
+    );
+    assert_eq!(
+        payload_projection.reason_class(),
+        ServiceApiProtocolSessionReasonClass::PayloadDecode
+    );
+    assert_eq!(
+        auth_projection.reason_class(),
+        ServiceApiProtocolSessionReasonClass::SessionAuth
+    );
+}
+
+#[test]
+fn regression_service_api_protocol_session_ws_upgrade_reason_class_stays_stable() {
+    // Regression: #4318
+    let projection =
+        project_service_api_protocol_session_reason("service_api_ws_upgrade_header_missing");
+    assert_eq!(
+        projection.reason_class(),
+        ServiceApiProtocolSessionReasonClass::WebsocketProtocol
+    );
+}
+
+#[test]
+fn performance_service_api_protocol_session_reason_projection_loop_stays_within_local_budget() {
+    let start = Instant::now();
+    let release_checklist = include_str!("../../../../docs/foundation/release-gonogo-checklist.md");
+    for index in 0..50_000_u32 {
+        let reason_code = match index % 4 {
+            0 => "service_api_ws_version_header_invalid",
+            1 => "service_api_payload_structure_invalid",
+            2 => "service_api_auth_replay_nonce_detected",
+            _ => "service_api_route_not_found",
+        };
+        let projection = project_service_api_protocol_session_reason(reason_code);
+        assert!(
+            !projection.reason_code().trim().is_empty(),
+            "projection reason code must stay explicit"
+        );
+        validate_service_api_protocol_session_docs_contract(release_checklist)
+            .expect("release checklist docs contract should stay stable");
+    }
+    assert!(
+        start.elapsed() <= Duration::from_secs(2),
+        "protocol/session reason projection loop exceeded local budget"
     );
 }
