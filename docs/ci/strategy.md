@@ -3582,6 +3582,26 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `gate_policy_libp2p_fallback_markers_detected`
   - `gate_policy_native_libp2p_provider_marker_contract_status_mismatch`
 
+### Incident go/no-go convergence and boundary governance
+- CI smoke contract-lane execution remains low-cost and bounded:
+  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh --max-seconds 120`
+- Local-heavy incident drill execution remains explicit opt-in and excluded from ci-fast-gate:
+  - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
+- Deterministic incident boundary marker surface:
+  - `incident_gonogo_boundary_reason_taxonomy_status=verified`
+  - `incident_gonogo_boundary_reason_taxonomy_version=kamn.release.gonogo-incident-boundary-reason-taxonomy.v1`
+  - `incident_gonogo_boundary_reason_codes_csv=incident_gonogo_ci_smoke_seconds_exceeded,incident_gonogo_local_heavy_seconds_exceeded,incident_gonogo_local_heavy_opt_in_missing,incident_gonogo_evidence_convergence_mismatch`
+  - `incident_gonogo_ci_smoke_max_seconds=120`
+  - `incident_gonogo_local_heavy_max_seconds=900`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
+- Deterministic fail-closed boundary reasons:
+  - `incident_gonogo_ci_smoke_seconds_exceeded`
+  - `incident_gonogo_local_heavy_seconds_exceeded`
+  - `incident_gonogo_local_heavy_opt_in_missing`
+  - `incident_gonogo_evidence_convergence_mismatch`
+- Regression coverage: `Regression: #4471`
+
 ## Flaky Reproducer Contract
 - Deterministic reproducer command:
   - `bash scripts/ci/run_flaky_reproducer.sh --seed 17 --attempts 5 --max-seconds 120 --artifact-dir /tmp/flaky-reproducer-artifacts --output-json /tmp/flaky-reproducer-report.json -- cargo test -p kamn-core --test invariant_harness`

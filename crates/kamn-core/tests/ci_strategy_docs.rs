@@ -998,9 +998,7 @@ fn doc_contains_merge_gate_reliability_ci_smoke_local_heavy_boundary_markers() {
 #[test]
 fn doc_contains_incident_gonogo_boundary_governance_matrix() {
     assert!(DOC.contains("Incident go/no-go convergence and boundary governance"));
-    assert!(DOC.contains(
-        "run_gonogo_evidence_contract_lane.sh --max-seconds 120"
-    ));
+    assert!(DOC.contains("run_gonogo_evidence_contract_lane.sh --max-seconds 120"));
     assert!(DOC.contains(
         "KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900"
     ));
