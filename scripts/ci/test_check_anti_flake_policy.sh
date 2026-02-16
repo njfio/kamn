@@ -29,7 +29,11 @@ empty_output="$(
 for marker in \
   '^anti_flake_policy_status=pass$' \
   '^anti_flake_policy_final_decision=GO$' \
-  '^anti_flake_policy_reason_codes=no_active_flaky_entries$'; do
+  '^anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1$' \
+  '^anti_flake_policy_reason_codes=no_active_flaky_entries$' \
+  '^anti_flake_policy_reason_codes_csv=no_active_flaky_entries$' \
+  '^anti_flake_policy_reason_codes_value=no_active_flaky_entries$' \
+  '^anti_flake_policy_reason_class=stable$'; do
   if ! printf '%s\n' "$empty_output" | grep -q "$marker"; then
     echo "expected anti-flake empty-registry marker: $marker" >&2
     exit 1
@@ -44,10 +48,18 @@ import sys
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("schema_version") != "kamn.ci.anti-flake-policy-report.v1":
     raise SystemExit("unexpected anti-flake policy schema")
+if report.get("reason_taxonomy_version") != "kamn.ci.anti-flake-policy-reason-taxonomy.v1":
+    raise SystemExit("unexpected anti-flake policy reason taxonomy version")
 if report.get("status") != "pass":
     raise SystemExit("expected anti-flake policy pass status for empty registry")
 if report.get("final_decision") != "GO":
     raise SystemExit("expected anti-flake policy GO decision for empty registry")
+if report.get("reason_codes_csv") != "no_active_flaky_entries":
+    raise SystemExit("expected anti-flake policy reason_codes_csv marker for empty registry")
+if report.get("reason_codes_value") != "no_active_flaky_entries":
+    raise SystemExit("expected anti-flake policy reason_codes_value marker for empty registry")
+if report.get("reason_class") != "stable":
+    raise SystemExit("expected anti-flake policy reason_class=stable for empty registry")
 if report.get("active_entries") != 0:
     raise SystemExit("expected anti-flake active_entries=0")
 PY
@@ -93,6 +105,10 @@ if ! printf '%s\n' "$allowed_output" | grep -q '^anti_flake_policy_reason_codes=
   echo "expected anti-flake within-budget reason marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$allowed_output" | grep -q '^anti_flake_policy_reason_class=budgeted$'; then
+  echo "expected anti-flake within-budget reason class marker" >&2
+  exit 1
+fi
 
 cat > "$TMP_DIR/invalid-registry.txt" <<EOF
 qa|crate::tests::flaky_a|issue-70|$future|temporary quarantine
@@ -134,6 +150,48 @@ if [ "$mismatch_status" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$mismatch_output" | grep -q '^anti_flake_policy_reason_codes=expected_final_decision_mismatch$'; then
   echo "expected anti-flake expected-final-decision mismatch marker" >&2
+  exit 1
+fi
+
+cat > "$TMP_DIR/fast-workflow-rerun-drift.yml" <<'EOF'
+name: CI fast gate
+jobs:
+  fast:
+    steps:
+      - run: bash scripts/ci/run_with_retry.sh --max-attempts 1 -- cargo test
+EOF
+
+cat > "$TMP_DIR/deep-workflow-rerun-ok.yml" <<'EOF'
+name: CI deep validate
+jobs:
+  deep:
+    steps:
+      - run: bash scripts/ci/run_with_retry.sh --max-attempts 2 -- cargo test
+      - run: bash scripts/ci/run_with_retry.sh --max-attempts 1 -- cargo test
+EOF
+
+set +e
+rerun_drift_output="$(
+  bash "$SCRIPT" \
+    --registry-file "$TMP_DIR/empty-registry.txt" \
+    --expected-final-decision NO-GO \
+    --max-active-entries 0 \
+    --fast-workflow-file "$TMP_DIR/fast-workflow-rerun-drift.yml" \
+    --deep-workflow-file "$TMP_DIR/deep-workflow-rerun-ok.yml" \
+    --output-json "$TMP_DIR/rerun-drift-report.json" 2>&1
+)"
+rerun_drift_status=$?
+set -e
+if [ "$rerun_drift_status" -eq 0 ]; then
+  echo "expected anti-flake policy to fail when rerun-policy bounded retry marker drifts" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$rerun_drift_output" | grep -q '^anti_flake_policy_reason_codes=rerun_policy_bounded_retry_missing$'; then
+  echo "expected anti-flake rerun-policy bounded-retry reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$rerun_drift_output" | grep -q '^anti_flake_policy_reason_class=violation$'; then
+  echo "expected anti-flake rerun-policy violation reason class marker" >&2
   exit 1
 fi
 
