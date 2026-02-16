@@ -143,6 +143,28 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `cargo test -p kamn-node signer -- --nocapture`
   - `cargo test -p kamn-node main_tests::signer_tests -- --nocapture`
 
+### Signer Policy Reason Taxonomy
+- `signer_policy_reason_taxonomy_version=v1`
+- Required fail-closed reason markers from `crates/kamn-node/src/signer/signer_policy.rs`:
+  - `runtime_signer_profile_selector_mismatch`
+  - `runtime_signer_previous_profile_invalid`
+  - `runtime_signer_attestation_approved_signers_invalid`
+  - `runtime_signer_attestation_approved_signers_not_unique`
+  - `runtime_signer_key_source_profile_pair_disallowed`
+  - `runtime_signer_rotation_epoch_invalid`
+  - `runtime_signer_previous_rotation_epoch_invalid`
+  - `runtime_signer_rotation_epoch_stale`
+  - `runtime_signer_attestation_required_approvals_invalid`
+  - `runtime_signer_failover_attestation_required_approvals_insufficient`
+  - `runtime_signer_failover_attestation_previous_profile_not_approved`
+  - `runtime_signer_quorum_linkage_violation`
+  - `runtime_signer_attestation_quorum_shortfall`
+  - `managed_signer_key_reference_missing`
+  - `managed_signer_key_reference_invalid`
+  - `managed_signer_key_reference_role_invalid`
+- Drift guard:
+  - `cargo test -p kamn-node --test signer_policy_reason_taxonomy_contract -- --nocapture`
+
 ## Transport and Block Pipeline Module Ownership Mapping
 - `crates/kamn-core/src/p2p_transport.rs` owns transport orchestration entry points.
 - `crates/kamn-core/src/p2p_transport/validation.rs` owns transport payload and state validation
