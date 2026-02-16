@@ -74,6 +74,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^queue_bound_budget_status=verified
   echo "expected local observability scrape contract lane queue-bound marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected local observability scrape contract lane observability TLS route marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_observability_scrape_policy_degradation_reason_codes_csv_mismatch$'; then
   echo "expected local observability scrape contract lane fail-closed reason marker" >&2
   exit 1
@@ -107,6 +111,8 @@ if lane_payload.get("stream_reconnect_churn_status") != "verified":
     raise SystemExit("expected stream_reconnect_churn_status=verified")
 if lane_payload.get("queue_bound_budget_status") != "verified":
     raise SystemExit("expected queue_bound_budget_status=verified")
+if lane_payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected observability_tls_route_contract_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
@@ -162,6 +168,10 @@ if ! printf '%s\n' "$soak_lane_output" | grep -q '^stream_reconnect_churn_status
 fi
 if ! printf '%s\n' "$soak_lane_output" | grep -q '^queue_bound_budget_status=verified$'; then
   echo "expected local observability scrape contract lane soak queue-bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected local observability scrape contract lane soak observability TLS route marker" >&2
   exit 1
 fi
 

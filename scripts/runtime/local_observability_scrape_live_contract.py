@@ -55,6 +55,10 @@ LOCAL_OBSERVABILITY_SCRAPE_TESTS: list[tuple[str, str]] = [
         "main_tests::observability_endpoint_tests::integration_runtime_observability_endpoint_serves_stream_path",
     ),
     (
+        "tls_route_contract",
+        "main_tests::observability_endpoint_tests::integration_runtime_observability_endpoint_tls_mode_serves_required_https_routes",
+    ),
+    (
         "stream_reconnect_churn",
         "main_tests::observability_endpoint_tests::integration_runtime_observability_endpoint_supports_stream_reconnect_churn_sequence",
     ),
@@ -153,6 +157,7 @@ def _run_lane(args: argparse.Namespace) -> int:
         "scrape_probe_status": "verified",
         "metrics_content_type_status": "verified",
         "stream_lifecycle_status": "verified",
+        "observability_tls_route_contract_status": "verified",
         "stream_reconnect_churn_status": "verified",
         "queue_bound_budget_status": "verified",
         "readiness_probe_status": "verified",
@@ -189,6 +194,7 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("scrape_probe_status=verified")
     print("metrics_content_type_status=verified")
     print("stream_lifecycle_status=verified")
+    print("observability_tls_route_contract_status=verified")
     print("stream_reconnect_churn_status=verified")
     print("queue_bound_budget_status=verified")
     print("readiness_probe_status=verified")
@@ -240,6 +246,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "scrape_probe_status",
         "metrics_content_type_status",
         "stream_lifecycle_status",
+        "observability_tls_route_contract_status",
         "stream_reconnect_churn_status",
         "queue_bound_budget_status",
         "readiness_probe_status",
@@ -285,6 +292,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "scrape_probe_status",
         "metrics_content_type_status",
         "stream_lifecycle_status",
+        "observability_tls_route_contract_status",
         "stream_reconnect_churn_status",
         "queue_bound_budget_status",
         "readiness_probe_status",

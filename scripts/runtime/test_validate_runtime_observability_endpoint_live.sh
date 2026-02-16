@@ -44,6 +44,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^timeout_contract_status=veri
   echo "expected timeout contract marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected observability TLS route contract marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
   echo "expected reason taxonomy version marker" >&2
   exit 1
@@ -89,6 +93,8 @@ if payload.get("malformed_input_contract_status") != "verified":
     raise SystemExit("expected malformed_input_contract_status=verified")
 if payload.get("timeout_contract_status") != "verified":
     raise SystemExit("expected timeout_contract_status=verified")
+if payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected observability_tls_route_contract_status=verified")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
 if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":

@@ -22,6 +22,16 @@ tampered_report="$TMP_DIR/runtime-observability-endpoint-live-summary.tampered.j
 
 bash "$VALIDATION_SCRIPT" --output-json "$summary_report" >/dev/null
 
+python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("observability_tls_route_contract_status") != "verified":
+    raise SystemExit("expected observability_tls_route_contract_status=verified")
+PY
+
 policy_output="$(
   bash "$POLICY_CHECKER" \
     --report-file "$summary_report" \
@@ -106,7 +116,7 @@ if ! printf '%s\n' "$tampered_output" | grep -q 'runtime_observability_policy_fi
   exit 1
 fi
 
-for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status; do
+for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status observability_tls_route_contract_status; do
   tampered_marker_report="$TMP_DIR/runtime-observability-endpoint-live-summary.${marker_field}.json"
   cp "$summary_report" "$tampered_marker_report"
   python3 - "$tampered_marker_report" "$marker_field" <<'PY'

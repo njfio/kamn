@@ -97,6 +97,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^stream_parity_status=verifie
   echo "expected runtime observability endpoint live validation stream parity marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_route_contract_status=verified$'; then
+  echo "expected runtime observability endpoint live validation TLS route marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
   echo "expected runtime observability endpoint live validation reason taxonomy marker" >&2
   exit 1
@@ -235,6 +239,9 @@ lane_report = {
     "timeout_contract_status": summary_report.get(
         "timeout_contract_status"
     ),
+    "observability_tls_route_contract_status": summary_report.get(
+        "observability_tls_route_contract_status"
+    ),
     "runtime_observability_policy_status": policy_report.get(
         "runtime_observability_policy_status"
     ),
@@ -267,6 +274,7 @@ echo "stream_parity_status=verified"
 echo "unknown_path_contract_status=verified"
 echo "malformed_input_contract_status=verified"
 echo "timeout_contract_status=verified"
+echo "observability_tls_route_contract_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
 echo "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
 echo "runtime_observability_policy_status=verified"
