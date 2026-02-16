@@ -1675,6 +1675,8 @@ Operator checkpoints:
 - local fork process lifecycle integration lane propagates integration runtime finality pass-through options and artifacts to nested integration command composition (`Regression: #1973`).
 - local fork process lifecycle integration lane propagates runtime policy report linkage to nested integration command composition and summary artifact lineage (`Regression: #2104`).
 - local fork process lifecycle integration lane propagates rollback/recovery evidence linkage options and deterministic artifact markers in summary/policy contracts (`Regression: #2107`).
+- local fork process lifecycle policy rejects startup dependency drift acceptance and duplicate orchestration check identifiers (`Regression: #4495`).
+- demo startup drift and orchestration instability response runbook: `docs/ops/runbook_demo.md` (`Regression: #4495`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).

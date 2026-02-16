@@ -12,6 +12,7 @@ RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_proce
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
+RUNBOOK_FILE="$ROOT_DIR/docs/ops/runbook_demo.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
@@ -135,6 +136,7 @@ required_coverage_markers=(
   "Regression: #1973"
   "Regression: #2104"
   "Regression: #2107"
+  "Regression: #4495"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -188,6 +190,11 @@ if ! grep -q -- "--recovery-evidence-file" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "docs/ops/runbook_demo.md" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference demo startup drift runbook" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle policy checker" >&2
   exit 1
@@ -230,6 +237,26 @@ fi
 
 if ! grep -q -- "--recovery-evidence-file" "$README_FILE"; then
   echo "expected README to document process lifecycle recovery evidence option" >&2
+  exit 1
+fi
+
+if ! grep -q "docs/ops/runbook_demo.md" "$README_FILE"; then
+  echo "expected README to reference demo startup drift runbook" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUNBOOK_FILE" ]; then
+  echo "expected demo startup drift runbook to exist" >&2
+  exit 1
+fi
+
+if ! grep -q "startup_dependency_drift:readiness_without_process_start" "$RUNBOOK_FILE"; then
+  echo "expected runbook to document startup dependency drift reason marker" >&2
+  exit 1
+fi
+
+if ! grep -q "check_id_duplicate:<check-id>" "$RUNBOOK_FILE"; then
+  echo "expected runbook to document duplicate orchestration check-id reason marker" >&2
   exit 1
 fi
 
@@ -352,5 +379,118 @@ if str(rollback_evidence_path) not in summary.get("artifact_paths", []):
 if str(recovery_evidence_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include recovery evidence file path")
 PY
+
+# Regression: #4495
+TMP_STARTUP_DRIFT_SUMMARY="$(mktemp)"
+TMP_ORCHESTRATION_DRIFT_SUMMARY="$(mktemp)"
+TMP_POLICY_OUTPUT="$(mktemp)"
+TMP_POLICY_ERR="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE" "$TMP_STARTUP_DRIFT_SUMMARY" "$TMP_ORCHESTRATION_DRIFT_SUMMARY" "$TMP_POLICY_OUTPUT" "$TMP_POLICY_ERR"' EXIT
+
+python3 - "$TMP_REPORT" "$TMP_STARTUP_DRIFT_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+summary["mode"] = "run"
+summary["status"] = "ok"
+summary["reason_code"] = "process_lifecycle_integration_passed"
+summary["budget_status"] = "within_budget"
+summary["start_reason_code"] = "process_start_failed"
+summary["readiness_reason_code"] = "readiness_checks_passed"
+summary["integration_reason_code"] = "kamn_live_integration_passed"
+summary["teardown_reason_code"] = "process_teardown_passed"
+summary["rollback_evidence_status"] = "not_required"
+summary["rollback_evidence_reason_code"] = "no_failure_detected"
+summary["recovery_evidence_status"] = "validated"
+summary["recovery_evidence_reason_code"] = "teardown_path_validated"
+for check in summary.get("checks", []):
+    if not isinstance(check, dict):
+        continue
+    check_id = check.get("id")
+    if check_id == "process_start":
+        check["status"] = "fail"
+        check["reason_code"] = "process_start_failed"
+    elif check_id == "readiness_probe":
+        check["status"] = "pass"
+        check["reason_code"] = "readiness_checks_passed"
+    elif check_id == "kamn_live_integration":
+        check["status"] = "pass"
+        check["reason_code"] = "kamn_live_integration_passed"
+    elif check_id == "process_teardown":
+        check["status"] = "pass"
+        check["reason_code"] = "process_teardown_passed"
+    elif check_id == "rollback_evidence":
+        check["status"] = "pass"
+        check["reason_code"] = "no_failure_detected"
+    elif check_id == "recovery_evidence":
+        check["status"] = "pass"
+        check["reason_code"] = "teardown_path_validated"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_STARTUP_DRIFT_SUMMARY" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUTPUT" >"$TMP_POLICY_ERR" 2>&1
+startup_drift_code=$?
+set -e
+if [ "$startup_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when startup dependency drift is accepted in run mode" >&2
+  exit 1
+fi
+if ! grep -q "startup_dependency_drift:readiness_without_process_start" "$TMP_POLICY_ERR"; then
+  echo "expected startup dependency drift reason marker for readiness without process-start pass" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" "$TMP_ORCHESTRATION_DRIFT_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+checks = summary.get("checks", [])
+checks.append(
+    {
+        "id": "readiness_probe",
+        "command": "curl --silent --show-error --fail http://127.0.0.1:3000/healthz",
+        "status": "fail",
+        "reason_code": "process_readiness_failed",
+    }
+)
+summary["checks"] = checks
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_ORCHESTRATION_DRIFT_SUMMARY" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUTPUT" >"$TMP_POLICY_ERR" 2>&1
+orchestration_drift_code=$?
+set -e
+if [ "$orchestration_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when duplicate orchestration check ids are accepted" >&2
+  exit 1
+fi
+if ! grep -q "check_id_duplicate:readiness_probe" "$TMP_POLICY_ERR"; then
+  echo "expected duplicate orchestration check-id reason marker" >&2
+  exit 1
+fi
 
 echo "local fork process lifecycle contract lane tests passed."

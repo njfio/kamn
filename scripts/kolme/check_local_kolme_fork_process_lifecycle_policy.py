@@ -110,6 +110,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     recovery_evidence_reason_code = report.get("recovery_evidence_reason_code")
     if not isinstance(recovery_evidence_reason_code, str) or not recovery_evidence_reason_code.strip():
         reason_codes.append("recovery_evidence_reason_code_missing")
+    start_reason_code = report.get("start_reason_code")
+    if not isinstance(start_reason_code, str) or not start_reason_code.strip():
+        reason_codes.append("start_reason_code_missing")
+    readiness_reason_code = report.get("readiness_reason_code")
+    if not isinstance(readiness_reason_code, str) or not readiness_reason_code.strip():
+        reason_codes.append("readiness_reason_code_missing")
+    integration_reason_code = report.get("integration_reason_code")
+    if not isinstance(integration_reason_code, str) or not integration_reason_code.strip():
+        reason_codes.append("integration_reason_code_missing")
+    teardown_reason_code = report.get("teardown_reason_code")
+    if not isinstance(teardown_reason_code, str) or not teardown_reason_code.strip():
+        reason_codes.append("teardown_reason_code_missing")
 
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
@@ -136,17 +148,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("recovery_evidence_artifact_missing")
 
     checks = report.get("checks")
+    check_entries_by_id: dict[str, list[dict[str, str]]] = {}
+    check_order: list[str] = []
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
     else:
-        expected_ids = {
+        expected_order = [
             "process_start",
             "readiness_probe",
             "kamn_live_integration",
             "process_teardown",
             "rollback_evidence",
             "recovery_evidence",
-        }
+        ]
+        expected_ids = set(expected_order)
         observed_ids: set[str] = set()
         for entry in checks:
             if not isinstance(entry, dict):
@@ -160,12 +175,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append("check_id_invalid")
                 continue
             observed_ids.add(check_id)
+            check_order.append(check_id)
             if not isinstance(command, str) or not command.strip():
                 reason_codes.append(f"check_command_invalid:{check_id}")
             if check_status not in ("planned", "pass", "fail", "skipped"):
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
                 reason_codes.append(f"check_reason_code_invalid:{check_id}")
+            check_entries_by_id.setdefault(check_id, []).append(
+                {
+                    "status": str(check_status),
+                    "reason_code": str(check_reason_code),
+                    "command": str(command),
+                }
+            )
             if (
                 check_id == "kamn_live_integration"
                 and isinstance(command, str)
@@ -199,6 +222,62 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
+
+        for check_id, entries in check_entries_by_id.items():
+            if len(entries) > 1:
+                reason_codes.append(f"check_id_duplicate:{check_id}")
+
+        observed_primary_order: list[str] = []
+        seen_primary_ids: set[str] = set()
+        for check_id in check_order:
+            if check_id in expected_ids and check_id not in seen_primary_ids:
+                observed_primary_order.append(check_id)
+                seen_primary_ids.add(check_id)
+        if len(observed_primary_order) == len(expected_order) and observed_primary_order != expected_order:
+            reason_codes.append("check_sequence_mismatch")
+
+        if expected_ids.issubset(set(check_entries_by_id.keys())):
+            process_start_status = check_entries_by_id["process_start"][0]["status"]
+            readiness_status = check_entries_by_id["readiness_probe"][0]["status"]
+            integration_status = check_entries_by_id["kamn_live_integration"][0]["status"]
+            teardown_status = check_entries_by_id["process_teardown"][0]["status"]
+
+            if readiness_status == "pass" and process_start_status != "pass":
+                reason_codes.append("startup_dependency_drift:readiness_without_process_start")
+            if integration_status == "pass" and readiness_status != "pass":
+                reason_codes.append("startup_dependency_drift:integration_without_readiness")
+            if integration_status == "pass" and process_start_status != "pass":
+                reason_codes.append("startup_dependency_drift:integration_without_process_start")
+            if teardown_status == "pass" and integration_status not in ("pass", "fail"):
+                reason_codes.append("startup_dependency_drift:teardown_without_integration_outcome")
+
+            if mode == "dry-run":
+                if start_reason_code != "not_run":
+                    reason_codes.append("dry_run_start_reason_code_mismatch")
+                if readiness_reason_code != "not_run":
+                    reason_codes.append("dry_run_readiness_reason_code_mismatch")
+                if integration_reason_code != "not_run":
+                    reason_codes.append("dry_run_integration_reason_code_mismatch")
+                if teardown_reason_code != "not_run":
+                    reason_codes.append("dry_run_teardown_reason_code_mismatch")
+
+            if mode == "run" and status == "ok":
+                if process_start_status != "pass":
+                    reason_codes.append("run_ok_process_start_status_mismatch")
+                if readiness_status != "pass":
+                    reason_codes.append("run_ok_readiness_status_mismatch")
+                if integration_status != "pass":
+                    reason_codes.append("run_ok_integration_status_mismatch")
+                if teardown_status != "pass":
+                    reason_codes.append("run_ok_teardown_status_mismatch")
+                if start_reason_code != "process_started":
+                    reason_codes.append("run_ok_start_reason_code_mismatch")
+                if readiness_reason_code != "readiness_checks_passed":
+                    reason_codes.append("run_ok_readiness_reason_code_mismatch")
+                if integration_reason_code != "kamn_live_integration_passed":
+                    reason_codes.append("run_ok_integration_reason_code_mismatch")
+                if teardown_reason_code != "process_teardown_passed":
+                    reason_codes.append("run_ok_teardown_reason_code_mismatch")
 
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
