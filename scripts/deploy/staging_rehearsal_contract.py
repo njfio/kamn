@@ -23,6 +23,8 @@ from framework.contract_framework import (  # noqa: E402
 SCHEMA_VERSION = "kamn.release.staging-rehearsal.v1"
 STAGED_REHEARSAL_SIGNOFF_SCHEMA_VERSION = "kamn.release.staged-rehearsal-signoff.v1"
 EVIDENCE_OUTPUT_CONTRACT_VERSION = "kamn.release.staging-rehearsal-output-contract.v1"
+REASON_TAXONOMY_SCHEMA_VERSION = "kamn.release.staging-rehearsal-reason-taxonomy.v1"
+NORMALIZED_EVIDENCE_SCHEMA_VERSION = "kamn.release.staging-rehearsal-evidence-normalization.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 MAX_BPS = 10_000
@@ -162,6 +164,66 @@ def _build_staged_rehearsal_signoff_artifact(
     }
 
 
+def _build_reason_taxonomy(
+    *,
+    final_decision: str,
+    deploy_status: str,
+    rollback_status: str,
+    rollback_hash_match: bool,
+    mttr_within_bound: bool,
+    runtime_submit_success_rate_within_bound: bool,
+    runtime_finality_timeouts_within_bound: bool,
+    signer_profile_drift_within_bound: bool,
+    evidence_complete: bool,
+    ci_fast_gate: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": REASON_TAXONOMY_SCHEMA_VERSION,
+        "overall": "rehearsal.success" if final_decision == GO_DECISION else "rehearsal.failed",
+        "decision_surface": "decision.go" if final_decision == GO_DECISION else "decision.no_go",
+        "lineage_surface": "lineage.verified" if final_decision == GO_DECISION else "lineage.fail_closed",
+        "deploy_surface": "deploy.pass" if deploy_status == "PASS" else "deploy.fail",
+        "rollback_surface": "rollback.pass" if rollback_status == "PASS" else "rollback.fail",
+        "rollback_hash_surface": "rollback_hash.match" if rollback_hash_match else "rollback_hash.mismatch",
+        "mttr_surface": "mttr.within_bound" if mttr_within_bound else "mttr.exceeded",
+        "runtime_submit_surface": (
+            "runtime_submit.within_bound"
+            if runtime_submit_success_rate_within_bound
+            else "runtime_submit.below_threshold"
+        ),
+        "runtime_finality_surface": (
+            "runtime_finality.within_bound"
+            if runtime_finality_timeouts_within_bound
+            else "runtime_finality.threshold_exceeded"
+        ),
+        "signer_profile_surface": (
+            "signer_profile.within_bound"
+            if signer_profile_drift_within_bound
+            else "signer_profile.threshold_exceeded"
+        ),
+        "evidence_surface": "evidence.complete" if evidence_complete else "evidence.incomplete",
+        "ci_fast_gate_surface": "ci_fast_gate.pass" if ci_fast_gate == "PASS" else "ci_fast_gate.fail",
+    }
+
+
+def _build_normalized_evidence(
+    *,
+    decision_reasons: list[str],
+    staged_rehearsal_signoff: dict[str, Any],
+) -> dict[str, Any]:
+    observed_artifacts = staged_rehearsal_signoff.get("observed_artifacts", {})
+    normalized_observed_artifacts = {
+        key: observed_artifacts.get(key) for key in SIGNOFF_REQUIRED_ARTIFACTS
+    }
+    return {
+        "schema_version": NORMALIZED_EVIDENCE_SCHEMA_VERSION,
+        "decision_reasons_ordered": list(decision_reasons),
+        "decision_reasons_csv": ",".join(decision_reasons),
+        "required_artifact_order": list(SIGNOFF_REQUIRED_ARTIFACTS),
+        "observed_artifacts_by_key": normalized_observed_artifacts,
+    }
+
+
 def generate_bundle(args: argparse.Namespace) -> int:
     required_values = (
         args.output_file,
@@ -247,6 +309,22 @@ def generate_bundle(args: argparse.Namespace) -> int:
         evidence_complete=evidence_complete,
         ci_fast_gate=ci_fast_gate,
     )
+    reason_taxonomy = _build_reason_taxonomy(
+        final_decision=final_decision,
+        deploy_status=deploy_status,
+        rollback_status=rollback_status,
+        rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
+        runtime_submit_success_rate_within_bound=runtime_submit_success_rate_within_bound,
+        runtime_finality_timeouts_within_bound=runtime_finality_timeouts_within_bound,
+        signer_profile_drift_within_bound=signer_profile_drift_within_bound,
+        evidence_complete=evidence_complete,
+        ci_fast_gate=ci_fast_gate,
+    )
+    normalized_evidence = _build_normalized_evidence(
+        decision_reasons=decision_reasons,
+        staged_rehearsal_signoff=staged_rehearsal_signoff,
+    )
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -275,6 +353,8 @@ def generate_bundle(args: argparse.Namespace) -> int:
             "evidence_complete": evidence_complete,
             "ci_fast_gate": ci_fast_gate,
         },
+        "reason_taxonomy": reason_taxonomy,
+        "normalized_evidence": normalized_evidence,
         "staged_rehearsal_signoff": staged_rehearsal_signoff,
         "decision_reasons": decision_reasons,
         "final_decision": final_decision,
@@ -320,6 +400,8 @@ def check_bundle(args: argparse.Namespace) -> int:
             "evidence_output_contract_version",
             "command_contracts",
             "rehearsal",
+            "reason_taxonomy",
+            "normalized_evidence",
             "staged_rehearsal_signoff",
             "decision_reasons",
             "final_decision",
@@ -560,6 +642,40 @@ def check_bundle(args: argparse.Namespace) -> int:
         evidence_complete=evidence_complete,
         ci_fast_gate=ci_fast_gate,
     )
+    expected_reason_taxonomy = _build_reason_taxonomy(
+        final_decision=expected_decision,
+        deploy_status=deploy_status,
+        rollback_status=rollback_status,
+        rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
+        runtime_submit_success_rate_within_bound=runtime_submit_success_rate_within_bound,
+        runtime_finality_timeouts_within_bound=runtime_finality_timeouts_within_bound,
+        signer_profile_drift_within_bound=signer_profile_drift_within_bound,
+        evidence_complete=evidence_complete,
+        ci_fast_gate=ci_fast_gate,
+    )
+    expected_normalized_evidence = _build_normalized_evidence(
+        decision_reasons=expected_decision_reasons,
+        staged_rehearsal_signoff=expected_signoff_artifact,
+    )
+
+    reason_taxonomy = payload.get("reason_taxonomy")
+    if not isinstance(reason_taxonomy, dict):
+        fail("reason taxonomy mismatch: reason_taxonomy must be an object")
+    if reason_taxonomy != expected_reason_taxonomy:
+        fail(
+            "reason taxonomy mismatch: "
+            "expected deterministic taxonomy surface"
+        )
+
+    normalized_evidence = payload.get("normalized_evidence")
+    if not isinstance(normalized_evidence, dict):
+        fail("normalized evidence bundle mismatch: normalized_evidence must be an object")
+    if normalized_evidence != expected_normalized_evidence:
+        fail(
+            "normalized evidence bundle mismatch: "
+            "expected deterministic normalized output surface"
+        )
 
     staged_rehearsal_signoff = payload.get("staged_rehearsal_signoff")
     if not isinstance(staged_rehearsal_signoff, dict):
@@ -626,6 +742,8 @@ def check_bundle(args: argparse.Namespace) -> int:
         "staged_rehearsal_signoff_status="
         f"{expected_signoff_artifact['lineage_status']}"
     )
+    print("reason_taxonomy_status=verified")
+    print("normalized_evidence_status=verified")
     print(f"evidence_output_contract_version={EVIDENCE_OUTPUT_CONTRACT_VERSION}")
     print("command_contracts_status=verified")
     print(f"reason_codes={','.join(expected_decision_reasons)}")

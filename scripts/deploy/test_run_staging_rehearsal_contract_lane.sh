@@ -94,6 +94,16 @@ if ! grep -Fq "evidence_output_contract_version" "$SHARED_REHEARSAL_CONTRACT_PY"
   exit 1
 fi
 
+if ! grep -Fq "reason_taxonomy" "$SHARED_REHEARSAL_CONTRACT_PY"; then
+  echo "expected staging rehearsal contract generator to emit reason taxonomy output" >&2
+  exit 1
+fi
+
+if ! grep -Fq "normalized_evidence" "$SHARED_REHEARSAL_CONTRACT_PY"; then
+  echo "expected staging rehearsal contract generator to emit normalized evidence output" >&2
+  exit 1
+fi
+
 if ! grep -Fq -- "--recovery-time-seconds" "$DEEP_SCRIPT"; then
   echo "expected staging rehearsal deep-lane runner to pass deterministic MTTR evidence markers" >&2
   exit 1
@@ -139,8 +149,33 @@ if ! grep -Fq "evidence output contract version mismatch" "$INCIDENT_READINESS_D
   exit 1
 fi
 
+if ! grep -Fq "rehearsal_reason_taxonomy_version=kamn.release.staging-rehearsal-reason-taxonomy.v1" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document rehearsal reason taxonomy version marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_normalized_evidence_version=kamn.release.staging-rehearsal-evidence-normalization.v1" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document rehearsal normalized evidence version marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "reason taxonomy mismatch" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document reason-taxonomy drift guard" >&2
+  exit 1
+fi
+
+if ! grep -Fq "normalized evidence bundle mismatch" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document normalized-evidence drift guard" >&2
+  exit 1
+fi
+
 if ! grep -Fq "Regression: #4499" "$INCIDENT_READINESS_DOC"; then
   echo "expected incident readiness ops doc to include rehearsal drift regression marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #4500" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal taxonomy normalization regression marker" >&2
   exit 1
 fi
 
