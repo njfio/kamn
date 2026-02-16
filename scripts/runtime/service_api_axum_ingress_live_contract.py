@@ -44,6 +44,13 @@ EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV = (
     "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,"
     "ci_local_promotion_budget_boundary_exceeded"
 )
+EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-admission-reason-taxonomy.v1"
+)
+EXPECTED_ADMISSION_REASON_CODES_CSV = (
+    "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,"
+    "admission_evidence_normalization_drift"
+)
 EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
 )
@@ -77,12 +84,17 @@ REQUIRED_REPORT_FIELDS = [
     "ingress_resilience_gate_status",
     "websocket_upgrade_parity_status",
     "ci_local_promotion_budget_boundary_status",
+    "admission_saturation_status",
+    "admission_queue_cap_enforcement_status",
+    "overload_evidence_normalization_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "protocol_compliance_reason_taxonomy_version",
     "protocol_compliance_reason_codes_csv",
     "ingress_resilience_reason_taxonomy_version",
     "ingress_resilience_reason_codes_csv",
+    "admission_reason_taxonomy_version",
+    "admission_reason_codes_csv",
     "request_validation_reason_registry_status",
     "error_envelope_source_contract_status",
     "request_validation_reason_taxonomy_version",
@@ -114,6 +126,9 @@ REQUIRED_VERIFIED_FIELDS = [
     "ingress_resilience_gate_status",
     "websocket_upgrade_parity_status",
     "ci_local_promotion_budget_boundary_status",
+    "admission_saturation_status",
+    "admission_queue_cap_enforcement_status",
+    "overload_evidence_normalization_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "request_validation_reason_registry_status",
@@ -242,6 +257,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_ingress_resilience_reason_codes_csv_mismatch",
     )
     decision.reject_if(
+        report.get("admission_reason_taxonomy_version")
+        != EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_admission_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("admission_reason_codes_csv")
+        != EXPECTED_ADMISSION_REASON_CODES_CSV,
+        "service_api_axum_policy_admission_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         report.get("request_validation_reason_taxonomy_version")
         != EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION,
         "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
@@ -294,6 +319,17 @@ def _check_policy(args: argparse.Namespace) -> int:
         "ingress_resilience_reason_codes_csv": (
             EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV
         ),
+        "admission_saturation_status": report.get("admission_saturation_status"),
+        "admission_queue_cap_enforcement_status": (
+            report.get("admission_queue_cap_enforcement_status")
+        ),
+        "overload_evidence_normalization_status": (
+            report.get("overload_evidence_normalization_status")
+        ),
+        "admission_reason_taxonomy_version": (
+            EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION
+        ),
+        "admission_reason_codes_csv": EXPECTED_ADMISSION_REASON_CODES_CSV,
         "request_validation_reason_registry_status": (
             report.get("request_validation_reason_registry_status")
         ),

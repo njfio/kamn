@@ -146,6 +146,11 @@ Deterministic lane and policy markers include:
 - `ci_local_promotion_budget_boundary_status=verified`
 - `ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1`
 - `ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+- `admission_saturation_status=verified`
+- `admission_queue_cap_enforcement_status=verified`
+- `overload_evidence_normalization_status=verified`
+- `admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1`
+- `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`
 
 ## Service API Websocket Lifecycle Governance
 
