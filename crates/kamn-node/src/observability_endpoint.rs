@@ -10,6 +10,8 @@ use axum::{
     routing::any,
     Router,
 };
+#[cfg(test)]
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::io::BufReader;
@@ -77,6 +79,27 @@ struct ObservabilityRequestBudget {
 enum ObservabilityEndpointTlsMode {
     Disabled,
     Require { cert_file: String, key_file: String },
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ObservabilityEndpointTlsModeOverride {
+    Require { cert_file: String, key_file: String },
+}
+
+#[cfg(test)]
+thread_local! {
+    static OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS: RefCell<Option<ObservabilityEndpointTlsModeOverride>> =
+        const { RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub(crate) fn set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(
+    mode: Option<ObservabilityEndpointTlsModeOverride>,
+) {
+    OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS.with(|tls_mode_override| {
+        tls_mode_override.replace(mode);
+    });
 }
 
 impl ObservabilityRequestBudget {
@@ -347,6 +370,37 @@ async fn serve_observability_endpoint_async(
 }
 
 fn resolve_observability_endpoint_tls_mode() -> Result<ObservabilityEndpointTlsMode, String> {
+    #[cfg(test)]
+    if let Some(tls_mode_override) = OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS
+        .with(|tls_mode_override| tls_mode_override.borrow().clone())
+    {
+        return match tls_mode_override {
+            ObservabilityEndpointTlsModeOverride::Require {
+                cert_file,
+                key_file,
+            } => {
+                if cert_file.trim().is_empty() {
+                    return Err(
+                        "observability endpoint tls cert override must not be empty".to_owned()
+                    );
+                }
+                if key_file.trim().is_empty() {
+                    return Err(
+                        "observability endpoint tls key override must not be empty".to_owned()
+                    );
+                }
+                validate_observability_endpoint_tls_materials(
+                    cert_file.as_str(),
+                    key_file.as_str(),
+                )?;
+                Ok(ObservabilityEndpointTlsMode::Require {
+                    cert_file,
+                    key_file,
+                })
+            }
+        };
+    }
+
     match env::var(OBSERVABILITY_ENDPOINT_TLS_MODE_ENV) {
         Ok(value) => {
             let mode = value.trim().to_ascii_lowercase();

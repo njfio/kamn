@@ -1,6 +1,9 @@
 use super::*;
 use crate::daemon_test_env_lock;
-use crate::observability_endpoint::RuntimeObservabilitySnapshot;
+use crate::observability_endpoint::{
+    set_observability_endpoint_tls_mode_override_for_current_thread_for_tests,
+    ObservabilityEndpointTlsModeOverride, RuntimeObservabilitySnapshot,
+};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -763,20 +766,8 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
 
 #[test]
 fn integration_runtime_observability_endpoint_tls_mode_serves_required_https_routes() {
-    let _env_lock = daemon_test_env_lock()
-        .lock()
-        .expect("daemon env lock should guard observability tls env overrides");
     let (cert_file, key_file) =
         super::service_api_endpoint_tests::write_test_service_api_tls_materials();
-    let _tls_mode_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE", Some("require"));
-    let _tls_cert_guard = EnvVarGuard::set(
-        "KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE",
-        Some(cert_file.as_str()),
-    );
-    let _tls_key_guard = EnvVarGuard::set(
-        "KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE",
-        Some(key_file.as_str()),
-    );
 
     let snapshot = sample_observability_snapshot();
     let bind_addr = reserve_loopback_addr();
@@ -788,9 +779,20 @@ fn integration_runtime_observability_endpoint_tls_mode_serves_required_https_rou
         idle_timeout_ms: 2_000,
     };
 
+    let server_cert_file = cert_file.clone();
+    let server_key_file = key_file.clone();
     let server_snapshot = snapshot.clone();
-    let server =
-        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    let server = thread::spawn(move || {
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(Some(
+            ObservabilityEndpointTlsModeOverride::Require {
+                cert_file: server_cert_file,
+                key_file: server_key_file,
+            },
+        ));
+        let result = serve_observability_endpoint(&endpoint_config, &server_snapshot);
+        set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(None);
+        result
+    });
     wait_for_https_endpoint_ready(bind_addr.as_str());
 
     let metrics_response = send_https_get(bind_addr.as_str(), "/metrics");
