@@ -82,6 +82,49 @@ if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_codes_value=rus
   exit 1
 fi
 
+ROOT_DRIFT_MANIFEST_FIXTURE="$TMP_DIR/Cargo-root-drift.toml"
+cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$ROOT_DRIFT_MANIFEST_FIXTURE"
+python3 - "$ROOT_DRIFT_MANIFEST_FIXTURE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+content = path.read_text(encoding="utf-8")
+content = content.replace(
+    'live-https = ["dep:rustls", "dep:rustls-pemfile", "dep:webpki-roots"]',
+    'live-https = ["dep:rustls", "dep:rustls-pemfile"]',
+)
+content = content.replace('webpki-roots = { version = "1.0.3", optional = true }\n', "")
+path.write_text(content, encoding="utf-8")
+PY
+
+set +e
+root_drift_output="$(bash "$CHECKER" --cargo-manifest "$ROOT_DRIFT_MANIFEST_FIXTURE" 2>&1)"
+root_drift_code=$?
+set -e
+
+if [ "$root_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when webpki root mapping+dependency drift is introduced" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$root_drift_output" | grep -q 'live-https feature must include mapping `dep:webpki-roots`'; then
+  echo "expected webpki-root feature mapping drift marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$root_drift_output" | grep -q 'dependency `webpki-roots` must be declared under \[dependencies\]'; then
+  echo "expected webpki-root dependency drift marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$root_drift_output" | grep -q '^reason_codes_csv=webpki_roots_dependency_missing,webpki_roots_feature_mapping_missing$'; then
+  echo "expected deterministic webpki-root reason taxonomy csv marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$root_drift_output" | grep -q '^reason_codes_value=webpki_roots_dependency_missing,webpki_roots_feature_mapping_missing$'; then
+  echo "expected deterministic webpki-root reason taxonomy value marker from checker" >&2
+  exit 1
+fi
+
 README_FIXTURE="$TMP_DIR/README.md"
 cp "$ROOT_DIR/README.md" "$README_FIXTURE"
 sed -i '/adr-kamn-core-live-tls-transport.md/d' "$README_FIXTURE"
@@ -117,6 +160,14 @@ if ! grep -q "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1
   echo "expected tls hardening doc to reference live-https deterministic reason taxonomy version" >&2
   exit 1
 fi
+if ! grep -q "webpki_roots_dependency_missing" "$TLS_HARDENING_DOC"; then
+  echo "expected tls hardening doc to include webpki-root dependency fail-closed reason marker" >&2
+  exit 1
+fi
+if ! grep -q "webpki_roots_feature_mapping_missing" "$TLS_HARDENING_DOC"; then
+  echo "expected tls hardening doc to include webpki-root feature-mapping fail-closed reason marker" >&2
+  exit 1
+fi
 if ! grep -q "docs/security/tls-hardening.md" "$CI_STRATEGY_DOC"; then
   echo "expected ci strategy doc to reference tls hardening policy doc" >&2
   exit 1
@@ -133,6 +184,14 @@ if ! grep -q "rustls_pemfile_dependency_optional_flag_mismatch" "$RELEASE_CHECKL
   echo "expected release go/no-go checklist to include tls dependency-posture fail-closed reason markers" >&2
   exit 1
 fi
+if ! grep -q "webpki_roots_dependency_missing" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release go/no-go checklist to include webpki-root dependency drift reason marker" >&2
+  exit 1
+fi
+if ! grep -q "webpki_roots_feature_mapping_missing" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release go/no-go checklist to include webpki-root feature-mapping drift reason marker" >&2
+  exit 1
+fi
 if [ ! -f "$KOLME_DEVNET_OPS_DOC" ]; then
   echo "expected kolme devnet ops compatibility doc to exist" >&2
   exit 1
@@ -147,6 +206,14 @@ if ! grep -q "reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-po
 fi
 if ! grep -q "rustls_pemfile_dependency_optional_flag_mismatch" "$KOLME_DEVNET_OPS_DOC"; then
   echo "expected kolme devnet ops compatibility doc to include live-https fail-closed reason marker" >&2
+  exit 1
+fi
+if ! grep -q "webpki_roots_dependency_missing" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to include webpki-root dependency drift reason marker" >&2
+  exit 1
+fi
+if ! grep -q "webpki_roots_feature_mapping_missing" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to include webpki-root feature-mapping drift reason marker" >&2
   exit 1
 fi
 if ! grep -q "Regression: #4108" "$KOLME_DEVNET_OPS_DOC"; then
