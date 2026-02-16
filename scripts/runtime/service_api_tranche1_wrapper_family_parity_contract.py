@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 MATRIX_SCHEMA = "kamn.runtime.service-api-tranche2-wrapper-family-matrix.v1"
+REPORT_SCHEMA = "kamn.runtime.service-api-tranche2-wrapper-family-parity-report.v1"
 REASON_TAXONOMY_VERSION = (
     "kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1"
 )
@@ -48,6 +49,20 @@ def _read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SystemExit(f"wrapper_read_failed:{path}:{exc}") from exc
+
+
+def _write_report(output_json: str | None, report: dict[str, Any]) -> None:
+    if not output_json:
+        return
+    path = Path(output_json)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise SystemExit(f"output_json_write_failed:{path}:{exc}") from exc
 
 
 def _is_executable(path: Path) -> bool:
@@ -176,7 +191,22 @@ def _run(args: argparse.Namespace) -> int:
         reason_codes.append("service_api_tranche2_impl_shell_loc_budget_exceeded")
 
     if reason_codes:
-        reason_codes_csv = ",".join(reason_codes)
+        reason_codes_value = ",".join(reason_codes)
+        report = {
+            "schema_version": REPORT_SCHEMA,
+            "status": "fail",
+            "service_api_tranche2_wrapper_family_status": "rejected",
+            "wrapper_count": len(wrappers),
+            "wrapper_shell_loc": total_wrapper_shell_loc,
+            "max_wrapper_shell_loc": max_wrapper_shell_loc,
+            "impl_shell_loc": total_impl_shell_loc,
+            "max_impl_shell_loc": max_impl_shell_loc,
+            "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+            "reason_codes_csv": REASON_CODES_CSV,
+            "reason_codes": reason_codes,
+            "reason_codes_value": reason_codes_value,
+        }
+        _write_report(args.output_json, report)
         print("status=fail")
         print("service_api_tranche2_wrapper_family_status=rejected")
         print(f"wrapper_count={len(wrappers)}")
@@ -186,9 +216,24 @@ def _run(args: argparse.Namespace) -> int:
         print(f"max_impl_shell_loc={max_impl_shell_loc}")
         print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
         print(f"reason_codes_csv={REASON_CODES_CSV}")
-        print(f"reason_codes={reason_codes_csv}")
+        print(f"reason_codes={reason_codes_value}")
         raise SystemExit(1)
 
+    report = {
+        "schema_version": REPORT_SCHEMA,
+        "status": "pass",
+        "service_api_tranche2_wrapper_family_status": "verified",
+        "wrapper_count": len(wrappers),
+        "wrapper_shell_loc": total_wrapper_shell_loc,
+        "max_wrapper_shell_loc": max_wrapper_shell_loc,
+        "impl_shell_loc": total_impl_shell_loc,
+        "max_impl_shell_loc": max_impl_shell_loc,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
+        "reason_codes": [],
+        "reason_codes_value": "none",
+    }
+    _write_report(args.output_json, report)
     print("status=pass")
     print("service_api_tranche2_wrapper_family_status=verified")
     print(f"wrapper_count={len(wrappers)}")
@@ -208,6 +253,10 @@ def main() -> int:
     )
     parser.add_argument("--root-dir", required=True, help="Repository root.")
     parser.add_argument("--matrix-file", required=True, help="Wrapper family matrix JSON.")
+    parser.add_argument(
+        "--output-json",
+        help="Optional path to write deterministic parity report JSON.",
+    )
     args = parser.parse_args()
     return _run(args)
 
