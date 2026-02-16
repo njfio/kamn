@@ -1221,6 +1221,24 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Local-only profile remains fail-closed for runtime network transport calls; this profile is for deterministic/local build validation only.
 - Regression: #2756
 
+## Dependency-License Metadata Governance CI/Local Boundary Contract (Issue #4457)
+- Metadata governance checker commands:
+  - `python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile ci-smoke`
+  - `python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile local-heavy --local-heavy-opt-in`
+  - `bash scripts/ci/test_check_workspace_license_policy.sh`
+- Deterministic metadata-governance taxonomy markers:
+  - `metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1`
+  - `metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required`
+  - `metadata_governance_reason_codes_value=none|<csv>`
+  - `metadata_governance_reason_class=stable|metadata_mismatch|configuration|boundary|mixed`
+- CI smoke/local-heavy boundary markers:
+  - `ci_smoke_local_heavy_boundary_status=verified|violation`
+  - `ci_smoke_lane_cost_profile=low|not-applicable`
+  - `local_heavy_lane_execution_mode=not_requested|opt_in|blocked`
+- Boundary enforcement:
+  - local-heavy execution without `--local-heavy-opt-in` fails closed with `metadata_governance_local_heavy_opt_in_required`.
+  - ci-smoke mode keeps low-cost profile and excludes local-heavy-only execution paths.
+
 ## Kolme Live Retry Coverage
 - Runtime commit submit/finality retry behavior must remain deterministic and bounded.
 - Fast-gate coverage commands:
