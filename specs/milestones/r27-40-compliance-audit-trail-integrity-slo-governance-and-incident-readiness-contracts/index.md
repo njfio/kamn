@@ -16,3 +16,6 @@ decisioning, and bounded CI smoke versus local-heavy incident validation.
 - #4463 Task: implement incident-readiness bundle schema checks and fail-closed evidence validation
 - #4469 Subtask: add red tests for incident-readiness bundle mismatch-tamper acceptance
 - #4470 Subtask: implement deterministic readiness reason taxonomy and normalized bundle evidence outputs
+- #4464 Task: enforce incident go-no-go convergence and ci smoke-local heavy drill boundary governance
+- #4471 Subtask: add red tests for incident go-no-go evidence convergence gaps
+- #4472 Subtask: implement incident gate reason taxonomy and ci smoke-local heavy drill boundary governance

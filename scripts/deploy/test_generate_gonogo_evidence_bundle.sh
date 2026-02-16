@@ -1020,6 +1020,39 @@ assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "incident
 assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "incident_readiness_reason_codes_csv")" "gonogo_incident_readiness_freshness_window_exceeded" "expected deterministic stale incident-readiness reason code"
 assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for stale incident-readiness evidence"
 
+incident_readiness_partial_report="$TMP_DIR/incident-readiness-partial-evidence-report.json"
+cp "$incident_readiness_report" "$incident_readiness_partial_report"
+python3 - "$incident_readiness_partial_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("staged_rehearsal_signoff", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+incident_readiness_partial_bundle="$TMP_DIR/gonogo-incident-readiness-partial-evidence.json"
+incident_readiness_partial_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$incident_readiness_partial_bundle" \
+    --release-candidate "v1.0.0-rc.18" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:incident-readiness-partial" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --incident-readiness-report-file "$incident_readiness_partial_report" \
+    --incident-readiness-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$incident_readiness_partial_generate_output" "incident_readiness_gate_final_decision")" "NO-GO" "expected incident-readiness gate to fail closed for partial readiness evidence"
+assert_eq "$(extract_value "$incident_readiness_partial_generate_output" "incident_readiness_reason_codes_csv")" "gonogo_incident_readiness_staged_signoff_schema_mismatch,gonogo_incident_readiness_staged_signoff_status_not_verified" "expected deterministic incident-readiness partial evidence convergence reason code markers"
+assert_eq "$(extract_value "$incident_readiness_partial_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for partial incident-readiness evidence"
+
 incident_readiness_tampered_bundle="$TMP_DIR/gonogo-incident-readiness-tampered.json"
 cp "$incident_readiness_bundle" "$incident_readiness_tampered_bundle"
 python3 - "$incident_readiness_tampered_bundle" <<'PY'
