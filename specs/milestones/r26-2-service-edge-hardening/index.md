@@ -17,6 +17,13 @@ Deliver service-edge hardening by converging TLS activation, API/observability e
   - Task `#3638`: deliver signer parity harness and migration completion
     - Subtask `#3766`: add signer migration parity matrix and legacy-behavior diff guard
     - Subtask `#3808`: add signer extraction threshold and ownership budget guards
+- Story `#3911`: harden signer key-material lifecycle with zeroization and secret policy enforcement
+  - Task `#3912`: zeroize signer key decode/loading intermediates across runtime profiles
+    - Subtask `#3913`: add explicit zeroization to signer key decode and transient buffers
+    - Subtask `#3914`: add regression checks for signer secret redaction and decode-failure hygiene
+  - Task `#3915`: enforce signer secret-lifecycle policy and docs parity contracts
+    - Subtask `#3916`: add fail-closed policy checks for fallback signer keys and lifecycle markers
+    - Subtask `#3917`: add docs-contract parity checks for signer secret-lifecycle markers
 
 ## Contract Signals
 - Signer responsibilities are isolated into explicit modules with deterministic error reason codes.
