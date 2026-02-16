@@ -290,3 +290,32 @@ fn main_module_extraction_contract_runtime_module_boundary_parity_markers_remain
         "runtime_orchestration should not re-inline Kolme request construction helper"
     );
 }
+
+#[test]
+fn main_module_extraction_contract_main_tests_decomposition_and_budget_markers_remain_stable() {
+    let main_tests_rs = read_repo_file("src/main_tests.rs");
+    let main_tests_lines = main_tests_rs.lines().count();
+    let module_decl_count = main_tests_rs
+        .lines()
+        .filter(|line| line.trim_start().starts_with("mod "))
+        .count();
+
+    assert!(
+        main_tests_rs.contains(
+            "main_tests structural budget shell only; keep domain tests in src/main_tests/*.rs"
+        ),
+        "main_tests.rs should carry explicit decomposition drift guard marker"
+    );
+    assert!(
+        !main_tests_rs.contains("#[test]"),
+        "main_tests.rs should not re-inline individual test bodies"
+    );
+    assert!(
+        main_tests_lines <= 260,
+        "main_tests.rs should remain a bounded shell (<=260 lines)"
+    );
+    assert!(
+        module_decl_count >= 9,
+        "main_tests.rs should keep decomposed domain module boundaries"
+    );
+}
