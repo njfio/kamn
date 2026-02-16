@@ -16,6 +16,7 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.s
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
+RUNBOOK_FILE = ROOT_DIR / "docs/ops/runbook_demo.md"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,6 +65,9 @@ def main() -> int:
         return 1
     if not README_FILE.is_file():
         print("expected README to exist", file=sys.stderr)
+        return 1
+    if not RUNBOOK_FILE.is_file():
+        print("expected demo startup drift runbook to exist", file=sys.stderr)
         return 1
 
     start_epoch = time.monotonic()
@@ -230,6 +234,10 @@ def main() -> int:
     if "run_local_kolme_fork_process_lifecycle_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local Kolme fork process lifecycle runner", file=sys.stderr)
         return 1
+    # Regression: #4495
+    if "docs/ops/runbook_demo.md" not in doc_text:
+        print("expected Kolme devnet ops doc to reference demo startup drift runbook", file=sys.stderr)
+        return 1
     if "check_local_kolme_fork_process_lifecycle_policy.py" not in doc_text:
         print("expected Kolme devnet ops doc to reference local Kolme fork process lifecycle policy checker", file=sys.stderr)
         return 1
@@ -277,6 +285,9 @@ def main() -> int:
         return 1
     if "run_local_kolme_fork_process_lifecycle_contract_lane.sh" not in readme_text:
         print("expected README to reference local Kolme fork process lifecycle contract lane", file=sys.stderr)
+        return 1
+    if "docs/ops/runbook_demo.md" not in readme_text:
+        print("expected README to reference demo startup drift runbook", file=sys.stderr)
         return 1
     if "--integration-runtime-commit-finality-command" not in readme_text:
         print(

@@ -1059,6 +1059,7 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
+Local Demo Startup Drift Runbook (Issue #4495): `docs/ops/runbook_demo.md`
 
 ### Run Local Live-Node Validation Bundle Lane
 
