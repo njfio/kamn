@@ -49,6 +49,10 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+if [ "$max_seconds" -gt 240 ]; then
+  echo "max-seconds must be <= 240 for ci-local contract lane" >&2
+  exit 1
+fi
 if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
   echo "ci-fast-gate must be PASS or FAIL" >&2
   exit 1
@@ -103,6 +107,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^full_runtime_shutdown_status
   echo "expected local full-runtime live validation shutdown marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_shutdown_gate_status=verified$'; then
+  echo "expected local full-runtime live validation shutdown-gate marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^three_node_role_set_status=verified$'; then
   echo "expected local full-runtime live validation three-node role-set marker" >&2
   exit 1
@@ -117,6 +125,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^canonical_convergence_status
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
   echo "expected local full-runtime live validation runtime transport mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_fallback_classification_status=verified$'; then
+  echo "expected local full-runtime live validation runtime fallback classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime live validation runtime error reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime live validation runtime error reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_runtime_extraction_budget_boundary_status=verified$'; then
+  echo "expected local full-runtime live validation runtime extraction budget boundary marker" >&2
   exit 1
 fi
 
@@ -137,6 +161,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^local_full_runtime_policy_status=verified$'; then
   echo "expected local full-runtime live policy checker status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime live policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime live policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -221,8 +253,24 @@ if summary_report.get("transport_propagation_status") != "verified":
     raise SystemExit("expected summary transport_propagation_status=verified")
 if summary_report.get("canonical_convergence_status") != "verified":
     raise SystemExit("expected summary canonical_convergence_status=verified")
+if summary_report.get("runtime_shutdown_gate_status") != "verified":
+    raise SystemExit("expected summary runtime_shutdown_gate_status=verified")
 if summary_report.get("runtime_transport_mode") != "libp2p_transport_fed":
     raise SystemExit("expected summary runtime_transport_mode=libp2p_transport_fed")
+if summary_report.get("runtime_fallback_classification_status") != "verified":
+    raise SystemExit("expected summary runtime_fallback_classification_status=verified")
+if summary_report.get("runtime_error_reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected summary runtime_error_reason_taxonomy_version marker")
+if summary_report.get("runtime_error_reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected summary runtime_error_reason_codes_csv marker")
+if summary_report.get("ci_local_runtime_extraction_budget_boundary_status") != "verified":
+    raise SystemExit("expected summary ci_local_runtime_extraction_budget_boundary_status=verified")
+if max_seconds > 240:
+    raise SystemExit("expected ci-local max_seconds budget boundary <= 240")
+if policy_report.get("reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected policy reason_taxonomy_version marker")
+if policy_report.get("reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected policy reason_codes_csv marker")
 
 lane_report = {
     "schema_version": "kamn.runtime.local-full-runtime-live-contract-lane-report.v1",
@@ -233,7 +281,16 @@ lane_report = {
     "local_full_runtime_policy_status": policy_report.get("local_full_runtime_policy_status"),
     "docs_contract_status": "verified",
     "three_node_convergence_status": "verified",
+    "runtime_shutdown_gate_status": "verified",
     "runtime_transport_mode_status": "verified",
+    "runtime_fallback_classification_status": "verified",
+    "runtime_error_reason_taxonomy_version": summary_report.get(
+        "runtime_error_reason_taxonomy_version"
+    ),
+    "runtime_error_reason_codes_csv": summary_report.get("runtime_error_reason_codes_csv"),
+    "reason_taxonomy_version": policy_report.get("reason_taxonomy_version"),
+    "reason_codes_csv": policy_report.get("reason_codes_csv"),
+    "ci_local_runtime_extraction_budget_boundary_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "local_full_runtime_policy_fast_gate_exclusion_mismatch",
     "performance_budget_status": "verified",
@@ -257,7 +314,14 @@ echo "local_full_runtime_contract_status=verified"
 echo "local_full_runtime_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "three_node_convergence_status=verified"
+echo "runtime_shutdown_gate_status=verified"
 echo "runtime_transport_mode_status=verified"
+echo "runtime_fallback_classification_status=verified"
+echo "runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1"
+echo "runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded"
+echo "reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1"
+echo "reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded"
+echo "ci_local_runtime_extraction_budget_boundary_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=local_full_runtime_policy_fast_gate_exclusion_mismatch"
 echo "performance_budget_status=verified"

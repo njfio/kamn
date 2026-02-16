@@ -240,16 +240,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic three-node role-set marker (`three_node_role_set_status=verified`).
   - lane emits deterministic transport propagation marker (`transport_propagation_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic runtime shutdown gate marker (`runtime_shutdown_gate_status=verified`).
   - lane emits deterministic runtime transport mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic runtime fallback classification marker (`runtime_fallback_classification_status=verified`).
+  - lane emits deterministic runtime error taxonomy markers:
+    `runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1`,
+    `runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded`.
+  - lane emits deterministic ci-local extraction budget marker (`ci_local_runtime_extraction_budget_boundary_status=verified`).
   - policy checker fails closed on transport/convergence marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1`.
   - run mode executes four targeted full-runtime/transport convergence checks with bounded per-command budgets.
+  - lane fails closed when `--max-seconds` exceeds the ci-local extraction budget boundary (`240` seconds).
   - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
-  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `runtime_full_shutdown_gate_drift_detected`
+  - `runtime_fallback_classification_unstable`
+  - `ci_local_runtime_extraction_budget_boundary_exceeded`
 
 ## Runtime Sqlite Crash-Recovery Live Validation Contract Lane
 - Entry commands:

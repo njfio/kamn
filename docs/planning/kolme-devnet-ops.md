@@ -1637,9 +1637,16 @@ Operator checkpoints:
   - `three_node_role_set_status=verified`
   - `transport_propagation_status=verified`
   - `canonical_convergence_status=verified`
+  - `runtime_shutdown_gate_status=verified`
   - `runtime_transport_mode=libp2p_transport_fed`
+  - `runtime_fallback_classification_status=verified`
+  - `runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1`
+  - `runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded`
+  - `ci_local_runtime_extraction_budget_boundary_status=verified`
 - Deterministic fail-closed policy reason markers:
-  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
+  - `runtime_full_shutdown_gate_drift_detected`
+  - `runtime_fallback_classification_unstable`
+  - `ci_local_runtime_extraction_budget_boundary_exceeded`
   - `local_full_runtime_policy_three_node_role_set_status_mismatch`
   - `local_full_runtime_policy_canonical_convergence_status_mismatch`
 

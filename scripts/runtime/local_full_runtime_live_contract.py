@@ -32,6 +32,15 @@ RUN_MODE_FAST_GATE_EXCLUSION_REASON = "local_full_runtime_run_mode_excluded_from
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "full_runtime_live_validation_executed"
 TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
+RUNTIME_ERROR_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1"
+)
+RUNTIME_ERROR_REASON_CODES_CSV = (
+    "runtime_full_shutdown_gate_drift_detected,"
+    "runtime_fallback_classification_unstable,"
+    "ci_local_runtime_extraction_budget_boundary_exceeded"
+)
+CI_LOCAL_RUNTIME_EXTRACTION_BUDGET_MAX_SECONDS = 240
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -61,6 +70,11 @@ def run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
     max_seconds = require_positive_int("KAMN_LOCAL_FULL_RUNTIME_LIVE_MAX_SECONDS", args.max_seconds)
+    if max_seconds > CI_LOCAL_RUNTIME_EXTRACTION_BUDGET_MAX_SECONDS:
+        fail(
+            "KAMN_LOCAL_FULL_RUNTIME_LIVE_MAX_SECONDS exceeds ci-local budget boundary: "
+            f"{max_seconds} > {CI_LOCAL_RUNTIME_EXTRACTION_BUDGET_MAX_SECONDS}"
+        )
     command_max_seconds = require_positive_int(
         "KAMN_LOCAL_FULL_RUNTIME_LIVE_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
@@ -146,10 +160,15 @@ def run_lane(args: argparse.Namespace) -> int:
         "fast_gate_exclusion_reason_code": RUN_MODE_FAST_GATE_EXCLUSION_REASON,
         "full_runtime_bootstrap_status": "verified",
         "full_runtime_shutdown_status": "verified",
+        "runtime_shutdown_gate_status": "verified",
         "three_node_role_set_status": "verified",
         "transport_propagation_status": "verified",
         "canonical_convergence_status": "verified",
         "runtime_transport_mode": TRANSPORT_RUNTIME_MODE,
+        "runtime_fallback_classification_status": "verified",
+        "runtime_error_reason_taxonomy_version": RUNTIME_ERROR_REASON_TAXONOMY_VERSION,
+        "runtime_error_reason_codes_csv": RUNTIME_ERROR_REASON_CODES_CSV,
+        "ci_local_runtime_extraction_budget_boundary_status": "verified",
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -170,10 +189,15 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"fast_gate_exclusion_reason_code={RUN_MODE_FAST_GATE_EXCLUSION_REASON}")
     print("full_runtime_bootstrap_status=verified")
     print("full_runtime_shutdown_status=verified")
+    print("runtime_shutdown_gate_status=verified")
     print("three_node_role_set_status=verified")
     print("transport_propagation_status=verified")
     print("canonical_convergence_status=verified")
     print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
+    print("runtime_fallback_classification_status=verified")
+    print(f"runtime_error_reason_taxonomy_version={RUNTIME_ERROR_REASON_TAXONOMY_VERSION}")
+    print(f"runtime_error_reason_codes_csv={RUNTIME_ERROR_REASON_CODES_CSV}")
+    print("ci_local_runtime_extraction_budget_boundary_status=verified")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -223,7 +247,11 @@ def check_policy(args: argparse.Namespace) -> int:
     )
     checks.reject_if(
         payload.get("full_runtime_shutdown_status") != "verified",
-        "local_full_runtime_policy_shutdown_status_mismatch",
+        "runtime_full_shutdown_gate_drift_detected",
+    )
+    checks.reject_if(
+        payload.get("runtime_shutdown_gate_status") != "verified",
+        "runtime_full_shutdown_gate_drift_detected",
     )
     checks.reject_if(
         payload.get("three_node_role_set_status") != "verified",
@@ -239,7 +267,24 @@ def check_policy(args: argparse.Namespace) -> int:
     )
     checks.reject_if(
         payload.get("runtime_transport_mode") != TRANSPORT_RUNTIME_MODE,
-        "local_full_runtime_policy_runtime_transport_mode_mismatch",
+        "runtime_fallback_classification_unstable",
+    )
+    checks.reject_if(
+        payload.get("runtime_fallback_classification_status") != "verified",
+        "runtime_fallback_classification_unstable",
+    )
+    checks.reject_if(
+        payload.get("runtime_error_reason_taxonomy_version")
+        != RUNTIME_ERROR_REASON_TAXONOMY_VERSION,
+        "local_full_runtime_policy_runtime_error_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_error_reason_codes_csv") != RUNTIME_ERROR_REASON_CODES_CSV,
+        "local_full_runtime_policy_runtime_error_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_runtime_extraction_budget_boundary_status") != "verified",
+        "local_full_runtime_policy_marker_missing:ci_local_runtime_extraction_budget_boundary_status",
     )
 
     lane_mode = payload.get("lane_mode")
@@ -252,6 +297,16 @@ def check_policy(args: argparse.Namespace) -> int:
         not isinstance(run_mode_command_count, int) or run_mode_command_count < 0,
         "local_full_runtime_policy_command_count_invalid",
     )
+    observed_max_seconds = payload.get("max_seconds")
+    checks.reject_if(
+        not isinstance(observed_max_seconds, int) or observed_max_seconds <= 0,
+        "local_full_runtime_policy_max_seconds_invalid",
+    )
+    if isinstance(observed_max_seconds, int):
+        checks.reject_if(
+            observed_max_seconds > CI_LOCAL_RUNTIME_EXTRACTION_BUDGET_MAX_SECONDS,
+            "ci_local_runtime_extraction_budget_boundary_exceeded",
+        )
     run_mode_command_status = payload.get("run_mode_command_status")
     reason_code = payload.get("reason_code")
 
@@ -306,6 +361,8 @@ def check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
+        "reason_taxonomy_version": RUNTIME_ERROR_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": RUNTIME_ERROR_REASON_CODES_CSV,
         "local_full_runtime_policy_status": "verified"
         if not failed_checks
         else "failed",
@@ -319,6 +376,9 @@ def check_policy(args: argparse.Namespace) -> int:
         print(f"final_decision={observed_final_decision}")
         print(f"expected_final_decision={expected_final_decision}")
         print("local_full_runtime_policy_status=failed")
+        print(f"reason_taxonomy_version={RUNTIME_ERROR_REASON_TAXONOMY_VERSION}")
+        print(f"reason_codes_csv={RUNTIME_ERROR_REASON_CODES_CSV}")
+        print(f"reason_codes={','.join(failed_checks)}")
         print(f"failed_checks={','.join(failed_checks)}")
         fail(",".join(failed_checks))
 
@@ -326,6 +386,9 @@ def check_policy(args: argparse.Namespace) -> int:
     print(f"final_decision={observed_final_decision}")
     print(f"expected_final_decision={expected_final_decision}")
     print("local_full_runtime_policy_status=verified")
+    print(f"reason_taxonomy_version={RUNTIME_ERROR_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={RUNTIME_ERROR_REASON_CODES_CSV}")
+    print("reason_codes=none")
     print("failed_checks=")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")

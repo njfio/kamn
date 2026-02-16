@@ -864,6 +864,32 @@ fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers()
 }
 
 #[test]
+fn doc_contains_runtime_local_full_mode_live_validation_runtime_error_taxonomy_markers() {
+    assert!(DOC.contains("## Runtime Local Full-Mode Live Validation Contract Lane"));
+    assert!(DOC.contains(
+        "validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_local_full_runtime_live_policy.sh --report-file /tmp/local-full-runtime-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-runtime-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_local_full_runtime_live_contract_lane.sh --output-json /tmp/local-full-runtime-live-contract-lane-report.json --policy-output-json /tmp/local-full-runtime-live-policy.json"
+    ));
+    assert!(DOC.contains("runtime_shutdown_gate_status=verified"));
+    assert!(DOC.contains("runtime_fallback_classification_status=verified"));
+    assert!(DOC.contains(
+        "runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("ci_local_runtime_extraction_budget_boundary_status=verified"));
+    assert!(DOC.contains("runtime_full_shutdown_gate_drift_detected"));
+    assert!(DOC.contains("runtime_fallback_classification_unstable"));
+    assert!(DOC.contains("ci_local_runtime_extraction_budget_boundary_exceeded"));
+}
+
+#[test]
 fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
     assert!(DOC.contains("local_heavy_runtime_budget_status"));
     assert!(DOC.contains("elapsed_seconds"));

@@ -42,6 +42,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^full_runtime_shutdown_status
   echo "expected local full-runtime live validation shutdown marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_shutdown_gate_status=verified$'; then
+  echo "expected local full-runtime live validation runtime shutdown gate marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^three_node_role_set_status=verified$'; then
   echo "expected local full-runtime live validation three-node role-set marker" >&2
   exit 1
@@ -56,6 +60,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^canonical_convergence_status
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_transport_fed$'; then
   echo "expected local full-runtime live validation runtime transport mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_fallback_classification_status=verified$'; then
+  echo "expected local full-runtime live validation runtime fallback classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_error_reason_taxonomy_version=kamn.runtime.local-full-runtime-error-reason-taxonomy.v1$'; then
+  echo "expected local full-runtime live validation runtime error reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_error_reason_codes_csv=runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded$'; then
+  echo "expected local full-runtime live validation runtime error reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_runtime_extraction_budget_boundary_status=verified$'; then
+  echo "expected local full-runtime live validation ci-local runtime extraction budget boundary marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
@@ -91,6 +111,16 @@ if payload.get("canonical_convergence_status") != "verified":
     raise SystemExit("expected canonical_convergence_status=verified")
 if payload.get("runtime_transport_mode") != "libp2p_transport_fed":
     raise SystemExit("expected runtime_transport_mode=libp2p_transport_fed")
+if payload.get("runtime_shutdown_gate_status") != "verified":
+    raise SystemExit("expected runtime_shutdown_gate_status=verified")
+if payload.get("runtime_fallback_classification_status") != "verified":
+    raise SystemExit("expected runtime_fallback_classification_status=verified")
+if payload.get("runtime_error_reason_taxonomy_version") != "kamn.runtime.local-full-runtime-error-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime_error_reason_taxonomy_version marker")
+if payload.get("runtime_error_reason_codes_csv") != "runtime_full_shutdown_gate_drift_detected,runtime_fallback_classification_unstable,ci_local_runtime_extraction_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic runtime_error_reason_codes_csv marker")
+if payload.get("ci_local_runtime_extraction_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_runtime_extraction_budget_boundary_status=verified")
 PY
 
 set +e
@@ -124,6 +154,22 @@ if [ "$invalid_budget_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_budget_output" | grep -q 'KAMN_LOCAL_FULL_RUNTIME_LIVE_MAX_SECONDS must be an integer'; then
   echo "expected deterministic invalid max-seconds marker for local full-runtime validation script" >&2
+  exit 1
+fi
+
+set +e
+boundary_budget_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --max-seconds 241 2>&1
+)"
+boundary_budget_code=$?
+set -e
+if [ "$boundary_budget_code" -eq 0 ]; then
+  echo "expected local full-runtime validation script to reject ci-local extraction boundary overrun" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$boundary_budget_output" | grep -q 'KAMN_LOCAL_FULL_RUNTIME_LIVE_MAX_SECONDS exceeds ci-local budget boundary'; then
+  echo "expected deterministic ci-local extraction budget boundary marker for local full-runtime validation script" >&2
   exit 1
 fi
 
