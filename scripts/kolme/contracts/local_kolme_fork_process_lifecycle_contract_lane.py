@@ -231,12 +231,20 @@ def main() -> int:
 
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
+    runbook_text = RUNBOOK_FILE.read_text(encoding="utf-8")
     if "run_local_kolme_fork_process_lifecycle_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local Kolme fork process lifecycle runner", file=sys.stderr)
         return 1
     # Regression: #4495
     if "docs/ops/runbook_demo.md" not in doc_text:
         print("expected Kolme devnet ops doc to reference demo startup drift runbook", file=sys.stderr)
+        return 1
+    # Regression: #4496
+    if "Regression: #4496" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to include reason taxonomy and normalized evidence regression marker",
+            file=sys.stderr,
+        )
         return 1
     if "check_local_kolme_fork_process_lifecycle_policy.py" not in doc_text:
         print("expected Kolme devnet ops doc to reference local Kolme fork process lifecycle policy checker", file=sys.stderr)
@@ -288,6 +296,15 @@ def main() -> int:
         return 1
     if "docs/ops/runbook_demo.md" not in readme_text:
         print("expected README to reference demo startup drift runbook", file=sys.stderr)
+        return 1
+    if "kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1" not in runbook_text:
+        print("expected runbook to document reason taxonomy schema marker", file=sys.stderr)
+        return 1
+    if "kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1" not in runbook_text:
+        print("expected runbook to document normalized evidence schema marker", file=sys.stderr)
+        return 1
+    if "reason_taxonomy_readiness_mismatch" not in runbook_text:
+        print("expected runbook to document reason taxonomy mismatch marker", file=sys.stderr)
         return 1
     if "--integration-runtime-commit-finality-command" not in readme_text:
         print(

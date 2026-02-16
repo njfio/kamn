@@ -38,6 +38,33 @@ The checker must fail closed when orchestration evidence becomes unstable:
 - non-deterministic phase ordering across the primary orchestration chain:
   - `check_sequence_mismatch`
 
+## Reason Taxonomy and Evidence Normalization
+
+Lifecycle summaries now include deterministic reason taxonomy and normalized
+evidence sections:
+
+- `reason_taxonomy.schema_version=kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1`
+  - `overall`
+  - `startup`
+  - `readiness`
+  - `integration`
+  - `teardown`
+- `normalized_evidence.schema_version=kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1`
+  - `primary_check_order`
+  - `checks_by_id`
+
+Fail-closed mismatch markers include:
+
+- `reason_taxonomy_overall_mismatch`
+- `reason_taxonomy_startup_mismatch`
+- `reason_taxonomy_readiness_mismatch`
+- `reason_taxonomy_integration_mismatch`
+- `reason_taxonomy_teardown_mismatch`
+- `normalized_evidence_primary_check_order_mismatch`
+- `normalized_evidence_status_mismatch:<check-id>`
+- `normalized_evidence_reason_code_mismatch:<check-id>`
+- `normalized_evidence_command_mismatch:<check-id>`
+
 ## Local Validation Commands
 
 ```bash

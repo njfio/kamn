@@ -5,6 +5,84 @@ import argparse
 import json
 from pathlib import Path
 
+EXPECTED_PRIMARY_CHECK_ORDER = [
+    "process_start",
+    "readiness_probe",
+    "kamn_live_integration",
+    "process_teardown",
+    "rollback_evidence",
+    "recovery_evidence",
+]
+
+
+def classify_overall_reason(status_value: str, reason_value: str) -> str:
+    if status_value == "ok" and reason_value == "dry_run_no_commands_executed":
+        return "lifecycle.not_run"
+    if status_value == "ok":
+        return "lifecycle.success"
+    if reason_value in (
+        "local_opt_in_missing",
+        "serve_command_missing",
+        "process_start_failed",
+        "process_readiness_failed",
+    ):
+        return "lifecycle.startup_failed"
+    if reason_value == "kamn_live_integration_failed":
+        return "lifecycle.integration_failed"
+    if reason_value == "process_teardown_failed":
+        return "lifecycle.teardown_failed"
+    if reason_value == "process_lifecycle_budget_exceeded":
+        return "lifecycle.budget_exceeded"
+    return "lifecycle.failed"
+
+
+def classify_start_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "startup.not_run",
+        "process_started": "startup.process_started",
+        "local_opt_in_missing": "startup.local_opt_in_missing",
+        "serve_command_missing": "startup.serve_command_missing",
+        "process_start_failed": "startup.process_start_failed",
+    }
+    return mapping.get(reason_value, "startup.other")
+
+
+def classify_readiness_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "readiness.not_run",
+        "readiness_checks_passed": "readiness.checks_passed",
+        "process_readiness_failed": "readiness.checks_failed",
+        "local_opt_in_missing": "readiness.prerequisite_failed",
+        "serve_command_missing": "readiness.prerequisite_failed",
+        "process_start_failed": "readiness.prerequisite_failed",
+    }
+    return mapping.get(reason_value, "readiness.other")
+
+
+def classify_integration_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "integration.not_run",
+        "kamn_live_integration_passed": "integration.passed",
+        "kamn_live_integration_timeout": "integration.timeout",
+        "process_readiness_failed": "integration.prerequisite_failed",
+        "local_opt_in_missing": "integration.prerequisite_failed",
+        "serve_command_missing": "integration.prerequisite_failed",
+        "process_start_failed": "integration.prerequisite_failed",
+    }
+    return mapping.get(reason_value, "integration.failed")
+
+
+def classify_teardown_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "teardown.not_run",
+        "process_teardown_passed": "teardown.passed",
+        "process_teardown_forced": "teardown.forced",
+        "local_opt_in_missing": "teardown.skipped_prerequisite_failed",
+        "serve_command_missing": "teardown.skipped_prerequisite_failed",
+        "process_start_failed": "teardown.skipped_prerequisite_failed",
+    }
+    return mapping.get(reason_value, "teardown.other")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -123,6 +201,68 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(teardown_reason_code, str) or not teardown_reason_code.strip():
         reason_codes.append("teardown_reason_code_missing")
 
+    reason_taxonomy = report.get("reason_taxonomy")
+    if not isinstance(reason_taxonomy, dict):
+        reason_codes.append("reason_taxonomy_missing")
+    else:
+        if reason_taxonomy.get("schema_version") != "kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1":
+            reason_codes.append("reason_taxonomy_schema_mismatch")
+        expected_overall_taxonomy = classify_overall_reason(
+            str(status) if isinstance(status, str) else "",
+            reason_code if isinstance(reason_code, str) else "",
+        )
+        if reason_taxonomy.get("overall") != expected_overall_taxonomy:
+            reason_codes.append("reason_taxonomy_overall_mismatch")
+        expected_start_taxonomy = classify_start_reason(
+            start_reason_code if isinstance(start_reason_code, str) else ""
+        )
+        if reason_taxonomy.get("startup") != expected_start_taxonomy:
+            reason_codes.append("reason_taxonomy_startup_mismatch")
+        expected_readiness_taxonomy = classify_readiness_reason(
+            readiness_reason_code if isinstance(readiness_reason_code, str) else ""
+        )
+        if reason_taxonomy.get("readiness") != expected_readiness_taxonomy:
+            reason_codes.append("reason_taxonomy_readiness_mismatch")
+        expected_integration_taxonomy = classify_integration_reason(
+            integration_reason_code if isinstance(integration_reason_code, str) else ""
+        )
+        if reason_taxonomy.get("integration") != expected_integration_taxonomy:
+            reason_codes.append("reason_taxonomy_integration_mismatch")
+        expected_teardown_taxonomy = classify_teardown_reason(
+            teardown_reason_code if isinstance(teardown_reason_code, str) else ""
+        )
+        if reason_taxonomy.get("teardown") != expected_teardown_taxonomy:
+            reason_codes.append("reason_taxonomy_teardown_mismatch")
+
+    normalized_evidence = report.get("normalized_evidence")
+    normalized_checks_by_id: dict[str, object] = {}
+    if not isinstance(normalized_evidence, dict):
+        reason_codes.append("normalized_evidence_missing")
+    else:
+        if normalized_evidence.get("schema_version") != "kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1":
+            reason_codes.append("normalized_evidence_schema_mismatch")
+        if normalized_evidence.get("primary_check_order") != EXPECTED_PRIMARY_CHECK_ORDER:
+            reason_codes.append("normalized_evidence_primary_check_order_mismatch")
+        checks_by_id = normalized_evidence.get("checks_by_id")
+        if not isinstance(checks_by_id, dict):
+            reason_codes.append("normalized_evidence_checks_by_id_missing")
+        else:
+            normalized_checks_by_id = checks_by_id
+            for check_id in EXPECTED_PRIMARY_CHECK_ORDER:
+                check_entry = checks_by_id.get(check_id)
+                if not isinstance(check_entry, dict):
+                    reason_codes.append(f"normalized_evidence_check_missing:{check_id}")
+                    continue
+                if not isinstance(check_entry.get("status"), str) or not check_entry.get("status"):
+                    reason_codes.append(f"normalized_evidence_status_invalid:{check_id}")
+                if (
+                    not isinstance(check_entry.get("reason_code"), str)
+                    or not check_entry.get("reason_code")
+                ):
+                    reason_codes.append(f"normalized_evidence_reason_code_invalid:{check_id}")
+                if not isinstance(check_entry.get("command"), str):
+                    reason_codes.append(f"normalized_evidence_command_invalid:{check_id}")
+
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
         reason_codes.append("artifact_paths_missing")
@@ -153,14 +293,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
     else:
-        expected_order = [
-            "process_start",
-            "readiness_probe",
-            "kamn_live_integration",
-            "process_teardown",
-            "rollback_evidence",
-            "recovery_evidence",
-        ]
+        expected_order = EXPECTED_PRIMARY_CHECK_ORDER
         expected_ids = set(expected_order)
         observed_ids: set[str] = set()
         for entry in checks:
@@ -222,6 +355,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
+
+        if normalized_checks_by_id and expected_ids.issubset(set(check_entries_by_id.keys())):
+            for check_id in expected_order:
+                normalized_entry = normalized_checks_by_id.get(check_id)
+                if not isinstance(normalized_entry, dict):
+                    continue
+                first_entry = check_entries_by_id[check_id][0]
+                if normalized_entry.get("status") != first_entry["status"]:
+                    reason_codes.append(f"normalized_evidence_status_mismatch:{check_id}")
+                if normalized_entry.get("reason_code") != first_entry["reason_code"]:
+                    reason_codes.append(f"normalized_evidence_reason_code_mismatch:{check_id}")
+                if normalized_entry.get("command") != first_entry["command"]:
+                    reason_codes.append(f"normalized_evidence_command_mismatch:{check_id}")
 
         for check_id, entries in check_entries_by_id.items():
             if len(entries) > 1:
