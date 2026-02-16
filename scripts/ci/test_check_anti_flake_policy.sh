@@ -161,6 +161,13 @@ name: CI fast gate
 jobs:
   fast:
     steps:
+      - name: Run Kolme local-heavy contract lane
+        if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'
+        run: echo "local heavy"
+      - name: Generate performance smoke report
+        run: echo "smoke"
+      - name: Check performance thresholds (smoke)
+        run: echo "threshold"
       - run: bash scripts/ci/run_with_retry.sh --max-attempts 1 -- cargo test
 EOF
 
@@ -208,6 +215,8 @@ jobs:
         run: echo "local heavy"
       - name: Generate performance smoke report
         run: echo "smoke"
+      - run: bash scripts/ci/run_with_retry.sh --max-attempts 2 -- cargo test
+      - run: bash scripts/ci/run_with_retry.sh --max-attempts 1 -- cargo test
 EOF
 
 set +e
