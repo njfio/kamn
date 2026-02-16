@@ -769,13 +769,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid`,
     `error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1`,
     `error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found`.
+  - ingress resilience governance remains deterministic via:
+    `ingress_resilience_gate_status=verified`,
+    `websocket_upgrade_parity_status=verified`,
+    `ci_local_promotion_budget_boundary_status=verified`,
+    `ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1`,
+    `ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
   - ingress limit config matrix defaults remain parity-checked against source constants and API docs (`api_max_requests_default=1`, `api_idle_timeout_default_ms=5000`, `body_size_limit_bytes=65536`, `api_concurrency_limit_default=32`, `api_rate_limit_per_second_default=120`).
   - runtime budget is bounded via `KAMN_SERVICE_API_AXUM_INGRESS_CONTRACT_MAX_SECONDS`.
   - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_axum_policy_marker_missing:concurrency_status`
-  - `service_api_axum_policy_marker_missing:method_path_classification_status`
+  - `service_api_axum_policy_marker_missing:websocket_upgrade_parity_status`
   - `service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
 

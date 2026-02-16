@@ -73,6 +73,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^method_path_classification_status=
   echo "expected service api axum ingress contract lane method/path classification marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ingress_resilience_gate_status=verified$'; then
+  echo "expected service api axum ingress contract lane ingress-resilience gate marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^websocket_upgrade_parity_status=verified$'; then
+  echo "expected service api axum ingress contract lane websocket-upgrade parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_promotion_budget_boundary_status=verified$'; then
+  echo "expected service api axum ingress contract lane ci/local promotion budget boundary marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy marker" >&2
   exit 1
@@ -105,6 +117,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_reason_codes_csv=se
   echo "expected service api axum ingress contract lane error-envelope reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane ingress-resilience reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+  echo "expected service api axum ingress contract lane ingress-resilience reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
   echo "expected service api axum ingress contract lane max-requests default marker" >&2
   exit 1
@@ -125,7 +145,7 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^api_rate_limit_per_second_default
   echo "expected service api axum ingress contract lane rate-limit default marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:method_path_classification_status$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:websocket_upgrade_parity_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
 fi
@@ -160,6 +180,12 @@ if lane_payload.get("error_envelope_field_status") != "verified":
     raise SystemExit("expected error_envelope_field_status=verified")
 if lane_payload.get("method_path_classification_status") != "verified":
     raise SystemExit("expected method_path_classification_status=verified")
+if lane_payload.get("ingress_resilience_gate_status") != "verified":
+    raise SystemExit("expected ingress_resilience_gate_status=verified")
+if lane_payload.get("websocket_upgrade_parity_status") != "verified":
+    raise SystemExit("expected websocket_upgrade_parity_status=verified")
+if lane_payload.get("ci_local_promotion_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
 if lane_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if lane_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
@@ -176,6 +202,10 @@ if lane_payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime.s
     raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker")
 if lane_payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
     raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker")
+if lane_payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker")
+if lane_payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -214,6 +244,10 @@ if policy_payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker in policy report")
 if policy_payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
     raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker in policy report")
+if policy_payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker in policy report")
+if policy_payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then

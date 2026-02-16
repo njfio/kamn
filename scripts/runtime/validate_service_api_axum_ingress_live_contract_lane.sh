@@ -19,8 +19,8 @@ POLICY_STATUS_KEY="service_api_axum_ingress_policy_status"
 SUMMARY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-validation.v1"
 POLICY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-policy-report.v1"
 LANE_REPORT_SCHEMA="kamn.runtime.service-api-axum-ingress-live-contract-lane-report.v1"
-TAMPER_FIELD="method_path_classification_status"
-TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:method_path_classification_status"
+TAMPER_FIELD="websocket_upgrade_parity_status"
+TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:websocket_upgrade_parity_status"
 ROADMAP_TASK_MARKER="Task #3308"
 ROADMAP_CONTRACT_SCRIPT_REF="scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh"
 ROADMAP_POLICY_SCRIPT_REF="scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
@@ -38,10 +38,15 @@ VALIDATION_REQUIRED_MARKERS=(
   "request_validation_status=verified"
   "error_envelope_field_status=verified"
   "method_path_classification_status=verified"
+  "ingress_resilience_gate_status=verified"
+  "websocket_upgrade_parity_status=verified"
+  "ci_local_promotion_budget_boundary_status=verified"
   "protocol_compliance_status=verified"
   "route_contract_parity_status=verified"
   "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
   "protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
+  "ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1"
+  "ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
   "request_validation_reason_registry_status=verified"
   "error_envelope_source_contract_status=verified"
   "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
@@ -72,6 +77,7 @@ STRATEGY_REQUIRED_MARKERS=(
   "service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
   "ingress limit config matrix defaults remain parity-checked against source constants and API docs"
   "request-validation and error-envelope taxonomy parity remains deterministic via:"
+  "ingress resilience governance remains deterministic via:"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status
@@ -79,10 +85,15 @@ LANE_REPORT_SUMMARY_FIELDS=(
   request_validation_status
   error_envelope_field_status
   method_path_classification_status
+  ingress_resilience_gate_status
+  websocket_upgrade_parity_status
+  ci_local_promotion_budget_boundary_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
   protocol_compliance_reason_codes_csv
+  ingress_resilience_reason_taxonomy_version
+  ingress_resilience_reason_codes_csv
   request_validation_reason_registry_status
   error_envelope_source_contract_status
   request_validation_reason_taxonomy_version
@@ -101,10 +112,15 @@ OUTPUT_SUMMARY_FIELDS=(
   request_validation_status
   error_envelope_field_status
   method_path_classification_status
+  ingress_resilience_gate_status
+  websocket_upgrade_parity_status
+  ci_local_promotion_budget_boundary_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
   protocol_compliance_reason_codes_csv
+  ingress_resilience_reason_taxonomy_version
+  ingress_resilience_reason_codes_csv
   request_validation_reason_registry_status
   error_envelope_source_contract_status
   request_validation_reason_taxonomy_version

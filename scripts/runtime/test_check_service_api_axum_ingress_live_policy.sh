@@ -28,8 +28,13 @@ cat >"$report_file" <<'JSON'
   "request_validation_status": "verified",
   "error_envelope_field_status": "verified",
   "method_path_classification_status": "verified",
+  "ingress_resilience_gate_status": "verified",
+  "websocket_upgrade_parity_status": "verified",
+  "ci_local_promotion_budget_boundary_status": "verified",
   "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
   "protocol_compliance_reason_codes_csv": "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected",
+  "ingress_resilience_reason_taxonomy_version": "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1",
+  "ingress_resilience_reason_codes_csv": "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
   "request_validation_reason_registry_status": "verified",
   "error_envelope_source_contract_status": "verified",
   "request_validation_reason_taxonomy_version": "kamn.runtime.service-api-request-validation-reason-taxonomy.v1",
@@ -90,6 +95,10 @@ if payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.s
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
     raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker")
+if payload.get("ingress_resilience_reason_taxonomy_version") != "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic ingress_resilience_reason_taxonomy_version marker")
+if payload.get("ingress_resilience_reason_codes_csv") != "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic ingress_resilience_reason_codes_csv marker")
 if payload.get("request_validation_reason_registry_status") != "verified":
     raise SystemExit("expected deterministic request_validation_reason_registry_status marker")
 if payload.get("error_envelope_source_contract_status") != "verified":
@@ -203,6 +212,39 @@ if ! printf '%s\n' "$tampered_method_path_classification_output" | grep -q 'serv
   exit 1
 fi
 
+tampered_websocket_upgrade_parity_report="$TMP_DIR/service-api-axum-ingress-live-summary.websocket-upgrade-parity.tampered.json"
+cp "$report_file" "$tampered_websocket_upgrade_parity_report"
+python3 - "$tampered_websocket_upgrade_parity_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["websocket_upgrade_parity_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_websocket_upgrade_parity_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_websocket_upgrade_parity_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.websocket-upgrade-parity.tampered.json" 2>&1
+)"
+tampered_websocket_upgrade_parity_code=$?
+set -e
+
+if [ "$tampered_websocket_upgrade_parity_code" -eq 0 ]; then
+  echo "expected tampered websocket-upgrade parity status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_websocket_upgrade_parity_output" | grep -q 'service_api_axum_policy_marker_missing:websocket_upgrade_parity_status'; then
+  echo "expected deterministic mismatch reason code for websocket-upgrade parity status tamper" >&2
+  exit 1
+fi
+
 tampered_protocol_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.protocol-taxonomy.tampered.json"
 cp "$report_file" "$tampered_protocol_taxonomy_report"
 python3 - "$tampered_protocol_taxonomy_report" <<'PY'
@@ -266,6 +308,39 @@ if [ "$tampered_request_validation_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_request_validation_taxonomy_output" | grep -q 'service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for tampered request-validation taxonomy" >&2
+  exit 1
+fi
+
+tampered_ingress_resilience_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.ingress-resilience-taxonomy.tampered.json"
+cp "$report_file" "$tampered_ingress_resilience_taxonomy_report"
+python3 - "$tampered_ingress_resilience_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["ingress_resilience_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_ingress_resilience_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_ingress_resilience_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.ingress-resilience-taxonomy.tampered.json" 2>&1
+)"
+tampered_ingress_resilience_taxonomy_code=$?
+set -e
+
+if [ "$tampered_ingress_resilience_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered ingress-resilience taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_ingress_resilience_taxonomy_output" | grep -q 'service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for ingress-resilience taxonomy tamper" >&2
   exit 1
 fi
 

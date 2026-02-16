@@ -33,6 +33,15 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+ci_local_promotion_max_seconds="${KAMN_SERVICE_API_AXUM_INGRESS_CI_LOCAL_PROMOTION_MAX_SECONDS:-$max_seconds}"
+if ! [[ "$ci_local_promotion_max_seconds" =~ ^[0-9]+$ ]]; then
+  echo "KAMN_SERVICE_API_AXUM_INGRESS_CI_LOCAL_PROMOTION_MAX_SECONDS must be an integer" >&2
+  exit 1
+fi
+if [ "$ci_local_promotion_max_seconds" -le 0 ]; then
+  echo "KAMN_SERVICE_API_AXUM_INGRESS_CI_LOCAL_PROMOTION_MAX_SECONDS must be greater than zero" >&2
+  exit 1
+fi
 if [ ! -f "$SOURCE_FILE" ]; then
   echo "expected service api source file: $SOURCE_FILE" >&2
   exit 1
@@ -687,6 +696,11 @@ protocol_compliance_status="verified"
 route_contract_parity_status="verified"
 protocol_compliance_reason_taxonomy_version="kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
 protocol_compliance_reason_codes_csv="method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
+ingress_resilience_gate_status="verified"
+websocket_upgrade_parity_status="verified"
+ci_local_promotion_budget_boundary_status="verified"
+ingress_resilience_reason_taxonomy_version="kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1"
+ingress_resilience_reason_codes_csv="ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
 request_validation_reason_taxonomy_version="kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
 request_validation_reason_codes_csv="service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid"
 error_envelope_reason_taxonomy_version="kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
@@ -695,6 +709,10 @@ error_envelope_reason_codes_csv="service_api_ws_upgrade_header_missing,service_a
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
   echo "service api axum ingress live validation exceeded runtime budget: ${elapsed_seconds}s" >&2
+  exit 1
+fi
+if [ "$elapsed_seconds" -gt "$ci_local_promotion_max_seconds" ]; then
+  echo "service api axum ingress live validation exceeded ci/local promotion boundary: ${elapsed_seconds}s > ${ci_local_promotion_max_seconds}s" >&2
   exit 1
 fi
 
@@ -713,10 +731,15 @@ cat >"$report_json" <<JSON
   "request_validation_status": "${request_validation_status}",
   "error_envelope_field_status": "${error_envelope_field_status}",
   "method_path_classification_status": "${method_path_classification_status}",
+  "ingress_resilience_gate_status": "${ingress_resilience_gate_status}",
+  "websocket_upgrade_parity_status": "${websocket_upgrade_parity_status}",
+  "ci_local_promotion_budget_boundary_status": "${ci_local_promotion_budget_boundary_status}",
   "protocol_compliance_status": "${protocol_compliance_status}",
   "route_contract_parity_status": "${route_contract_parity_status}",
   "protocol_compliance_reason_taxonomy_version": "${protocol_compliance_reason_taxonomy_version}",
   "protocol_compliance_reason_codes_csv": "${protocol_compliance_reason_codes_csv}",
+  "ingress_resilience_reason_taxonomy_version": "${ingress_resilience_reason_taxonomy_version}",
+  "ingress_resilience_reason_codes_csv": "${ingress_resilience_reason_codes_csv}",
   "request_validation_reason_registry_status": "${request_validation_reason_registry_status}",
   "error_envelope_source_contract_status": "${error_envelope_source_contract_status}",
   "request_validation_reason_taxonomy_version": "${request_validation_reason_taxonomy_version}",
@@ -730,6 +753,7 @@ cat >"$report_json" <<JSON
   "api_rate_limit_per_second_default": ${api_rate_limit_per_second_default},
   "fail_closed_status": "${fail_closed_status}",
   "ci_fast_gate_exclusion_status": "${ci_fast_gate_exclusion_status}",
+  "ci_local_promotion_max_seconds": ${ci_local_promotion_max_seconds},
   "performance_budget_status": "verified",
   "fail_closed_reason_code": "${fail_closed_reason_code}",
   "elapsed_seconds": ${elapsed_seconds}
@@ -751,10 +775,15 @@ echo "docs_ingress_limit_matrix_status=${docs_ingress_limit_matrix_status}"
 echo "request_validation_status=${request_validation_status}"
 echo "error_envelope_field_status=${error_envelope_field_status}"
 echo "method_path_classification_status=${method_path_classification_status}"
+echo "ingress_resilience_gate_status=${ingress_resilience_gate_status}"
+echo "websocket_upgrade_parity_status=${websocket_upgrade_parity_status}"
+echo "ci_local_promotion_budget_boundary_status=${ci_local_promotion_budget_boundary_status}"
 echo "protocol_compliance_status=${protocol_compliance_status}"
 echo "route_contract_parity_status=${route_contract_parity_status}"
 echo "protocol_compliance_reason_taxonomy_version=${protocol_compliance_reason_taxonomy_version}"
 echo "protocol_compliance_reason_codes_csv=${protocol_compliance_reason_codes_csv}"
+echo "ingress_resilience_reason_taxonomy_version=${ingress_resilience_reason_taxonomy_version}"
+echo "ingress_resilience_reason_codes_csv=${ingress_resilience_reason_codes_csv}"
 echo "request_validation_reason_registry_status=${request_validation_reason_registry_status}"
 echo "error_envelope_source_contract_status=${error_envelope_source_contract_status}"
 echo "request_validation_reason_taxonomy_version=${request_validation_reason_taxonomy_version}"

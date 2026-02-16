@@ -37,6 +37,13 @@ EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV = (
     "method_path_contract_mismatch,payload_shape_contract_mismatch,"
     "route_contract_bypass_detected"
 )
+EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1"
+)
+EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV = (
+    "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,"
+    "ci_local_promotion_budget_boundary_exceeded"
+)
 EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
 )
@@ -67,10 +74,15 @@ REQUIRED_REPORT_FIELDS = [
     "request_validation_status",
     "error_envelope_field_status",
     "method_path_classification_status",
+    "ingress_resilience_gate_status",
+    "websocket_upgrade_parity_status",
+    "ci_local_promotion_budget_boundary_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "protocol_compliance_reason_taxonomy_version",
     "protocol_compliance_reason_codes_csv",
+    "ingress_resilience_reason_taxonomy_version",
+    "ingress_resilience_reason_codes_csv",
     "request_validation_reason_registry_status",
     "error_envelope_source_contract_status",
     "request_validation_reason_taxonomy_version",
@@ -99,6 +111,9 @@ REQUIRED_VERIFIED_FIELDS = [
     "request_validation_status",
     "error_envelope_field_status",
     "method_path_classification_status",
+    "ingress_resilience_gate_status",
+    "websocket_upgrade_parity_status",
+    "ci_local_promotion_budget_boundary_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "request_validation_reason_registry_status",
@@ -217,6 +232,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_protocol_compliance_reason_codes_csv_mismatch",
     )
     decision.reject_if(
+        report.get("ingress_resilience_reason_taxonomy_version")
+        != EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("ingress_resilience_reason_codes_csv")
+        != EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV,
+        "service_api_axum_policy_ingress_resilience_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         report.get("request_validation_reason_taxonomy_version")
         != EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION,
         "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
@@ -262,6 +287,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         ),
         "protocol_compliance_reason_codes_csv": (
             EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV
+        ),
+        "ingress_resilience_reason_taxonomy_version": (
+            EXPECTED_INGRESS_RESILIENCE_REASON_TAXONOMY_VERSION
+        ),
+        "ingress_resilience_reason_codes_csv": (
+            EXPECTED_INGRESS_RESILIENCE_REASON_CODES_CSV
         ),
         "request_validation_reason_registry_status": (
             report.get("request_validation_reason_registry_status")
