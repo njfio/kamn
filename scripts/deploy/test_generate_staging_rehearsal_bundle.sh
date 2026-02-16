@@ -76,6 +76,20 @@ expected_command_contracts = {
 }
 if payload.get("command_contracts") != expected_command_contracts:
     raise SystemExit("expected deterministic staging rehearsal command contract markers")
+reason_taxonomy = payload.get("reason_taxonomy")
+if not isinstance(reason_taxonomy, dict):
+    raise SystemExit("expected deterministic staging rehearsal reason taxonomy output")
+if reason_taxonomy.get("schema_version") != "kamn.release.staging-rehearsal-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic staging rehearsal reason taxonomy schema marker")
+if reason_taxonomy.get("overall") != "rehearsal.success":
+    raise SystemExit("expected deterministic GO overall rehearsal reason taxonomy classification")
+normalized_evidence = payload.get("normalized_evidence")
+if not isinstance(normalized_evidence, dict):
+    raise SystemExit("expected deterministic staging rehearsal normalized evidence output")
+if normalized_evidence.get("schema_version") != "kamn.release.staging-rehearsal-evidence-normalization.v1":
+    raise SystemExit("expected deterministic staging rehearsal normalized evidence schema marker")
+if normalized_evidence.get("decision_reasons_csv") != "all rehearsal gates satisfied":
+    raise SystemExit("expected deterministic GO normalized decision_reasons_csv marker")
 if signoff.get("schema_version") != "kamn.release.staged-rehearsal-signoff.v1":
     raise SystemExit("expected staged_rehearsal_signoff schema marker")
 if signoff.get("lineage_status") != "verified":
@@ -326,6 +340,61 @@ if [ "$tampered_output_contract_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output_contract_output" | grep -q "evidence output contract version mismatch"; then
   echo "expected explicit evidence output contract version mismatch regression guard to be enforced" >&2
+  exit 1
+fi
+
+# Regression: #4500
+tampered_reason_taxonomy_bundle="$TMP_DIR/rehearsal-tampered-reason-taxonomy.json"
+cp "$go_bundle" "$tampered_reason_taxonomy_bundle"
+python3 - "$tampered_reason_taxonomy_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["reason_taxonomy"]["overall"] = "rehearsal.failed"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_reason_taxonomy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_reason_taxonomy_bundle" 2>&1)"
+tampered_reason_taxonomy_code=$?
+set -e
+
+if [ "$tampered_reason_taxonomy_code" -eq 0 ]; then
+  echo "expected reason-taxonomy drift rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reason_taxonomy_output" | grep -q "reason taxonomy mismatch"; then
+  echo "expected explicit reason taxonomy mismatch regression guard to be enforced" >&2
+  exit 1
+fi
+
+tampered_normalized_evidence_bundle="$TMP_DIR/rehearsal-tampered-normalized-evidence.json"
+cp "$go_bundle" "$tampered_normalized_evidence_bundle"
+python3 - "$tampered_normalized_evidence_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["normalized_evidence"]["decision_reasons_csv"] = "tampered-reason-csv"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_normalized_evidence_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_normalized_evidence_bundle" 2>&1)"
+tampered_normalized_evidence_code=$?
+set -e
+
+if [ "$tampered_normalized_evidence_code" -eq 0 ]; then
+  echo "expected normalized-evidence drift rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_normalized_evidence_output" | grep -q "normalized evidence bundle mismatch"; then
+  echo "expected explicit normalized evidence mismatch regression guard to be enforced" >&2
   exit 1
 fi
 
