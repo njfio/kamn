@@ -708,6 +708,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
   - `endpoint_readiness_status=verified`
   - `stream_parity_status=verified`
+  - `observability_tls_route_contract_status=verified`
 - Deterministic fail-closed marker for drift tamper drills:
   - `observability_source_marker_missing:async_dispatch`
   - `observability_source_marker_missing:legacy_tcp_listener_import`
@@ -842,7 +843,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - dry-run mode executes no nested local observability scrape commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`.
   - soak run-mode profile is local-only (`--lane-profile soak`) and emits deterministic `local_heavy_soak_lane_status=verified` plus iteration markers (`soak_iterations_requested`, `soak_iterations_executed`).
-  - bounded to seven targeted `kamn-node` observability endpoint tests when run mode is enabled (metrics/health scrape, stream projection, stream reconnect churn sequence, queue-bound budget enforcement, readiness failure-drill degradation taxonomy, and readiness dependency-probe taxonomy matrix coverage).
+  - bounded to eight targeted `kamn-node` observability endpoint tests when run mode is enabled (metrics/health scrape, HTTPS route coverage for `/metrics` + `/healthz` + `/readyz`, stream projection, stream reconnect churn sequence, queue-bound budget enforcement, readiness failure-drill degradation taxonomy, and readiness dependency-probe taxonomy matrix coverage).
   - async handler parity checks remain in the bounded test scope, including concurrent metrics/stream request handling against the async observability adapter path.
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
@@ -851,6 +852,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
   - lane emits deterministic readiness degradation drill marker (`readiness_failure_drill_status=verified`).
   - lane emits deterministic readiness reason taxonomy marker (`readiness_reason_taxonomy_status=verified`).
+  - lane emits deterministic observability TLS route marker (`observability_tls_route_contract_status=verified`).
   - lane emits deterministic degradation taxonomy marker (`degradation_taxonomy_status=verified`) and reason-code csv marker (`degradation_reason_codes_csv=none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded`).
   - lane emits deterministic scrape-failure taxonomy marker (`scrape_failure_taxonomy_status=verified`) and taxonomy csv marker (`scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status`).
   - telemetry degradation taxonomy policy checker markers remain command-surface contract-governed.
