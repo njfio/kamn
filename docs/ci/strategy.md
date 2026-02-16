@@ -2491,6 +2491,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - strict profile policy reason-taxonomy markers:
       - `reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1`
       - `reason_taxonomy_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_non_synthetic_submit_probe_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_in_memory_provider_reference_detected,runtime_signing_profile_mismatch`
+      - `fixture_profile_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1`
+      - `fixture_profile_reason_codes_csv=runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_command_profile_version_mismatch,runtime_commit_non_synthetic_policy_marker_missing,runtime_commit_non_synthetic_submit_probe_missing`
+      - `runtime_commit_failure_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1`
+      - `runtime_commit_failure_reason_codes_csv=runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing`
       - `observed_reason_codes_csv=none|<sorted reason csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`

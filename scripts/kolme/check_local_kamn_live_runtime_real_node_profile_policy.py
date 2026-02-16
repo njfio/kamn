@@ -66,6 +66,36 @@ REAL_NODE_REASON_TAXONOMY_CODES = (
     "runtime_signing_profile_mismatch",
 )
 REAL_NODE_REASON_TAXONOMY_CODES_CSV = ",".join(REAL_NODE_REASON_TAXONOMY_CODES)
+FIXTURE_PROFILE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1"
+)
+FIXTURE_PROFILE_REASON_TAXONOMY_CODES = (
+    "runtime_commit_command_profile_mismatch",
+    "runtime_commit_policy_command_profile_mismatch",
+    "runtime_commit_command_profile_version_mismatch",
+    "runtime_commit_non_synthetic_policy_marker_missing",
+    "runtime_commit_non_synthetic_submit_probe_missing",
+)
+FIXTURE_PROFILE_REASON_TAXONOMY_CODES_CSV = ",".join(
+    FIXTURE_PROFILE_REASON_TAXONOMY_CODES
+)
+RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1"
+)
+RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES = (
+    "runtime_commit_real_signing_profile_marker_missing",
+    "runtime_commit_simulated_signing_profile_detected",
+    "runtime_commit_signer_profile_marker_missing",
+    "runtime_commit_signer_profile_split_brain_detected",
+    "runtime_commit_signer_key_source_marker_missing",
+    "runtime_commit_in_memory_provider_reference_detected",
+    "runtime_commit_native_payload_pubkey_marker_missing",
+    "runtime_commit_native_payload_nonce_marker_missing",
+    "runtime_commit_native_payload_messages_marker_missing",
+)
+RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV = ",".join(
+    RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES
+)
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -847,6 +877,18 @@ def main() -> int:
         "observed_reason_code": report.get("reason_code"),
         "reason_taxonomy_version": REAL_NODE_REASON_TAXONOMY_VERSION,
         "reason_taxonomy_codes_csv": REAL_NODE_REASON_TAXONOMY_CODES_CSV,
+        "fixture_profile_reason_taxonomy_version": (
+            FIXTURE_PROFILE_REASON_TAXONOMY_VERSION
+        ),
+        "fixture_profile_reason_codes_csv": (
+            FIXTURE_PROFILE_REASON_TAXONOMY_CODES_CSV
+        ),
+        "runtime_commit_failure_reason_taxonomy_version": (
+            RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_VERSION
+        ),
+        "runtime_commit_failure_reason_codes_csv": (
+            RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV
+        ),
         "observed_reason_codes_csv": observed_reason_codes_csv,
         "reason_codes": reason_codes,
         "final_decision": final_decision,
@@ -863,6 +905,22 @@ def main() -> int:
     print(f"final_decision={final_decision}")
     print(f"reason_taxonomy_version={REAL_NODE_REASON_TAXONOMY_VERSION}")
     print(f"reason_taxonomy_codes_csv={REAL_NODE_REASON_TAXONOMY_CODES_CSV}")
+    print(
+        "fixture_profile_reason_taxonomy_version="
+        f"{FIXTURE_PROFILE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "fixture_profile_reason_codes_csv="
+        f"{FIXTURE_PROFILE_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "runtime_commit_failure_reason_taxonomy_version="
+        f"{RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "runtime_commit_failure_reason_codes_csv="
+        f"{RUNTIME_COMMIT_FAILURE_REASON_TAXONOMY_CODES_CSV}"
+    )
     print(f"observed_reason_codes_csv={observed_reason_codes_csv}")
     print(f"failed_checks={failed_checks}")
     if args.output_json:
