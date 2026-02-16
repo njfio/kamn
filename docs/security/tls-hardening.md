@@ -20,6 +20,8 @@ for `kamn-core` live HTTPS dependency posture governance.
 Representative fail-closed reason codes include:
 
 - `rustls_pemfile_dependency_optional_flag_mismatch`
+- `webpki_roots_dependency_missing`
+- `webpki_roots_feature_mapping_missing`
 - `readme_adr_link_missing`
 - `ci_strategy_live_https_feature_check_missing`
 - `ci_strategy_no_default_features_check_missing`

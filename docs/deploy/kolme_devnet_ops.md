@@ -44,5 +44,8 @@ Live-HTTPS dependency posture must remain explicit in compatibility runbooks:
   - `reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
 - Fail-closed drift reason markers:
   - `rustls_pemfile_dependency_optional_flag_mismatch`
+  - `webpki_roots_dependency_missing`
+  - `webpki_roots_feature_mapping_missing`
 
 - `Regression: #4108`
+- `Regression: #4107`
