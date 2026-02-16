@@ -181,10 +181,7 @@ fn evaluate_signer_secret_lifecycle_policy(
     markers: &BTreeMap<String, String>,
     reason_codes: &[&str],
 ) -> Result<(), String> {
-    if reason_codes
-        .iter()
-        .any(|reason| *reason == FALLBACK_SECRET_VIOLATION_REASON)
-    {
+    if reason_codes.contains(&FALLBACK_SECRET_VIOLATION_REASON) {
         return Err(format!(
             "forbidden_reason_code:{FALLBACK_SECRET_VIOLATION_REASON}"
         ));
