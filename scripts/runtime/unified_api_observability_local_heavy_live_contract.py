@@ -32,6 +32,63 @@ POLICY_SCHEMA = "kamn.runtime.unified-api-observability-local-heavy-live-policy-
 CONTRACT_LANE_SCHEMA = (
     "kamn.runtime.unified-api-observability-local-heavy-live-contract-lane-report.v1"
 )
+POLICY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.unified-api-observability-local-heavy-policy-reason-taxonomy.v1"
+)
+POLICY_REASON_CODES_CSV = ",".join(
+    [
+        "ci_fast_gate_failed",
+        "unified_api_observability_local_heavy_policy_artifact_paths_invalid",
+        "unified_api_observability_local_heavy_policy_ci_fast_gate_mismatch",
+        "unified_api_observability_local_heavy_policy_command_budget_exceeded",
+        "unified_api_observability_local_heavy_policy_command_count_invalid",
+        "unified_api_observability_local_heavy_policy_command_max_seconds_invalid",
+        "unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch",
+        "unified_api_observability_local_heavy_policy_compatibility_policy_schema_mismatch",
+        "unified_api_observability_local_heavy_policy_compatibility_policy_status_mismatch",
+        "unified_api_observability_local_heavy_policy_compatibility_report_schema_mismatch",
+        "unified_api_observability_local_heavy_policy_dry_run_command_count_mismatch",
+        "unified_api_observability_local_heavy_policy_dry_run_command_status_mismatch",
+        "unified_api_observability_local_heavy_policy_dry_run_eligibility_mismatch",
+        "unified_api_observability_local_heavy_policy_dry_run_reason_code_mismatch",
+        (
+            "unified_api_observability_local_heavy_policy_"
+            "dry_run_soak_iterations_executed_mismatch"
+        ),
+        "unified_api_observability_local_heavy_policy_dry_run_soak_status_mismatch",
+        "unified_api_observability_local_heavy_policy_elapsed_seconds_invalid",
+        "unified_api_observability_local_heavy_policy_fast_gate_exclusion_reason_mismatch",
+        "unified_api_observability_local_heavy_policy_fast_gate_exclusion_status_mismatch",
+        "unified_api_observability_local_heavy_policy_final_decision_invalid",
+        "unified_api_observability_local_heavy_policy_final_decision_mismatch",
+        "unified_api_observability_local_heavy_policy_lane_mode_invalid",
+        "unified_api_observability_local_heavy_policy_max_seconds_invalid",
+        "unified_api_observability_local_heavy_policy_observability_policy_schema_mismatch",
+        "unified_api_observability_local_heavy_policy_observability_policy_status_mismatch",
+        "unified_api_observability_local_heavy_policy_observability_report_schema_mismatch",
+        "unified_api_observability_local_heavy_policy_observability_soak_status_mismatch",
+        "unified_api_observability_local_heavy_policy_run_mode_command_count_mismatch",
+        "unified_api_observability_local_heavy_policy_run_mode_command_status_mismatch",
+        "unified_api_observability_local_heavy_policy_run_mode_exclusion_mismatch",
+        "unified_api_observability_local_heavy_policy_run_mode_reason_code_mismatch",
+        (
+            "unified_api_observability_local_heavy_policy_"
+            "run_mode_soak_iterations_executed_invalid"
+        ),
+        "unified_api_observability_local_heavy_policy_run_mode_soak_iterations_mismatch",
+        (
+            "unified_api_observability_local_heavy_policy_"
+            "run_mode_soak_iterations_requested_invalid"
+        ),
+        "unified_api_observability_local_heavy_policy_run_mode_soak_status_mismatch",
+        "unified_api_observability_local_heavy_policy_runtime_budget_exceeded",
+        "unified_api_observability_local_heavy_policy_runtime_budget_status_mismatch",
+        "unified_api_observability_local_heavy_policy_schema_mismatch",
+        "unified_api_observability_local_heavy_policy_soak_iterations_executed_invalid",
+        "unified_api_observability_local_heavy_policy_soak_iterations_requested_invalid",
+        "unified_api_observability_local_heavy_policy_status_mismatch",
+    ]
+)
 
 COMPATIBILITY_RUN_SCHEMA = (
     "kamn.runtime.service-api-observability-route-compatibility-live-report.v1"
@@ -546,7 +603,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "final_decision": final_decision,
         "expected_final_decision": expected_final_decision,
         "unified_api_observability_local_heavy_policy_status": policy_status,
+        "reason_taxonomy_version": POLICY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": POLICY_REASON_CODES_CSV,
         "reason_codes": reason_codes,
+        "reason_codes_value": ",".join(reason_codes),
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -557,17 +617,21 @@ def _check_policy(args: argparse.Namespace) -> int:
         output_json = Path(args.output_json).resolve()
         write_json(output_json, policy_payload)
 
+    reason_codes_csv = ",".join(reason_codes)
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"unified_api_observability_local_heavy_policy_status={policy_status}")
-    print(f"reason_codes={','.join(reason_codes)}")
+    print(f"reason_taxonomy_version={POLICY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={POLICY_REASON_CODES_CSV}")
+    print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 
     if final_decision != "GO":
         fail(
             "unified API-observability local-heavy policy rejected: "
-            f"{','.join(reason_codes)}"
+            f"{reason_codes_csv}"
         )
 
     return 0
@@ -608,6 +672,16 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
                 output_json=str(policy_report),
             )
         )
+        policy_payload = load_json(policy_report)
+        if (
+            policy_payload.get("reason_taxonomy_version")
+            != POLICY_REASON_TAXONOMY_VERSION
+        ):
+            fail("unified local-heavy contract lane policy reason taxonomy marker mismatch")
+        if policy_payload.get("reason_codes_csv") != POLICY_REASON_CODES_CSV:
+            fail("unified local-heavy contract lane policy reason code taxonomy marker mismatch")
+        if policy_payload.get("reason_codes_value") != "none":
+            fail("unified local-heavy contract lane policy reason_codes_value marker mismatch")
 
         payload = json.loads(summary_report.read_text(encoding="utf-8"))
         payload["compatibility_matrix_status"] = "missing"
@@ -666,6 +740,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "docs_contract_status": "verified",
             "performance_budget_status": "verified",
             "fail_closed_reason_code": tamper_reason_code,
+            "policy_reason_taxonomy_version": POLICY_REASON_TAXONOMY_VERSION,
+            "policy_reason_codes_csv": POLICY_REASON_CODES_CSV,
+            "policy_reason_codes_value": "none",
             "summary_report_file": str(summary_report),
             "policy_report_file": str(policy_report),
             "elapsed_seconds": elapsed_seconds,
@@ -689,6 +766,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
     print("unified_api_observability_local_heavy_policy_status=verified")
     print("docs_contract_status=verified")
     print("performance_budget_status=verified")
+    print(f"policy_reason_taxonomy_version={POLICY_REASON_TAXONOMY_VERSION}")
+    print(f"policy_reason_codes_csv={POLICY_REASON_CODES_CSV}")
+    print("policy_reason_codes_value=none")
     print(
         "fail_closed_reason_code="
         "unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch"
