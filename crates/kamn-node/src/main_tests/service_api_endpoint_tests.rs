@@ -1893,6 +1893,37 @@ fn functional_service_api_endpoint_lifecycle_rejection_projection_maps_limiter_c
 }
 
 #[test]
+fn functional_service_api_endpoint_backpressure_projection_covers_reason_codes() {
+    let expected = [
+        (
+            "service_api_ingress_concurrency_limit_exceeded",
+            "async-lifecycle-limiter",
+            "concurrency-limit",
+        ),
+        (
+            "service_api_ingress_rate_limit_exceeded",
+            "async-lifecycle-limiter",
+            "rate-limit",
+        ),
+        (
+            "service_api_ingress_sender_rate_limit_exceeded",
+            "sender-admission-limiter",
+            "anti-spam",
+        ),
+    ];
+
+    for (reason_code, rejection_class, outcome) in expected {
+        let projection = project_service_api_lifecycle_rejection(reason_code)
+            .expect("known backpressure reason code should project");
+        assert_eq!(projection.reason_code, reason_code);
+        assert_eq!(projection.rejection_class, rejection_class);
+        assert_eq!(projection.status_code, 429);
+        assert_eq!(projection.error_label, "too-many-requests");
+        assert_eq!(projection.outcome, outcome);
+    }
+}
+
+#[test]
 fn integration_service_api_endpoint_lifecycle_projection_matches_live_concurrency_rejection() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
@@ -1982,6 +2013,114 @@ fn integration_service_api_endpoint_lifecycle_projection_matches_live_concurrenc
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after lifecycle projection integration budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_across_rounds() {
+    // Regression: #4315
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34068".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let rounds = 3_u64;
+    let worker_count = 4_usize;
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: rounds * worker_count as u64,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: 1,
+        rate_limit_per_second: 1_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:test-client-concurrency-regression";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    for round in 0..rounds {
+        let barrier = Arc::new(Barrier::new(worker_count));
+        let mut clients = Vec::with_capacity(worker_count);
+        for request_index in 0..worker_count {
+            let client_bind_addr = bind_addr.clone();
+            let barrier = barrier.clone();
+            let state_hash = state_hash.clone();
+            clients.push(thread::spawn(move || {
+                let body = format!(
+                    "{{\"message\":\"concurrency-stability-round-{round}-request-{request_index}\"}}"
+                );
+                let nonce = 4_000 + round * worker_count as u64 + request_index as u64;
+                let signature =
+                    baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), &body);
+                let nonce_text = nonce.to_string();
+                barrier.wait();
+                send_http_request_with_headers(
+                    client_bind_addr.as_str(),
+                    "POST",
+                    "/v1/messages/send",
+                    body.as_str(),
+                    &[
+                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                        ("X-KAMN-Request-Signature", signature.as_str()),
+                    ],
+                )
+            }));
+        }
+
+        let responses = clients
+            .into_iter()
+            .map(|client| client.join().expect("client request should complete"))
+            .collect::<Vec<String>>();
+        assert!(
+            responses
+                .iter()
+                .any(|response| response.contains("HTTP/1.1 202 Accepted")),
+            "round {round} expected at least one accepted request"
+        );
+        let rejection_payloads = responses
+            .iter()
+            .filter(|response| response.contains("HTTP/1.1 429 Too Many Requests"))
+            .map(|response| parse_error_envelope_from_http_response(response))
+            .collect::<Vec<ServiceApiErrorEnvelope>>();
+        assert!(
+            !rejection_payloads.is_empty(),
+            "round {round} expected at least one fail-closed concurrency rejection"
+        );
+        for payload in rejection_payloads {
+            assert_eq!(payload.error, "too-many-requests");
+            assert_eq!(
+                payload.reason_code,
+                "service_api_ingress_concurrency_limit_exceeded"
+            );
+            assert!(payload
+                .message
+                .contains("ingress concurrency limit exceeded"));
+        }
+    }
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after concurrency regression rounds"
     );
 }
 

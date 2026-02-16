@@ -65,6 +65,38 @@ Kolme-live keys:
 - `kolme_live_base_url`, `kolme_live_provider_hint`, `kolme_live_signing_profile`
 - `kolme_live_strict_signer_contracts`, `kolme_live_signer_profile`, `kolme_live_signer_key_source`
 
+## Async API Backpressure Failure Modes (Issue #4315)
+
+`kamn-node` async API ingress limits remain fail closed under bounded-concurrency pressure.
+
+Deterministic taxonomy marker:
+
+- `service_api_backpressure_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
+
+Backpressure reason markers:
+
+- `service_api_ingress_concurrency_limit_exceeded`
+- `service_api_ingress_rate_limit_exceeded`
+- `service_api_ingress_sender_rate_limit_exceeded`
+
+fail-closed response contract:
+
+- backpressure limiter rejections emit `HTTP 429` with `error=too-many-requests`
+- concurrency saturation maps to `outcome=concurrency-limit`
+- ingress rate pressure maps to `outcome=rate-limit`
+- sender admission anti-spam pressure maps to `outcome=anti-spam`
+
+Validation commands:
+
+- `cargo test -p kamn-node integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded -- --exact`
+- `cargo test -p kamn-node regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_across_rounds -- --exact`
+- `cargo test -p kamn-node functional_service_api_endpoint_backpressure_projection_covers_reason_codes -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_async_backpressure_failure_modes -- --exact`
+
+Regression marker:
+
+- `Regression: #4315`
+
 ## TLS Runtime Transport Behavior Contracts
 
 Runtime-commit HTTPS execution in `kolme-live` mode uses an in-process rustls
