@@ -152,7 +152,7 @@ if ! grep -q "service api tranche-2 wrapper retirement parity guard" "$STRATEGY_
 fi
 
 set +e
-unknown_wrapper_output="$(bash "$DISPATCHER" --lane-wrapper validate_service_api_unknown_contract_lane.sh --resolve-impl-path 2>&1)"
+unknown_wrapper_output="$(bash "$DISPATCHER" --lane-wrapper validate_service_api_unknown_contract_lane.sh --resolve-impl-path --fallback-output-json "$TMP_DIR/service-api-tranche2-dispatch-fallback.report.json" 2>&1)"
 unknown_wrapper_code=$?
 set -e
 if [ "$unknown_wrapper_code" -eq 0 ]; then
@@ -163,6 +163,42 @@ if ! printf '%s\n' "$unknown_wrapper_output" | grep -q 'unknown service api tran
   echo "expected deterministic unknown-wrapper reason marker for service api tranche-2 dispatcher" >&2
   exit 1
 fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^dispatch_status=fail$'; then
+  echo "expected deterministic dispatcher fallback status marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_taxonomy_version=kamn.runtime.service-api-tranche2-dispatch-fallback-reason-taxonomy.v1$'; then
+  echo "expected deterministic dispatcher fallback taxonomy marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_codes_csv=dispatcher_impl_missing,dispatcher_impl_not_executable,dispatcher_unknown_wrapper$'; then
+  echo "expected deterministic dispatcher fallback reason code set marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$unknown_wrapper_output" | grep -q '^fallback_reason_code=dispatcher_unknown_wrapper$'; then
+  echo "expected deterministic dispatcher fallback reason code marker for unknown service api tranche-2 wrapper" >&2
+  exit 1
+fi
+python3 - "$TMP_DIR/service-api-tranche2-dispatch-fallback.report.json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.service-api-tranche2-dispatch-fallback-report.v1":
+    raise SystemExit("expected deterministic schema version in service api tranche-2 dispatcher fallback report")
+if payload.get("dispatch_status") != "fail":
+    raise SystemExit("expected dispatch_status=fail in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_taxonomy_version") != "kamn.runtime.service-api-tranche2-dispatch-fallback-reason-taxonomy.v1":
+    raise SystemExit("expected fallback taxonomy version in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_codes_csv") != "dispatcher_impl_missing,dispatcher_impl_not_executable,dispatcher_unknown_wrapper":
+    raise SystemExit("expected deterministic fallback reason code set in service api tranche-2 dispatcher fallback report")
+if payload.get("fallback_reason_code") != "dispatcher_unknown_wrapper":
+    raise SystemExit("expected fallback_reason_code=dispatcher_unknown_wrapper in service api tranche-2 dispatcher fallback report")
+if "unknown service api tranche-2 wrapper for dispatch" not in str(payload.get("fallback_reason_detail", "")):
+    raise SystemExit("expected unknown-wrapper detail marker in service api tranche-2 dispatcher fallback report")
+PY
 
 tampered_matrix="$TMP_DIR/service-api-tranche2-wrapper-family-matrix.tampered.json"
 cp "$MATRIX_FILE" "$tampered_matrix"
