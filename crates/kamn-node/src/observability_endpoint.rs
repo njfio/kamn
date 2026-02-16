@@ -84,6 +84,7 @@ enum ObservabilityEndpointTlsMode {
 #[cfg(test)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ObservabilityEndpointTlsModeOverride {
+    InvalidMode { mode: String },
     Require { cert_file: String, key_file: String },
 }
 
@@ -375,6 +376,9 @@ fn resolve_observability_endpoint_tls_mode() -> Result<ObservabilityEndpointTlsM
         .with(|tls_mode_override| tls_mode_override.borrow().clone())
     {
         return match tls_mode_override {
+            ObservabilityEndpointTlsModeOverride::InvalidMode { mode } => Err(format!(
+                "observability endpoint tls mode is invalid: {mode} (supported: {OBSERVABILITY_ENDPOINT_TLS_MODE_DISABLED},{OBSERVABILITY_ENDPOINT_TLS_MODE_REQUIRE})"
+            )),
             ObservabilityEndpointTlsModeOverride::Require {
                 cert_file,
                 key_file,

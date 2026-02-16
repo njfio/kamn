@@ -48,12 +48,20 @@ if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_route_cont
   echo "expected observability TLS route contract marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_negative_matrix_status=verified$'; then
+  echo "expected observability TLS negative matrix marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1$'; then
   echo "expected reason taxonomy version marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded$'; then
   echo "expected reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
+  echo "expected observability TLS negative matrix reason taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_budget_boundary_status=verified$'; then
@@ -95,10 +103,14 @@ if payload.get("timeout_contract_status") != "verified":
     raise SystemExit("expected timeout_contract_status=verified")
 if payload.get("observability_tls_route_contract_status") != "verified":
     raise SystemExit("expected observability_tls_route_contract_status=verified")
+if payload.get("observability_tls_negative_matrix_status") != "verified":
+    raise SystemExit("expected observability_tls_negative_matrix_status=verified")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
 if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
     raise SystemExit("expected deterministic reason_codes_csv marker")
+if payload.get("observability_tls_negative_matrix_reason_codes_csv") != "observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected":
+    raise SystemExit("expected deterministic observability_tls_negative_matrix_reason_codes_csv marker")
 if payload.get("ci_local_budget_boundary_status") != "verified":
     raise SystemExit("expected ci_local_budget_boundary_status=verified")
 if payload.get("fail_closed_status") != "verified":
