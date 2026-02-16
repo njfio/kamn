@@ -32,6 +32,9 @@ TEST_HARNESS_SCRIPT_COUNT_BASELINE=3
 TEST_HARNESS_SHELL_LINE_TOTAL_BASELINE=90
 EOF_BASELINE
 
+EXPECTED_REASON_TAXONOMY_VERSION='kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1'
+EXPECTED_REASON_CODES_CSV='report_file_not_found,budget_file_not_found,baseline_file_not_found,trend_threshold_file_not_found,report_json_invalid,report_schema_mismatch,report_harness_script_count_invalid,report_harness_shell_line_total_invalid,budget_key_missing,budget_value_invalid,baseline_key_missing,baseline_value_invalid,trend_threshold_key_missing,trend_threshold_value_invalid,trend_threshold_order_invalid,harness_script_count_soft_max_exceeded,harness_shell_line_total_soft_max_exceeded,harness_script_count_trend_warn_delta_exceeded,harness_shell_line_total_trend_warn_delta_exceeded,harness_script_count_trend_fail_delta_exceeded,harness_shell_line_total_trend_fail_delta_exceeded,trend_fail_enforcement_triggered'
+
 POLICY_JSON="$TMP_DIR/policy-within.json"
 within_output="$(
   bash "$SCRIPT" \
@@ -57,6 +60,26 @@ if ! printf '%s\n' "$within_output" | grep -q '^review_required=false$'; then
 fi
 if ! printf '%s\n' "$within_output" | grep -q '^reason_codes=none$'; then
   echo "expected reason_codes=none for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q "^reason_taxonomy_version=${EXPECTED_REASON_TAXONOMY_VERSION}$"; then
+  echo "expected deterministic reason taxonomy version marker for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q "^reason_codes_csv=${EXPECTED_REASON_CODES_CSV}$"; then
+  echo "expected deterministic reason taxonomy csv marker for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected normalized reason_codes_value=none for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^reason_class=stable$'; then
+  echo "expected reason_class=stable for within-budget soft checker path" >&2
   exit 1
 fi
 
@@ -109,6 +132,16 @@ if ! printf '%s\n' "$exceeded_output" | grep -q '^reason_codes=harness_script_co
   exit 1
 fi
 
+if ! printf '%s\n' "$exceeded_output" | grep -q '^reason_codes_value=harness_script_count_soft_max_exceeded,harness_shell_line_total_soft_max_exceeded$'; then
+  echo "expected deterministic normalized reason_codes_value marker for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$exceeded_output" | grep -q '^reason_class=budgeted$'; then
+  echo "expected reason_class=budgeted for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
 BROKEN_REPORT="$TMP_DIR/broken-report.json"
 cat >"$BROKEN_REPORT" <<'EOF_REPORT'
 {
@@ -139,6 +172,16 @@ if ! printf '%s\n' "$broken_output" | grep -q '^error=unexpected report schema:'
 fi
 if ! printf '%s\n' "$broken_output" | grep -q '^reason_codes=report_schema_mismatch$'; then
   echo "expected deterministic reason_codes marker for invalid report schema path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$broken_output" | grep -q '^reason_codes_value=report_schema_mismatch$'; then
+  echo "expected normalized reason_codes_value marker for invalid report schema path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$broken_output" | grep -q '^reason_class=violation$'; then
+  echo "expected reason_class=violation marker for invalid report schema path" >&2
   exit 1
 fi
 

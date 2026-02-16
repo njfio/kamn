@@ -244,6 +244,8 @@ summary = {
     "exceeded_decision": exceeded["policy_decision"],
     "warn_decision": warn["policy_decision"],
     "fail_decision": fail["policy_decision"],
+    "ci_smoke_lane_cost_profile": "low",
+    "ci_smoke_runtime_budget_status": "within",
     "combined_reason_code_contract": "pass",
     "trend_reason_code_contract": "pass",
     "within_reason_codes": within.get("reason_codes", []),
@@ -278,6 +280,8 @@ payload["status"] = status
 payload["runtime_seconds"] = elapsed_seconds
 payload["max_runtime_seconds"] = max_runtime_seconds
 payload["reason_key"] = reason_key
+payload["ci_smoke_lane_cost_profile"] = "low"
+payload["ci_smoke_runtime_budget_status"] = "within" if status == "pass" else "exceeded"
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
@@ -313,11 +317,30 @@ print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("fail_decisi
 PY
 )"
 
+ci_smoke_runtime_budget_status="$(python3 - "$OUTPUT_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("ci_smoke_runtime_budget_status", ""))
+PY
+)"
+
+reason_key_value="$(python3 - "$OUTPUT_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+print(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")).get("reason_key", ""))
+PY
+)"
+
 echo "test_harness_loc_soft_budget_contract_status=$status"
 echo "test_harness_loc_soft_budget_contract_within_decision=$within_decision"
 echo "test_harness_loc_soft_budget_contract_exceeded_decision=$exceeded_decision"
 echo "test_harness_loc_soft_budget_contract_warn_decision=$warn_decision"
 echo "test_harness_loc_soft_budget_contract_fail_decision=$fail_decision"
+echo "test_harness_loc_soft_budget_contract_ci_smoke_lane_cost_profile=low"
+echo "test_harness_loc_soft_budget_contract_ci_smoke_runtime_budget_status=$ci_smoke_runtime_budget_status"
+echo "test_harness_loc_soft_budget_contract_reason_key=$reason_key_value"
 echo "test_harness_loc_soft_budget_contract_report=$(realpath "$OUTPUT_JSON")"
 
 if [ "$status" != "pass" ]; then

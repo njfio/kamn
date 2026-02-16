@@ -11,6 +11,53 @@ import sys
 
 INPUT_SCHEMA = "kamn.ci.test-harness-loc-report.v1"
 OUTPUT_SCHEMA = "kamn.ci.test-harness-loc-soft-budget-report.v1"
+REASON_TAXONOMY_VERSION = "kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1"
+REASON_CODES_CSV = (
+    "report_file_not_found,"
+    "budget_file_not_found,"
+    "baseline_file_not_found,"
+    "trend_threshold_file_not_found,"
+    "report_json_invalid,"
+    "report_schema_mismatch,"
+    "report_harness_script_count_invalid,"
+    "report_harness_shell_line_total_invalid,"
+    "budget_key_missing,"
+    "budget_value_invalid,"
+    "baseline_key_missing,"
+    "baseline_value_invalid,"
+    "trend_threshold_key_missing,"
+    "trend_threshold_value_invalid,"
+    "trend_threshold_order_invalid,"
+    "harness_script_count_soft_max_exceeded,"
+    "harness_shell_line_total_soft_max_exceeded,"
+    "harness_script_count_trend_warn_delta_exceeded,"
+    "harness_shell_line_total_trend_warn_delta_exceeded,"
+    "harness_script_count_trend_fail_delta_exceeded,"
+    "harness_shell_line_total_trend_fail_delta_exceeded,"
+    "trend_fail_enforcement_triggered"
+)
+REASON_CODES_BUDGETED = frozenset(
+    {
+        "harness_script_count_soft_max_exceeded",
+        "harness_shell_line_total_soft_max_exceeded",
+        "harness_script_count_trend_warn_delta_exceeded",
+        "harness_shell_line_total_trend_warn_delta_exceeded",
+        "harness_script_count_trend_fail_delta_exceeded",
+        "harness_shell_line_total_trend_fail_delta_exceeded",
+    }
+)
+
+
+def reason_codes_value(reason_codes: list[str]) -> str:
+    return "none" if not reason_codes else ",".join(reason_codes)
+
+
+def classify_reason_class(reason_codes: list[str]) -> str:
+    if not reason_codes:
+        return "stable"
+    if all(code in REASON_CODES_BUDGETED for code in reason_codes):
+        return "budgeted"
+    return "violation"
 
 
 def parse_key_value_budget_file(path: Path) -> dict[str, str]:
@@ -69,8 +116,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def fail(error: str, reason_code: str) -> int:
+    reason_codes = [reason_code]
     print("status=fail")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
     print(f"reason_codes={reason_code}")
+    print(f"reason_codes_value={reason_codes_value(reason_codes)}")
+    print(f"reason_class={classify_reason_class(reason_codes)}")
     print(f"error={error}")
     return 1
 
@@ -252,8 +304,11 @@ def main(argv: list[str]) -> int:
     status = "ok"
     exit_code = 0
     if args.enforce_trend_fail and trend_status == "fail":
+        combined_reason_codes.append("trend_fail_enforcement_triggered")
         status = "fail"
         exit_code = 1
+    combined_reason_class = classify_reason_class(combined_reason_codes)
+    combined_reason_codes_value = reason_codes_value(combined_reason_codes)
 
     output = {
         "schema_version": OUTPUT_SCHEMA,
@@ -273,9 +328,13 @@ def main(argv: list[str]) -> int:
         "exceeded_metrics": exceeded_metrics,
         "trend_warning_metrics": trend_warning_metrics,
         "trend_fail_metrics": trend_fail_metrics,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
         "soft_budget_reason_codes": soft_budget_reason_codes,
         "trend_reason_codes": trend_reason_codes,
         "reason_codes": combined_reason_codes,
+        "reason_codes_value": combined_reason_codes_value,
+        "reason_class": combined_reason_class,
         "harness_script_count": harness_script_count,
         "harness_shell_line_total": harness_shell_line_total,
         "soft_max_harness_script_count": soft_max_script_count,
@@ -314,9 +373,11 @@ def main(argv: list[str]) -> int:
     print(
         f"trend_fail_metrics={'none' if not trend_fail_metrics else ','.join(trend_fail_metrics)}"
     )
-    print(
-        f"reason_codes={'none' if not combined_reason_codes else ','.join(combined_reason_codes)}"
-    )
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
+    print(f"reason_codes={combined_reason_codes_value}")
+    print(f"reason_codes_value={combined_reason_codes_value}")
+    print(f"reason_class={combined_reason_class}")
     print(f"harness_script_count={harness_script_count}")
     print(f"harness_shell_line_total={harness_shell_line_total}")
     print(f"delta_harness_script_count={delta_harness_script_count}")

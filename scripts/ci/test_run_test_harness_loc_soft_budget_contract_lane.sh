@@ -65,6 +65,16 @@ if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contr
   exit 1
 fi
 
+if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contract_ci_smoke_lane_cost_profile=low$'; then
+  echo "expected low-cost CI smoke lane marker from contract lane" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contract_ci_smoke_runtime_budget_status=within$'; then
+  echo "expected bounded CI smoke runtime budget marker from contract lane" >&2
+  exit 1
+fi
+
 if [ ! -f "$REPORT_FILE" ]; then
   echo "expected generic soft-budget contract report to be emitted" >&2
   exit 1
@@ -82,6 +92,21 @@ fi
 
 if ! grep -q '"trend_reason_code_contract": "pass"' "$REPORT_FILE"; then
   echo "expected trend reason-code contract to pass" >&2
+  exit 1
+fi
+
+if ! grep -q '"ci_smoke_lane_cost_profile": "low"' "$REPORT_FILE"; then
+  echo "expected low-cost CI smoke lane marker in contract report payload" >&2
+  exit 1
+fi
+
+if ! grep -q '"ci_smoke_runtime_budget_status": "within"' "$REPORT_FILE"; then
+  echo "expected bounded CI smoke runtime budget marker in contract report payload" >&2
+  exit 1
+fi
+
+if ! grep -q '"reason_key": "test_harness_loc_soft_budget_contract_ok"' "$REPORT_FILE"; then
+  echo "expected deterministic reason_key marker in contract report payload" >&2
   exit 1
 fi
 
