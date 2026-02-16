@@ -100,6 +100,21 @@ if ! grep -q "Regression: #4497" "$RELEASE_GONOGO_DOC"; then
   exit 1
 fi
 
+if ! grep -q "demo_evidence_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme reason taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "demo_evidence_normalization_version=kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme normalization marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #4498" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme taxonomy normalization regression marker" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_signed_to_kolme_demo_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference local signed-to-Kolme demo contract lane" >&2
   exit 1
@@ -140,6 +155,33 @@ if summary.get("runtime_commit_finality_evidence_marker_present") is not False:
     raise SystemExit("expected runtime commit finality marker absence in dry-run summary")
 if summary.get("runtime_commit_submit_finality_contract_version") != "v1":
     raise SystemExit("expected signed-to-Kolme submit/finality contract version marker")
+reason_taxonomy = summary.get("reason_taxonomy")
+if not isinstance(reason_taxonomy, dict):
+    raise SystemExit("expected signed-to-Kolme dry-run reason taxonomy")
+if reason_taxonomy.get("schema_version") != "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1":
+    raise SystemExit("unexpected signed-to-Kolme dry-run reason taxonomy schema")
+if reason_taxonomy.get("overall") != "demo.not_run":
+    raise SystemExit("expected signed-to-Kolme dry-run overall taxonomy classification")
+if reason_taxonomy.get("signed_demo_checkpoint") != "checkpoint.planned":
+    raise SystemExit("expected signed-to-Kolme dry-run signed-demo checkpoint taxonomy classification")
+if reason_taxonomy.get("signed_integration_checkpoint") != "checkpoint.planned":
+    raise SystemExit("expected signed-to-Kolme dry-run signed-integration checkpoint taxonomy classification")
+if reason_taxonomy.get("runtime_integration_checkpoint") != "checkpoint.planned":
+    raise SystemExit("expected signed-to-Kolme dry-run runtime-integration checkpoint taxonomy classification")
+if reason_taxonomy.get("runtime_commit_live") != "runtime_commit.not_run":
+    raise SystemExit("expected signed-to-Kolme dry-run runtime-commit taxonomy classification")
+normalized_evidence = summary.get("normalized_evidence")
+if not isinstance(normalized_evidence, dict):
+    raise SystemExit("expected signed-to-Kolme dry-run normalized evidence")
+if normalized_evidence.get("schema_version") != "kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1":
+    raise SystemExit("unexpected signed-to-Kolme dry-run normalized evidence schema")
+expected_order = [
+    "localhost_signed_demo_contract",
+    "localhost_signed_integration_contract",
+    "local_kamn_runtime_integration_run",
+]
+if normalized_evidence.get("primary_check_order") != expected_order:
+    raise SystemExit("unexpected signed-to-Kolme dry-run normalized primary check order")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected signed-to-Kolme dry-run policy final_decision GO")
 PY
@@ -178,6 +220,34 @@ if summary.get("runtime_commit_submit_finality_linked") is not True:
     raise SystemExit("expected runtime commit submit/finality evidence linkage marker")
 if summary.get("reason_code") != "signed_to_kolme_demo_passed":
     raise SystemExit("expected deterministic signed-to-Kolme pass reason code")
+reason_taxonomy = summary.get("reason_taxonomy")
+if not isinstance(reason_taxonomy, dict):
+    raise SystemExit("expected signed-to-Kolme run reason taxonomy")
+if reason_taxonomy.get("schema_version") != "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1":
+    raise SystemExit("unexpected signed-to-Kolme run reason taxonomy schema")
+if reason_taxonomy.get("overall") != "demo.success":
+    raise SystemExit("expected signed-to-Kolme run overall taxonomy classification")
+if reason_taxonomy.get("signed_demo_checkpoint") != "checkpoint.pass":
+    raise SystemExit("expected signed-to-Kolme run signed-demo checkpoint taxonomy classification")
+if reason_taxonomy.get("signed_integration_checkpoint") != "checkpoint.pass":
+    raise SystemExit("expected signed-to-Kolme run signed-integration checkpoint taxonomy classification")
+if reason_taxonomy.get("runtime_integration_checkpoint") != "checkpoint.pass":
+    raise SystemExit("expected signed-to-Kolme run runtime-integration checkpoint taxonomy classification")
+if reason_taxonomy.get("runtime_commit_live") != "runtime_commit.success":
+    raise SystemExit("expected signed-to-Kolme run runtime-commit taxonomy classification")
+normalized_evidence = summary.get("normalized_evidence")
+if not isinstance(normalized_evidence, dict):
+    raise SystemExit("expected signed-to-Kolme run normalized evidence")
+if normalized_evidence.get("schema_version") != "kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1":
+    raise SystemExit("unexpected signed-to-Kolme run normalized evidence schema")
+checks_by_id = normalized_evidence.get("checks_by_id")
+if not isinstance(checks_by_id, dict):
+    raise SystemExit("expected signed-to-Kolme run normalized checks map")
+runtime_entry = checks_by_id.get("local_kamn_runtime_integration_run")
+if not isinstance(runtime_entry, dict):
+    raise SystemExit("expected signed-to-Kolme run normalized runtime integration entry")
+if runtime_entry.get("status") != "pass":
+    raise SystemExit("expected signed-to-Kolme run normalized runtime integration pass status")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected signed-to-Kolme run policy final_decision GO")
 PY
@@ -187,6 +257,8 @@ TMP_MISMATCH_SIGNED_CHECK="$TMP_DIR/signed_to_kolme_demo_mismatch_signed_check.j
 TMP_MISMATCH_INTEGRATION_CHECK="$TMP_DIR/signed_to_kolme_demo_mismatch_integration_check.json"
 TMP_MISMATCH_POLICY="$TMP_DIR/signed_to_kolme_demo_mismatch_policy.json"
 TMP_MISMATCH_ERR="$TMP_DIR/signed_to_kolme_demo_mismatch.err"
+TMP_TAXONOMY_DRIFT="$TMP_DIR/signed_to_kolme_demo_taxonomy_drift.json"
+TMP_NORMALIZED_DRIFT="$TMP_DIR/signed_to_kolme_demo_normalized_drift.json"
 
 python3 - "$TMP_SUMMARY_RUN" "$TMP_MISMATCH_SIGNED_CHECK" <<'PY'
 from __future__ import annotations
@@ -265,6 +337,71 @@ if [ "$mismatch_integration_check_code" -eq 0 ]; then
 fi
 if ! grep -q "signed_message_commit_evidence_mismatch" "$TMP_MISMATCH_ERR"; then
   echo "expected deterministic signed_message_commit_evidence_mismatch marker for integration-check mismatch" >&2
+  exit 1
+fi
+
+# Regression: #4498
+python3 - "$TMP_SUMMARY_RUN" "$TMP_TAXONOMY_DRIFT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+summary["reason_taxonomy"]["overall"] = "demo.not_run"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_TAXONOMY_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_MISMATCH_POLICY" >"$TMP_MISMATCH_ERR" 2>&1
+taxonomy_drift_code=$?
+set -e
+if [ "$taxonomy_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when signed-to-Kolme taxonomy output drifts" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_overall_mismatch" "$TMP_MISMATCH_ERR"; then
+  echo "expected reason_taxonomy_overall_mismatch marker for signed-to-Kolme taxonomy drift" >&2
+  exit 1
+fi
+
+python3 - "$TMP_SUMMARY_RUN" "$TMP_NORMALIZED_DRIFT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+summary["normalized_evidence"]["checks_by_id"]["local_kamn_runtime_integration_run"]["status"] = "fail"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_NORMALIZED_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_MISMATCH_POLICY" >"$TMP_MISMATCH_ERR" 2>&1
+normalized_drift_code=$?
+set -e
+if [ "$normalized_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when signed-to-Kolme normalized evidence output drifts" >&2
+  exit 1
+fi
+if ! grep -q "normalized_evidence_status_mismatch:local_kamn_runtime_integration_run" "$TMP_MISMATCH_ERR"; then
+  echo "expected normalized_evidence_status_mismatch marker for signed-to-Kolme normalized evidence drift" >&2
   exit 1
 fi
 

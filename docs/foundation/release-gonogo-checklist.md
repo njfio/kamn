@@ -415,6 +415,9 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json`
   - deterministic mismatch marker:
     - `signed_message_commit_evidence_mismatch`
+  - deterministic taxonomy/normalization markers:
+    - `demo_evidence_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1`
+    - `demo_evidence_normalization_version=kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
@@ -429,6 +432,7 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
   - submit/finality success-reason mismatches force `NO-GO` (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`) (`Regression: #4420`).
   - signed-message checkpoint failures accepted alongside commit evidence success force `NO-GO` (`signed_message_commit_evidence_mismatch`) (`Regression: #4497`).
+  - signed-to-Kolme taxonomy/normalized-evidence drift forces `NO-GO` (`reason_taxonomy_overall_mismatch`, `normalized_evidence_status_mismatch:local_kamn_runtime_integration_run`) (`Regression: #4498`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.

@@ -24,6 +24,11 @@ DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
 EXPECTED_REMOTE_URL = "https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF = "refs/heads/main"
+PRIMARY_CHECK_ORDER = [
+    "localhost_signed_demo_contract",
+    "localhost_signed_integration_contract",
+    "local_kamn_runtime_integration_run",
+]
 
 
 def _pick_port() -> int:
@@ -236,6 +241,72 @@ def _runtime_commit_command(
 
 def _load_json(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _first_check_entry(checks: list[dict[str, str]], check_id: str) -> dict[str, str]:
+    for entry in checks:
+        if entry.get("id") == check_id:
+            return entry
+    return {"id": check_id, "command": "", "status": "missing", "reason_code": "missing"}
+
+
+def _classify_overall_reason(status_value: str, reason_value: str) -> str:
+    if status_value == "ok" and reason_value == "dry_run_no_commands_executed":
+        return "demo.not_run"
+    if status_value == "ok" and reason_value == "signed_to_kolme_demo_passed":
+        return "demo.success"
+    if reason_value in (
+        "runtime_commit_live_summary_missing",
+        "runtime_commit_submit_evidence_marker_missing",
+        "runtime_commit_finality_evidence_marker_missing",
+        "runtime_commit_submit_finality_linkage_missing",
+    ):
+        return "demo.runtime_commit_evidence_failed"
+    if reason_value.startswith("checkpoint_failed_"):
+        return "demo.checkpoint_failed"
+    if reason_value == "demo_budget_exceeded":
+        return "demo.budget_exceeded"
+    if status_value == "fail":
+        return "demo.failed"
+    return "demo.other"
+
+
+def _classify_checkpoint(check_status: str, check_reason_code: str) -> str:
+    if check_status == "planned":
+        return "checkpoint.planned"
+    if check_status == "pass":
+        return "checkpoint.pass"
+    if check_status == "fail":
+        if check_reason_code == "mock_server_start_failed":
+            return "checkpoint.prerequisite_failed"
+        return "checkpoint.fail"
+    if check_status == "skipped":
+        return "checkpoint.skipped"
+    return "checkpoint.other"
+
+
+def _classify_runtime_commit(runtime_status: str, runtime_reason_code: str) -> str:
+    if runtime_status == "not_run":
+        return "runtime_commit.not_run"
+    if runtime_status == "ok":
+        return "runtime_commit.success"
+    if runtime_status == "fail":
+        if "submit" in runtime_reason_code or "finality" in runtime_reason_code:
+            return "runtime_commit.submit_finality_failed"
+        return "runtime_commit.fail"
+    return "runtime_commit.other"
+
+
+def _build_normalized_checks(checks: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    normalized: dict[str, dict[str, str]] = {}
+    for check_id in PRIMARY_CHECK_ORDER:
+        entry = _first_check_entry(checks, check_id)
+        normalized[check_id] = {
+            "status": str(entry.get("status", "")),
+            "reason_code": str(entry.get("reason_code", "")),
+            "command": str(entry.get("command", "")),
+        }
+    return normalized
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -604,6 +675,10 @@ def main() -> int:
             status = "fail"
             reason_code = "demo_budget_exceeded"
 
+    signed_demo_entry = _first_check_entry(checks, "localhost_signed_demo_contract")
+    signed_integration_entry = _first_check_entry(checks, "localhost_signed_integration_contract")
+    runtime_integration_entry = _first_check_entry(checks, "local_kamn_runtime_integration_run")
+
     summary = {
         "schema_version": "kamn.kolme.local-signed-to-kolme-demo-summary.v1",
         "mode": args.mode,
@@ -623,6 +698,31 @@ def main() -> int:
         "runtime_commit_live_reason_code": runtime_commit_live_reason_code,
         "runtime_commit_live_summary_path": args.runtime_commit_live_summary,
         "runtime_commit_live_policy_report_path": args.runtime_commit_live_policy_report,
+        "reason_taxonomy": {
+            "schema_version": "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1",
+            "overall": _classify_overall_reason(status, reason_code),
+            "signed_demo_checkpoint": _classify_checkpoint(
+                str(signed_demo_entry.get("status", "")),
+                str(signed_demo_entry.get("reason_code", "")),
+            ),
+            "signed_integration_checkpoint": _classify_checkpoint(
+                str(signed_integration_entry.get("status", "")),
+                str(signed_integration_entry.get("reason_code", "")),
+            ),
+            "runtime_integration_checkpoint": _classify_checkpoint(
+                str(runtime_integration_entry.get("status", "")),
+                str(runtime_integration_entry.get("reason_code", "")),
+            ),
+            "runtime_commit_live": _classify_runtime_commit(
+                runtime_commit_live_status,
+                runtime_commit_live_reason_code,
+            ),
+        },
+        "normalized_evidence": {
+            "schema_version": "kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1",
+            "primary_check_order": PRIMARY_CHECK_ORDER,
+            "checks_by_id": _build_normalized_checks(checks),
+        },
         "checks": checks,
         "artifact_paths": [
             "/tmp/localhost-signed-demo-contract-report.json",

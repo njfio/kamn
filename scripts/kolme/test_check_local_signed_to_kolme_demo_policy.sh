@@ -9,6 +9,8 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/signed_to_kolme_ok.json"
 TMP_REPORT_MISSING_SUBMIT="$TMP_DIR/signed_to_kolme_missing_submit.json"
 TMP_REPORT_MISSING_FINALITY="$TMP_DIR/signed_to_kolme_missing_finality.json"
+TMP_REPORT_TAXONOMY_DRIFT="$TMP_DIR/signed_to_kolme_taxonomy_drift.json"
+TMP_REPORT_NORMALIZED_DRIFT="$TMP_DIR/signed_to_kolme_normalized_drift.json"
 TMP_POLICY_OK="$TMP_DIR/signed_to_kolme_policy_ok.json"
 TMP_POLICY_BAD="$TMP_DIR/signed_to_kolme_policy_bad.json"
 TMP_ERR="$TMP_DIR/policy_error.log"
@@ -49,6 +51,39 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_commit_live_reason_code": "live_runtime_commit_and_finality_commands_passed",
   "runtime_commit_live_summary_path": "/tmp/kolme-local-runtime-commit-live-summary.json",
   "runtime_commit_live_policy_report_path": "/tmp/kolme-local-runtime-commit-live-policy.json",
+  "reason_taxonomy": {
+    "schema_version": "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1",
+    "overall": "demo.success",
+    "signed_demo_checkpoint": "checkpoint.pass",
+    "signed_integration_checkpoint": "checkpoint.pass",
+    "runtime_integration_checkpoint": "checkpoint.pass",
+    "runtime_commit_live": "runtime_commit.success"
+  },
+  "normalized_evidence": {
+    "schema_version": "kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1",
+    "primary_check_order": [
+      "localhost_signed_demo_contract",
+      "localhost_signed_integration_contract",
+      "local_kamn_runtime_integration_run"
+    ],
+    "checks_by_id": {
+      "localhost_signed_demo_contract": {
+        "status": "pass",
+        "reason_code": "localhost_signed_demo_contract_passed",
+        "command": "bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh"
+      },
+      "localhost_signed_integration_contract": {
+        "status": "pass",
+        "reason_code": "localhost_signed_integration_contract_passed",
+        "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
+      },
+      "local_kamn_runtime_integration_run": {
+        "status": "pass",
+        "reason_code": "local_kamn_runtime_integration_run_passed",
+        "command": "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+      }
+    }
+  },
   "checks": [
     {
       "id": "localhost_signed_demo_contract",
@@ -162,6 +197,63 @@ if ! grep -q "runtime_commit_finality_evidence_marker_missing" "$TMP_ERR"; then
 fi
 if ! grep -q "runtime_commit_submit_finality_linkage_missing" "$TMP_ERR"; then
   echo "expected runtime_commit_submit_finality_linkage_missing reason code" >&2
+  exit 1
+fi
+
+# Regression: #4498
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_TAXONOMY_DRIFT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["reason_taxonomy"]["overall"] = "demo.not_run"
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_TAXONOMY_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+taxonomy_drift_code=$?
+set -e
+
+if [ "$taxonomy_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when reason taxonomy output drifts" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_overall_mismatch" "$TMP_ERR"; then
+  echo "expected reason_taxonomy_overall_mismatch reason code" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_NORMALIZED_DRIFT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["normalized_evidence"]["checks_by_id"]["local_kamn_runtime_integration_run"]["status"] = "fail"
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_NORMALIZED_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+normalized_drift_code=$?
+set -e
+
+if [ "$normalized_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when normalized evidence output drifts" >&2
+  exit 1
+fi
+if ! grep -q "normalized_evidence_status_mismatch:local_kamn_runtime_integration_run" "$TMP_ERR"; then
+  echo "expected normalized_evidence_status_mismatch reason code" >&2
   exit 1
 fi
 
