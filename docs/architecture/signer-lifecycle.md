@@ -79,6 +79,19 @@ Primary fail-closed signer reason codes include:
 - ensure `KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS` includes both current and previous profile during failover
 - ensure `KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS` is at least `2` during failover
 
+### Migration Parity Matrix
+
+- `signer_migration_parity_matrix_version=kamn.signer.migration-parity-matrix.v1`
+- `legacy_behavior_diff_guard=enabled`
+- Matrix cases:
+  - `matrix_case=primary_env_local_happy_path`
+  - `matrix_case=secondary_env_local_happy_path`
+  - `matrix_case=primary_managed_external_happy_path`
+  - `matrix_case=secondary_managed_external_disallowed`
+- Guard commands:
+  - `cargo test -p kamn-node main_tests::signer_tests::functional_signer_migration_profile_key_source_parity_matrix -- --exact --nocapture`
+  - `cargo test -p kamn-node --test signer_migration_parity_docs_contract -- --nocapture`
+
 ## Testing Coverage
 
 - Unit: signer preflight defaults and parser invariants.
