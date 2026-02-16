@@ -357,6 +357,13 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
 - Runtime commit replay policy checker:
   - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
+  - deterministic recovery taxonomy markers:
+    - `recovery_reason_taxonomy_version=kamn.kolme.runtime-commit-recovery-reason-taxonomy.v1`
+    - `recovery_reason_codes_csv=recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+    - `recovery_reason_codes_value=none|recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+  - deterministic retransmission evidence markers:
+    - `retransmission_evidence_contract_version=v1`
+    - `nonce_idempotency_contract_version=v1`
 - Runtime commit replay matrix runner:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit adapter replay/finality fast lane:
@@ -382,6 +389,7 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - fork release-tag drift remains blocked (`Regression: #1401`).
   - fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
+  - runtime commit replay recovery/nonce-idempotency taxonomy drift forces `NO-GO` (`Regression: #4422`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
   - submit/finality success-reason mismatches force `NO-GO` (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`) (`Regression: #4420`).
 

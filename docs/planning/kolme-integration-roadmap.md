@@ -45,6 +45,13 @@ across Kolme upgrades.
   - `docs/foundation/kolme-runtime-commit-client.md`
 - Runtime commit replay policy checker:
   - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
+  - deterministic recovery taxonomy markers:
+    - `recovery_reason_taxonomy_version=kamn.kolme.runtime-commit-recovery-reason-taxonomy.v1`
+    - `recovery_reason_codes_csv=recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+    - `recovery_reason_codes_value=none|recovery_nonce_not_monotonic,recovery_payload_hash_mismatch,recovery_receipt_not_final,recovery_replay_detected`
+  - retransmission evidence markers:
+    - `retransmission_evidence_contract_version=v1`
+    - `nonce_idempotency_contract_version=v1`
 - Runtime commit replay matrix command:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit replay contract lane:
@@ -118,6 +125,7 @@ across Kolme upgrades.
 - Malformed runtime commit request shapes remain fail-closed (`Regression: #825`).
 - Runtime commit finality projection blocks invalid lifecycle regression to pending (`Regression: #826`).
 - Runtime commit replay/tamper mismatch policy emits fail-closed reason codes (`Regression: #827`).
+- Runtime commit replay recovery/nonce-idempotency taxonomy drift remains fail-closed (`Regression: #4422`).
 - Adapter provider mismatch and non-final receipt handling remain fail-closed (`Regression: #979`).
 - Adapter replay/finality reason-code drift remains fail-closed (`Regression: #980`).
 - `kolme_fork` `PUT /broadcast` submit profile and txhash-only response mapping remain fail-closed (`Regression: #1502`).
