@@ -1,12 +1,12 @@
 # Issue #4319 Tasks
 
 - Issue: `#4319`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
-- T1 (Red): add peer-integrity drift + retry-timeout misclassification tests across required categories.
-- T2 (Docs): update `docs/planning/kolme-devnet-ops.md` with contract markers for drift and timeout classification.
-- T3 (Verify): run
+- T1 (Red): completed peer-integrity drift + retry-timeout misclassification tests across required categories.
+- T2 (Docs): updated `docs/planning/kolme-devnet-ops.md` with contract markers for drift and timeout classification.
+- T3 (Verify): ran
   - `cargo fmt --check`
   - `cargo clippy -p kamn-core -- -D warnings`
   - `cargo test -p kamn-core --test p2p_peer_integrity_drift_timeout`

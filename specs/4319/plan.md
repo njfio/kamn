@@ -1,7 +1,7 @@
 # Issue #4319 Plan
 
 - Issue: `#4319`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add a dedicated peer transport integrity/timeout test suite to keep this subtask isolated.

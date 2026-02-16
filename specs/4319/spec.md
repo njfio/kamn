@@ -1,7 +1,7 @@
 # Issue #4319 Spec
 
 - Title: `Subtask: add red tests for networked peer integrity drift and retry-timeout misclassification`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
 - Parent: `#4313`
