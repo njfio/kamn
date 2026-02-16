@@ -66,6 +66,16 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 signoff = payload.get("staged_rehearsal_signoff")
 if not isinstance(signoff, dict):
     raise SystemExit("expected staged_rehearsal_signoff object")
+if payload.get("evidence_output_contract_version") != "kamn.release.staging-rehearsal-output-contract.v1":
+    raise SystemExit("expected deterministic staging rehearsal evidence_output_contract_version marker")
+expected_command_contracts = {
+    "bundle_generator": "scripts/deploy/generate_staging_rehearsal_bundle.sh",
+    "policy_checker": "scripts/deploy/check_staging_rehearsal_policy.sh",
+    "contract_lane": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+    "deep_lane": "scripts/deploy/run_staging_rehearsal_deep_lane.sh",
+}
+if payload.get("command_contracts") != expected_command_contracts:
+    raise SystemExit("expected deterministic staging rehearsal command contract markers")
 if signoff.get("schema_version") != "kamn.release.staged-rehearsal-signoff.v1":
     raise SystemExit("expected staged_rehearsal_signoff schema marker")
 if signoff.get("lineage_status") != "verified":
@@ -261,6 +271,61 @@ fi
 # Regression: #4574
 if ! printf '%s\n' "$tampered_signer_drift_output" | grep -q "signer_profile_drift_threshold_mismatch"; then
   echo "expected signer drift threshold mismatch reason code for tampered signer drift rehearsal bundle" >&2
+  exit 1
+fi
+
+# Regression: #4499
+tampered_command_contract_bundle="$TMP_DIR/rehearsal-tampered-command-contract.json"
+cp "$go_bundle" "$tampered_command_contract_bundle"
+python3 - "$tampered_command_contract_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["command_contracts"]["policy_checker"] = "scripts/deploy/check_staging_rehearsal_policy_drift.sh"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_command_contract_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_command_contract_bundle" 2>&1)"
+tampered_command_contract_code=$?
+set -e
+
+if [ "$tampered_command_contract_code" -eq 0 ]; then
+  echo "expected command-contract drift rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_command_contract_output" | grep -q "command contract mismatch"; then
+  echo "expected explicit command contract mismatch regression guard to be enforced" >&2
+  exit 1
+fi
+
+tampered_output_contract_bundle="$TMP_DIR/rehearsal-tampered-output-contract-version.json"
+cp "$go_bundle" "$tampered_output_contract_bundle"
+python3 - "$tampered_output_contract_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["evidence_output_contract_version"] = "kamn.release.staging-rehearsal-output-contract.v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_output_contract_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_output_contract_bundle" 2>&1)"
+tampered_output_contract_code=$?
+set -e
+
+if [ "$tampered_output_contract_code" -eq 0 ]; then
+  echo "expected evidence-output contract version drift rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output_contract_output" | grep -q "evidence output contract version mismatch"; then
+  echo "expected explicit evidence output contract version mismatch regression guard to be enforced" >&2
   exit 1
 fi
 

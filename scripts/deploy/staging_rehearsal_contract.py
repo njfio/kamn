@@ -22,9 +22,16 @@ from framework.contract_framework import (  # noqa: E402
 
 SCHEMA_VERSION = "kamn.release.staging-rehearsal.v1"
 STAGED_REHEARSAL_SIGNOFF_SCHEMA_VERSION = "kamn.release.staged-rehearsal-signoff.v1"
+EVIDENCE_OUTPUT_CONTRACT_VERSION = "kamn.release.staging-rehearsal-output-contract.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 MAX_BPS = 10_000
+COMMAND_CONTRACTS = {
+    "bundle_generator": "scripts/deploy/generate_staging_rehearsal_bundle.sh",
+    "policy_checker": "scripts/deploy/check_staging_rehearsal_policy.sh",
+    "contract_lane": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+    "deep_lane": "scripts/deploy/run_staging_rehearsal_deep_lane.sh",
+}
 SIGNOFF_REQUIRED_ARTIFACTS = (
     "deploy_status",
     "rollback_status",
@@ -243,6 +250,8 @@ def generate_bundle(args: argparse.Namespace) -> int:
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        "evidence_output_contract_version": EVIDENCE_OUTPUT_CONTRACT_VERSION,
+        "command_contracts": dict(COMMAND_CONTRACTS),
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "release_candidate": args.release_candidate,
         "rehearsal": {
@@ -308,12 +317,30 @@ def check_bundle(args: argparse.Namespace) -> int:
             "schema_version",
             "generated_at",
             "release_candidate",
+            "evidence_output_contract_version",
+            "command_contracts",
             "rehearsal",
             "staged_rehearsal_signoff",
             "decision_reasons",
             "final_decision",
         ),
     )
+
+    evidence_output_contract_version = payload.get("evidence_output_contract_version")
+    if evidence_output_contract_version != EVIDENCE_OUTPUT_CONTRACT_VERSION:
+        fail(
+            "evidence output contract version mismatch: "
+            f"expected {EVIDENCE_OUTPUT_CONTRACT_VERSION}, found {evidence_output_contract_version}"
+        )
+
+    command_contracts = payload.get("command_contracts")
+    if not isinstance(command_contracts, dict):
+        fail("command contract mismatch: command_contracts must be an object")
+    if command_contracts != COMMAND_CONTRACTS:
+        fail(
+            "command contract mismatch: "
+            f"expected {COMMAND_CONTRACTS}, found {command_contracts}"
+        )
 
     rehearsal = payload["rehearsal"]
     if not isinstance(rehearsal, dict):
@@ -599,6 +626,8 @@ def check_bundle(args: argparse.Namespace) -> int:
         "staged_rehearsal_signoff_status="
         f"{expected_signoff_artifact['lineage_status']}"
     )
+    print(f"evidence_output_contract_version={EVIDENCE_OUTPUT_CONTRACT_VERSION}")
+    print("command_contracts_status=verified")
     print(f"reason_codes={','.join(expected_decision_reasons)}")
     print(f"evidence_complete={str(evidence_complete).lower()}")
     return 0

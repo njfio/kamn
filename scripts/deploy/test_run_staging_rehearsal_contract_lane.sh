@@ -5,8 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/deploy/run_staging_rehearsal_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/deploy/run_staging_rehearsal_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/deploy/staging_rehearsal_contract_lane_contract.sh"
+SHARED_REHEARSAL_CONTRACT_PY="$ROOT_DIR/scripts/deploy/staging_rehearsal_contract.py"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+INCIDENT_READINESS_DOC="$ROOT_DIR/docs/ops/incident-readiness.md"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected staging rehearsal fast-lane runner to be executable" >&2
@@ -19,6 +21,11 @@ if [ ! -x "$DEEP_SCRIPT" ]; then
 fi
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected staging rehearsal shared contract-lane module to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$INCIDENT_READINESS_DOC" ]; then
+  echo "expected incident readiness ops doc to exist" >&2
   exit 1
 fi
 
@@ -77,6 +84,16 @@ if ! grep -Fq "staged_rehearsal_signoff_status=verified" "$SHARED_CONTRACT"; the
   exit 1
 fi
 
+if ! grep -Fq "command_contracts" "$SHARED_REHEARSAL_CONTRACT_PY"; then
+  echo "expected staging rehearsal contract generator to emit command contract markers" >&2
+  exit 1
+fi
+
+if ! grep -Fq "evidence_output_contract_version" "$SHARED_REHEARSAL_CONTRACT_PY"; then
+  echo "expected staging rehearsal contract generator to emit evidence output contract version marker" >&2
+  exit 1
+fi
+
 if ! grep -Fq -- "--recovery-time-seconds" "$DEEP_SCRIPT"; then
   echo "expected staging rehearsal deep-lane runner to pass deterministic MTTR evidence markers" >&2
   exit 1
@@ -89,6 +106,41 @@ fi
 
 if ! grep -Fq "staged_rehearsal_signoff_status=fail-closed" "$DEEP_SCRIPT"; then
   echo "expected staging rehearsal deep-lane runner to assert fail-closed staged signoff status" >&2
+  exit 1
+fi
+
+if ! grep -Fq "generate_staging_rehearsal_bundle.sh" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal bundle generator command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_staging_rehearsal_policy.sh" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal policy checker command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_staging_rehearsal_contract_lane.sh" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal contract lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_staging_rehearsal_deep_lane.sh" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal deep lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "command contract mismatch" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document command-contract drift guard" >&2
+  exit 1
+fi
+
+if ! grep -Fq "evidence output contract version mismatch" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to document evidence-output contract drift guard" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #4499" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal drift regression marker" >&2
   exit 1
 fi
 
