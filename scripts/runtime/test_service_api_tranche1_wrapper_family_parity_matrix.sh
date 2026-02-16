@@ -39,6 +39,14 @@ if ! printf '%s\n' "$parity_output" | grep -q '^reason_codes=none$'; then
   echo "expected service api tranche-2 parity checker reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$parity_output" | grep -q '^reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1$'; then
+  echo "expected service api tranche-2 parity checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$parity_output" | grep -q '^reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink$'; then
+  echo "expected service api tranche-2 parity checker reason taxonomy codes marker" >&2
+  exit 1
+fi
 
 while IFS=$'\t' read -r wrapper impl contract_key policy_key tamper_reason; do
   wrapper_path="$ROOT_DIR/$wrapper"
@@ -160,6 +168,45 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh'; then
   echo "expected deterministic policy-checker drift reason code for tampered service api tranche-2 matrix" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1$'; then
+  echo "expected tampered service api tranche-2 matrix output to emit reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink$'; then
+  echo "expected tampered service api tranche-2 matrix output to emit deterministic taxonomy code set" >&2
+  exit 1
+fi
+
+tampered_second_wrapper_matrix="$TMP_DIR/service-api-tranche2-wrapper-family-matrix.second-wrapper.tampered.json"
+cp "$MATRIX_FILE" "$tampered_second_wrapper_matrix"
+python3 - "$tampered_second_wrapper_matrix" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["wrappers"][1]["contract_status_key"] = "service_api_graceful_shutdown_drain_contract_status_drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_second_wrapper_output="$(
+  python3 "$CHECKER" \
+    --root-dir "$ROOT_DIR" \
+    --matrix-file "$tampered_second_wrapper_matrix" 2>&1
+)"
+tampered_second_wrapper_code=$?
+set -e
+
+if [ "$tampered_second_wrapper_code" -eq 0 ]; then
+  echo "expected second-wrapper tampered service api tranche-2 matrix to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_second_wrapper_output" | grep -q 'impl_contract_status_marker_missing:scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh'; then
+  echo "expected deterministic second-wrapper contract-status drift reason code for tampered service api tranche-2 matrix" >&2
   exit 1
 fi
 

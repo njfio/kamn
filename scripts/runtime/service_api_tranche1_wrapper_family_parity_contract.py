@@ -10,6 +10,28 @@ from pathlib import Path
 from typing import Any
 
 MATRIX_SCHEMA = "kamn.runtime.service-api-tranche2-wrapper-family-matrix.v1"
+REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1"
+)
+REASON_CODES_CSV = ",".join(
+    [
+        "impl_contract_status_marker_missing",
+        "impl_missing",
+        "impl_not_executable",
+        "impl_policy_checker_marker_missing",
+        "impl_policy_status_marker_missing",
+        "impl_runner_entry_marker_missing",
+        "impl_runner_source_marker_missing",
+        "impl_tamper_reason_marker_missing",
+        "impl_validation_script_marker_missing",
+        "matrix_wrapper_entry_invalid",
+        "service_api_tranche2_impl_shell_loc_budget_exceeded",
+        "service_api_tranche2_wrapper_shell_loc_budget_exceeded",
+        "wrapper_dispatch_target_mismatch",
+        "wrapper_missing",
+        "wrapper_not_symlink",
+    ]
+)
 
 
 def _load_json(path: Path) -> Any:
@@ -162,6 +184,8 @@ def _run(args: argparse.Namespace) -> int:
         print(f"max_wrapper_shell_loc={max_wrapper_shell_loc}")
         print(f"impl_shell_loc={total_impl_shell_loc}")
         print(f"max_impl_shell_loc={max_impl_shell_loc}")
+        print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+        print(f"reason_codes_csv={REASON_CODES_CSV}")
         print(f"reason_codes={reason_codes_csv}")
         raise SystemExit(1)
 
@@ -172,6 +196,8 @@ def _run(args: argparse.Namespace) -> int:
     print(f"max_wrapper_shell_loc={max_wrapper_shell_loc}")
     print(f"impl_shell_loc={total_impl_shell_loc}")
     print(f"max_impl_shell_loc={max_impl_shell_loc}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
     print("reason_codes=none")
     return 0
 

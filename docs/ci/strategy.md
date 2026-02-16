@@ -1110,8 +1110,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - enforces tranche shell-wrapper budget:
     - combined wrapper symlink shell LOC must remain `<= 8`
     - combined implementation shell LOC must remain `<= 260`
+  - deterministic parity taxonomy markers:
+    - `reason_taxonomy_version=kamn.runtime.service-api-tranche2-wrapper-family-parity-reason-taxonomy.v1`
+    - `reason_codes_csv=impl_contract_status_marker_missing,impl_missing,impl_not_executable,impl_policy_checker_marker_missing,impl_policy_status_marker_missing,impl_runner_entry_marker_missing,impl_runner_source_marker_missing,impl_tamper_reason_marker_missing,impl_validation_script_marker_missing,matrix_wrapper_entry_invalid,service_api_tranche2_impl_shell_loc_budget_exceeded,service_api_tranche2_wrapper_shell_loc_budget_exceeded,wrapper_dispatch_target_mismatch,wrapper_missing,wrapper_not_symlink`
   - deterministic fail-closed drift reason marker:
     - `impl_policy_checker_marker_missing:scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh`
+    - `impl_contract_status_marker_missing:scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh`
 
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
