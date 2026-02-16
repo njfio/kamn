@@ -90,10 +90,56 @@ fn classify_retry_category(error: &KolmeRuntimeCommitProviderError) -> Option<&'
     }
 }
 
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RetryDecision {
+    Retry { reason_code: &'static str },
+    Stop { reason_code: &'static str },
+}
+
+#[cfg(test)]
+fn retry_decision_for_attempt(
+    error: &KolmeRuntimeCommitProviderError,
+    attempt: u32,
+    max_attempts: u32,
+) -> RetryDecision {
+    match classify_retry_category(error) {
+        Some(reason_code) if attempt < max_attempts => RetryDecision::Retry { reason_code },
+        Some(_) => RetryDecision::Stop {
+            reason_code: "attempt_ceiling_reached",
+        },
+        None => RetryDecision::Stop {
+            reason_code: "malformed_response_fail_fast",
+        },
+    }
+}
+
 fn deterministic_retry_backoff_millis(retry_attempt: u32) -> u64 {
     let exponent = retry_attempt.saturating_sub(1).min(4);
     let multiplier = 1_u64 << exponent;
     (KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS * multiplier).min(KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS)
+}
+
+#[cfg(test)]
+fn deterministic_retry_jitter_seed(correlation_id: &str) -> u64 {
+    correlation_id
+        .bytes()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |acc, byte| {
+            (acc ^ u64::from(byte)).wrapping_mul(0x1000_0000_01b3)
+        })
+}
+
+#[cfg(test)]
+fn deterministic_retry_backoff_millis_with_jitter(retry_attempt: u32, jitter_seed: u64) -> u64 {
+    let backoff = deterministic_retry_backoff_millis(retry_attempt);
+    let rotate_by = retry_attempt.saturating_sub(1) % 63;
+    let jitter = jitter_seed
+        .rotate_left(rotate_by)
+        .wrapping_add(u64::from(retry_attempt))
+        % 4;
+    backoff
+        .saturating_add(jitter)
+        .min(KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS)
 }
 
 pub(crate) fn execute_kolme_live_runtime(
@@ -391,10 +437,11 @@ pub(crate) fn execute_kolme_live_runtime_continuous(
 mod tests {
     use super::{
         classify_retry_category, deterministic_retry_backoff_millis,
+        deterministic_retry_backoff_millis_with_jitter, deterministic_retry_jitter_seed,
         ensure_kolme_live_provider_marker, kolme_live_finality_label,
-        map_kolme_live_submit_outcome, ConfigError, KolmeCommitReceiptFinality,
-        KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
-        KolmeRuntimeCommitProviderReceipt,
+        map_kolme_live_submit_outcome, retry_decision_for_attempt, ConfigError,
+        KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError,
+        KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt, RetryDecision,
     };
 
     #[test]
@@ -423,6 +470,77 @@ mod tests {
         assert_eq!(deterministic_retry_backoff_millis(2), 20);
         assert_eq!(deterministic_retry_backoff_millis(3), 40);
         assert_eq!(deterministic_retry_backoff_millis(8), 40);
+    }
+
+    #[test]
+    fn unit_retry_decision_matrix_respects_attempt_ceiling_contract() {
+        assert_eq!(
+            retry_decision_for_attempt(&KolmeRuntimeCommitProviderError::Timeout, 1, 3),
+            RetryDecision::Retry {
+                reason_code: "timeout",
+            }
+        );
+        assert_eq!(
+            retry_decision_for_attempt(
+                &KolmeRuntimeCommitProviderError::Unavailable {
+                    reason: "temporary network fault".to_owned(),
+                },
+                2,
+                3,
+            ),
+            RetryDecision::Retry {
+                reason_code: "unavailable",
+            }
+        );
+        assert_eq!(
+            retry_decision_for_attempt(&KolmeRuntimeCommitProviderError::Timeout, 3, 3),
+            RetryDecision::Stop {
+                reason_code: "attempt_ceiling_reached",
+            }
+        );
+        assert_eq!(
+            retry_decision_for_attempt(
+                &KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: "invalid json".to_owned(),
+                },
+                1,
+                3,
+            ),
+            RetryDecision::Stop {
+                reason_code: "malformed_response_fail_fast",
+            }
+        );
+    }
+
+    #[test]
+    fn unit_retry_jitter_seed_contract_is_deterministic() {
+        // Regression: #4109
+        let correlation_id = "kolme:retry:seed:deterministic";
+        assert_eq!(
+            deterministic_retry_jitter_seed(correlation_id),
+            deterministic_retry_jitter_seed(correlation_id)
+        );
+        assert_ne!(
+            deterministic_retry_jitter_seed(correlation_id),
+            deterministic_retry_jitter_seed("kolme:retry:seed:deterministic:alt")
+        );
+    }
+
+    #[test]
+    fn unit_retry_backoff_with_jitter_stays_bounded_and_deterministic() {
+        let seed = deterministic_retry_jitter_seed("kolme:retry:jitter:bounded");
+        assert_eq!(
+            deterministic_retry_backoff_millis_with_jitter(1, seed),
+            deterministic_retry_backoff_millis_with_jitter(1, seed)
+        );
+        assert_eq!(
+            deterministic_retry_backoff_millis_with_jitter(2, seed),
+            deterministic_retry_backoff_millis_with_jitter(2, seed)
+        );
+        assert!(
+            deterministic_retry_backoff_millis_with_jitter(8, seed) <= 40,
+            "retry backoff must remain capped at configured max"
+        );
     }
 
     #[test]
