@@ -29,3 +29,18 @@ This contract defines fail-closed websocket protocol/session checks for Task #43
 ## Regression
 
 - invalid-frame and protocol-drift fail-closed behavior remains stable (`Regression: #4317`).
+
+## Async Lifecycle Rejection Taxonomy (Issue #4316)
+
+- `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
+- `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
+
+## Async Lifecycle Rejection Projection Matrix
+
+| Guardrail | Reason code projection |
+|---|---|
+| `async-lifecycle-limiter` | `service_api_ingress_concurrency_limit_exceeded` / `service_api_ingress_rate_limit_exceeded` |
+| `sender-admission-limiter` | `service_api_ingress_sender_rate_limit_exceeded` / `service_api_ingress_sender_suspended` / `service_api_ingress_sender_duplicate_message_id` / `service_api_ingress_sender_insufficient_deposit` |
+| `async-lifecycle-engine` | `service_api_ingress_anti_spam_engine_invalid` |
+
+- Regression: #4316

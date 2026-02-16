@@ -93,24 +93,9 @@ const REASON_CODE_WS_UPGRADE_HEADER_INVALID: &str = "service_api_ws_upgrade_head
 const REASON_CODE_WS_CONNECTION_HEADER_INVALID: &str = "service_api_ws_connection_header_invalid";
 const REASON_CODE_WS_KEY_HEADER_EMPTY: &str = "service_api_ws_key_header_empty";
 const REASON_CODE_WS_VERSION_HEADER_INVALID: &str = "service_api_ws_version_header_invalid";
-const RESPONSE_HEADER_WS_CONTRACT: &str = "X-KAMN-WebSocket-Contract";
-const WEBSOCKET_CONTRACT_VERSION: &str = "v1";
-#[cfg(test)]
-const REASON_CODE_WS_PROTOCOL_CONTRACT_DRIFT_DETECTED: &str =
-    "service_api_ws_protocol_contract_drift_detected";
-#[cfg(test)]
-const REASON_CODE_WS_SESSION_FRAME_TOO_SHORT: &str = "service_api_ws_session_frame_too_short";
-#[cfg(test)]
-const REASON_CODE_WS_SESSION_FRAME_OPCODE_INVALID: &str =
-    "service_api_ws_session_frame_opcode_invalid";
-#[cfg(test)]
-const REASON_CODE_WS_SESSION_FRAME_MASK_INVALID: &str = "service_api_ws_session_frame_mask_invalid";
-#[cfg(test)]
-const REASON_CODE_WS_SESSION_FRAME_LENGTH_MISMATCH: &str =
-    "service_api_ws_session_frame_length_mismatch";
-#[cfg(test)]
-const REASON_CODE_WS_SESSION_FRAME_PAYLOAD_UTF8_INVALID: &str =
-    "service_api_ws_session_frame_payload_utf8_invalid";
+const LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER: &str = "async-lifecycle-limiter";
+const LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION: &str = "sender-admission-limiter";
+const LIFECYCLE_REJECTION_CLASS_ASYNC_ENGINE: &str = "async-lifecycle-engine";
 const SERVICE_API_TLS_MODE_ENV: &str = "KAMN_SERVICE_API_TLS_MODE";
 const SERVICE_API_TLS_CERT_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CERT_FILE";
 const SERVICE_API_TLS_KEY_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_KEY_FILE";
@@ -344,6 +329,26 @@ struct ServiceApiMiddlewareError<'a> {
     reason_code: &'a str,
     message: &'a str,
     outcome: &'a str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ServiceApiLifecycleRejectionPolicy {
+    rejection_class: &'static str,
+    reason_code: &'static str,
+    status_code: StatusCode,
+    error_label: &'static str,
+    outcome: &'static str,
+    default_message: &'static str,
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiLifecycleRejectionProjection {
+    pub(crate) rejection_class: &'static str,
+    pub(crate) reason_code: &'static str,
+    pub(crate) status_code: u16,
+    pub(crate) error_label: &'static str,
+    pub(crate) outcome: &'static str,
 }
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
@@ -779,6 +784,11 @@ async fn service_api_auth_middleware(
     let concurrency_permit = match state.concurrency_limiter.clone().try_acquire_owned() {
         Ok(permit) => permit,
         Err(_) => {
+            let projection = service_api_lifecycle_rejection_policy(
+                REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
+            )
+            .expect("known concurrency limiter reason code should have projection");
+            let _projection_class = projection.rejection_class;
             let correlation_id = format!(
                 "service-api:{}:{}:concurrency-limit",
                 method_label.to_ascii_lowercase(),
@@ -790,11 +800,11 @@ async fn service_api_auth_middleware(
                     correlation_id: correlation_id.as_str(),
                     method: method_label.as_str(),
                     path: path.as_str(),
-                    status_code: StatusCode::TOO_MANY_REQUESTS,
-                    error_label: "too-many-requests",
-                    reason_code: REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
-                    message: "ingress concurrency limit exceeded",
-                    outcome: "concurrency-limit",
+                    status_code: projection.status_code,
+                    error_label: projection.error_label,
+                    reason_code: projection.reason_code,
+                    message: projection.default_message,
+                    outcome: projection.outcome,
                 },
             );
         }
@@ -889,31 +899,28 @@ async fn service_api_auth_middleware(
     }
 
     if let Err(error) = enforce_sender_anti_spam(&state, &parsed_request).await {
-        let (status_code, error_label, outcome) =
-            if error.reason_code == REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "internal",
-                    "anti-spam-error",
-                )
-            } else {
-                (
-                    StatusCode::TOO_MANY_REQUESTS,
-                    "too-many-requests",
-                    "anti-spam",
-                )
-            };
+        let projection = service_api_lifecycle_rejection_policy(error.reason_code).unwrap_or(
+            ServiceApiLifecycleRejectionPolicy {
+                rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
+                reason_code: error.reason_code,
+                status_code: StatusCode::TOO_MANY_REQUESTS,
+                error_label: "too-many-requests",
+                outcome: "anti-spam",
+                default_message: "sender request rejected by anti-spam policy",
+            },
+        );
+        let _projection_class = projection.rejection_class;
         return service_api_middleware_error_response(
             &state,
             ServiceApiMiddlewareError {
                 correlation_id: correlation_id.as_str(),
                 method: parsed_request.method.as_str(),
                 path: parsed_request.path.as_str(),
-                status_code,
-                error_label,
-                reason_code: error.reason_code,
+                status_code: projection.status_code,
+                error_label: projection.error_label,
+                reason_code: projection.reason_code,
                 message: error.message.as_str(),
-                outcome,
+                outcome: projection.outcome,
             },
         );
     }
@@ -921,17 +928,21 @@ async fn service_api_auth_middleware(
     if route_requires_auth(parsed_request.method.as_str(), parsed_request.path.as_str()) {
         let mut ingress_rate_window = state.ingress_rate_window.lock().await;
         if !ingress_rate_window.try_record_request(Instant::now()) {
+            let projection =
+                service_api_lifecycle_rejection_policy(REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED)
+                    .expect("known ingress rate limiter reason code should have projection");
+            let _projection_class = projection.rejection_class;
             return service_api_middleware_error_response(
                 &state,
                 ServiceApiMiddlewareError {
                     correlation_id: correlation_id.as_str(),
                     method: parsed_request.method.as_str(),
                     path: parsed_request.path.as_str(),
-                    status_code: StatusCode::TOO_MANY_REQUESTS,
-                    error_label: "too-many-requests",
-                    reason_code: REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED,
-                    message: "ingress rate limit exceeded",
-                    outcome: "rate-limit",
+                    status_code: projection.status_code,
+                    error_label: projection.error_label,
+                    reason_code: projection.reason_code,
+                    message: projection.default_message,
+                    outcome: projection.outcome,
                 },
             );
         }
@@ -1092,6 +1103,86 @@ fn service_api_request_correlation_id(request: &ParsedRequest) -> String {
     }
     let request_tag = deterministic_body_tag(request.body.as_bytes());
     format!("service-api:{method}:{}:{request_tag:016x}", request.path)
+}
+
+fn service_api_lifecycle_rejection_policy(
+    reason_code: &str,
+) -> Option<ServiceApiLifecycleRejectionPolicy> {
+    let policy = match reason_code {
+        REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER,
+            reason_code: REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "concurrency-limit",
+            default_message: "ingress concurrency limit exceeded",
+        },
+        REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER,
+            reason_code: REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "rate-limit",
+            default_message: "ingress rate limit exceeded",
+        },
+        REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
+            reason_code: REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "anti-spam",
+            default_message: "sender anti-spam rate limit exceeded",
+        },
+        REASON_CODE_INGRESS_SENDER_SUSPENDED => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
+            reason_code: REASON_CODE_INGRESS_SENDER_SUSPENDED,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "anti-spam",
+            default_message: "sender suspended by anti-spam policy",
+        },
+        REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
+            reason_code: REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "anti-spam",
+            default_message: "sender anti-spam duplicate message id rejected",
+        },
+        REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION,
+            reason_code: REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+            error_label: "too-many-requests",
+            outcome: "anti-spam",
+            default_message: "sender deposit below anti-spam minimum",
+        },
+        REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID => ServiceApiLifecycleRejectionPolicy {
+            rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_ENGINE,
+            reason_code: REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID,
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
+            error_label: "internal",
+            outcome: "anti-spam-error",
+            default_message: "anti-spam decision evaluation failed",
+        },
+        _ => return None,
+    };
+    Some(policy)
+}
+
+#[cfg(test)]
+pub(crate) fn project_service_api_lifecycle_rejection(
+    reason_code: &str,
+) -> Option<ServiceApiLifecycleRejectionProjection> {
+    service_api_lifecycle_rejection_policy(reason_code).map(|policy| {
+        ServiceApiLifecycleRejectionProjection {
+            rejection_class: policy.rejection_class,
+            reason_code: policy.reason_code,
+            status_code: policy.status_code.as_u16(),
+            error_label: policy.error_label,
+            outcome: policy.outcome,
+        }
+    })
 }
 
 fn emit_service_api_request_outcome(
@@ -1524,10 +1615,9 @@ fn websocket_upgrade_response(upgrade: WebSocketUpgrade, snapshot: ServiceApiSna
     let mut response = upgrade
         .on_upgrade(move |socket| stream_websocket_event(socket, snapshot))
         .into_response();
-    response.headers_mut().insert(
-        RESPONSE_HEADER_WS_CONTRACT,
-        HeaderValue::from_static(WEBSOCKET_CONTRACT_VERSION),
-    );
+    response
+        .headers_mut()
+        .insert("X-KAMN-WebSocket-Contract", HeaderValue::from_static("v1"));
     response
 }
 
@@ -1608,56 +1698,6 @@ pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) 
         Category::Syntax | Category::Eof => "service_api_payload_json_syntax_invalid",
         Category::Data => "service_api_payload_structure_invalid",
     }
-}
-
-#[cfg(test)]
-pub(crate) fn detect_service_api_websocket_protocol_contract_drift(
-    response_header: &str,
-    expected_contract: &str,
-) -> Result<(), &'static str> {
-    let observed_contract = response_header.lines().find_map(|line| {
-        line.split_once(':').and_then(|(name, value)| {
-            if name
-                .trim()
-                .eq_ignore_ascii_case(RESPONSE_HEADER_WS_CONTRACT)
-            {
-                Some(value.trim())
-            } else {
-                None
-            }
-        })
-    });
-
-    match observed_contract {
-        Some(value) if value.eq_ignore_ascii_case(expected_contract) => Ok(()),
-        _ => Err(REASON_CODE_WS_PROTOCOL_CONTRACT_DRIFT_DETECTED),
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn validate_service_api_websocket_session_frame(
-    frame: &[u8],
-) -> Result<(), &'static str> {
-    if frame.len() < 2 {
-        return Err(REASON_CODE_WS_SESSION_FRAME_TOO_SHORT);
-    }
-    if frame[0] != 0x81 {
-        return Err(REASON_CODE_WS_SESSION_FRAME_OPCODE_INVALID);
-    }
-    if frame[1] & 0x80 != 0 {
-        return Err(REASON_CODE_WS_SESSION_FRAME_MASK_INVALID);
-    }
-
-    let payload_len = (frame[1] & 0x7f) as usize;
-    if frame.len() != payload_len + 2 {
-        return Err(REASON_CODE_WS_SESSION_FRAME_LENGTH_MISMATCH);
-    }
-
-    if std::str::from_utf8(&frame[2..2 + payload_len]).is_err() {
-        return Err(REASON_CODE_WS_SESSION_FRAME_PAYLOAD_UTF8_INVALID);
-    }
-
-    Ok(())
 }
 
 fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {

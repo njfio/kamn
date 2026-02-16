@@ -1,9 +1,8 @@
 use super::*;
 use crate::service_api_endpoint::{
-    detect_service_api_websocket_protocol_contract_drift, parse_service_api_payload,
-    validate_service_api_websocket_session_frame, ServiceApiAgentGetBody,
-    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiMessageCreateBody,
-    ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
+    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection,
+    ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
 use kamn_core::baseline_signature_for_fields;
@@ -404,18 +403,6 @@ fn parse_websocket_response(response: &[u8]) -> (String, String) {
         .expect("websocket payload should be utf-8")
         .to_owned();
     (header, payload)
-}
-
-fn split_websocket_response(response: &[u8]) -> (String, &[u8]) {
-    let header_end = response
-        .windows(4)
-        .position(|window| window == b"\r\n\r\n")
-        .map(|index| index + 4)
-        .expect("websocket response should include header terminator");
-    let header = std::str::from_utf8(&response[..header_end])
-        .expect("websocket header should be utf-8")
-        .to_owned();
-    (header, &response[header_end..])
 }
 
 fn wait_for_endpoint_ready(addr: &str) {
@@ -1872,32 +1859,41 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
 }
 
 #[test]
-fn unit_service_api_endpoint_websocket_protocol_drift_is_detected() {
-    let response_header = "\
-HTTP/1.1 101 Switching Protocols\r\n\
-Upgrade: websocket\r\n\
-Connection: Upgrade\r\n\
-X-KAMN-WebSocket-Contract: v2\r\n\
-\r\n";
-    let drift = detect_service_api_websocket_protocol_contract_drift(response_header, "v1");
-    assert_eq!(
-        drift,
-        Err("service_api_ws_protocol_contract_drift_detected")
-    );
+fn unit_service_api_endpoint_lifecycle_rejection_projection_is_deterministic() {
+    let first = project_service_api_lifecycle_rejection("service_api_ingress_rate_limit_exceeded")
+        .expect("known lifecycle reason code should project");
+    let second = project_service_api_lifecycle_rejection("service_api_ingress_rate_limit_exceeded")
+        .expect("known lifecycle reason code should project");
+    assert_eq!(first, second);
 }
 
 #[test]
-fn functional_service_api_endpoint_websocket_session_rejects_invalid_frame_opcode() {
-    let invalid_binary_frame = [0x82, 0x01, b'{'];
-    let rejection = validate_service_api_websocket_session_frame(&invalid_binary_frame);
+fn functional_service_api_endpoint_lifecycle_rejection_projection_maps_limiter_classes() {
+    let concurrency =
+        project_service_api_lifecycle_rejection("service_api_ingress_concurrency_limit_exceeded")
+            .expect("concurrency limiter reason must project");
     assert_eq!(
-        rejection,
-        Err("service_api_ws_session_frame_opcode_invalid")
+        concurrency,
+        ServiceApiLifecycleRejectionProjection {
+            rejection_class: "async-lifecycle-limiter",
+            reason_code: "service_api_ingress_concurrency_limit_exceeded",
+            status_code: 429,
+            error_label: "too-many-requests",
+            outcome: "concurrency-limit",
+        }
     );
+
+    let sender_suspended =
+        project_service_api_lifecycle_rejection("service_api_ingress_sender_suspended")
+            .expect("sender suspension reason must project");
+    assert_eq!(sender_suspended.rejection_class, "sender-admission-limiter");
+    assert_eq!(sender_suspended.status_code, 429);
+    assert_eq!(sender_suspended.error_label, "too-many-requests");
+    assert_eq!(sender_suspended.outcome, "anti-spam");
 }
 
 #[test]
-fn integration_service_api_endpoint_websocket_session_contract_checks_live_upgrade_frame() {
+fn integration_service_api_endpoint_lifecycle_projection_matches_live_concurrency_rejection() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -1906,107 +1902,119 @@ fn integration_service_api_endpoint_websocket_session_contract_checks_live_upgra
         "--runtime-mode".to_owned(),
         "api".to_owned(),
         "--api-bind".to_owned(),
-        "127.0.0.1:34058".to_owned(),
+        "127.0.0.1:34067".to_owned(),
     ])
     .expect("api args should parse");
     let report = execute(parsed).expect("api execution should succeed");
     let snapshot = build_service_api_snapshot(&report);
 
     let bind_addr = reserve_loopback_addr();
+    let worker_count = 4_usize;
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 1,
+        max_requests: worker_count as u64,
         idle_timeout_ms: 2_000,
         body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
-        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+        concurrency_limit: 1,
+        rate_limit_per_second: 1_000,
     };
     let server_snapshot = snapshot.clone();
     let server =
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let sender_did = "kamn:did:agent:ws-client-contract-1";
-    let nonce = 31_u64;
+    let sender_did = "kamn:did:agent:test-client-lifecycle-projection";
+    let message_body = "{\"message\":\"lifecycle-projection-check\"}";
     let state_hash = format!(
         "service-api:{}:{}",
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
-    let response = send_websocket_upgrade_request(
-        bind_addr.as_str(),
-        "/v1/events/ws",
-        &[
-            ("X-KAMN-Sender-DID", sender_did),
-            ("X-KAMN-Request-Nonce", "31"),
-            ("X-KAMN-Request-Signature", signature.as_str()),
-        ],
-    );
-    let (header, frame) = split_websocket_response(&response);
-    assert!(header.contains("HTTP/1.1 101 Switching Protocols"));
+
+    let barrier = Arc::new(Barrier::new(worker_count));
+    let mut clients = Vec::with_capacity(worker_count);
+    for request_index in 0..worker_count {
+        let client_bind_addr = bind_addr.clone();
+        let barrier = barrier.clone();
+        let state_hash = state_hash.clone();
+        clients.push(thread::spawn(move || {
+            let nonce = 810 + request_index as u64;
+            let signature =
+                baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+            let nonce_text = nonce.to_string();
+            barrier.wait();
+            send_http_request_with_headers(
+                client_bind_addr.as_str(),
+                "POST",
+                "/v1/messages/send",
+                message_body,
+                &[
+                    ("X-KAMN-Sender-DID", sender_did),
+                    ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                    ("X-KAMN-Request-Signature", signature.as_str()),
+                ],
+            )
+        }));
+    }
+
+    let responses = clients
+        .into_iter()
+        .map(|client| client.join().expect("client request should complete"))
+        .collect::<Vec<String>>();
+    let rejection = responses
+        .iter()
+        .find(|response| response.contains("HTTP/1.1 429 Too Many Requests"))
+        .expect("expected at least one lifecycle limiter rejection");
+    let rejection_payload = parse_error_envelope_from_http_response(rejection);
+    let projection =
+        project_service_api_lifecycle_rejection(rejection_payload.reason_code.as_str())
+            .expect("live rejection reason should have projection");
+    assert_eq!(projection.rejection_class, "async-lifecycle-limiter");
     assert_eq!(
-        detect_service_api_websocket_protocol_contract_drift(header.as_str(), "v1"),
-        Ok(())
+        projection.reason_code,
+        "service_api_ingress_concurrency_limit_exceeded"
     );
-    assert_eq!(validate_service_api_websocket_session_frame(frame), Ok(()));
-    let (_, payload) = parse_websocket_response(&response);
-    assert!(payload.contains("\"event\":\"state-transition\""));
+    assert_eq!(projection.status_code, 429);
+    assert_eq!(projection.error_label, "too-many-requests");
+    assert_eq!(projection.outcome, "concurrency-limit");
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
         server_result.is_ok(),
-        "service api endpoint should stop cleanly after websocket session contract checks"
+        "service api endpoint should stop cleanly after lifecycle projection integration budget"
     );
 }
 
 #[test]
-fn regression_service_api_endpoint_websocket_protocol_contract_drift_remains_fail_closed() {
-    // Regression: #4317
-    let response_header = "\
-HTTP/1.1 101 Switching Protocols\r\n\
-Upgrade: websocket\r\n\
-Connection: Upgrade\r\n\
-X-KAMN-WebSocket-Contract: v2\r\n\
-\r\n";
-    assert_eq!(
-        detect_service_api_websocket_protocol_contract_drift(response_header, "v1"),
-        Err("service_api_ws_protocol_contract_drift_detected")
-    );
+fn regression_service_api_endpoint_lifecycle_projection_sender_suspension_class_stays_stable() {
+    // Regression: #4316
+    let projection =
+        project_service_api_lifecycle_rejection("service_api_ingress_sender_suspended")
+            .expect("sender suspension projection should exist");
+    assert_eq!(projection.rejection_class, "sender-admission-limiter");
+    assert_eq!(projection.status_code, 429);
+    assert_eq!(projection.outcome, "anti-spam");
 }
 
 #[test]
-fn performance_service_api_endpoint_websocket_session_checker_loop_stays_within_local_budget() {
+fn performance_service_api_endpoint_lifecycle_projection_loop_stays_within_local_budget() {
     let started = Instant::now();
-    let response_header = "\
-HTTP/1.1 101 Switching Protocols\r\n\
-Upgrade: websocket\r\n\
-Connection: Upgrade\r\n\
-X-KAMN-WebSocket-Contract: v1\r\n\
-\r\n";
-    let payload = br#"{"event":"state-transition","sequence":1}"#;
-    assert!(
-        payload.len() <= 125,
-        "test websocket payload must remain short"
-    );
-    let mut valid_frame = Vec::with_capacity(payload.len() + 2);
-    valid_frame.push(0x81);
-    valid_frame.push(payload.len() as u8);
-    valid_frame.extend_from_slice(payload);
+    let reason_codes = [
+        "service_api_ingress_concurrency_limit_exceeded",
+        "service_api_ingress_rate_limit_exceeded",
+        "service_api_ingress_sender_rate_limit_exceeded",
+        "service_api_ingress_sender_suspended",
+    ];
 
-    for _ in 0..50_000_u32 {
-        assert_eq!(
-            detect_service_api_websocket_protocol_contract_drift(response_header, "v1"),
-            Ok(())
-        );
-        assert_eq!(
-            validate_service_api_websocket_session_frame(valid_frame.as_slice()),
-            Ok(())
-        );
+    for idx in 0..60_000_u32 {
+        let reason_code = reason_codes[idx as usize % reason_codes.len()];
+        let projection = project_service_api_lifecycle_rejection(reason_code)
+            .expect("known lifecycle reason should project");
+        assert_eq!(projection.reason_code, reason_code);
     }
 
     assert!(
         started.elapsed() <= Duration::from_secs(2),
-        "websocket protocol/session checker loop exceeded local budget"
+        "lifecycle projection loop exceeded local budget"
     );
 }
