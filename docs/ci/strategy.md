@@ -683,8 +683,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - composes existing low-cost deployment asset checks and bounded live validation (`validate_deployment_assets_live.sh`).
   - no external network dependency; checks are deterministic against local compose/docs artifacts.
   - runtime budget is bounded via `KAMN_COMPOSE_TOPOLOGY_CONTRACT_MAX_SECONDS`.
+- Deterministic packaging taxonomy and evidence markers:
+  - `packaging_reason_taxonomy_version=kamn.deploy.compose-packaging-reason-taxonomy.v1`
+  - `packaging_reason_codes_csv=compose_packaging_manifest_drift_detected,compose_packaging_config_drift_detected,compose_packaging_evidence_contract_drift_detected`
+  - `packaging_contract_evidence_status=verified`
+  - `compose_manifest_contract_status=verified`
+  - `compose_config_contract_status=verified`
+  - `k8s_manifest_contract_status=verified`
 - Deterministic fail-closed marker for policy tamper drills:
   - `compose_topology_policy_docs_marker_mismatch`
+  - `compose_topology_policy_packaging_reason_taxonomy_version_mismatch`
+  - `compose_topology_policy_packaging_reason_codes_csv_mismatch`
+  - `compose_topology_policy_packaging_contract_evidence_status_mismatch`
 
 ## Deploy Local Compose Multinode Live Validation Contract Lane
 - Entry commands:

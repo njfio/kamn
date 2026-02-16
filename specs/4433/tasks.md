@@ -1,6 +1,6 @@
 # Tasks: Issue #4433
 
-Status: In Progress
+Status: Completed
 Issue: #4433
 
 ## Ordered Tasks
@@ -37,10 +37,28 @@ T4 (Verify):
 ## TDD Evidence
 
 - RED command/output:
-  - Pending execution.
+  - `bash scripts/deploy/test_validate_compose_topology_contract_lane.sh`
+    - Failed with: `expected compose topology contract lane packaging reason taxonomy marker`
+  - `bash scripts/deploy/test_check_compose_topology_contract_policy.sh`
+    - Failed with: `expected compose topology policy checker reason taxonomy marker`
+  - `bash scripts/deploy/test_validate_deployment_assets_live.sh`
+    - Failed with: `expected deployment compose-manifest contract marker`
 
 - GREEN command/output:
-  - Pending implementation.
+  - `bash scripts/deploy/test_validate_deployment_assets_live.sh`
+    - Passed: `deployment assets live validation tests passed.`
+  - `bash scripts/deploy/test_validate_compose_topology_contract_lane.sh`
+    - Passed: `compose topology contract lane tests passed.`
+  - `bash scripts/deploy/test_check_compose_topology_contract_policy.sh`
+    - Passed: `compose topology policy tests passed.`
+  - `bash scripts/deploy/test_deployment_assets.sh`
+    - Passed: `deployment asset contract tests passed.`
+  - `cargo fmt --check`
+    - Passed
+  - `cargo clippy -p kamn-core -- -D warnings`
+    - Passed
 
 - Regression summary:
-  - Pending verification.
+  - Compose topology lane now emits deterministic packaging taxonomy and evidence markers.
+  - Policy checker now fails closed on packaging taxonomy/reason/evidence drift.
+  - Live deployment asset validation now includes compose-manifest-config marker coverage.
