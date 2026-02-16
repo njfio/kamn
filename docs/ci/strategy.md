@@ -3299,8 +3299,9 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
   - `anti_flake_policy_reason_codes_csv=none|<csv>`
   - `anti_flake_policy_reason_codes_value=none|<csv>`
   - `anti_flake_policy_reason_class=stable|budgeted|violation`
+  - `ci_smoke_local_heavy_boundary_status=verified|violation`
 - Deterministic reason-code surface:
-  - `anti_flake_policy_reason_codes_csv=no_active_flaky_entries,active_flaky_entries_within_budget,active_flaky_entries_exceed_max,registry_validation_failed,registry_file_missing,expected_final_decision_mismatch,rerun_policy_fast_workflow_missing,rerun_policy_deep_workflow_missing,rerun_policy_bounded_retry_missing,rerun_policy_invariant_non_retry_missing,rerun_policy_excessive_retry_detected`
+  - `anti_flake_policy_reason_codes_csv=no_active_flaky_entries,active_flaky_entries_within_budget,active_flaky_entries_exceed_max,registry_validation_failed,registry_file_missing,expected_final_decision_mismatch,rerun_policy_fast_workflow_missing,rerun_policy_deep_workflow_missing,rerun_policy_bounded_retry_missing,rerun_policy_invariant_non_retry_missing,rerun_policy_excessive_retry_detected,ci_smoke_performance_report_step_missing,ci_smoke_threshold_check_step_missing,local_heavy_opt_in_boundary_missing`
   - `no_active_flaky_entries`
   - `active_flaky_entries_within_budget`
   - `active_flaky_entries_exceed_max`
@@ -3312,6 +3313,14 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
   - `rerun_policy_bounded_retry_missing`
   - `rerun_policy_invariant_non_retry_missing`
   - `rerun_policy_excessive_retry_detected`
+  - `ci_smoke_performance_report_step_missing`
+  - `ci_smoke_threshold_check_step_missing`
+  - `local_heavy_opt_in_boundary_missing`
+- CI smoke/local-heavy boundary governance:
+  - checker validates fast-gate contains `Generate performance smoke report` and `Check performance thresholds (smoke)` markers.
+  - checker validates local-heavy lane remains explicit opt-in with selector gate:
+    - `run_kolme_local_heavy_contract_tests == 'true'`
+    - `kolme_local_heavy_selector_opt_in == 'true'`
 - Merge gate wiring:
   - `ci-fast-gate` runs anti-flake policy enforcement after registry format validation and uploads `ci-anti-flake-policy-report.json` as artifact telemetry.
 
