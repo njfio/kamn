@@ -1,7 +1,7 @@
 # Issue #4322 Tasks
 
 - Issue: `#4322`
-- Status: `In Progress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red): add `block_commit_checker_reason_mapping` conformance tests for unit/functional/integration/regression/performance categories.
@@ -14,4 +14,6 @@
   - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_durable_commit_checker_ci_boundary_markers -- --exact`
 
 ## Completion Evidence
-- Pending implementation and verification.
+- Durable commit checker reason projection and lane-boundary enforcement API implemented in `block_pipeline`.
+- Conformance suite `block_commit_checker_reason_mapping` passes across required categories.
+- CI strategy docs include durable commit checker boundary markers and are guarded by docs tests.

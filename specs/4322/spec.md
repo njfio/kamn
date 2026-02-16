@@ -1,7 +1,7 @@
 # Issue #4322 Spec
 
 - Title: `Subtask: implement durable commit checker reason mapping with ci smoke and local-heavy boundary enforcement`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
 - Parent: `#4314`

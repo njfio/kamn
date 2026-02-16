@@ -1,7 +1,7 @@
 # Issue #4322 Plan
 
 - Issue: `#4322`
-- Status: `In Progress`
+- Status: `Completed`
 
 ## Approach
 - Add a small durable commit checker projection surface in `block_pipeline` with:

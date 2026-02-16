@@ -925,3 +925,26 @@ fn doc_contains_message_anchoring_ci_boundary_taxonomy_markers() {
     assert!(DOC.contains("test_run_message_proof_anchoring_contract_lane.sh"));
     assert!(DOC.contains("test_validate_message_proof_anchoring_live.sh"));
 }
+
+#[test]
+fn doc_contains_durable_commit_checker_ci_boundary_markers() {
+    assert!(DOC.contains("## Durable Commit Checker Reason Mapping + CI Boundary Fast Lane"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test block_commit_checker_reason_mapping unit_replay_drift_reason_projection_is_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test block_commit_checker_reason_mapping functional_ci_smoke_lane_boundary_emits_low_cost_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test block_commit_checker_reason_mapping integration_checker_projection_and_lane_boundary_contracts_are_consistent -- --exact"
+    ));
+    assert!(DOC.contains(
+        "durable_commit_checker_reason_taxonomy_version=kamn.runtime.durable-commit-checker-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("ci_smoke_local_heavy_boundary_status=verified"));
+    assert!(DOC.contains("ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("local_heavy_lane_execution_mode=opt_in"));
+    assert!(DOC.contains("durable_commit_checker_ci_smoke_fast_gate_required"));
+    assert!(DOC.contains("durable_commit_checker_local_heavy_ci_fast_gate_mismatch"));
+    assert!(DOC.contains("durable_commit_checker_local_heavy_opt_in_required"));
+}
