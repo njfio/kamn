@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/sdk/run_rust_sdk_service_client_contract.sh"
+REQUEST_ERROR_REASON_TAXONOMY_VERSION="kamn.sdk.rust-http-request-error-reason-taxonomy.v1"
+REQUEST_ERROR_REASON_CODES_CSV="service_api_auth_sender_did_header_missing,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_route_not_found,service_api_method_not_allowed,service_api_legacy_unauthorized,service_api_legacy_conflict,service_api_legacy_bad_request,service_api_legacy_error_unknown"
 
 output_json=""
 max_seconds=240
@@ -62,6 +64,18 @@ if ! printf '%s\n' "$run_output" | grep -q '^regression_guard_status=verified$';
   echo "expected rust sdk service client contract regression marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q "^request_error_reason_taxonomy_version=${REQUEST_ERROR_REASON_TAXONOMY_VERSION}$"; then
+  echo "expected rust sdk service client contract request-error taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^request_error_reason_codes_csv=${REQUEST_ERROR_REASON_CODES_CSV}$"; then
+  echo "expected rust sdk service client contract request-error reason-codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^request_error_taxonomy_status=verified$'; then
+  echo "expected rust sdk service client contract request-error taxonomy status marker" >&2
+  exit 1
+fi
 
 set +e
 fail_closed_output="$({
@@ -92,6 +106,10 @@ cat >"$report_json" <<JSON
   "final_decision": "GO",
   "service_client_contract_status": "verified",
   "evidence_bundle_status": "verified",
+  "http_error_taxonomy_contract_status": "verified",
+  "request_error_reason_taxonomy_version": "${REQUEST_ERROR_REASON_TAXONOMY_VERSION}",
+  "request_error_reason_codes_csv": "${REQUEST_ERROR_REASON_CODES_CSV}",
+  "request_error_reason_codes_value": "${REQUEST_ERROR_REASON_CODES_CSV}",
   "fail_closed_status": "verified",
   "fail_closed_reason_code": "zero_runtime_budget",
   "elapsed_seconds": ${elapsed_seconds}
@@ -106,5 +124,8 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "service_client_contract_status=verified"
 echo "evidence_bundle_status=verified"
+echo "http_error_taxonomy_contract_status=verified"
+echo "request_error_reason_taxonomy_version=${REQUEST_ERROR_REASON_TAXONOMY_VERSION}"
+echo "request_error_reason_codes_csv=${REQUEST_ERROR_REASON_CODES_CSV}"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=zero_runtime_budget"

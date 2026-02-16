@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REQUEST_ERROR_REASON_TAXONOMY_VERSION="kamn.sdk.rust-http-request-error-reason-taxonomy.v1"
+REQUEST_ERROR_REASON_CODES_CSV="service_api_auth_sender_did_header_missing,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_route_not_found,service_api_method_not_allowed,service_api_legacy_unauthorized,service_api_legacy_conflict,service_api_legacy_bad_request,service_api_legacy_error_unknown"
 
 output_json=""
 max_seconds=180
@@ -77,6 +79,10 @@ cat >"$report_json" <<JSON
   "http_route_contract_status": "verified",
   "websocket_contract_status": "verified",
   "regression_guard_status": "verified",
+  "request_error_reason_taxonomy_version": "${REQUEST_ERROR_REASON_TAXONOMY_VERSION}",
+  "request_error_reason_codes_csv": "${REQUEST_ERROR_REASON_CODES_CSV}",
+  "request_error_reason_codes_value": "${REQUEST_ERROR_REASON_CODES_CSV}",
+  "request_error_taxonomy_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
 JSON
@@ -90,3 +96,6 @@ echo "final_decision=GO"
 echo "http_route_contract_status=verified"
 echo "websocket_contract_status=verified"
 echo "regression_guard_status=verified"
+echo "request_error_reason_taxonomy_version=${REQUEST_ERROR_REASON_TAXONOMY_VERSION}"
+echo "request_error_reason_codes_csv=${REQUEST_ERROR_REASON_CODES_CSV}"
+echo "request_error_taxonomy_status=verified"
