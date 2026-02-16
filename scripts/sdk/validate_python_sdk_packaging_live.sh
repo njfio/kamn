@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/sdk/run_python_sdk_packaging_contract.sh"
+PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION="kamn.sdk.python-packaging-publish-readiness-reason-taxonomy.v1"
+PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV="python_packaging_metadata_missing,python_packaging_metadata_invalid,python_packaging_import_probe_failed,python_packaging_unittest_contract_failed"
 
 output_json=""
 max_seconds=240
@@ -60,6 +62,18 @@ if ! printf '%s\n' "$run_output" | grep -q '^packaging_contract_status=verified$
   echo "expected python sdk packaging contract marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q "^packaging_publish_readiness_reason_taxonomy_version=${PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION}$"; then
+  echo "expected python sdk packaging contract publish-readiness taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^packaging_publish_readiness_reason_codes_csv=${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}$"; then
+  echo "expected python sdk packaging contract publish-readiness reason-codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^packaging_publish_readiness_status=verified$'; then
+  echo "expected python sdk packaging contract publish-readiness status marker" >&2
+  exit 1
+fi
 
 if [ ! -f "$pyproject_file" ]; then
   echo "expected pyproject.toml for missing-file fail-closed drill" >&2
@@ -101,6 +115,10 @@ cat >"$report_json" <<JSON
   "final_decision": "GO",
   "packaging_contract_status": "verified",
   "evidence_bundle_status": "verified",
+  "publish_readiness_taxonomy_status": "verified",
+  "packaging_publish_readiness_reason_taxonomy_version": "${PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION}",
+  "packaging_publish_readiness_reason_codes_csv": "${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}",
+  "packaging_publish_readiness_reason_codes_value": "${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}",
   "fail_closed_status": "verified",
   "fail_closed_reason_code": "missing_pyproject",
   "elapsed_seconds": ${elapsed_seconds}
@@ -115,5 +133,8 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "packaging_contract_status=verified"
 echo "evidence_bundle_status=verified"
+echo "publish_readiness_taxonomy_status=verified"
+echo "packaging_publish_readiness_reason_taxonomy_version=${PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION}"
+echo "packaging_publish_readiness_reason_codes_csv=${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=missing_pyproject"

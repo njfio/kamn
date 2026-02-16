@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION="kamn.sdk.python-packaging-publish-readiness-reason-taxonomy.v1"
+PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV="python_packaging_metadata_missing,python_packaging_metadata_invalid,python_packaging_import_probe_failed,python_packaging_unittest_contract_failed"
 
 output_json=""
 max_seconds=180
@@ -110,6 +112,10 @@ cat >"$report_json" <<JSON
   "package_metadata_status": "verified",
   "sdk_import_status": "verified",
   "packaging_contract_status": "verified",
+  "packaging_publish_readiness_reason_taxonomy_version": "${PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION}",
+  "packaging_publish_readiness_reason_codes_csv": "${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}",
+  "packaging_publish_readiness_reason_codes_value": "${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}",
+  "packaging_publish_readiness_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
 JSON
@@ -123,3 +129,6 @@ echo "final_decision=GO"
 echo "package_metadata_status=verified"
 echo "sdk_import_status=verified"
 echo "packaging_contract_status=verified"
+echo "packaging_publish_readiness_reason_taxonomy_version=${PACKAGING_PUBLISH_READINESS_REASON_TAXONOMY_VERSION}"
+echo "packaging_publish_readiness_reason_codes_csv=${PACKAGING_PUBLISH_READINESS_REASON_CODES_CSV}"
+echo "packaging_publish_readiness_status=verified"
