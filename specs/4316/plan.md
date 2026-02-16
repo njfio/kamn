@@ -1,7 +1,7 @@
 # Issue #4316 Plan
 
 - Issue: `#4316`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add a shared lifecycle-limiter rejection projection mapping in `service_api_endpoint` keyed by reason code.
