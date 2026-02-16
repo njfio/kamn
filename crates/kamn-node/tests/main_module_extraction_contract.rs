@@ -249,3 +249,44 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
         "runtime_orchestration module should own signer key-source policy enforcement"
     );
 }
+
+#[test]
+fn main_module_extraction_contract_runtime_module_boundary_parity_markers_remain_stable() {
+    let main_rs = read_repo_file("src/main.rs");
+    let runtime_orchestration_rs = read_repo_file("src/runtime_orchestration.rs");
+    let daemon_phase_rs = read_repo_file("src/runtime_orchestration/daemon_phase.rs");
+    let runtime_kolme_live_rs = read_repo_file("src/runtime_kolme_live.rs");
+
+    assert!(
+        main_rs.contains("use runtime_orchestration::{build_runtime_execution_id, execute};"),
+        "main.rs should dispatch runtime execution through runtime_orchestration boundary"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("use daemon_phase::execute_daemon_runtime;"),
+        "runtime_orchestration should delegate daemon execution to daemon_phase module"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime("),
+        "runtime_orchestration should delegate single-cycle Kolme execution to runtime_kolme_live"
+    );
+    assert!(
+        runtime_orchestration_rs.contains("execute_kolme_live_runtime_continuous("),
+        "runtime_orchestration should delegate continuous Kolme execution to runtime_kolme_live"
+    );
+    assert!(
+        daemon_phase_rs.contains("pub(super) fn execute_daemon_runtime("),
+        "daemon_phase should own daemon runtime execution helper"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn daemon_shutdown_drain_status("),
+        "runtime_orchestration should not re-inline daemon shutdown status helper from daemon_phase"
+    );
+    assert!(
+        runtime_kolme_live_rs.contains("pub(crate) fn execute_kolme_live_runtime("),
+        "runtime_kolme_live should own single-cycle Kolme execution helper"
+    );
+    assert!(
+        !runtime_orchestration_rs.contains("fn build_kolme_live_request("),
+        "runtime_orchestration should not re-inline Kolme request construction helper"
+    );
+}
