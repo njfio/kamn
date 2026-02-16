@@ -10,7 +10,6 @@ use axum::{
     routing::any,
     Router,
 };
-#[cfg(test)]
 use std::cell::RefCell;
 use std::env;
 use std::fs;
@@ -81,20 +80,19 @@ enum ObservabilityEndpointTlsMode {
     Require { cert_file: String, key_file: String },
 }
 
-#[cfg(test)]
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ObservabilityEndpointTlsModeOverride {
     InvalidMode { mode: String },
     Require { cert_file: String, key_file: String },
 }
 
-#[cfg(test)]
 thread_local! {
     static OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS: RefCell<Option<ObservabilityEndpointTlsModeOverride>> =
         const { RefCell::new(None) };
 }
 
-#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn set_observability_endpoint_tls_mode_override_for_current_thread_for_tests(
     mode: Option<ObservabilityEndpointTlsModeOverride>,
 ) {
@@ -371,7 +369,6 @@ async fn serve_observability_endpoint_async(
 }
 
 fn resolve_observability_endpoint_tls_mode() -> Result<ObservabilityEndpointTlsMode, String> {
-    #[cfg(test)]
     if let Some(tls_mode_override) = OBSERVABILITY_ENDPOINT_TLS_MODE_OVERRIDE_FOR_TESTS
         .with(|tls_mode_override| tls_mode_override.borrow().clone())
     {
