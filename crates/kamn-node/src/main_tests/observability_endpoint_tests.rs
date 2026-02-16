@@ -1,6 +1,7 @@
 use super::*;
 use crate::daemon_test_env_lock;
 use crate::observability_endpoint::RuntimeObservabilitySnapshot;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Barrier};
@@ -12,6 +13,60 @@ fn reserve_loopback_addr() -> String {
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()
+}
+
+#[derive(Debug)]
+struct TestSkipServerVerification(Arc<rustls::crypto::CryptoProvider>);
+
+impl TestSkipServerVerification {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(Arc::new(rustls::crypto::ring::default_provider())))
+    }
+}
+
+impl rustls::client::danger::ServerCertVerifier for TestSkipServerVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        self.0.signature_verification_algorithms.supported_schemes()
+    }
 }
 
 fn send_http_get(addr: &str, path: &str) -> String {
@@ -40,6 +95,54 @@ fn send_http_get(addr: &str, path: &str) -> String {
         }
     }
     response
+}
+
+fn send_https_get(addr: &str, path: &str) -> String {
+    try_send_https_get(addr, path).expect("tls request should succeed")
+}
+
+fn try_send_https_get(addr: &str, path: &str) -> Result<String, String> {
+    let client_config = rustls::ClientConfig::builder()
+        .dangerous()
+        .with_custom_certificate_verifier(TestSkipServerVerification::new())
+        .with_no_client_auth();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost".to_owned())
+        .map_err(|error| format!("server name should parse: {error}"))?;
+    let connection = rustls::ClientConnection::new(Arc::new(client_config), server_name)
+        .map_err(|error| format!("tls client connection should initialize: {error}"))?;
+    let tcp_stream =
+        TcpStream::connect(addr).map_err(|error| format!("tls connect should succeed: {error}"))?;
+    tcp_stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .map_err(|error| format!("tls read timeout should be configurable: {error}"))?;
+    let mut stream = rustls::StreamOwned::new(connection, tcp_stream);
+
+    let request = format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("tls request should write: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("tls request should flush: {error}"))?;
+
+    let mut response = String::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.push_str(
+                    std::str::from_utf8(&chunk[..read_count])
+                        .map_err(|error| format!("response must be utf-8: {error}"))?,
+                );
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => return Err(format!("tls response should be readable: {error}")),
+        }
+    }
+    Ok(response)
 }
 
 fn try_send_http_get(addr: &str, path: &str) -> Result<String, String> {
@@ -147,6 +250,20 @@ fn wait_for_endpoint_ready(addr: &str) {
         thread::sleep(Duration::from_millis(10));
     }
     panic!("endpoint did not become ready within timeout");
+}
+
+fn wait_for_https_endpoint_ready(addr: &str) {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline {
+        if try_send_https_get(addr, "/readyz")
+            .map(|response| response.contains("HTTP/1.1"))
+            .unwrap_or(false)
+        {
+            return;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    panic!("tls endpoint did not become ready within timeout");
 }
 
 fn sample_observability_snapshot() -> RuntimeObservabilitySnapshot {
@@ -641,6 +758,58 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
     assert!(
         server_result.is_ok(),
         "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_runtime_observability_endpoint_tls_mode_serves_required_https_routes() {
+    let _env_lock = daemon_test_env_lock()
+        .lock()
+        .expect("daemon env lock should guard observability tls env overrides");
+    let (cert_file, key_file) =
+        super::service_api_endpoint_tests::write_test_service_api_tls_materials();
+    let _tls_mode_guard = EnvVarGuard::set("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE", Some("require"));
+    let _tls_cert_guard = EnvVarGuard::set(
+        "KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE",
+        Some(cert_file.as_str()),
+    );
+    let _tls_key_guard = EnvVarGuard::set(
+        "KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE",
+        Some(key_file.as_str()),
+    );
+
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_https_endpoint_ready(bind_addr.as_str());
+
+    let metrics_response = send_https_get(bind_addr.as_str(), "/metrics");
+    let health_response = send_https_get(bind_addr.as_str(), "/healthz");
+    let readiness_response = send_https_get(bind_addr.as_str(), "/readyz");
+
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(metrics_response.contains("text/plain; version=0.0.4"));
+    assert!(metrics_response.contains("kamn_observability_latency_p50_ms 25"));
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(health_response.contains("\"schema_version\":\"kamn.runtime.observability.health.v1\""));
+    assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response
+        .contains("\"schema_version\":\"kamn.runtime.observability.readiness.v1\""));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "tls endpoint server should stop cleanly after configured request budget"
     );
 }
 
