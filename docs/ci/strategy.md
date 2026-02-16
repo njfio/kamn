@@ -3235,6 +3235,14 @@ Test-harness growth advisory (non-blocking):
 - `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --trend-threshold-file .ci/test-harness-loc-trend-thresholds.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
 - `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
 - Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
+- deterministic structural-budget reason taxonomy markers:
+  - `test_harness_loc_soft_budget_reason_taxonomy_version=kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1`
+  - `test_harness_loc_soft_budget_reason_codes_csv=report_file_not_found,budget_file_not_found,baseline_file_not_found,trend_threshold_file_not_found,report_json_invalid,report_schema_mismatch,report_harness_script_count_invalid,report_harness_shell_line_total_invalid,budget_key_missing,budget_value_invalid,baseline_key_missing,baseline_value_invalid,trend_threshold_key_missing,trend_threshold_value_invalid,trend_threshold_order_invalid,harness_script_count_soft_max_exceeded,harness_shell_line_total_soft_max_exceeded,harness_script_count_trend_warn_delta_exceeded,harness_shell_line_total_trend_warn_delta_exceeded,harness_script_count_trend_fail_delta_exceeded,harness_shell_line_total_trend_fail_delta_exceeded,trend_fail_enforcement_triggered`
+  - `test_harness_loc_soft_budget_reason_codes_value=none|<csv>`
+  - `test_harness_loc_soft_budget_reason_class=stable|budgeted|violation`
+- deterministic CI smoke bounded-enforcement markers:
+  - `test_harness_loc_soft_budget_ci_smoke_lane_cost_profile=low`
+  - `test_harness_loc_soft_budget_ci_smoke_runtime_budget_status=within|exceeded`
 
 Kolme harness trend policy (warning-to-fail escalation contract):
 - trend thresholds file: `.ci/kolme-test-harness-loc-trend-thresholds.env`
@@ -3431,6 +3439,10 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=harness_shell_line_total_trend_warn_delta_exceeded`
     - `reason_codes=harness_script_count_trend_fail_delta_exceeded`
     - `reason_codes=harness_shell_line_total_trend_fail_delta_exceeded`
+  - deterministic CI smoke bounded-enforcement surface:
+    - `test_harness_loc_soft_budget_contract_ci_smoke_lane_cost_profile=low`
+    - `test_harness_loc_soft_budget_contract_ci_smoke_runtime_budget_status=within|exceeded`
+    - `test_harness_loc_soft_budget_contract_reason_key=test_harness_loc_soft_budget_contract_ok|test_harness_loc_soft_budget_contract_runtime_budget_exceeded`
 - Kolme test-harness LOC soft-budget contract lane (`test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`

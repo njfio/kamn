@@ -864,6 +864,29 @@ fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers()
 }
 
 #[test]
+fn doc_contains_test_harness_structural_budget_reason_taxonomy_and_ci_smoke_markers() {
+    assert!(DOC.contains(
+        "test_harness_loc_soft_budget_reason_taxonomy_version=kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "test_harness_loc_soft_budget_reason_codes_csv=report_file_not_found,budget_file_not_found,baseline_file_not_found,trend_threshold_file_not_found,report_json_invalid,report_schema_mismatch,report_harness_script_count_invalid,report_harness_shell_line_total_invalid,budget_key_missing,budget_value_invalid,baseline_key_missing,baseline_value_invalid,trend_threshold_key_missing,trend_threshold_value_invalid,trend_threshold_order_invalid,harness_script_count_soft_max_exceeded,harness_shell_line_total_soft_max_exceeded,harness_script_count_trend_warn_delta_exceeded,harness_shell_line_total_trend_warn_delta_exceeded,harness_script_count_trend_fail_delta_exceeded,harness_shell_line_total_trend_fail_delta_exceeded,trend_fail_enforcement_triggered"
+    ));
+    assert!(DOC.contains("test_harness_loc_soft_budget_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains("test_harness_loc_soft_budget_reason_class=stable|budgeted|violation"));
+    assert!(DOC.contains("test_harness_loc_soft_budget_ci_smoke_lane_cost_profile=low"));
+    assert!(
+        DOC.contains("test_harness_loc_soft_budget_ci_smoke_runtime_budget_status=within|exceeded")
+    );
+    assert!(DOC.contains("test_harness_loc_soft_budget_contract_ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains(
+        "test_harness_loc_soft_budget_contract_ci_smoke_runtime_budget_status=within|exceeded"
+    ));
+    assert!(DOC.contains(
+        "test_harness_loc_soft_budget_contract_reason_key=test_harness_loc_soft_budget_contract_ok|test_harness_loc_soft_budget_contract_runtime_budget_exceeded"
+    ));
+}
+
+#[test]
 fn doc_contains_runtime_local_full_mode_live_validation_runtime_error_taxonomy_markers() {
     assert!(DOC.contains("## Runtime Local Full-Mode Live Validation Contract Lane"));
     assert!(DOC.contains(
