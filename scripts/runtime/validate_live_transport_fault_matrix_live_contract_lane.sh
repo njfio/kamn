@@ -139,6 +139,18 @@ if ! printf '%s\n' "$policy_output" | grep -q '^live_transport_fault_matrix_poli
   echo "expected live transport fault matrix policy status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1$'; then
+  echo "expected live transport fault matrix policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid$'; then
+  echo "expected live transport fault matrix policy reason codes taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected live transport fault matrix policy normalized reason_codes_value marker" >&2
+  exit 1
+fi
 
 cp "$summary_report" "$tampered_report"
 python3 - "$tampered_report" <<'PY'
@@ -240,6 +252,9 @@ lane_report = {
     "docs_contract_status": "verified",
     "runtime_transport_mode_status": "verified",
     "reason_taxonomy_status": "verified",
+    "policy_reason_taxonomy_version": policy_report.get("reason_taxonomy_version"),
+    "policy_reason_codes_csv": policy_report.get("reason_codes_csv"),
+    "policy_reason_codes_value": policy_report.get("reason_codes_value"),
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status",
     "performance_budget_status": "verified",
@@ -264,6 +279,9 @@ echo "live_transport_fault_matrix_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
 echo "reason_taxonomy_status=verified"
+echo "policy_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
+echo "policy_reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
+echo "policy_reason_codes_value=none"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status"
 echo "performance_budget_status=verified"

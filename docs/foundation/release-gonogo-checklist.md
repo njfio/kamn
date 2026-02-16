@@ -24,6 +24,19 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Fail-closed drill requirement:
   - tampered compatibility matrix status must reject with `unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch`.
 
+## Transport Retry-Reconnect Failure Taxonomy Gate (Issue #4508)
+- Validation command:
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-summary.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_live_transport_fault_matrix_live_policy.sh --report-file /tmp/live-transport-fault-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/live-transport-fault-matrix-live-policy.json`
+- Required deterministic payload markers:
+  - `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`
+  - `reason_codes_value=none|<csv>`
+- Fail-closed drill requirements:
+  - partition/rejoin tamper must reject with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
+  - unstable reason classification tamper must reject with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
+
 ## Kolme Signer Custody Gate (Issue #2240)
 - Deployment preflight lane command:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`

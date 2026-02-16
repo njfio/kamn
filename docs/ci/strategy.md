@@ -466,7 +466,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic replay recovery marker (`replay_recovery_status=verified`).
   - lane emits deterministic peer-churn recovery marker (`peer_churn_recovery_status=verified`).
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_live_fault_matrix`).
-  - lane emits deterministic taxonomy marker (`reason_taxonomy_status=verified`) with reason-code matrix (`reason_codes=none|...`).
+  - lane emits deterministic taxonomy markers:
+    `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`,
+    `reason_taxonomy_status=verified`.
+  - policy checker emits deterministic reason-code taxonomy marker:
+    `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`.
+  - policy checker and contract lane emit normalized marker `reason_codes_value=none|<csv>` for deterministic machine parsing.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
@@ -475,6 +480,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - live transport fault matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+  - `live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch`
+  - `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`
 
 ## Runtime Libp2p Process-Isolated Convergence Validation Contract Lane
 - Entry commands:

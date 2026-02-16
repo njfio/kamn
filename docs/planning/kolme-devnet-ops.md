@@ -1774,6 +1774,20 @@ Operator checkpoints:
 - localhost signed admission bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1632`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
+## Runtime Transport Retry-Reconnect Failure Taxonomy (Issue #4508)
+
+- Entry commands:
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-summary.json`
+  - `bash scripts/runtime/check_live_transport_fault_matrix_live_policy.sh --report-file /tmp/live-transport-fault-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/live-transport-fault-matrix-live-policy.json`
+  - `bash scripts/runtime/validate_live_transport_fault_matrix_live_contract_lane.sh --mode dry-run --output-json /tmp/live-transport-fault-matrix-live-contract-lane-report.json --policy-output-json /tmp/live-transport-fault-matrix-live-policy.json`
+- Deterministic taxonomy/normalization markers:
+  - `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`
+  - `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`
+  - `reason_codes_value=none|<csv>`
+- Drift failure requirements:
+  - partition/rejoin tamper must fail closed with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
+  - unstable reason classification tamper must fail closed with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
+
 ## Local Validation
 
 ```bash
