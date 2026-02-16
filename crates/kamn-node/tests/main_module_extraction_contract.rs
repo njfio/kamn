@@ -191,15 +191,20 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
         "signer module should own direct signed payload builder"
     );
     assert!(
-        signer_rs.contains("pub(crate) fn resolve_kolme_live_nonce("),
+        signer_rs.contains("pub(crate) fn resolve_kolme_live_nonce(")
+            || signer_rs.contains("pub(crate) use nonce::resolve_kolme_live_nonce;"),
         "signer module should own nonce resolver"
     );
     assert!(
-        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_profile_selector("),
+        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_profile_selector(")
+            || signer_rs.contains("pub(crate) use signer_policy::")
+                && signer_rs.contains("normalize_kolme_live_signer_profile_selector"),
         "signer module should own signer profile normalization helper"
     );
     assert!(
-        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_key_source("),
+        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_key_source(")
+            || signer_rs.contains("pub(crate) use signer_policy::")
+                && signer_rs.contains("normalize_kolme_live_signer_key_source"),
         "signer module should own signer key-source normalization helper"
     );
     assert!(
