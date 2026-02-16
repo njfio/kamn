@@ -116,10 +116,44 @@ if missing_doc_markers:
         + ",".join(missing_doc_markers)
     )
 
+required_request_validation_reason_markers = [
+    "service_api_ws_upgrade_header_missing",
+    "service_api_ws_version_header_invalid",
+    "service_api_method_not_allowed",
+    "service_api_route_not_found",
+    "service_api_payload_json_syntax_invalid",
+    "service_api_payload_structure_invalid",
+]
+missing_request_validation_reason_markers = [
+    marker
+    for marker in required_request_validation_reason_markers
+    if marker not in source_text
+]
+if missing_request_validation_reason_markers:
+    raise SystemExit(
+        "service api source missing request-validation reason markers: "
+        + ",".join(missing_request_validation_reason_markers)
+    )
+
+required_error_envelope_markers = [
+    "pub(crate) reason_code: String",
+    "pub(crate) message: String",
+]
+missing_error_envelope_markers = [
+    marker for marker in required_error_envelope_markers if marker not in source_text
+]
+if missing_error_envelope_markers:
+    raise SystemExit(
+        "service api source missing error-envelope markers: "
+        + ",".join(missing_error_envelope_markers)
+    )
+
 report = {
     "schema_version": "kamn.runtime.service-api-axum-ingress-config-matrix.v1",
     "ingress_limit_config_status": "verified",
     "docs_ingress_limit_matrix_status": "verified",
+    "request_validation_reason_registry_status": "verified",
+    "error_envelope_source_contract_status": "verified",
     "api_max_requests_default": max_requests_default,
     "api_idle_timeout_default_ms": idle_timeout_default_ms,
     "body_size_limit_bytes": body_size_limit_bytes,
@@ -199,8 +233,9 @@ host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
 
 
-def signature(nonce: int, payload: str) -> str:
-    return f"sig:ed25519:baseline-v1:{sender_did}:{nonce}:{state_hash}:{len(payload)}"
+def signature(nonce: int, payload: str, sender: str | None = None) -> str:
+    sender_value = sender_did if sender is None else sender
+    return f"sig:ed25519:baseline-v1:{sender_value}:{nonce}:{state_hash}:{len(payload)}"
 
 
 def request(method: str, path: str, body: str, headers: dict[str, str]) -> tuple[int, str]:
@@ -277,6 +312,78 @@ def run_keep_alive_probe() -> None:
         sock.close()
 
 
+def auth_headers(
+    nonce: int, body: str = "", sender: str | None = None
+) -> dict[str, str]:
+    sender_value = sender_did if sender is None else sender
+    return {
+        "X-KAMN-Sender-DID": sender_value,
+        "X-KAMN-Request-Nonce": str(nonce),
+        "X-KAMN-Request-Signature": signature(nonce, body, sender_value),
+    }
+
+
+def parse_error_envelope(payload: str, status: int, expected_status: int) -> dict[str, str]:
+    if status != expected_status:
+        raise SystemExit(
+            f"request-validation probe expected {expected_status} status; got {status}"
+        )
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise SystemExit("request-validation probe expected JSON error envelope") from exc
+    if not isinstance(parsed, dict):
+        raise SystemExit("request-validation probe expected JSON object error envelope")
+    return parsed
+
+
+def run_request_validation_probe() -> None:
+    request_validation_sender = "kamn:did:agent:axum-ingress-validator-request-validation"
+    websocket_status, websocket_body = request(
+        "GET",
+        "/v1/events/ws",
+        "",
+        auth_headers(530, sender=request_validation_sender),
+    )
+    websocket_payload = parse_error_envelope(websocket_body, websocket_status, 400)
+    if websocket_payload.get("error") != "bad-request":
+        raise SystemExit("request-validation probe expected bad-request websocket envelope")
+    if websocket_payload.get("reason_code") != "service_api_ws_upgrade_header_missing":
+        raise SystemExit("request-validation probe expected websocket-upgrade reason code")
+    if "missing required websocket upgrade header" not in str(
+        websocket_payload.get("message", "")
+    ):
+        raise SystemExit("request-validation probe expected websocket-upgrade message marker")
+
+    method_status, method_body = request(
+        "DELETE",
+        "/v1/messages/send",
+        "",
+        auth_headers(531, sender=request_validation_sender),
+    )
+    method_payload = parse_error_envelope(method_body, method_status, 405)
+    if method_payload.get("error") != "method-not-allowed":
+        raise SystemExit("request-validation probe expected method-not-allowed envelope")
+    if method_payload.get("reason_code") != "service_api_method_not_allowed":
+        raise SystemExit("request-validation probe expected method-not-allowed reason code")
+    if "method not allowed" not in str(method_payload.get("message", "")):
+        raise SystemExit("request-validation probe expected method-not-allowed message marker")
+
+    route_status, route_body = request(
+        "GET",
+        "/v1/nope",
+        "",
+        auth_headers(532, sender=request_validation_sender),
+    )
+    route_payload = parse_error_envelope(route_body, route_status, 404)
+    if route_payload.get("error") != "not-found":
+        raise SystemExit("request-validation probe expected not-found envelope")
+    if route_payload.get("reason_code") != "service_api_route_not_found":
+        raise SystemExit("request-validation probe expected route-not-found reason code")
+    if "not found" not in str(route_payload.get("message", "")):
+        raise SystemExit("request-validation probe expected route-not-found message marker")
+
+
 def run_websocket_probe() -> None:
     def send_upgrade(version: str, nonce: int) -> tuple[str, str]:
         ws_sock = socket.create_connection((host, port), timeout=3)
@@ -311,13 +418,13 @@ def run_websocket_probe() -> None:
         finally:
             ws_sock.close()
 
-    success_headers, _ = send_upgrade("13", 501)
+    success_headers, _ = send_upgrade("13", 640)
     if "HTTP/1.1 101 Switching Protocols" not in success_headers:
         raise SystemExit("websocket probe expected 101 Switching Protocols")
     if "x-kamn-websocket-contract: v1" not in success_headers.lower():
         raise SystemExit("websocket probe expected x-kamn-websocket-contract header")
 
-    invalid_headers, invalid_body = send_upgrade("12", 502)
+    invalid_headers, invalid_body = send_upgrade("12", 641)
     if "HTTP/1.1 400 Bad Request" not in invalid_headers:
         raise SystemExit("websocket fail-closed probe expected 400 for invalid version")
     if "invalid websocket version header" not in invalid_body:
@@ -352,6 +459,7 @@ def run_concurrency_probe() -> None:
 
 
 run_keep_alive_probe()
+run_request_validation_probe()
 run_websocket_probe()
 run_concurrency_probe()
 
@@ -361,6 +469,9 @@ with open(probe_report, "w", encoding="utf-8") as handle:
             "keep_alive_status": "verified",
             "concurrency_status": "verified",
             "websocket_status": "verified",
+            "request_validation_status": "verified",
+            "error_envelope_field_status": "verified",
+            "method_path_classification_status": "verified",
             "fail_closed_status": "verified",
         },
         handle,
@@ -455,6 +566,33 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["websocket_status"])
 PY
 )"
+request_validation_status="$(python3 - "$probe_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["request_validation_status"])
+PY
+)"
+error_envelope_field_status="$(python3 - "$probe_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["error_envelope_field_status"])
+PY
+)"
+method_path_classification_status="$(python3 - "$probe_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["method_path_classification_status"])
+PY
+)"
 fail_closed_status="$(python3 - "$probe_report" <<'PY'
 import json
 import pathlib
@@ -480,6 +618,24 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["docs_ingress_limit_matrix_status"])
+PY
+)"
+request_validation_reason_registry_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["request_validation_reason_registry_status"])
+PY
+)"
+error_envelope_source_contract_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["error_envelope_source_contract_status"])
 PY
 )"
 api_max_requests_default="$(python3 - "$config_matrix_report" <<'PY'
@@ -531,6 +687,10 @@ protocol_compliance_status="verified"
 route_contract_parity_status="verified"
 protocol_compliance_reason_taxonomy_version="kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
 protocol_compliance_reason_codes_csv="method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
+request_validation_reason_taxonomy_version="kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+request_validation_reason_codes_csv="service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid"
+error_envelope_reason_taxonomy_version="kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+error_envelope_reason_codes_csv="service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found"
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -550,10 +710,19 @@ cat >"$report_json" <<JSON
   "websocket_status": "${websocket_status}",
   "ingress_limit_config_status": "${ingress_limit_config_status}",
   "docs_ingress_limit_matrix_status": "${docs_ingress_limit_matrix_status}",
+  "request_validation_status": "${request_validation_status}",
+  "error_envelope_field_status": "${error_envelope_field_status}",
+  "method_path_classification_status": "${method_path_classification_status}",
   "protocol_compliance_status": "${protocol_compliance_status}",
   "route_contract_parity_status": "${route_contract_parity_status}",
   "protocol_compliance_reason_taxonomy_version": "${protocol_compliance_reason_taxonomy_version}",
   "protocol_compliance_reason_codes_csv": "${protocol_compliance_reason_codes_csv}",
+  "request_validation_reason_registry_status": "${request_validation_reason_registry_status}",
+  "error_envelope_source_contract_status": "${error_envelope_source_contract_status}",
+  "request_validation_reason_taxonomy_version": "${request_validation_reason_taxonomy_version}",
+  "request_validation_reason_codes_csv": "${request_validation_reason_codes_csv}",
+  "error_envelope_reason_taxonomy_version": "${error_envelope_reason_taxonomy_version}",
+  "error_envelope_reason_codes_csv": "${error_envelope_reason_codes_csv}",
   "api_max_requests_default": ${api_max_requests_default},
   "api_idle_timeout_default_ms": ${api_idle_timeout_default_ms},
   "body_size_limit_bytes": ${body_size_limit_bytes},
@@ -579,10 +748,19 @@ echo "concurrency_status=${concurrency_status}"
 echo "websocket_status=${websocket_status}"
 echo "ingress_limit_config_status=${ingress_limit_config_status}"
 echo "docs_ingress_limit_matrix_status=${docs_ingress_limit_matrix_status}"
+echo "request_validation_status=${request_validation_status}"
+echo "error_envelope_field_status=${error_envelope_field_status}"
+echo "method_path_classification_status=${method_path_classification_status}"
 echo "protocol_compliance_status=${protocol_compliance_status}"
 echo "route_contract_parity_status=${route_contract_parity_status}"
 echo "protocol_compliance_reason_taxonomy_version=${protocol_compliance_reason_taxonomy_version}"
 echo "protocol_compliance_reason_codes_csv=${protocol_compliance_reason_codes_csv}"
+echo "request_validation_reason_registry_status=${request_validation_reason_registry_status}"
+echo "error_envelope_source_contract_status=${error_envelope_source_contract_status}"
+echo "request_validation_reason_taxonomy_version=${request_validation_reason_taxonomy_version}"
+echo "request_validation_reason_codes_csv=${request_validation_reason_codes_csv}"
+echo "error_envelope_reason_taxonomy_version=${error_envelope_reason_taxonomy_version}"
+echo "error_envelope_reason_codes_csv=${error_envelope_reason_codes_csv}"
 echo "api_max_requests_default=${api_max_requests_default}"
 echo "api_idle_timeout_default_ms=${api_idle_timeout_default_ms}"
 echo "body_size_limit_bytes=${body_size_limit_bytes}"

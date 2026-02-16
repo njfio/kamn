@@ -25,8 +25,17 @@ cat >"$report_file" <<'JSON'
   "docs_ingress_limit_matrix_status": "verified",
   "protocol_compliance_status": "verified",
   "route_contract_parity_status": "verified",
+  "request_validation_status": "verified",
+  "error_envelope_field_status": "verified",
+  "method_path_classification_status": "verified",
   "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
   "protocol_compliance_reason_codes_csv": "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected",
+  "request_validation_reason_registry_status": "verified",
+  "error_envelope_source_contract_status": "verified",
+  "request_validation_reason_taxonomy_version": "kamn.runtime.service-api-request-validation-reason-taxonomy.v1",
+  "request_validation_reason_codes_csv": "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid",
+  "error_envelope_reason_taxonomy_version": "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1",
+  "error_envelope_reason_codes_csv": "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found",
   "api_max_requests_default": 1,
   "api_idle_timeout_default_ms": 5000,
   "body_size_limit_bytes": 65536,
@@ -81,6 +90,18 @@ if payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.s
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
     raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker")
+if payload.get("request_validation_reason_registry_status") != "verified":
+    raise SystemExit("expected deterministic request_validation_reason_registry_status marker")
+if payload.get("error_envelope_source_contract_status") != "verified":
+    raise SystemExit("expected deterministic error_envelope_source_contract_status marker")
+if payload.get("request_validation_reason_taxonomy_version") != "kamn.runtime.service-api-request-validation-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic request_validation_reason_taxonomy_version marker")
+if payload.get("request_validation_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid":
+    raise SystemExit("expected deterministic request_validation_reason_codes_csv marker")
+if payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker")
+if payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
+    raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker")
 PY
 
 tampered_report="$TMP_DIR/service-api-axum-ingress-live-summary.tampered.json"
@@ -149,6 +170,39 @@ if ! printf '%s\n' "$tampered_route_parity_output" | grep -q 'service_api_axum_p
   exit 1
 fi
 
+tampered_method_path_classification_report="$TMP_DIR/service-api-axum-ingress-live-summary.method-path-classification.tampered.json"
+cp "$report_file" "$tampered_method_path_classification_report"
+python3 - "$tampered_method_path_classification_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["method_path_classification_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_method_path_classification_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_method_path_classification_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.method-path-classification.tampered.json" 2>&1
+)"
+tampered_method_path_classification_code=$?
+set -e
+
+if [ "$tampered_method_path_classification_code" -eq 0 ]; then
+  echo "expected tampered method/path classification status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_method_path_classification_output" | grep -q 'service_api_axum_policy_marker_missing:method_path_classification_status'; then
+  echo "expected deterministic mismatch reason code for tampered method/path classification status" >&2
+  exit 1
+fi
+
 tampered_protocol_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.protocol-taxonomy.tampered.json"
 cp "$report_file" "$tampered_protocol_taxonomy_report"
 python3 - "$tampered_protocol_taxonomy_report" <<'PY'
@@ -179,6 +233,39 @@ if [ "$tampered_protocol_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_protocol_taxonomy_output" | grep -q 'service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for tampered protocol taxonomy" >&2
+  exit 1
+fi
+
+tampered_request_validation_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.request-validation-taxonomy.tampered.json"
+cp "$report_file" "$tampered_request_validation_taxonomy_report"
+python3 - "$tampered_request_validation_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["request_validation_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_request_validation_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_request_validation_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.request-validation-taxonomy.tampered.json" 2>&1
+)"
+tampered_request_validation_taxonomy_code=$?
+set -e
+
+if [ "$tampered_request_validation_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered request-validation taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_request_validation_taxonomy_output" | grep -q 'service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered request-validation taxonomy" >&2
   exit 1
 fi
 

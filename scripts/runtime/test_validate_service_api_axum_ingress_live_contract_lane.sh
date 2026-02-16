@@ -61,12 +61,48 @@ if ! printf '%s\n' "$lane_output" | grep -q '^route_contract_parity_status=verif
   echo "expected service api axum ingress contract lane route-contract parity marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^request_validation_status=verified$'; then
+  echo "expected service api axum ingress contract lane request-validation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_field_status=verified$'; then
+  echo "expected service api axum ingress contract lane error-envelope field marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^method_path_classification_status=verified$'; then
+  echo "expected service api axum ingress contract lane method/path classification marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected$'; then
   echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane request-validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^request_validation_reason_registry_status=verified$'; then
+  echo "expected service api axum ingress contract lane request-validation reason registry marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_source_contract_status=verified$'; then
+  echo "expected service api axum ingress contract lane error-envelope source contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid$'; then
+  echo "expected service api axum ingress contract lane request-validation reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane error-envelope reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found$'; then
+  echo "expected service api axum ingress contract lane error-envelope reason taxonomy csv marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
@@ -89,7 +125,7 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^api_rate_limit_per_second_default
   echo "expected service api axum ingress contract lane rate-limit default marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:route_contract_parity_status$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:method_path_classification_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
 fi
@@ -118,10 +154,28 @@ if lane_payload.get("protocol_compliance_status") != "verified":
     raise SystemExit("expected protocol_compliance_status=verified")
 if lane_payload.get("route_contract_parity_status") != "verified":
     raise SystemExit("expected route_contract_parity_status=verified")
+if lane_payload.get("request_validation_status") != "verified":
+    raise SystemExit("expected request_validation_status=verified")
+if lane_payload.get("error_envelope_field_status") != "verified":
+    raise SystemExit("expected error_envelope_field_status=verified")
+if lane_payload.get("method_path_classification_status") != "verified":
+    raise SystemExit("expected method_path_classification_status=verified")
 if lane_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if lane_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
     raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker")
+if lane_payload.get("request_validation_reason_taxonomy_version") != "kamn.runtime.service-api-request-validation-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic request_validation_reason_taxonomy_version marker")
+if lane_payload.get("request_validation_reason_registry_status") != "verified":
+    raise SystemExit("expected request_validation_reason_registry_status=verified")
+if lane_payload.get("error_envelope_source_contract_status") != "verified":
+    raise SystemExit("expected error_envelope_source_contract_status=verified")
+if lane_payload.get("request_validation_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid":
+    raise SystemExit("expected deterministic request_validation_reason_codes_csv marker")
+if lane_payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker")
+if lane_payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
+    raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -148,6 +202,18 @@ if policy_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.ru
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker in policy report")
 if policy_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
     raise SystemExit("expected deterministic protocol_compliance_reason_codes_csv marker in policy report")
+if policy_payload.get("request_validation_reason_taxonomy_version") != "kamn.runtime.service-api-request-validation-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic request_validation_reason_taxonomy_version marker in policy report")
+if policy_payload.get("request_validation_reason_registry_status") != "verified":
+    raise SystemExit("expected request_validation_reason_registry_status=verified in policy report")
+if policy_payload.get("error_envelope_source_contract_status") != "verified":
+    raise SystemExit("expected error_envelope_source_contract_status=verified in policy report")
+if policy_payload.get("request_validation_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid":
+    raise SystemExit("expected deterministic request_validation_reason_codes_csv marker in policy report")
+if policy_payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker in policy report")
+if policy_payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
+    raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then

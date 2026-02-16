@@ -37,6 +37,22 @@ EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV = (
     "method_path_contract_mismatch,payload_shape_contract_mismatch,"
     "route_contract_bypass_detected"
 )
+EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+)
+EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV = (
+    "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,"
+    "service_api_method_not_allowed,service_api_route_not_found,"
+    "service_api_payload_json_syntax_invalid,"
+    "service_api_payload_structure_invalid"
+)
+EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+)
+EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV = (
+    "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,"
+    "service_api_route_not_found"
+)
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -48,10 +64,19 @@ REQUIRED_REPORT_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "request_validation_status",
+    "error_envelope_field_status",
+    "method_path_classification_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "protocol_compliance_reason_taxonomy_version",
     "protocol_compliance_reason_codes_csv",
+    "request_validation_reason_registry_status",
+    "error_envelope_source_contract_status",
+    "request_validation_reason_taxonomy_version",
+    "request_validation_reason_codes_csv",
+    "error_envelope_reason_taxonomy_version",
+    "error_envelope_reason_codes_csv",
     "api_max_requests_default",
     "api_idle_timeout_default_ms",
     "body_size_limit_bytes",
@@ -71,8 +96,13 @@ REQUIRED_VERIFIED_FIELDS = [
     "websocket_status",
     "ingress_limit_config_status",
     "docs_ingress_limit_matrix_status",
+    "request_validation_status",
+    "error_envelope_field_status",
+    "method_path_classification_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
+    "request_validation_reason_registry_status",
+    "error_envelope_source_contract_status",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -187,6 +217,26 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_protocol_compliance_reason_codes_csv_mismatch",
     )
     decision.reject_if(
+        report.get("request_validation_reason_taxonomy_version")
+        != EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("request_validation_reason_codes_csv")
+        != EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV,
+        "service_api_axum_policy_request_validation_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("error_envelope_reason_taxonomy_version")
+        != EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_error_envelope_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("error_envelope_reason_codes_csv")
+        != EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV,
+        "service_api_axum_policy_error_envelope_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "service_api_axum_policy_elapsed_seconds_invalid",
     )
@@ -212,6 +262,24 @@ def _check_policy(args: argparse.Namespace) -> int:
         ),
         "protocol_compliance_reason_codes_csv": (
             EXPECTED_PROTOCOL_COMPLIANCE_REASON_CODES_CSV
+        ),
+        "request_validation_reason_registry_status": (
+            report.get("request_validation_reason_registry_status")
+        ),
+        "error_envelope_source_contract_status": (
+            report.get("error_envelope_source_contract_status")
+        ),
+        "request_validation_reason_taxonomy_version": (
+            EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION
+        ),
+        "request_validation_reason_codes_csv": (
+            EXPECTED_REQUEST_VALIDATION_REASON_CODES_CSV
+        ),
+        "error_envelope_reason_taxonomy_version": (
+            EXPECTED_ERROR_ENVELOPE_REASON_TAXONOMY_VERSION
+        ),
+        "error_envelope_reason_codes_csv": (
+            EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV
         ),
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),

@@ -105,3 +105,12 @@ Deterministic lane and policy markers include:
 - `route_contract_parity_status=verified`
 - `protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1`
 - `protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected`
+- `request_validation_status=verified`
+- `error_envelope_field_status=verified`
+- `method_path_classification_status=verified`
+- `request_validation_reason_registry_status=verified`
+- `error_envelope_source_contract_status=verified`
+- `request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1`
+- `request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid`
+- `error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1`
+- `error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found`

@@ -19,8 +19,8 @@ POLICY_STATUS_KEY="service_api_axum_ingress_policy_status"
 SUMMARY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-validation.v1"
 POLICY_SCHEMA="kamn.runtime.service-api-axum-ingress-live-policy-report.v1"
 LANE_REPORT_SCHEMA="kamn.runtime.service-api-axum-ingress-live-contract-lane-report.v1"
-TAMPER_FIELD="route_contract_parity_status"
-TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:route_contract_parity_status"
+TAMPER_FIELD="method_path_classification_status"
+TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:method_path_classification_status"
 ROADMAP_TASK_MARKER="Task #3308"
 ROADMAP_CONTRACT_SCRIPT_REF="scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh"
 ROADMAP_POLICY_SCRIPT_REF="scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
@@ -35,10 +35,19 @@ VALIDATION_REQUIRED_MARKERS=(
   "websocket_status=verified"
   "ingress_limit_config_status=verified"
   "docs_ingress_limit_matrix_status=verified"
+  "request_validation_status=verified"
+  "error_envelope_field_status=verified"
+  "method_path_classification_status=verified"
   "protocol_compliance_status=verified"
   "route_contract_parity_status=verified"
   "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
   "protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
+  "request_validation_reason_registry_status=verified"
+  "error_envelope_source_contract_status=verified"
+  "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+  "request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid"
+  "error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+  "error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found"
 )
 VALIDATION_REQUIRED_REGEX_MARKERS=(
   '^api_max_requests_default=[1-9][0-9]*$'
@@ -62,14 +71,24 @@ STRATEGY_REQUIRED_REFS=(
 STRATEGY_REQUIRED_MARKERS=(
   "service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
   "ingress limit config matrix defaults remain parity-checked against source constants and API docs"
+  "request-validation and error-envelope taxonomy parity remains deterministic via:"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status
   docs_ingress_limit_matrix_status
+  request_validation_status
+  error_envelope_field_status
+  method_path_classification_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
   protocol_compliance_reason_codes_csv
+  request_validation_reason_registry_status
+  error_envelope_source_contract_status
+  request_validation_reason_taxonomy_version
+  request_validation_reason_codes_csv
+  error_envelope_reason_taxonomy_version
+  error_envelope_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
   body_size_limit_bytes
@@ -79,10 +98,19 @@ LANE_REPORT_SUMMARY_FIELDS=(
 OUTPUT_SUMMARY_FIELDS=(
   ingress_limit_config_status
   docs_ingress_limit_matrix_status
+  request_validation_status
+  error_envelope_field_status
+  method_path_classification_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
   protocol_compliance_reason_codes_csv
+  request_validation_reason_registry_status
+  error_envelope_source_contract_status
+  request_validation_reason_taxonomy_version
+  request_validation_reason_codes_csv
+  error_envelope_reason_taxonomy_version
+  error_envelope_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
   body_size_limit_bytes
