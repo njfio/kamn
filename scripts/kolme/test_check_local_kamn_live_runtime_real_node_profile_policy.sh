@@ -250,6 +250,14 @@ if report.get("reason_taxonomy_codes_csv") != "runtime_commit_command_profile_mi
     raise SystemExit("expected deterministic reason_taxonomy_codes_csv marker")
 if report.get("observed_reason_codes_csv") != "none":
     raise SystemExit("expected observed_reason_codes_csv=none for GO real-node profile report")
+if report.get("fixture_profile_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic fixture_profile_reason_taxonomy_version marker")
+if report.get("fixture_profile_reason_codes_csv") != "runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_command_profile_version_mismatch,runtime_commit_non_synthetic_policy_marker_missing,runtime_commit_non_synthetic_submit_probe_missing":
+    raise SystemExit("expected deterministic fixture_profile_reason_codes_csv marker")
+if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker")
+if report.get("runtime_commit_failure_reason_codes_csv") != "runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_codes_csv marker")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
@@ -313,6 +321,10 @@ if report.get("reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-
     raise SystemExit("expected deterministic reason_taxonomy_version marker for secondary profile")
 if report.get("observed_reason_codes_csv") != "none":
     raise SystemExit("expected observed_reason_codes_csv=none for GO secondary real-node profile report")
+if report.get("fixture_profile_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-fixture-profile-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic fixture_profile_reason_taxonomy_version marker for secondary profile")
+if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-runtime-commit-failure-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker for secondary profile")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_MANAGED" <<'PY'
