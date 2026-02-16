@@ -56,6 +56,37 @@ between completion reason, drain status, and snapshot flush status:
 
 Invalid combinations emit deterministic reason codes and fail closed.
 
+## Local Retry/Diagnostics Governance Contract
+
+Local retry/backoff diagnostics are enforced through a deterministic summary +
+policy + contract-lane chain:
+
+- summary lane:
+  - `scripts/runtime/validate_local_retry_diagnostics_live.sh`
+- policy checker:
+  - `scripts/runtime/check_local_retry_diagnostics_live_policy.sh`
+- composed lane:
+  - `scripts/runtime/validate_local_retry_diagnostics_live_contract_lane.sh`
+
+Deterministic retry governance markers:
+
+- `retry_readiness_status=verified`
+- `retry_backoff_status=verified`
+- `retry_jitter_parity_status=verified`
+- `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1`
+- `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded`
+
+Fail-closed drift/budget markers:
+
+- `local_retry_readiness_progress_stalled`
+- `local_retry_backoff_jitter_parity_bypass_detected`
+- `ci_local_network_budget_boundary_exceeded`
+
+CI-local budget is explicitly bounded and fail-closed:
+
+- contract lane rejects `--max-seconds > 240`.
+- run-mode local-heavy checks remain opt-in and excluded from fast-gate paths.
+
 ## Observability Route Topology Contract
 
 Observability serving is on the unified axum route stack and no longer uses a

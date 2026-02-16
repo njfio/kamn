@@ -50,6 +50,22 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^execution_reason_code=dry_run_n
   echo "expected local retry/diagnostics dry-run reason marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^retry_readiness_status=verified$'; then
+  echo "expected local retry/diagnostics dry-run retry readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^retry_jitter_parity_status=verified$'; then
+  echo "expected local retry/diagnostics dry-run retry jitter parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+  echo "expected local retry/diagnostics dry-run reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+  echo "expected local retry/diagnostics dry-run reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$dry_run_report" <<'PY'
 import json
@@ -69,6 +85,16 @@ if payload.get("command_count") != 0:
     raise SystemExit("expected local retry/diagnostics dry-run command_count=0")
 if payload.get("execution_reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected local retry/diagnostics dry-run reason code")
+if payload.get("retry_readiness_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run retry readiness marker")
+if payload.get("retry_backoff_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run retry backoff marker")
+if payload.get("retry_jitter_parity_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run retry jitter parity marker")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic local retry/diagnostics reason taxonomy marker")
+if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic local retry/diagnostics reason codes taxonomy marker")
 PY
 
 set +e
@@ -117,6 +143,14 @@ if ! printf '%s\n' "$run_output" | grep -q '^command_count=2$'; then
   echo "expected local retry/diagnostics run command-count marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^retry_readiness_status=verified$'; then
+  echo "expected local retry/diagnostics run retry readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^retry_jitter_parity_status=verified$'; then
+  echo "expected local retry/diagnostics run retry jitter parity marker" >&2
+  exit 1
+fi
 
 python3 - "$run_report" "$nonce_stub" "$structured_stub" <<'PY'
 import json
@@ -143,6 +177,16 @@ if payload.get("retry_contract_status") != "verified":
     raise SystemExit("expected local retry/diagnostics retry marker")
 if payload.get("correlation_diagnostics_status") != "verified":
     raise SystemExit("expected local retry/diagnostics correlation marker")
+if payload.get("retry_readiness_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics retry readiness marker")
+if payload.get("retry_backoff_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics retry backoff marker")
+if payload.get("retry_jitter_parity_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics retry jitter parity marker")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic local retry/diagnostics reason taxonomy marker")
+if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic local retry/diagnostics reason codes taxonomy marker")
 PY
 
 set +e

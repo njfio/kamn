@@ -715,9 +715,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested retry/diagnostics lane commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN=1`.
+  - ci-local contract-lane budget remains fail-closed and rejects `--max-seconds > 240`.
   - local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic retry taxonomy markers:
+  - `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1`
+  - `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded`
+  - `retry_readiness_status=verified`
+  - `retry_backoff_status=verified`
+  - `retry_jitter_parity_status=verified`
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status`
+  - `local_retry_readiness_progress_stalled`
+  - `local_retry_backoff_jitter_parity_bypass_detected`
+  - `ci_local_network_budget_boundary_exceeded`
 
 ## Runtime Local Signal/Secret Hygiene Contract Lane
 - Entry commands:

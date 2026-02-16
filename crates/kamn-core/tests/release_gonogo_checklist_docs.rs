@@ -333,9 +333,7 @@ fn checklist_contains_post_cutover_slo_evidence_contract() {
     assert!(CHECKLIST.contains(
         "alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
     ));
-    assert!(CHECKLIST.contains(
-        "KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS"
-    ));
+    assert!(CHECKLIST.contains("KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS"));
     assert!(CHECKLIST.contains("KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY"));
 }
 

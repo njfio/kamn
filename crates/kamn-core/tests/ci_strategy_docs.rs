@@ -504,10 +504,25 @@ fn doc_contains_runtime_local_retry_diagnostics_contract_lane_ci_mode_markers() 
     assert!(DOC.contains("test_check_local_retry_diagnostics_live_policy.sh"));
     assert!(DOC.contains("test_validate_local_retry_diagnostics_live_contract_lane.sh"));
     assert!(DOC.contains(
+        "ci-local contract-lane budget remains fail-closed and rejects `--max-seconds > 240`."
+    ));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("retry_readiness_status=verified"));
+    assert!(DOC.contains("retry_backoff_status=verified"));
+    assert!(DOC.contains("retry_jitter_parity_status=verified"));
+    assert!(DOC.contains(
         "local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC
         .contains("local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status"));
+    assert!(DOC.contains("local_retry_readiness_progress_stalled"));
+    assert!(DOC.contains("local_retry_backoff_jitter_parity_bypass_detected"));
+    assert!(DOC.contains("ci_local_network_budget_boundary_exceeded"));
 }
 
 #[test]
@@ -558,12 +573,9 @@ fn doc_contains_runtime_local_metrics_scrape_contract_lane_ci_mode_markers() {
         "local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:local_scrape_probe_status"));
-    assert!(DOC.contains(
-        "local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status"
-    ));
-    assert!(DOC.contains(
-        "local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch"
-    ));
+    assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:scrape_latency_budget_status"));
+    assert!(DOC
+        .contains("local_metrics_scrape_policy_metrics_emission_reason_taxonomy_version_mismatch"));
 }
 
 #[test]

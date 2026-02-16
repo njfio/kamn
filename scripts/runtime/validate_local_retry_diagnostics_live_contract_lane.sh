@@ -60,6 +60,10 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+if [ "$max_seconds" -gt 240 ]; then
+  echo "max-seconds must be <= 240 for ci-local contract lane" >&2
+  exit 1
+fi
 if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
   echo "ci-fast-gate must be PASS or FAIL" >&2
   exit 1
@@ -120,6 +124,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^correlation_diagnostics_stat
   echo "expected local retry/diagnostics live validation correlation marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_readiness_status=verified$'; then
+  echo "expected local retry/diagnostics live validation retry readiness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_jitter_parity_status=verified$'; then
+  echo "expected local retry/diagnostics live validation retry jitter parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+  echo "expected local retry/diagnostics live validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+  echo "expected local retry/diagnostics live validation reason codes taxonomy marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -138,6 +158,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^local_retry_diagnostics_policy_status=verified$'; then
   echo "expected local retry/diagnostics policy checker status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+  echo "expected local retry/diagnostics policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+  echo "expected local retry/diagnostics policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
 
@@ -240,6 +268,10 @@ lane_report = {
     "local_retry_diagnostics_policy_status": policy_report.get(
         "local_retry_diagnostics_policy_status"
     ),
+    "retry_readiness_status": summary_report.get("retry_readiness_status"),
+    "retry_jitter_parity_status": summary_report.get("retry_jitter_parity_status"),
+    "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
+    "reason_codes_csv": summary_report.get("reason_codes_csv"),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status",
@@ -262,6 +294,10 @@ echo "final_decision=GO"
 echo "lane_mode=$mode"
 echo "local_retry_diagnostics_contract_status=verified"
 echo "local_retry_diagnostics_policy_status=verified"
+echo "retry_readiness_status=verified"
+echo "retry_jitter_parity_status=verified"
+echo "reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
+echo "reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status"
