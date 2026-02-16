@@ -13,6 +13,13 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from framework.contract_framework import ContractError, fail, load_json  # noqa: E402
 
+REASON_TAXONOMY_VERSION = "kamn.governance.lifecycle-rollback-reason-taxonomy.v1"
+REASON_TAXONOMY_CODES_CSV = (
+    "docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,"
+    "rollback_contract_missing,rollback_gate_progress_stalled,"
+    "runbook_marker_parity_bypass_detected,runtime_budget_exceeded"
+)
+
 
 def check_report(args: argparse.Namespace) -> int:
     if not args.report_file:
@@ -31,6 +38,8 @@ def check_report(args: argparse.Namespace) -> int:
         "runtime_seconds",
         "checks",
         "commands",
+        "reason_taxonomy_version",
+        "reason_taxonomy_codes_csv",
         "decision_reasons",
         "final_decision",
         "reason_key",
@@ -71,6 +80,17 @@ def check_report(args: argparse.Namespace) -> int:
     ):
         fail("commands must be an array of strings")
 
+    if payload["reason_taxonomy_version"] != REASON_TAXONOMY_VERSION:
+        fail(
+            "reason_taxonomy_version mismatch: "
+            f"expected {REASON_TAXONOMY_VERSION}, found {payload['reason_taxonomy_version']}"
+        )
+    if payload["reason_taxonomy_codes_csv"] != REASON_TAXONOMY_CODES_CSV:
+        fail(
+            "reason_taxonomy_codes_csv mismatch: "
+            f"expected {REASON_TAXONOMY_CODES_CSV}, found {payload['reason_taxonomy_codes_csv']}"
+        )
+
     actual_reasons = payload["decision_reasons"]
     if not isinstance(actual_reasons, list) or any(
         not isinstance(item, str) for item in actual_reasons
@@ -87,12 +107,14 @@ def check_report(args: argparse.Namespace) -> int:
     expected_reasons: list[str] = []
     if checks["lane_failed"]:
         expected_reasons.append("governance_lifecycle_lane_failed")
+        expected_reasons.append("rollback_gate_progress_stalled")
     if not checks["lifecycle_contract_present"]:
         expected_reasons.append("lifecycle_contract_missing")
     if not checks["rollback_contract_present"]:
         expected_reasons.append("rollback_contract_missing")
     if not checks["docs_contract_present"]:
         expected_reasons.append("docs_contract_missing")
+        expected_reasons.append("runbook_marker_parity_bypass_detected")
     if not runtime_budget_ok_expected:
         expected_reasons.append("runtime_budget_exceeded")
 
@@ -124,6 +146,8 @@ def check_report(args: argparse.Namespace) -> int:
     print(f"report_file={report_path}")
     print(f"final_decision={actual_decision}")
     print(f"reason_key={actual_reason_key}")
+    print(f"reason_taxonomy_version={payload['reason_taxonomy_version']}")
+    print(f"reason_taxonomy_codes_csv={payload['reason_taxonomy_codes_csv']}")
     print(f"runtime_seconds={runtime_seconds}")
     print(f"max_runtime_seconds={max_runtime_seconds}")
     return 0

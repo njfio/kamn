@@ -145,12 +145,17 @@ Runtime budget controls:
 Required schema/reason markers:
 
 - `kamn.governance.lifecycle-rollback-report.v1`
+- `kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
 - `governance_lifecycle_rollback_reason_codes:GO:v1`
 - `governance_lifecycle_rollback_reason_codes:NO-GO:v1`
+- `rollback_gate_progress_stalled`
+- `runbook_marker_parity_bypass_detected`
+- `ci_local_promotion_budget_boundary_status=verified`
 
 Regression policy:
 
 - illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).
+- rollback gate drift and runbook marker parity bypass acceptance must fail closed (`Regression: #4576`).
 - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1246`).
 
 ## Governance Quorum Attestation Replay Contract Lane

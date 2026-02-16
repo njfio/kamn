@@ -2904,6 +2904,15 @@ Required demo lane command contract:
   - deep lane remains local-only via `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY=true`.
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+  - rollback-governance taxonomy markers remain deterministic:
+    - `reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
+    - `reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded`
+  - rollback gate and runbook-marker parity bypass guards remain fail-closed:
+    - `rollback_gate_progress_stalled`
+    - `runbook_marker_parity_bypass_detected`
+  - ci-local promotion budget boundary remains bounded:
+    - `ci_local_promotion_budget_boundary_status=verified`
+    - `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS <= 240`
 - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 
 Regression policy:

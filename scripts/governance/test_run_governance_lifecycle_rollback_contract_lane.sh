@@ -30,7 +30,8 @@ if [ ! -f "$MANIFEST" ]; then
 fi
 
 tmp_out="$(mktemp)"
-trap 'rm -f "$tmp_out"' EXIT
+TMP_DIR="$(mktemp -d)"
+trap 'rm -f "$tmp_out"; rm -rf "$TMP_DIR"' EXIT
 
 bash "$CONTRACT_SCRIPT" >"$tmp_out"
 if ! grep -q "governance lifecycle/rollback contract lane tests passed." "$tmp_out"; then
@@ -60,6 +61,61 @@ if ! grep -q "KAMN_GOVERNANCE_LIFECYCLE_FORCE_DOCS_CONTRACT_MISSING" "$SHARED_CO
 fi
 if ! grep -q "reason_key mismatch" "$SHARED_CONTRACT"; then
   echo "expected governance lifecycle/rollback contract lane to enforce reason_key drift failures" >&2
+  exit 1
+fi
+if ! grep -q "ci-local promotion budget boundary exceeded" "$SHARED_CONTRACT"; then
+  echo "expected governance lifecycle/rollback contract lane to enforce ci-local promotion budget boundary failures" >&2
+  exit 1
+fi
+if ! grep -q "kamn.governance.lifecycle-rollback-reason-taxonomy.v1" "$SHARED_CONTRACT"; then
+  echo "expected governance lifecycle/rollback contract lane to enforce deterministic rollback reason taxonomy marker" >&2
+  exit 1
+fi
+
+rollback_gate_drift_report="$TMP_DIR/governance-lifecycle-rollback-gate-drift.json"
+KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS=true \
+KAMN_GOVERNANCE_LIFECYCLE_FORCE_LANE_FAILURE=true \
+  bash "$LANE_SCRIPT" --output-file "$rollback_gate_drift_report" >/dev/null
+if ! grep -q '"rollback_gate_progress_stalled"' "$rollback_gate_drift_report"; then
+  echo "expected rollback_gate_progress_stalled reason marker in rollback gate drift report" >&2
+  exit 1
+fi
+
+runbook_parity_drift_report="$TMP_DIR/governance-lifecycle-rollback-runbook-parity-drift.json"
+KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS=true \
+KAMN_GOVERNANCE_LIFECYCLE_FORCE_DOCS_CONTRACT_MISSING=true \
+  bash "$LANE_SCRIPT" --output-file "$runbook_parity_drift_report" >/dev/null
+if ! grep -q '"runbook_marker_parity_bypass_detected"' "$runbook_parity_drift_report"; then
+  echo "expected runbook_marker_parity_bypass_detected reason marker in runbook parity drift report" >&2
+  exit 1
+fi
+
+if ! grep -q "ci_local_promotion_budget_boundary_status=verified" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane ci-local promotion budget boundary marker" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane reason taxonomy codes marker" >&2
+  exit 1
+fi
+
+set +e
+oversized_budget_output="$(
+  KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS=241 \
+    bash "$CONTRACT_SCRIPT" 2>&1
+)"
+oversized_budget_code=$?
+set -e
+if [ "$oversized_budget_code" -eq 0 ]; then
+  echo "expected governance lifecycle/rollback contract lane to fail when ci-local promotion budget boundary is exceeded" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$oversized_budget_output" | grep -q "ci-local promotion budget boundary exceeded"; then
+  echo "expected deterministic ci-local promotion budget boundary rejection marker for governance lifecycle/rollback contract lane" >&2
   exit 1
 fi
 
