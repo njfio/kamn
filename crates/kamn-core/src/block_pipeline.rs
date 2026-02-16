@@ -469,6 +469,14 @@ pub fn encode_transport_commit_report_payload(
 }
 
 mod block_pipeline_support;
+#[allow(dead_code)]
+mod commit_store;
+#[allow(dead_code)]
+mod evidence;
+#[allow(dead_code)]
+mod fork_choice;
+#[allow(dead_code)]
+mod validation;
 
 pub use block_pipeline_support::*;
 
