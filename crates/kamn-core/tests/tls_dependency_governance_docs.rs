@@ -3,6 +3,7 @@ const README: &str = include_str!("../../../README.md");
 const RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
 const OPS_CONFIGURATION_DOC: &str = include_str!("../../../docs/ops/configuration.md");
+const TLS_HARDENING_DOC: &str = include_str!("../../../docs/security/tls-hardening.md");
 
 #[test]
 fn adr_documents_live_tls_dependency_decision_and_tradeoffs() {
@@ -39,4 +40,9 @@ fn ops_configuration_doc_tracks_tls_runtime_transport_behavior_contracts() {
     assert!(OPS_CONFIGURATION_DOC.contains("in-process rustls"));
     assert!(OPS_CONFIGURATION_DOC.contains("Subprocess fallback is not allowed"));
     assert!(OPS_CONFIGURATION_DOC.contains("Regression: #4106"));
+}
+
+#[test]
+fn security_tls_hardening_doc_tracks_reason_class_marker() {
+    assert!(TLS_HARDENING_DOC.contains("reason_class=stable|violation"));
 }
