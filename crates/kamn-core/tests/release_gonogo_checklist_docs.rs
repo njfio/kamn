@@ -44,6 +44,23 @@ fn checklist_contains_message_anchoring_mismatch_tamper_gate() {
 }
 
 #[test]
+fn checklist_contains_service_api_protocol_session_reason_mapping_gate() {
+    assert!(CHECKLIST.contains("## Service API Protocol/Session Reason Mapping Gate (Issue #4318)"));
+    assert!(CHECKLIST.contains(
+        "service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing"
+    ));
+    assert!(CHECKLIST.contains("service_api_ws_upgrade_header_missing"));
+    assert!(CHECKLIST.contains("service_api_ws_version_header_invalid"));
+    assert!(CHECKLIST.contains("service_api_payload_json_syntax_invalid"));
+    assert!(CHECKLIST.contains("service_api_auth_replay_nonce_detected"));
+    assert!(CHECKLIST.contains("service_api_protocol_session_docs_marker_missing"));
+    assert!(CHECKLIST.contains("Regression: #4318"));
+}
+
+#[test]
 fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
     assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));
@@ -51,6 +68,25 @@ fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("check_gonogo_evidence_policy.sh"));
     assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_gonogo_evidence_deep_lane.sh"));
+}
+
+#[test]
+fn checklist_contains_tls_evidence_completeness_freshness_gate() {
+    assert!(
+        CHECKLIST.contains("## TLS Evidence Completeness/Freshness Convergence Gate (Issue #4477)")
+    );
+    assert!(CHECKLIST.contains(
+        "--tls-evidence-report-file /tmp/kamn-core-live-https-dependency-posture-report.json"
+    ));
+    assert!(CHECKLIST.contains("--tls-evidence-max-age-seconds 1800"));
+    assert!(CHECKLIST.contains(
+        "tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "tls_evidence_reason_codes_csv=gonogo_tls_evidence_file_missing,gonogo_tls_evidence_invalid_json,gonogo_tls_evidence_schema_mismatch,gonogo_tls_evidence_status_not_pass,gonogo_tls_evidence_reason_taxonomy_version_mismatch,gonogo_tls_evidence_freshness_window_exceeded"
+    ));
+    assert!(CHECKLIST.contains("tls_evidence_gate_final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("Regression: #4477"));
 }
 
 #[test]
@@ -219,6 +255,30 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
     assert!(CHECKLIST.contains("run_failover_sync_drill_preflight_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_failover_sync_drill_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_failover_sync_drill_suite.sh"));
+}
+
+#[test]
+fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
+    assert!(CHECKLIST.contains(
+        "## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)"
+    ));
+    assert!(CHECKLIST.contains("cargo test -p kamn-core --test p2p_peer_adapter_reason_projection"));
+    assert!(CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live.sh"));
+    assert!(CHECKLIST.contains("check_libp2p_convergence_process_isolated_live_policy.sh"));
+    assert!(
+        CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh")
+    );
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
+    ));
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted"
+    ));
+    assert!(CHECKLIST.contains("peer_adapter_multi_process_validation_local_heavy_status=required"));
+    assert!(CHECKLIST.contains("Regression: #4320"));
 }
 
 #[test]

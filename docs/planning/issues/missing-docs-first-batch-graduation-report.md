@@ -1,6 +1,6 @@
 # Missing-Docs First Batch Graduation Report
 
-schema_version: kamn.ci.kamn-core-missing-docs-graduation-batch-report.v1  
+schema_version: kamn.ci.kamn-core-missing-docs-graduation-batch-report.v1
 batch_id: first-three-modules-v1
 
 ## Representative Batch Modules

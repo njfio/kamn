@@ -224,6 +224,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `canonical_replay_payload_digest_mismatch`
   - `canonical_replay_transaction_ids_mismatch`
 
+## Durable Commit Checker Reason Mapping + CI Boundary Fast Lane
+- For durable block commit checker reason-mapping and boundary contract changes, keep PR checks bounded to:
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping unit_replay_drift_reason_projection_is_deterministic -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping functional_ci_smoke_lane_boundary_emits_low_cost_markers -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping integration_checker_projection_and_lane_boundary_contracts_are_consistent -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping regression_local_heavy_opt_in_reason_code_stays_stable -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping performance_reason_projection_and_boundary_loops_stay_within_local_budget -- --exact`
+- Deterministic reason-mapping taxonomy and boundary markers:
+  - `durable_commit_checker_reason_taxonomy_version=kamn.runtime.durable-commit-checker-reason-taxonomy.v1`
+  - `ci_smoke_local_heavy_boundary_status=verified`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
+- CI/local-heavy boundary rules:
+  - ci-smoke mode stays low-cost and requires `ci-fast-gate=PASS`.
+  - local-heavy mode is excluded from ci-fast-gate and requires explicit opt-in.
+  - fail-closed boundary reasons remain deterministic:
+    - `durable_commit_checker_ci_smoke_fast_gate_required`
+    - `durable_commit_checker_local_heavy_ci_fast_gate_mismatch`
+    - `durable_commit_checker_local_heavy_opt_in_required`
+
 ## Runtime Local Full-Mode Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json`
@@ -3294,20 +3314,39 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 
 ## Anti-Flake Merge Gate Policy
 - Merge-gate policy command:
-  - `bash scripts/ci/check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --output-json /tmp/anti-flake-policy-report.json`
+  - `bash scripts/ci/check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --fast-workflow-file .github/workflows/ci-fast-gate.yml --deep-workflow-file .github/workflows/ci-deep-validate.yml --output-json /tmp/anti-flake-policy-report.json`
 - Policy report schema:
   - `kamn.ci.anti-flake-policy-report.v1`
-- Deterministic status markers:
+- Deterministic taxonomy/status markers:
+  - `anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1`
   - `anti_flake_policy_status=pass|fail`
   - `anti_flake_policy_final_decision=GO|NO-GO`
   - `anti_flake_policy_reason_codes=<comma-delimited>`
+  - `anti_flake_policy_reason_codes_csv=none|<csv>`
+  - `anti_flake_policy_reason_codes_value=none|<csv>`
+  - `anti_flake_policy_reason_class=stable|budgeted|violation`
+  - `ci_smoke_local_heavy_boundary_status=verified|violation`
 - Deterministic reason-code surface:
+  - `anti_flake_policy_reason_codes_csv=no_active_flaky_entries,active_flaky_entries_within_budget,active_flaky_entries_exceed_max,registry_validation_failed,registry_file_missing,expected_final_decision_mismatch,rerun_policy_fast_workflow_missing,rerun_policy_deep_workflow_missing,rerun_policy_bounded_retry_missing,rerun_policy_invariant_non_retry_missing,rerun_policy_excessive_retry_detected,ci_smoke_performance_report_step_missing,ci_smoke_threshold_check_step_missing,local_heavy_opt_in_boundary_missing`
   - `no_active_flaky_entries`
   - `active_flaky_entries_within_budget`
   - `active_flaky_entries_exceed_max`
   - `registry_validation_failed`
   - `registry_file_missing`
   - `expected_final_decision_mismatch`
+  - `rerun_policy_fast_workflow_missing`
+  - `rerun_policy_deep_workflow_missing`
+  - `rerun_policy_bounded_retry_missing`
+  - `rerun_policy_invariant_non_retry_missing`
+  - `rerun_policy_excessive_retry_detected`
+  - `ci_smoke_performance_report_step_missing`
+  - `ci_smoke_threshold_check_step_missing`
+  - `local_heavy_opt_in_boundary_missing`
+- CI smoke/local-heavy boundary governance:
+  - checker validates fast-gate contains `Generate performance smoke report` and `Check performance thresholds (smoke)` markers.
+  - checker validates local-heavy lane remains explicit opt-in with selector gate:
+    - `run_kolme_local_heavy_contract_tests == 'true'`
+    - `kolme_local_heavy_selector_opt_in == 'true'`
 - Merge gate wiring:
   - `ci-fast-gate` runs anti-flake policy enforcement after registry format validation and uploads `ci-anti-flake-policy-report.json` as artifact telemetry.
 
