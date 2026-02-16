@@ -26,6 +26,7 @@ from framework.contract_framework import (  # noqa: E402
 
 SCHEMA_VERSION = "kamn.release.gonogo.v1"
 MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
+TLS_EVIDENCE_GATE_SCHEMA_VERSION = "kamn.release.gonogo-tls-evidence-gate.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 DEFAULT_OPERATOR_RUNBOOK_DOC = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
@@ -45,6 +46,14 @@ REQUIRED_EVIDENCE_MARKERS = (
     "approval_quorum",
     "runtime_image_digest",
 )
+TLS_EVIDENCE_SCHEMA_VERSION = "kamn.ci.kamn-core-live-https-dependency-posture-report.v1"
+TLS_EVIDENCE_SOURCE_REASON_TAXONOMY_VERSION = (
+    "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
+)
+TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1"
+)
+DEFAULT_TLS_EVIDENCE_MAX_AGE_SECONDS = 1800
 
 PREFLIGHT_SUMMARY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
@@ -116,6 +125,143 @@ def _optional_milestone_artifact_paths(args: argparse.Namespace) -> dict[str, Pa
         return None
 
     return {field_name: Path(raw_values[field_name]).resolve() for field_name in raw_values}
+
+
+def _parse_utc_timestamp(value: object, field_name: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        fail(f"{field_name} must be a non-empty UTC timestamp")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        fail(f"{field_name} must use UTC timestamp format YYYY-MM-DDTHH:MM:SSZ")
+    return parsed.replace(tzinfo=timezone.utc)
+
+
+def _optional_tls_evidence_gate_inputs(args: argparse.Namespace) -> tuple[Path, int] | None:
+    raw_report_file = getattr(args, "tls_evidence_report_file", "")
+    raw_max_age = getattr(args, "tls_evidence_max_age_seconds", "")
+
+    report_file = raw_report_file.strip() if isinstance(raw_report_file, str) else ""
+    max_age_value = raw_max_age.strip() if isinstance(raw_max_age, str) else ""
+
+    if not report_file and not max_age_value:
+        return None
+    if not report_file:
+        fail(
+            "--tls-evidence-report-file is required when "
+            "--tls-evidence-max-age-seconds is provided"
+        )
+
+    if not max_age_value:
+        max_age_seconds = DEFAULT_TLS_EVIDENCE_MAX_AGE_SECONDS
+    else:
+        max_age_seconds = parse_int("tls-evidence-max-age-seconds", max_age_value)
+        if max_age_seconds < 1:
+            fail("tls-evidence-max-age-seconds must be >= 1")
+
+    return Path(report_file).resolve(), max_age_seconds
+
+
+def _build_tls_evidence_gate(
+    report_path: Path, max_age_seconds: int, reference_time: datetime
+) -> dict[str, Any]:
+    reason_codes: list[str] = []
+    report_payload: dict[str, Any] | None = None
+    report_schema_version = ""
+    report_status = ""
+    report_reason_taxonomy_version = ""
+    report_reason_codes_csv = ""
+    report_reason_codes_value = ""
+    report_reason_codes: list[str] = []
+    report_mtime_utc = ""
+    report_age_seconds = -1
+
+    if max_age_seconds < 1:
+        reason_codes.append("gonogo_tls_evidence_max_age_invalid")
+
+    if not report_path.is_file():
+        reason_codes.append("gonogo_tls_evidence_file_missing")
+    else:
+        mtime_utc = datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+        report_mtime_utc = mtime_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        report_age_seconds = max(
+            0, int((reference_time - mtime_utc).total_seconds())
+        )
+        if max_age_seconds >= 1 and report_age_seconds > max_age_seconds:
+            reason_codes.append("gonogo_tls_evidence_freshness_window_exceeded")
+
+        try:
+            payload = load_json(report_path)
+        except ContractError:
+            reason_codes.append("gonogo_tls_evidence_invalid_json")
+        else:
+            if not isinstance(payload, dict):
+                reason_codes.append("gonogo_tls_evidence_invalid_json")
+            else:
+                report_payload = payload
+
+    if report_payload is not None:
+        report_schema_version = str(report_payload.get("schema_version", ""))
+        report_status = str(report_payload.get("status", ""))
+        report_reason_taxonomy_version = str(
+            report_payload.get("reason_taxonomy_version", "")
+        )
+        report_reason_codes_csv = str(report_payload.get("reason_codes_csv", ""))
+        report_reason_codes_value = str(report_payload.get("reason_codes_value", ""))
+        raw_reason_codes = report_payload.get("reason_codes")
+        if isinstance(raw_reason_codes, list):
+            report_reason_codes = [
+                value for value in raw_reason_codes if isinstance(value, str) and value
+            ]
+        else:
+            reason_codes.append("gonogo_tls_evidence_reason_codes_invalid")
+
+        if report_schema_version != TLS_EVIDENCE_SCHEMA_VERSION:
+            reason_codes.append("gonogo_tls_evidence_schema_mismatch")
+        if report_reason_taxonomy_version != TLS_EVIDENCE_SOURCE_REASON_TAXONOMY_VERSION:
+            reason_codes.append("gonogo_tls_evidence_reason_taxonomy_version_mismatch")
+        if report_status != "pass":
+            reason_codes.append("gonogo_tls_evidence_status_not_pass")
+        if report_status == "pass" and report_reason_codes != ["none"]:
+            reason_codes.append("gonogo_tls_evidence_reason_codes_invalid")
+
+    reason_codes = sorted(set(reason_codes))
+    final_decision = GO_DECISION if not reason_codes else NO_GO_DECISION
+    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
+    gate_status = "verified" if final_decision == GO_DECISION else "fail-closed"
+
+    return {
+        "schema_version": TLS_EVIDENCE_GATE_SCHEMA_VERSION,
+        "reason_taxonomy_version": TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION,
+        "final_decision": final_decision,
+        "status": gate_status,
+        "reason_codes": reason_codes,
+        "reason_codes_csv": reason_codes_csv,
+        "reason_codes_value": reason_codes_csv,
+        "artifacts": {
+            "tls_evidence_report_file": str(report_path),
+            "tls_evidence_report_sha256": _artifact_sha256(report_path),
+        },
+        "observed": {
+            "tls_evidence_report_schema_version": report_schema_version,
+            "tls_evidence_report_status": report_status,
+            "tls_evidence_report_reason_taxonomy_version": report_reason_taxonomy_version,
+            "tls_evidence_report_reason_codes_csv": report_reason_codes_csv,
+            "tls_evidence_report_reason_codes_value": report_reason_codes_value,
+            "tls_evidence_report_reason_codes": report_reason_codes,
+            "tls_evidence_report_mtime_utc": report_mtime_utc,
+            "tls_evidence_report_age_seconds": report_age_seconds,
+        },
+        "contracts": {
+            "tls_evidence_report_schema_version_required": TLS_EVIDENCE_SCHEMA_VERSION,
+            "tls_evidence_report_reason_taxonomy_version_required": (
+                TLS_EVIDENCE_SOURCE_REASON_TAXONOMY_VERSION
+            ),
+            "tls_evidence_report_status_required": "pass",
+            "tls_evidence_report_reason_codes_required": ["none"],
+            "tls_evidence_max_age_seconds_required": max_age_seconds,
+        },
+    }
 
 
 def _load_milestone_artifact(
@@ -464,6 +610,58 @@ def _validated_expected_milestone_bundle(
     return expected_bundle, expected_decision
 
 
+def _validated_expected_tls_evidence_gate(
+    payload: dict[str, object], reference_time: datetime
+) -> tuple[dict[str, Any], str]:
+    tls_evidence_gate = payload.get("tls_evidence_gate")
+    if not isinstance(tls_evidence_gate, dict):
+        fail("bundle field 'tls_evidence_gate' must be an object when provided")
+
+    require_keys(
+        tls_evidence_gate,
+        (
+            "schema_version",
+            "reason_taxonomy_version",
+            "final_decision",
+            "status",
+            "reason_codes",
+            "reason_codes_csv",
+            "reason_codes_value",
+            "artifacts",
+            "observed",
+            "contracts",
+        ),
+    )
+
+    artifacts = tls_evidence_gate.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("tls_evidence_gate.artifacts must be an object")
+    report_file = artifacts.get("tls_evidence_report_file")
+    if not isinstance(report_file, str) or not report_file.strip():
+        fail("tls_evidence_gate.artifacts.tls_evidence_report_file must be a non-empty string")
+
+    contracts = tls_evidence_gate.get("contracts")
+    if not isinstance(contracts, dict):
+        fail("tls_evidence_gate.contracts must be an object")
+    max_age_seconds = contracts.get("tls_evidence_max_age_seconds_required")
+    if not isinstance(max_age_seconds, int):
+        fail("tls_evidence_gate.contracts.tls_evidence_max_age_seconds_required must be an integer")
+
+    expected_gate = _build_tls_evidence_gate(
+        Path(report_file).resolve(), max_age_seconds, reference_time
+    )
+    if tls_evidence_gate != expected_gate:
+        fail(
+            "tls evidence gate convergence mismatch: "
+            "expected deterministic tls evidence completeness/freshness markers and decision surface"
+        )
+
+    expected_decision = expected_gate["final_decision"]
+    if not isinstance(expected_decision, str):
+        fail("tls evidence gate final decision must be a string")
+    return expected_gate, expected_decision
+
+
 def generate_bundle(args: argparse.Namespace) -> int:
     required_values = (
         args.output_file,
@@ -510,9 +708,12 @@ def generate_bundle(args: argparse.Namespace) -> int:
         and received_approvals >= required_approvals
     )
 
+    generated_at_dt = datetime.now(timezone.utc).replace(microsecond=0)
+    generated_at = generated_at_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": generated_at,
         "release_candidate": args.release_candidate,
         "schema_target_version": args.schema_target_version,
         "runtime_image_digest": args.runtime_image_digest,
@@ -536,6 +737,16 @@ def generate_bundle(args: argparse.Namespace) -> int:
         payload["milestone_review_bundle"] = milestone_review_bundle
         expected_go = expected_go and milestone_review_bundle["final_decision"] == GO_DECISION
 
+    tls_evidence_gate = None
+    tls_evidence_gate_inputs = _optional_tls_evidence_gate_inputs(args)
+    if tls_evidence_gate_inputs is not None:
+        tls_report_file, tls_max_age_seconds = tls_evidence_gate_inputs
+        tls_evidence_gate = _build_tls_evidence_gate(
+            tls_report_file, tls_max_age_seconds, generated_at_dt
+        )
+        payload["tls_evidence_gate"] = tls_evidence_gate
+        expected_go = expected_go and tls_evidence_gate["final_decision"] == GO_DECISION
+
     final_decision = GO_DECISION if expected_go else NO_GO_DECISION
     payload["final_decision"] = final_decision
 
@@ -546,6 +757,10 @@ def generate_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={output_path}")
     if milestone_review_bundle is not None:
         print(f"milestone_review_final_decision={milestone_review_bundle['final_decision']}")
+    if tls_evidence_gate is not None:
+        print(f"tls_evidence_gate_final_decision={tls_evidence_gate['final_decision']}")
+        print(f"tls_evidence_reason_taxonomy_version={TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}")
+        print(f"tls_evidence_reason_codes_csv={tls_evidence_gate['reason_codes_csv']}")
     print(f"final_decision={final_decision}")
     return 0
 
@@ -574,6 +789,8 @@ def check_bundle(args: argparse.Namespace) -> int:
             "final_decision",
         ),
     )
+
+    generated_at = _parse_utc_timestamp(payload.get("generated_at"), "generated_at")
 
     gates = payload["gates"]
     if not isinstance(gates, dict):
@@ -635,6 +852,13 @@ def check_bundle(args: argparse.Namespace) -> int:
         _, milestone_decision = _validated_expected_milestone_bundle(payload)
         expected_go = expected_go and milestone_decision == GO_DECISION
 
+    tls_evidence_gate_decision = GO_DECISION
+    if "tls_evidence_gate" in payload:
+        _, tls_evidence_gate_decision = _validated_expected_tls_evidence_gate(
+            payload, generated_at
+        )
+        expected_go = expected_go and tls_evidence_gate_decision == GO_DECISION
+
     expected_decision = GO_DECISION if expected_go else NO_GO_DECISION
     actual_decision = payload["final_decision"]
     if actual_decision not in {GO_DECISION, NO_GO_DECISION}:
@@ -649,6 +873,8 @@ def check_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={bundle_path}")
     if "milestone_review_bundle" in payload:
         print(f"milestone_review_final_decision={milestone_decision}")
+    if "tls_evidence_gate" in payload:
+        print(f"tls_evidence_gate_final_decision={tls_evidence_gate_decision}")
     print(f"final_decision={actual_decision}")
     print(f"required_approvals={required_approvals}")
     print(f"received_approvals={received_approvals}")
@@ -677,6 +903,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--live-node-validation-summary-file", default="")
     generate.add_argument("--live-node-validation-policy-file", default="")
     generate.add_argument("--go-no-go-gate-report-file", default="")
+    generate.add_argument("--tls-evidence-report-file", default="")
+    generate.add_argument("--tls-evidence-max-age-seconds", default="")
     generate.set_defaults(handler=generate_bundle)
 
     check = subparsers.add_parser("check")
