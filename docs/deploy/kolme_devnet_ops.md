@@ -33,3 +33,16 @@ present, including:
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_version_mismatch`
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
 - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
+
+## TLS Dependency-Posture Compatibility Markers
+
+Live-HTTPS dependency posture must remain explicit in compatibility runbooks:
+
+- Checker command:
+  - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
+- Deterministic policy markers:
+  - `reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
+- Fail-closed drift reason markers:
+  - `rustls_pemfile_dependency_optional_flag_mismatch`
+
+- `Regression: #4108`

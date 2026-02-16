@@ -7,6 +7,7 @@ PY_CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.p
 TLS_HARDENING_DOC="$ROOT_DIR/docs/security/tls-hardening.md"
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
+KOLME_DEVNET_OPS_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected live-https dependency posture checker wrapper to be executable" >&2
@@ -130,6 +131,26 @@ if ! grep -q "TLS Dependency-Posture Gate (Issues #4480, #4481)" "$RELEASE_CHECK
 fi
 if ! grep -q "rustls_pemfile_dependency_optional_flag_mismatch" "$RELEASE_CHECKLIST_DOC"; then
   echo "expected release go/no-go checklist to include tls dependency-posture fail-closed reason markers" >&2
+  exit 1
+fi
+if [ ! -f "$KOLME_DEVNET_OPS_DOC" ]; then
+  echo "expected kolme devnet ops compatibility doc to exist" >&2
+  exit 1
+fi
+if ! grep -q "check_kamn_core_live_https_dependency_posture.sh" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to reference live-https posture checker command" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to include live-https deterministic reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "rustls_pemfile_dependency_optional_flag_mismatch" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to include live-https fail-closed reason marker" >&2
+  exit 1
+fi
+if ! grep -q "Regression: #4108" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected kolme devnet ops compatibility doc to include live-https runbook-sync regression marker" >&2
   exit 1
 fi
 
