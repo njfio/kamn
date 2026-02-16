@@ -258,19 +258,27 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
 }
 
 #[test]
-fn checklist_contains_block_commit_persistence_mismatch_tamper_gate() {
-    assert!(CHECKLIST.contains("## Persisted Block Commit Mismatch/Tamper Gate (Issue #4321)"));
+fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
+    assert!(CHECKLIST.contains(
+        "## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)"
+    ));
+    assert!(CHECKLIST.contains("cargo test -p kamn-core --test p2p_peer_adapter_reason_projection"));
+    assert!(CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live.sh"));
+    assert!(CHECKLIST.contains("check_libp2p_convergence_process_isolated_live_policy.sh"));
     assert!(
-        CHECKLIST.contains("cargo test -p kamn-core --test block_commit_persistence_tamper_matrix")
+        CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh")
     );
     assert!(CHECKLIST.contains(
-        "block_commit_persistence_reason_taxonomy_version=kamn.runtime.block-commit-persistence-reason-taxonomy.v1"
+        "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1"
     ));
     assert!(CHECKLIST.contains(
-        "block_commit_persistence_reason_codes_csv=canonical_replay_payload_digest_mismatch,canonical_replay_checkpoint_missing,canonical_replay_block_height_mismatch,canonical_replay_transaction_ids_mismatch"
+        "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
     ));
-    assert!(CHECKLIST.contains("block_commit_persistence_tamper_detection_status=verified"));
-    assert!(CHECKLIST.contains("Regression: #4321"));
+    assert!(CHECKLIST.contains(
+        "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted"
+    ));
+    assert!(CHECKLIST.contains("peer_adapter_multi_process_validation_local_heavy_status=required"));
+    assert!(CHECKLIST.contains("Regression: #4320"));
 }
 
 #[test]
