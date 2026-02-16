@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.py"
+TLS_HARDENING_DOC="$ROOT_DIR/docs/security/tls-hardening.md"
+CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected live-https dependency posture checker wrapper to be executable" >&2
@@ -19,7 +22,19 @@ REPORT_FILE="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR" "$REPORT_FILE"' EXIT
 
-bash "$CHECKER" --output-json "$REPORT_FILE" >/dev/null
+pass_output="$(bash "$CHECKER" --output-json "$REPORT_FILE")"
+if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1$'; then
+  echo "expected deterministic reason taxonomy marker on pass output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes_csv=none$'; then
+  echo "expected deterministic reason-codes csv marker on pass output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected deterministic reason-codes value marker on pass output" >&2
+  exit 1
+fi
 python3 - "$REPORT_FILE" <<'PY'
 import json
 import pathlib
@@ -29,6 +44,9 @@ report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert report["schema_version"] == "kamn.ci.kamn-core-live-https-dependency-posture-report.v1"
 assert report["status"] == "pass"
 assert report["reason_codes"] == ["none"]
+assert report["reason_taxonomy_version"] == "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
+assert report["reason_codes_csv"] == "none"
+assert report["reason_codes_value"] == "none"
 assert report["violation_count"] == 0
 PY
 
@@ -50,6 +68,18 @@ if ! printf '%s\n' "$manifest_failure_output" | grep -q 'dependency `rustls-pemf
   echo "expected optional-flag drift marker from checker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1$'; then
+  echo "expected deterministic reason taxonomy marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_codes_csv=rustls_pemfile_dependency_optional_flag_mismatch$'; then
+  echo "expected deterministic optional-flag reason code from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_codes_value=rustls_pemfile_dependency_optional_flag_mismatch$'; then
+  echo "expected deterministic reason-codes value marker from checker" >&2
+  exit 1
+fi
 
 README_FIXTURE="$TMP_DIR/README.md"
 cp "$ROOT_DIR/README.md" "$README_FIXTURE"
@@ -67,6 +97,39 @@ fi
 
 if ! printf '%s\n' "$readme_failure_output" | grep -q 'README must link live TLS transport ADR'; then
   echo "expected README ADR-link violation marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$readme_failure_output" | grep -q '^reason_codes_csv=readme_adr_link_missing$'; then
+  echo "expected deterministic readme ADR-link reason code from checker" >&2
+  exit 1
+fi
+
+if [ ! -f "$TLS_HARDENING_DOC" ]; then
+  echo "expected tls hardening doc to exist" >&2
+  exit 1
+fi
+if ! grep -q "check_kamn_core_live_https_dependency_posture.sh" "$TLS_HARDENING_DOC"; then
+  echo "expected tls hardening doc to reference live-https posture checker command" >&2
+  exit 1
+fi
+if ! grep -q "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1" "$TLS_HARDENING_DOC"; then
+  echo "expected tls hardening doc to reference live-https deterministic reason taxonomy version" >&2
+  exit 1
+fi
+if ! grep -q "docs/security/tls-hardening.md" "$CI_STRATEGY_DOC"; then
+  echo "expected ci strategy doc to reference tls hardening policy doc" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1" "$CI_STRATEGY_DOC"; then
+  echo "expected ci strategy doc to include deterministic tls dependency-posture reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "TLS Dependency-Posture Gate (Issues #4480, #4481)" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release go/no-go checklist to include tls dependency-posture gate section" >&2
+  exit 1
+fi
+if ! grep -q "rustls_pemfile_dependency_optional_flag_mismatch" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release go/no-go checklist to include tls dependency-posture fail-closed reason markers" >&2
   exit 1
 fi
 

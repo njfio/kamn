@@ -11,7 +11,7 @@ use serde::Deserialize;
 use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Barrier};
+use std::sync::{Arc, Barrier, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -416,8 +416,36 @@ fn wait_for_endpoint_ready(addr: &str) {
     panic!("endpoint did not become ready within timeout");
 }
 
+struct ServiceApiTestEnvGuards {
+    _env_lock: MutexGuard<'static, ()>,
+    _tls_mode_guard: EnvVarGuard,
+    _tls_cert_guard: EnvVarGuard,
+    _tls_key_guard: EnvVarGuard,
+    _log_level_guard: EnvVarGuard,
+    _log_format_guard: EnvVarGuard,
+    _chain_id_guard: EnvVarGuard,
+    _sync_mode_guard: EnvVarGuard,
+}
+
+fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
+    let env_lock = signer_env_lock()
+        .lock()
+        .expect("service api env lock should guard process-level overrides");
+    ServiceApiTestEnvGuards {
+        _env_lock: env_lock,
+        _tls_mode_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", None),
+        _tls_cert_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_CERT_FILE", None),
+        _tls_key_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_KEY_FILE", None),
+        _log_level_guard: EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None),
+        _log_format_guard: EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", None),
+        _chain_id_guard: EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None),
+        _sync_mode_guard: EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None),
+    }
+}
+
 #[test]
 fn functional_service_api_endpoint_renders_required_route_contracts() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -496,6 +524,7 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
 
 #[test]
 fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -561,6 +590,7 @@ fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
 
 #[test]
 fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -610,6 +640,7 @@ fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contrac
 
 #[test]
 fn regression_service_api_payload_parse_reason_codes_fail_closed() {
+    let _env = acquire_service_api_test_env();
     let syntax_error = parse_service_api_payload::<ServiceApiHealthBody>("{\"status\":\"ok\"");
     let syntax_reason = syntax_error.expect_err("invalid json syntax should fail closed");
     assert!(
@@ -630,6 +661,7 @@ fn regression_service_api_payload_parse_reason_codes_fail_closed() {
 
 #[test]
 fn integration_service_api_endpoint_serves_required_http_routes() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -699,9 +731,7 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
 
 #[test]
 fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
-    let env_lock = signer_env_lock()
-        .lock()
-        .expect("environment lock for tls test should acquire");
+    let _env = acquire_service_api_test_env();
     let (cert_file, key_file) = write_test_service_api_tls_materials();
     let _tls_mode = EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", Some("require"));
     let _tls_cert = EnvVarGuard::set("KAMN_SERVICE_API_TLS_CERT_FILE", Some(cert_file.as_str()));
@@ -763,14 +793,11 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
         server_result.is_ok(),
         "service api endpoint tls mode should stop cleanly after configured request budget"
     );
-    drop(env_lock);
 }
 
 #[test]
 fn regression_service_api_endpoint_tls_mode_rejects_missing_cert_file() {
-    let env_lock = signer_env_lock()
-        .lock()
-        .expect("environment lock for tls test should acquire");
+    let _env = acquire_service_api_test_env();
     let missing_cert_file = std::env::temp_dir().join("kamn-service-api-missing-cert.pem");
     let missing_key_file = std::env::temp_dir().join("kamn-service-api-missing-key.pem");
     let _tls_mode = EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", Some("require"));
@@ -812,11 +839,11 @@ fn regression_service_api_endpoint_tls_mode_rejects_missing_cert_file() {
         error.contains("service api tls certificate file read failed"),
         "unexpected tls missing-cert marker: {error}"
     );
-    drop(env_lock);
 }
 
 #[test]
 fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -891,6 +918,7 @@ fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts()
 
 #[test]
 fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_connection() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -952,9 +980,7 @@ fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_conne
 
 #[test]
 fn functional_service_api_endpoint_emits_structured_ingress_correlation_markers() {
-    let _lock = log_env_lock()
-        .lock()
-        .expect("log env lock should guard test mutation");
+    let _env = acquire_service_api_test_env();
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![
@@ -1043,6 +1069,7 @@ fn functional_service_api_endpoint_emits_structured_ingress_correlation_markers(
 
 #[test]
 fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1072,6 +1099,7 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
 
 #[test]
 fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1123,6 +1151,7 @@ fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
 
 #[test]
 fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1206,6 +1235,7 @@ fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
 
 #[test]
 fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspension() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1296,6 +1326,7 @@ fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspens
 
 #[test]
 fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1392,6 +1423,7 @@ fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded()
 
 #[test]
 fn regression_service_api_endpoint_oversized_payload_maps_body_limit_reason_code() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1462,6 +1494,7 @@ fn regression_service_api_endpoint_oversized_payload_maps_body_limit_reason_code
 
 #[test]
 fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1540,6 +1573,7 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
 
 #[test]
 fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1636,6 +1670,7 @@ fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_sp
 
 #[test]
 fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1698,6 +1733,7 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
 
 #[test]
 fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_headers() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -1761,6 +1797,7 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
 
 #[test]
 fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
+    let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),

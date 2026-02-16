@@ -30,6 +30,20 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - tampered actor payload for same message+nonce idempotency window must reject with `message_proof_anchor_conflicting_key`.
 - Regression policy:
   - mismatch/tamper acceptance drift forces `NO-GO` (`Regression: #4419`).
+## TLS Dependency-Posture Gate (Issues #4480, #4481)
+- Checker command:
+  - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
+- Required deterministic taxonomy markers:
+  - `reason_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1`
+  - `reason_codes_csv=none|<csv>`
+  - `reason_codes_value=none|<csv>`
+- Example fail-closed reasons:
+  - `rustls_pemfile_dependency_optional_flag_mismatch`
+  - `readme_adr_link_missing`
+  - `ci_strategy_live_https_feature_check_missing`
+  - `ci_strategy_no_default_features_check_missing`
+- Regression policy:
+  - dependency-posture drift or unstable reason outputs force `NO-GO` (`Regression: #4480`, `Regression: #4481`).
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`

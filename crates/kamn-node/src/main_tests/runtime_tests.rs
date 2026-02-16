@@ -1412,6 +1412,13 @@ fn profile_defaults_can_be_overridden_by_explicit_flags() {
 
 #[test]
 fn parses_config_file_layer_for_core_node_fields() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None);
+    let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None);
+    let _log_level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None);
+    let _log_format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", None);
     let config_path = write_temp_node_config(
         "role=listener\nchain_id=kamn-config-file\nchain_version=v0.2.0\nstorage_dir=./tmp/config-listener\nenable_gossip=false\nsync_mode=archive\noutput=json\ndiagnostics=snapshot\n",
     );
