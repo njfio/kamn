@@ -3300,7 +3300,7 @@ Fast-mode CI tooling regression coverage includes:
   - baseline fixture:
     - `fixtures/ci/combined_shell_surface_trend_baseline.json`
   - script budget envelope:
-    - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=34000`)
+    - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=36000`)
     - `.ci/script-surface-baseline.env` (post-#3740 refreshed baseline snapshot)
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
