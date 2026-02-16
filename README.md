@@ -1242,6 +1242,7 @@ Canonical contributor rules are in `.github/CONTRIBUTING.md` (`AGENTS.md` remain
 - `.github/CONTRIBUTING.md`: mandatory execution contract (issue hierarchy, TDD, PR standards).
 - `AGENTS.md`: compatibility redirect for agent tooling.
 - `PRD.md`: product requirements and phase scope baseline.
+- `docs/architecture/README.md`: canonical architecture navigation index and diagram catalog.
 - `docs/planning/engineering-hardening-wave.md#commands`: baseline hardening and missing-doc policy command surface.
 - `docs/architecture/kamn-core-module-map.md#ownership-matrix`: `kamn-core` domain ownership map.
 - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`: contributor entrypoints by architecture/workflow need.

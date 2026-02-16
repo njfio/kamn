@@ -1154,6 +1154,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - `impl_contract_status_marker_missing:scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh`
     - `fallback_reason_code=dispatcher_unknown_wrapper`
 
+## Architecture Navigation Index Contract
+- architecture navigation index guard stays on PR fast gate:
+  - `cargo test -p kamn-node --test architecture_navigation_docs`
+- index artifact and marker contract:
+  - `docs/architecture/README.md`
+  - `schema_version=kamn.docs.architecture-navigation-index.v1`
+  - `diagram_catalog_status=active`
+- required cross-doc references remain fail-closed:
+  - `README.md` must reference `docs/architecture/README.md`.
+  - architecture index must include core map/runtime/service/Kolme/TLS ADR paths.
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
