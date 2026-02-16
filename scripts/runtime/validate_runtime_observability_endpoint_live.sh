@@ -36,6 +36,7 @@ OBSERVABILITY_DOC="$ROOT_DIR/docs/foundation/observability-slo-dashboards.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
 REASON_TAXONOMY_VERSION="kamn.runtime.observability-endpoint-reason-taxonomy.v1"
 REASON_CODES_CSV="runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
+OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV="observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected"
 
 start_epoch="$(date +%s)"
 
@@ -43,6 +44,11 @@ pushd "$ROOT_DIR" >/dev/null
 cargo test -p kamn-node functional_observability_endpoint_renders_stream_payload
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_stream_path
 cargo test -p kamn-node integration_runtime_observability_endpoint_serves_metrics_and_health_paths
+cargo test -p kamn-node integration_runtime_observability_endpoint_tls_mode_serves_required_https_routes
+cargo test -p kamn-node regression_runtime_observability_endpoint_tls_mode_rejects_missing_cert_file
+cargo test -p kamn-node regression_runtime_observability_endpoint_tls_mode_rejects_invalid_key_file
+cargo test -p kamn-node regression_runtime_observability_endpoint_tls_mode_rejects_invalid_mode_value
+cargo test -p kamn-node integration_runtime_observability_endpoint_tls_mode_rejects_plain_http_handshake
 cargo test -p kamn-node functional_observability_endpoint_projects_readiness_reason_code_parity_across_endpoint_surfaces
 cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_unknown_path
 cargo test -p kamn-node integration_runtime_observability_endpoint_returns_not_found_for_malformed_request_method
@@ -88,8 +94,11 @@ cat >"$report_json" <<JSON
   "unknown_path_contract_status": "verified",
   "malformed_input_contract_status": "verified",
   "timeout_contract_status": "verified",
+  "observability_tls_route_contract_status": "verified",
+  "observability_tls_negative_matrix_status": "verified",
   "reason_taxonomy_version": "${REASON_TAXONOMY_VERSION}",
   "reason_codes_csv": "${REASON_CODES_CSV}",
+  "observability_tls_negative_matrix_reason_codes_csv": "${OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV}",
   "ci_local_budget_boundary_status": "verified",
   "fail_closed_status": "verified",
   "docs_contract_status": "verified",
@@ -114,8 +123,11 @@ echo "stream_parity_status=verified"
 echo "unknown_path_contract_status=verified"
 echo "malformed_input_contract_status=verified"
 echo "timeout_contract_status=verified"
+echo "observability_tls_route_contract_status=verified"
+echo "observability_tls_negative_matrix_status=verified"
 echo "reason_taxonomy_version=${REASON_TAXONOMY_VERSION}"
 echo "reason_codes_csv=${REASON_CODES_CSV}"
+echo "observability_tls_negative_matrix_reason_codes_csv=${OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV}"
 echo "ci_local_budget_boundary_status=verified"
 echo "fail_closed_status=verified"
 echo "docs_contract_status=verified"

@@ -24,6 +24,7 @@ cat >"$report_file" <<'JSON'
   "stream_lifecycle_status": "verified",
   "stream_reconnect_churn_status": "verified",
   "queue_bound_budget_status": "verified",
+  "observability_tls_route_contract_status": "verified",
   "readiness_probe_status": "verified",
   "readiness_failure_drill_status": "verified",
   "readiness_reason_taxonomy_status": "verified",
@@ -178,6 +179,39 @@ if [ "$tampered_reconnect_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_reconnect_output" | grep -q 'local_observability_scrape_policy_marker_missing:stream_reconnect_churn_status'; then
   echo "expected deterministic reconnect churn marker mismatch reason code for tampered local observability policy validation" >&2
+  exit 1
+fi
+
+tampered_tls_route_report="$TMP_DIR/local-observability-scrape-live-summary.tls-route.tampered.json"
+cp "$report_file" "$tampered_tls_route_report"
+python3 - "$tampered_tls_route_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["observability_tls_route_contract_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_tls_route_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_tls_route_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.tls-route.tampered.json" 2>&1
+)"
+tampered_tls_route_code=$?
+set -e
+
+if [ "$tampered_tls_route_code" -eq 0 ]; then
+  echo "expected tampered local observability TLS route marker report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_tls_route_output" | grep -q 'local_observability_scrape_policy_marker_missing:observability_tls_route_contract_status'; then
+  echo "expected deterministic TLS route marker mismatch reason code for tampered local observability policy validation" >&2
   exit 1
 fi
 

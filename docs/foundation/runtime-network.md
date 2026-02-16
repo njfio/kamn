@@ -200,6 +200,20 @@ This document captures the initial runtime-network foundation slice for peer lif
   - health: `--observability-endpoint-health-path` (default `/healthz`)
   - readiness: fixed `/readyz`
   - stream: fixed `/metrics.stream`
+- Observability TLS mode contract:
+  - `KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE=disabled|require`
+  - `KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE`
+  - `KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE`
+- TLS negative-matrix fail-closed taxonomy (Issue `#3805`):
+  - `observability_endpoint_tls_certificate_file_read_failed`
+  - `observability_endpoint_tls_key_file_parse_failed`
+  - `observability_endpoint_tls_mode_invalid`
+  - `observability_endpoint_tls_plain_http_handshake_rejected`
+- Runtime observability live lane deterministic marker contracts:
+  - `observability_tls_negative_matrix_status=verified`
+  - `observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected`
+- Policy fail-closed drift contract:
+  - tampered TLS negative-matrix taxonomy rejects with `runtime_observability_policy_tls_negative_matrix_reason_codes_csv_mismatch`
 
 ## Process-Isolated Libp2p Connectivity Matrix
 - Process-isolated convergence lane command:
