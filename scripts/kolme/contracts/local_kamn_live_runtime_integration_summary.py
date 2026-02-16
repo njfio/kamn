@@ -59,6 +59,57 @@ runtime_signer_private_key_env_zeroized = (
     not runtime_signer_fallback_private_key_present and not runtime_signer_raw_private_key_present
 )
 runtime_signer_private_key_bytes_zeroized = runtime_signer_private_key_env_zeroized
+PANIC_REASON_MARKERS = ("panic", "unreachable", "unwrap(", "expect(")
+KEY_LOADING_ERROR_CLASSIFICATION_VERSION = "v1"
+KEY_LOADING_ERROR_CLASSIFICATIONS = (
+    "none",
+    "fallback_private_key_present",
+    "managed_external_raw_private_key_present",
+    "key_source_profile_pair_disallowed",
+    "private_key_env_mismatch",
+)
+KEY_LOADING_ERROR_CLASSIFICATIONS_CSV = ",".join(KEY_LOADING_ERROR_CLASSIFICATIONS)
+SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
+    "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+}
+SIGNER_KEY_SOURCES_BY_PROFILE = {
+    "ops-primary": ("env-local", "managed-external"),
+    "ops-secondary": ("env-local",),
+}
+
+
+def classify_key_loading_error() -> str:
+    if runtime_signer_fallback_private_key_present:
+        return "fallback_private_key_present"
+    if (
+        runtime_signer_key_source == "managed-external"
+        and runtime_signer_raw_private_key_present
+    ):
+        return "managed_external_raw_private_key_present"
+    allowed_key_sources = SIGNER_KEY_SOURCES_BY_PROFILE.get(runtime_signer_profile, ())
+    if (
+        isinstance(runtime_signer_key_source, str)
+        and runtime_signer_key_source
+        and allowed_key_sources
+        and runtime_signer_key_source not in allowed_key_sources
+    ):
+        return "key_source_profile_pair_disallowed"
+    expected_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE.get(runtime_signer_profile, "")
+    if (
+        expected_private_key_env
+        and isinstance(runtime_signer_private_key_env, str)
+        and runtime_signer_private_key_env
+        and runtime_signer_private_key_env != expected_private_key_env
+    ):
+        return "private_key_env_mismatch"
+    return "none"
+
+
+runtime_signer_key_loading_error_classification = classify_key_loading_error()
+runtime_signer_key_loading_panic_free = not any(
+    marker in reason_code.lower() for marker in PANIC_REASON_MARKERS
+)
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -260,6 +311,10 @@ summary = {
     "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
     "runtime_signer_private_key_env_zeroized": runtime_signer_private_key_env_zeroized,
     "runtime_signer_private_key_bytes_zeroized": runtime_signer_private_key_bytes_zeroized,
+    "runtime_signer_key_loading_panic_free": runtime_signer_key_loading_panic_free,
+    "runtime_signer_key_loading_error_classification_version": KEY_LOADING_ERROR_CLASSIFICATION_VERSION,
+    "runtime_signer_key_loading_error_classification_allowed_csv": KEY_LOADING_ERROR_CLASSIFICATIONS_CSV,
+    "runtime_signer_key_loading_error_classification": runtime_signer_key_loading_error_classification,
     "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
     "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
     "runtime_signer_quorum_linkage_contract_version": runtime_signer_quorum_linkage_contract_version,
@@ -305,6 +360,10 @@ summary = {
         "runtime_signer_managed_external_raw_private_key_allowed": False,
         "runtime_signer_private_key_env_zeroization_required": True,
         "runtime_signer_private_key_bytes_zeroization_required": True,
+        "runtime_signer_key_loading_panic_free_required": True,
+        "runtime_signer_key_loading_error_classification_version": KEY_LOADING_ERROR_CLASSIFICATION_VERSION,
+        "runtime_signer_key_loading_error_classification_stable_required": True,
+        "runtime_signer_key_loading_error_classification_allowed_csv": KEY_LOADING_ERROR_CLASSIFICATIONS_CSV,
         "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
         "runtime_signer_attestation_signer_uniqueness_required": True,
         "runtime_signer_attestation_threshold_required": True,

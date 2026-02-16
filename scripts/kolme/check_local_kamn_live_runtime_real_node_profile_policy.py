@@ -106,6 +106,24 @@ SIGNER_HYGIENE_REASON_TAXONOMY_CODES = (
 SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV = ",".join(
     SIGNER_HYGIENE_REASON_TAXONOMY_CODES
 )
+KEY_LOADING_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1"
+)
+KEY_LOADING_REASON_TAXONOMY_CODES = (
+    "runtime_signer_key_loading_panic_violation",
+    "runtime_signer_key_loading_error_classification_violation",
+)
+KEY_LOADING_REASON_TAXONOMY_CODES_CSV = ",".join(KEY_LOADING_REASON_TAXONOMY_CODES)
+KEY_LOADING_ERROR_CLASSIFICATION_VERSION = "v1"
+KEY_LOADING_ERROR_CLASSIFICATIONS = (
+    "none",
+    "fallback_private_key_present",
+    "managed_external_raw_private_key_present",
+    "key_source_profile_pair_disallowed",
+    "private_key_env_mismatch",
+)
+KEY_LOADING_ERROR_CLASSIFICATIONS_CSV = ",".join(KEY_LOADING_ERROR_CLASSIFICATIONS)
+PANIC_REASON_MARKERS = ("panic", "unreachable", "unwrap(", "expect(")
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -144,6 +162,40 @@ def evaluate_runtime_signer_attestation_bundle(
             reason_codes.append("runtime_signer_attestation_profile_not_approved")
 
     return reason_codes
+
+
+def classify_expected_key_loading_error(
+    runtime_signer_profile: object,
+    runtime_signer_key_source: object,
+    runtime_signer_private_key_env: object,
+    runtime_signer_fallback_private_key_present: object,
+    runtime_signer_raw_private_key_present: object,
+    expected_signer_private_key_env: str,
+) -> str:
+    if runtime_signer_fallback_private_key_present is True:
+        return "fallback_private_key_present"
+    if (
+        runtime_signer_key_source == "managed-external"
+        and runtime_signer_raw_private_key_present is True
+    ):
+        return "managed_external_raw_private_key_present"
+    if (
+        isinstance(runtime_signer_profile, str)
+        and runtime_signer_profile in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE
+        and isinstance(runtime_signer_key_source, str)
+        and runtime_signer_key_source.strip()
+        and runtime_signer_key_source
+        not in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE[runtime_signer_profile]
+    ):
+        return "key_source_profile_pair_disallowed"
+    if (
+        expected_signer_private_key_env
+        and isinstance(runtime_signer_private_key_env, str)
+        and runtime_signer_private_key_env.strip()
+        and runtime_signer_private_key_env != expected_signer_private_key_env
+    ):
+        return "private_key_env_mismatch"
+    return "none"
 
 
 def parse_args() -> argparse.Namespace:
@@ -385,6 +437,85 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_private_key_bytes_zeroized_invalid")
     elif runtime_signer_private_key_bytes_zeroized is not True:
         reason_codes.append("runtime_signer_private_key_bytes_zeroization_violation")
+
+    runtime_signer_key_loading_panic_free = report.get(
+        "runtime_signer_key_loading_panic_free"
+    )
+    if not isinstance(runtime_signer_key_loading_panic_free, bool):
+        reason_codes.append("runtime_signer_key_loading_panic_free_invalid")
+    elif runtime_signer_key_loading_panic_free is not True:
+        reason_codes.append("runtime_signer_key_loading_panic_violation")
+
+    reason_code_contains_panic_marker = (
+        isinstance(reason_code, str)
+        and any(marker in reason_code.lower() for marker in PANIC_REASON_MARKERS)
+    )
+    if reason_code_contains_panic_marker and runtime_signer_key_loading_panic_free is not False:
+        reason_codes.append("runtime_signer_key_loading_panic_violation")
+
+    runtime_signer_key_loading_error_classification_version = report.get(
+        "runtime_signer_key_loading_error_classification_version"
+    )
+    if (
+        not isinstance(runtime_signer_key_loading_error_classification_version, str)
+        or not runtime_signer_key_loading_error_classification_version.strip()
+    ):
+        reason_codes.append("runtime_signer_key_loading_error_classification_version_missing")
+    elif (
+        runtime_signer_key_loading_error_classification_version
+        != KEY_LOADING_ERROR_CLASSIFICATION_VERSION
+    ):
+        reason_codes.append(
+            "runtime_signer_key_loading_error_classification_version_mismatch"
+        )
+
+    runtime_signer_key_loading_error_classification_allowed_csv = report.get(
+        "runtime_signer_key_loading_error_classification_allowed_csv"
+    )
+    if (
+        not isinstance(runtime_signer_key_loading_error_classification_allowed_csv, str)
+        or not runtime_signer_key_loading_error_classification_allowed_csv.strip()
+    ):
+        reason_codes.append(
+            "runtime_signer_key_loading_error_classification_allowed_csv_missing"
+        )
+    elif (
+        runtime_signer_key_loading_error_classification_allowed_csv
+        != KEY_LOADING_ERROR_CLASSIFICATIONS_CSV
+    ):
+        reason_codes.append(
+            "runtime_signer_key_loading_error_classification_allowed_csv_mismatch"
+        )
+
+    runtime_signer_key_loading_error_classification = report.get(
+        "runtime_signer_key_loading_error_classification"
+    )
+    if (
+        not isinstance(runtime_signer_key_loading_error_classification, str)
+        or not runtime_signer_key_loading_error_classification.strip()
+    ):
+        reason_codes.append("runtime_signer_key_loading_error_classification_missing")
+    elif (
+        runtime_signer_key_loading_error_classification
+        not in KEY_LOADING_ERROR_CLASSIFICATIONS
+    ):
+        reason_codes.append("runtime_signer_key_loading_error_classification_invalid")
+    else:
+        expected_key_loading_error_classification = classify_expected_key_loading_error(
+            runtime_signer_profile=runtime_signer_profile,
+            runtime_signer_key_source=runtime_signer_key_source,
+            runtime_signer_private_key_env=runtime_signer_private_key_env,
+            runtime_signer_fallback_private_key_present=runtime_signer_fallback_private_key_present,
+            runtime_signer_raw_private_key_present=runtime_signer_raw_private_key_present,
+            expected_signer_private_key_env=expected_signer_private_key_env,
+        )
+        if (
+            runtime_signer_key_loading_error_classification
+            != expected_key_loading_error_classification
+        ):
+            reason_codes.append(
+                "runtime_signer_key_loading_error_classification_violation"
+            )
 
     runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
     if (
@@ -719,6 +850,29 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_private_key_env_zeroization_required_contract_mismatch")
         if contracts.get("runtime_signer_private_key_bytes_zeroization_required") is not True:
             reason_codes.append("runtime_signer_private_key_bytes_zeroization_required_contract_mismatch")
+        if contracts.get("runtime_signer_key_loading_panic_free_required") is not True:
+            reason_codes.append("runtime_signer_key_loading_panic_free_required_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_key_loading_error_classification_version")
+            != KEY_LOADING_ERROR_CLASSIFICATION_VERSION
+        ):
+            reason_codes.append(
+                "runtime_signer_key_loading_error_classification_version_contract_mismatch"
+            )
+        if (
+            contracts.get("runtime_signer_key_loading_error_classification_stable_required")
+            is not True
+        ):
+            reason_codes.append(
+                "runtime_signer_key_loading_error_classification_stable_required_contract_mismatch"
+            )
+        if (
+            contracts.get("runtime_signer_key_loading_error_classification_allowed_csv")
+            != KEY_LOADING_ERROR_CLASSIFICATIONS_CSV
+        ):
+            reason_codes.append(
+                "runtime_signer_key_loading_error_classification_allowed_csv_contract_mismatch"
+            )
         if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
             reason_codes.append("runtime_signer_attestation_schema_version_contract_mismatch")
         if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
@@ -925,6 +1079,18 @@ def main() -> int:
         "signer_hygiene_reason_codes_csv": (
             SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV
         ),
+        "key_loading_reason_taxonomy_version": (
+            KEY_LOADING_REASON_TAXONOMY_VERSION
+        ),
+        "key_loading_reason_codes_csv": (
+            KEY_LOADING_REASON_TAXONOMY_CODES_CSV
+        ),
+        "key_loading_error_classification_version": (
+            KEY_LOADING_ERROR_CLASSIFICATION_VERSION
+        ),
+        "key_loading_error_classifications_csv": (
+            KEY_LOADING_ERROR_CLASSIFICATIONS_CSV
+        ),
         "observed_reason_codes_csv": observed_reason_codes_csv,
         "reason_codes": reason_codes,
         "final_decision": final_decision,
@@ -964,6 +1130,22 @@ def main() -> int:
     print(
         "signer_hygiene_reason_codes_csv="
         f"{SIGNER_HYGIENE_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "key_loading_reason_taxonomy_version="
+        f"{KEY_LOADING_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "key_loading_reason_codes_csv="
+        f"{KEY_LOADING_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "key_loading_error_classification_version="
+        f"{KEY_LOADING_ERROR_CLASSIFICATION_VERSION}"
+    )
+    print(
+        "key_loading_error_classifications_csv="
+        f"{KEY_LOADING_ERROR_CLASSIFICATIONS_CSV}"
     )
     print(f"observed_reason_codes_csv={observed_reason_codes_csv}")
     print(f"failed_checks={failed_checks}")

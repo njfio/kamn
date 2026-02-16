@@ -2482,8 +2482,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_raw_private_key_present=false`
       - `runtime_signer_private_key_env_zeroized=true`
       - `runtime_signer_private_key_bytes_zeroized=true`
+      - `runtime_signer_key_loading_panic_free=true`
+      - `runtime_signer_key_loading_error_classification_version=v1`
+      - `runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+      - `runtime_signer_key_loading_error_classification=none`
       - `contracts.runtime_signer_private_key_env_zeroization_required=true`
       - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
+      - `contracts.runtime_signer_key_loading_panic_free_required=true`
+      - `contracts.runtime_signer_key_loading_error_classification_version=v1`
+      - `contracts.runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
+      - `contracts.runtime_signer_key_loading_error_classification_stable_required=true`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
       - `runtime_signer_attestation_bundle`
       - `runtime_signer_quorum_linkage_contract_version=v1`
@@ -2501,6 +2509,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_commit_failure_reason_codes_csv=runtime_commit_real_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_commit_signer_profile_marker_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_signer_key_source_marker_missing,runtime_commit_in_memory_provider_reference_detected,runtime_commit_native_payload_pubkey_marker_missing,runtime_commit_native_payload_nonce_marker_missing,runtime_commit_native_payload_messages_marker_missing`
       - `signer_hygiene_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-hygiene-reason-taxonomy.v1`
       - `signer_hygiene_reason_codes_csv=runtime_signer_private_key_env_zeroization_violation,runtime_signer_private_key_bytes_zeroization_violation`
+      - `key_loading_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1`
+      - `key_loading_reason_codes_csv=runtime_signer_key_loading_panic_violation,runtime_signer_key_loading_error_classification_violation`
+      - `key_loading_error_classification_version=v1`
+      - `key_loading_error_classifications_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
       - `observed_reason_codes_csv=none|<sorted reason csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
@@ -2522,6 +2534,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_private_key_env_mismatch`
       - `runtime_signer_private_key_env_zeroization_violation`
       - `runtime_signer_private_key_bytes_zeroization_violation`
+      - `runtime_signer_key_loading_panic_violation`
+      - `runtime_signer_key_loading_error_classification_violation`
       - `runtime_commit_signer_key_source_marker_missing`
       - `runtime_commit_fallback_private_key_command_marker_detected`
       - `runtime_commit_managed_external_signer_key_reference_marker_missing`
