@@ -7,6 +7,9 @@ ASSET_LIVE_VALIDATOR="$ROOT_DIR/scripts/deploy/validate_deployment_assets_live.s
 CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 DEPLOY_DOC="$ROOT_DIR/docs/ops/deployment.md"
 DOCKER_DOC="$ROOT_DIR/docs/deployment/docker.md"
+PACKAGING_REASON_TAXONOMY_VERSION="kamn.deploy.compose-packaging-reason-taxonomy.v1"
+PACKAGING_REASON_CODES_CSV="compose_packaging_manifest_drift_detected,compose_packaging_config_drift_detected,compose_packaging_evidence_contract_drift_detected"
+PACKAGING_CONTRACT_EVIDENCE_STATUS="verified"
 
 output_json=""
 max_seconds="${KAMN_COMPOSE_TOPOLOGY_CONTRACT_MAX_SECONDS:-240}"
@@ -87,6 +90,18 @@ if ! printf '%s\n' "$live_output" | grep -q '^fail_closed_status=verified$'; the
   echo "expected deployment assets live validation fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$live_output" | grep -q '^compose_manifest_contract_status=verified$'; then
+  echo "expected deployment assets live validation compose-manifest marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$live_output" | grep -q '^compose_config_contract_status=verified$'; then
+  echo "expected deployment assets live validation compose-config marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$live_output" | grep -q '^k8s_manifest_contract_status=verified$'; then
+  echo "expected deployment assets live validation k8s-manifest marker" >&2
+  exit 1
+fi
 
 for required_ref in \
   "validate_compose_topology_contract_lane.sh" \
@@ -98,6 +113,18 @@ for required_ref in \
     exit 1
   fi
 done
+if ! grep -Fq "packaging_reason_taxonomy_version=${PACKAGING_REASON_TAXONOMY_VERSION}" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include compose topology packaging reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -Fq "packaging_reason_codes_csv=${PACKAGING_REASON_CODES_CSV}" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include compose topology packaging reason codes marker" >&2
+  exit 1
+fi
+if ! grep -Fq "packaging_contract_evidence_status=verified" "$DEPLOY_DOC"; then
+  echo "expected deployment docs to include packaging contract evidence marker" >&2
+  exit 1
+fi
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -106,7 +133,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 summary_report="$TMP_DIR/compose-topology-contract-lane-summary.json"
-python3 - "$summary_report" "$elapsed_seconds" "$max_seconds" "$ci_fast_gate" <<'PY'
+python3 - "$summary_report" "$elapsed_seconds" "$max_seconds" "$ci_fast_gate" "$PACKAGING_REASON_TAXONOMY_VERSION" "$PACKAGING_REASON_CODES_CSV" "$PACKAGING_CONTRACT_EVIDENCE_STATUS" <<'PY'
 import json
 import pathlib
 import sys
@@ -115,6 +142,9 @@ summary_report_file = pathlib.Path(sys.argv[1])
 elapsed_seconds = int(sys.argv[2])
 max_seconds = int(sys.argv[3])
 ci_fast_gate = sys.argv[4]
+packaging_reason_taxonomy_version = sys.argv[5]
+packaging_reason_codes_csv = sys.argv[6]
+packaging_contract_evidence_status = sys.argv[7]
 
 payload = {
     "schema_version": "kamn.deploy.compose-topology-contract-lane-summary.v1",
@@ -125,6 +155,13 @@ payload = {
     "compose_api_port_status": "verified",
     "compose_volume_network_status": "verified",
     "compose_docs_parity_status": "verified",
+    "compose_manifest_contract_status": "verified",
+    "compose_config_contract_status": "verified",
+    "k8s_manifest_contract_status": "verified",
+    "packaging_reason_taxonomy_version": packaging_reason_taxonomy_version,
+    "packaging_reason_codes_csv": packaging_reason_codes_csv,
+    "packaging_reason_codes_value": packaging_reason_codes_csv,
+    "packaging_contract_evidence_status": packaging_contract_evidence_status,
     "fail_closed_status": "verified",
     "reason_code": "compose_topology_contract_verified",
     "elapsed_seconds": elapsed_seconds,
@@ -147,5 +184,11 @@ echo "compose_runtime_mode_full_status=verified"
 echo "compose_api_port_status=verified"
 echo "compose_volume_network_status=verified"
 echo "compose_docs_parity_status=verified"
+echo "compose_manifest_contract_status=verified"
+echo "compose_config_contract_status=verified"
+echo "k8s_manifest_contract_status=verified"
+echo "packaging_reason_taxonomy_version=${PACKAGING_REASON_TAXONOMY_VERSION}"
+echo "packaging_reason_codes_csv=${PACKAGING_REASON_CODES_CSV}"
+echo "packaging_contract_evidence_status=${PACKAGING_CONTRACT_EVIDENCE_STATUS}"
 echo "fail_closed_status=verified"
 echo "reason_code=compose_topology_contract_verified"

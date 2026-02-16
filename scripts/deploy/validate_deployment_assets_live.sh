@@ -73,6 +73,46 @@ if ! printf '%s\n' "$healthcheck_negative_output" | grep -q 'expected docker-com
   exit 1
 fi
 
+bad_compose_runtime_mode="$TMP_DIR/docker-compose.runtime-mode.bad.yml"
+sed 's/--runtime-mode/--runtime_mode_drift/g' "$ROOT_DIR/deploy/docker-compose.yml" >"$bad_compose_runtime_mode"
+
+set +e
+runtime_mode_negative_output="$(
+  COMPOSE_FILE_PATH="$bad_compose_runtime_mode" \
+  bash "$ROOT_DIR/scripts/deploy/test_deployment_assets.sh" 2>&1
+)"
+runtime_mode_negative_code=$?
+set -e
+if [ "$runtime_mode_negative_code" -eq 0 ]; then
+  echo "expected deployment assets checker to fail closed for invalid compose runtime-mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runtime_mode_negative_output" | grep -q 'expected docker-compose runtime mode command marker'; then
+  printf '%s\n' "$runtime_mode_negative_output" >&2
+  echo "expected deterministic fail-closed reason marker for invalid compose runtime-mode marker" >&2
+  exit 1
+fi
+
+bad_manifest="$TMP_DIR/kamn-node.manifest.bad.yaml"
+grep -v 'KAMN_NODE_DAEMON_MAX_TICKS' "$ROOT_DIR/deploy/k8s/kamn-node.yaml" >"$bad_manifest"
+
+set +e
+manifest_negative_output="$(
+  K8S_MANIFEST_PATH="$bad_manifest" \
+  bash "$ROOT_DIR/scripts/deploy/test_deployment_assets.sh" 2>&1
+)"
+manifest_negative_code=$?
+set -e
+if [ "$manifest_negative_code" -eq 0 ]; then
+  echo "expected deployment assets checker to fail closed for invalid k8s manifest marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$manifest_negative_output" | grep -q 'expected kubernetes manifest daemon max-ticks env marker'; then
+  printf '%s\n' "$manifest_negative_output" >&2
+  echo "expected deterministic fail-closed reason marker for invalid k8s manifest marker" >&2
+  exit 1
+fi
+
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
   echo "deployment assets live validation exceeded runtime budget: ${elapsed_seconds}s" >&2
@@ -87,6 +127,9 @@ cat >"$report_json" <<JSON
   "final_decision": "GO",
   "asset_contract_status": "verified",
   "fail_closed_status": "verified",
+  "compose_manifest_contract_status": "verified",
+  "compose_config_contract_status": "verified",
+  "k8s_manifest_contract_status": "verified",
   "elapsed_seconds": ${elapsed_seconds}
 }
 JSON
@@ -99,3 +142,6 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "asset_contract_status=verified"
 echo "fail_closed_status=verified"
+echo "compose_manifest_contract_status=verified"
+echo "compose_config_contract_status=verified"
+echo "k8s_manifest_contract_status=verified"
