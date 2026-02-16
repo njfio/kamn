@@ -15,6 +15,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 | TM-007 | Privileged role fallback bypass under secure-provider degradation | Deny local fallback for privileged signer roles and reject policy-blocked handshake downgrades | Signer policy contract lane + signer backend router | Security + Backend | `functional_privileged_roles_deny_fallback_when_provider_unavailable` |
 | TM-008 | Validator/watchdog proof-consensus anomaly evidence missing or cadence/budget guard bypass | Require deterministic proof-consensus anomaly evidence with scheduled/manual deep-lane cadence and runtime budget policy checks | Runtime watchdog proof-consensus contract lane + deep lane policy checker | Runtime + Security | `run_watchdog_proof_consensus_contract_lane.sh` |
 | TM-009 | Kolme live signature conformance drift or malformed parity evidence | Enforce secp256k1 signature parity vectors with deterministic NO-GO reason codes and policy gating | Kolme signature parity contract lane + local heavy validation matrix policy | Security + Crypto + QA | `test_run_signature_parity_contract_lane.sh` |
+| TM-010 | Critical runtime output bypasses structured event contracts | Block ad-hoc `println!/eprintln!` usage in critical runtime and signer modules via deterministic source-contract tests | `kamn-node` runtime output contract tests | Backend + QA | `integration_runtime_output_contract_enforces_main_entrypoint_path` |
 
 ## Governance Quorum Attestation Replay Contract
 - Fast lane:
@@ -77,6 +78,13 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
   - `parity_pubkey_mismatch`
 - Required fail-closed policy:
   - known-bad signature vectors must emit deterministic NO-GO reason codes and fail closed on drift (`Regression: #2299`).
+
+## Runtime Output Contract
+- Contract test:
+  - `cargo test -p kamn-node --test runtime_output_contract`
+- Required fail-closed policy:
+  - critical runtime/signer modules must not reintroduce ad-hoc `println!/eprintln!`
+    output paths (`Regression: #4122`).
 
 ## Ownership and Review Cadence
 - Security owner reviews this matrix each milestone and when new threat classes are introduced.
