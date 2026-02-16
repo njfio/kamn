@@ -3573,6 +3573,15 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - per-iteration reproducer runtime is bounded by `--reproducer-max-seconds`.
   - iteration count and failure threshold are explicit (`--iterations`, `--failure-threshold`).
 
+### Signer Extraction Budget Guard
+- `signer_extraction_budget_guard_status=active`
+- `signer_rs_max_lines=950`
+- Guard command:
+  - `cargo test -p kamn-node --test signer_extraction_budget_contract -- --nocapture`
+- Fail-closed policy:
+  - `signer.rs` line budget overflow fails with `signer.rs line budget exceeded`.
+  - signer extraction ownership marker drift (missing `mod managed_backend`, `mod nonce`, `mod signer_policy`, or missing re-exports) fails the guard target.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
