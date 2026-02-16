@@ -1751,6 +1751,7 @@ Operator checkpoints:
 - local fork process lifecycle integration lane propagates rollback/recovery evidence linkage options and deterministic artifact markers in summary/policy contracts (`Regression: #2107`).
 - local fork process lifecycle policy rejects startup dependency drift acceptance and duplicate orchestration check identifiers (`Regression: #4495`).
 - demo startup drift and orchestration instability response runbook: `docs/ops/runbook_demo.md` (`Regression: #4495`).
+- local fork process lifecycle summary emits deterministic reason taxonomy and normalized evidence outputs; policy checker fails closed on reason-output mapping drift (`Regression: #4496`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).

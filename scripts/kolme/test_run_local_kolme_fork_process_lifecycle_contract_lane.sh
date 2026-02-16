@@ -137,6 +137,7 @@ required_coverage_markers=(
   "Regression: #2104"
   "Regression: #2107"
   "Regression: #4495"
+  "Regression: #4496"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -260,6 +261,16 @@ if ! grep -q "check_id_duplicate:<check-id>" "$RUNBOOK_FILE"; then
   exit 1
 fi
 
+if ! grep -q "kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1" "$RUNBOOK_FILE"; then
+  echo "expected runbook to document reason taxonomy schema marker" >&2
+  exit 1
+fi
+
+if ! grep -q "kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1" "$RUNBOOK_FILE"; then
+  echo "expected runbook to document normalized evidence schema marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2104" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include process lifecycle runtime policy pass-through regression marker" >&2
   exit 1
@@ -378,14 +389,54 @@ if str(rollback_evidence_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include rollback evidence file path")
 if str(recovery_evidence_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include recovery evidence file path")
+reason_taxonomy = summary.get("reason_taxonomy")
+if not isinstance(reason_taxonomy, dict):
+    raise SystemExit("expected process lifecycle summary reason taxonomy object")
+if reason_taxonomy.get("schema_version") != "kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1":
+    raise SystemExit("expected process lifecycle summary reason taxonomy schema")
+if reason_taxonomy.get("overall") != "lifecycle.not_run":
+    raise SystemExit("expected process lifecycle summary overall reason taxonomy for dry-run")
+if reason_taxonomy.get("startup") != "startup.not_run":
+    raise SystemExit("expected process lifecycle summary startup reason taxonomy for dry-run")
+if reason_taxonomy.get("readiness") != "readiness.not_run":
+    raise SystemExit("expected process lifecycle summary readiness reason taxonomy for dry-run")
+if reason_taxonomy.get("integration") != "integration.not_run":
+    raise SystemExit("expected process lifecycle summary integration reason taxonomy for dry-run")
+if reason_taxonomy.get("teardown") != "teardown.not_run":
+    raise SystemExit("expected process lifecycle summary teardown reason taxonomy for dry-run")
+normalized_evidence = summary.get("normalized_evidence")
+if not isinstance(normalized_evidence, dict):
+    raise SystemExit("expected process lifecycle summary normalized evidence object")
+if normalized_evidence.get("schema_version") != "kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1":
+    raise SystemExit("expected process lifecycle summary normalized evidence schema")
+expected_order = [
+    "process_start",
+    "readiness_probe",
+    "kamn_live_integration",
+    "process_teardown",
+    "rollback_evidence",
+    "recovery_evidence",
+]
+if normalized_evidence.get("primary_check_order") != expected_order:
+    raise SystemExit("expected process lifecycle summary normalized evidence primary check order")
+checks_by_id = normalized_evidence.get("checks_by_id")
+if not isinstance(checks_by_id, dict):
+    raise SystemExit("expected process lifecycle summary normalized checks_by_id object")
+for check_id in expected_order:
+    check_entry = checks_by_id.get(check_id)
+    if not isinstance(check_entry, dict):
+        raise SystemExit(f"expected normalized check entry for {check_id}")
+    if check_entry.get("status") != "planned":
+        raise SystemExit(f"expected normalized check entry status=planned for dry-run: {check_id}")
 PY
 
 # Regression: #4495
 TMP_STARTUP_DRIFT_SUMMARY="$(mktemp)"
 TMP_ORCHESTRATION_DRIFT_SUMMARY="$(mktemp)"
+TMP_REASON_TAXONOMY_DRIFT_SUMMARY="$(mktemp)"
 TMP_POLICY_OUTPUT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE" "$TMP_STARTUP_DRIFT_SUMMARY" "$TMP_ORCHESTRATION_DRIFT_SUMMARY" "$TMP_POLICY_OUTPUT" "$TMP_POLICY_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE" "$TMP_STARTUP_DRIFT_SUMMARY" "$TMP_ORCHESTRATION_DRIFT_SUMMARY" "$TMP_REASON_TAXONOMY_DRIFT_SUMMARY" "$TMP_POLICY_OUTPUT" "$TMP_POLICY_ERR"' EXIT
 
 python3 - "$TMP_REPORT" "$TMP_STARTUP_DRIFT_SUMMARY" <<'PY'
 from __future__ import annotations
@@ -490,6 +541,42 @@ if [ "$orchestration_drift_code" -eq 0 ]; then
 fi
 if ! grep -q "check_id_duplicate:readiness_probe" "$TMP_POLICY_ERR"; then
   echo "expected duplicate orchestration check-id reason marker" >&2
+  exit 1
+fi
+
+# Regression: #4496
+python3 - "$TMP_REPORT" "$TMP_REASON_TAXONOMY_DRIFT_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+reason_taxonomy = summary.get("reason_taxonomy", {})
+if isinstance(reason_taxonomy, dict):
+    reason_taxonomy["readiness"] = "readiness.checks_passed"
+summary["reason_taxonomy"] = reason_taxonomy
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REASON_TAXONOMY_DRIFT_SUMMARY" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUTPUT" >"$TMP_POLICY_ERR" 2>&1
+reason_taxonomy_drift_code=$?
+set -e
+if [ "$reason_taxonomy_drift_code" -eq 0 ]; then
+  echo "expected checker to fail when reason taxonomy readiness mapping drifts" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_readiness_mismatch" "$TMP_POLICY_ERR"; then
+  echo "expected reason taxonomy readiness mismatch reason marker" >&2
   exit 1
 fi
 

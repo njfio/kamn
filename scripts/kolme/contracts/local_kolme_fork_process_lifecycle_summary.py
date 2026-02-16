@@ -5,6 +5,103 @@ import json
 import pathlib
 import sys
 
+PRIMARY_CHECK_ORDER = [
+    "process_start",
+    "readiness_probe",
+    "kamn_live_integration",
+    "process_teardown",
+    "rollback_evidence",
+    "recovery_evidence",
+]
+
+
+def classify_overall_reason(status_value: str, reason_value: str) -> str:
+    if status_value == "ok" and reason_value == "dry_run_no_commands_executed":
+        return "lifecycle.not_run"
+    if status_value == "ok":
+        return "lifecycle.success"
+    if reason_value in (
+        "local_opt_in_missing",
+        "serve_command_missing",
+        "process_start_failed",
+        "process_readiness_failed",
+    ):
+        return "lifecycle.startup_failed"
+    if reason_value == "kamn_live_integration_failed":
+        return "lifecycle.integration_failed"
+    if reason_value == "process_teardown_failed":
+        return "lifecycle.teardown_failed"
+    if reason_value == "process_lifecycle_budget_exceeded":
+        return "lifecycle.budget_exceeded"
+    return "lifecycle.failed"
+
+
+def classify_start_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "startup.not_run",
+        "process_started": "startup.process_started",
+        "local_opt_in_missing": "startup.local_opt_in_missing",
+        "serve_command_missing": "startup.serve_command_missing",
+        "process_start_failed": "startup.process_start_failed",
+    }
+    return mapping.get(reason_value, "startup.other")
+
+
+def classify_readiness_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "readiness.not_run",
+        "readiness_checks_passed": "readiness.checks_passed",
+        "process_readiness_failed": "readiness.checks_failed",
+        "local_opt_in_missing": "readiness.prerequisite_failed",
+        "serve_command_missing": "readiness.prerequisite_failed",
+        "process_start_failed": "readiness.prerequisite_failed",
+    }
+    return mapping.get(reason_value, "readiness.other")
+
+
+def classify_integration_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "integration.not_run",
+        "kamn_live_integration_passed": "integration.passed",
+        "kamn_live_integration_timeout": "integration.timeout",
+        "process_readiness_failed": "integration.prerequisite_failed",
+        "local_opt_in_missing": "integration.prerequisite_failed",
+        "serve_command_missing": "integration.prerequisite_failed",
+        "process_start_failed": "integration.prerequisite_failed",
+    }
+    return mapping.get(reason_value, "integration.failed")
+
+
+def classify_teardown_reason(reason_value: str) -> str:
+    mapping = {
+        "not_run": "teardown.not_run",
+        "process_teardown_passed": "teardown.passed",
+        "process_teardown_forced": "teardown.forced",
+        "local_opt_in_missing": "teardown.skipped_prerequisite_failed",
+        "serve_command_missing": "teardown.skipped_prerequisite_failed",
+        "process_start_failed": "teardown.skipped_prerequisite_failed",
+    }
+    return mapping.get(reason_value, "teardown.other")
+
+
+def build_normalized_checks(checks: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    normalized: dict[str, dict[str, str]] = {}
+    for check_id in PRIMARY_CHECK_ORDER:
+        first_match = next(
+            (entry for entry in checks if entry.get("id") == check_id),
+            None,
+        )
+        if first_match is None:
+            normalized[check_id] = {"status": "missing", "reason_code": "missing", "command": ""}
+            continue
+        normalized[check_id] = {
+            "status": str(first_match.get("status", "")),
+            "reason_code": str(first_match.get("reason_code", "")),
+            "command": str(first_match.get("command", "")),
+        }
+    return normalized
+
+
 output_path = pathlib.Path(sys.argv[1]).resolve()
 mode = sys.argv[2]
 status = sys.argv[3]
@@ -89,6 +186,19 @@ summary = {
     "readiness_reason_code": readiness_reason_code,
     "integration_reason_code": integration_reason_code,
     "teardown_reason_code": teardown_reason_code,
+    "reason_taxonomy": {
+        "schema_version": "kamn.kolme.local-fork-process-lifecycle.reason-taxonomy.v1",
+        "overall": classify_overall_reason(status, reason_code),
+        "startup": classify_start_reason(start_reason_code),
+        "readiness": classify_readiness_reason(readiness_reason_code),
+        "integration": classify_integration_reason(integration_reason_code),
+        "teardown": classify_teardown_reason(teardown_reason_code),
+    },
+    "normalized_evidence": {
+        "schema_version": "kamn.kolme.local-fork-process-lifecycle.evidence-normalization.v1",
+        "primary_check_order": PRIMARY_CHECK_ORDER,
+        "checks_by_id": build_normalized_checks(checks),
+    },
     "contracts": {
         "healthz_path": "/healthz",
         "fork_info_path": "/fork-info",
