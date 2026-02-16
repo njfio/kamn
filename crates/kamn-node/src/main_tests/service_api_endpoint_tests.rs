@@ -243,7 +243,7 @@ fn send_https_request_with_headers(
     response
 }
 
-fn write_test_service_api_tls_materials() -> (String, String) {
+pub(super) fn write_test_service_api_tls_materials() -> (String, String) {
     let entropy = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock should be monotonic")
