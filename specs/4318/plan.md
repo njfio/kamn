@@ -1,7 +1,7 @@
 # Issue #4318 Plan
 
 - Issue: `#4318`
-- Status: `In Progress`
+- Status: `Completed`
 
 ## Approach
 - Add deterministic protocol/session reason projection types + helpers near `service_api_endpoint` reason-code constants.
