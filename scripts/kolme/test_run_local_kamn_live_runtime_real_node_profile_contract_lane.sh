@@ -436,6 +436,12 @@ if policy.get("final_decision") != "GO":
     raise SystemExit("expected real-node profile contract-lane policy final_decision GO")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for real-node profile contract-lane dry-run composition")
+if policy.get("reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in real-node profile contract-lane policy")
+if policy.get("reason_taxonomy_codes_csv") != "runtime_commit_command_profile_mismatch,runtime_commit_policy_command_profile_mismatch,runtime_commit_non_synthetic_submit_probe_missing,runtime_commit_signer_profile_split_brain_detected,runtime_commit_in_memory_provider_reference_detected,runtime_signing_profile_mismatch":
+    raise SystemExit("expected deterministic reason_taxonomy_codes_csv marker in real-node profile contract-lane policy")
+if policy.get("observed_reason_codes_csv") != "none":
+    raise SystemExit("expected observed_reason_codes_csv=none in GO real-node profile contract-lane policy")
 PY
 
 bash "$RUNNER" \
@@ -530,6 +536,10 @@ if policy.get("final_decision") != "GO":
     raise SystemExit("expected secondary signer policy final_decision GO")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for secondary signer dry-run composition")
+if policy.get("reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-real-node-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in secondary signer policy output")
+if policy.get("observed_reason_codes_csv") != "none":
+    raise SystemExit("expected observed_reason_codes_csv=none in GO secondary signer policy output")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_MANAGED_EXTERNAL_RAW_KEY_REPORT" <<'PY'
