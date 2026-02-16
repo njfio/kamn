@@ -255,6 +255,56 @@ class PythonLiveTransportSDKTests(unittest.TestCase):
         finally:
             LiveKAMNClient.clear_backend_adapters()
 
+    def test_regression_backend_adapter_legacy_reason_normalization_is_deterministic(
+        self,
+    ) -> None:
+        # Regression: #4436
+        endpoint = "https://live.kamn.testnet/python-backend-adapter-normalization"
+        reasons = [
+            "Policy Denied",
+            "retry-timeout",
+            "###",
+        ]
+
+        class Adapter:
+            def __init__(self) -> None:
+                self.index = 0
+
+            def invoke(self, request: dict[str, object]) -> dict[str, object]:
+                operation = str(request["operation"])
+                if operation == "receive":
+                    reason = reasons[self.index]
+                    self.index += 1
+                    return {"status": "error", "reason": reason}
+                return {"status": "ok", "value": "kamn:did:agent:backend-z"}
+
+        LiveKAMNClient.register_backend_adapter(endpoint, Adapter())
+        try:
+            client = LiveKAMNClient(endpoint)
+
+            with self.assertRaises(LiveTransportBackendAdapterError) as first:
+                client.receive("kamn:did:agent:x")
+            self.assertEqual(first.exception.reason, "policy_denied")
+            self.assertEqual(first.exception.reason_code, "policy_denied")
+
+            with self.assertRaises(LiveTransportBackendAdapterError) as second:
+                client.receive("kamn:did:agent:x")
+            self.assertEqual(second.exception.reason, "retry_timeout")
+            self.assertEqual(second.exception.reason_code, "retry_timeout")
+
+            with self.assertRaises(LiveTransportBackendAdapterError) as third:
+                client.receive("kamn:did:agent:x")
+            self.assertEqual(
+                third.exception.reason,
+                "backend_adapter_error_legacy_unknown",
+            )
+            self.assertEqual(
+                third.exception.reason_code,
+                "backend_adapter_error_legacy_unknown",
+            )
+        finally:
+            LiveKAMNClient.clear_backend_adapters()
+
 
 if __name__ == "__main__":
     unittest.main()
