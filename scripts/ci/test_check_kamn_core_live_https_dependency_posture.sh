@@ -36,6 +36,10 @@ if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes_value=none$'; then
   echo "expected deterministic reason-codes value marker on pass output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$pass_output" | grep -q '^reason_class=stable$'; then
+  echo "expected deterministic reason-class marker on pass output" >&2
+  exit 1
+fi
 python3 - "$REPORT_FILE" <<'PY'
 import json
 import pathlib
@@ -48,6 +52,7 @@ assert report["reason_codes"] == ["none"]
 assert report["reason_taxonomy_version"] == "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
 assert report["reason_codes_csv"] == "none"
 assert report["reason_codes_value"] == "none"
+assert report["reason_class"] == "stable"
 assert report["violation_count"] == 0
 PY
 
@@ -79,6 +84,10 @@ if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_codes_csv=rustl
 fi
 if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_codes_value=rustls_pemfile_dependency_optional_flag_mismatch$'; then
   echo "expected deterministic reason-codes value marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$manifest_failure_output" | grep -q '^reason_class=violation$'; then
+  echo "expected deterministic reason-class marker from checker on failure" >&2
   exit 1
 fi
 
@@ -158,6 +167,10 @@ if ! grep -q "check_kamn_core_live_https_dependency_posture.sh" "$TLS_HARDENING_
 fi
 if ! grep -q "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1" "$TLS_HARDENING_DOC"; then
   echo "expected tls hardening doc to reference live-https deterministic reason taxonomy version" >&2
+  exit 1
+fi
+if ! grep -q "reason_class=stable|violation" "$TLS_HARDENING_DOC"; then
+  echo "expected tls hardening doc to include deterministic reason-class marker" >&2
   exit 1
 fi
 if ! grep -q "webpki_roots_dependency_missing" "$TLS_HARDENING_DOC"; then

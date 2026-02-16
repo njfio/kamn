@@ -3,5 +3,5 @@
 Milestone scope for async runtime API hardening, networked peer transport realism, and durable block-pipeline governance.
 
 ## Linked Issues
-- #4312 Task: HTTP/websocket protocol checker contracts and deterministic session violation reason mapping
-- #4317 Subtask: websocket protocol drift and invalid session-frame rejection red tests
+- #4310 Story: networked peer transport and durable block commit-fidelity contracts
+- #4314 Task: durable block commit persistence with digest/finality fail-closed governance
