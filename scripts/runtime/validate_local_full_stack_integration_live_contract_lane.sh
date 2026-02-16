@@ -395,6 +395,8 @@ if summary_report.get("runtime_phase_parity_reason_taxonomy_version") != "kamn.r
     raise SystemExit("expected runtime phase parity reason taxonomy version marker in summary report")
 if summary_report.get("runtime_phase_parity_reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected runtime phase parity reason codes marker in summary report")
+if summary_report.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
+    raise SystemExit("expected runtime phase parity evidence output normalization marker in summary report")
 if summary_report.get("runtime_phase_module_parity_status") != "verified":
     raise SystemExit("expected runtime phase module parity status marker in summary report")
 if summary_report.get("runtime_extraction_evidence_output_status") != "verified":
@@ -451,6 +453,10 @@ if policy_report.get("reason_taxonomy_version") != "kamn.runtime.phase-module-ex
     raise SystemExit("expected policy reason taxonomy version marker in policy report")
 if policy_report.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected policy reason codes marker in policy report")
+if policy_report.get("reason_codes_value") != "none":
+    raise SystemExit("expected policy reason_codes_value=none marker in policy report")
+if policy_report.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
+    raise SystemExit("expected policy runtime phase parity evidence output normalization marker in policy report")
 
 for marker in (
     "transport_convergence_status",
@@ -531,6 +537,10 @@ lane_report = {
         "runtime_phase_parity_reason_codes_csv",
         "",
     ),
+    "runtime_phase_parity_evidence_outputs_csv": summary_report.get(
+        "runtime_phase_parity_evidence_outputs_csv",
+        "",
+    ),
     "runtime_phase_module_parity_status": summary_report.get(
         "runtime_phase_module_parity_status",
         "unknown",
@@ -541,6 +551,7 @@ lane_report = {
     ),
     "reason_taxonomy_version": policy_report.get("reason_taxonomy_version", ""),
     "reason_codes_csv": policy_report.get("reason_codes_csv", ""),
+    "reason_codes_value": policy_report.get("reason_codes_value", ""),
     "combined_transport_reason_codes": summary_report.get("combined_transport_reason_codes", []),
     "combined_kolme_runtime_reason_code": summary_report.get("combined_kolme_runtime_reason_code", ""),
     "kolme_runtime_commit_failure_taxonomy_version": summary_report.get(
@@ -628,6 +639,8 @@ echo "runtime_phase_module_parity_status=verified"
 echo "runtime_extraction_evidence_output_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
 echo "reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+echo "reason_codes_value=none"
+echo "runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status"
 echo "combined_transport_reason_codes=fork_choice_stale_block_height"
 if [[ "$mode" == "run" ]]; then
   echo "combined_kolme_runtime_reason_code=live_runtime_integration_passed"
