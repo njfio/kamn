@@ -41,6 +41,9 @@ Issue lineage:
 Deterministic taxonomy markers for local full-stack extraction parity evidence:
 - `runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`
 - `runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+- `runtime_phase_parity_reason_codes_value=<normalized runtime extraction reason key>`
+- `runtime_phase_parity_reason_mapper=runtime_phase_parity_reason_mapper_v1`
+- `runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status`
 
 Deterministic phase parity governance markers:
 - `runtime_phase_module_parity_status=verified`

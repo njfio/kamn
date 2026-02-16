@@ -54,6 +54,19 @@ fn doc_contains_runtime_phase_extraction_parity_taxonomy_contract_markers() {
 }
 
 #[test]
+fn doc_contains_runtime_phase_reason_mapper_and_parity_evidence_normalization_markers() {
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_codes_value=<normalized runtime extraction reason key>"
+    ));
+    assert!(DOC.contains(
+        "runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status"
+    ));
+    assert!(
+        DOC.contains("runtime_phase_parity_reason_mapper=runtime_phase_parity_reason_mapper_v1")
+    );
+}
+
+#[test]
 fn doc_contains_docs_governance_and_rustdoc_navigation_parity_markers() {
     assert!(DOC.contains("## Docs Governance and Rustdoc Navigation Parity"));
     assert!(DOC.contains("Task: `#4524`"));

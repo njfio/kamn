@@ -62,6 +62,7 @@ cat >"$TMP_REPORT" <<'JSON'
   "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
   "runtime_phase_parity_reason_taxonomy_version": "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1",
   "runtime_phase_parity_reason_codes_csv": "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded",
+  "runtime_phase_parity_evidence_outputs_csv": "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status",
   "runtime_phase_module_parity_status": "verified",
   "runtime_extraction_evidence_output_status": "verified",
   "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
@@ -110,6 +111,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_phase_m
   echo "expected local full-stack integration policy reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected local full-stack integration policy normalized reason_codes_value marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status$'; then
+  echo "expected local full-stack integration policy parity evidence output normalization marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -129,6 +138,10 @@ if payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-extracti
     raise SystemExit("expected deterministic runtime phase extraction parity reason taxonomy marker")
 if payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected deterministic runtime phase extraction parity reason codes marker")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected deterministic reason_codes_value=none marker")
+if payload.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
+    raise SystemExit("expected deterministic runtime phase parity evidence output normalization marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -346,6 +359,41 @@ if [ "$tampered_phase_parity_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_phase_parity_output" | grep -q 'runtime_phase_module_parity_drift_detected'; then
   echo "expected deterministic runtime phase module parity drift reason marker" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_extraction_evidence_output_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_extraction_evidence_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_extraction_evidence_code=$?
+set -e
+if [ "$tampered_extraction_evidence_code" -eq 0 ]; then
+  echo "expected runtime extraction evidence output drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_extraction_evidence_output" | grep -q 'runtime_extraction_evidence_output_unstable'; then
+  echo "expected deterministic runtime extraction evidence output drift reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_extraction_evidence_output" | grep -q '^reason_codes_value=runtime_extraction_evidence_output_unstable$'; then
+  echo "expected normalized reason_codes_value mapping for runtime extraction evidence output drift" >&2
   exit 1
 fi
 

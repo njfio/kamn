@@ -61,6 +61,31 @@ RUNTIME_PHASE_PARITY_REASON_CODES_CSV = (
     "runtime_extraction_evidence_output_unstable,"
     "ci_local_runtime_phase_parity_budget_boundary_exceeded"
 )
+RUNTIME_PHASE_PARITY_REASON_CODES = RUNTIME_PHASE_PARITY_REASON_CODES_CSV.split(",")
+RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV = (
+    "runtime_phase_module_parity_status,"
+    "runtime_extraction_evidence_output_status,"
+    "ci_local_runtime_phase_parity_budget_boundary_status"
+)
+RUNTIME_PHASE_PARITY_BUDGET_REASON_MARKERS = {
+    "ci_local_runtime_phase_parity_budget_boundary_exceeded",
+    "local_full_stack_integration_policy_runtime_budget_status_mismatch",
+    "local_full_stack_integration_policy_elapsed_seconds_invalid",
+    "local_full_stack_integration_policy_max_seconds_invalid",
+    "local_full_stack_integration_policy_command_max_seconds_invalid",
+    "local_full_stack_integration_policy_command_budget_exceeds_lane_budget",
+    "local_full_stack_integration_policy_runtime_budget_exceeded",
+    "local_full_stack_integration_policy_runtime_phase_parity_budget_boundary_status_mismatch",
+}
+RUNTIME_PHASE_PARITY_EVIDENCE_REASON_MARKERS = {
+    "runtime_extraction_evidence_output_unstable",
+    "local_full_stack_integration_policy_reason_taxonomy_version_mismatch",
+    "local_full_stack_integration_policy_runtime_phase_parity_reason_taxonomy_version_mismatch",
+    "local_full_stack_integration_policy_runtime_phase_parity_reason_codes_csv_mismatch",
+    "local_full_stack_integration_policy_runtime_phase_parity_evidence_outputs_csv_mismatch",
+    "local_full_stack_integration_policy_transport_reason_taxonomy_mismatch",
+    "local_full_stack_integration_policy_artifact_paths_invalid",
+}
 CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS = 240
 OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
@@ -156,6 +181,48 @@ def _require_local_kolme_checkout(
     observed_ref = symbolic_ref.stdout.strip()
     if observed_ref != expected_ref:
         fail("local_kolme_checkout_ref_mismatch")
+
+
+def _classify_runtime_phase_parity_failed_check(failed_check: str) -> str:
+    if failed_check == "local_full_stack_integration_policy_expected_decision_mismatch":
+        return ""
+    if failed_check in RUNTIME_PHASE_PARITY_BUDGET_REASON_MARKERS:
+        return "ci_local_runtime_phase_parity_budget_boundary_exceeded"
+    if failed_check in RUNTIME_PHASE_PARITY_EVIDENCE_REASON_MARKERS:
+        return "runtime_extraction_evidence_output_unstable"
+    if (
+        "reason_taxonomy" in failed_check
+        or "reason_codes" in failed_check
+        or "runtime_extraction_evidence_output" in failed_check
+        or "artifact" in failed_check
+        or failed_check.endswith("_json_invalid")
+        or failed_check.endswith("_root_invalid")
+    ):
+        return "runtime_extraction_evidence_output_unstable"
+    return "runtime_phase_module_parity_drift_detected"
+
+
+def _normalize_runtime_phase_parity_reason_codes(failed_checks: list[str]) -> list[str]:
+    if not failed_checks:
+        return ["none"]
+
+    mapped_reason_codes: list[str] = []
+    for failed_check in failed_checks:
+        mapped_reason = _classify_runtime_phase_parity_failed_check(failed_check)
+        if not mapped_reason:
+            continue
+        if mapped_reason not in mapped_reason_codes:
+            mapped_reason_codes.append(mapped_reason)
+
+    if not mapped_reason_codes:
+        mapped_reason_codes = ["runtime_phase_module_parity_drift_detected"]
+
+    ordered_mapped_reason_codes = [
+        reason_code
+        for reason_code in RUNTIME_PHASE_PARITY_REASON_CODES
+        if reason_code in mapped_reason_codes
+    ]
+    return ordered_mapped_reason_codes or mapped_reason_codes
 
 
 def run_lane(args: argparse.Namespace) -> int:
@@ -609,6 +676,7 @@ def run_lane(args: argparse.Namespace) -> int:
         "combined_reason_taxonomy_version": COMBINED_REASON_TAXONOMY_VERSION,
         "runtime_phase_parity_reason_taxonomy_version": RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION,
         "runtime_phase_parity_reason_codes_csv": RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
+        "runtime_phase_parity_evidence_outputs_csv": RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV,
         "runtime_phase_module_parity_status": "verified",
         "runtime_extraction_evidence_output_status": "verified",
         "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
@@ -683,6 +751,7 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION}"
     )
     print(f"runtime_phase_parity_reason_codes_csv={RUNTIME_PHASE_PARITY_REASON_CODES_CSV}")
+    print(f"runtime_phase_parity_evidence_outputs_csv={RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV}")
     print("runtime_phase_module_parity_status=verified")
     print("runtime_extraction_evidence_output_status=verified")
     print("ci_local_runtime_phase_parity_budget_boundary_status=verified")
@@ -825,6 +894,11 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("runtime_phase_parity_reason_codes_csv") != RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
         "local_full_stack_integration_policy_runtime_phase_parity_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_phase_parity_evidence_outputs_csv")
+        != RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV,
+        "local_full_stack_integration_policy_runtime_phase_parity_evidence_outputs_csv_mismatch",
     )
     checks.reject_if(
         payload.get("runtime_phase_module_parity_status") != "verified",
@@ -1348,6 +1422,8 @@ def check_policy(args: argparse.Namespace) -> int:
         failed_checks.extend(decision_reasons)
     if observed_final_decision != expected_final_decision:
         failed_checks.append("local_full_stack_integration_policy_expected_decision_mismatch")
+    normalized_reason_codes = _normalize_runtime_phase_parity_reason_codes(failed_checks)
+    reason_codes_value = ",".join(normalized_reason_codes)
 
     report_payload = {
         "schema_version": POLICY_SCHEMA,
@@ -1358,6 +1434,8 @@ def check_policy(args: argparse.Namespace) -> int:
         "decision_reasons": decision_reasons,
         "reason_taxonomy_version": RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION,
         "reason_codes_csv": RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
+        "reason_codes_value": reason_codes_value,
+        "runtime_phase_parity_evidence_outputs_csv": RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV,
         "local_full_stack_integration_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -1370,7 +1448,9 @@ def check_policy(args: argparse.Namespace) -> int:
     print(f"ci_fast_gate={ci_fast_gate}")
     print(f"reason_taxonomy_version={RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={RUNTIME_PHASE_PARITY_REASON_CODES_CSV}")
+    print(f"reason_codes_value={reason_codes_value}")
     print(f"reason_codes={'none' if not failed_checks else ','.join(failed_checks)}")
+    print(f"runtime_phase_parity_evidence_outputs_csv={RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV}")
     print(
         "local_full_stack_integration_policy_status="
         f"{'verified' if not failed_checks else 'failed'}"

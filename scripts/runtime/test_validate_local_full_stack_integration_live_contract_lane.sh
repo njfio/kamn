@@ -151,6 +151,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=runtime_phase_mod
   echo "expected local full-stack integration contract lane policy reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected local full-stack integration contract lane policy normalized reason_codes_value marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status$'; then
+  echo "expected local full-stack integration contract lane parity evidence output normalization marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
   echo "expected local full-stack integration contract lane combined transport reason marker" >&2
   exit 1
@@ -287,6 +295,10 @@ if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-ext
     raise SystemExit("expected reason_taxonomy_version marker")
 if lane_payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected reason_codes_csv marker")
+if lane_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected reason_codes_value=none marker")
+if lane_payload.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
+    raise SystemExit("expected runtime_phase_parity_evidence_outputs_csv marker")
 if lane_payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected combined_transport_reason_codes marker")
 if lane_payload.get("combined_kolme_runtime_reason_code") != "not_run":
@@ -335,6 +347,10 @@ if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-e
     raise SystemExit("expected policy reason_taxonomy_version marker")
 if policy_payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected policy reason_codes_csv marker")
+if policy_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected policy reason_codes_value=none marker")
+if policy_payload.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
+    raise SystemExit("expected policy runtime_phase_parity_evidence_outputs_csv marker")
 PY
 
 if ! grep -q "check_local_full_stack_integration_live_policy.sh" "$CONTRACT_LANE"; then
