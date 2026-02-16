@@ -787,4 +787,124 @@ if ! printf '%s\n' "$audit_tampered_output" | grep -q "audit integrity gate conv
   exit 1
 fi
 
+slo_policy_report="$TMP_DIR/slo-policy-report.json"
+cat >"$slo_policy_report" <<'JSON'
+{
+  "schema_version": "kamn.deploy.slo-rollback-report.v1",
+  "status": "pass",
+  "final_decision": "GO",
+  "reason_key": "deployment_slo_rollback_reason_codes:GO:v1",
+  "reason_codes": []
+}
+JSON
+
+slo_policy_bundle="$TMP_DIR/gonogo-slo-policy-go.json"
+slo_policy_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$slo_policy_bundle" \
+    --release-candidate "v1.0.0-rc.13" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:slo-policy-go" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --slo-policy-report-file "$slo_policy_report" \
+    --slo-policy-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$slo_policy_generate_output" "slo_policy_gate_final_decision")" "GO" "expected SLO policy gate decision to be GO"
+assert_eq "$(extract_value "$slo_policy_generate_output" "slo_policy_reason_taxonomy_version")" "kamn.release.gonogo-slo-threshold-convergence-reason-taxonomy.v1" "expected deterministic SLO policy gate reason taxonomy marker"
+assert_eq "$(extract_value "$slo_policy_generate_output" "slo_policy_reason_codes_csv")" "none" "expected deterministic SLO policy gate reason codes csv marker on pass path"
+assert_eq "$(extract_value "$slo_policy_generate_output" "final_decision")" "GO" "expected final decision to remain GO for converged SLO policy evidence"
+
+python3 - "$slo_policy_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+gate = payload.get("slo_policy_gate")
+if not isinstance(gate, dict):
+    raise SystemExit("expected slo_policy_gate object in go/no-go evidence bundle")
+if gate.get("schema_version") != "kamn.release.gonogo-slo-policy-gate.v1":
+    raise SystemExit("expected SLO policy gate schema marker")
+if gate.get("reason_taxonomy_version") != "kamn.release.gonogo-slo-threshold-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected SLO policy gate reason taxonomy marker")
+if gate.get("final_decision") != "GO":
+    raise SystemExit("expected SLO policy gate final_decision=GO")
+PY
+
+slo_policy_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$slo_policy_bundle")"
+assert_eq "$(extract_value "$slo_policy_policy_output" "status")" "ok" "expected SLO policy converged bundle policy check to pass"
+assert_eq "$(extract_value "$slo_policy_policy_output" "slo_policy_gate_final_decision")" "GO" "expected SLO policy gate policy decision to remain GO"
+assert_eq "$(extract_value "$slo_policy_policy_output" "final_decision")" "GO" "expected policy checker final decision to remain GO for converged SLO policy evidence"
+
+slo_policy_drift_report="$TMP_DIR/slo-policy-threshold-drift-report.json"
+cp "$slo_policy_report" "$slo_policy_drift_report"
+python3 - "$slo_policy_drift_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reason_key"] = "deployment_slo_rollback_reason_codes:NO-GO:v1"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+slo_policy_drift_bundle="$TMP_DIR/gonogo-slo-policy-threshold-drift.json"
+slo_policy_drift_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$slo_policy_drift_bundle" \
+    --release-candidate "v1.0.0-rc.14" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:slo-policy-drift" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --slo-policy-report-file "$slo_policy_drift_report" \
+    --slo-policy-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$slo_policy_drift_generate_output" "slo_policy_gate_final_decision")" "NO-GO" "expected SLO policy gate to fail closed for threshold drift evidence"
+assert_eq "$(extract_value "$slo_policy_drift_generate_output" "slo_policy_reason_codes_csv")" "gonogo_slo_policy_reason_key_mismatch" "expected deterministic SLO reason-key mismatch reason code"
+assert_eq "$(extract_value "$slo_policy_drift_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for SLO threshold drift evidence"
+
+slo_policy_drift_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$slo_policy_drift_bundle")"
+assert_eq "$(extract_value "$slo_policy_drift_policy_output" "status")" "ok" "expected SLO threshold-drift bundle policy check to pass deterministically"
+assert_eq "$(extract_value "$slo_policy_drift_policy_output" "slo_policy_gate_final_decision")" "NO-GO" "expected SLO threshold-drift gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$slo_policy_drift_policy_output" "final_decision")" "NO-GO" "expected SLO threshold-drift bundle policy decision to remain NO-GO"
+
+slo_policy_tampered_bundle="$TMP_DIR/gonogo-slo-policy-tampered.json"
+cp "$slo_policy_bundle" "$slo_policy_tampered_bundle"
+python3 - "$slo_policy_tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["slo_policy_gate"]["observed"]["slo_policy_report_status"] = "fail"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+slo_policy_tampered_output="$(bash "$POLICY_CHECKER" --bundle-file "$slo_policy_tampered_bundle" 2>&1)"
+slo_policy_tampered_code=$?
+set -e
+
+if [ "$slo_policy_tampered_code" -eq 0 ]; then
+  echo "expected policy checker to fail for tampered SLO policy gate markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$slo_policy_tampered_output" | grep -q "slo policy gate convergence mismatch"; then
+  echo "expected deterministic SLO policy gate convergence mismatch error from policy checker" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence bundle tests passed."
