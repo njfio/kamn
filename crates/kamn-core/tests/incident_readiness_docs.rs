@@ -2,9 +2,7 @@ const DOC: &str = include_str!("../../../docs/ops/incident-readiness.md");
 
 #[test]
 fn incident_readiness_doc_contains_gonogo_bundle_schema_convergence_gate() {
-    assert!(DOC.contains(
-        "## Go/No-Go Incident Readiness Bundle Convergence Gate (Issue #4470)"
-    ));
+    assert!(DOC.contains("## Go/No-Go Incident Readiness Bundle Convergence Gate (Issue #4470)"));
     assert!(DOC.contains("--incident-readiness-report-file"));
     assert!(DOC.contains(
         "reason_taxonomy_version=kamn.release.gonogo-incident-readiness-convergence-reason-taxonomy.v1"

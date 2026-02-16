@@ -323,4 +323,52 @@ if ! printf '%s\n' "$slo_policy_policy_output" | grep -q "^final_decision=GO$"; 
   exit 1
 fi
 
+incident_readiness_report="$TMP_DIR/incident-readiness-report.json"
+bash "$ROOT_DIR/scripts/deploy/generate_staging_rehearsal_bundle.sh" \
+  --output-file "$incident_readiness_report" \
+  --release-candidate "v1.0.0-contract-incident-readiness" \
+  --deploy-status PASS \
+  --rollback-status PASS \
+  --rollback-target-hash "state-hash-contract-incident-ready" \
+  --post-rollback-hash "state-hash-contract-incident-ready" \
+  --recovery-time-seconds 420 \
+  --max-allowed-recovery-time-seconds 900 \
+  --evidence-complete true \
+  --ci-fast-gate PASS >/dev/null
+
+incident_readiness_bundle_file="$TMP_DIR/gonogo-incident-readiness-contract.json"
+incident_readiness_generator_output="$(
+  bash "$GENERATOR" \
+    --output-file "$incident_readiness_bundle_file" \
+    --release-candidate "v1.0.0-contract-incident-readiness-gate" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:contract-incident-readiness" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --incident-readiness-report-file "$incident_readiness_report" \
+    --incident-readiness-max-age-seconds 1800
+)"
+if ! printf '%s\n' "$incident_readiness_generator_output" | grep -q "^incident_readiness_gate_final_decision=GO$"; then
+  echo "expected incident-readiness gate decision marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$incident_readiness_generator_output" | grep -q "^final_decision=GO$"; then
+  echo "expected incident-readiness contract lane bundle decision to be GO" >&2
+  exit 1
+fi
+
+incident_readiness_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$incident_readiness_bundle_file")"
+if ! printf '%s\n' "$incident_readiness_policy_output" | grep -q "^incident_readiness_gate_final_decision=GO$"; then
+  echo "expected incident-readiness gate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$incident_readiness_policy_output" | grep -q "^final_decision=GO$"; then
+  echo "expected incident-readiness contract lane policy check decision to be GO" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence contract lane tests passed."
