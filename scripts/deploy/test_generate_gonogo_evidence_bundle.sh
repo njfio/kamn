@@ -907,4 +907,145 @@ if ! printf '%s\n' "$slo_policy_tampered_output" | grep -q "slo policy gate conv
   exit 1
 fi
 
+incident_readiness_report="$TMP_DIR/incident-readiness-report.json"
+bash "$ROOT_DIR/scripts/deploy/generate_staging_rehearsal_bundle.sh" \
+  --output-file "$incident_readiness_report" \
+  --release-candidate "v1.0.0-incident-readiness" \
+  --deploy-status PASS \
+  --rollback-status PASS \
+  --rollback-target-hash "state-hash-incident-ready" \
+  --post-rollback-hash "state-hash-incident-ready" \
+  --recovery-time-seconds 420 \
+  --max-allowed-recovery-time-seconds 900 \
+  --evidence-complete true \
+  --ci-fast-gate PASS >/dev/null
+
+incident_readiness_bundle="$TMP_DIR/gonogo-incident-readiness-go.json"
+incident_readiness_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$incident_readiness_bundle" \
+    --release-candidate "v1.0.0-rc.15" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:incident-readiness-go" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --incident-readiness-report-file "$incident_readiness_report" \
+    --incident-readiness-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$incident_readiness_generate_output" "incident_readiness_gate_final_decision")" "GO" "expected incident-readiness gate decision to be GO"
+assert_eq "$(extract_value "$incident_readiness_generate_output" "incident_readiness_reason_taxonomy_version")" "kamn.release.gonogo-incident-readiness-convergence-reason-taxonomy.v1" "expected deterministic incident-readiness gate reason taxonomy marker"
+assert_eq "$(extract_value "$incident_readiness_generate_output" "incident_readiness_reason_codes_csv")" "none" "expected deterministic incident-readiness gate reason codes csv marker on pass path"
+assert_eq "$(extract_value "$incident_readiness_generate_output" "final_decision")" "GO" "expected final decision to remain GO for converged incident-readiness evidence"
+
+python3 - "$incident_readiness_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+gate = payload.get("incident_readiness_gate")
+if not isinstance(gate, dict):
+    raise SystemExit("expected incident_readiness_gate object in go/no-go evidence bundle")
+if gate.get("schema_version") != "kamn.release.gonogo-incident-readiness-gate.v1":
+    raise SystemExit("expected incident-readiness gate schema marker")
+if gate.get("reason_taxonomy_version") != "kamn.release.gonogo-incident-readiness-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected incident-readiness gate reason taxonomy marker")
+if gate.get("final_decision") != "GO":
+    raise SystemExit("expected incident-readiness gate final_decision=GO")
+PY
+
+incident_readiness_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$incident_readiness_bundle")"
+assert_eq "$(extract_value "$incident_readiness_policy_output" "status")" "ok" "expected incident-readiness converged bundle policy check to pass"
+assert_eq "$(extract_value "$incident_readiness_policy_output" "incident_readiness_gate_final_decision")" "GO" "expected incident-readiness gate policy decision to remain GO"
+assert_eq "$(extract_value "$incident_readiness_policy_output" "final_decision")" "GO" "expected policy checker final decision to remain GO for converged incident-readiness evidence"
+
+incident_readiness_drift_report="$TMP_DIR/incident-readiness-taxonomy-drift-report.json"
+cp "$incident_readiness_report" "$incident_readiness_drift_report"
+python3 - "$incident_readiness_drift_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reason_taxonomy"]["schema_version"] = "kamn.release.staging-rehearsal-reason-taxonomy.v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+incident_readiness_drift_bundle="$TMP_DIR/gonogo-incident-readiness-taxonomy-drift.json"
+incident_readiness_drift_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$incident_readiness_drift_bundle" \
+    --release-candidate "v1.0.0-rc.16" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:incident-readiness-drift" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --incident-readiness-report-file "$incident_readiness_drift_report" \
+    --incident-readiness-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$incident_readiness_drift_generate_output" "incident_readiness_gate_final_decision")" "NO-GO" "expected incident-readiness gate to fail closed for taxonomy drift evidence"
+assert_eq "$(extract_value "$incident_readiness_drift_generate_output" "incident_readiness_reason_codes_csv")" "gonogo_incident_readiness_reason_taxonomy_schema_mismatch" "expected deterministic incident-readiness taxonomy mismatch reason code"
+assert_eq "$(extract_value "$incident_readiness_drift_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for incident-readiness taxonomy drift evidence"
+
+incident_readiness_stale_report="$TMP_DIR/incident-readiness-stale-report.json"
+cp "$incident_readiness_report" "$incident_readiness_stale_report"
+touch -d '1970-01-01T00:00:00Z' "$incident_readiness_stale_report"
+
+incident_readiness_stale_bundle="$TMP_DIR/gonogo-incident-readiness-stale.json"
+incident_readiness_stale_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$incident_readiness_stale_bundle" \
+    --release-candidate "v1.0.0-rc.17" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:incident-readiness-stale" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --incident-readiness-report-file "$incident_readiness_stale_report" \
+    --incident-readiness-max-age-seconds 1
+)"
+assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "incident_readiness_gate_final_decision")" "NO-GO" "expected incident-readiness gate to fail closed for stale evidence"
+assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "incident_readiness_reason_codes_csv")" "gonogo_incident_readiness_freshness_window_exceeded" "expected deterministic stale incident-readiness reason code"
+assert_eq "$(extract_value "$incident_readiness_stale_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for stale incident-readiness evidence"
+
+incident_readiness_tampered_bundle="$TMP_DIR/gonogo-incident-readiness-tampered.json"
+cp "$incident_readiness_bundle" "$incident_readiness_tampered_bundle"
+python3 - "$incident_readiness_tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["incident_readiness_gate"]["observed"]["incident_readiness_report_final_decision"] = "NO-GO"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+incident_readiness_tampered_output="$(bash "$POLICY_CHECKER" --bundle-file "$incident_readiness_tampered_bundle" 2>&1)"
+incident_readiness_tampered_code=$?
+set -e
+
+if [ "$incident_readiness_tampered_code" -eq 0 ]; then
+  echo "expected policy checker to fail for tampered incident-readiness gate markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$incident_readiness_tampered_output" | grep -q "incident readiness gate convergence mismatch"; then
+  echo "expected deterministic incident-readiness gate convergence mismatch error from policy checker" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence bundle tests passed."
