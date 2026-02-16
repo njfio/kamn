@@ -30,6 +30,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - tampered actor payload for same message+nonce idempotency window must reject with `message_proof_anchor_conflicting_key`.
 - Regression policy:
   - mismatch/tamper acceptance drift forces `NO-GO` (`Regression: #4419`).
+
+## Service API Protocol/Session Reason Mapping Gate (Issue #4318)
+- Validation commands:
+  - `cargo test -p kamn-node unit_service_api_protocol_session_reason_projection_is_deterministic -- --exact`
+  - `cargo test -p kamn-node functional_service_api_protocol_session_docs_contract_validation_passes_release_checklist -- --exact`
+  - `cargo test -p kamn-node integration_service_api_protocol_session_reason_projection_and_docs_contract_flow -- --exact`
+  - `cargo test -p kamn-node regression_service_api_protocol_session_ws_upgrade_reason_class_stays_stable -- --exact`
+- Required deterministic taxonomy markers:
+  - `service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1`
+  - `service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing`
+- Required protocol/session reason markers:
+  - `service_api_ws_upgrade_header_missing`
+  - `service_api_ws_version_header_invalid`
+  - `service_api_payload_json_syntax_invalid`
+  - `service_api_auth_replay_nonce_detected`
+  - `service_api_protocol_session_docs_marker_missing`
+- Regression policy:
+  - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
+
 ## TLS Dependency-Posture Gate (Issues #4480, #4481)
 - Checker command:
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
@@ -46,6 +65,26 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `ci_strategy_no_default_features_check_missing`
 - Regression policy:
   - dependency-posture drift or unstable reason outputs force `NO-GO` (`Regression: #4480`, `Regression: #4481`, `Regression: #4107`).
+
+## TLS Evidence Completeness/Freshness Convergence Gate (Issue #4477)
+- TLS evidence generation command:
+  - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
+- Go/no-go bundle command:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-tls-evidence.json --release-candidate v1.0.0-rc.8 --schema-target-version 1.0.0 --runtime-image-digest sha256:tls-go --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --tls-evidence-report-file /tmp/kamn-core-live-https-dependency-posture-report.json --tls-evidence-max-age-seconds 1800`
+- Go/no-go policy checker command:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-tls-evidence.json`
+- Required deterministic TLS evidence gate markers:
+  - `tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1`
+  - `tls_evidence_reason_codes_csv=gonogo_tls_evidence_file_missing,gonogo_tls_evidence_invalid_json,gonogo_tls_evidence_schema_mismatch,gonogo_tls_evidence_status_not_pass,gonogo_tls_evidence_reason_taxonomy_version_mismatch,gonogo_tls_evidence_freshness_window_exceeded`
+  - `tls_evidence_reason_codes_value=none|<csv>`
+  - `tls_evidence_gate_final_decision=GO|NO-GO`
+- Fail-closed drills:
+  - missing TLS evidence report must reject with `gonogo_tls_evidence_file_missing`.
+  - stale TLS evidence report beyond max age must reject with `gonogo_tls_evidence_freshness_window_exceeded`.
+  - tampered TLS evidence gate payload must reject with `tls evidence gate convergence mismatch`.
+- Regression policy:
+  - TLS evidence completeness/freshness drift forces `NO-GO` (`Regression: #4477`).
+
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
