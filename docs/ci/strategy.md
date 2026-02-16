@@ -600,6 +600,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
     - nested Kolme local-only enforcement and run-mode policy markers
     - deterministic combined reason taxonomy version (`kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`)
+    - deterministic runtime phase extraction parity taxonomy:
+      `runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`,
+      `runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+    - deterministic runtime phase parity governance markers:
+      `runtime_phase_module_parity_status=verified`,
+      `runtime_extraction_evidence_output_status=verified`,
+      `ci_local_runtime_phase_parity_budget_boundary_status=verified`
     - deterministic transport reason taxonomy (`fork_choice_stale_block_height`)
     - deterministic Kolme fixture profile (`real-node-non-synthetic-v1`, profile version `v1`)
   - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
@@ -613,9 +620,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - budget drift is fail-closed when lane runtime markers exceed configured max budget.
+  - ci-local phase parity budget boundary rejects `--max-seconds > 240`.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `runtime_phase_module_parity_drift_detected`
+  - `runtime_extraction_evidence_output_unstable`
+  - `ci_local_runtime_phase_parity_budget_boundary_exceeded`
   - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`

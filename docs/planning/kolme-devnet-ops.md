@@ -36,6 +36,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - local checkout/remote/ref/base-url/fork-chain prerequisite markers
     - local-only enforcement and nested run-mode policy reason-code marker `live_runtime_integration_passed`
     - combined reason taxonomy marker `kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+    - runtime phase parity reason taxonomy marker `kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`
+    - runtime phase parity reason codes marker `runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+    - runtime phase parity governance markers:
+      - `runtime_phase_module_parity_status=verified`
+      - `runtime_extraction_evidence_output_status=verified`
+      - `ci_local_runtime_phase_parity_budget_boundary_status=verified`
     - combined transport reason marker `fork_choice_stale_block_height`
     - combined Kolme runtime reason marker (`not_run` in dry-run, `live_runtime_integration_passed` in run mode)
     - combined lane marker contract status marker `combined_lane_marker_contract_status=verified`
@@ -43,6 +49,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - deterministic Kolme fixture profile markers (`real-node-non-synthetic-v1`, profile version `v1`)
 - Deterministic tamper reason:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `runtime_phase_module_parity_drift_detected`
+  - `runtime_extraction_evidence_output_unstable`
+  - `ci_local_runtime_phase_parity_budget_boundary_exceeded`
 - Release go/no-go linkage:
   - `scripts/runtime/release_evidence_manifest.json` includes required artifact ids:
     `local_full_stack_integration`,

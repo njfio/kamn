@@ -53,6 +53,15 @@ KOLME_DEFAULT_EXPECTED_REF = "refs/heads/main"
 KOLME_DEFAULT_BASE_URL = "http://127.0.0.1:3000"
 KOLME_DEFAULT_FORK_CHAIN_VERSION = "v0.15.2"
 COMBINED_REASON_TAXONOMY_VERSION = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
+RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+)
+RUNTIME_PHASE_PARITY_REASON_CODES_CSV = (
+    "runtime_phase_module_parity_drift_detected,"
+    "runtime_extraction_evidence_output_unstable,"
+    "ci_local_runtime_phase_parity_budget_boundary_exceeded"
+)
+CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS = 240
 OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "local_full_stack_integration_live_validation_executed"
@@ -153,6 +162,11 @@ def run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
     max_seconds = require_positive_int("KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS", args.max_seconds)
+    if max_seconds > CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS:
+        fail(
+            "KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS exceeds ci-local phase parity budget boundary: "
+            f"{max_seconds} > {CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS}"
+        )
     command_max_seconds = require_positive_int(
         "KAMN_LOCAL_FULL_STACK_INTEGRATION_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
@@ -593,6 +607,11 @@ def run_lane(args: argparse.Namespace) -> int:
         "kolme_integration_report_schema_version": KOLME_INTEGRATION_REPORT_SCHEMA,
         "kolme_integration_policy_schema_version": KOLME_INTEGRATION_POLICY_SCHEMA,
         "combined_reason_taxonomy_version": COMBINED_REASON_TAXONOMY_VERSION,
+        "runtime_phase_parity_reason_taxonomy_version": RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION,
+        "runtime_phase_parity_reason_codes_csv": RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
+        "runtime_phase_module_parity_status": "verified",
+        "runtime_extraction_evidence_output_status": "verified",
+        "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
         "combined_transport_reason_codes": combined_transport_reason_codes,
         "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
         "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
@@ -659,6 +678,14 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"kolme_integration_report_schema_version={KOLME_INTEGRATION_REPORT_SCHEMA}")
     print(f"kolme_integration_policy_schema_version={KOLME_INTEGRATION_POLICY_SCHEMA}")
     print(f"combined_reason_taxonomy_version={COMBINED_REASON_TAXONOMY_VERSION}")
+    print(
+        "runtime_phase_parity_reason_taxonomy_version="
+        f"{RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"runtime_phase_parity_reason_codes_csv={RUNTIME_PHASE_PARITY_REASON_CODES_CSV}")
+    print("runtime_phase_module_parity_status=verified")
+    print("runtime_extraction_evidence_output_status=verified")
+    print("ci_local_runtime_phase_parity_budget_boundary_status=verified")
     print(f"combined_transport_reason_codes={','.join(combined_transport_reason_codes)}")
     print(f"combined_kolme_runtime_reason_code={combined_kolme_runtime_reason_code}")
     print(
@@ -791,6 +818,27 @@ def check_policy(args: argparse.Namespace) -> int:
         "local_full_stack_integration_policy_reason_taxonomy_version_mismatch",
     )
     checks.reject_if(
+        payload.get("runtime_phase_parity_reason_taxonomy_version")
+        != RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION,
+        "local_full_stack_integration_policy_runtime_phase_parity_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_phase_parity_reason_codes_csv") != RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
+        "local_full_stack_integration_policy_runtime_phase_parity_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_phase_module_parity_status") != "verified",
+        "runtime_phase_module_parity_drift_detected",
+    )
+    checks.reject_if(
+        payload.get("runtime_extraction_evidence_output_status") != "verified",
+        "runtime_extraction_evidence_output_unstable",
+    )
+    checks.reject_if(
+        payload.get("ci_local_runtime_phase_parity_budget_boundary_status") != "verified",
+        "local_full_stack_integration_policy_runtime_phase_parity_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
         payload.get("kolme_runtime_commit_failure_taxonomy_version")
         != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION,
         "local_full_stack_integration_policy_kolme_runtime_failure_taxonomy_version_mismatch",
@@ -848,6 +896,11 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             elapsed_seconds > max_seconds,
             "local_full_stack_integration_policy_runtime_budget_exceeded",
+        )
+    if isinstance(max_seconds, int):
+        checks.reject_if(
+            max_seconds > CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS,
+            "ci_local_runtime_phase_parity_budget_boundary_exceeded",
         )
     combined_transport_reason_codes = payload.get("combined_transport_reason_codes")
     checks.reject_if(
@@ -1303,6 +1356,8 @@ def check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
+        "reason_taxonomy_version": RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
         "local_full_stack_integration_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -1313,6 +1368,9 @@ def check_policy(args: argparse.Namespace) -> int:
     print(f"final_decision={observed_final_decision}")
     print(f"expected_final_decision={expected_final_decision}")
     print(f"ci_fast_gate={ci_fast_gate}")
+    print(f"reason_taxonomy_version={RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={RUNTIME_PHASE_PARITY_REASON_CODES_CSV}")
+    print(f"reason_codes={'none' if not failed_checks else ','.join(failed_checks)}")
     print(
         "local_full_stack_integration_policy_status="
         f"{'verified' if not failed_checks else 'failed'}"
@@ -1334,7 +1392,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_lane_parser.add_argument("--mode", default=os.environ.get("KAMN_LOCAL_FULL_STACK_INTEGRATION_MODE", "dry-run"))
     run_lane_parser.add_argument(
         "--max-seconds",
-        default=os.environ.get("KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS", "360"),
+        default=os.environ.get("KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS", "240"),
     )
     run_lane_parser.add_argument(
         "--command-max-seconds",

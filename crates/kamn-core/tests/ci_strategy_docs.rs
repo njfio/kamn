@@ -892,9 +892,21 @@ fn doc_contains_runtime_local_full_mode_live_validation_runtime_error_taxonomy_m
 #[test]
 fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
     assert!(DOC.contains("local_heavy_runtime_budget_status"));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("runtime_phase_module_parity_status=verified"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_status=verified"));
     assert!(DOC.contains("elapsed_seconds"));
     assert!(DOC.contains("max_seconds"));
     assert!(DOC.contains("command_max_seconds"));
     assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_status_mismatch"));
     assert!(DOC.contains("local_full_stack_integration_policy_runtime_budget_exceeded"));
+    assert!(DOC.contains("runtime_phase_module_parity_drift_detected"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_unstable"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_exceeded"));
 }

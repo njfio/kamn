@@ -127,6 +127,30 @@ if ! printf '%s\n' "$lane_output" | grep -q '^combined_reason_taxonomy_version=k
   echo "expected local full-stack integration contract lane combined reason taxonomy version marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration contract lane runtime phase parity reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration contract lane runtime phase parity reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_phase_module_parity_status=verified$'; then
+  echo "expected local full-stack integration contract lane runtime phase module parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_extraction_evidence_output_status=verified$'; then
+  echo "expected local full-stack integration contract lane runtime extraction evidence output marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration contract lane policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration contract lane policy reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
   echo "expected local full-stack integration contract lane combined transport reason marker" >&2
   exit 1
@@ -163,6 +187,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^local_heavy_runtime_budget_status=
   echo "expected local full-stack integration contract lane local-heavy runtime budget status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_local_runtime_phase_parity_budget_boundary_status=verified$'; then
+  echo "expected local full-stack integration contract lane ci-local runtime phase parity budget boundary marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^elapsed_seconds=[0-9]+$'; then
   echo "expected local full-stack integration contract lane elapsed runtime marker" >&2
   exit 1
@@ -194,6 +222,8 @@ if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 if lane_payload.get("local_heavy_runtime_budget_status") != "verified":
     raise SystemExit("expected local_heavy_runtime_budget_status=verified")
+if lane_payload.get("ci_local_runtime_phase_parity_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_runtime_phase_parity_budget_boundary_status=verified")
 if lane_payload.get("transport_convergence_status") != "planned":
     raise SystemExit("expected transport_convergence_status=planned in dry-run")
 if lane_payload.get("signer_provenance_status") != "planned":
@@ -245,6 +275,18 @@ if lane_payload.get("kolme_integration_policy_status") != "planned":
     raise SystemExit("expected kolme_integration_policy_status=planned in dry-run")
 if lane_payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
     raise SystemExit("expected combined_reason_taxonomy_version marker")
+if lane_payload.get("runtime_phase_parity_reason_taxonomy_version") != "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1":
+    raise SystemExit("expected runtime_phase_parity_reason_taxonomy_version marker")
+if lane_payload.get("runtime_phase_parity_reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
+    raise SystemExit("expected runtime_phase_parity_reason_codes_csv marker")
+if lane_payload.get("runtime_phase_module_parity_status") != "verified":
+    raise SystemExit("expected runtime_phase_module_parity_status=verified")
+if lane_payload.get("runtime_extraction_evidence_output_status") != "verified":
+    raise SystemExit("expected runtime_extraction_evidence_output_status=verified")
+if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1":
+    raise SystemExit("expected reason_taxonomy_version marker")
+if lane_payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
+    raise SystemExit("expected reason_codes_csv marker")
 if lane_payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected combined_transport_reason_codes marker")
 if lane_payload.get("combined_kolme_runtime_reason_code") != "not_run":
@@ -289,6 +331,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("local_full_stack_integration_policy_status") != "verified":
     raise SystemExit("expected local_full_stack_integration_policy_status=verified in policy report")
+if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1":
+    raise SystemExit("expected policy reason_taxonomy_version marker")
+if policy_payload.get("reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
+    raise SystemExit("expected policy reason_codes_csv marker")
 PY
 
 if ! grep -q "check_local_full_stack_integration_live_policy.sh" "$CONTRACT_LANE"; then
@@ -322,6 +368,23 @@ if [ "$invalid_ci_fast_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_ci_fast_gate_output" | grep -q 'ci-fast-gate must be PASS or FAIL'; then
   echo "expected deterministic invalid ci-fast-gate marker for local full-stack integration contract lane" >&2
+  exit 1
+fi
+
+set +e
+invalid_budget_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --max-seconds 241 2>&1
+)"
+invalid_budget_code=$?
+set -e
+if [ "$invalid_budget_code" -eq 0 ]; then
+  echo "expected local full-stack integration contract lane to reject ci-local phase parity budget overrun" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_budget_output" | grep -q 'max-seconds must be <= 240 for ci-local contract lane'; then
+  echo "expected deterministic ci-local phase parity budget boundary marker for local full-stack integration contract lane" >&2
   exit 1
 fi
 

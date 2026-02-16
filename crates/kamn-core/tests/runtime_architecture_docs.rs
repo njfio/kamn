@@ -33,3 +33,22 @@ fn doc_contains_runtime_extraction_fallback_evidence_entrypoints() {
     ));
     assert!(DOC.contains("240"));
 }
+
+#[test]
+fn doc_contains_runtime_phase_extraction_parity_taxonomy_contract_markers() {
+    assert!(DOC.contains("## Runtime Phase Extraction Parity Taxonomy"));
+    assert!(DOC.contains("Task: `#4536`"));
+    assert!(DOC.contains("Subtasks: `#4540`, `#4541`"));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("runtime_phase_module_parity_status=verified"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_status=verified"));
+    assert!(DOC.contains("runtime_phase_module_parity_drift_detected"));
+    assert!(DOC.contains("runtime_extraction_evidence_output_unstable"));
+    assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_exceeded"));
+}

@@ -139,6 +139,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^combined_reason_taxonomy_ver
   echo "expected local full-stack integration combined reason taxonomy version marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration runtime phase parity reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration runtime phase parity reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_phase_module_parity_status=verified$'; then
+  echo "expected local full-stack integration runtime phase module parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_extraction_evidence_output_status=verified$'; then
+  echo "expected local full-stack integration runtime extraction evidence output marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_runtime_phase_parity_budget_boundary_status=verified$'; then
+  echo "expected local full-stack integration runtime phase parity budget boundary marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
   echo "expected local full-stack integration combined transport reason marker" >&2
   exit 1
@@ -257,6 +277,16 @@ if payload.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp
     raise SystemExit("expected libp2p_convergence_policy_schema_version marker")
 if payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
     raise SystemExit("expected combined_reason_taxonomy_version marker")
+if payload.get("runtime_phase_parity_reason_taxonomy_version") != "kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1":
+    raise SystemExit("expected runtime_phase_parity_reason_taxonomy_version marker")
+if payload.get("runtime_phase_parity_reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
+    raise SystemExit("expected runtime_phase_parity_reason_codes_csv marker")
+if payload.get("runtime_phase_module_parity_status") != "verified":
+    raise SystemExit("expected runtime_phase_module_parity_status=verified")
+if payload.get("runtime_extraction_evidence_output_status") != "verified":
+    raise SystemExit("expected runtime_extraction_evidence_output_status=verified")
+if payload.get("ci_local_runtime_phase_parity_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_runtime_phase_parity_budget_boundary_status=verified")
 if payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected combined_transport_reason_codes marker")
 if payload.get("combined_kolme_runtime_reason_code") != "not_run":
@@ -360,6 +390,22 @@ if [ "$invalid_budget_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_budget_output" | grep -q 'KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS must be an integer'; then
   echo "expected deterministic invalid max-seconds marker for local full-stack integration validation script" >&2
+  exit 1
+fi
+
+set +e
+phase_parity_budget_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --max-seconds 241 2>&1
+)"
+phase_parity_budget_code=$?
+set -e
+if [ "$phase_parity_budget_code" -eq 0 ]; then
+  echo "expected local full-stack integration validation script to reject ci-local phase parity budget overrun" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$phase_parity_budget_output" | grep -q 'KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS exceeds ci-local phase parity budget boundary'; then
+  echo "expected deterministic ci-local phase parity budget boundary marker for local full-stack integration validation script" >&2
   exit 1
 fi
 
