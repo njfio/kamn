@@ -1493,6 +1493,11 @@ Operator checkpoints:
   - request/finality linkage drift fails closed with deterministic reasons (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
   - provider drift fails closed when in-memory provider usage is detected in summary marker surfaces (`provider_in_memory_reference_detected`).
   - finality retry exhaustion reasons are deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) and drift fails closed with checker reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
+  - submit/finality success-reason taxonomy remains deterministic in policy outputs:
+    - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+    - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+  - submit/finality success-reason drift remains fail-closed with deterministic checker reasons (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`).
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
@@ -1761,6 +1766,7 @@ Operator checkpoints:
 - local runtime-commit live proof lane preflight health probe and default live-provider ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - local runtime-commit live proof lane evidence policy remains fail-closed for missing live-provider command marker contracts (`Regression: #2095`).
 - local runtime-commit submit/finality evidence marker policy and contract lane parity remains fail-closed (`Regression: #2099`).
+- local runtime-commit submit/finality success-reason taxonomy mismatch remains fail-closed across policy and contract-lane proofs (`Regression: #4420`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
 - local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).

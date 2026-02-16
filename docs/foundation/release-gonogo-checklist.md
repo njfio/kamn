@@ -366,6 +366,12 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - adapter reason-code checks include:
     - `receipt_provider_mismatch`
     - `receipt_not_final`
+- Runtime commit submit/finality evidence policy checker:
+  - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+  - deterministic submit/finality taxonomy markers:
+    - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+    - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+    - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
@@ -377,6 +383,7 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
+  - submit/finality success-reason mismatches force `NO-GO` (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`) (`Regression: #4420`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.

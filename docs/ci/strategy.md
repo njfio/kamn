@@ -2943,6 +2943,11 @@ JSON`
     - linkage drift reason codes are deterministic and fail-closed (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
     - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) are required for run-mode policy evaluation.
     - retry exhaustion reason codes remain deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) with fail-closed drift reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
+    - submit/finality success-reason taxonomy markers are deterministic in policy outputs:
+      - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
+      - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
+      - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+    - submit/finality reason-code drift remains fail-closed (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`).
     - strict real-node marker checks additionally require native payload evidence markers (`native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, `native_payload_messages_marker_present`) and use `--require-native-payload-evidence`.
   - local native API parity live-proof run-mode commands remain excluded from ci-fast-gate.
     - wrapper routing stays manifest-backed:
@@ -3091,6 +3096,7 @@ Regression policy:
 - local runtime-commit live preflight health-probe and default live-provider ignored-test dispatch parity remains fail-closed (`Regression: #1829`).
 - local runtime-commit live evidence policy marker parity remains fail-closed for missing `KolmeRuntimeCommitLiveProvider` command markers (`Regression: #2095`).
 - local runtime-commit submit/finality evidence marker policy and contract lane command-surface parity remains fail-closed (`Regression: #2099`).
+- local runtime-commit submit/finality success-reason taxonomy mismatch remains fail-closed (`Regression: #4420`).
 - local native API parity live-proof run-mode exclusion parity remains fail-closed (`Regression: #1467`).
 - native parity fast/local command matrix docs parity remains fail-closed (`Regression: #1468`).
 - local probe fork-info chain_version query and native parity broadcast method drift remains fail-closed (`Regression: #1482`).
