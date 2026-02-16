@@ -45,6 +45,9 @@ Deterministic success markers:
 - `package_metadata_status=verified`
 - `sdk_import_status=verified`
 - `packaging_contract_status=verified`
+- `packaging_publish_readiness_reason_taxonomy_version=kamn.sdk.python-packaging-publish-readiness-reason-taxonomy.v1`
+- `packaging_publish_readiness_reason_codes_csv=python_packaging_metadata_missing,python_packaging_metadata_invalid,python_packaging_import_probe_failed,python_packaging_unittest_contract_failed`
+- `packaging_publish_readiness_status=verified`
 
 JSON schema marker:
 
@@ -76,6 +79,9 @@ Deterministic success markers:
 - `final_decision=GO`
 - `packaging_contract_status=verified`
 - `evidence_bundle_status=verified`
+- `publish_readiness_taxonomy_status=verified`
+- `packaging_publish_readiness_reason_taxonomy_version=kamn.sdk.python-packaging-publish-readiness-reason-taxonomy.v1`
+- `packaging_publish_readiness_reason_codes_csv=python_packaging_metadata_missing,python_packaging_metadata_invalid,python_packaging_import_probe_failed,python_packaging_unittest_contract_failed`
 - `fail_closed_status=verified`
 - `fail_closed_reason_code=missing_pyproject`
 
