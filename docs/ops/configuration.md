@@ -65,6 +65,31 @@ Kolme-live keys:
 - `kolme_live_base_url`, `kolme_live_provider_hint`, `kolme_live_signing_profile`
 - `kolme_live_strict_signer_contracts`, `kolme_live_signer_profile`, `kolme_live_signer_key_source`
 
+## TLS Runtime Transport Behavior Contracts
+
+Runtime-commit HTTPS execution in `kolme-live` mode uses an in-process rustls
+client transport. Subprocess fallback is not allowed in runtime request paths.
+
+TLS trust-root override:
+
+- `KAMN_KOLME_TLS_CA_FILE` (optional custom CA bundle for runtime-commit HTTPS)
+
+Deterministic fail-closed TLS reason markers:
+
+- `tls certificate verification failed`
+- `tls handshake failed`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact`
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact`
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_tls_handshake_failures_to_unavailable -- --exact`
+- `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_does_not_use_openssl_subprocess -- --exact`
+
+Regression markers:
+
+- `Regression: #4106`
+
 ## Environment Override Contracts
 
 Environment override names map to the same key contracts regardless of config-file usage.
