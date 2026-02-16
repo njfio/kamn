@@ -2,6 +2,7 @@ const ADR: &str = include_str!("../../../docs/architecture/adr-kamn-core-live-tl
 const README: &str = include_str!("../../../README.md");
 const RUNTIME_COMMIT_DOC: &str =
     include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
+const OPS_CONFIGURATION_DOC: &str = include_str!("../../../docs/ops/configuration.md");
 
 #[test]
 fn adr_documents_live_tls_dependency_decision_and_tradeoffs() {
@@ -28,4 +29,14 @@ fn readme_and_foundation_transport_doc_reference_tls_dependency_adr() {
 fn runtime_commit_transport_doc_keeps_in_process_tls_narrative() {
     assert!(RUNTIME_COMMIT_DOC.contains("in-process `rustls` transport wiring"));
     assert!(!RUNTIME_COMMIT_DOC.contains("openssl s_client command wiring"));
+}
+
+#[test]
+fn ops_configuration_doc_tracks_tls_runtime_transport_behavior_contracts() {
+    assert!(OPS_CONFIGURATION_DOC.contains("KAMN_KOLME_TLS_CA_FILE"));
+    assert!(OPS_CONFIGURATION_DOC.contains("tls certificate verification failed"));
+    assert!(OPS_CONFIGURATION_DOC.contains("tls handshake failed"));
+    assert!(OPS_CONFIGURATION_DOC.contains("in-process rustls"));
+    assert!(OPS_CONFIGURATION_DOC.contains("Subprocess fallback is not allowed"));
+    assert!(OPS_CONFIGURATION_DOC.contains("Regression: #4106"));
 }
