@@ -34,6 +34,55 @@ if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=GO$"; then
   exit 1
 fi
 
+tls_evidence_report="$TMP_DIR/tls-evidence-report.json"
+cat >"$tls_evidence_report" <<'JSON'
+{
+  "schema_version": "kamn.ci.kamn-core-live-https-dependency-posture-report.v1",
+  "reason_taxonomy_version": "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
+  "status": "pass",
+  "reason_codes": [
+    "none"
+  ],
+  "reason_codes_csv": "none",
+  "reason_codes_value": "none"
+}
+JSON
+
+tls_bundle_file="$TMP_DIR/gonogo-contract-tls.json"
+tls_generator_output="$(
+  bash "$GENERATOR" \
+    --output-file "$tls_bundle_file" \
+    --release-candidate "v1.0.0-contract-tls" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:contract-tls" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --tls-evidence-report-file "$tls_evidence_report" \
+    --tls-evidence-max-age-seconds 1800
+)"
+if ! printf '%s\n' "$tls_generator_output" | grep -q "^tls_evidence_gate_final_decision=GO$"; then
+  echo "expected tls evidence gate decision marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_generator_output" | grep -q "^final_decision=GO$"; then
+  echo "expected tls evidence contract lane bundle decision to be GO" >&2
+  exit 1
+fi
+
+tls_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_bundle_file")"
+if ! printf '%s\n' "$tls_policy_output" | grep -q "^tls_evidence_gate_final_decision=GO$"; then
+  echo "expected tls evidence gate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_policy_output" | grep -q "^final_decision=GO$"; then
+  echo "expected tls evidence contract lane policy check decision to be GO" >&2
+  exit 1
+fi
+
 milestone_preflight_summary="$TMP_DIR/milestone-preflight-summary.json"
 milestone_preflight_policy="$TMP_DIR/milestone-preflight-policy.json"
 milestone_live_bundle_summary="$TMP_DIR/milestone-live-bundle-summary.json"

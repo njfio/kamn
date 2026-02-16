@@ -532,4 +532,138 @@ if ! printf '%s\n' "$milestone_lineage_tampered_output" | grep -q "milestone rev
   exit 1
 fi
 
+tls_evidence_report="$TMP_DIR/tls-evidence-report.json"
+cat >"$tls_evidence_report" <<'JSON'
+{
+  "schema_version": "kamn.ci.kamn-core-live-https-dependency-posture-report.v1",
+  "reason_taxonomy_version": "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
+  "status": "pass",
+  "reason_codes": [
+    "none"
+  ],
+  "reason_codes_csv": "none",
+  "reason_codes_value": "none"
+}
+JSON
+
+tls_bundle="$TMP_DIR/gonogo-tls-go.json"
+tls_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$tls_bundle" \
+    --release-candidate "v1.0.0-rc.8" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:tls-go" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --tls-evidence-report-file "$tls_evidence_report" \
+    --tls-evidence-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$tls_generate_output" "final_decision")" "GO" "expected GO bundle decision for converged tls evidence"
+assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_gate_final_decision")" "GO" "expected tls evidence gate decision to be GO"
+assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected deterministic tls evidence gate reason taxonomy marker"
+assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_reason_codes_csv")" "none" "expected deterministic tls evidence gate reason csv marker on pass path"
+
+python3 - "$tls_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+gate = payload.get("tls_evidence_gate")
+if not isinstance(gate, dict):
+    raise SystemExit("expected tls_evidence_gate object in go/no-go evidence bundle")
+if gate.get("schema_version") != "kamn.release.gonogo-tls-evidence-gate.v1":
+    raise SystemExit("expected tls_evidence_gate schema marker")
+if gate.get("reason_taxonomy_version") != "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected tls_evidence_gate reason taxonomy marker")
+if gate.get("final_decision") != "GO":
+    raise SystemExit("expected tls_evidence_gate final_decision=GO")
+PY
+
+tls_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_bundle")"
+assert_eq "$(extract_value "$tls_policy_output" "status")" "ok" "expected tls converged bundle policy check to pass"
+assert_eq "$(extract_value "$tls_policy_output" "tls_evidence_gate_final_decision")" "GO" "expected policy checker tls evidence decision to remain GO"
+assert_eq "$(extract_value "$tls_policy_output" "final_decision")" "GO" "expected policy checker final decision to remain GO for converged tls evidence"
+
+tls_stale_report="$TMP_DIR/tls-evidence-stale-report.json"
+cp "$tls_evidence_report" "$tls_stale_report"
+touch -d '1970-01-01T00:00:00Z' "$tls_stale_report"
+
+tls_stale_bundle="$TMP_DIR/gonogo-tls-stale.json"
+tls_stale_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$tls_stale_bundle" \
+    --release-candidate "v1.0.0-rc.9" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:tls-stale" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --tls-evidence-report-file "$tls_stale_report" \
+    --tls-evidence-max-age-seconds 1
+)"
+assert_eq "$(extract_value "$tls_stale_generate_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected tls evidence gate to fail closed for stale evidence"
+assert_eq "$(extract_value "$tls_stale_generate_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_freshness_window_exceeded" "expected deterministic stale tls evidence reason code"
+assert_eq "$(extract_value "$tls_stale_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for stale tls evidence"
+
+tls_stale_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_stale_bundle")"
+assert_eq "$(extract_value "$tls_stale_policy_output" "status")" "ok" "expected stale tls bundle policy check to pass deterministically"
+assert_eq "$(extract_value "$tls_stale_policy_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected stale tls evidence gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$tls_stale_policy_output" "final_decision")" "NO-GO" "expected stale tls bundle policy decision to remain NO-GO"
+
+tls_missing_bundle="$TMP_DIR/gonogo-tls-missing.json"
+tls_missing_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$tls_missing_bundle" \
+    --release-candidate "v1.0.0-rc.10" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:tls-missing" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --tls-evidence-report-file "$TMP_DIR/missing-tls-evidence-report.json" \
+    --tls-evidence-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$tls_missing_generate_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected tls evidence gate to fail closed for missing evidence file"
+assert_eq "$(extract_value "$tls_missing_generate_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_file_missing" "expected deterministic missing tls evidence reason code"
+assert_eq "$(extract_value "$tls_missing_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for missing tls evidence"
+
+tls_tampered_bundle="$TMP_DIR/gonogo-tls-tampered.json"
+cp "$tls_bundle" "$tls_tampered_bundle"
+python3 - "$tls_tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["tls_evidence_gate"]["observed"]["tls_evidence_report_status"] = "fail"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tls_tampered_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_tampered_bundle" 2>&1)"
+tls_tampered_code=$?
+set -e
+
+if [ "$tls_tampered_code" -eq 0 ]; then
+  echo "expected policy checker to fail for tampered tls evidence gate markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$tls_tampered_output" | grep -q "tls evidence gate convergence mismatch"; then
+  echo "expected deterministic tls evidence gate convergence mismatch error from policy checker" >&2
+  exit 1
+fi
+
 echo "go/no-go evidence bundle tests passed."

@@ -2,31 +2,30 @@
 
 ## Scope
 
-This contract defines deterministic fail-closed taxonomy markers for async lifecycle limiter rejection projection in Task #4311 and Subtask #4316.
+This contract defines fail-closed websocket protocol/session checks for Task #4312 and Subtask #4317.
 
-## Async Lifecycle Rejection Taxonomy (Issue #4316)
+## Websocket Protocol/Session Taxonomy
 
-- `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
-- `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
+- `service_api_websocket_session_reason_taxonomy_version=kamn.runtime.service-api.websocket-session-reason-taxonomy.v1`
+- `service_api_websocket_session_reason_codes_csv=service_api_ws_protocol_contract_drift_detected,service_api_ws_session_frame_too_short,service_api_ws_session_frame_opcode_invalid,service_api_ws_session_frame_mask_invalid,service_api_ws_session_frame_length_mismatch,service_api_ws_session_frame_payload_utf8_invalid`
 
-## Async Lifecycle Rejection Projection Matrix
+## Invalid-Frame Handling Matrix
 
-| Reason code | Rejection class | HTTP status | Error label | Outcome |
-|---|---|---|---|---|
-| `service_api_ingress_concurrency_limit_exceeded` | `async-lifecycle-limiter` | `429` | `too-many-requests` | `concurrency-limit` |
-| `service_api_ingress_rate_limit_exceeded` | `async-lifecycle-limiter` | `429` | `too-many-requests` | `rate-limit` |
-| `service_api_ingress_sender_rate_limit_exceeded` | `sender-admission-limiter` | `429` | `too-many-requests` | `anti-spam` |
-| `service_api_ingress_sender_suspended` | `sender-admission-limiter` | `429` | `too-many-requests` | `anti-spam` |
-| `service_api_ingress_sender_duplicate_message_id` | `sender-admission-limiter` | `429` | `too-many-requests` | `anti-spam` |
-| `service_api_ingress_sender_insufficient_deposit` | `sender-admission-limiter` | `429` | `too-many-requests` | `anti-spam` |
-| `service_api_ingress_anti_spam_engine_invalid` | `async-lifecycle-engine` | `500` | `internal` | `anti-spam-error` |
+| Condition | Fail-closed reason code | Expected behavior |
+|---|---|---|
+| websocket contract header missing or mismatched (`X-KAMN-WebSocket-Contract != v1`) | `service_api_ws_protocol_contract_drift_detected` | reject protocol/session contract as drifted |
+| websocket frame shorter than 2 bytes | `service_api_ws_session_frame_too_short` | reject session frame |
+| websocket frame opcode is not single-frame text (`0x81`) | `service_api_ws_session_frame_opcode_invalid` | reject session frame |
+| websocket frame is masked in server->client direction | `service_api_ws_session_frame_mask_invalid` | reject session frame |
+| websocket frame payload length marker mismatches bytes present | `service_api_ws_session_frame_length_mismatch` | reject session frame |
+| websocket frame payload is not utf-8 | `service_api_ws_session_frame_payload_utf8_invalid` | reject session frame |
 
 ## Validation Commands
 
-- `cargo test -p kamn-node lifecycle_projection_ -- --nocapture`
-- `cargo test -p kamn-node lifecycle_rejection_projection -- --nocapture`
-- `cargo test -p kamn-core --test service_api_lifecycle_contract_docs`
+- `cargo test -p kamn-node websocket_protocol_ -- --nocapture`
+- `cargo test -p kamn-node websocket_session_ -- --nocapture`
+- `cargo test -p kamn-core --test service_api_contract_docs`
 
 ## Regression
 
-- Async lifecycle limiter rejection projection remains fail-closed and deterministic (`Regression: #4316`).
+- invalid-frame and protocol-drift fail-closed behavior remains stable (`Regression: #4317`).

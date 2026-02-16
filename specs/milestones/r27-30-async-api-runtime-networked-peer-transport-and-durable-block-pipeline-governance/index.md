@@ -3,5 +3,5 @@
 Milestone scope for async runtime API hardening, networked peer transport realism, and durable block-pipeline governance.
 
 ## Linked Issues
-- #4311 Task: async API request lifecycle with deterministic concurrency and backpressure limits
-- #4316 Subtask: async lifecycle limiter and deterministic API rejection reason projection
+- #4310 Story: networked peer transport and durable block commit-fidelity contracts
+- #4314 Task: durable block commit persistence with digest/finality fail-closed governance
