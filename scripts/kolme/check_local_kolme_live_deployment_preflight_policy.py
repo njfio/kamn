@@ -875,6 +875,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("startup_latency_budget_reason_code_mismatch")
         if isinstance(signer_rotation_delta_epochs, int) and signer_rotation_delta_epochs <= 0:
             reason_codes.append("signer_rotation_promotion_stalled")
+            reason_codes.append("signer_rotation_rehearsal_drift_detected")
 
         if isinstance(required_approvals, int) and isinstance(received_approvals, int):
             if received_approvals < required_approvals:
@@ -891,6 +892,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("quorum_evidence_approvals_mismatch")
         if quorum_evidence_custody_sha256_match is not True:
             reason_codes.append("quorum_evidence_custody_sha256_mismatch")
+            reason_codes.append("custody_continuity_bypass_detected")
         if quorum_evidence_signer_roles_present is not True:
             reason_codes.append("quorum_evidence_signer_roles_missing")
         if quorum_evidence_signer_roles_valid is not True:

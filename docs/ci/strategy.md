@@ -2695,6 +2695,7 @@ JSON`
       - `quorum_evidence_rotation_metadata_invalid`
       - `quorum_evidence_approvals_mismatch`
       - `quorum_evidence_custody_sha256_mismatch`
+      - `custody_continuity_bypass_detected`
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
       - `runtime_signer_attestation_schema_invalid`
@@ -2713,6 +2714,8 @@ JSON`
       - `signer_provenance_missing`
       - `signer_provenance_sha256_invalid`
       - `signer_rotation_epoch_stale`
+      - `signer_rotation_rehearsal_drift_detected`
+      - `signer_profile_drift_threshold_mismatch`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
     - fallback retirement docs parity remains fail-closed across README/CI/devnet runbooks (`Regression: #2337`).
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
