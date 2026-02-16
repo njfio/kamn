@@ -90,14 +90,12 @@ fn classify_retry_category(error: &KolmeRuntimeCommitProviderError) -> Option<&'
     }
 }
 
-#[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RetryDecision {
     Retry { reason_code: &'static str },
     Stop { reason_code: &'static str },
 }
 
-#[cfg(test)]
 fn retry_decision_for_attempt(
     error: &KolmeRuntimeCommitProviderError,
     attempt: u32,
@@ -120,7 +118,6 @@ fn deterministic_retry_backoff_millis(retry_attempt: u32) -> u64 {
     (KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS * multiplier).min(KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS)
 }
 
-#[cfg(test)]
 fn deterministic_retry_jitter_seed(correlation_id: &str) -> u64 {
     correlation_id
         .bytes()
@@ -129,7 +126,6 @@ fn deterministic_retry_jitter_seed(correlation_id: &str) -> u64 {
         })
 }
 
-#[cfg(test)]
 fn deterministic_retry_backoff_millis_with_jitter(retry_attempt: u32, jitter_seed: u64) -> u64 {
     let backoff = deterministic_retry_backoff_millis(retry_attempt);
     let rotate_by = retry_attempt.saturating_sub(1) % 63;
@@ -161,6 +157,7 @@ pub(crate) fn execute_kolme_live_runtime(
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     let request = build_kolme_live_request(plan)?;
     let correlation_id = request.idempotency_key().to_owned();
+    let retry_jitter_seed = deterministic_retry_jitter_seed(correlation_id.as_str());
     log_info(
         "kolme.live.submit.start",
         &[
@@ -185,6 +182,7 @@ pub(crate) fn execute_kolme_live_runtime(
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     let mut submit_attempts = 0_u32;
     let mut submit_retry_reason = "none";
+    let mut submit_retry_terminal_decision = "none";
     let submit_outcome = loop {
         submit_attempts += 1;
         match provider
@@ -192,13 +190,21 @@ pub(crate) fn execute_kolme_live_runtime(
         {
             Ok(outcome) => break outcome,
             Err(error) => {
-                if let Some(reason_code) = classify_retry_category(&error) {
-                    if submit_attempts < KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS {
+                match retry_decision_for_attempt(
+                    &error,
+                    submit_attempts,
+                    KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS,
+                ) {
+                    RetryDecision::Retry { reason_code } => {
                         submit_retry_reason = reason_code;
                         let attempt_label = submit_attempts.to_string();
                         let max_attempts_label = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS.to_string();
-                        let backoff_ms = deterministic_retry_backoff_millis(submit_attempts);
+                        let backoff_ms = deterministic_retry_backoff_millis_with_jitter(
+                            submit_attempts,
+                            retry_jitter_seed,
+                        );
                         let backoff_ms_label = backoff_ms.to_string();
+                        let jitter_seed_label = retry_jitter_seed.to_string();
                         log_warn(
                             "kolme.live.submit.retry",
                             &[
@@ -206,17 +212,59 @@ pub(crate) fn execute_kolme_live_runtime(
                                 ("attempt", attempt_label.as_str()),
                                 ("max_attempts", max_attempts_label.as_str()),
                                 ("reason", reason_code),
+                                ("decision", "retry"),
+                                ("jitter_seed", jitter_seed_label.as_str()),
                                 ("backoff_ms", backoff_ms_label.as_str()),
                             ],
                         )?;
                         thread::sleep(Duration::from_millis(backoff_ms));
                         continue;
                     }
-                    return Err(ConfigError::RuntimeKolmeLive(format!(
-                        "submit retries exhausted after {submit_attempts} attempts ({reason_code}): {error}"
-                    )));
+                    RetryDecision::Stop {
+                        reason_code: "attempt_ceiling_reached",
+                    } => {
+                        submit_retry_terminal_decision = "attempt_ceiling_reached";
+                        let terminal_reason = classify_retry_category(&error).unwrap_or("unknown");
+                        let attempt_label = submit_attempts.to_string();
+                        let max_attempts_label = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS.to_string();
+                        log_warn(
+                            "kolme.live.submit.retry.terminal",
+                            &[
+                                ("correlation_id", correlation_id.as_str()),
+                                ("attempt", attempt_label.as_str()),
+                                ("max_attempts", max_attempts_label.as_str()),
+                                ("reason", terminal_reason),
+                                ("decision", "stop"),
+                                ("terminal_decision", submit_retry_terminal_decision),
+                            ],
+                        )?;
+                        return Err(ConfigError::RuntimeKolmeLive(format!(
+                            "submit retries exhausted after {submit_attempts} attempts ({terminal_reason}): {error}"
+                        )));
+                    }
+                    RetryDecision::Stop {
+                        reason_code: "malformed_response_fail_fast",
+                    } => {
+                        submit_retry_terminal_decision = "malformed_response_fail_fast";
+                        let attempt_label = submit_attempts.to_string();
+                        let max_attempts_label = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS.to_string();
+                        log_warn(
+                            "kolme.live.submit.retry.terminal",
+                            &[
+                                ("correlation_id", correlation_id.as_str()),
+                                ("attempt", attempt_label.as_str()),
+                                ("max_attempts", max_attempts_label.as_str()),
+                                ("reason", "malformed"),
+                                ("decision", "fail-fast"),
+                                ("terminal_decision", submit_retry_terminal_decision),
+                            ],
+                        )?;
+                        return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
+                    }
+                    RetryDecision::Stop { .. } => {
+                        return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
+                    }
                 }
-                return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
             }
         }
     };
@@ -234,6 +282,7 @@ pub(crate) fn execute_kolme_live_runtime(
     let mut resolution = "submit-receipt".to_owned();
     let mut finality_retry_attempts = 0_u32;
     let mut finality_retry_reason = "none";
+    let mut finality_retry_terminal_decision = "none";
 
     if matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
         log_info(
@@ -264,15 +313,22 @@ pub(crate) fn execute_kolme_live_runtime(
                     break;
                 }
                 Err(error) => {
-                    if let Some(reason_code) = classify_retry_category(&error) {
-                        if finality_retry_attempts < KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS {
+                    match retry_decision_for_attempt(
+                        &error,
+                        finality_retry_attempts,
+                        KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS,
+                    ) {
+                        RetryDecision::Retry { reason_code } => {
                             finality_retry_reason = reason_code;
                             let attempt_label = finality_retry_attempts.to_string();
                             let max_attempts_label =
                                 KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS.to_string();
-                            let backoff_ms =
-                                deterministic_retry_backoff_millis(finality_retry_attempts);
+                            let backoff_ms = deterministic_retry_backoff_millis_with_jitter(
+                                finality_retry_attempts,
+                                retry_jitter_seed,
+                            );
                             let backoff_ms_label = backoff_ms.to_string();
+                            let jitter_seed_label = retry_jitter_seed.to_string();
                             log_warn(
                                 "kolme.live.finality.retry",
                                 &[
@@ -281,25 +337,74 @@ pub(crate) fn execute_kolme_live_runtime(
                                     ("attempt", attempt_label.as_str()),
                                     ("max_attempts", max_attempts_label.as_str()),
                                     ("reason", reason_code),
+                                    ("decision", "retry"),
+                                    ("jitter_seed", jitter_seed_label.as_str()),
                                     ("backoff_ms", backoff_ms_label.as_str()),
                                 ],
                             )?;
                             thread::sleep(Duration::from_millis(backoff_ms));
                             continue;
                         }
-                        resolution = if reason_code == "timeout" {
-                            "finality-timeout".to_owned()
-                        } else {
-                            "finality-unavailable".to_owned()
-                        };
-                        break;
+                        RetryDecision::Stop {
+                            reason_code: "attempt_ceiling_reached",
+                        } => {
+                            finality_retry_terminal_decision = "attempt_ceiling_reached";
+                            let terminal_reason =
+                                classify_retry_category(&error).unwrap_or("unavailable");
+                            let attempt_label = finality_retry_attempts.to_string();
+                            let max_attempts_label =
+                                KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS.to_string();
+                            log_warn(
+                                "kolme.live.finality.retry.terminal",
+                                &[
+                                    ("correlation_id", correlation_id.as_str()),
+                                    ("commit_id", receipt.commit_id.as_str()),
+                                    ("attempt", attempt_label.as_str()),
+                                    ("max_attempts", max_attempts_label.as_str()),
+                                    ("reason", terminal_reason),
+                                    ("decision", "stop"),
+                                    ("terminal_decision", finality_retry_terminal_decision),
+                                ],
+                            )?;
+                            resolution = if terminal_reason == "timeout" {
+                                "finality-timeout".to_owned()
+                            } else {
+                                "finality-unavailable".to_owned()
+                            };
+                            break;
+                        }
+                        RetryDecision::Stop {
+                            reason_code: "malformed_response_fail_fast",
+                        } => {
+                            finality_retry_terminal_decision = "malformed_response_fail_fast";
+                            let attempt_label = finality_retry_attempts.to_string();
+                            let max_attempts_label =
+                                KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS.to_string();
+                            log_warn(
+                                "kolme.live.finality.retry.terminal",
+                                &[
+                                    ("correlation_id", correlation_id.as_str()),
+                                    ("commit_id", receipt.commit_id.as_str()),
+                                    ("attempt", attempt_label.as_str()),
+                                    ("max_attempts", max_attempts_label.as_str()),
+                                    ("reason", "malformed"),
+                                    ("decision", "fail-fast"),
+                                    ("terminal_decision", finality_retry_terminal_decision),
+                                ],
+                            )?;
+                            if let KolmeRuntimeCommitProviderError::MalformedResponse { reason } =
+                                error
+                            {
+                                return Err(ConfigError::RuntimeKolmeLive(format!(
+                                    "finality response malformed: {reason}"
+                                )));
+                            }
+                            return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
+                        }
+                        RetryDecision::Stop { .. } => {
+                            return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
+                        }
                     }
-                    if let KolmeRuntimeCommitProviderError::MalformedResponse { reason } = error {
-                        return Err(ConfigError::RuntimeKolmeLive(format!(
-                            "finality response malformed: {reason}"
-                        )));
-                    }
-                    return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
                 }
             }
         }
@@ -330,8 +435,9 @@ pub(crate) fn execute_kolme_live_runtime(
     let finality_retry_max_attempts = KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS;
     let retry_backoff_base_ms = KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS;
     let retry_backoff_cap_ms = KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS;
+    let retry_jitter_seed_label = retry_jitter_seed.to_string();
     let execution_status = format!(
-        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};submit_retry_max_attempts={submit_retry_max_attempts};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason};finality_retry_max_attempts={finality_retry_max_attempts};retry_backoff_base_ms={retry_backoff_base_ms};retry_backoff_cap_ms={retry_backoff_cap_ms};signer_previous_profile={};signer_failover_active={};signer_rotation_epoch={};signer_previous_rotation_epoch={};signer_quorum_linkage_contract_version={};signer_quorum_required_approvals={};signer_quorum_approved_signers_count={};signer_quorum_profile_linked={};signer_quorum_satisfied={};signer_quorum_linked={}",
+        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};submit_retry_terminal_decision={submit_retry_terminal_decision};submit_retry_max_attempts={submit_retry_max_attempts};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason};finality_retry_terminal_decision={finality_retry_terminal_decision};finality_retry_max_attempts={finality_retry_max_attempts};retry_backoff_base_ms={retry_backoff_base_ms};retry_backoff_cap_ms={retry_backoff_cap_ms};retry_jitter_seed={retry_jitter_seed_label};signer_previous_profile={};signer_failover_active={};signer_rotation_epoch={};signer_previous_rotation_epoch={};signer_quorum_linkage_contract_version={};signer_quorum_required_approvals={};signer_quorum_approved_signers_count={};signer_quorum_profile_linked={};signer_quorum_satisfied={};signer_quorum_linked={}",
         receipt.commit_id
         ,
         signer_preflight.previous_profile,

@@ -210,8 +210,20 @@ fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
     assert!(PLAN.contains("submit_evidence_marker_present"));
     assert!(PLAN.contains("finality_evidence_marker_present"));
+    assert!(PLAN.contains("kolme.live.submit.retry"));
+    assert!(PLAN.contains("kolme.live.finality.retry"));
+    assert!(PLAN.contains("kolme.live.submit.retry.terminal"));
+    assert!(PLAN.contains("kolme.live.finality.retry.terminal"));
+    assert!(PLAN.contains("decision=retry"));
+    assert!(PLAN.contains("jitter_seed"));
+    assert!(PLAN.contains("terminal_decision=attempt_ceiling_reached"));
+    assert!(PLAN.contains("terminal_decision=malformed_response_fail_fast"));
+    assert!(PLAN.contains("submit_retry_terminal_decision"));
+    assert!(PLAN.contains("finality_retry_terminal_decision"));
+    assert!(PLAN.contains("retry_jitter_seed"));
     assert!(PLAN.contains("kamn.kolme.local-runtime-commit-live-summary.v1"));
     assert!(PLAN.contains("`Regression: #2099`"));
+    assert!(PLAN.contains("`Regression: #4110`"));
 }
 
 #[test]
