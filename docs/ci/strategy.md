@@ -469,6 +469,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic taxonomy markers:
     `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`,
     `reason_taxonomy_status=verified`.
+  - contract lane emits deterministic evidence-convergence marker (`evidence_convergence_status=verified`).
+  - contract lane emits deterministic boundary-governance marker (`boundary_governance_status=verified`).
+  - contract lane emits deterministic resilience gate taxonomy markers:
+    `resilience_gate_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1`,
+    `resilience_gate_reason_codes_csv=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch`.
   - policy checker emits deterministic reason-code taxonomy marker:
     `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`.
   - policy checker and contract lane emit normalized marker `reason_codes_value=none|<csv>` for deterministic machine parsing.
@@ -476,12 +481,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LIVE_TRANSPORT_FAULT_MATRIX_OPT_IN=1`.
+  - contract lane enforces a CI smoke/local-heavy budget boundary (`max-seconds <= 240`) and fails closed with `live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded` when exceeded.
+  - contract lane enforces local-heavy CI scope in run mode (`--ci-fast-gate FAIL`) and fails closed with `live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch` on mismatch.
   - run mode executes four bounded targeted `cargo test` selectors for partition/rejoin, publish-drop, replay, and peer-churn drills.
   - live transport fault matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
   - `live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch`
   - `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`
+  - `live_transport_fault_matrix_contract_evidence_convergence_mismatch`
+  - `live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded`
+  - `live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch`
 
 ## Runtime Libp2p Process-Isolated Convergence Validation Contract Lane
 - Entry commands:

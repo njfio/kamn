@@ -6,6 +6,9 @@ VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_live_transport_fault_matri
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_live_transport_fault_matrix_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 NEXT_STEPS_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
+CI_SMOKE_MAX_SECONDS_BOUNDARY=240
+RESILIENCE_GATE_REASON_TAXONOMY_VERSION="kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1"
+RESILIENCE_GATE_REASON_CODES_CSV="live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch"
 
 output_json=""
 policy_output_json=""
@@ -58,6 +61,20 @@ if [[ "$mode" != "dry-run" && "$mode" != "run" ]]; then
   echo "mode must be dry-run or run" >&2
   exit 1
 fi
+if [ "$mode" = "run" ] && [ "$ci_fast_gate" != "FAIL" ]; then
+  echo "resilience_gate_reason_taxonomy_version=$RESILIENCE_GATE_REASON_TAXONOMY_VERSION" >&2
+  echo "resilience_gate_reason_codes_csv=$RESILIENCE_GATE_REASON_CODES_CSV" >&2
+  echo "resilience_gate_reason_codes_value=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch" >&2
+  echo "live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch" >&2
+  exit 1
+fi
+if [ "$max_seconds" -gt "$CI_SMOKE_MAX_SECONDS_BOUNDARY" ]; then
+  echo "resilience_gate_reason_taxonomy_version=$RESILIENCE_GATE_REASON_TAXONOMY_VERSION" >&2
+  echo "resilience_gate_reason_codes_csv=$RESILIENCE_GATE_REASON_CODES_CSV" >&2
+  echo "resilience_gate_reason_codes_value=live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded" >&2
+  echo "live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded" >&2
+  exit 1
+fi
 
 for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
   if [ ! -x "$required_exec" ]; then
@@ -76,9 +93,34 @@ start_epoch="$(date +%s)"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+check_evidence_convergence() {
+  local summary_file="$1"
+  local policy_file="$2"
+
+  python3 - "$summary_file" "$policy_file" <<'PY'
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+
+if summary.get("reason_taxonomy_version") != policy.get("reason_taxonomy_version"):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("reason_codes") != policy.get("reason_codes"):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("reason_codes_value") != policy.get("reason_codes_value"):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+
+print("evidence_convergence_status=verified")
+print("evidence_convergence_reason_code=none")
+PY
+}
+
 summary_report="$TMP_DIR/live-transport-fault-matrix-live-summary.json"
 policy_report="$TMP_DIR/live-transport-fault-matrix-live-policy.json"
 tampered_report="$TMP_DIR/live-transport-fault-matrix-live-summary.tampered.json"
+tampered_policy_convergence_report="$TMP_DIR/live-transport-fault-matrix-live-policy.convergence.tampered.json"
 
 validation_output="$(
   bash "$VALIDATION_SCRIPT" \
@@ -183,6 +225,41 @@ if ! printf '%s\n' "$tampered_policy_output" | grep -q 'live_transport_fault_mat
   exit 1
 fi
 
+evidence_convergence_output="$(
+  check_evidence_convergence "$summary_report" "$policy_report"
+)"
+if ! printf '%s\n' "$evidence_convergence_output" | grep -q '^evidence_convergence_status=verified$'; then
+  echo "expected live transport fault matrix evidence convergence marker" >&2
+  exit 1
+fi
+
+cp "$policy_report" "$tampered_policy_convergence_report"
+python3 - "$tampered_policy_convergence_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reason_codes_value"] = "transport_convergence_unstable"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_convergence_output="$(
+  check_evidence_convergence "$summary_report" "$tampered_policy_convergence_report" 2>&1
+)"
+tampered_convergence_code=$?
+set -e
+if [ "$tampered_convergence_code" -eq 0 ]; then
+  echo "expected tampered live transport fault matrix policy report to fail evidence convergence check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_convergence_output" | grep -q 'live_transport_fault_matrix_contract_evidence_convergence_mismatch'; then
+  echo "expected deterministic evidence convergence mismatch marker for live transport fault matrix contract lane" >&2
+  exit 1
+fi
+
 for required_ref in \
   "validate_live_transport_fault_matrix_live.sh" \
   "check_live_transport_fault_matrix_live_policy.sh" \
@@ -252,10 +329,16 @@ lane_report = {
     "docs_contract_status": "verified",
     "runtime_transport_mode_status": "verified",
     "reason_taxonomy_status": "verified",
+    "evidence_convergence_status": "verified",
+    "boundary_governance_status": "verified",
+    "resilience_gate_reason_taxonomy_version": "kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1",
+    "resilience_gate_reason_codes_csv": "live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch",
+    "resilience_gate_reason_codes_value": "none",
     "policy_reason_taxonomy_version": policy_report.get("reason_taxonomy_version"),
     "policy_reason_codes_csv": policy_report.get("reason_codes_csv"),
     "policy_reason_codes_value": policy_report.get("reason_codes_value"),
     "fail_closed_status": "verified",
+    "convergence_fail_closed_reason_code": "live_transport_fault_matrix_contract_evidence_convergence_mismatch",
     "fail_closed_reason_code": "live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status",
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
@@ -279,9 +362,15 @@ echo "live_transport_fault_matrix_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
 echo "reason_taxonomy_status=verified"
+echo "evidence_convergence_status=verified"
+echo "boundary_governance_status=verified"
+echo "resilience_gate_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1"
+echo "resilience_gate_reason_codes_csv=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch"
+echo "resilience_gate_reason_codes_value=none"
 echo "policy_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
 echo "policy_reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
 echo "policy_reason_codes_value=none"
 echo "fail_closed_status=verified"
+echo "convergence_fail_closed_reason_code=live_transport_fault_matrix_contract_evidence_convergence_mismatch"
 echo "fail_closed_reason_code=live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status"
 echo "performance_budget_status=verified"
