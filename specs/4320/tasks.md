@@ -1,13 +1,13 @@
 # Issue #4320 Tasks
 
 - Issue: `#4320`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
-- T1 (Red): add peer adapter reason projection + multi-process hook contract tests.
-- T2 (Green): implement deterministic reason projection and hook APIs in `p2p_transport`.
-- T3 (Docs): update release go/no-go checklist with peer reason taxonomy and multi-process validation references.
-- T4 (Verify): run
+- T1 (Red): added peer adapter reason projection + multi-process hook contract tests.
+- T2 (Green): implemented deterministic reason projection and hook APIs in `p2p_transport`.
+- T3 (Docs): updated release go/no-go checklist with peer reason taxonomy and multi-process validation references.
+- T4 (Verify): ran
   - `cargo fmt --check`
   - `cargo clippy -p kamn-core -- -D warnings`
   - `cargo test -p kamn-core --test p2p_peer_adapter_reason_projection`

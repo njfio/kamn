@@ -1,7 +1,7 @@
 # Issue #4320 Spec
 
 - Title: `Subtask: implement peer adapter reason projection and deterministic multi-process validation hooks`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
 - Parent: `#4313`

@@ -1,7 +1,7 @@
 # Issue #4320 Plan
 
 - Issue: `#4320`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Introduce peer adapter reason projection types/functions in `p2p_transport` for deterministic reason-code normalization.

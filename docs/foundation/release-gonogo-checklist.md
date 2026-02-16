@@ -451,6 +451,23 @@ Runtime failover and sync readiness requires deterministic lane routing, budget 
   - preflight runtime budget overruns force lane failure (`Regression: #788`).
   - unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`).
 
+## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)
+Peer adapter retry/timeout evidence must project deterministic reason classes and remain repeatable across process-isolated multi-process validation lanes.
+
+- Projection contract selectors:
+  - `cargo test -p kamn-core --test p2p_peer_adapter_reason_projection`
+- Multi-process validation hooks:
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile smoke --ci-fast-gate PASS`
+  - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS`
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --mode run --lane-profile deep --ci-fast-gate FAIL`
+- Deterministic taxonomy and projection markers:
+  - `peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1`
+  - `peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout`
+  - `peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted`
+  - `peer_adapter_multi_process_validation_local_heavy_status=required`
+- Regression policy:
+  - peer adapter reason projection drift and multi-process hook contract drift force `NO-GO` (`Regression: #4320`).
+
 ## Live-Network Pilot Launch and Rollback Evidence Gates (Issue #830)
 Pilot launch gates require deterministic smoke and scheduled/manual deep-lane evidence before release approval.
 
