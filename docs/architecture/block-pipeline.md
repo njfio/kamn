@@ -166,4 +166,8 @@ Expected live markers:
 - `two_node_discovery_status=verified`
 - `three_node_partition_rejoin_status=verified`
 - `three_node_publish_drop_recovery_status=verified`
+- `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`
+- `convergence_reason_codes_csv=fork_choice_stale_block_height`
+- `transport_classification_normalization_status=verified`
+- `fork_choice_stale_height_classification_status=verified`
 - `convergence_reason_codes=fork_choice_stale_block_height`

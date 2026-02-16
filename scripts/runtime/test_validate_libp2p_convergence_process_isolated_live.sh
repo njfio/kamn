@@ -87,6 +87,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^convergence_reason_code_stat
   echo "expected process-isolated convergence reason-code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^convergence_reason_codes_csv=fork_choice_stale_block_height$'; then
+  echo "expected process-isolated convergence reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^transport_classification_normalization_status=verified$'; then
+  echo "expected process-isolated convergence transport classification normalization marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^fork_choice_stale_height_classification_status=verified$'; then
+  echo "expected process-isolated convergence stale-height classification marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2p_process_isolated_convergence$'; then
   echo "expected process-isolated convergence runtime transport marker" >&2
   exit 1
@@ -109,6 +125,14 @@ if payload.get("runtime_transport_mode") != "libp2p_process_isolated_convergence
 reason_codes = payload.get("convergence_reason_codes")
 if reason_codes != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected deterministic convergence reason-code marker")
+if payload.get("convergence_reason_taxonomy_version") != "kamn.runtime.libp2p-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic convergence_reason_taxonomy_version marker")
+if payload.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
+    raise SystemExit("expected deterministic convergence_reason_codes_csv marker")
+if payload.get("transport_classification_normalization_status") != "verified":
+    raise SystemExit("expected deterministic transport_classification_normalization_status=verified")
+if payload.get("fork_choice_stale_height_classification_status") != "verified":
+    raise SystemExit("expected deterministic fork_choice_stale_height_classification_status=verified")
 if payload.get("lane_profile") != "smoke":
     raise SystemExit("expected lane_profile=smoke")
 if payload.get("smoke_lane_status") != "verified":

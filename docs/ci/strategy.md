@@ -438,6 +438,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
   - lane emits deterministic three-node publish-drop recovery marker (`three_node_publish_drop_recovery_status=verified`).
   - lane emits deterministic convergence reason-code marker (`convergence_reason_code_status=verified`) with reason-code matrix (`convergence_reason_codes=fork_choice_stale_block_height`).
+  - lane emits deterministic convergence reason taxonomy markers:
+    `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`,
+    `convergence_reason_codes_csv=fork_choice_stale_block_height`.
+  - lane emits deterministic transport classification normalization markers:
+    `transport_classification_normalization_status=verified`,
+    `fork_choice_stale_height_classification_status=verified`.
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_process_isolated_convergence`).
   - lane emits deterministic profile split markers (`lane_profile=smoke|deep`, `smoke_lane_status=verified`, `deep_lane_status=skipped_local_only|verified`).
   - policy checker fails closed on schema/marker drift and decision mismatches.
@@ -453,6 +459,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`
+  - `libp2p_process_isolated_convergence_policy_convergence_reason_taxonomy_version_mismatch`
+  - `libp2p_process_isolated_convergence_policy_fork_choice_stale_height_classification_status_mismatch`
 
 ## Process Harness Primitive Contract
 - Entry commands:

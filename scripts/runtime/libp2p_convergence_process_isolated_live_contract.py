@@ -28,6 +28,8 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1"
 RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
+CONVERGENCE_REASON_TAXONOMY_VERSION = "kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
+CONVERGENCE_REASON_CODES_CSV = "fork_choice_stale_block_height"
 LEGACY_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN"
 DEEP_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN"
 EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
@@ -233,6 +235,10 @@ def _run_lane(args: argparse.Namespace) -> int:
         "three_node_partition_rejoin_status": "verified",
         "three_node_publish_drop_recovery_status": "verified",
         "convergence_reason_code_status": "verified",
+        "convergence_reason_taxonomy_version": CONVERGENCE_REASON_TAXONOMY_VERSION,
+        "convergence_reason_codes_csv": CONVERGENCE_REASON_CODES_CSV,
+        "transport_classification_normalization_status": "verified",
+        "fork_choice_stale_height_classification_status": "verified",
         "convergence_reason_codes": ["fork_choice_stale_block_height"],
         "evidence_keys": [
             "no_shared_state_zero_delivery_status",
@@ -285,6 +291,13 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("three_node_partition_rejoin_status=verified")
     print("three_node_publish_drop_recovery_status=verified")
     print("convergence_reason_code_status=verified")
+    print(
+        "convergence_reason_taxonomy_version="
+        f"{CONVERGENCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"convergence_reason_codes_csv={CONVERGENCE_REASON_CODES_CSV}")
+    print("transport_classification_normalization_status=verified")
+    print("fork_choice_stale_height_classification_status=verified")
     print("convergence_reason_codes=fork_choice_stale_block_height")
     print("performance_budget_status=verified")
     print(f"execution_reason_code={execution_reason_code}")
@@ -336,6 +349,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "three_node_partition_rejoin_status",
         "three_node_publish_drop_recovery_status",
         "convergence_reason_code_status",
+        "convergence_reason_taxonomy_version",
+        "convergence_reason_codes_csv",
+        "transport_classification_normalization_status",
+        "fork_choice_stale_height_classification_status",
         "convergence_reason_codes",
         "evidence_keys",
         "performance_budget_status",
@@ -388,6 +405,38 @@ def _check_policy(args: argparse.Namespace) -> int:
             ),
             f"libp2p_process_isolated_convergence_policy_marker_missing:{field_name}",
         )
+
+    decision.reject_if(
+        report.get("transport_classification_normalization_status") != "verified",
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "transport_classification_normalization_status_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("fork_choice_stale_height_classification_status") != "verified",
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "fork_choice_stale_height_classification_status_mismatch"
+        ),
+    )
+
+    decision.reject_if(
+        report.get("convergence_reason_taxonomy_version")
+        != CONVERGENCE_REASON_TAXONOMY_VERSION,
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "convergence_reason_taxonomy_version_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("convergence_reason_codes_csv")
+        != CONVERGENCE_REASON_CODES_CSV,
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "convergence_reason_codes_csv_mismatch"
+        ),
+    )
 
     decision.reject_if(
         report.get("two_node_disconnected_fail_closed_reason_code")
@@ -539,6 +588,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "status": status,
         "final_decision": final_decision,
         "libp2p_process_isolated_convergence_policy_status": policy_status,
+        "convergence_reason_taxonomy_version": CONVERGENCE_REASON_TAXONOMY_VERSION,
+        "convergence_reason_codes_csv": CONVERGENCE_REASON_CODES_CSV,
+        "transport_classification_normalization_status": "verified",
+        "fork_choice_stale_height_classification_status": "verified",
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,

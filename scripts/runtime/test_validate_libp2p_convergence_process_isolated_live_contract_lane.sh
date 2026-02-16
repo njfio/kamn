@@ -51,6 +51,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_process_isolated_convergenc
   echo "expected process-isolated convergence policy status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence contract lane reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^convergence_reason_codes_csv=fork_choice_stale_block_height$'; then
+  echo "expected process-isolated convergence contract lane reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^transport_classification_normalization_status=verified$'; then
+  echo "expected process-isolated convergence contract lane transport classification normalization marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fork_choice_stale_height_classification_status=verified$'; then
+  echo "expected process-isolated convergence contract lane stale-height classification marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status$'; then
   echo "expected process-isolated convergence fail-closed reason marker" >&2
   exit 1
@@ -76,6 +92,14 @@ if lane_payload.get("libp2p_process_isolated_convergence_policy_status") != "ver
     raise SystemExit("expected libp2p_process_isolated_convergence_policy_status=verified")
 if lane_payload.get("lane_profile") != "smoke":
     raise SystemExit("expected lane_profile=smoke in contract lane report")
+if lane_payload.get("convergence_reason_taxonomy_version") != "kamn.runtime.libp2p-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic convergence_reason_taxonomy_version marker")
+if lane_payload.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
+    raise SystemExit("expected deterministic convergence_reason_codes_csv marker")
+if lane_payload.get("transport_classification_normalization_status") != "verified":
+    raise SystemExit("expected transport_classification_normalization_status=verified")
+if lane_payload.get("fork_choice_stale_height_classification_status") != "verified":
+    raise SystemExit("expected fork_choice_stale_height_classification_status=verified")
 
 if policy_payload.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
     raise SystemExit("unexpected process-isolated convergence policy report schema")
@@ -83,6 +107,14 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected process-isolated convergence policy final_decision=GO")
 if policy_payload.get("libp2p_process_isolated_convergence_policy_status") != "verified":
     raise SystemExit("expected libp2p_process_isolated_convergence_policy_status=verified in policy report")
+if policy_payload.get("convergence_reason_taxonomy_version") != "kamn.runtime.libp2p-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic convergence_reason_taxonomy_version marker in policy report")
+if policy_payload.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
+    raise SystemExit("expected deterministic convergence_reason_codes_csv marker in policy report")
+if policy_payload.get("transport_classification_normalization_status") != "verified":
+    raise SystemExit("expected transport_classification_normalization_status=verified in policy report")
+if policy_payload.get("fork_choice_stale_height_classification_status") != "verified":
+    raise SystemExit("expected fork_choice_stale_height_classification_status=verified in policy report")
 PY
 
 set +e

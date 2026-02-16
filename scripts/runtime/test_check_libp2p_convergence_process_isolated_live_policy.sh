@@ -37,6 +37,10 @@ cat > "$report_file" <<'JSON'
   "three_node_partition_rejoin_status": "verified",
   "three_node_publish_drop_recovery_status": "verified",
   "convergence_reason_code_status": "verified",
+  "convergence_reason_taxonomy_version": "kamn.runtime.libp2p-convergence-reason-taxonomy.v1",
+  "convergence_reason_codes_csv": "fork_choice_stale_block_height",
+  "transport_classification_normalization_status": "verified",
+  "fork_choice_stale_height_classification_status": "verified",
   "convergence_reason_codes": ["fork_choice_stale_block_height"],
   "evidence_keys": [
     "no_shared_state_zero_delivery_status",
@@ -89,6 +93,14 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if payload.get("libp2p_process_isolated_convergence_policy_status") != "verified":
     raise SystemExit("expected libp2p_process_isolated_convergence_policy_status=verified")
+if payload.get("convergence_reason_taxonomy_version") != "kamn.runtime.libp2p-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic convergence_reason_taxonomy_version marker")
+if payload.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
+    raise SystemExit("expected deterministic convergence_reason_codes_csv marker")
+if payload.get("transport_classification_normalization_status") != "verified":
+    raise SystemExit("expected deterministic transport_classification_normalization_status marker")
+if payload.get("fork_choice_stale_height_classification_status") != "verified":
+    raise SystemExit("expected deterministic fork_choice_stale_height_classification_status marker")
 PY
 
 tampered_report="$TMP_DIR/libp2p-convergence-process-isolated-summary.tampered.json"
@@ -120,6 +132,38 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status'; then
   echo "expected deterministic mismatch reason code for tampered process-isolated convergence policy validation" >&2
+  exit 1
+fi
+
+tampered_classification_report="$TMP_DIR/libp2p-convergence-process-isolated-summary.classification.tampered.json"
+cp "$report_file" "$tampered_classification_report"
+python3 - "$tampered_classification_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["fork_choice_stale_height_classification_status"] = "tampered"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_classification_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_classification_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/libp2p-convergence-process-isolated-policy.classification.tampered.json" 2>&1
+)"
+tampered_classification_code=$?
+set -e
+if [ "$tampered_classification_code" -eq 0 ]; then
+  echo "expected tampered stale-height classification report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_classification_output" | grep -q 'libp2p_process_isolated_convergence_policy_fork_choice_stale_height_classification_status_mismatch'; then
+  echo "expected deterministic stale-height classification mismatch reason code for policy validation" >&2
   exit 1
 fi
 
@@ -177,6 +221,10 @@ cat > "$deep_report" <<JSON
   "three_node_partition_rejoin_status": "verified",
   "three_node_publish_drop_recovery_status": "verified",
   "convergence_reason_code_status": "verified",
+  "convergence_reason_taxonomy_version": "kamn.runtime.libp2p-convergence-reason-taxonomy.v1",
+  "convergence_reason_codes_csv": "fork_choice_stale_block_height",
+  "transport_classification_normalization_status": "verified",
+  "fork_choice_stale_height_classification_status": "verified",
   "convergence_reason_codes": ["fork_choice_stale_block_height"],
   "evidence_keys": [
     "no_shared_state_zero_delivery_status",
