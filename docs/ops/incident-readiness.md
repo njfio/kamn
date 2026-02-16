@@ -25,8 +25,13 @@ This runbook defines local rehearsal command contracts and drift guards for stag
 - Runbook/boundary governance surfaces:
   - `rehearsal_runbook_contract_parity_status=verified`
   - `rehearsal_boundary_thresholds_schema_version=kamn.release.staging-rehearsal-boundary-thresholds.v1`
+  - `rehearsal_boundary_reason_taxonomy_status=verified`
+  - `rehearsal_boundary_reason_taxonomy_version=kamn.release.staging-rehearsal-boundary-reason-taxonomy.v1`
+  - `rehearsal_boundary_reason_codes_csv=rehearsal_boundary_ci_smoke_seconds_exceeded,rehearsal_boundary_local_heavy_opt_in_missing,rehearsal_runbook_contract_parity_mismatch`
   - `rehearsal_boundary_ci_smoke_max_seconds=120`
   - `rehearsal_boundary_local_heavy_max_seconds=900`
+  - local-heavy run path requires explicit opt-in:
+    - `KAMN_STAGING_REHEARSAL_LOCAL_HEAVY_OPT_IN=1`
 - Reason-surface drift is fail-closed:
   - `reason taxonomy mismatch`
 - Normalized-output drift is fail-closed:
@@ -44,3 +49,5 @@ This runbook defines local rehearsal command contracts and drift guards for stag
   - `Regression: #4500`
 - Rehearsal runbook parity and boundary threshold drift coverage:
   - `Regression: #4501`
+- Rehearsal boundary reason taxonomy and local-heavy opt-in enforcement drift coverage:
+  - `Regression: #4502`
