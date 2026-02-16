@@ -15,6 +15,8 @@ Deliver service-edge hardening by converging TLS activation, API/observability e
     - Subtask `#3654`: extract signer_policy with deterministic quorum and profile checks
     - Subtask `#3807`: add signer_policy reason-taxonomy drift and docs parity contracts
   - Task `#3638`: deliver signer parity harness and migration completion
+    - Subtask `#3766`: add signer migration parity matrix and legacy-behavior diff guard
+    - Subtask `#3808`: add signer extraction threshold and ownership budget guards
 
 ## Contract Signals
 - Signer responsibilities are isolated into explicit modules with deterministic error reason codes.
