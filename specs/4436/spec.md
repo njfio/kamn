@@ -1,6 +1,6 @@
 # Spec: Issue #4436
 
-Status: Reviewed
+Status: Implemented
 Issue: #4436
 Parent: #4431
 Milestone: R27.38 SDK-client readiness, deployment packaging, and live-validation governance

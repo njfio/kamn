@@ -1,6 +1,6 @@
 # Tasks: Issue #4431
 
-Status: In Progress
+Status: Completed
 Issue: #4431
 
 ## Ordered Tasks
@@ -38,10 +38,27 @@ T5 (Verify):
 ## TDD Evidence
 
 - RED command/output:
-  - Pending execution.
+  - `bash scripts/sdk/test_run_rust_sdk_service_client_contract.sh`
+    - Failed with: `expected rust sdk service client contract request-error taxonomy marker`
+  - `bash scripts/sdk/test_validate_rust_sdk_service_client_live.sh`
+    - Failed with: `expected rust sdk service client live http error taxonomy contract marker`
 
 - GREEN command/output:
-  - Pending implementation.
+  - `bash scripts/sdk/test_run_rust_sdk_service_client_contract.sh`
+    - Passed: `rust sdk service client contract tests passed.`
+  - `bash scripts/sdk/test_validate_rust_sdk_service_client_live.sh`
+    - Passed: `rust sdk service client live validation tests passed.`
+  - `cargo test -p kamn-sdk --test service_api_client`
+    - Passed: `4 passed; 0 failed`
+  - `python3 -m unittest tests.python.test_sdk`
+    - Passed: `Ran 16 tests ... OK`
+  - `cargo fmt --check`
+    - Passed
+  - `cargo clippy -p kamn-sdk -- -D warnings`
+    - Passed
 
 - Regression summary:
-  - Pending verification.
+  - Rust SDK HTTP contract/live outputs now emit deterministic request-error taxonomy markers.
+  - Python legacy adapter reason normalization is regression-pinned for deterministic fallbacks.
+  - SDK docs now pin taxonomy/evidence marker surfaces in `docs/sdk/rust-sdk.md` and
+    `docs/sdk/README.md`.
