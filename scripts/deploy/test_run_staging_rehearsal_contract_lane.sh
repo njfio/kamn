@@ -9,6 +9,7 @@ SHARED_REHEARSAL_CONTRACT_PY="$ROOT_DIR/scripts/deploy/staging_rehearsal_contrac
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 INCIDENT_READINESS_DOC="$ROOT_DIR/docs/ops/incident-readiness.md"
+CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected staging rehearsal fast-lane runner to be executable" >&2
@@ -26,6 +27,11 @@ fi
 
 if [ ! -f "$INCIDENT_READINESS_DOC" ]; then
   echo "expected incident readiness ops doc to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$CI_STRATEGY_DOC" ]; then
+  echo "expected CI strategy doc to exist" >&2
   exit 1
 fi
 
@@ -176,6 +182,78 @@ fi
 
 if ! grep -Fq "Regression: #4500" "$INCIDENT_READINESS_DOC"; then
   echo "expected incident readiness ops doc to include rehearsal taxonomy normalization regression marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_runbook_contract_parity_status=verified" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal runbook-contract parity marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_thresholds_schema_version=kamn.release.staging-rehearsal-boundary-thresholds.v1" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal boundary thresholds schema marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_ci_smoke_max_seconds=120" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal smoke boundary max-seconds marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_local_heavy_max_seconds=900" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal local-heavy boundary max-seconds marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_ci_smoke_seconds_exceeded" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal smoke-boundary drift reason code marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_local_heavy_opt_in_missing" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal local-heavy opt-in drift reason code marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_runbook_contract_parity_mismatch" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal runbook parity drift reason code marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #4501" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include rehearsal runbook-boundary regression marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_runbook_contract_parity_status=verified" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal runbook-contract parity marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "rehearsal_boundary_thresholds_schema_version=kamn.release.staging-rehearsal-boundary-thresholds.v1" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include rehearsal boundary thresholds schema marker" >&2
+  exit 1
+fi
+
+strategy_boundary_smoke="$(grep -Eo 'rehearsal_boundary_ci_smoke_max_seconds=[0-9]+' "$CI_STRATEGY_DOC" | head -n1)"
+incident_boundary_smoke="$(grep -Eo 'rehearsal_boundary_ci_smoke_max_seconds=[0-9]+' "$INCIDENT_READINESS_DOC" | head -n1)"
+if [ -z "$strategy_boundary_smoke" ] || [ -z "$incident_boundary_smoke" ]; then
+  echo "expected rehearsal smoke boundary markers in both CI strategy and incident readiness docs" >&2
+  exit 1
+fi
+if [ "$strategy_boundary_smoke" != "$incident_boundary_smoke" ]; then
+  echo "expected rehearsal smoke boundary markers to remain parity-aligned across docs" >&2
+  exit 1
+fi
+
+strategy_boundary_local_heavy="$(grep -Eo 'rehearsal_boundary_local_heavy_max_seconds=[0-9]+' "$CI_STRATEGY_DOC" | head -n1)"
+incident_boundary_local_heavy="$(grep -Eo 'rehearsal_boundary_local_heavy_max_seconds=[0-9]+' "$INCIDENT_READINESS_DOC" | head -n1)"
+if [ -z "$strategy_boundary_local_heavy" ] || [ -z "$incident_boundary_local_heavy" ]; then
+  echo "expected rehearsal local-heavy boundary markers in both CI strategy and incident readiness docs" >&2
+  exit 1
+fi
+if [ "$strategy_boundary_local_heavy" != "$incident_boundary_local_heavy" ]; then
+  echo "expected rehearsal local-heavy boundary markers to remain parity-aligned across docs" >&2
   exit 1
 fi
 
