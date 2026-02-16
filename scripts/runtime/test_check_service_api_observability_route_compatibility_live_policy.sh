@@ -107,4 +107,78 @@ if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=service_api
   exit 1
 fi
 
+tampered_route_report="$TMP_DIR/service-api-observability-route-compatibility-summary.route-mismatch.json"
+cp "$report_file" "$tampered_route_report"
+python3 - "$tampered_route_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+for row in payload.get("matrix_rows", []):
+    if row.get("row_id") == "api_healthz_get":
+        row["route"] = "/healthz-drift"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_route_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_route_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-observability-route-compatibility-policy.route-mismatch.json" 2>&1
+)"
+tampered_route_code=$?
+set -e
+if [ "$tampered_route_code" -eq 0 ]; then
+  echo "expected route-mismatched service api observability route compatibility report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_route_output" | grep -q 'service_api_observability_route_compatibility_policy_matrix_row_route_mismatch:api_healthz_get'; then
+  echo "expected deterministic route mismatch reason code for tampered service api observability route compatibility policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_route_output" | grep -q '^reason_codes_value=service_api_observability_route_compatibility_policy_matrix_row_route_mismatch:api_healthz_get$'; then
+  echo "expected deterministic normalized reason_codes_value marker for route mismatch policy validation" >&2
+  exit 1
+fi
+
+tampered_marker_report="$TMP_DIR/service-api-observability-route-compatibility-summary.marker-drift.json"
+cp "$report_file" "$tampered_marker_report"
+python3 - "$tampered_marker_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["route_parity_checkpoint_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_marker_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_marker_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-observability-route-compatibility-policy.marker-drift.json" 2>&1
+)"
+tampered_marker_code=$?
+set -e
+if [ "$tampered_marker_code" -eq 0 ]; then
+  echo "expected marker-drifted service api observability route compatibility report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_marker_output" | grep -q 'service_api_observability_route_compatibility_policy_marker_missing:route_parity_checkpoint_status'; then
+  echo "expected deterministic marker drift reason code for tampered service api observability route compatibility policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_marker_output" | grep -q '^reason_codes_value=service_api_observability_route_compatibility_policy_marker_missing:route_parity_checkpoint_status$'; then
+  echo "expected deterministic normalized reason_codes_value marker for marker drift policy validation" >&2
+  exit 1
+fi
+
 echo "service api observability route compatibility live policy checker tests passed."
