@@ -15,10 +15,60 @@ if [ ! -x "$PY_CHECKER" ]; then
   exit 1
 fi
 
-bash "$CHECKER" >/dev/null
-
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
+
+EXPECTED_REASON_TAXONOMY_VERSION="kamn.ci.production-panic-replacement-reason-taxonomy.v1"
+EXPECTED_REASON_CODES_CSV="scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default"
+EXPECTED_RUNTIME_EVIDENCE_OUTPUTS_CSV="runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
+
+BASELINE_REPORT="$TMP_DIR/no-production-expect-baseline-report.json"
+baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT")"
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok for baseline production panic checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q "^reason_taxonomy_version=${EXPECTED_REASON_TAXONOMY_VERSION}$"; then
+  echo "expected deterministic reason taxonomy version marker for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q "^reason_codes_csv=${EXPECTED_REASON_CODES_CSV}$"; then
+  echo "expected deterministic reason taxonomy csv marker for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected reason_codes_value=none for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^reason_class=stable$'; then
+  echo "expected reason_class=stable for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^runtime_panic_replacement_evidence_status=verified$'; then
+  echo "expected runtime evidence verified marker for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^runtime_panic_replacement_evidence_violation_count=0$'; then
+  echo "expected runtime evidence violation_count=0 marker for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q '^runtime_panic_replacement_evidence_files_csv=none$'; then
+  echo "expected runtime evidence files_csv=none marker for baseline checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$baseline_output" | grep -q "^runtime_panic_replacement_evidence_outputs_csv=${EXPECTED_RUNTIME_EVIDENCE_OUTPUTS_CSV}$"; then
+  echo "expected runtime evidence outputs csv marker for baseline checker path" >&2
+  exit 1
+fi
 
 cat <<'RS' > "$TMP_DIR/failing.rs"
 fn panic_path() {
@@ -38,6 +88,21 @@ fi
 
 if ! printf '%s\n' "$failure_output" | grep -q "status=fail"; then
   echo "expected checker to emit status=fail for production expect() violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$failure_output" | grep -q '^reason_codes_value=production_expect_reachable$'; then
+  echo "expected deterministic reason_codes_value for production expect() violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$failure_output" | grep -q '^reason_class=panic_reachability$'; then
+  echo "expected reason_class=panic_reachability for production expect() violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$failure_output" | grep -q '^runtime_panic_replacement_evidence_status=violation$'; then
+  echo "expected runtime evidence violation marker for production expect() path" >&2
   exit 1
 fi
 
@@ -64,6 +129,16 @@ if ! printf '%s\n' "$panic_macro_output" | grep -q "status=fail"; then
   exit 1
 fi
 
+if ! printf '%s\n' "$panic_macro_output" | grep -q '^reason_codes_value=production_panic_macro_reachable$'; then
+  echo "expected deterministic reason_codes_value for production panic! violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$panic_macro_output" | grep -q '^reason_class=panic_reachability$'; then
+  echo "expected reason_class=panic_reachability for production panic! violation" >&2
+  exit 1
+fi
+
 rm -f "$TMP_DIR/panic_macro.rs"
 
 cat <<'RS' > "$TMP_DIR/unreachable_macro.rs"
@@ -84,6 +159,16 @@ fi
 
 if ! printf '%s\n' "$unreachable_macro_output" | grep -q "status=fail"; then
   echo "expected checker to emit status=fail for production unreachable! violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$unreachable_macro_output" | grep -q '^reason_codes_value=production_unreachable_macro_reachable$'; then
+  echo "expected deterministic reason_codes_value for production unreachable! violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$unreachable_macro_output" | grep -q '^reason_class=panic_reachability$'; then
+  echo "expected reason_class=panic_reachability for production unreachable! violation" >&2
   exit 1
 fi
 
@@ -110,7 +195,37 @@ if ! printf '%s\n' "$unsafe_fallback_output" | grep -q "status=fail"; then
   exit 1
 fi
 
+if ! printf '%s\n' "$unsafe_fallback_output" | grep -q '^reason_codes_value=production_unsafe_env_fallback_default$'; then
+  echo "expected deterministic reason_codes_value for production unsafe fallback violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$unsafe_fallback_output" | grep -q '^reason_class=unsafe_fallback$'; then
+  echo "expected reason_class=unsafe_fallback for production unsafe fallback violation" >&2
+  exit 1
+fi
+
 rm -f "$TMP_DIR/unsafe_fallback.rs"
+
+set +e
+missing_root_output="$(python3 "$PY_CHECKER" --root "$TMP_DIR/does-not-exist" 2>&1)"
+missing_root_code=$?
+set -e
+
+if [ "$missing_root_code" -eq 0 ]; then
+  echo "expected checker to fail when scan root does not exist" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$missing_root_output" | grep -q '^reason_codes_value=scan_root_not_found$'; then
+  echo "expected deterministic reason_codes_value for missing root violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$missing_root_output" | grep -q '^reason_class=configuration$'; then
+  echo "expected reason_class=configuration for missing root violation" >&2
+  exit 1
+fi
 
 cat <<'RS' > "$TMP_DIR/cfg_test_only.rs"
 fn safe_path() -> Result<(), String> {
