@@ -45,7 +45,7 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `ci_strategy_live_https_feature_check_missing`
   - `ci_strategy_no_default_features_check_missing`
 - Regression policy:
-  - dependency-posture drift or unstable reason outputs force `NO-GO` (`Regression: #4480`, `Regression: #4481`).
+  - dependency-posture drift or unstable reason outputs force `NO-GO` (`Regression: #4480`, `Regression: #4481`, `Regression: #4107`).
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
