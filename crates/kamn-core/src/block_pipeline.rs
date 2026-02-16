@@ -102,6 +102,170 @@ impl BlockPipelineError {
     }
 }
 
+const DURABLE_COMMIT_CHECKER_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.durable-commit-checker-reason-taxonomy.v1";
+
+/// Deterministic durable commit checker reason classifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DurableCommitCheckerReasonClass {
+    /// Replay/checkpoint lineage drift reason class.
+    ReplayDrift,
+    /// Commit-store persistence and parsing reason class.
+    CommitStore,
+    /// CI smoke/local-heavy boundary enforcement reason class.
+    LaneBoundary,
+    /// Fallback class for non-durable-commit-specific reason markers.
+    Unclassified,
+}
+
+/// Deterministic durable commit checker reason projection output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DurableCommitCheckerReasonProjection {
+    reason_code: String,
+    reason_class: DurableCommitCheckerReasonClass,
+    source_marker: &'static str,
+}
+
+impl DurableCommitCheckerReasonProjection {
+    fn new(reason_code: String, reason_class: DurableCommitCheckerReasonClass) -> Self {
+        Self {
+            reason_code,
+            reason_class,
+            source_marker: "durable_commit_checker_reason_projection",
+        }
+    }
+
+    /// Returns deterministic projected reason code.
+    pub fn reason_code(&self) -> &str {
+        self.reason_code.as_str()
+    }
+
+    /// Returns deterministic projected reason class.
+    pub fn reason_class(&self) -> DurableCommitCheckerReasonClass {
+        self.reason_class
+    }
+
+    /// Returns deterministic projection source marker.
+    pub fn source_marker(&self) -> &'static str {
+        self.source_marker
+    }
+
+    /// Returns deterministic reason taxonomy marker for this projection.
+    pub fn reason_taxonomy_version(&self) -> &'static str {
+        durable_commit_checker_reason_taxonomy_version()
+    }
+}
+
+/// Durable commit checker lane mode used for CI/local boundary enforcement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DurableCommitCheckerLaneMode {
+    /// Low-cost CI smoke lane mode.
+    CiSmoke,
+    /// Opt-in local-heavy lane mode.
+    LocalHeavy,
+}
+
+/// Deterministic lane-boundary report for durable commit checker enforcement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DurableCommitCheckerLaneBoundaryReport {
+    /// Final decision marker for boundary checks.
+    pub final_decision: String,
+    /// CI smoke/local-heavy boundary verification marker.
+    pub ci_smoke_local_heavy_boundary_status: String,
+    /// CI smoke cost profile marker.
+    pub ci_smoke_lane_cost_profile: String,
+    /// Local-heavy execution mode marker.
+    pub local_heavy_lane_execution_mode: String,
+    /// Deterministic boundary enforcement reason marker.
+    pub enforcement_reason_code: String,
+}
+
+/// Returns deterministic durable commit checker reason taxonomy marker.
+pub fn durable_commit_checker_reason_taxonomy_version() -> &'static str {
+    DURABLE_COMMIT_CHECKER_REASON_TAXONOMY_VERSION
+}
+
+/// Projects deterministic reason output for durable commit checker failures.
+pub fn project_durable_commit_checker_reason(
+    error: &BlockPipelineError,
+) -> DurableCommitCheckerReasonProjection {
+    let reason_code = error.reason_code();
+    let reason_class = classify_durable_commit_checker_reason(reason_code.as_str());
+    DurableCommitCheckerReasonProjection::new(reason_code, reason_class)
+}
+
+/// Enforces deterministic CI-smoke and local-heavy durable commit checker boundaries.
+pub fn enforce_durable_commit_checker_lane_boundary(
+    lane_mode: DurableCommitCheckerLaneMode,
+    ci_fast_gate: bool,
+    local_heavy_opt_in: bool,
+) -> Result<DurableCommitCheckerLaneBoundaryReport, BlockPipelineError> {
+    match lane_mode {
+        DurableCommitCheckerLaneMode::CiSmoke => {
+            if !ci_fast_gate {
+                return Err(BlockPipelineError::ReplayDrift {
+                    reason_code: "durable_commit_checker_ci_smoke_fast_gate_required".to_owned(),
+                    detail: "ci-smoke durable commit checker mode requires ci-fast-gate PASS"
+                        .to_owned(),
+                });
+            }
+
+            Ok(DurableCommitCheckerLaneBoundaryReport {
+                final_decision: "GO".to_owned(),
+                ci_smoke_local_heavy_boundary_status: "verified".to_owned(),
+                ci_smoke_lane_cost_profile: "low".to_owned(),
+                local_heavy_lane_execution_mode: "not-applicable".to_owned(),
+                enforcement_reason_code: "durable_commit_checker_ci_smoke_boundary_verified"
+                    .to_owned(),
+            })
+        }
+        DurableCommitCheckerLaneMode::LocalHeavy => {
+            if ci_fast_gate {
+                return Err(BlockPipelineError::ReplayDrift {
+                    reason_code: "durable_commit_checker_local_heavy_ci_fast_gate_mismatch"
+                        .to_owned(),
+                    detail:
+                        "local-heavy durable commit checker mode must remain excluded from ci-fast-gate"
+                            .to_owned(),
+                });
+            }
+            if !local_heavy_opt_in {
+                return Err(BlockPipelineError::ReplayDrift {
+                    reason_code: "durable_commit_checker_local_heavy_opt_in_required".to_owned(),
+                    detail:
+                        "local-heavy durable commit checker mode requires explicit local opt-in"
+                            .to_owned(),
+                });
+            }
+
+            Ok(DurableCommitCheckerLaneBoundaryReport {
+                final_decision: "GO".to_owned(),
+                ci_smoke_local_heavy_boundary_status: "verified".to_owned(),
+                ci_smoke_lane_cost_profile: "low".to_owned(),
+                local_heavy_lane_execution_mode: "opt_in".to_owned(),
+                enforcement_reason_code: "durable_commit_checker_local_heavy_boundary_verified"
+                    .to_owned(),
+            })
+        }
+    }
+}
+
+fn classify_durable_commit_checker_reason(reason_code: &str) -> DurableCommitCheckerReasonClass {
+    if reason_code.starts_with("canonical_replay_") {
+        DurableCommitCheckerReasonClass::ReplayDrift
+    } else if reason_code.starts_with("canonical_commit_store_")
+        || reason_code == "block_pipeline_commit_store_error"
+    {
+        DurableCommitCheckerReasonClass::CommitStore
+    } else if reason_code.starts_with("durable_commit_checker_")
+        || reason_code == "ci_fast_gate_failed"
+    {
+        DurableCommitCheckerReasonClass::LaneBoundary
+    } else {
+        DurableCommitCheckerReasonClass::Unclassified
+    }
+}
+
 fn extract_error_reason_marker(detail: &str) -> Option<String> {
     let trimmed = detail.trim();
     let open_index = trimmed.rfind('(')?;
