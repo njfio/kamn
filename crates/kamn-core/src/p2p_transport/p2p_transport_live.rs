@@ -339,8 +339,8 @@ enum Libp2pNativeSwarmCommand {
 #[cfg(feature = "libp2p-live-transport")]
 #[derive(Debug, Clone)]
 pub(super) struct Libp2pNativeRuntimeAdapterLoop {
-    pub(super) command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
-    pub(super) state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+    command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
 #[cfg(feature = "libp2p-live-transport")]
