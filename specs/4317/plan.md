@@ -1,7 +1,7 @@
 # Issue #4317 Plan
 
 - Issue: `#4317`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add red tests in `service_api_endpoint_tests` covering protocol-drift detection and invalid session-frame rejection across unit/functional/integration/regression/performance categories.

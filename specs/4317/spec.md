@@ -1,7 +1,7 @@
 # Issue #4317 Spec
 
 - Title: `Subtask: add red tests for websocket protocol drift and invalid session-frame rejection`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r27-30-async-api-runtime-networked-peer-transport-and-durable-block-pipeline-governance/index.md`
 - Parent: `#4312`

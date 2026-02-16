@@ -1,7 +1,7 @@
 # Issue #4317 Tasks
 
 - Issue: `#4317`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red): add websocket protocol-drift + invalid session-frame conformance tests in `service_api_endpoint_tests` and capture failing evidence.
@@ -18,3 +18,9 @@
 - Conformance tests fail when drift/invalid-frame rejection behavior regresses.
 - Deterministic protocol/session checker helpers return stable reason codes.
 - Docs matrix/taxonomy markers are enforced by docs guard tests.
+- Verification commands passed:
+  - `cargo fmt --check`
+  - `cargo clippy -p kamn-node -- -D warnings`
+  - `cargo test -p kamn-node websocket_protocol_ -- --nocapture`
+  - `cargo test -p kamn-node websocket_session_ -- --nocapture`
+  - `cargo test -p kamn-core --test service_api_contract_docs`
