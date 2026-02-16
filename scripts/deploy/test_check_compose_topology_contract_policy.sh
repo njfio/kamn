@@ -7,7 +7,8 @@ POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_compose_topology_contract_policy.
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"' EXIT
+TMP_TAXONOMY_TAMPERED="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAXONOMY_TAMPERED"' EXIT
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected compose topology contract lane script to be executable" >&2
@@ -39,6 +40,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^compose_topology_policy_status=v
   echo "expected compose topology policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.deploy.compose-topology-contract-policy-reason-taxonomy.v1$'; then
+  echo "expected compose topology policy checker reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=none$'; then
+  echo "expected compose topology policy checker reason codes csv marker on pass path" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -52,7 +61,46 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected compose topology policy final_decision=GO")
 if payload.get("compose_topology_policy_status") != "verified":
     raise SystemExit("expected compose_topology_policy_status=verified")
+if payload.get("reason_taxonomy_version") != "kamn.deploy.compose-topology-contract-policy-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic policy reason taxonomy marker")
+if payload.get("reason_codes_csv") != "none":
+    raise SystemExit("expected deterministic policy reason_codes_csv=none on pass path")
 PY
+
+cp "$TMP_REPORT" "$TMP_TAXONOMY_TAMPERED"
+python3 - "$TMP_TAXONOMY_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["packaging_reason_taxonomy_version"] = "kamn.deploy.compose-packaging-reason-taxonomy.v0"
+payload["packaging_reason_codes_csv"] = "tampered_reason"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAXONOMY_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_taxonomy_code=$?
+set -e
+if [ "$tampered_taxonomy_code" -eq 0 ]; then
+  echo "expected packaging taxonomy drift report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'compose_topology_policy_packaging_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic packaging taxonomy mismatch reason for tampered compose topology report" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'compose_topology_policy_packaging_reason_codes_csv_mismatch'; then
+  echo "expected deterministic packaging reason-csv mismatch reason for tampered compose topology report" >&2
+  exit 1
+fi
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
 python3 - "$TMP_TAMPERED" <<'PY'
