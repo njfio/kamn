@@ -110,6 +110,31 @@ Fail-closed mismatch reasons:
 - `submit_finality_reason_mismatch_for_finality_enabled_run`
 - `submit_finality_reason_mismatch_for_submit_only_run`
 
+### Retry Decision Matrix and Jitter Seed Contracts
+
+`kamn-node` keeps retry behavior deterministic and bounded for live runtime submit/finality paths.
+
+Contract helpers and invariants:
+
+- `retry_decision_for_attempt(error, attempt, max_attempts)`:
+  - returns `Retry` only for transient classes (`timeout`, `unavailable`) with `attempt < max_attempts`
+  - returns `Stop` with `attempt_ceiling_reached` when transient classes hit the configured ceiling
+  - returns `Stop` with `malformed_response_fail_fast` for malformed payload classes
+- `deterministic_retry_jitter_seed(correlation_id)`:
+  - produces a stable seed for a given correlation ID
+  - different correlation IDs produce different seeds in contract tests
+- `deterministic_retry_backoff_millis_with_jitter(attempt, seed)`:
+  - remains deterministic for the same input pair
+  - remains bounded by `retry_backoff_cap_ms`
+
+Operational note:
+
+- Active runtime marker emission remains on the deterministic non-jitter schedule (`deterministic_retry_backoff_millis`) until rollout issue `#4110` wires jitter into runtime retry markers.
+
+Regression marker:
+
+- `Regression: #4109`
+
 ## Validation Evidence
 
 Implemented and validated by `kamn-node` tests:
