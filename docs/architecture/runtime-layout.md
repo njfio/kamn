@@ -74,6 +74,11 @@ Deterministic lane and policy markers include:
 - `checkpoint_divergence_bypass_rejection_status=verified`
 - `journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1`
 - `journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected`
+- `crash_recovery_readiness_progress_status=verified`
+- `snapshot_parity_status=verified`
+- `ci_local_recovery_budget_boundary_status=verified`
+- `state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1`
+- `state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded`
 - `crash_recovery_promotion_gate_status=verified`
 - `audit_trail_parity_status=verified`
 - `ci_local_promotion_budget_boundary_status=verified`

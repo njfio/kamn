@@ -282,6 +282,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic journal-replay taxonomy markers:
     `journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1`,
     `journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected`.
+  - lane emits deterministic crash-recovery readiness and snapshot parity governance markers:
+    `crash_recovery_readiness_progress_status=verified`,
+    `snapshot_parity_status=verified`,
+    `ci_local_recovery_budget_boundary_status=verified`.
+  - lane emits deterministic state-consistency taxonomy markers:
+    `state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1`,
+    `state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded`.
   - lane emits deterministic promotion/audit governance markers:
     `crash_recovery_promotion_gate_status=verified`,
     `audit_trail_parity_status=verified`,
@@ -306,6 +313,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_recovery_policy_checkpoint_divergence_bypass_rejection_status_mismatch`
   - `sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_crash_recovery_readiness_progress_status_mismatch`
+  - `sqlite_crash_recovery_policy_snapshot_parity_status_mismatch`
+  - `sqlite_crash_recovery_policy_state_consistency_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_state_consistency_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_status_mismatch`
+  - `sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_exceeded`
   - `sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch`
   - `sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch`
   - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`

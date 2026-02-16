@@ -49,6 +49,13 @@ JOURNAL_REPLAY_REASON_TAXONOMY_VERSION = (
 JOURNAL_REPLAY_REASON_CODES_CSV = (
     "journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
 )
+STATE_CONSISTENCY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1"
+)
+STATE_CONSISTENCY_REASON_CODES_CSV = (
+    "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,"
+    "ci_local_recovery_budget_boundary_exceeded"
+)
 DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.durability-governance-reason-taxonomy.v1"
 )
@@ -187,10 +194,18 @@ def run_lane(args: argparse.Namespace) -> int:
             JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
         ),
         "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "crash_recovery_readiness_progress_status": "verified",
+        "snapshot_parity_status": "verified",
+        "ci_local_recovery_budget_boundary_status": "verified",
+        "state_consistency_reason_taxonomy_version": (
+            STATE_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "state_consistency_reason_codes_csv": STATE_CONSISTENCY_REASON_CODES_CSV,
         "crash_recovery_promotion_gate_status": "verified",
         "audit_trail_parity_status": "verified",
         "ci_local_promotion_budget_boundary_status": "verified",
         "ci_local_promotion_max_seconds": ci_local_promotion_max_seconds,
+        "ci_local_recovery_budget_max_seconds": ci_local_promotion_max_seconds,
         "durability_governance_reason_taxonomy_version": (
             DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
         ),
@@ -243,6 +258,14 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
     )
     print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print("crash_recovery_readiness_progress_status=verified")
+    print("snapshot_parity_status=verified")
+    print("ci_local_recovery_budget_boundary_status=verified")
+    print(
+        "state_consistency_reason_taxonomy_version="
+        f"{STATE_CONSISTENCY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"state_consistency_reason_codes_csv={STATE_CONSISTENCY_REASON_CODES_CSV}")
     print("crash_recovery_promotion_gate_status=verified")
     print("audit_trail_parity_status=verified")
     print("ci_local_promotion_budget_boundary_status=verified")
@@ -361,6 +384,28 @@ def check_policy(args: argparse.Namespace) -> int:
         "sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch",
     )
     checks.reject_if(
+        payload.get("crash_recovery_readiness_progress_status") != "verified",
+        "sqlite_crash_recovery_policy_crash_recovery_readiness_progress_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("snapshot_parity_status") != "verified",
+        "sqlite_crash_recovery_policy_snapshot_parity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_recovery_budget_boundary_status") != "verified",
+        "sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("state_consistency_reason_taxonomy_version")
+        != STATE_CONSISTENCY_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_state_consistency_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("state_consistency_reason_codes_csv")
+        != STATE_CONSISTENCY_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_state_consistency_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
         payload.get("crash_recovery_promotion_gate_status") != "verified",
         "sqlite_crash_recovery_policy_crash_recovery_promotion_gate_status_mismatch",
     )
@@ -405,11 +450,17 @@ def check_policy(args: argparse.Namespace) -> int:
             "sqlite_crash_recovery_policy_historical_query_latency_budget_exceeded",
         )
     ci_local_promotion_max_seconds = payload.get("ci_local_promotion_max_seconds")
+    ci_local_recovery_budget_max_seconds = payload.get("ci_local_recovery_budget_max_seconds")
     max_seconds = payload.get("max_seconds")
     checks.reject_if(
         not isinstance(ci_local_promotion_max_seconds, int)
         or ci_local_promotion_max_seconds <= 0,
         "sqlite_crash_recovery_policy_ci_local_promotion_max_seconds_invalid",
+    )
+    checks.reject_if(
+        not isinstance(ci_local_recovery_budget_max_seconds, int)
+        or ci_local_recovery_budget_max_seconds <= 0,
+        "sqlite_crash_recovery_policy_ci_local_recovery_budget_max_seconds_invalid",
     )
     checks.reject_if(
         not isinstance(max_seconds, int) or max_seconds <= 0,
@@ -419,6 +470,11 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             max_seconds > ci_local_promotion_max_seconds,
             "sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded",
+        )
+    if isinstance(ci_local_recovery_budget_max_seconds, int) and isinstance(max_seconds, int):
+        checks.reject_if(
+            max_seconds > ci_local_recovery_budget_max_seconds,
+            "sqlite_crash_recovery_policy_ci_local_recovery_budget_boundary_exceeded",
         )
 
     lane_mode = payload.get("lane_mode")
@@ -501,10 +557,21 @@ def check_policy(args: argparse.Namespace) -> int:
         "checkpoint_divergence_bypass_rejection_status": payload.get(
             "checkpoint_divergence_bypass_rejection_status"
         ),
+        "crash_recovery_readiness_progress_status": payload.get(
+            "crash_recovery_readiness_progress_status"
+        ),
+        "snapshot_parity_status": payload.get("snapshot_parity_status"),
+        "ci_local_recovery_budget_boundary_status": payload.get(
+            "ci_local_recovery_budget_boundary_status"
+        ),
         "journal_replay_reason_taxonomy_version": (
             JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
         ),
         "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "state_consistency_reason_taxonomy_version": (
+            STATE_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "state_consistency_reason_codes_csv": STATE_CONSISTENCY_REASON_CODES_CSV,
         "durability_governance_reason_taxonomy_version": (
             DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION
         ),
@@ -540,11 +607,19 @@ def check_policy(args: argparse.Namespace) -> int:
     print(f"historical_query_reason_codes_csv={HISTORICAL_QUERY_REASON_CODES_CSV}")
     print("journal_replay_drift_detection_status=verified")
     print("checkpoint_divergence_bypass_rejection_status=verified")
+    print("crash_recovery_readiness_progress_status=verified")
+    print("snapshot_parity_status=verified")
+    print("ci_local_recovery_budget_boundary_status=verified")
     print(
         "journal_replay_reason_taxonomy_version="
         f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
     )
     print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print(
+        "state_consistency_reason_taxonomy_version="
+        f"{STATE_CONSISTENCY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"state_consistency_reason_codes_csv={STATE_CONSISTENCY_REASON_CODES_CSV}")
     print(
         "durability_governance_reason_taxonomy_version="
         f"{DURABILITY_GOVERNANCE_REASON_TAXONOMY_VERSION}"
