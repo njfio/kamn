@@ -68,6 +68,8 @@ required_impl_markers=(
   "functional_anchor_submission_advances_broadcast_to_included_with_typed_outcome"
   "integration_anchor_retry_is_duplicate_without_reapplying_state_transition"
   "regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed"
+  "regression_anchor_submission_rejects_lifecycle_state_mismatch_before_broadcast"
+  "regression_anchor_submission_rejects_tampered_actor_for_same_message_nonce"
   "performance_anchor_submission_contract_lane_stays_within_budget"
   "kamn.kolme.message-proof-anchoring.contract.v1"
 )
@@ -99,8 +101,36 @@ if ! printf '%s\n' "$run_output" | grep -q '^conflict_fail_closed_status=verifie
   echo "expected conflict fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^mismatch_fail_closed_status=verified$'; then
+  echo "expected mismatch fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^tamper_fail_closed_status=verified$'; then
+  echo "expected tamper fail-closed marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$run_output" | grep -q '^performance_budget_status=verified$'; then
   echo "expected performance budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1$'; then
+  echo "expected deterministic anchoring gate reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required$'; then
+  echo "expected deterministic anchoring gate reason code ordering marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^ci_smoke_local_heavy_boundary_status=verified$'; then
+  echo "expected ci smoke/local-heavy boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^ci_smoke_lane_cost_profile=low$'; then
+  echo "expected ci smoke lane cost profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^local_heavy_lane_execution_mode=opt_in$'; then
+  echo "expected local-heavy lane execution mode marker" >&2
   exit 1
 fi
 
@@ -122,8 +152,24 @@ if payload.get("lifecycle_alignment_status") != "verified":
     raise SystemExit("expected lifecycle_alignment_status=verified")
 if payload.get("conflict_fail_closed_status") != "verified":
     raise SystemExit("expected conflict_fail_closed_status=verified")
+if payload.get("mismatch_fail_closed_status") != "verified":
+    raise SystemExit("expected mismatch_fail_closed_status=verified")
+if payload.get("tamper_fail_closed_status") != "verified":
+    raise SystemExit("expected tamper_fail_closed_status=verified")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if payload.get("anchoring_gate_reason_taxonomy_version") != "kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1":
+    raise SystemExit("expected anchoring_gate_reason_taxonomy_version in contract-lane report")
+if payload.get("anchoring_gate_reason_codes_csv") != "message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required":
+    raise SystemExit("expected deterministic anchoring_gate_reason_codes_csv in contract-lane report")
+if payload.get("anchoring_gate_reason_codes_value") != "none":
+    raise SystemExit("expected anchoring_gate_reason_codes_value=none in GO contract-lane report")
+if payload.get("ci_smoke_local_heavy_boundary_status") != "verified":
+    raise SystemExit("expected ci_smoke_local_heavy_boundary_status=verified in contract-lane report")
+if payload.get("ci_smoke_lane_cost_profile") != "low":
+    raise SystemExit("expected ci_smoke_lane_cost_profile=low in contract-lane report")
+if payload.get("local_heavy_lane_execution_mode") != "opt_in":
+    raise SystemExit("expected local_heavy_lane_execution_mode=opt_in in contract-lane report")
 PY
 
 set +e

@@ -10,6 +10,17 @@ import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
+ANCHORING_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1"
+)
+ANCHORING_GATE_REASON_CODES = [
+    "message_anchor_evidence_mismatch",
+    "message_anchor_evidence_tamper_detected",
+    "message_proof_anchor_conflicting_key",
+    "message_proof_anchor_invalid_state",
+    "ci_fast_gate_failed",
+    "local_heavy_opt_in_required",
+]
 
 
 def parse_args(argv: list[str]) -> tuple[str, int]:
@@ -63,6 +74,8 @@ def main() -> int:
         "--",
         "functional_anchor_submission_advances_broadcast_to_included_with_typed_outcome",
         "integration_anchor_retry_is_duplicate_without_reapplying_state_transition",
+        "regression_anchor_submission_rejects_lifecycle_state_mismatch_before_broadcast",
+        "regression_anchor_submission_rejects_tampered_actor_for_same_message_nonce",
         "regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed",
         "performance_anchor_submission_contract_lane_stays_within_budget",
     ]
@@ -81,7 +94,7 @@ def main() -> int:
         print("message proof anchoring contract lane failed", file=sys.stderr)
         return 1
 
-    if "4 passed; 0 failed" not in test_output:
+    if "6 passed; 0 failed" not in test_output:
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(
@@ -106,6 +119,14 @@ def main() -> int:
         "message_anchor_contract_status": "verified",
         "lifecycle_alignment_status": "verified",
         "conflict_fail_closed_status": "verified",
+        "mismatch_fail_closed_status": "verified",
+        "tamper_fail_closed_status": "verified",
+        "anchoring_gate_reason_taxonomy_version": ANCHORING_GATE_REASON_TAXONOMY_VERSION,
+        "anchoring_gate_reason_codes_csv": ",".join(ANCHORING_GATE_REASON_CODES),
+        "anchoring_gate_reason_codes_value": "none",
+        "ci_smoke_local_heavy_boundary_status": "verified",
+        "ci_smoke_lane_cost_profile": "low",
+        "local_heavy_lane_execution_mode": "opt_in",
         "performance_budget_status": "verified",
         "elapsed_seconds": elapsed_seconds,
     }
@@ -123,6 +144,17 @@ def main() -> int:
     print("message_anchor_contract_status=verified")
     print("lifecycle_alignment_status=verified")
     print("conflict_fail_closed_status=verified")
+    print("mismatch_fail_closed_status=verified")
+    print("tamper_fail_closed_status=verified")
+    print(
+        "anchoring_gate_reason_taxonomy_version="
+        f"{ANCHORING_GATE_REASON_TAXONOMY_VERSION}"
+    )
+    print("anchoring_gate_reason_codes_csv=" f"{','.join(ANCHORING_GATE_REASON_CODES)}")
+    print("anchoring_gate_reason_codes_value=none")
+    print("ci_smoke_local_heavy_boundary_status=verified")
+    print("ci_smoke_lane_cost_profile=low")
+    print("local_heavy_lane_execution_mode=opt_in")
     print("performance_budget_status=verified")
     return 0
 

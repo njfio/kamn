@@ -910,3 +910,18 @@ fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
     assert!(DOC.contains("runtime_extraction_evidence_output_unstable"));
     assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_exceeded"));
 }
+
+#[test]
+fn doc_contains_message_anchoring_ci_boundary_taxonomy_markers() {
+    assert!(DOC.contains(
+        "anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required"
+    ));
+    assert!(DOC.contains("ci_smoke_local_heavy_boundary_status=verified"));
+    assert!(DOC.contains("ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("local_heavy_lane_execution_mode=opt_in"));
+    assert!(DOC.contains("test_run_message_proof_anchoring_contract_lane.sh"));
+    assert!(DOC.contains("test_validate_message_proof_anchoring_live.sh"));
+}

@@ -12,6 +12,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Message Anchoring Mismatch/Tamper Gate (Issue #4419)
+- Contract lane command:
+  - `bash scripts/kolme/run_message_proof_anchoring_contract_lane.sh --output-json /tmp/message-proof-anchoring-contract-report.json`
+- Live validation command:
+  - `bash scripts/kolme/validate_message_proof_anchoring_live.sh --output-json /tmp/message-proof-anchoring-live-report.json`
+- Required deterministic taxonomy markers:
+  - `anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1`
+  - `anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required`
+  - `anchoring_gate_reason_codes_value=none|<csv>`
+- Required CI/local-heavy boundary markers:
+  - `ci_smoke_local_heavy_boundary_status=verified`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
+- Fail-closed drills:
+  - lifecycle-state mismatch before `Broadcast` must reject with `message_proof_anchor_invalid_state`.
+  - tampered actor payload for same message+nonce idempotency window must reject with `message_proof_anchor_conflicting_key`.
+- Regression policy:
+  - mismatch/tamper acceptance drift forces `NO-GO` (`Regression: #4419`).
+
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`

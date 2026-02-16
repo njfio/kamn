@@ -28,6 +28,22 @@ fn checklist_contains_go_no_go_evidence_template() {
 }
 
 #[test]
+fn checklist_contains_message_anchoring_mismatch_tamper_gate() {
+    assert!(CHECKLIST.contains("## Message Anchoring Mismatch/Tamper Gate (Issue #4419)"));
+    assert!(CHECKLIST.contains("run_message_proof_anchoring_contract_lane.sh"));
+    assert!(CHECKLIST.contains("validate_message_proof_anchoring_live.sh"));
+    assert!(CHECKLIST.contains(
+        "anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required"
+    ));
+    assert!(CHECKLIST.contains("ci_smoke_local_heavy_boundary_status=verified"));
+    assert!(CHECKLIST.contains("local_heavy_lane_execution_mode=opt_in"));
+    assert!(CHECKLIST.contains("Regression: #4419"));
+}
+
+#[test]
 fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
     assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));

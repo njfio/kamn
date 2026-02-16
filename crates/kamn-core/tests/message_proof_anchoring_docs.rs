@@ -26,3 +26,16 @@ fn regression_doc_marks_conflicting_idempotency_fail_closed_guard() {
     // Regression: #2941
     assert!(DOC.contains("Regression: #2941"));
 }
+
+#[test]
+fn regression_doc_marks_mismatch_tamper_reason_taxonomy_and_ci_boundary_contracts() {
+    // Regression: #4419
+    assert!(DOC.contains("Regression: #4419"));
+    assert!(DOC.contains(
+        "anchoring_gate_reason_taxonomy_version=kamn.kolme.message-proof-anchoring-gate-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "anchoring_gate_reason_codes_csv=message_anchor_evidence_mismatch,message_anchor_evidence_tamper_detected,message_proof_anchor_conflicting_key,message_proof_anchor_invalid_state,ci_fast_gate_failed,local_heavy_opt_in_required"
+    ));
+    assert!(DOC.contains("ci_smoke_local_heavy_boundary_status=verified"));
+}
