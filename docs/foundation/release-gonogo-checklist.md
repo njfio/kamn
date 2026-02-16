@@ -139,6 +139,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - audit-trail integrity evidence drift and tamper acceptance force `NO-GO` (`Regression: #4466`).
 
+## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)
+- SLO policy report command:
+  - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`
+- Go/no-go bundle command:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-slo-policy.json --release-candidate v1.0.0-rc.13 --schema-target-version 1.0.0 --runtime-image-digest sha256:slo-policy-go --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --slo-policy-report-file /tmp/deployment-slo-rollback-report.json --slo-policy-max-age-seconds 1800`
+- Go/no-go policy checker command:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-slo-policy.json`
+- Required deterministic SLO policy gate markers:
+  - `slo_policy_reason_taxonomy_version=kamn.release.gonogo-slo-threshold-convergence-reason-taxonomy.v1`
+  - `slo_policy_reason_codes_csv=gonogo_slo_policy_file_missing,gonogo_slo_policy_invalid_json,gonogo_slo_policy_schema_mismatch,gonogo_slo_policy_status_not_pass,gonogo_slo_policy_final_decision_not_go,gonogo_slo_policy_reason_key_mismatch,gonogo_slo_policy_reason_codes_not_empty,gonogo_slo_policy_freshness_window_exceeded`
+  - `slo_policy_reason_codes_value=none|<csv>`
+  - `slo_policy_gate_final_decision=GO|NO-GO`
+- Fail-closed drills:
+  - threshold drift in reason-key mapping must reject with `gonogo_slo_policy_reason_key_mismatch`.
+  - non-empty source reason codes on GO path must reject with `gonogo_slo_policy_reason_codes_not_empty`.
+  - tampered SLO policy gate payload must reject with `slo policy gate convergence mismatch`.
+- Regression policy:
+  - threshold drift and SLO gate mismatch acceptance force `NO-GO` (`Regression: #4468`).
+
 ## Unified API-Observability Payload Taxonomy Gate (Issue #4507)
 - Validation command:
   - `bash scripts/runtime/validate_unified_api_observability_local_heavy_live.sh --mode dry-run --output-json /tmp/unified-api-observability-local-heavy-summary.json`
