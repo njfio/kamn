@@ -38,6 +38,9 @@ for marker in \
   '^lane_mode=dry-run$' \
   '^service_api_observability_route_compatibility_contract_status=verified$' \
   '^service_api_observability_route_compatibility_policy_status=verified$' \
+  '^route_parity_checkpoint_status=verified$' \
+  '^fail_closed_checkpoint_status=verified$' \
+  '^fail_closed_tamper_status=verified$' \
   '^docs_contract_status=verified$' \
   '^performance_budget_status=verified$' \
   '^fail_closed_reason_code=service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get$'; do
@@ -63,6 +66,12 @@ if lane_payload.get("service_api_observability_route_compatibility_contract_stat
     raise SystemExit("expected compatibility contract status=verified")
 if lane_payload.get("service_api_observability_route_compatibility_policy_status") != "verified":
     raise SystemExit("expected compatibility policy status=verified")
+if lane_payload.get("route_parity_checkpoint_status") != "verified":
+    raise SystemExit("expected route_parity_checkpoint_status=verified")
+if lane_payload.get("fail_closed_checkpoint_status") != "verified":
+    raise SystemExit("expected fail_closed_checkpoint_status=verified")
+if lane_payload.get("fail_closed_tamper_status") != "verified":
+    raise SystemExit("expected fail_closed_tamper_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 

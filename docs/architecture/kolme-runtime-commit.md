@@ -100,6 +100,27 @@ Execution status now emits deterministic signer readiness markers:
 - `signer_quorum_satisfied`
 - `signer_quorum_linked`
 
+### Signer Key Decode Zeroization Guarantees
+
+- `signer_decode_zeroization_contract_version=v1`
+- Decode-path zeroization markers:
+  - `signer_decode_zeroization_success_path=private_key_hex.zeroize+private_key_bytes.zeroize`
+  - `signer_decode_zeroization_failure_path=decoded.zeroize+private_key_hex.zeroize`
+- Redaction marker:
+  - `signer_decode_error_redaction_policy=raw_private_key_value_never_emitted`
+- Contract command:
+  - `cargo test -p kamn-node --test signer_secret_hygiene_contract -- --nocapture`
+
+### Signer Adapter API Boundary
+
+- `signer_adapter_boundary_contract_status=active`
+- `signer_adapter_boundary_contract_version=v1`
+- `signer_adapter_module_path=crates/kamn-node/src/signer/signer_adapter.rs`
+- `signer_adapter_reexport_owner=crates/kamn-node/src/signer.rs`
+- `signer_adapter_owned_symbols_csv=KolmeForkSecp256k1SignerAdapter,decode_kolme_hex_bytes,encode_kolme_hex_lower,build_kolme_live_managed_signing_key,resolve_kolme_live_signer_private_key_env_name`
+- Contract command:
+  - `cargo test -p kamn-node --test signer_adapter_boundary_contract -- --nocapture`
+
 ## Validation Evidence
 
 Primary tests:

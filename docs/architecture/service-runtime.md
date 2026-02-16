@@ -163,18 +163,32 @@ Matrix row coverage includes:
 
 - service API:
   - `GET /healthz -> 200 application/json`
-  - `GET /metrics -> 200 text/plain`
-  - `POST /metrics -> 405 application/json`
+  - `GET /metrics -> 200 text/plain; version=0.0.4`
+  - `GET /v1/events/ws -> 400 application/json`
+  - `DELETE /v1/messages/send -> 405 application/json`
+  - `GET /v1/nope -> 404 application/json`
 - observability endpoint:
-  - `GET /metrics -> 200 text/plain`
+  - `GET /metrics -> 200 text/plain; version=0.0.4`
   - `GET /healthz -> 200 application/json`
-  - `GET /unknown -> 404 application/json`
+  - `GET /readyz -> 200 application/json`
+  - `GET /metrics.stream -> 200 application/x-ndjson`
+  - `GET /unknown -> 404 text/plain; charset=utf-8`
+  - `POST /metrics -> 404 text/plain; charset=utf-8`
+
+Deterministic checkpoint markers include:
+
+- `route_parity_checkpoint_status=verified`
+- `fail_closed_checkpoint_status=verified`
+- `route_class_coverage_status=verified`
+- `fail_closed_reason_code=service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get`
 
 Fail-closed drift taxonomy includes:
 
 - `service_api_observability_route_compatibility_policy_matrix_row_missing:<row_id>`
+- `service_api_observability_route_compatibility_policy_matrix_row_route_mismatch:<row_id>`
 - `service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:<row_id>`
 - `service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch:<row_id>`
+- `service_api_observability_route_compatibility_policy_marker_missing:route_parity_checkpoint_status`
 
 ## Combined Native Transport + Kolme Commit Validation Flow
 

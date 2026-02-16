@@ -1131,9 +1131,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested matrix evidence tests and emits deterministic `dry_run_no_commands_executed`.
   - run mode (manual local verification) remains bounded to six targeted `kamn-node` route-compatibility tests.
+  - compatibility matrix emits deterministic coverage over eleven route rows spanning health, metrics, readiness/stream, websocket, and negative-path classes.
   - no external network dependencies; lane coverage is local cargo test selectors plus deterministic policy validation.
   - runtime budget is bounded via `KAMN_SERVICE_API_OBSERVABILITY_ROUTE_COMPATIBILITY_CONTRACT_MAX_SECONDS`.
   - route compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic checkpoint markers:
+  - `route_parity_checkpoint_status=verified`
+  - `fail_closed_checkpoint_status=verified`
+  - `route_class_coverage_status=verified`
+  - contract lane: `fail_closed_tamper_status=verified`
 - Deterministic policy taxonomy markers:
   - `reason_taxonomy_version=kamn.runtime.service-api-observability-route-compatibility-policy-reason-taxonomy.v1`
   - `reason_codes_csv=ci_fast_gate_failed,service_api_observability_route_compatibility_policy_command_count_invalid,service_api_observability_route_compatibility_policy_command_count_mismatch,service_api_observability_route_compatibility_policy_elapsed_seconds_invalid,service_api_observability_route_compatibility_policy_execution_reason_code_mismatch,service_api_observability_route_compatibility_policy_final_decision_invalid,service_api_observability_route_compatibility_policy_final_decision_mismatch,service_api_observability_route_compatibility_policy_lane_mode_invalid,service_api_observability_route_compatibility_policy_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_compatibility_marker_missing,service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch,service_api_observability_route_compatibility_policy_matrix_row_count_mismatch,service_api_observability_route_compatibility_policy_matrix_row_duplicate,service_api_observability_route_compatibility_policy_matrix_row_id_invalid,service_api_observability_route_compatibility_policy_matrix_row_invalid,service_api_observability_route_compatibility_policy_matrix_row_method_mismatch,service_api_observability_route_compatibility_policy_matrix_row_missing,service_api_observability_route_compatibility_policy_matrix_row_route_mismatch,service_api_observability_route_compatibility_policy_matrix_row_status_mismatch,service_api_observability_route_compatibility_policy_matrix_row_surface_mismatch,service_api_observability_route_compatibility_policy_matrix_rows_invalid,service_api_observability_route_compatibility_policy_matrix_schema_mismatch,service_api_observability_route_compatibility_policy_schema_mismatch,service_api_observability_route_compatibility_policy_status_invalid`
@@ -3613,6 +3619,38 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - total runtime is bounded by `--max-seconds`.
   - per-iteration reproducer runtime is bounded by `--reproducer-max-seconds`.
   - iteration count and failure threshold are explicit (`--iterations`, `--failure-threshold`).
+
+### Signer Extraction Budget Guard
+- `signer_extraction_budget_guard_status=active`
+- `signer_rs_max_lines=950`
+- Guard command:
+  - `cargo test -p kamn-node --test signer_extraction_budget_contract -- --nocapture`
+- Fail-closed policy:
+  - `signer.rs` line budget overflow fails with `signer.rs line budget exceeded`.
+  - signer extraction ownership marker drift (missing `mod managed_backend`, `mod nonce`, `mod signer_policy`, or missing re-exports) fails the guard target.
+
+### Signer Secret Redaction Regression Guard
+- `signer_secret_redaction_regression_guard_status=active`
+- `signer_secret_redaction_policy=raw_private_key_value_never_emitted`
+- Guard commands:
+  - `cargo test -p kamn-node signer::tests::regression_signer_private_key_decode_failure_redacts_sensitive_input -- --exact --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_hygiene_contract -- --nocapture`
+- Fail-closed policy:
+  - decode-failure regression must verify raw private-key input is absent from error surfaces.
+  - source/docs marker drift for signer decode zeroization and redaction contracts fails the guard target.
+
+### Signer Secret Lifecycle Policy Contract
+- `signer_secret_lifecycle_policy_contract_status=active`
+- `signer_secret_lifecycle_policy_contract_version=v1`
+- `signer_secret_lifecycle_forbidden_reason_code=fallback_signer_secret_present_violation`
+- `signer_secret_lifecycle_required_markers_csv=signer_secret_redaction_regression_guard_status,signer_secret_redaction_policy,fallback_signer_secret_present_violation,signer_secret_source_precedence_violation`
+- Guard commands:
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract -- --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract policy_checker_rejects_fallback_secret_violation_reason_code -- --exact --nocapture`
+  - `cargo test -p kamn-node --test signer_secret_lifecycle_policy_contract policy_checker_rejects_missing_required_lifecycle_markers -- --exact --nocapture`
+- Fail-closed policy:
+  - fallback signer secret reason code remains forbidden in lifecycle policy checks.
+  - lifecycle marker completeness and docs parity drift fail the contract target.
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.

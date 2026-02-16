@@ -26,10 +26,13 @@ for marker in \
   '^route_compatibility_matrix_status=verified$' \
   '^service_api_route_matrix_status=verified$' \
   '^observability_route_matrix_status=verified$' \
+  '^route_parity_checkpoint_status=verified$' \
+  '^fail_closed_checkpoint_status=verified$' \
+  '^route_class_coverage_status=verified$' \
   '^fail_closed_status=verified$' \
   '^performance_budget_status=verified$' \
   '^execution_reason_code=dry_run_no_commands_executed$' \
-  '^compatibility_row_count=6$'; do
+  '^compatibility_row_count=11$'; do
   if ! printf '%s\n' "$validation_output" | grep -q "$marker"; then
     echo "expected service api observability route compatibility validation marker: $marker" >&2
     exit 1
@@ -50,14 +53,52 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected run-lane final_decision=GO")
 if payload.get("matrix_schema_version") != "kamn.runtime.service-api-observability-route-compatibility-matrix.v1":
     raise SystemExit("expected matrix schema marker")
-if payload.get("compatibility_row_count") != 6:
-    raise SystemExit("expected compatibility_row_count=6")
+if payload.get("route_parity_checkpoint_status") != "verified":
+    raise SystemExit("expected route_parity_checkpoint_status=verified")
+if payload.get("fail_closed_checkpoint_status") != "verified":
+    raise SystemExit("expected fail_closed_checkpoint_status=verified")
+if payload.get("route_class_coverage_status") != "verified":
+    raise SystemExit("expected route_class_coverage_status=verified")
+if payload.get("compatibility_row_count") != 11:
+    raise SystemExit("expected compatibility_row_count=11")
 rows = payload.get("matrix_rows")
-if not isinstance(rows, list) or len(rows) != 6:
-    raise SystemExit("expected six matrix rows")
+if not isinstance(rows, list) or len(rows) != 11:
+    raise SystemExit("expected eleven matrix rows")
+row_ids = {row.get("row_id") for row in rows}
+expected_row_ids = {
+    "api_healthz_get",
+    "api_metrics_get",
+    "api_websocket_upgrade_required_get",
+    "api_messages_send_delete_method_not_allowed",
+    "api_unknown_path_not_found",
+    "observability_metrics_get",
+    "observability_health_get",
+    "observability_ready_get",
+    "observability_stream_get",
+    "observability_unknown_path_not_found",
+    "observability_metrics_post_not_found",
+}
+if row_ids != expected_row_ids:
+    raise SystemExit(f"unexpected matrix row set: {sorted(row_ids)}")
+route_classes = {row.get("route_class") for row in rows}
+expected_route_classes = {
+    "service_api_health",
+    "service_api_metrics",
+    "service_api_websocket_upgrade",
+    "service_api_method_guard",
+    "service_api_route_not_found",
+    "observability_metrics",
+    "observability_health",
+    "observability_readiness",
+    "observability_stream",
+    "observability_negative_path",
+}
+if route_classes != expected_route_classes:
+    raise SystemExit(f"unexpected route class coverage set: {sorted(route_classes)}")
 required_keys = {
     "row_id",
     "surface",
+    "route_class",
     "route",
     "method",
     "expected_status",
