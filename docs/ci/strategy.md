@@ -779,6 +779,35 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
 
+## Runtime Service API Websocket Live Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_websocket_live.sh --output-json /tmp/service-api-websocket-live-summary.json`
+  - `bash scripts/runtime/check_service_api_websocket_live_policy.sh --report-file /tmp/service-api-websocket-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-websocket-live-policy.json`
+  - `bash scripts/runtime/validate_service_api_websocket_live_contract_lane.sh --output-json /tmp/service-api-websocket-live-contract-lane-report.json --policy-output-json /tmp/service-api-websocket-live-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+  - `bash scripts/runtime/test_check_service_api_websocket_live_policy.sh`
+  - `bash scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
+  - uses only localhost process-level probes against `runtime-mode api`.
+  - no external Kolme node, remote service, or internet dependency.
+  - websocket lifecycle governance remains deterministic via:
+    `websocket_upgrade_status=verified`,
+    `websocket_session_lifecycle_status=verified`,
+    `websocket_heartbeat_timeout_status=verified`,
+    `websocket_idle_timeout_contract_status=verified`,
+    `websocket_reason_registry_status=verified`,
+    `websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1`,
+    `websocket_lifecycle_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing`.
+  - runtime budget is bounded via `KAMN_SERVICE_API_WEBSOCKET_CONTRACT_MAX_SECONDS`.
+  - service api websocket live contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_websocket_policy_marker_missing:websocket_session_lifecycle_status`
+  - `service_api_websocket_policy_websocket_lifecycle_reason_taxonomy_version_mismatch`
+
 ## Runtime Service API Serde Payload Parity Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_serde_payload_parity_live.sh --output-json /tmp/service-api-serde-payload-parity-live-summary.json`

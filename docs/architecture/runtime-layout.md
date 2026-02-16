@@ -114,3 +114,20 @@ Deterministic lane and policy markers include:
 - `request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid`
 - `error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1`
 - `error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found`
+
+## Service API Websocket Lifecycle Governance
+
+Service API websocket lifecycle and timeout taxonomy drift are enforced through:
+
+- `scripts/runtime/check_service_api_websocket_live_policy.sh`
+- `scripts/runtime/validate_service_api_websocket_live_contract_lane.sh`
+
+Deterministic lane and policy markers include:
+
+- `websocket_upgrade_status=verified`
+- `websocket_session_lifecycle_status=verified`
+- `websocket_heartbeat_timeout_status=verified`
+- `websocket_idle_timeout_contract_status=verified`
+- `websocket_reason_registry_status=verified`
+- `websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1`
+- `websocket_lifecycle_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing`

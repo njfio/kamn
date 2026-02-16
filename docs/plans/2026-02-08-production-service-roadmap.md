@@ -201,8 +201,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 2.3 initial slice delivered: realtime websocket event route with deterministic upgrade/frame contract and fail-closed upgrade/auth/replay guards (Task #2916, Subtask #2917).
 - Phase 2.3 live validation delivered:
-  - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh` and `scripts/runtime/test_validate_service_api_websocket_live.sh` (Task #2918, Subtask #2919).
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `fail_closed_status=verified`, `probe_status=verified`.
+  - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh`, `scripts/runtime/validate_service_api_websocket_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_websocket_live.sh`, `scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_websocket_live_policy.sh` (Task #2918, Subtask #2919).
+  - Policy checker: `scripts/runtime/check_service_api_websocket_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `websocket_session_lifecycle_status=verified`, `websocket_heartbeat_timeout_status=verified`, `websocket_idle_timeout_contract_status=verified`, `service_api_websocket_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 2.4 axum ingress contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_axum_ingress_live.sh`, `scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh` (Task #3308).
