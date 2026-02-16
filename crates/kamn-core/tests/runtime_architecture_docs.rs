@@ -73,3 +73,24 @@ fn doc_contains_docs_governance_and_rustdoc_navigation_parity_markers() {
     assert!(DOC.contains("test_missing_docs_velocity_guard_contract.sh"));
     assert!(DOC.contains("test_check_kamn_core_missing_docs_policy.sh"));
 }
+
+#[test]
+fn doc_contains_runtime_module_boundary_parity_drift_markers() {
+    assert!(DOC.contains("## Runtime Module Boundary Parity Drift Cases (Issue #4450)"));
+    assert!(DOC.contains(
+        "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected"
+    ));
+    assert!(DOC.contains("runtime_module_boundary_parity_status=verified"));
+    assert!(DOC.contains("runtime_module_boundary_evidence_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_module_boundary_budget_boundary_status=verified"));
+}
+
+#[test]
+fn doc_contains_runtime_module_boundary_parity_guard_commands() {
+    assert!(DOC
+        .contains("cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture"));
+    assert!(DOC.contains("cargo test -p kamn-core --test runtime_architecture_docs -- --nocapture"));
+}
