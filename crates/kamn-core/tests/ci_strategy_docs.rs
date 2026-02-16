@@ -950,6 +950,29 @@ fn doc_contains_message_anchoring_ci_boundary_taxonomy_markers() {
 }
 
 #[test]
+fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_markers() {
+    assert!(DOC.contains(
+        "metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required"
+    ));
+    assert!(DOC.contains("metadata_governance_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains(
+        "metadata_governance_reason_class=stable|metadata_mismatch|configuration|boundary|mixed"
+    ));
+    assert!(DOC.contains("ci_smoke_local_heavy_boundary_status=verified|violation"));
+    assert!(DOC.contains("ci_smoke_lane_cost_profile=low|not-applicable"));
+    assert!(DOC.contains("local_heavy_lane_execution_mode=not_requested|opt_in|blocked"));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile ci-smoke"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile local-heavy --local-heavy-opt-in"
+    ));
+}
+
+#[test]
 fn doc_contains_anti_flake_rerun_policy_reason_taxonomy_markers() {
     assert!(DOC.contains(
         "anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1"
