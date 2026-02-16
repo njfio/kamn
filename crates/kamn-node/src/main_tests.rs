@@ -214,6 +214,7 @@ fn spawn_kolme_live_mock_server(replies: Vec<MockHttpReply>) -> (String, Arc<Mut
     (format!("http://{addr}"), recorded_requests)
 }
 
+// main_tests structural budget shell only; keep domain tests in src/main_tests/*.rs
 mod async_runtime_contract_tests;
 mod cli_contract_tests;
 mod core_behavior_tests;
