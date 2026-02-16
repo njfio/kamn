@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/deploy/validate_compose_topology_contract_lane.sh"
+CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+DEPLOY_DOC="$ROOT_DIR/docs/ops/deployment.md"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -41,6 +43,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^compose_docs_parity_status=verifie
   echo "expected compose topology contract lane docs marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^packaging_reason_taxonomy_version=kamn.deploy.compose-packaging-reason-taxonomy.v1$'; then
+  echo "expected compose topology contract lane packaging reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^packaging_reason_codes_csv=compose_packaging_manifest_drift_detected,compose_packaging_config_drift_detected,compose_packaging_evidence_contract_drift_detected$'; then
+  echo "expected compose topology contract lane packaging reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^packaging_contract_evidence_status=verified$'; then
+  echo "expected compose topology contract lane packaging evidence marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -62,6 +76,12 @@ if payload.get("compose_volume_network_status") != "verified":
     raise SystemExit("expected compose_volume_network_status=verified")
 if payload.get("compose_docs_parity_status") != "verified":
     raise SystemExit("expected compose_docs_parity_status=verified")
+if payload.get("packaging_reason_taxonomy_version") != "kamn.deploy.compose-packaging-reason-taxonomy.v1":
+    raise SystemExit("expected packaging_reason_taxonomy_version marker")
+if payload.get("packaging_reason_codes_csv") != "compose_packaging_manifest_drift_detected,compose_packaging_config_drift_detected,compose_packaging_evidence_contract_drift_detected":
+    raise SystemExit("expected packaging_reason_codes_csv marker")
+if payload.get("packaging_contract_evidence_status") != "verified":
+    raise SystemExit("expected packaging_contract_evidence_status=verified")
 PY
 
 set +e
@@ -77,6 +97,19 @@ if [ "$invalid_budget_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_budget_output" | grep -q 'max-seconds must be an integer'; then
   echo "expected deterministic invalid max-seconds marker for compose topology contract lane" >&2
+  exit 1
+fi
+
+if ! grep -Fq "packaging_reason_taxonomy_version=kamn.deploy.compose-packaging-reason-taxonomy.v1" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include compose topology packaging reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -Fq "packaging_reason_codes_csv=compose_packaging_manifest_drift_detected,compose_packaging_config_drift_detected,compose_packaging_evidence_contract_drift_detected" "$CI_STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include compose topology packaging reason codes marker" >&2
+  exit 1
+fi
+if ! grep -Fq "packaging_contract_evidence_status=verified" "$DEPLOY_DOC"; then
+  echo "expected deployment docs to include packaging contract evidence marker" >&2
   exit 1
 fi
 

@@ -28,6 +28,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$
   echo "expected deployment fail-closed marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^compose_manifest_contract_status=verified$'; then
+  echo "expected deployment compose-manifest contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^compose_config_contract_status=verified$'; then
+  echo "expected deployment compose-config contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^k8s_manifest_contract_status=verified$'; then
+  echo "expected deployment k8s-manifest contract marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -45,6 +57,12 @@ if payload.get("asset_contract_status") != "verified":
     raise SystemExit("expected asset_contract_status=verified")
 if payload.get("fail_closed_status") != "verified":
     raise SystemExit("expected fail_closed_status=verified")
+if payload.get("compose_manifest_contract_status") != "verified":
+    raise SystemExit("expected compose_manifest_contract_status=verified")
+if payload.get("compose_config_contract_status") != "verified":
+    raise SystemExit("expected compose_config_contract_status=verified")
+if payload.get("k8s_manifest_contract_status") != "verified":
+    raise SystemExit("expected k8s_manifest_contract_status=verified")
 PY
 
 set +e
