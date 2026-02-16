@@ -269,9 +269,9 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
 
 #[derive(Debug, Default)]
 pub(super) struct Libp2pLiveDataPlaneState {
-    peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
-    inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
-    runtime_events: VecDeque<Libp2pRuntimeEvent>,
+    pub(super) peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
+    pub(super) inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
+    pub(super) runtime_events: VecDeque<Libp2pRuntimeEvent>,
 }
 
 #[cfg(not(feature = "libp2p-live-transport"))]

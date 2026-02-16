@@ -32,6 +32,7 @@ struct Libp2pDeterministicRuntimeBehaviour {
 mod adapter;
 mod coordinator;
 mod error;
+#[allow(dead_code)]
 mod native_runtime;
 mod p2p_transport_live;
 mod runtime_event;
@@ -58,15 +59,6 @@ pub use p2p_transport_live::{
     PeerLifecycleRegressionExpectedOutcome, PeerLifecycleRegressionOutcome,
 };
 pub use runtime_event::{Libp2pBehaviorFailureClass, Libp2pRuntimeEvent, Libp2pRuntimeEventKind};
-
-#[cfg(feature = "libp2p-live-transport")]
-pub(super) use native_runtime::Libp2pNativeRuntimeAdapterLoop;
-#[cfg(feature = "libp2p-live-transport")]
-pub(super) use p2p_transport_live::{
-    apply_libp2p_runtime_network_config, build_libp2p_runtime_swarm,
-    runtime_channel_closed_behavior_failure_class, validate_libp2p_runtime_stack_composition,
-    Libp2pLiveDataPlaneState,
-};
 
 const PEER_ADAPTER_REASON_TAXONOMY_VERSION: &str = "kamn.runtime.peer-adapter-reason-taxonomy.v1";
 const PEER_ADAPTER_REASON_SOURCE_RECONNECT_POLICY: &str = "p2p_live_reconnect_policy";
