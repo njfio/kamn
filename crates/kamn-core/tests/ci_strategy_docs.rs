@@ -940,3 +940,11 @@ fn doc_contains_anti_flake_rerun_policy_reason_taxonomy_markers() {
         "check_anti_flake_policy.sh --registry-file .ci/flaky-tests.txt --expected-final-decision GO --max-active-entries 0 --fast-workflow-file .github/workflows/ci-fast-gate.yml --deep-workflow-file .github/workflows/ci-deep-validate.yml --output-json /tmp/anti-flake-policy-report.json"
     ));
 }
+
+#[test]
+fn doc_contains_merge_gate_reliability_ci_smoke_local_heavy_boundary_markers() {
+    assert!(DOC.contains("ci_smoke_local_heavy_boundary_status=verified|violation"));
+    assert!(DOC.contains("ci_smoke_performance_report_step_missing"));
+    assert!(DOC.contains("ci_smoke_threshold_check_step_missing"));
+    assert!(DOC.contains("local_heavy_opt_in_boundary_missing"));
+}

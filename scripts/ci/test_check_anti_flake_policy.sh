@@ -33,7 +33,8 @@ for marker in \
   '^anti_flake_policy_reason_codes=no_active_flaky_entries$' \
   '^anti_flake_policy_reason_codes_csv=no_active_flaky_entries$' \
   '^anti_flake_policy_reason_codes_value=no_active_flaky_entries$' \
-  '^anti_flake_policy_reason_class=stable$'; do
+  '^anti_flake_policy_reason_class=stable$' \
+  '^ci_smoke_local_heavy_boundary_status=verified$'; do
   if ! printf '%s\n' "$empty_output" | grep -q "$marker"; then
     echo "expected anti-flake empty-registry marker: $marker" >&2
     exit 1
@@ -60,6 +61,8 @@ if report.get("reason_codes_value") != "no_active_flaky_entries":
     raise SystemExit("expected anti-flake policy reason_codes_value marker for empty registry")
 if report.get("reason_class") != "stable":
     raise SystemExit("expected anti-flake policy reason_class=stable for empty registry")
+if report.get("ci_smoke_local_heavy_boundary_status") != "verified":
+    raise SystemExit("expected anti-flake policy boundary status verified for empty registry")
 if report.get("active_entries") != 0:
     raise SystemExit("expected anti-flake active_entries=0")
 PY
@@ -192,6 +195,47 @@ if ! printf '%s\n' "$rerun_drift_output" | grep -q '^anti_flake_policy_reason_co
 fi
 if ! printf '%s\n' "$rerun_drift_output" | grep -q '^anti_flake_policy_reason_class=violation$'; then
   echo "expected anti-flake rerun-policy violation reason class marker" >&2
+  exit 1
+fi
+
+cat > "$TMP_DIR/boundary-drift-fast-workflow.yml" <<'EOF'
+name: CI fast gate
+jobs:
+  fast:
+    steps:
+      - name: Run Kolme local-heavy contract lane
+        if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'
+        run: echo "local heavy"
+      - name: Generate performance smoke report
+        run: echo "smoke"
+EOF
+
+set +e
+boundary_drift_output="$(
+  bash "$SCRIPT" \
+    --registry-file "$TMP_DIR/empty-registry.txt" \
+    --expected-final-decision NO-GO \
+    --max-active-entries 0 \
+    --fast-workflow-file "$TMP_DIR/boundary-drift-fast-workflow.yml" \
+    --deep-workflow-file "$TMP_DIR/deep-workflow-rerun-ok.yml" \
+    --output-json "$TMP_DIR/boundary-drift-report.json" 2>&1
+)"
+boundary_drift_status=$?
+set -e
+if [ "$boundary_drift_status" -eq 0 ]; then
+  echo "expected anti-flake policy to fail when CI smoke/local-heavy boundary markers drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$boundary_drift_output" | grep -q '^anti_flake_policy_reason_codes=ci_smoke_threshold_check_step_missing$'; then
+  echo "expected anti-flake boundary drift reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$boundary_drift_output" | grep -q '^ci_smoke_local_heavy_boundary_status=violation$'; then
+  echo "expected anti-flake boundary violation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$boundary_drift_output" | grep -q '^anti_flake_policy_reason_class=violation$'; then
+  echo "expected anti-flake boundary drift reason class marker" >&2
   exit 1
 fi
 
