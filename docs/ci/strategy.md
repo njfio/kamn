@@ -224,6 +224,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `canonical_replay_payload_digest_mismatch`
   - `canonical_replay_transaction_ids_mismatch`
 
+## Durable Commit Checker Reason Mapping + CI Boundary Fast Lane
+- For durable block commit checker reason-mapping and boundary contract changes, keep PR checks bounded to:
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping unit_replay_drift_reason_projection_is_deterministic -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping functional_ci_smoke_lane_boundary_emits_low_cost_markers -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping integration_checker_projection_and_lane_boundary_contracts_are_consistent -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping regression_local_heavy_opt_in_reason_code_stays_stable -- --exact`
+  - `cargo test -p kamn-core --test block_commit_checker_reason_mapping performance_reason_projection_and_boundary_loops_stay_within_local_budget -- --exact`
+- Deterministic reason-mapping taxonomy and boundary markers:
+  - `durable_commit_checker_reason_taxonomy_version=kamn.runtime.durable-commit-checker-reason-taxonomy.v1`
+  - `ci_smoke_local_heavy_boundary_status=verified`
+  - `ci_smoke_lane_cost_profile=low`
+  - `local_heavy_lane_execution_mode=opt_in`
+- CI/local-heavy boundary rules:
+  - ci-smoke mode stays low-cost and requires `ci-fast-gate=PASS`.
+  - local-heavy mode is excluded from ci-fast-gate and requires explicit opt-in.
+  - fail-closed boundary reasons remain deterministic:
+    - `durable_commit_checker_ci_smoke_fast_gate_required`
+    - `durable_commit_checker_local_heavy_ci_fast_gate_mismatch`
+    - `durable_commit_checker_local_heavy_opt_in_required`
+
 ## Runtime Local Full-Mode Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json`
