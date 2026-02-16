@@ -39,6 +39,10 @@ DOC_MARKERS = [
     "signer_rotation_epoch_stale",
     "managed_signer_rotation_promotion_stalled_fail_closed_status=verified",
     "managed_signer_custody_audit_parity_fail_closed_status=verified",
+    "managed_signer_rotation_reason_taxonomy_status=verified",
+    "managed_signer_rehearsal_output_normalization_status=verified",
+    "managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1",
+    "managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected",
     "ci_local_promotion_budget_boundary_status=verified",
     "execution_scope=local-scheduled",
 ]
@@ -58,6 +62,19 @@ PROFILE_MATRIX_DOC_MARKERS = [
 PRIMARY_TEST_PRIVATE_KEY_HEX = "1" * 64
 SECONDARY_TEST_PRIVATE_KEY_HEX = "2" * 64
 MAX_CI_LOCAL_PROMOTION_SECONDS = 180
+MANAGED_SIGNER_ROTATION_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.managed-signer-startup-reason-taxonomy.v1"
+)
+MANAGED_SIGNER_ROTATION_REASON_CODES = (
+    "custody_continuity_bypass_detected",
+    "quorum_evidence_custody_sha256_mismatch",
+    "signer_rotation_epoch_stale",
+    "signer_rotation_promotion_stalled",
+    "signer_rotation_rehearsal_drift_detected",
+)
+MANAGED_SIGNER_ROTATION_REASON_CODES_CSV = ",".join(
+    MANAGED_SIGNER_ROTATION_REASON_CODES
+)
 
 
 def run_command(command: list[str], *, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -126,6 +143,15 @@ def _write_evidence_bundle(case_dir: Path) -> tuple[Path, Path, Path]:
 def _assert_marker(output: str, marker: str, message: str) -> None:
     if marker not in output:
         raise RuntimeError(message)
+
+
+def _normalize_reason_codes(reason_codes: Any) -> list[str]:
+    if not isinstance(reason_codes, list):
+        return []
+    normalized = sorted(
+        {code.strip() for code in reason_codes if isinstance(code, str) and code.strip()}
+    )
+    return normalized
 
 
 def run_preflight_scenario(
@@ -252,9 +278,13 @@ def run_preflight_scenario(
     if policy_payload.get("final_decision") != expected_final_decision:
         raise RuntimeError(f"scenario {scenario_id} policy report final decision mismatch")
 
+    observed_reason_codes = _normalize_reason_codes(policy_payload.get("reason_codes"))
+    observed_reason_codes_csv = (
+        ",".join(observed_reason_codes) if observed_reason_codes else "none"
+    )
+
     if expected_policy_reason_code is not None:
-        reason_codes = policy_payload.get("reason_codes")
-        if not isinstance(reason_codes, list) or expected_policy_reason_code not in reason_codes:
+        if expected_policy_reason_code not in observed_reason_codes:
             raise RuntimeError(
                 f"scenario {scenario_id} missing expected policy reason code: {expected_policy_reason_code}"
             )
@@ -266,6 +296,9 @@ def run_preflight_scenario(
         "expected_reason_code": expected_reason_code,
         "expected_policy_reason_code": expected_policy_reason_code,
         "final_decision": expected_final_decision,
+        "reason_taxonomy_version": MANAGED_SIGNER_ROTATION_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": MANAGED_SIGNER_ROTATION_REASON_CODES_CSV,
+        "observed_reason_codes_csv": observed_reason_codes_csv,
     }
 
 
@@ -458,6 +491,23 @@ def main() -> int:
                 ),
             ]
 
+            rotation_observed_reason_codes: set[str] = set()
+            for scenario_report in scenario_reports:
+                scenario_reason_codes_csv = scenario_report.get("observed_reason_codes_csv")
+                if not isinstance(scenario_reason_codes_csv, str):
+                    continue
+                if scenario_reason_codes_csv == "none":
+                    continue
+                for reason_code in scenario_reason_codes_csv.split(","):
+                    normalized_reason_code = reason_code.strip()
+                    if normalized_reason_code:
+                        rotation_observed_reason_codes.add(normalized_reason_code)
+            managed_signer_rotation_observed_reason_codes_csv = (
+                ",".join(sorted(rotation_observed_reason_codes))
+                if rotation_observed_reason_codes
+                else "none"
+            )
+
             elapsed_seconds = int(time.time() - start_time)
             if elapsed_seconds > args.max_seconds:
                 raise RuntimeError(
@@ -480,6 +530,11 @@ def main() -> int:
                 "managed_signer_rotation_promotion_stalled_fail_closed_status": "verified",
                 "managed_signer_custody_audit_parity_fail_closed_status": "verified",
                 "managed_signer_reason_code_status": "verified",
+                "managed_signer_rotation_reason_taxonomy_status": "verified",
+                "managed_signer_rehearsal_output_normalization_status": "verified",
+                "managed_signer_rotation_reason_taxonomy_version": MANAGED_SIGNER_ROTATION_REASON_TAXONOMY_VERSION,
+                "managed_signer_rotation_reason_codes_csv": MANAGED_SIGNER_ROTATION_REASON_CODES_CSV,
+                "managed_signer_rotation_observed_reason_codes_csv": managed_signer_rotation_observed_reason_codes_csv,
                 "signer_key_source_profile_matrix_status": "verified",
                 "signer_key_source_production_reject_status": "verified",
                 "signer_key_source_local_override_allow_status": "verified",
@@ -510,6 +565,20 @@ def main() -> int:
     print("managed_signer_rotation_promotion_stalled_fail_closed_status=verified")
     print("managed_signer_custody_audit_parity_fail_closed_status=verified")
     print("managed_signer_reason_code_status=verified")
+    print("managed_signer_rotation_reason_taxonomy_status=verified")
+    print("managed_signer_rehearsal_output_normalization_status=verified")
+    print(
+        "managed_signer_rotation_reason_taxonomy_version="
+        f"{MANAGED_SIGNER_ROTATION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "managed_signer_rotation_reason_codes_csv="
+        f"{MANAGED_SIGNER_ROTATION_REASON_CODES_CSV}"
+    )
+    print(
+        "managed_signer_rotation_observed_reason_codes_csv="
+        f"{managed_signer_rotation_observed_reason_codes_csv}"
+    )
     print("signer_key_source_profile_matrix_status=verified")
     print("signer_key_source_production_reject_status=verified")
     print("signer_key_source_local_override_allow_status=verified")

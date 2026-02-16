@@ -110,7 +110,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Contract lane: `scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh` and `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh` (Subtask #3067).
   - Contract report schema: `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`.
   - Baseline startup pass marker: `deployment_preflight_passed`.
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`, `managed_signer_custody_audit_parity_fail_closed_status=verified`, `execution_scope=local-scheduled`, `ci_local_promotion_budget_boundary_status=verified`, `performance_budget_status=verified`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`, `managed_signer_custody_audit_parity_fail_closed_status=verified`, `managed_signer_rotation_reason_taxonomy_status=verified`, `managed_signer_rehearsal_output_normalization_status=verified`, `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`, `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`, `execution_scope=local-scheduled`, `ci_local_promotion_budget_boundary_status=verified`, `performance_budget_status=verified`.
   - Signer key-source profile matrix validation delivered (Task #3108, Subtask #3109):
     - matrix markers: `signer_key_source_profile_matrix_status=verified`, `signer_key_source_production_reject_status=verified`, `signer_key_source_local_override_allow_status=verified`, `signer_fallback_private_key_reject_status=verified`.
     - production strict env-local fail-closed reason code: `production_signer_key_source_env_local_forbidden`.
@@ -120,8 +120,8 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
     - invalid signer profile: `checkpoint_failed_signer_profile_contract` + `signer_profile_mismatch`
     - stale signer rotation metadata: `checkpoint_failed_signer_rotation_freshness_contract` + `signer_rotation_epoch_stale`
-    - rotation promotion stalled: `deployment_preflight_passed` + `signer_rotation_promotion_stalled`
-    - custody-audit parity drift: `deployment_preflight_passed` + `quorum_evidence_custody_sha256_mismatch`
+    - rotation promotion stalled: `deployment_preflight_passed` + `signer_rotation_promotion_stalled` + `signer_rotation_rehearsal_drift_detected`
+    - custody-audit parity drift: `deployment_preflight_passed` + `quorum_evidence_custody_sha256_mismatch` + `custody_continuity_bypass_detected`
 - Post-roadmap hardening wave 4 local-live managed-signer runtime+finality validation delivered (Story #3088):
   - Local-live composition lane delivered and validated (Task #3102, Task #3104):
     - `scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`

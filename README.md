@@ -1012,6 +1012,10 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # managed_signer_rotation_promotion_stalled_fail_closed_status=verified
 # managed_signer_custody_audit_parity_fail_closed_status=verified
 # managed_signer_reason_code_status=verified
+# managed_signer_rotation_reason_taxonomy_status=verified
+# managed_signer_rehearsal_output_normalization_status=verified
+# managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1
+# managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected
 # execution_scope=local-scheduled
 # ci_local_promotion_budget_boundary_status=verified
 # baseline pass marker: deployment_preflight_passed
@@ -1026,8 +1030,10 @@ bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
 # signer_rotation_epoch_stale
 # rotation-promotion stall fail-closed markers
 # signer_rotation_promotion_stalled
+# signer_rotation_rehearsal_drift_detected
 # custody-audit parity fail-closed markers
 # quorum_evidence_custody_sha256_mismatch
+# custody_continuity_bypass_detected
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`

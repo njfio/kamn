@@ -2716,6 +2716,8 @@ JSON`
       - `signer_rotation_epoch_stale`
       - `signer_rotation_rehearsal_drift_detected`
       - `signer_profile_drift_threshold_mismatch`
+      - `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
+      - `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
     - fallback retirement docs parity remains fail-closed across README/CI/devnet runbooks (`Regression: #2337`).
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).

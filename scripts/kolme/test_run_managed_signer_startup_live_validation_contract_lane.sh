@@ -95,6 +95,10 @@ required_markers=(
   "signer_rotation_epoch_stale"
   "managed_signer_rotation_promotion_stalled_fail_closed_status=verified"
   "managed_signer_custody_audit_parity_fail_closed_status=verified"
+  "managed_signer_rotation_reason_taxonomy_status=verified"
+  "managed_signer_rehearsal_output_normalization_status=verified"
+  "managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1"
+  "managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected"
   "ci_local_promotion_budget_boundary_status=verified"
   "execution_scope=local-scheduled"
 )
@@ -137,6 +141,10 @@ for marker in \
   "managed_signer_rotation_promotion_stalled_fail_closed_status=verified" \
   "managed_signer_custody_audit_parity_fail_closed_status=verified" \
   "managed_signer_reason_code_status=verified" \
+  "managed_signer_rotation_reason_taxonomy_status=verified" \
+  "managed_signer_rehearsal_output_normalization_status=verified" \
+  "managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1" \
+  "managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected" \
   "signer_key_source_profile_matrix_status=verified" \
   "signer_key_source_production_reject_status=verified" \
   "signer_key_source_local_override_allow_status=verified" \
@@ -179,6 +187,14 @@ if payload.get("managed_signer_custody_audit_parity_fail_closed_status") != "ver
     raise SystemExit("expected managed_signer_custody_audit_parity_fail_closed_status=verified")
 if payload.get("managed_signer_reason_code_status") != "verified":
     raise SystemExit("expected managed_signer_reason_code_status=verified")
+if payload.get("managed_signer_rotation_reason_taxonomy_status") != "verified":
+    raise SystemExit("expected managed_signer_rotation_reason_taxonomy_status=verified")
+if payload.get("managed_signer_rehearsal_output_normalization_status") != "verified":
+    raise SystemExit("expected managed_signer_rehearsal_output_normalization_status=verified")
+if payload.get("managed_signer_rotation_reason_taxonomy_version") != "kamn.kolme.managed-signer-startup-reason-taxonomy.v1":
+    raise SystemExit("expected managed_signer_rotation_reason_taxonomy_version marker")
+if payload.get("managed_signer_rotation_reason_codes_csv") != "custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected":
+    raise SystemExit("expected deterministic managed_signer_rotation_reason_codes_csv marker")
 if payload.get("signer_key_source_profile_matrix_status") != "verified":
     raise SystemExit("expected signer_key_source_profile_matrix_status=verified")
 if payload.get("signer_key_source_production_reject_status") != "verified":
@@ -193,6 +209,11 @@ if payload.get("ci_local_promotion_budget_boundary_status") != "verified":
     raise SystemExit("expected ci_local_promotion_budget_boundary_status=verified")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+observed_reason_codes_csv = payload.get("managed_signer_rotation_observed_reason_codes_csv")
+if not isinstance(observed_reason_codes_csv, str):
+    raise SystemExit("expected managed_signer_rotation_observed_reason_codes_csv marker")
+if observed_reason_codes_csv == "none":
+    raise SystemExit("expected managed_signer_rotation_observed_reason_codes_csv to include fail-closed rehearsal reasons")
 scenario_reports = payload.get("scenario_reports")
 if not isinstance(scenario_reports, list) or len(scenario_reports) != 6:
     raise SystemExit("expected six scenario reports")
@@ -215,6 +236,17 @@ for entry in scenario_reports:
         raise SystemExit(f"unexpected final decision for {scenario_id}")
     if entry.get("expected_reason_code") != reason_code:
         raise SystemExit(f"unexpected expected_reason_code for {scenario_id}")
+    if entry.get("reason_taxonomy_version") != "kamn.kolme.managed-signer-startup-reason-taxonomy.v1":
+        raise SystemExit(f"unexpected reason taxonomy version for {scenario_id}")
+    if entry.get("reason_codes_csv") != "custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected":
+        raise SystemExit(f"unexpected reason taxonomy codes csv for {scenario_id}")
+    observed_reason_codes_csv = entry.get("observed_reason_codes_csv")
+    if not isinstance(observed_reason_codes_csv, str):
+        raise SystemExit(f"expected observed_reason_codes_csv string for {scenario_id}")
+    expected_policy_reason_code = entry.get("expected_policy_reason_code")
+    if isinstance(expected_policy_reason_code, str):
+        if expected_policy_reason_code not in observed_reason_codes_csv.split(","):
+            raise SystemExit(f"expected observed_reason_codes_csv to include expected_policy_reason_code for {scenario_id}")
 
 matrix_reports = payload.get("signer_key_source_matrix_reports")
 if not isinstance(matrix_reports, list) or len(matrix_reports) != 4:

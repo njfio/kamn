@@ -940,6 +940,10 @@ JSON`
   - `managed_signer_rotation_promotion_stalled_fail_closed_status=verified`
   - `managed_signer_custody_audit_parity_fail_closed_status=verified`
   - `managed_signer_reason_code_status=verified`
+  - `managed_signer_rotation_reason_taxonomy_status=verified`
+  - `managed_signer_rehearsal_output_normalization_status=verified`
+  - `managed_signer_rotation_reason_taxonomy_version=kamn.kolme.managed-signer-startup-reason-taxonomy.v1`
+  - `managed_signer_rotation_reason_codes_csv=custody_continuity_bypass_detected,quorum_evidence_custody_sha256_mismatch,signer_rotation_epoch_stale,signer_rotation_promotion_stalled,signer_rotation_rehearsal_drift_detected`
   - `execution_scope=local-scheduled`
   - `ci_local_promotion_budget_boundary_status=verified`
 - Fault-injection matrix and deterministic fail-closed reason codes:
@@ -955,9 +959,11 @@ JSON`
   - rotation promotion stalled:
     - checkpoint: `deployment_preflight_passed`
     - policy reason: `signer_rotation_promotion_stalled`
+    - normalized rehearsal drift reason: `signer_rotation_rehearsal_drift_detected`
   - custody-audit parity drift:
     - checkpoint: `deployment_preflight_passed`
     - policy reason: `quorum_evidence_custody_sha256_mismatch`
+    - normalized custody continuity bypass reason: `custody_continuity_bypass_detected`
 - Cost policy:
   - lane runtime is bounded via `--max-seconds`.
   - lane is local/scheduled by default (`ci_fast_gate_eligible=false`).
