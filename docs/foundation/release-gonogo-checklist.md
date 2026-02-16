@@ -30,6 +30,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - tampered actor payload for same message+nonce idempotency window must reject with `message_proof_anchor_conflicting_key`.
 - Regression policy:
   - mismatch/tamper acceptance drift forces `NO-GO` (`Regression: #4419`).
+
+## Service API Protocol/Session Reason Mapping Gate (Issue #4318)
+- Validation commands:
+  - `cargo test -p kamn-node unit_service_api_protocol_session_reason_projection_is_deterministic -- --exact`
+  - `cargo test -p kamn-node functional_service_api_protocol_session_docs_contract_validation_passes_release_checklist -- --exact`
+  - `cargo test -p kamn-node integration_service_api_protocol_session_reason_projection_and_docs_contract_flow -- --exact`
+  - `cargo test -p kamn-node regression_service_api_protocol_session_ws_upgrade_reason_class_stays_stable -- --exact`
+- Required deterministic taxonomy markers:
+  - `service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1`
+  - `service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing`
+- Required protocol/session reason markers:
+  - `service_api_ws_upgrade_header_missing`
+  - `service_api_ws_version_header_invalid`
+  - `service_api_payload_json_syntax_invalid`
+  - `service_api_auth_replay_nonce_detected`
+  - `service_api_protocol_session_docs_marker_missing`
+- Regression policy:
+  - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
+
 ## TLS Dependency-Posture Gate (Issues #4480, #4481)
 - Checker command:
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
