@@ -221,6 +221,18 @@ fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("submit_retry_terminal_decision"));
     assert!(PLAN.contains("finality_retry_terminal_decision"));
     assert!(PLAN.contains("retry_jitter_seed"));
+    assert!(PLAN.contains("retry_tls_smoke_contract_status=verified"));
+    assert!(PLAN.contains(
+        "retry_tls_live_https_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "retry_tls_submit_finality_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
+    ));
+    assert!(
+        PLAN.contains(
+            "retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+        )
+    );
     assert!(PLAN.contains("kamn.kolme.local-runtime-commit-live-summary.v1"));
     assert!(PLAN.contains("`Regression: #2099`"));
     assert!(PLAN.contains("`Regression: #4110`"));
