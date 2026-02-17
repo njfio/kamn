@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_retry_diagnostics_live.sh"
 TMP_DIR="$(mktemp -d)"
+EXPECTED_REASON_TAXONOMY_VERSION="kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2"
+EXPECTED_REASON_CODES_CSV="local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded"
+EXPECTED_RETRY_ENVELOPE_MAX_ATTEMPTS=3
+EXPECTED_RETRY_ENVELOPE_MAX_BACKOFF_SECONDS=8
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
@@ -58,11 +62,31 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^retry_jitter_parity_status=veri
   echo "expected local retry/diagnostics dry-run retry jitter parity marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$dry_run_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+if ! printf '%s\n' "$dry_run_output" | grep -q '^retry_envelope_exhaustion_fail_closed_status=verified$'; then
+  echo "expected local retry/diagnostics dry-run retry envelope exhaustion fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^reconnect_attempt_bound_status=verified$'; then
+  echo "expected local retry/diagnostics dry-run reconnect-attempt bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^reconnect_backoff_bound_status=verified$'; then
+  echo "expected local retry/diagnostics dry-run reconnect-backoff bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q "^retry_envelope_max_attempts=$EXPECTED_RETRY_ENVELOPE_MAX_ATTEMPTS$"; then
+  echo "expected local retry/diagnostics dry-run retry envelope max-attempts marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q "^retry_envelope_max_backoff_seconds=$EXPECTED_RETRY_ENVELOPE_MAX_BACKOFF_SECONDS$"; then
+  echo "expected local retry/diagnostics dry-run retry envelope max-backoff marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q "^reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION$"; then
   echo "expected local retry/diagnostics dry-run reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$dry_run_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+if ! printf '%s\n' "$dry_run_output" | grep -q "^reason_codes_csv=$EXPECTED_REASON_CODES_CSV$"; then
   echo "expected local retry/diagnostics dry-run reason codes taxonomy marker" >&2
   exit 1
 fi
@@ -91,9 +115,19 @@ if payload.get("retry_backoff_status") != "verified":
     raise SystemExit("expected local retry/diagnostics dry-run retry backoff marker")
 if payload.get("retry_jitter_parity_status") != "verified":
     raise SystemExit("expected local retry/diagnostics dry-run retry jitter parity marker")
-if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+if payload.get("retry_envelope_exhaustion_fail_closed_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run retry envelope exhaustion fail-closed marker")
+if payload.get("reconnect_attempt_bound_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run reconnect-attempt bound marker")
+if payload.get("reconnect_backoff_bound_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics dry-run reconnect-backoff bound marker")
+if payload.get("retry_envelope_max_attempts") != 3:
+    raise SystemExit("expected local retry/diagnostics dry-run retry_envelope_max_attempts=3")
+if payload.get("retry_envelope_max_backoff_seconds") != 8:
+    raise SystemExit("expected local retry/diagnostics dry-run retry_envelope_max_backoff_seconds=8")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2":
     raise SystemExit("expected deterministic local retry/diagnostics reason taxonomy marker")
-if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded":
     raise SystemExit("expected deterministic local retry/diagnostics reason codes taxonomy marker")
 PY
 
@@ -151,6 +185,26 @@ if ! printf '%s\n' "$run_output" | grep -q '^retry_jitter_parity_status=verified
   echo "expected local retry/diagnostics run retry jitter parity marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_output" | grep -q '^retry_envelope_exhaustion_fail_closed_status=verified$'; then
+  echo "expected local retry/diagnostics run retry envelope exhaustion fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^reconnect_attempt_bound_status=verified$'; then
+  echo "expected local retry/diagnostics run reconnect-attempt bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q '^reconnect_backoff_bound_status=verified$'; then
+  echo "expected local retry/diagnostics run reconnect-backoff bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^retry_envelope_max_attempts=$EXPECTED_RETRY_ENVELOPE_MAX_ATTEMPTS$"; then
+  echo "expected local retry/diagnostics run retry envelope max-attempts marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_output" | grep -q "^retry_envelope_max_backoff_seconds=$EXPECTED_RETRY_ENVELOPE_MAX_BACKOFF_SECONDS$"; then
+  echo "expected local retry/diagnostics run retry envelope max-backoff marker" >&2
+  exit 1
+fi
 
 python3 - "$run_report" "$nonce_stub" "$structured_stub" <<'PY'
 import json
@@ -183,9 +237,19 @@ if payload.get("retry_backoff_status") != "verified":
     raise SystemExit("expected local retry/diagnostics retry backoff marker")
 if payload.get("retry_jitter_parity_status") != "verified":
     raise SystemExit("expected local retry/diagnostics retry jitter parity marker")
-if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+if payload.get("retry_envelope_exhaustion_fail_closed_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics run retry envelope exhaustion fail-closed marker")
+if payload.get("reconnect_attempt_bound_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics run reconnect-attempt bound marker")
+if payload.get("reconnect_backoff_bound_status") != "verified":
+    raise SystemExit("expected local retry/diagnostics run reconnect-backoff bound marker")
+if payload.get("retry_envelope_max_attempts") != 3:
+    raise SystemExit("expected local retry/diagnostics run retry_envelope_max_attempts=3")
+if payload.get("retry_envelope_max_backoff_seconds") != 8:
+    raise SystemExit("expected local retry/diagnostics run retry_envelope_max_backoff_seconds=8")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2":
     raise SystemExit("expected deterministic local retry/diagnostics reason taxonomy marker")
-if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded":
     raise SystemExit("expected deterministic local retry/diagnostics reason codes taxonomy marker")
 PY
 

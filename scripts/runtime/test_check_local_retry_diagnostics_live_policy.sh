@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_retry_diagnostics_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_retry_diagnostics_live_policy.sh"
 TMP_DIR="$(mktemp -d)"
+EXPECTED_REASON_TAXONOMY_VERSION="kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2"
+EXPECTED_REASON_CODES_CSV="local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
@@ -41,11 +43,11 @@ if ! printf '%s\n' "$policy_output" | grep -q '^local_retry_diagnostics_policy_s
   echo "expected local retry/diagnostics policy checker status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION$"; then
   echo "expected local retry/diagnostics policy checker reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_codes_csv=$EXPECTED_REASON_CODES_CSV$"; then
   echo "expected local retry/diagnostics policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
@@ -66,9 +68,9 @@ if payload.get("local_retry_diagnostics_policy_status") != "verified":
     raise SystemExit("expected local retry/diagnostics policy marker")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
-if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1":
+if payload.get("reason_taxonomy_version") != "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2":
     raise SystemExit("expected deterministic local retry/diagnostics reason taxonomy marker")
-if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded":
+if payload.get("reason_codes_csv") != "local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded":
     raise SystemExit("expected deterministic local retry/diagnostics reason codes taxonomy marker")
 PY
 
@@ -183,6 +185,102 @@ if [ "$tampered_retry_jitter_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_retry_jitter_output" | grep -q 'local_retry_backoff_jitter_parity_bypass_detected'; then
   echo "expected deterministic retry jitter parity bypass marker" >&2
+  exit 1
+fi
+
+tampered_envelope_exhaustion_report="$TMP_DIR/runtime-local-retry-diagnostics-summary.envelope-exhaustion.tampered.json"
+cp "$summary_report" "$tampered_envelope_exhaustion_report"
+python3 - "$tampered_envelope_exhaustion_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["retry_envelope_exhaustion_fail_closed_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_envelope_exhaustion_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_envelope_exhaustion_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-local-retry-diagnostics-policy.envelope-exhaustion.tampered.json" 2>&1
+)"
+tampered_envelope_exhaustion_code=$?
+set -e
+if [ "$tampered_envelope_exhaustion_code" -eq 0 ]; then
+  echo "expected retry envelope exhaustion fail-closed drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_envelope_exhaustion_output" | grep -q 'local_retry_envelope_exhaustion_fail_closed_missing'; then
+  echo "expected deterministic retry envelope exhaustion fail-closed drift marker" >&2
+  exit 1
+fi
+
+tampered_reconnect_attempt_bound_report="$TMP_DIR/runtime-local-retry-diagnostics-summary.reconnect-attempt-bound.tampered.json"
+cp "$summary_report" "$tampered_reconnect_attempt_bound_report"
+python3 - "$tampered_reconnect_attempt_bound_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["retry_envelope_max_attempts"] = 999
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_reconnect_attempt_bound_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_reconnect_attempt_bound_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-local-retry-diagnostics-policy.reconnect-attempt-bound.tampered.json" 2>&1
+)"
+tampered_reconnect_attempt_bound_code=$?
+set -e
+if [ "$tampered_reconnect_attempt_bound_code" -eq 0 ]; then
+  echo "expected reconnect-attempt bound drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reconnect_attempt_bound_output" | grep -q 'local_retry_reconnect_attempt_bound_drift'; then
+  echo "expected deterministic reconnect-attempt bound drift marker" >&2
+  exit 1
+fi
+
+tampered_reconnect_backoff_bound_report="$TMP_DIR/runtime-local-retry-diagnostics-summary.reconnect-backoff-bound.tampered.json"
+cp "$summary_report" "$tampered_reconnect_backoff_bound_report"
+python3 - "$tampered_reconnect_backoff_bound_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["retry_envelope_max_backoff_seconds"] = 999
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_reconnect_backoff_bound_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_reconnect_backoff_bound_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-local-retry-diagnostics-policy.reconnect-backoff-bound.tampered.json" 2>&1
+)"
+tampered_reconnect_backoff_bound_code=$?
+set -e
+if [ "$tampered_reconnect_backoff_bound_code" -eq 0 ]; then
+  echo "expected reconnect-backoff bound drift tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_reconnect_backoff_bound_output" | grep -q 'local_retry_reconnect_backoff_bound_drift'; then
+  echo "expected deterministic reconnect-backoff bound drift marker" >&2
   exit 1
 fi
 
