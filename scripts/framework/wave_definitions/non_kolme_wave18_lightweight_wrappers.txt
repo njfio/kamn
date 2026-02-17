@@ -1,0 +1,3 @@
+scripts/deploy/run_deployment_slo_rollback_contract_lane.sh
+scripts/did/run_service_endpoint_canonicalization_contract_lane.sh
+scripts/sdk/run_localhost_signed_demo_contract_lane.sh

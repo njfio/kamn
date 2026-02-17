@@ -1,0 +1,1 @@
+scripts/message/run_processor_proof_artifact_contract_lane.sh
