@@ -117,6 +117,27 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - signal hook mode drift or shutdown reason-class drift forces `NO-GO` (`Regression: #4331`).
 
+## Runtime Observability Endpoint Payload Checker Gate (Issue #4328)
+- Validation commands:
+  - `cargo test -p kamn-node main_tests::observability_endpoint_tests::spec_c01_observability_endpoint_contract_checker_accepts_valid_surface_payloads -- --exact`
+  - `cargo test -p kamn-node main_tests::observability_endpoint_tests::spec_c02_observability_endpoint_contract_checker_rejects_missing_health_reason_code_field -- --exact`
+  - `cargo test -p kamn-node main_tests::observability_endpoint_tests::spec_c03_observability_endpoint_contract_checker_rejects_metrics_readiness_metric_drift -- --exact`
+  - `cargo test -p kamn-node main_tests::observability_endpoint_tests::spec_c04_observability_endpoint_contract_checker_rejects_stream_schema_version_drift -- --exact`
+  - `cargo test -p kamn-node main_tests::observability_endpoint_tests::spec_c05_observability_endpoint_contract_checker_fails_closed_with_stable_reason_markers -- --exact`
+- Required deterministic taxonomy markers:
+  - `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
+  - `reason_codes_csv=runtime_observability_policy_required_field_missing,runtime_observability_policy_schema_drift`
+  - `reason_codes_value=none|<csv>`
+- Required fail-closed envelope markers:
+  - `schema_version=kamn.runtime.observability.endpoint-fail-closed.v1`
+  - `status=fail_closed`
+  - `final_decision=NO-GO`
+- Fail-closed policy:
+  - missing required endpoint payload fields must reject with `runtime_observability_policy_required_field_missing:<surface>.<field>`.
+  - schema-version drift must reject with `runtime_observability_policy_schema_drift:<surface>.schema_version`.
+- Regression policy:
+  - endpoint payload schema/taxonomy drift acceptance forces `NO-GO` (`Regression: #4328`).
+
 ## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)
 - Checker command:
   - `scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json`
