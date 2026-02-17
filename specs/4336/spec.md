@@ -1,6 +1,6 @@
 # Spec — #4336 Subtask: RED Tests for Runtime Extraction Parity Drift Across Module Boundaries
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4329
 Milestone: R27.31 Signal-safe daemon lifecycle, streaming observability, and runtime-decomposition governance
