@@ -61,6 +61,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observa
   echo "expected runtime observability endpoint live policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected runtime observability endpoint live policy checker normalized reason_codes_value marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$policy_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
   echo "expected runtime observability endpoint live policy checker TLS negative matrix taxonomy marker" >&2
   exit 1
@@ -82,6 +86,8 @@ if payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected deterministic policy checker success reason_codes_value marker")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.observability-endpoint-reason-taxonomy.v1":
     raise SystemExit("expected deterministic runtime observability endpoint reason taxonomy marker")
 if payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
@@ -123,6 +129,10 @@ if ! printf '%s\n' "$tampered_output" | grep -q 'runtime_observability_policy_fi
   echo "expected deterministic mismatch reason code for tampered policy validation" >&2
   exit 1
 fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=runtime_observability_policy_final_decision_mismatch$'; then
+  echo "expected deterministic normalized reason_codes_value marker for final-decision mismatch tamper" >&2
+  exit 1
+fi
 
 for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status observability_tls_route_contract_status observability_tls_negative_matrix_status; do
   tampered_marker_report="$TMP_DIR/runtime-observability-endpoint-live-summary.${marker_field}.json"
@@ -158,6 +168,42 @@ PY
     exit 1
   fi
 done
+
+missing_required_field_report="$TMP_DIR/runtime-observability-endpoint-live-summary.required-field-missing.json"
+cp "$summary_report" "$missing_required_field_report"
+python3 - "$missing_required_field_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("observability_tls_negative_matrix_reason_codes_csv", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_required_field_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$missing_required_field_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.required-field-missing.json" 2>&1
+)"
+missing_required_field_code=$?
+set -e
+if [ "$missing_required_field_code" -eq 0 ]; then
+  echo "expected missing required field tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_required_field_output" | grep -q 'runtime_observability_policy_required_field_missing:observability_tls_negative_matrix_reason_codes_csv'; then
+  echo "expected deterministic missing required field reason code for observability endpoint policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_required_field_output" | grep -q '^reason_codes_value=.*runtime_observability_policy_required_field_missing:observability_tls_negative_matrix_reason_codes_csv'; then
+  echo "expected normalized reason_codes_value output to include missing required field reason code" >&2
+  exit 1
+fi
 
 tampered_taxonomy_report="$TMP_DIR/runtime-observability-endpoint-live-summary.fail-closed-taxonomy.json"
 cp "$summary_report" "$tampered_taxonomy_report"

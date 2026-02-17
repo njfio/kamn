@@ -81,6 +81,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_csv=runtime_observabi
   echo "expected runtime observability endpoint reason codes taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected runtime observability endpoint normalized reason_codes_value marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
   echo "expected runtime observability endpoint TLS negative matrix reason taxonomy marker" >&2
   exit 1
@@ -128,6 +132,8 @@ if lane_payload.get("reason_taxonomy_version") != "kamn.runtime.observability-en
     raise SystemExit("expected deterministic reason_taxonomy_version marker")
 if lane_payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
     raise SystemExit("expected deterministic reason_codes_csv marker")
+if lane_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected deterministic reason_codes_value marker")
 if lane_payload.get("observability_tls_negative_matrix_reason_codes_csv") != "observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected":
     raise SystemExit("expected deterministic observability_tls_negative_matrix_reason_codes_csv marker")
 if lane_payload.get("fail_closed_reason_code") != "runtime_observability_policy_final_decision_mismatch":
@@ -148,6 +154,8 @@ if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.observability-
     raise SystemExit("expected deterministic reason_taxonomy_version marker in policy report")
 if policy_payload.get("reason_codes_csv") != "runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded":
     raise SystemExit("expected deterministic reason_codes_csv marker in policy report")
+if policy_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected deterministic reason_codes_value marker in policy report")
 if policy_payload.get("observability_tls_negative_matrix_reason_codes_csv") != "observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected":
     raise SystemExit("expected deterministic observability_tls_negative_matrix_reason_codes_csv marker in policy report")
 PY
