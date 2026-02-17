@@ -5,9 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh"
+EVIDENCE_CHECKER="$ROOT_DIR/scripts/runtime/check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"
 RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
-for required_exec in "$CONTRACT_LANE" "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
+for required_exec in "$CONTRACT_LANE" "$VALIDATION_SCRIPT" "$POLICY_CHECKER" "$EVIDENCE_CHECKER"; do
   if [ ! -x "$required_exec" ]; then
     echo "expected process-isolated convergence script to be executable: $required_exec" >&2
     exit 1
@@ -22,6 +23,7 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 lane_report="$TMP_DIR/libp2p-convergence-process-isolated-contract-lane-report.json"
 policy_report="$TMP_DIR/libp2p-convergence-process-isolated-policy-report.json"
+convergence_report="$TMP_DIR/libp2p-convergence-process-isolated-convergence-report.json"
 
 lane_output="$(
   bash "$CONTRACT_LANE" \
@@ -30,7 +32,8 @@ lane_output="$(
     --ci-fast-gate PASS \
     --max-seconds 180 \
     --output-json "$lane_report" \
-    --policy-output-json "$policy_report"
+    --policy-output-json "$policy_report" \
+    --convergence-output-json "$convergence_report"
 )"
 if ! printf '%s\n' "$lane_output" | grep -q '^status=pass$'; then
   echo "expected process-isolated convergence contract lane status=pass marker" >&2
@@ -92,18 +95,47 @@ if ! printf '%s\n' "$lane_output" | grep -q '^finality_taxonomy_runbook_reason_c
   echo "expected process-isolated convergence contract lane finality taxonomy runbook reason code marker on GO path" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_finality_evidence_convergence_status=verified$'; then
+  echo "expected process-isolated convergence contract lane evidence convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected process-isolated convergence contract lane promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence contract lane evidence reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch$'; then
+  echo "expected process-isolated convergence contract lane evidence reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence contract lane promotion decision reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation$'; then
+  echo "expected process-isolated convergence contract lane promotion decision reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected process-isolated convergence contract lane promotion decision reason code marker on GO path" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status$'; then
   echo "expected process-isolated convergence fail-closed reason marker" >&2
   exit 1
 fi
 
-python3 - "$lane_report" "$policy_report" <<'PY'
+python3 - "$lane_report" "$policy_report" "$convergence_report" <<'PY'
 import json
 import pathlib
 import sys
 
 lane_payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 policy_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+convergence_payload = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
 
 if lane_payload.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-contract-lane-report.v1":
     raise SystemExit("unexpected process-isolated convergence contract-lane report schema")
@@ -135,6 +167,20 @@ if lane_payload.get("finality_taxonomy_runbook_reason_codes_csv") != "finality_t
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_codes_csv marker")
 if lane_payload.get("finality_taxonomy_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_code marker on GO path")
+if lane_payload.get("libp2p_finality_evidence_convergence_status") != "verified":
+    raise SystemExit("expected libp2p_finality_evidence_convergence_status=verified")
+if lane_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected promotion_decision_reason_mapping_status=verified")
+if lane_payload.get("libp2p_finality_evidence_reason_taxonomy_version") != "kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic libp2p_finality_evidence_reason_taxonomy_version marker")
+if lane_payload.get("libp2p_finality_evidence_reason_codes_csv") != "libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic libp2p_finality_evidence_reason_codes_csv marker")
+if lane_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if lane_payload.get("promotion_decision_reason_codes_csv") != "libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if lane_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker on GO path")
 
 if policy_payload.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
     raise SystemExit("unexpected process-isolated convergence policy report schema")
@@ -160,6 +206,27 @@ if policy_payload.get("finality_taxonomy_runbook_reason_codes_csv") != "finality
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_codes_csv marker in policy report")
 if policy_payload.get("finality_taxonomy_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_code marker on GO path in policy report")
+if policy_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker in policy report")
+if policy_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker in policy report")
+if policy_payload.get("promotion_decision_reason_codes_csv") != "libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker in policy report")
+if policy_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker on GO path in policy report")
+
+if convergence_payload.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-convergence-report.v1":
+    raise SystemExit("unexpected process-isolated convergence evidence report schema")
+if convergence_payload.get("final_decision") != "GO":
+    raise SystemExit("expected process-isolated convergence evidence final_decision=GO")
+if convergence_payload.get("evidence_convergence_status") != "verified":
+    raise SystemExit("expected deterministic evidence_convergence_status=verified marker")
+if convergence_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status=verified marker in convergence report")
+if convergence_payload.get("reason_taxonomy_version") != "kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic convergence reason taxonomy version marker")
+if convergence_payload.get("reason_codes_csv") != "libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic convergence reason codes csv marker")
 PY
 
 set +e

@@ -110,6 +110,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_runbook_reason
   echo "expected deterministic finality taxonomy runbook reason code marker on GO path in policy output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected deterministic promotion decision reason mapping status marker in policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected deterministic promotion decision reason taxonomy version marker in policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation$'; then
+  echo "expected deterministic promotion decision reason taxonomy csv marker in policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected deterministic promotion decision reason code marker on GO path in policy output" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -137,6 +153,14 @@ if payload.get("finality_taxonomy_runbook_reason_codes_csv") != "finality_taxono
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_codes_csv marker")
 if payload.get("finality_taxonomy_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_code marker on GO path")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker")
+if payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if payload.get("promotion_decision_reason_codes_csv") != "libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker on GO path")
 if payload.get("transport_classification_normalization_status") != "verified":
     raise SystemExit("expected deterministic transport_classification_normalization_status marker")
 if payload.get("fork_choice_stale_height_classification_status") != "verified":
