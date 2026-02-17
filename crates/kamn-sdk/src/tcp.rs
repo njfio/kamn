@@ -1,6 +1,6 @@
 use crate::{AgentDid, SdkError};
 use std::collections::HashMap;
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -565,9 +565,13 @@ impl TcpTransportAdapter {
         stream
             .flush()
             .map_err(|_| SdkError::TransportFailure("tcp flush failed"))?;
-        stream
-            .shutdown(Shutdown::Write)
-            .map_err(|_| SdkError::TransportFailure("tcp shutdown failed"))?;
+        if let Err(error) = stream.shutdown(Shutdown::Write) {
+            // Peer-side oversized payload rejection can close early after read;
+            // treat deterministic half-close races as successful send completion.
+            if !is_benign_tcp_shutdown_error(&error) {
+                return Err(SdkError::TransportFailure("tcp shutdown failed"));
+            }
+        }
         Ok(())
     }
 
@@ -631,6 +635,16 @@ impl TcpTransportAdapter {
             .map_err(|_| SdkError::TransportFailure("tcp replay guard lock poisoned"))?;
         guard.verify_and_record(envelope)
     }
+}
+
+fn is_benign_tcp_shutdown_error(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        ErrorKind::NotConnected
+            | ErrorKind::BrokenPipe
+            | ErrorKind::ConnectionReset
+            | ErrorKind::ConnectionAborted
+    )
 }
 
 fn serialize_transport_payload(

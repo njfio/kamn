@@ -18,6 +18,10 @@ Each service is wired for `runtime-mode full` and includes:
 - `--daemon-max-ticks 1000000`
 - `--daemon-tick-interval-ms 250`
 - `--api-bind 0.0.0.0:<role-port>`
+- `KAMN_SERVICE_API_TLS_MODE=require`
+- `KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem`
+- `KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem`
+- `./certs:/tls:ro` volume mount for local TLS material
 
 ## Ports
 
@@ -43,13 +47,30 @@ All services join the named bridge network `kamn_mesh` for deterministic local s
 
 ## Healthcheck And Restart
 
-Each role service includes a compose `healthcheck` probing `/healthz` over its local API bind:
+Each role service includes a compose `healthcheck` probing `/healthz` over HTTPS on its local API bind:
 
-- processor: `curl --fail --silent http://127.0.0.1:19081/healthz`
-- listener: `curl --fail --silent http://127.0.0.1:19082/healthz`
-- approver: `curl --fail --silent http://127.0.0.1:19083/healthz`
+- processor: `curl --fail --silent --insecure https://127.0.0.1:19081/healthz`
+- listener: `curl --fail --silent --insecure https://127.0.0.1:19082/healthz`
+- approver: `curl --fail --silent --insecure https://127.0.0.1:19083/healthz`
 
 `listener` and `approver` dependencies require `service_healthy` on `processor`, and all roles keep `restart: unless-stopped`.
+
+## TLS Material
+
+Compose mounts local TLS files from `deploy/certs` and requires:
+
+- `deploy/certs/service-api-cert.pem`
+- `deploy/certs/service-api-key.pem`
+
+Generate local self-signed material:
+
+```bash
+mkdir -p deploy/certs
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+  -keyout deploy/certs/service-api-key.pem \
+  -out deploy/certs/service-api-cert.pem \
+  -subj "/CN=localhost"
+```
 
 ## Commands
 

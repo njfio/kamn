@@ -8,6 +8,7 @@ K8S_MANIFEST="${K8S_MANIFEST_PATH:-$ROOT_DIR/deploy/k8s/kamn-node.yaml}"
 DEPLOY_DOC="${DEPLOY_DOC_PATH:-$ROOT_DIR/docs/ops/deployment.md}"
 DOCKER_DEPLOY_DOC="${DOCKER_DEPLOY_DOC_PATH:-$ROOT_DIR/docs/deployment/docker.md}"
 DOCKERIGNORE_FILE="${DOCKERIGNORE_PATH:-$ROOT_DIR/.dockerignore}"
+TLS_CERTS_README="${TLS_CERTS_README_PATH:-$ROOT_DIR/deploy/certs/README.md}"
 
 if [ ! -f "$DOCKERFILE" ]; then
   echo "expected Dockerfile for deployment assets story" >&2
@@ -31,6 +32,10 @@ if [ ! -f "$DOCKER_DEPLOY_DOC" ]; then
 fi
 if [ ! -f "$DOCKERIGNORE_FILE" ]; then
   echo "expected .dockerignore for deployment build-context hygiene" >&2
+  exit 1
+fi
+if [ ! -f "$TLS_CERTS_README" ]; then
+  echo "expected deploy/certs/README.md for compose tls material contract" >&2
   exit 1
 fi
 
@@ -80,6 +85,26 @@ if [ "$api_bind_marker_count" -lt 3 ]; then
   echo "expected docker-compose triad services to declare --api-bind endpoints" >&2
   exit 1
 fi
+service_api_tls_mode_marker_count="$(grep -c 'KAMN_SERVICE_API_TLS_MODE=require' "$COMPOSE_FILE" || true)"
+if [ "$service_api_tls_mode_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to require service api tls mode" >&2
+  exit 1
+fi
+service_api_tls_cert_marker_count="$(grep -c 'KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem' "$COMPOSE_FILE" || true)"
+if [ "$service_api_tls_cert_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to declare service api tls cert path" >&2
+  exit 1
+fi
+service_api_tls_key_marker_count="$(grep -c 'KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem' "$COMPOSE_FILE" || true)"
+if [ "$service_api_tls_key_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to declare service api tls key path" >&2
+  exit 1
+fi
+tls_volume_marker_count="$(grep -c './certs:/tls:ro' "$COMPOSE_FILE" || true)"
+if [ "$tls_volume_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to mount tls material volume" >&2
+  exit 1
+fi
 for required_port in '19081:19081' '19082:19082' '19083:19083'; do
   if ! grep -q "$required_port" "$COMPOSE_FILE"; then
     echo "expected docker-compose port mapping marker ${required_port}" >&2
@@ -122,15 +147,15 @@ if [ "$healthz_probe_marker_count" -lt 3 ]; then
   echo "expected docker-compose triad services to probe /healthz endpoints" >&2
   exit 1
 fi
-if ! grep -q 'curl --fail --silent http://127.0.0.1:19081/healthz > /dev/null' "$COMPOSE_FILE"; then
+if ! grep -q 'curl --fail --silent --insecure https://127.0.0.1:19081/healthz > /dev/null' "$COMPOSE_FILE"; then
   echo "expected docker-compose processor healthcheck probe marker" >&2
   exit 1
 fi
-if ! grep -q 'curl --fail --silent http://127.0.0.1:19082/healthz > /dev/null' "$COMPOSE_FILE"; then
+if ! grep -q 'curl --fail --silent --insecure https://127.0.0.1:19082/healthz > /dev/null' "$COMPOSE_FILE"; then
   echo "expected docker-compose listener healthcheck probe marker" >&2
   exit 1
 fi
-if ! grep -q 'curl --fail --silent http://127.0.0.1:19083/healthz > /dev/null' "$COMPOSE_FILE"; then
+if ! grep -q 'curl --fail --silent --insecure https://127.0.0.1:19083/healthz > /dev/null' "$COMPOSE_FILE"; then
   echo "expected docker-compose approver healthcheck probe marker" >&2
   exit 1
 fi
@@ -185,6 +210,18 @@ if ! grep -q 'service_healthy' "$DEPLOY_DOC"; then
   echo "expected deployment doc service_healthy dependency marker" >&2
   exit 1
 fi
+if ! grep -q 'KAMN_SERVICE_API_TLS_MODE=require' "$DEPLOY_DOC"; then
+  echo "expected deployment doc service api tls mode marker" >&2
+  exit 1
+fi
+if ! grep -q '\./certs:/tls:ro' "$DEPLOY_DOC"; then
+  echo "expected deployment doc tls material volume marker" >&2
+  exit 1
+fi
+if ! grep -q 'https://127.0.0.1:19081/healthz' "$DEPLOY_DOC"; then
+  echo "expected deployment doc https healthcheck marker" >&2
+  exit 1
+fi
 if ! grep -q '19081:19081' "$DEPLOY_DOC"; then
   echo "expected deployment doc processor api port marker" >&2
   exit 1
@@ -199,6 +236,10 @@ if ! grep -q 'kubectl apply -f deploy/k8s/kamn-node.yaml' "$DEPLOY_DOC"; then
 fi
 if ! grep -q '\.dockerignore' "$DEPLOY_DOC"; then
   echo "expected deployment doc to mention .dockerignore build-context hygiene" >&2
+  exit 1
+fi
+if ! grep -q 'deploy/certs/README.md' "$DEPLOY_DOC"; then
+  echo "expected deployment doc to mention deploy/certs/README.md tls setup marker" >&2
   exit 1
 fi
 if ! grep -q 'KAMN_NODE_DAEMON_MAX_TICKS' "$DEPLOY_DOC"; then
@@ -221,7 +262,12 @@ for required_marker in \
   'kamn_mesh' \
   'healthcheck' \
   '/healthz' \
-  'service_healthy'; do
+  'service_healthy' \
+  'KAMN_SERVICE_API_TLS_MODE=require' \
+  './certs:/tls:ro' \
+  'https://127.0.0.1:19081/healthz' \
+  'deploy/certs/service-api-cert.pem' \
+  'deploy/certs/service-api-key.pem'; do
   if ! grep -q "$required_marker" "$DOCKER_DEPLOY_DOC"; then
     echo "expected docker deployment doc marker ${required_marker}" >&2
     exit 1
