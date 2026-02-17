@@ -41,7 +41,7 @@ service API + observability route compatibility contract lanes.
 - Policy report schema: `kamn.runtime.observability-endpoint-live-policy-report.v1`
 - Deterministic taxonomy:
   - `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
-  - `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded`
+  - `reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded,runtime_observability_policy_required_field_missing,runtime_observability_policy_schema_drift`
   - `reason_codes_value=none|<csv>`
 - TLS negative matrix taxonomy:
   - `observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected`
@@ -71,7 +71,16 @@ service API + observability route compatibility contract lanes.
   - `elapsed_seconds`
   - `max_seconds`
 - Missing required fields fail closed with deterministic marker pattern:
-  - `runtime_observability_policy_required_field_missing:<field-name>`
+  - `runtime_observability_policy_required_field_missing:<surface>.<field-name>`
+- Schema-version drift fails closed with deterministic marker pattern:
+  - `runtime_observability_policy_schema_drift:<surface>.schema_version`
+- Checker surface scope:
+  - `surface in {metrics,health,readiness,stream}`
+- Fail-closed envelope contract fields:
+  - `schema_version=kamn.runtime.observability.endpoint-fail-closed.v1`
+  - `status=fail_closed`
+  - `final_decision=NO-GO`
+  - `reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1`
 
 ## SLO Threshold and Gate Reason Taxonomy Matrix (Issue #4462)
 

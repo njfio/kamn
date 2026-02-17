@@ -125,6 +125,32 @@ fn checklist_contains_shutdown_drain_checkpoint_reconciliation_gate() {
 }
 
 #[test]
+fn checklist_contains_runtime_observability_endpoint_payload_checker_gate() {
+    assert!(
+        CHECKLIST.contains("## Runtime Observability Endpoint Payload Checker Gate (Issue #4328)")
+    );
+    assert!(CHECKLIST.contains(
+        "main_tests::observability_endpoint_tests::spec_c01_observability_endpoint_contract_checker_accepts_valid_surface_payloads -- --exact"
+    ));
+    assert!(CHECKLIST.contains(
+        "main_tests::observability_endpoint_tests::spec_c05_observability_endpoint_contract_checker_fails_closed_with_stable_reason_markers -- --exact"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_codes_csv=runtime_observability_policy_required_field_missing,runtime_observability_policy_schema_drift"
+    ));
+    assert!(CHECKLIST.contains("schema_version=kamn.runtime.observability.endpoint-fail-closed.v1"));
+    assert!(CHECKLIST.contains("status=fail_closed"));
+    assert!(CHECKLIST.contains("final_decision=NO-GO"));
+    assert!(
+        CHECKLIST.contains("runtime_observability_policy_schema_drift:<surface>.schema_version")
+    );
+    assert!(CHECKLIST.contains("Regression: #4328"));
+}
+
+#[test]
 fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
     assert!(CHECKLIST
         .contains("## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)"));
