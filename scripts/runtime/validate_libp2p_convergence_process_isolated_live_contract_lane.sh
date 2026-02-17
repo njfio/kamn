@@ -6,6 +6,7 @@ VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_libp2p_convergence_process
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 BLOCK_PIPELINE_DOC="$ROOT_DIR/docs/architecture/block-pipeline.md"
+RUNBOOK_DOC="${KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_RUNBOOK_DOC_OVERRIDE:-$ROOT_DIR/docs/deploy/kolme_devnet_ops.md}"
 
 output_json=""
 policy_output_json=""
@@ -74,7 +75,7 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
     exit 1
   fi
 done
-for required_doc in "$STRATEGY_DOC" "$BLOCK_PIPELINE_DOC"; do
+for required_doc in "$STRATEGY_DOC" "$BLOCK_PIPELINE_DOC" "$RUNBOOK_DOC"; do
   if [ ! -f "$required_doc" ]; then
     echo "expected required documentation file '$required_doc'" >&2
     exit 1
@@ -173,6 +174,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^convergence_reason_codes_csv
   echo "expected process-isolated convergence reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_mapping_status=verified$'; then
+  echo "expected process-isolated convergence finality taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected process-isolated convergence runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected process-isolated convergence finality taxonomy runbook reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^transport_classification_normalization_status=verified$'; then
   echo "expected process-isolated convergence transport classification normalization marker" >&2
   exit 1
@@ -187,6 +204,7 @@ policy_output="$(
     --report-file "$summary_report" \
     --expected-final-decision GO \
     --ci-fast-gate "$ci_fast_gate" \
+    --runbook-file "$RUNBOOK_DOC" \
     --output-json "$policy_report"
 )"
 if ! printf '%s\n' "$policy_output" | grep -q '^status=ok$'; then
@@ -199,6 +217,26 @@ if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^libp2p_process_isolated_convergence_policy_status=verified$'; then
   echo "expected process-isolated convergence policy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_mapping_status=verified$'; then
+  echo "expected process-isolated convergence policy finality taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected process-isolated convergence policy runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence policy finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected process-isolated convergence policy finality taxonomy runbook reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_runbook_reason_code=none$'; then
+  echo "expected process-isolated convergence policy finality taxonomy runbook reason code marker on GO path" >&2
   exit 1
 fi
 
@@ -220,6 +258,7 @@ tampered_policy_output="$(
     --report-file "$tampered_report" \
     --expected-final-decision GO \
     --ci-fast-gate "$ci_fast_gate" \
+    --runbook-file "$RUNBOOK_DOC" \
     --output-json "$TMP_DIR/libp2p-convergence-process-isolated-live-policy.tampered.json" 2>&1
 )"
 tampered_policy_code=$?
@@ -249,8 +288,36 @@ if ! grep -q "process-isolated convergence deep run-mode commands remain exclude
   echo "expected CI strategy docs to include process-isolated convergence deep run-mode exclusion marker" >&2
   exit 1
 fi
+if ! grep -q "finality taxonomy and runbook-marker parity remains deterministic via:" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include finality taxonomy and runbook-marker parity heading" >&2
+  exit 1
+fi
+if ! grep -q "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
 if ! grep -q "libp2p_convergence_process_isolated_live_contract.py" "$BLOCK_PIPELINE_DOC"; then
   echo "expected block-pipeline doc to reference process-isolated convergence contract implementation" >&2
+  exit 1
+fi
+if ! grep -q "## Fork-Choice Finality Taxonomy and Runbook Marker Parity Contracts (Issue #4252)" "$RUNBOOK_DOC"; then
+  echo "expected runbook doc to include finality taxonomy and runbook marker parity section" >&2
+  exit 1
+fi
+if ! grep -q "finality_taxonomy_mapping_status=verified" "$RUNBOOK_DOC"; then
+  echo "expected runbook doc to include finality taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! grep -q "runbook_marker_parity_status=verified" "$RUNBOOK_DOC"; then
+  echo "expected runbook doc to include runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! grep -q "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1" "$RUNBOOK_DOC"; then
+  echo "expected runbook doc to include finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch" "$RUNBOOK_DOC"; then
+  echo "expected runbook doc to include finality taxonomy runbook reason codes marker" >&2
   exit 1
 fi
 
@@ -286,10 +353,28 @@ if summary_report.get("convergence_reason_taxonomy_version") != "kamn.runtime.li
     raise SystemExit("expected summary convergence_reason_taxonomy_version marker")
 if summary_report.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
     raise SystemExit("expected summary convergence_reason_codes_csv marker")
+if summary_report.get("finality_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected summary finality_taxonomy_mapping_status=verified")
+if summary_report.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected summary runbook_marker_parity_status=verified")
+if summary_report.get("finality_taxonomy_runbook_reason_taxonomy_version") != "kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected summary finality_taxonomy_runbook_reason_taxonomy_version marker")
+if summary_report.get("finality_taxonomy_runbook_reason_codes_csv") != "finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected summary finality_taxonomy_runbook_reason_codes_csv marker")
 if summary_report.get("transport_classification_normalization_status") != "verified":
     raise SystemExit("expected summary transport_classification_normalization_status=verified")
 if summary_report.get("fork_choice_stale_height_classification_status") != "verified":
     raise SystemExit("expected summary fork_choice_stale_height_classification_status=verified")
+if policy_report.get("finality_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected policy finality_taxonomy_mapping_status=verified")
+if policy_report.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected policy runbook_marker_parity_status=verified")
+if policy_report.get("finality_taxonomy_runbook_reason_taxonomy_version") != "kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected policy finality_taxonomy_runbook_reason_taxonomy_version marker")
+if policy_report.get("finality_taxonomy_runbook_reason_codes_csv") != "finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected policy finality_taxonomy_runbook_reason_codes_csv marker")
+if policy_report.get("finality_taxonomy_runbook_reason_code") != "none":
+    raise SystemExit("expected policy finality_taxonomy_runbook_reason_code=none")
 
 lane_report = {
     "schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-contract-lane-report.v1",
@@ -308,6 +393,19 @@ lane_report = {
         "convergence_reason_taxonomy_version"
     ),
     "convergence_reason_codes_csv": summary_report.get("convergence_reason_codes_csv"),
+    "finality_taxonomy_mapping_status": policy_report.get(
+        "finality_taxonomy_mapping_status"
+    ),
+    "runbook_marker_parity_status": policy_report.get("runbook_marker_parity_status"),
+    "finality_taxonomy_runbook_reason_taxonomy_version": policy_report.get(
+        "finality_taxonomy_runbook_reason_taxonomy_version"
+    ),
+    "finality_taxonomy_runbook_reason_codes_csv": policy_report.get(
+        "finality_taxonomy_runbook_reason_codes_csv"
+    ),
+    "finality_taxonomy_runbook_reason_code": policy_report.get(
+        "finality_taxonomy_runbook_reason_code"
+    ),
     "transport_classification_normalization_status": summary_report.get(
         "transport_classification_normalization_status"
     ),
@@ -341,6 +439,11 @@ echo "runtime_transport_mode_status=verified"
 echo "reason_taxonomy_status=verified"
 echo "convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
 echo "convergence_reason_codes_csv=fork_choice_stale_block_height"
+echo "finality_taxonomy_mapping_status=verified"
+echo "runbook_marker_parity_status=verified"
+echo "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
+echo "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+echo "finality_taxonomy_runbook_reason_code=none"
 echo "transport_classification_normalization_status=verified"
 echo "fork_choice_stale_height_classification_status=verified"
 echo "fail_closed_status=verified"

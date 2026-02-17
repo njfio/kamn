@@ -95,6 +95,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^convergence_reason_codes_csv
   echo "expected process-isolated convergence reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_mapping_status=verified$'; then
+  echo "expected process-isolated convergence finality taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected process-isolated convergence runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1$'; then
+  echo "expected process-isolated convergence finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected process-isolated convergence finality taxonomy runbook reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^transport_classification_normalization_status=verified$'; then
   echo "expected process-isolated convergence transport classification normalization marker" >&2
   exit 1
@@ -129,6 +145,14 @@ if payload.get("convergence_reason_taxonomy_version") != "kamn.runtime.libp2p-co
     raise SystemExit("expected deterministic convergence_reason_taxonomy_version marker")
 if payload.get("convergence_reason_codes_csv") != "fork_choice_stale_block_height":
     raise SystemExit("expected deterministic convergence_reason_codes_csv marker")
+if payload.get("finality_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected deterministic finality_taxonomy_mapping_status=verified")
+if payload.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected deterministic runbook_marker_parity_status=verified")
+if payload.get("finality_taxonomy_runbook_reason_taxonomy_version") != "kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_taxonomy_version marker")
+if payload.get("finality_taxonomy_runbook_reason_codes_csv") != "finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic finality_taxonomy_runbook_reason_codes_csv marker")
 if payload.get("transport_classification_normalization_status") != "verified":
     raise SystemExit("expected deterministic transport_classification_normalization_status=verified")
 if payload.get("fork_choice_stale_height_classification_status") != "verified":

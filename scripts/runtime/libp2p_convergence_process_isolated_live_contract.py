@@ -30,6 +30,13 @@ POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-re
 RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
 CONVERGENCE_REASON_TAXONOMY_VERSION = "kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
 CONVERGENCE_REASON_CODES_CSV = "fork_choice_stale_block_height"
+FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
+)
+FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV = (
+    "finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+)
+DEFAULT_RUNBOOK_FILE = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
 LEGACY_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN"
 DEEP_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN"
 EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
@@ -91,6 +98,35 @@ SMOKE_TESTS: list[tuple[str, list[str]]] = [
 DEEP_HARNESS_VALIDATION = (
     ROOT_DIR / "scripts/runtime/validate_libp2p_process_isolated_harness.sh"
 )
+
+
+def _required_runbook_markers() -> list[str]:
+    return [
+        "finality_taxonomy_mapping_status=verified",
+        "runbook_marker_parity_status=verified",
+        "convergence_reason_taxonomy_version="
+        f"{CONVERGENCE_REASON_TAXONOMY_VERSION}",
+        "convergence_reason_codes_csv="
+        f"{CONVERGENCE_REASON_CODES_CSV}",
+        "finality_taxonomy_runbook_reason_taxonomy_version="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION}",
+        "finality_taxonomy_runbook_reason_codes_csv="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV}",
+    ]
+
+
+def _resolve_finality_taxonomy_runbook_reason_code(
+    reason_codes: list[str], final_decision: str
+) -> str:
+    if final_decision == "GO":
+        return "none"
+    if "runbook_marker_parity_mismatch" in reason_codes:
+        return "runbook_marker_parity_mismatch"
+    if "finality_taxonomy_mapping_drift_detected" in reason_codes:
+        return "finality_taxonomy_mapping_drift_detected"
+    if reason_codes:
+        return reason_codes[0]
+    return "finality_taxonomy_mapping_drift_detected"
 
 
 def _run_command(
@@ -237,6 +273,14 @@ def _run_lane(args: argparse.Namespace) -> int:
         "convergence_reason_code_status": "verified",
         "convergence_reason_taxonomy_version": CONVERGENCE_REASON_TAXONOMY_VERSION,
         "convergence_reason_codes_csv": CONVERGENCE_REASON_CODES_CSV,
+        "finality_taxonomy_mapping_status": "verified",
+        "runbook_marker_parity_status": "verified",
+        "finality_taxonomy_runbook_reason_taxonomy_version": (
+            FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION
+        ),
+        "finality_taxonomy_runbook_reason_codes_csv": (
+            FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV
+        ),
         "transport_classification_normalization_status": "verified",
         "fork_choice_stale_height_classification_status": "verified",
         "convergence_reason_codes": ["fork_choice_stale_block_height"],
@@ -296,6 +340,16 @@ def _run_lane(args: argparse.Namespace) -> int:
         f"{CONVERGENCE_REASON_TAXONOMY_VERSION}"
     )
     print(f"convergence_reason_codes_csv={CONVERGENCE_REASON_CODES_CSV}")
+    print("finality_taxonomy_mapping_status=verified")
+    print("runbook_marker_parity_status=verified")
+    print(
+        "finality_taxonomy_runbook_reason_taxonomy_version="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "finality_taxonomy_runbook_reason_codes_csv="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV}"
+    )
     print("transport_classification_normalization_status=verified")
     print("fork_choice_stale_height_classification_status=verified")
     print("convergence_reason_codes=fork_choice_stale_block_height")
@@ -325,6 +379,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         ("GO", "NO-GO"),
     )
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate, ("PASS", "FAIL"))
+    runbook_file = Path(args.runbook_file).resolve()
+    if not runbook_file.is_file():
+        fail(f"runbook file not found: {runbook_file}")
+    runbook_text = runbook_file.read_text(encoding="utf-8")
 
     required_fields = [
         "schema_version",
@@ -351,6 +409,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "convergence_reason_code_status",
         "convergence_reason_taxonomy_version",
         "convergence_reason_codes_csv",
+        "finality_taxonomy_mapping_status",
+        "runbook_marker_parity_status",
+        "finality_taxonomy_runbook_reason_taxonomy_version",
+        "finality_taxonomy_runbook_reason_codes_csv",
         "transport_classification_normalization_status",
         "fork_choice_stale_height_classification_status",
         "convergence_reason_codes",
@@ -436,6 +498,53 @@ def _check_policy(args: argparse.Namespace) -> int:
             "libp2p_process_isolated_convergence_policy_"
             "convergence_reason_codes_csv_mismatch"
         ),
+    )
+    decision.reject_if(
+        report.get("finality_taxonomy_mapping_status") != "verified",
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "finality_taxonomy_mapping_status_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("runbook_marker_parity_status") != "verified",
+        "runbook_marker_parity_mismatch",
+    )
+    decision.reject_if(
+        report.get("finality_taxonomy_runbook_reason_taxonomy_version")
+        != FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION,
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "finality_taxonomy_runbook_reason_taxonomy_version_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("finality_taxonomy_runbook_reason_codes_csv")
+        != FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV,
+        (
+            "libp2p_process_isolated_convergence_policy_"
+            "finality_taxonomy_runbook_reason_codes_csv_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("convergence_reason_code_status") != "verified"
+        or report.get("convergence_reason_taxonomy_version")
+        != CONVERGENCE_REASON_TAXONOMY_VERSION
+        or report.get("convergence_reason_codes_csv") != CONVERGENCE_REASON_CODES_CSV
+        or report.get("finality_taxonomy_mapping_status") != "verified"
+        or report.get("finality_taxonomy_runbook_reason_taxonomy_version")
+        != FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION
+        or report.get("finality_taxonomy_runbook_reason_codes_csv")
+        != FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV,
+        "finality_taxonomy_mapping_drift_detected",
+    )
+    required_runbook_markers = _required_runbook_markers()
+    missing_runbook_markers = [
+        marker for marker in required_runbook_markers if marker not in runbook_text
+    ]
+    decision.reject_if(
+        bool(missing_runbook_markers),
+        "runbook_marker_parity_mismatch",
     )
 
     decision.reject_if(
@@ -580,6 +689,17 @@ def _check_policy(args: argparse.Namespace) -> int:
         )
 
     final_decision, reason_codes = decision.finalize("none")
+    finality_taxonomy_mapping_status = (
+        "failed"
+        if "finality_taxonomy_mapping_drift_detected" in reason_codes
+        else "verified"
+    )
+    runbook_marker_parity_status = (
+        "failed" if "runbook_marker_parity_mismatch" in reason_codes else "verified"
+    )
+    finality_taxonomy_runbook_reason_code = (
+        _resolve_finality_taxonomy_runbook_reason_code(reason_codes, final_decision)
+    )
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "rejected"
 
@@ -590,6 +710,17 @@ def _check_policy(args: argparse.Namespace) -> int:
         "libp2p_process_isolated_convergence_policy_status": policy_status,
         "convergence_reason_taxonomy_version": CONVERGENCE_REASON_TAXONOMY_VERSION,
         "convergence_reason_codes_csv": CONVERGENCE_REASON_CODES_CSV,
+        "finality_taxonomy_mapping_status": finality_taxonomy_mapping_status,
+        "runbook_marker_parity_status": runbook_marker_parity_status,
+        "finality_taxonomy_runbook_reason_taxonomy_version": (
+            FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION
+        ),
+        "finality_taxonomy_runbook_reason_codes_csv": (
+            FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV
+        ),
+        "finality_taxonomy_runbook_reason_code": (
+            finality_taxonomy_runbook_reason_code
+        ),
         "transport_classification_normalization_status": "verified",
         "fork_choice_stale_height_classification_status": "verified",
         "expected_final_decision": expected_final_decision,
@@ -597,6 +728,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
+        "runbook_file": str(runbook_file),
         "generated_at_epoch": int(time.time()),
     }
 
@@ -611,6 +743,26 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(
         "libp2p_process_isolated_convergence_policy_status="
         f"{policy_status}"
+    )
+    print(
+        "finality_taxonomy_mapping_status="
+        f"{finality_taxonomy_mapping_status}"
+    )
+    print(
+        "runbook_marker_parity_status="
+        f"{runbook_marker_parity_status}"
+    )
+    print(
+        "finality_taxonomy_runbook_reason_taxonomy_version="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "finality_taxonomy_runbook_reason_codes_csv="
+        f"{FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV}"
+    )
+    print(
+        "finality_taxonomy_runbook_reason_code="
+        f"{finality_taxonomy_runbook_reason_code}"
     )
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
@@ -718,6 +870,11 @@ def main() -> int:
         "--ci-fast-gate",
         default="PASS",
         help="CI fast-gate marker (PASS|FAIL).",
+    )
+    check_policy_parser.add_argument(
+        "--runbook-file",
+        default=str(DEFAULT_RUNBOOK_FILE),
+        help="Runbook marker-parity source file path.",
     )
     check_policy_parser.add_argument(
         "--output-json",
