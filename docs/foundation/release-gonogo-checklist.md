@@ -601,6 +601,14 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
     - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
     - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
     - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+  - deterministic provider-failure taxonomy markers:
+    - `provider_failure_reason_taxonomy_version=kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1`
+    - `provider_failure_reason_codes_csv=provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected`
+    - `provider_failure_reason_codes_value=none|provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected`
+  - deterministic submission/finality lineage-failure markers:
+    - `request_payload_evidence_artifact_path_lineage_mismatch`
+    - `submit_evidence_artifact_path_lineage_mismatch`
+    - `finality_evidence_artifact_path_lineage_mismatch`
 - Signed-message + commit evidence demo policy checker:
   - `python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json`
   - deterministic mismatch marker:
@@ -621,6 +629,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - runtime commit replay recovery/nonce-idempotency taxonomy drift forces `NO-GO` (`Regression: #4422`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
   - submit/finality success-reason mismatches force `NO-GO` (`submit_finality_reason_mismatch_for_finality_enabled_run`, `submit_finality_reason_mismatch_for_submit_only_run`) (`Regression: #4420`).
+  - submission/finality artifact lineage cross-link drift forces `NO-GO` (`request_payload_evidence_artifact_path_lineage_mismatch`, `submit_evidence_artifact_path_lineage_mismatch`, `finality_evidence_artifact_path_lineage_mismatch`) (`Regression: #4372`).
+  - provider-failure taxonomy drift or non-deterministic provider-failure reason projection forces `NO-GO` (`Regression: #4378`).
   - signed-message checkpoint failures accepted alongside commit evidence success force `NO-GO` (`signed_message_commit_evidence_mismatch`) (`Regression: #4497`).
   - signed-to-Kolme taxonomy/normalized-evidence drift forces `NO-GO` (`reason_taxonomy_overall_mismatch`, `normalized_evidence_status_mismatch:local_kamn_runtime_integration_run`) (`Regression: #4498`).
 
