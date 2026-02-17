@@ -1095,6 +1095,29 @@ fn doc_contains_live_gonogo_boundary_reason_taxonomy_markers() {
 }
 
 #[test]
+fn doc_contains_transport_observability_tls_ci_smoke_convergence_governance() {
+    assert!(DOC.contains("Transport/Observability/TLS CI smoke convergence governance"));
+    assert!(DOC
+        .contains("python3 scripts/ci/check_transport_observability_tls_ci_smoke_convergence.py"));
+    assert!(DOC.contains("test_check_transport_observability_tls_ci_smoke_convergence.sh"));
+    assert!(DOC.contains(
+        "transport_observability_tls_reason_taxonomy_version=kamn.ci.transport-observability-tls-ci-smoke-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "transport_observability_tls_reason_codes_csv=transport_ci_smoke_composition_missing,observability_ci_smoke_composition_missing,tls_ci_smoke_composition_missing,transport_local_heavy_command_leaked_in_fast_mode,observability_local_heavy_command_leaked_in_fast_mode,tls_local_heavy_command_leaked_in_fast_mode,ci_fast_gate_transport_run_mode_not_excluded,ci_fast_gate_observability_run_mode_not_excluded,ci_fast_gate_tls_deep_lane_not_excluded,ci_strategy_convergence_markers_missing,production_plan_convergence_markers_missing,transport_observability_tls_ci_smoke_seconds_exceeded"
+    ));
+    assert!(DOC.contains("transport_observability_tls_ci_smoke_max_seconds=120"));
+    assert!(DOC.contains("transport_observability_tls_local_heavy_max_seconds=900"));
+    assert!(DOC.contains("transport_observability_tls_ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("transport_observability_tls_local_heavy_execution_mode=opt_in"));
+    assert!(DOC.contains("transport_ci_smoke_composition_missing"));
+    assert!(DOC.contains("observability_ci_smoke_composition_missing"));
+    assert!(DOC.contains("tls_ci_smoke_composition_missing"));
+    assert!(DOC.contains("transport_observability_tls_ci_smoke_seconds_exceeded"));
+    assert!(DOC.contains("Regression: #4299"));
+}
+
+#[test]
 fn doc_contains_persistence_adapter_integrity_ci_boundary_markers() {
     assert!(DOC.contains("## Persistence Adapter Integrity + CI Boundary Fast Lane"));
     assert!(DOC.contains("test_validate_persistence_adapters_live.sh"));

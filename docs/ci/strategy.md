@@ -3763,6 +3763,37 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch`
 - Regression coverage: `Regression: #4442`
 
+### Transport/Observability/TLS CI smoke convergence governance
+- Composite checker command:
+  - `python3 scripts/ci/check_transport_observability_tls_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/transport-observability-tls-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh`
+- Deterministic convergence markers:
+  - `transport_observability_tls_reason_taxonomy_version=kamn.ci.transport-observability-tls-ci-smoke-convergence-reason-taxonomy.v1`
+  - `transport_observability_tls_reason_codes_csv=transport_ci_smoke_composition_missing,observability_ci_smoke_composition_missing,tls_ci_smoke_composition_missing,transport_local_heavy_command_leaked_in_fast_mode,observability_local_heavy_command_leaked_in_fast_mode,tls_local_heavy_command_leaked_in_fast_mode,ci_fast_gate_transport_run_mode_not_excluded,ci_fast_gate_observability_run_mode_not_excluded,ci_fast_gate_tls_deep_lane_not_excluded,ci_strategy_convergence_markers_missing,production_plan_convergence_markers_missing,transport_observability_tls_ci_smoke_seconds_exceeded`
+  - `transport_observability_tls_ci_smoke_max_seconds=120`
+  - `transport_observability_tls_local_heavy_max_seconds=900`
+  - `transport_observability_tls_ci_smoke_lane_cost_profile=low`
+  - `transport_observability_tls_local_heavy_execution_mode=opt_in`
+- Composition contract surface:
+  - transport smoke policy marker: `scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh`
+  - observability smoke policy marker: `scripts/ci/test_check_observability_endpoint_drift_contract.sh`
+  - tls smoke policy marker: `scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh`
+- Fail-closed reasons:
+  - `transport_ci_smoke_composition_missing`
+  - `observability_ci_smoke_composition_missing`
+  - `tls_ci_smoke_composition_missing`
+  - `transport_local_heavy_command_leaked_in_fast_mode`
+  - `observability_local_heavy_command_leaked_in_fast_mode`
+  - `tls_local_heavy_command_leaked_in_fast_mode`
+  - `ci_fast_gate_transport_run_mode_not_excluded`
+  - `ci_fast_gate_observability_run_mode_not_excluded`
+  - `ci_fast_gate_tls_deep_lane_not_excluded`
+  - `ci_strategy_convergence_markers_missing`
+  - `production_plan_convergence_markers_missing`
+  - `transport_observability_tls_ci_smoke_seconds_exceeded`
+- Regression coverage: `Regression: #4299`
+
 ## Flaky Reproducer Contract
 - Deterministic reproducer command:
   - `bash scripts/ci/run_flaky_reproducer.sh --seed 17 --attempts 5 --max-seconds 120 --artifact-dir /tmp/flaky-reproducer-artifacts --output-json /tmp/flaky-reproducer-report.json -- cargo test -p kamn-core --test invariant_harness`
