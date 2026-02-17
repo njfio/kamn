@@ -99,6 +99,24 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
 
+## Shutdown Signal Lifecycle Reason Mapping Gate (Issue #4331)
+- Validation commands:
+  - `cargo test -p kamn-node main_tests::runtime_tests::regression_full_supervisor_stop_contract_classifier_rejects_empty_or_non_numeric_signal_tick -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::regression_shutdown_policy_rejects_os_signal_hooks_for_non_daemon_modes -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field_parity -- --exact`
+- Required deterministic taxonomy markers:
+  - `shutdown_signal_reason_taxonomy_version=kamn.runtime.shutdown-signal-lifecycle-reason-taxonomy.v1`
+  - `shutdown_signal_reason_codes_csv=full_supervisor_stop_invalid_shutdown_drain_status,full_supervisor_stop_invalid_shutdown_snapshot_flush_status,full_supervisor_stop_not_signaled_status_mismatch,full_supervisor_stop_not_signaled_snapshot_flush_mismatch,full_supervisor_stop_missing_signal_tick,full_supervisor_stop_missing_drain_ticks,full_supervisor_stop_missing_timeout_ticks,full_supervisor_stop_missing_ignored_signals,full_supervisor_stop_graceful_status_mismatch,full_supervisor_stop_graceful_snapshot_flush_status_mismatch,full_supervisor_stop_graceful_timeout_status_mismatch,full_supervisor_stop_graceful_timeout_snapshot_flush_status_mismatch,full_supervisor_stop_unknown_completion_reason`
+  - `shutdown_signal_reason_codes_value=none|<csv>`
+- Required hook-policy markers:
+  - `shutdown_signal_hook_runtime_modes=daemon|full`
+  - `shutdown_signal_hook_explicit_override=--daemon-shutdown-os-signals`
+- Fail-closed policy:
+  - malformed graceful/graceful-timeout completion reasons with empty/non-numeric signal ticks must reject with `full_supervisor_stop_missing_signal_tick`.
+  - non-daemon/full runtime modes must not enable OS-signal hooks.
+- Regression policy:
+  - signal hook mode drift or shutdown reason-class drift forces `NO-GO` (`Regression: #4331`).
+
 ## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)
 - Checker command:
   - `scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json`

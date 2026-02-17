@@ -979,6 +979,22 @@ fn regression_shutdown_policy_prioritizes_explicit_controls_over_defaults() {
 }
 
 #[test]
+fn regression_shutdown_policy_rejects_os_signal_hooks_for_non_daemon_modes() {
+    // Regression: #4331
+    for mode in [
+        RuntimeMode::bootstrap(),
+        RuntimeMode::planning(),
+        RuntimeMode::api(),
+        RuntimeMode::kolme_live(),
+    ] {
+        assert!(
+            !crate::should_use_os_signal_shutdown(mode, true, &[]),
+            "non-daemon/full runtime modes must not enable OS-signal hooks"
+        );
+    }
+}
+
+#[test]
 fn functional_production_transport_profile_classifier_rejects_in_memory_fallback() {
     let components = vec![
         "p2p-discovery".to_owned(),
@@ -1319,6 +1335,30 @@ fn regression_full_supervisor_stop_contract_classifier_rejects_snapshot_flush_mi
     assert_eq!(
         reason,
         Some("full_supervisor_stop_graceful_timeout_snapshot_flush_status_mismatch")
+    );
+}
+
+#[test]
+fn regression_full_supervisor_stop_contract_classifier_rejects_empty_or_non_numeric_signal_tick() {
+    // Regression: #4331
+    let empty_tick_reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown:signal@;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
+        "completed",
+        "snapshot-flushed",
+    );
+    assert_eq!(
+        empty_tick_reason,
+        Some("full_supervisor_stop_missing_signal_tick")
+    );
+
+    let non_numeric_tick_reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown-timeout:signal@abc;drain_ticks=3;timeout_ticks=1;ignored_signals=0",
+        "timeout",
+        "snapshot-flush-timeout",
+    );
+    assert_eq!(
+        non_numeric_tick_reason,
+        Some("full_supervisor_stop_missing_signal_tick")
     );
 }
 
