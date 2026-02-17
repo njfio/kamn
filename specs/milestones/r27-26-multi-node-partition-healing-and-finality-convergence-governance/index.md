@@ -1,6 +1,6 @@
 # Milestone Spec Index — R27.26 Multi-node Partition-Healing and Finality-Convergence Governance
 
-Milestone: R27.26 Multi-node partition-healing and finality-convergence governance  
+Milestone: R27.26 Multi-node partition-healing and finality-convergence governance
 GitHub Milestone: https://github.com/njfio/kamn/milestone/60
 
 ## Scope
