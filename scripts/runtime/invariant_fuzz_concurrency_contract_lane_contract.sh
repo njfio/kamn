@@ -165,6 +165,10 @@ summary = {
     "concurrency_replay_test_count": concurrency_test_count,
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
+    "reason_taxonomy_version": "kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1",
+    "reason_codes_csv": "property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch",
+    "reason_codes_value": "none",
+    "final_decision": "GO",
     "reason_codes": ["none"],
 }
 report_file.write_text(json.dumps(summary, separators=(",", ":")), encoding="utf-8")
@@ -173,6 +177,14 @@ PY
 policy_output="$(bash "$POLICY_CHECKER" --report-file "$summary_report")"
 if ! printf '%s\n' "$policy_output" | grep -Fq "status=ok"; then
   echo "expected invariant/fuzz/concurrency policy checker success marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -Fq "invariant_policy_reason_taxonomy_version=kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1"; then
+  echo "expected invariant/fuzz/concurrency policy checker taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -Fq "invariant_policy_reason_codes_value=none"; then
+  echo "expected invariant/fuzz/concurrency policy checker reason value marker" >&2
   exit 1
 fi
 
