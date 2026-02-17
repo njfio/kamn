@@ -2664,6 +2664,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json --output-json /tmp/invariant-fuzz-concurrency-policy-report.json`
     - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh --output-json /tmp/concurrency-state-mutation-contract-report.json`
     - run mode is local-only and opt-in for heavy stress paths; fast-gate coverage remains dry-run and contract-policy only.
+    - invariant/fuzz/concurrency boundary marker contract:
+      - `ci_smoke_local_heavy_boundary_status=verified`
+      - `ci_smoke_lane_cost_profile=low`
+      - `local_heavy_lane_execution_mode=opt_in`
+    - fail-closed boundary drift reason markers:
+      - `ci_smoke_local_heavy_boundary_status_mismatch`
+      - `ci_smoke_lane_cost_profile_mismatch`
+      - `local_heavy_lane_execution_mode_mismatch`
   - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - wrapper routing stays manifest-backed:
