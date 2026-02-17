@@ -431,6 +431,39 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `Regression: #4276`
   - `Regression: #4277`
 
+### Partition-Finality CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_partition_finality_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/partition-finality-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `partition_finality_ci_smoke_reason_taxonomy_version=kamn.ci.partition-finality-ci-smoke-convergence-reason-taxonomy.v1`
+  - `partition_finality_ci_smoke_reason_codes_csv=libp2p_validate_ci_smoke_composition_missing,libp2p_policy_ci_smoke_composition_missing,libp2p_contract_lane_ci_smoke_composition_missing,libp2p_evidence_ci_smoke_composition_missing,partition_finality_run_mode_command_leaked_in_fast_mode,ci_fast_gate_partition_finality_run_mode_not_excluded,ci_strategy_partition_finality_convergence_markers_missing,production_plan_partition_finality_convergence_markers_missing,partition_finality_ci_smoke_seconds_exceeded`
+  - `partition_finality_ci_smoke_max_seconds=120`
+  - `partition_finality_local_heavy_max_seconds=900`
+  - `partition_finality_ci_smoke_lane_cost_profile=low`
+  - `partition_finality_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh`
+  - `bash scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh`
+  - `bash scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh`
+- Local-heavy boundary policy:
+  - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - deep run command (`validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile deep`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `libp2p_validate_ci_smoke_composition_missing`
+  - `libp2p_policy_ci_smoke_composition_missing`
+  - `libp2p_contract_lane_ci_smoke_composition_missing`
+  - `libp2p_evidence_ci_smoke_composition_missing`
+  - `partition_finality_run_mode_command_leaked_in_fast_mode`
+  - `ci_fast_gate_partition_finality_run_mode_not_excluded`
+  - `ci_strategy_partition_finality_convergence_markers_missing`
+  - `production_plan_partition_finality_convergence_markers_missing`
+  - `partition_finality_ci_smoke_seconds_exceeded`
+  - `Regression: #4261`
+  - `Regression: #4262`
+
 ## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode dry-run --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`

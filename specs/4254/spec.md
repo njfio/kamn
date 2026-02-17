@@ -1,6 +1,6 @@
 # Spec — #4254 Task: Partition-Finality CI Smoke Governance and Heavy-Lane Exclusion
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4250
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

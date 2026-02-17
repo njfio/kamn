@@ -1,6 +1,6 @@
 # Spec — #4262 Subtask: Docs and Drift-Contract Parity for Partition-Finality CI Smoke Governance
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4254
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

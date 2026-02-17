@@ -1,6 +1,6 @@
 # Spec — #4261 Subtask: CI Smoke Checker for Partition-Finality Drift and Heavy-Lane Exclusion
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4254
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance
