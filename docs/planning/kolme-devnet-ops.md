@@ -1786,6 +1786,29 @@ Operator checkpoints:
   - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4289`).
   - tampered policy payload and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4290`).
 
+## Sqlite Crash-Replay Evidence Convergence and Promotion Reason Mapping Contract (Issue #4238)
+
+- Contract lane command:
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-policy-report.json --summary-output-json /tmp/sqlite-crash-recovery-live-summary-report.json --convergence-output-json /tmp/sqlite-crash-recovery-live-convergence-report.json`
+- Evidence convergence checker:
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh --report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-file /tmp/sqlite-crash-recovery-live-policy-report.json --output-json /tmp/sqlite-crash-recovery-live-convergence-report.json`
+- Deterministic evidence convergence markers:
+  - `sqlite_crash_replay_evidence_convergence_status=verified`
+  - `promotion_decision_reason_mapping_status=verified`
+  - `sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1`
+  - `sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+- Deterministic promotion decision reason mapping markers:
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation`
+  - `promotion_decision_reason_code=none|<reason>`
+- Deterministic fail-closed convergence reasons:
+  - `sqlite_crash_replay_evidence_link_missing:source_report_file`
+  - `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
+  - `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+- Regression policy:
+  - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4244`).
+  - tampered evidence payloads and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4245`).
+
 ## Service API Websocket Session Evidence Convergence (Issue #4268)
 
 - Contract lane command:

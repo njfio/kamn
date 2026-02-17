@@ -424,6 +424,7 @@ bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_pol
 bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live.sh"
 bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh"
+bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh"
 bash "$ROOT_DIR/scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live.sh"
 bash "$ROOT_DIR/scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh"

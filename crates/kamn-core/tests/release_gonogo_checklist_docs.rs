@@ -512,6 +512,37 @@ fn checklist_contains_replay_idempotency_taxonomy_runbook_parity_gate() {
 }
 
 #[test]
+fn checklist_contains_crash_replay_evidence_convergence_and_mapping_gate() {
+    assert!(CHECKLIST.contains(
+        "## Crash-Replay Evidence Convergence/Promotion Reason Mapping Gate (Issues #4238, #4244, #4245)"
+    ));
+    assert!(CHECKLIST.contains("test_check_sqlite_crash_recovery_live_evidence_convergence.sh"));
+    assert!(CHECKLIST.contains(
+        "check_sqlite_crash_recovery_live_evidence_convergence.sh --report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-file /tmp/sqlite-crash-recovery-live-policy-report.json --output-json /tmp/sqlite-crash-recovery-live-convergence-report.json"
+    ));
+    assert!(CHECKLIST.contains("sqlite_crash_replay_evidence_convergence_status=verified"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("sqlite_crash_replay_evidence_link_missing:source_report_file"));
+    assert!(CHECKLIST.contains("sqlite_crash_replay_evidence_payload_tamper_detected:<field>"));
+    assert!(CHECKLIST.contains("sqlite_crash_replay_promotion_decision_reason_mapping_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4244"));
+    assert!(CHECKLIST.contains("Regression: #4245"));
+}
+
+#[test]
 fn checklist_contains_slo_threshold_policy_gate_convergence() {
     assert!(CHECKLIST.contains("## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)"));
     assert!(CHECKLIST.contains("--slo-policy-report-file /tmp/deployment-slo-rollback-report.json"));

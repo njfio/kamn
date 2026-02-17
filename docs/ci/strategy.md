@@ -298,9 +298,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode dry-run --output-json /tmp/sqlite-crash-recovery-live-summary.json`
   - `KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1 bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/sqlite-crash-recovery-live-summary.json`
   - `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-policy.json`
-  - `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-policy.json`
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-policy.json --summary-output-json /tmp/sqlite-crash-recovery-live-summary.json --convergence-output-json /tmp/sqlite-crash-recovery-live-convergence.json`
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh --report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-file /tmp/sqlite-crash-recovery-live-policy.json --output-json /tmp/sqlite-crash-recovery-live-convergence.json`
   - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live.sh`
   - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh`
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh`
   - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh`
 - ci-fast-gate mode: fast
 - local-dev mode: local
@@ -328,6 +330,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic journal-replay taxonomy markers:
     `journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1`,
     `journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected`.
+  - lane emits deterministic promotion decision reason mapping markers:
+    `promotion_decision_reason_mapping_status=verified`,
+    `promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1`,
+    `promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation`,
+    `promotion_decision_reason_code=none|<reason>`.
+  - sqlite crash-replay evidence convergence remains deterministic via:
+    `sqlite_crash_replay_evidence_convergence_status=verified`,
+    `sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1`,
+    `sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`.
   - lane emits deterministic crash-recovery readiness and snapshot parity governance markers:
     `crash_recovery_readiness_progress_status=verified`,
     `snapshot_parity_status=verified`,
@@ -374,6 +385,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_recovery_policy_audit_trail_parity_status_mismatch`
   - `sqlite_crash_recovery_policy_durability_governance_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_ci_local_promotion_budget_boundary_exceeded`
+  - `sqlite_crash_replay_evidence_link_missing:source_report_file`
+  - `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
+  - `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
 
 ## Runtime Failover Sync-Drill Governance Contract Lanes
 - Entry commands:

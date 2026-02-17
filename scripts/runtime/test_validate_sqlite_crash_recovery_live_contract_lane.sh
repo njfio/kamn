@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_sqlite_crash_recovery_live_policy.sh"
+EVIDENCE_CHECKER="$ROOT_DIR/scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -20,9 +21,15 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected sqlite crash-recovery policy checker script to be executable" >&2
   exit 1
 fi
+if [ ! -x "$EVIDENCE_CHECKER" ]; then
+  echo "expected sqlite crash-recovery evidence convergence checker script to be executable" >&2
+  exit 1
+fi
 
 lane_report="$TMP_DIR/sqlite-crash-recovery-contract-lane-report.json"
 policy_report="$TMP_DIR/sqlite-crash-recovery-policy-report.json"
+summary_report="$TMP_DIR/sqlite-crash-recovery-summary-report.json"
+convergence_report="$TMP_DIR/sqlite-crash-recovery-convergence-report.json"
 
 lane_output="$(
   bash "$CONTRACT_LANE" \
@@ -30,7 +37,9 @@ lane_output="$(
     --max-seconds 240 \
     --ci-fast-gate PASS \
     --output-json "$lane_report" \
-    --policy-output-json "$policy_report"
+    --policy-output-json "$policy_report" \
+    --summary-output-json "$summary_report" \
+    --convergence-output-json "$convergence_report"
 )"
 if ! printf '%s\n' "$lane_output" | grep -q '^status=pass$'; then
   echo "expected sqlite crash-recovery contract lane status=pass marker" >&2
@@ -124,6 +133,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^replay_idempotency_runbook_reason_
   echo "expected sqlite crash-recovery contract lane replay idempotency runbook reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane promotion decision reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation$'; then
+  echo "expected sqlite crash-recovery contract lane promotion decision reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected sqlite crash-recovery contract lane promotion decision reason code marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane crash-recovery readiness progress marker" >&2
   exit 1
@@ -168,6 +193,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_recovery_policy_statu
   echo "expected sqlite crash-recovery contract lane policy status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_replay_evidence_convergence_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane evidence convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane evidence convergence reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch$'; then
+  echo "expected sqlite crash-recovery contract lane evidence convergence reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^sqlite_crash_recovery_contract_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane status marker" >&2
   exit 1
@@ -177,7 +214,7 @@ if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=sqlite_cra
   exit 1
 fi
 
-python3 - "$lane_report" "$policy_report" <<'PY'
+python3 - "$lane_report" "$policy_report" "$convergence_report" <<'PY'
 import json
 import pathlib
 import sys
@@ -229,6 +266,14 @@ if lane_payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_id
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker")
 if lane_payload.get("replay_idempotency_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker")
+if lane_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker")
+if lane_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if lane_payload.get("promotion_decision_reason_codes_csv") != "sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if lane_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker")
 if lane_payload.get("crash_recovery_readiness_progress_status") != "verified":
     raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
 if lane_payload.get("snapshot_parity_status") != "verified":
@@ -253,6 +298,12 @@ if lane_payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified")
 if lane_payload.get("sqlite_crash_recovery_contract_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_contract_status=verified")
+if lane_payload.get("sqlite_crash_replay_evidence_convergence_status") != "verified":
+    raise SystemExit("expected sqlite_crash_replay_evidence_convergence_status=verified")
+if lane_payload.get("sqlite_crash_replay_evidence_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic sqlite_crash_replay_evidence_reason_taxonomy_version marker")
+if lane_payload.get("sqlite_crash_replay_evidence_reason_codes_csv") != "sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic sqlite_crash_replay_evidence_reason_codes_csv marker")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
@@ -289,6 +340,14 @@ if policy_payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker in policy report")
 if policy_payload.get("replay_idempotency_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker in policy report")
+if policy_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker in policy report")
+if policy_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker in policy report")
+if policy_payload.get("promotion_decision_reason_codes_csv") != "sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker in policy report")
+if policy_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker in policy report")
 if policy_payload.get("state_consistency_reason_taxonomy_version") != "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1":
     raise SystemExit("expected deterministic state_consistency_reason_taxonomy_version marker in policy report")
 if policy_payload.get("state_consistency_reason_codes_csv") != "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded":
@@ -297,10 +356,34 @@ if policy_payload.get("durability_governance_reason_taxonomy_version") != "kamn.
     raise SystemExit("expected deterministic durability_governance_reason_taxonomy_version marker in policy report")
 if policy_payload.get("durability_governance_reason_codes_csv") != "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic durability_governance_reason_codes_csv marker in policy report")
+
+convergence_payload = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+if convergence_payload.get("schema_version") != "kamn.runtime.sqlite-crash-recovery-live-evidence-convergence-report.v1":
+    raise SystemExit("unexpected sqlite crash-recovery evidence convergence report schema")
+if convergence_payload.get("final_decision") != "GO":
+    raise SystemExit("expected sqlite crash-recovery evidence convergence final_decision=GO")
+if convergence_payload.get("evidence_convergence_status") != "verified":
+    raise SystemExit("expected deterministic evidence_convergence_status marker")
+if convergence_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker in convergence report")
+if convergence_payload.get("reason_taxonomy_version") != "kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reason_taxonomy_version marker in convergence report")
+if convergence_payload.get("reason_codes_csv") != "sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic reason_codes_csv marker in convergence report")
+if convergence_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker in convergence report")
+if convergence_payload.get("promotion_decision_reason_codes_csv") != "sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker in convergence report")
+if convergence_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker in convergence report")
 PY
 
 if ! grep -q "check_sqlite_crash_recovery_live_policy.sh" "$CONTRACT_LANE"; then
   echo "expected sqlite crash-recovery contract lane to compose policy checker" >&2
+  exit 1
+fi
+if ! grep -q "check_sqlite_crash_recovery_live_evidence_convergence.sh" "$CONTRACT_LANE"; then
+  echo "expected sqlite crash-recovery contract lane to compose evidence convergence checker" >&2
   exit 1
 fi
 if ! grep -q "validate_sqlite_crash_recovery_live.sh" "$CONTRACT_LANE"; then
