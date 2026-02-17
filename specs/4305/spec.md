@@ -1,6 +1,6 @@
 # Spec — #4305 Subtask: TLS Reason Projection and Release-Gate Checker Integration
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4298
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence

@@ -1,6 +1,6 @@
 # Spec — #4304 Subtask: RED Tests for TLS Evidence Completeness Failures and Stale-Artifact Rejection
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4298
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence
