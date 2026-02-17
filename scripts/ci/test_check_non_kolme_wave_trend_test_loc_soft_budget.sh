@@ -207,8 +207,11 @@ payload = json.loads(baseline_path.read_text(encoding="utf-8"))
 
 removed_script = payload["script_files"].pop()
 removed_path = root_dir / removed_script
-with removed_path.open("r", encoding="utf-8") as handle:
-    removed_loc = sum(1 for _ in handle)
+if removed_path.is_symlink():
+    removed_loc = 1
+else:
+    with removed_path.open("r", encoding="utf-8") as handle:
+        removed_loc = sum(1 for _ in handle)
 
 payload["script_count"] = len(payload["script_files"])
 payload["total_shell_loc"] = int(payload["total_shell_loc"]) - removed_loc

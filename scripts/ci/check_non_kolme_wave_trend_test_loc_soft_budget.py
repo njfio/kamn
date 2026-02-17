@@ -141,6 +141,11 @@ def collect_current_scripts(root_dir: Path) -> tuple[list[str], int]:
     relative_paths = [path.relative_to(root_dir).as_posix() for path in current_paths]
     total_shell_loc = 0
     for path in current_paths:
+        # Count symlink wrappers as 1 LOC so shared dispatcher indirection
+        # reduces shell surface instead of duplicating dispatcher file length.
+        if path.is_symlink():
+            total_shell_loc += 1
+            continue
         with path.open("r", encoding="utf-8") as handle:
             total_shell_loc += sum(1 for _ in handle)
 

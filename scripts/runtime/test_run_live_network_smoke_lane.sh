@@ -6,6 +6,8 @@ SMOKE_SCRIPT="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane.sh"
 SMOKE_SCRIPT_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_smoke_lane.json"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -19,6 +21,14 @@ if [ ! -x "$SMOKE_SCRIPT_IMPL" ]; then
 fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
   exit 1
 fi
 
@@ -43,10 +53,34 @@ if ! grep -q 'run_live_network_smoke_lane_impl.sh' "$MANIFEST_FILE"; then
   exit 1
 fi
 
-if ! grep -q 'live_network_smoke_lane_contract.py' "$SMOKE_SCRIPT_IMPL"; then
-  echo "expected live-network smoke lane implementation to delegate to smoke lane contract module" >&2
+if [ ! -L "$SMOKE_SCRIPT_IMPL" ]; then
+  echo "expected live-network smoke lane implementation wrapper to be a symlink" >&2
   exit 1
 fi
+
+if [ "$(readlink -f "$SMOKE_SCRIPT_IMPL")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected live-network smoke lane implementation wrapper to resolve to shared exec dispatcher" >&2
+  exit 1
+fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get("scripts/runtime/run_live_network_smoke_lane_impl.sh")
+if not isinstance(entry, dict):
+    raise SystemExit("expected registry entry for live-network smoke lane implementation wrapper")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for live-network smoke lane implementation wrapper")
+if entry.get("target") != "scripts/runtime/live_network_smoke_lane_contract.py":
+    raise SystemExit("expected live-network smoke lane implementation wrapper target in exec registry")
+if entry.get("args_prefix") != []:
+    raise SystemExit("expected empty args_prefix for live-network smoke lane implementation wrapper")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for live-network smoke lane implementation wrapper")
+PY
 
 smoke_output="$(
   bash "$SMOKE_SCRIPT" \

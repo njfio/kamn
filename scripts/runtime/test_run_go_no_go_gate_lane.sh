@@ -7,6 +7,8 @@ LANE_IMPL_SCRIPT="$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_go_no_go_gate_lane.json"
 RELEASE_MANIFEST_FILE="$ROOT_DIR/scripts/runtime/release_evidence_manifest.json"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
@@ -31,6 +33,14 @@ if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
   exit 1
 fi
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
+  exit 1
+fi
 if [ ! -L "$LANE_SCRIPT" ]; then
   echo "expected go/no-go gate lane wrapper to be a dispatcher symlink" >&2
   exit 1
@@ -50,10 +60,33 @@ if ! grep -q 'run_go_no_go_gate_lane_impl.sh' "$MANIFEST_FILE"; then
   echo "expected go/no-go gate lane manifest to dispatch implementation module" >&2
   exit 1
 fi
-if ! grep -q 'go_no_go_gate_lane_contract.py' "$LANE_IMPL_SCRIPT"; then
-  echo "expected go/no-go gate lane implementation to delegate to contract module" >&2
+if [ ! -L "$LANE_IMPL_SCRIPT" ]; then
+  echo "expected go/no-go gate lane implementation wrapper to be a symlink" >&2
   exit 1
 fi
+if [ "$(readlink -f "$LANE_IMPL_SCRIPT")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected go/no-go gate lane implementation wrapper to resolve to shared exec dispatcher" >&2
+  exit 1
+fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get("scripts/runtime/run_go_no_go_gate_lane_impl.sh")
+if not isinstance(entry, dict):
+    raise SystemExit("expected registry entry for go/no-go gate lane implementation wrapper")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for go/no-go gate lane implementation wrapper")
+if entry.get("target") != "scripts/runtime/go_no_go_gate_lane_contract.py":
+    raise SystemExit("expected go/no-go gate lane implementation wrapper target in exec registry")
+if entry.get("args_prefix") != []:
+    raise SystemExit("expected empty args_prefix for go/no-go gate lane implementation wrapper")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for go/no-go gate lane implementation wrapper")
+PY
 if [ ! -f "$RELEASE_MANIFEST_FILE" ]; then
   echo "expected release evidence manifest file for go/no-go gate lane" >&2
   exit 1

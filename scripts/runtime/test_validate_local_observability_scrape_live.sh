@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_observability_scrape_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_observability_scrape_live_policy.sh"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -16,10 +18,44 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   exit 1
 fi
 
-if ! grep -q 'local_observability_scrape_live_contract.py" run-lane' "$VALIDATION_SCRIPT"; then
-  echo "expected local observability scrape validation wrapper to dispatch to python run-lane contract" >&2
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher script to be executable" >&2
   exit 1
 fi
+
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
+  exit 1
+fi
+
+if [ ! -L "$VALIDATION_SCRIPT" ]; then
+  echo "expected local observability scrape validation wrapper to be a symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink -f "$VALIDATION_SCRIPT")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected local observability scrape validation wrapper to resolve to shared dispatcher" >&2
+  exit 1
+fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get("scripts/runtime/validate_local_observability_scrape_live.sh")
+if not isinstance(entry, dict):
+    raise SystemExit("expected registry entry for local observability scrape validation wrapper")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for local observability scrape validation wrapper")
+if entry.get("target") != "scripts/runtime/local_observability_scrape_live_contract.py":
+    raise SystemExit("expected local observability scrape validation wrapper target in exec registry")
+if entry.get("args_prefix") != ["run-lane"]:
+    raise SystemExit("expected local observability scrape validation wrapper args_prefix to pin run-lane mode")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for local observability scrape validation wrapper")
+PY
 
 dry_run_report="$TMP_DIR/local-observability-scrape-live-summary.dry-run.json"
 dry_run_output="$(

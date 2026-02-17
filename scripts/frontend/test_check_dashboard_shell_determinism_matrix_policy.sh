@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh"
 CHECKER="$ROOT_DIR/scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh"
 SHARED_SCRIPT="$ROOT_DIR/scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -18,8 +20,23 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-if ! grep -q 'dashboard_shell_determinism_matrix_policy_contract.py' "$CHECKER"; then
-  echo "expected dashboard shell matrix policy checker wrapper to delegate to shared implementation" >&2
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
+  exit 1
+fi
+
+if [ ! -L "$CHECKER" ]; then
+  echo "expected dashboard shell matrix policy checker wrapper to be a symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink -f "$CHECKER")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected dashboard shell matrix policy checker wrapper to resolve to shared dispatcher" >&2
   exit 1
 fi
 
@@ -27,6 +44,27 @@ if [ ! -x "$SHARED_SCRIPT" ]; then
   echo "expected shared dashboard shell matrix policy checker implementation to be executable" >&2
   exit 1
 fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get(
+    "scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh"
+)
+if not isinstance(entry, dict):
+    raise SystemExit("expected exec registry entry for dashboard shell matrix policy checker")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for dashboard shell matrix policy checker")
+if entry.get("target") != "scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py":
+    raise SystemExit("expected dashboard shell matrix policy checker target in exec registry")
+if entry.get("args_prefix") != []:
+    raise SystemExit("expected empty args_prefix for dashboard shell matrix policy checker")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for dashboard shell matrix policy checker")
+PY
 
 go_report="$TMP_DIR/dashboard-shell-matrix-go.json"
 KAMN_FRONTEND_SHELL_MATRIX_SKIP_COMMANDS=true \

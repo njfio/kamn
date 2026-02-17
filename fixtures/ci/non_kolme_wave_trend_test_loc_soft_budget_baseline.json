@@ -1,7 +1,7 @@
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-baseline.v1",
   "script_count": 20,
-  "total_shell_loc": 311,
+  "total_shell_loc": 216,
   "script_files": [
     "scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh",
     "scripts/ci/test_check_non_kolme_wave11_wrapper_family_budget_trend.sh",
