@@ -1168,11 +1168,8 @@ fn doc_contains_websocket_session_ci_smoke_convergence_governance() {
 #[test]
 fn doc_contains_partition_finality_ci_smoke_convergence_governance() {
     assert!(DOC.contains("### Partition-Finality CI smoke convergence governance"));
-    assert!(DOC
-        .contains("python3 scripts/ci/check_partition_finality_ci_smoke_convergence.py"));
-    assert!(DOC.contains(
-        "bash scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"
-    ));
+    assert!(DOC.contains("python3 scripts/ci/check_partition_finality_ci_smoke_convergence.py"));
+    assert!(DOC.contains("bash scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"));
     assert!(DOC.contains(
         "partition_finality_ci_smoke_reason_taxonomy_version=kamn.ci.partition-finality-ci-smoke-convergence-reason-taxonomy.v1"
     ));
