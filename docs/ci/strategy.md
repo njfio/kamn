@@ -3889,6 +3889,16 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=combined_shell_surface_ratio_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_budget_status_fail`
     - `reason_codes=combined_shell_surface_threshold_order_invalid`
+- Fast-gate workflow governance wiring:
+  - `.github/workflows/ci-fast-gate.yml` runs, under `run_script_surface_budget_checks` scope:
+    - `bash scripts/ci/check_script_duplication_budget.sh --budget-file .ci/script-surface-budget.env --baseline-file .ci/script-surface-baseline.env --waiver-file .ci/script-surface-budget-waiver.json --output-json ci-script-surface-budget.json`
+    - `bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json ci-combined-shell-surface-trend-report.json`
+    - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file ci-combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json ci-combined-shell-surface-trend-policy.json`
+    - `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --report-file ci-combined-shell-surface-trend-report.json --output-json ci-shell-rust-loc-telemetry.json`
+  - workflow uploads:
+    - `ci-script-surface-budget-<run_id>-<run_attempt>`
+    - `ci-combined-shell-surface-trend-<run_id>-<run_attempt>`
+    - `ci-shell-rust-loc-telemetry-<run_id>-<run_attempt>`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
