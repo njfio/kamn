@@ -99,6 +99,27 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
 
+## Service API Websocket Session Evidence Convergence Gate (Issue #4268)
+- Lane and checker commands:
+  - `bash scripts/runtime/validate_service_api_websocket_live_contract_lane.sh --output-json /tmp/service-api-websocket-live-contract-lane-report.json --policy-output-json /tmp/service-api-websocket-live-policy-report.json`
+  - `bash scripts/runtime/check_service_api_websocket_live_evidence_convergence.sh --report-file /tmp/service-api-websocket-live-contract-lane-report.json --policy-file /tmp/service-api-websocket-live-policy-report.json --output-json /tmp/service-api-websocket-live-convergence-report.json`
+- Deterministic evidence convergence markers:
+  - `service_api_websocket_evidence_convergence_status=verified`
+  - `promotion_decision_reason_mapping_status=verified`
+  - `service_api_websocket_evidence_reason_taxonomy_version=kamn.runtime.service-api-websocket-evidence-convergence-reason-taxonomy.v1`
+  - `service_api_websocket_evidence_reason_codes_csv=service_api_websocket_evidence_link_missing,service_api_websocket_evidence_payload_tamper_detected,service_api_websocket_promotion_decision_reason_mapping_mismatch`
+- Deterministic promotion decision reason mapping markers:
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-websocket-promotion-decision-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=service_api_websocket_policy_required_field_missing,service_api_websocket_policy_marker_missing,service_api_websocket_policy_reason_taxonomy_mismatch,service_api_websocket_policy_idle_timeout_contract_mismatch,ci_fast_gate_failed,service_api_websocket_policy_expected_decision_mismatch,service_api_websocket_policy_violation`
+  - `promotion_decision_reason_code=none|<reason>`
+- Fail-closed convergence reasons:
+  - `service_api_websocket_evidence_link_missing:source_report_file`
+  - `service_api_websocket_evidence_payload_tamper_detected:<field>`
+  - `service_api_websocket_promotion_decision_reason_mapping_mismatch`
+- Regression policy:
+  - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4274`).
+  - tampered evidence payloads and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4275`).
+
 ## Shutdown Signal Lifecycle Reason Mapping Gate (Issue #4331)
 - Validation commands:
   - `cargo test -p kamn-node main_tests::runtime_tests::regression_full_supervisor_stop_contract_classifier_rejects_empty_or_non_numeric_signal_tick -- --exact`

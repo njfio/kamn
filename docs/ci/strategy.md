@@ -1063,6 +1063,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/runtime/validate_service_api_websocket_live.sh --output-json /tmp/service-api-websocket-live-summary.json`
   - `bash scripts/runtime/check_service_api_websocket_live_policy.sh --report-file /tmp/service-api-websocket-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-websocket-live-policy.json`
   - `bash scripts/runtime/validate_service_api_websocket_live_contract_lane.sh --output-json /tmp/service-api-websocket-live-contract-lane-report.json --policy-output-json /tmp/service-api-websocket-live-policy.json`
+  - `bash scripts/runtime/check_service_api_websocket_live_evidence_convergence.sh --report-file /tmp/service-api-websocket-live-contract-lane-report.json --policy-file /tmp/service-api-websocket-live-policy.json --output-json /tmp/service-api-websocket-live-convergence-report.json`
   - `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
   - `bash scripts/runtime/test_check_service_api_websocket_live_policy.sh`
   - `bash scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh`
@@ -1081,11 +1082,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `websocket_reason_registry_status=verified`,
     `websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1`,
     `websocket_lifecycle_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing`.
+  - websocket evidence convergence governance remains deterministic via:
+    `service_api_websocket_evidence_convergence_status=verified`,
+    `promotion_decision_reason_mapping_status=verified`,
+    `service_api_websocket_evidence_reason_taxonomy_version=kamn.runtime.service-api-websocket-evidence-convergence-reason-taxonomy.v1`,
+    `service_api_websocket_evidence_reason_codes_csv=service_api_websocket_evidence_link_missing,service_api_websocket_evidence_payload_tamper_detected,service_api_websocket_promotion_decision_reason_mapping_mismatch`,
+    `promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-websocket-promotion-decision-reason-taxonomy.v1`,
+    `promotion_decision_reason_codes_csv=service_api_websocket_policy_required_field_missing,service_api_websocket_policy_marker_missing,service_api_websocket_policy_reason_taxonomy_mismatch,service_api_websocket_policy_idle_timeout_contract_mismatch,ci_fast_gate_failed,service_api_websocket_policy_expected_decision_mismatch,service_api_websocket_policy_violation`.
   - runtime budget is bounded via `KAMN_SERVICE_API_WEBSOCKET_CONTRACT_MAX_SECONDS`.
   - service api websocket live contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_websocket_policy_marker_missing:websocket_session_lifecycle_status`
   - `service_api_websocket_policy_websocket_lifecycle_reason_taxonomy_version_mismatch`
+  - `service_api_websocket_evidence_link_missing:source_report_file`
+  - `service_api_websocket_evidence_payload_tamper_detected:<field>`
+  - `service_api_websocket_promotion_decision_reason_mapping_mismatch`
 
 ## Runtime Service API Serde Payload Parity Contract Lane
 - Entry commands:

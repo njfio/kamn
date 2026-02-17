@@ -55,6 +55,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
   echo "expected websocket live policy checker normalized reason_codes_value marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected websocket live policy checker promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-websocket-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected websocket live policy checker promotion decision reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_codes_csv=service_api_websocket_policy_required_field_missing,service_api_websocket_policy_marker_missing,service_api_websocket_policy_reason_taxonomy_mismatch,service_api_websocket_policy_idle_timeout_contract_mismatch,ci_fast_gate_failed,service_api_websocket_policy_expected_decision_mismatch,service_api_websocket_policy_violation$'; then
+  echo "expected websocket live policy checker promotion decision reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected websocket live policy checker promotion decision reason code marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -78,6 +94,14 @@ if payload.get("websocket_lifecycle_reason_taxonomy_version") != "kamn.runtime.s
     raise SystemExit("expected deterministic websocket_lifecycle_reason_taxonomy_version marker")
 if payload.get("websocket_lifecycle_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing":
     raise SystemExit("expected deterministic websocket_lifecycle_reason_codes_csv marker")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected promotion_decision_reason_mapping_status=verified")
+if payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.service-api-websocket-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if payload.get("promotion_decision_reason_codes_csv") != "service_api_websocket_policy_required_field_missing,service_api_websocket_policy_marker_missing,service_api_websocket_policy_reason_taxonomy_mismatch,service_api_websocket_policy_idle_timeout_contract_mismatch,ci_fast_gate_failed,service_api_websocket_policy_expected_decision_mismatch,service_api_websocket_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker")
 PY
 
 tampered_lifecycle_report="$TMP_DIR/service-api-websocket-live-summary.lifecycle.tampered.json"
@@ -184,6 +208,30 @@ if ! printf '%s\n' "$missing_required_field_output" | grep -q 'service_api_webso
 fi
 if ! printf '%s\n' "$missing_required_field_output" | grep -q '^reason_codes_value=.*service_api_websocket_policy_required_field_missing:websocket_lifecycle_reason_codes_csv'; then
   echo "expected normalized reason_codes_value output to include missing required websocket field reason code" >&2
+  exit 1
+fi
+
+set +e
+ci_fast_gate_fail_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$report_file" \
+    --expected-final-decision GO \
+    --ci-fast-gate FAIL \
+    --output-json "$TMP_DIR/service-api-websocket-live-policy.ci-fast-gate-fail.json" 2>&1
+)"
+ci_fast_gate_fail_code=$?
+set -e
+
+if [ "$ci_fast_gate_fail_code" -eq 0 ]; then
+  echo "expected websocket policy checker to fail closed when ci-fast-gate=FAIL" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ci_fast_gate_fail_output" | grep -q 'ci_fast_gate_failed'; then
+  echo "expected deterministic ci_fast_gate_failed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ci_fast_gate_fail_output" | grep -q '^promotion_decision_reason_code=ci_fast_gate_failed$'; then
+  echo "expected deterministic promotion decision reason code for ci-fast-gate failure" >&2
   exit 1
 fi
 
