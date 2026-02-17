@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -78,7 +79,14 @@ def main() -> int:
         print("continuous runtime commit contract lane failed", file=sys.stderr)
         return 1
 
-    if "3 passed; 0 failed" not in test_output:
+    passing_summary_counts = [
+        int(match.group(1))
+        for match in re.finditer(
+            r"test result: ok\. ([0-9]+) passed; 0 failed;",
+            test_output,
+        )
+    ]
+    if not passing_summary_counts or max(passing_summary_counts) < 3:
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(

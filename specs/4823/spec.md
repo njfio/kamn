@@ -8,36 +8,39 @@
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Collapse duplicated non-Kolme wave10-wave19 lightweight wrapper-matrix tests into a single shared runner driven by wave definition data files while preserving CI command surface compatibility.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Ten framework scripts duplicate the same dispatcher/symlink assertions with only wrapper lists changing. This creates maintenance drift and script LOC growth for every new lightweight wave.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add a shared wave-driven runner at `scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+- add per-wave wrapper definition files under `scripts/framework/wave_definitions/`
+- convert `wave10`-`wave19` test entrypoints into symlinks to the shared runner
+- add an explicit contract test that verifies shared-runner + symlink topology
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- CI wave budget trend script consolidation (`#4824`)
+- JSON helper and test-harness migrations (`#4825`, `#4826`)
+- any dispatcher contract/protocol changes outside wave-matrix test consolidation
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: A single shared runner executes wave10-wave19 lightweight wrapper matrix assertions using per-wave definition files.
+- AC-2: Existing CI invocations (`test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh`) remain valid without command-surface changes.
+- AC-3: Wave-matrix duplication is measurably reduced while preserving deterministic unknown-wrapper fallback marker assertions.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1): `scripts/framework/test_non_kolme_wave_lightweight_wrapper_runner_contract.sh` fails when shared runner or wave symlink topology is missing and passes when topology is correct.
+- C-02 (AC-2): `for wave in {10..19}; do bash scripts/framework/test_non_kolme_wave${wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh; done` passes unchanged entrypoint names.
+- C-03 (AC-3): `bash scripts/ci/test_ci_tools.sh` passes with wave matrix coverage and deterministic fallback markers preserved.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Ten duplicated wave scripts converted to symlink entrypoints.
+- Wave-specific logic moved to one runner script (`116` lines) and definition data files (`39` lines) instead of ten duplicated bodies (`472` lines previously).
+- CI-tools regression suite remains green after consolidation.
