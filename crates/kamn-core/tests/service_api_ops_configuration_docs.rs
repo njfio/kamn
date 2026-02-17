@@ -37,9 +37,8 @@ fn service_api_ops_configuration_contains_in_memory_provider_rejection_controls(
 
 #[test]
 fn service_api_ops_configuration_contains_multi_signer_quorum_signature_decision_controls() {
-    assert!(DOC.contains(
-        "## Multi-Signer Profile and Quorum Signature-Decision Controls (Issue #4357)"
-    ));
+    assert!(DOC
+        .contains("## Multi-Signer Profile and Quorum Signature-Decision Controls (Issue #4357)"));
     assert!(DOC.contains(
         "signature_decision_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signature-decision-reason-taxonomy.v1"
     ));
