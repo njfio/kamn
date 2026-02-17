@@ -5,12 +5,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_signed_to_kolme_demo_policy.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
+SECURITY_DOC="$ROOT_DIR/docs/security/key-management.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/signed_to_kolme_ok.json"
 TMP_REPORT_MISSING_SUBMIT="$TMP_DIR/signed_to_kolme_missing_submit.json"
 TMP_REPORT_MISSING_FINALITY="$TMP_DIR/signed_to_kolme_missing_finality.json"
 TMP_REPORT_TAXONOMY_DRIFT="$TMP_DIR/signed_to_kolme_taxonomy_drift.json"
 TMP_REPORT_NORMALIZED_DRIFT="$TMP_DIR/signed_to_kolme_normalized_drift.json"
+TMP_REPORT_SIMULATED_SIGNING="$TMP_DIR/signed_to_kolme_simulated_signing.json"
+TMP_REPORT_MISSING_NATIVE_SIGNING_MARKER="$TMP_DIR/signed_to_kolme_missing_native_signing_marker.json"
 TMP_POLICY_OK="$TMP_DIR/signed_to_kolme_policy_ok.json"
 TMP_POLICY_BAD="$TMP_DIR/signed_to_kolme_policy_bad.json"
 TMP_ERR="$TMP_DIR/policy_error.log"
@@ -28,6 +31,16 @@ fi
 
 if ! grep -q "check_local_signed_to_kolme_demo_policy.py" "$README_FILE"; then
   echo "expected README to reference signed-to-Kolme policy checker command" >&2
+  exit 1
+fi
+
+if [ ! -f "$SECURITY_DOC" ]; then
+  echo "expected key management security doc to exist" >&2
+  exit 1
+fi
+
+if ! grep -q "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1" "$SECURITY_DOC"; then
+  echo "expected key management security doc to include native signer taxonomy marker" >&2
   exit 1
 fi
 
@@ -51,6 +64,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_commit_live_reason_code": "live_runtime_commit_and_finality_commands_passed",
   "runtime_commit_live_summary_path": "/tmp/kolme-local-runtime-commit-live-summary.json",
   "runtime_commit_live_policy_report_path": "/tmp/kolme-local-runtime-commit-live-policy.json",
+  "runtime_signing_profile_contract_version": "v1",
+  "runtime_signing_profile": "kolme-fork-secp256k1-v1",
   "reason_taxonomy": {
     "schema_version": "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1",
     "overall": "demo.success",
@@ -80,7 +95,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
       "local_kamn_runtime_integration_run": {
         "status": "pass",
         "reason_code": "local_kamn_runtime_integration_run_passed",
-        "command": "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+        "command": "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
       }
     }
   },
@@ -99,7 +114,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     },
     {
       "id": "local_kamn_runtime_integration_run",
-      "command": "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run",
+      "command": "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run",
       "status": "pass",
       "reason_code": "local_kamn_runtime_integration_run_passed"
     }
@@ -136,7 +151,90 @@ if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for valid signed-to-Kolme report")
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid signed-to-Kolme report")
+if report.get("native_signer_reason_taxonomy_version") != "kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic native_signer_reason_taxonomy_version in policy report")
+if report.get("native_signer_reason_codes_csv") != "runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch":
+    raise SystemExit("expected deterministic native_signer_reason_codes_csv in policy report")
+if report.get("native_signer_reason_codes_value") != "none":
+    raise SystemExit("expected native_signer_reason_codes_value=none in GO policy report")
 PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_SIMULATED_SIGNING" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signing_profile"] = "simulated"
+for check in report.get("checks", []):
+    if isinstance(check, dict) and check.get("id") == "local_kamn_runtime_integration_run":
+        check["command"] = (
+            "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated "
+            "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+        )
+normalized = report.get("normalized_evidence", {}).get("checks_by_id", {}).get("local_kamn_runtime_integration_run")
+if isinstance(normalized, dict):
+    normalized["command"] = (
+        "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated "
+        "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+    )
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_SIMULATED_SIGNING" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+simulated_signing_code=$?
+set -e
+
+if [ "$simulated_signing_code" -eq 0 ]; then
+  echo "expected checker to fail when simulated signing profile is accepted in run-mode evidence" >&2
+  exit 1
+fi
+if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_ERR"; then
+  echo "expected runtime_commit_simulated_signing_profile_detected reason code" >&2
+  exit 1
+fi
+if ! grep -q "runtime_signing_profile_mismatch" "$TMP_ERR"; then
+  echo "expected runtime_signing_profile_mismatch reason code" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MISSING_NATIVE_SIGNING_MARKER" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+for check in report.get("checks", []):
+    if isinstance(check, dict) and check.get("id") == "local_kamn_runtime_integration_run":
+        check["command"] = "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+normalized = report.get("normalized_evidence", {}).get("checks_by_id", {}).get("local_kamn_runtime_integration_run")
+if isinstance(normalized, dict):
+    normalized["command"] = "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run"
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MISSING_NATIVE_SIGNING_MARKER" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+missing_native_signing_marker_code=$?
+set -e
+
+if [ "$missing_native_signing_marker_code" -eq 0 ]; then
+  echo "expected checker to fail when native signing profile marker is missing from run-mode runtime evidence command" >&2
+  exit 1
+fi
+if ! grep -q "runtime_commit_native_signing_profile_marker_missing" "$TMP_ERR"; then
+  echo "expected runtime_commit_native_signing_profile_marker_missing reason code" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MISSING_SUBMIT" <<'PY'
 import json

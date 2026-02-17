@@ -110,6 +110,31 @@ if ! grep -q "demo_evidence_normalization_version=kamn.kolme.local-signed-to-kol
   exit 1
 fi
 
+if ! grep -q "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme native signer taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_native_signing_profile_marker_missing" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme native signer marker-missing reason" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signing_profile=kolme-fork-secp256k1-v1" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include signed-to-Kolme native runtime signing profile marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #4373" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include native signer rejection regression marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #4380" "$RELEASE_GONOGO_DOC"; then
+  echo "expected release go/no-go checklist doc to include native signer taxonomy regression marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #4498" "$RELEASE_GONOGO_DOC"; then
   echo "expected release go/no-go checklist doc to include signed-to-Kolme taxonomy normalization regression marker" >&2
   exit 1
@@ -155,6 +180,10 @@ if summary.get("runtime_commit_finality_evidence_marker_present") is not False:
     raise SystemExit("expected runtime commit finality marker absence in dry-run summary")
 if summary.get("runtime_commit_submit_finality_contract_version") != "v1":
     raise SystemExit("expected signed-to-Kolme submit/finality contract version marker")
+if summary.get("runtime_signing_profile_contract_version") != "v1":
+    raise SystemExit("expected signed-to-Kolme runtime signing profile contract version marker")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected signed-to-Kolme runtime signing profile marker")
 reason_taxonomy = summary.get("reason_taxonomy")
 if not isinstance(reason_taxonomy, dict):
     raise SystemExit("expected signed-to-Kolme dry-run reason taxonomy")
@@ -184,6 +213,12 @@ if normalized_evidence.get("primary_check_order") != expected_order:
     raise SystemExit("unexpected signed-to-Kolme dry-run normalized primary check order")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected signed-to-Kolme dry-run policy final_decision GO")
+if policy.get("native_signer_reason_taxonomy_version") != "kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1":
+    raise SystemExit("expected signed-to-Kolme dry-run native signer taxonomy version marker")
+if policy.get("native_signer_reason_codes_csv") != "runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch":
+    raise SystemExit("expected signed-to-Kolme dry-run native signer reason csv marker")
+if policy.get("native_signer_reason_codes_value") != "none":
+    raise SystemExit("expected signed-to-Kolme dry-run native signer reason value marker")
 PY
 
 run_output="$(
@@ -218,6 +253,10 @@ if summary.get("runtime_commit_finality_evidence_marker_present") is not True:
     raise SystemExit("expected runtime commit finality marker in run-mode signed-to-Kolme summary")
 if summary.get("runtime_commit_submit_finality_linked") is not True:
     raise SystemExit("expected runtime commit submit/finality evidence linkage marker")
+if summary.get("runtime_signing_profile_contract_version") != "v1":
+    raise SystemExit("expected signed-to-Kolme run runtime signing profile contract version marker")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected signed-to-Kolme run runtime signing profile marker")
 if summary.get("reason_code") != "signed_to_kolme_demo_passed":
     raise SystemExit("expected deterministic signed-to-Kolme pass reason code")
 reason_taxonomy = summary.get("reason_taxonomy")
@@ -250,6 +289,12 @@ if runtime_entry.get("status") != "pass":
     raise SystemExit("expected signed-to-Kolme run normalized runtime integration pass status")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected signed-to-Kolme run policy final_decision GO")
+if policy.get("native_signer_reason_taxonomy_version") != "kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1":
+    raise SystemExit("expected signed-to-Kolme run native signer taxonomy version marker")
+if policy.get("native_signer_reason_codes_csv") != "runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch":
+    raise SystemExit("expected signed-to-Kolme run native signer reason csv marker")
+if policy.get("native_signer_reason_codes_value") != "none":
+    raise SystemExit("expected signed-to-Kolme run native signer reason value marker")
 PY
 
 # Regression: #4497

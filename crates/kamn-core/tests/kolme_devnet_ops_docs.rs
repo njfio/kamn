@@ -142,6 +142,16 @@ fn plan_contains_unified_local_signed_to_kolme_demo_lane() {
     assert!(PLAN.contains("run_local_signed_to_kolme_demo_contract_lane.sh"));
     assert!(PLAN.contains("check_local_signed_to_kolme_demo_policy.py"));
     assert!(PLAN.contains("kamn.kolme.local-signed-to-kolme-demo-summary.v1"));
+    assert!(PLAN.contains("runtime_signing_profile_contract_version=v1"));
+    assert!(PLAN.contains("runtime_signing_profile=kolme-fork-secp256k1-v1"));
+    assert!(PLAN.contains(
+        "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch"
+    ));
+    assert!(PLAN.contains("Regression: #4373"));
+    assert!(PLAN.contains("Regression: #4380"));
 }
 
 #[test]

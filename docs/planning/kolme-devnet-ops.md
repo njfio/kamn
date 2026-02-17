@@ -1281,6 +1281,11 @@ Operator checkpoints:
   - `run_localhost_signed_integration_contract_lane.sh` run-mode verification before Kolme runtime stage.
   - `run_local_kamn_live_runtime_integration_lane.sh` run-mode verification over localhost mock Kolme API before final GO decision.
   - explicit runtime-commit submit/finality marker contracts: `runtime_commit_submit_evidence_marker_present`, `runtime_commit_finality_evidence_marker_present`.
+  - native signer profile contracts: `runtime_signing_profile_contract_version=v1`, `runtime_signing_profile=kolme-fork-secp256k1-v1`.
+  - deterministic native signer taxonomy markers:
+    - `native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1`
+    - `native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
+    - `native_signer_reason_codes_value=none|runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
   - lane enforces bounded per-stage and total runtime budgets.
@@ -1778,6 +1783,8 @@ Operator checkpoints:
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - unified local signed-to-Kolme demo policy rejects missing runtime submit/finality evidence markers and broken submit/finality linkage (`Regression: #2388`).
+- unified local signed-to-Kolme demo policy rejects simulated signing profile acceptance and missing native secp256k1 command markers (`runtime_commit_simulated_signing_profile_detected`, `runtime_commit_native_signing_profile_marker_missing`) (`Regression: #4373`).
+- unified local signed-to-Kolme demo policy emits deterministic native signer taxonomy markers and remains fail-closed on runtime signing profile drift (`runtime_signing_profile_mismatch`) (`Regression: #4380`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork process lifecycle integration lane propagates integration runtime finality pass-through options and artifacts to nested integration command composition (`Regression: #1973`).
 - local fork process lifecycle integration lane propagates runtime policy report linkage to nested integration command composition and summary artifact lineage (`Regression: #2104`).

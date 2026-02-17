@@ -10,6 +10,17 @@ EXPECTED_PRIMARY_CHECK_ORDER = [
     "localhost_signed_integration_contract",
     "local_kamn_runtime_integration_run",
 ]
+NATIVE_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
+NATIVE_SIGNING_PROFILE_MARKER = f"KAMN_KOLME_LIVE_SIGNING_PROFILE={NATIVE_SIGNING_PROFILE_VALUE}"
+NATIVE_SIGNER_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1"
+)
+NATIVE_SIGNER_REASON_CODES = (
+    "runtime_commit_native_signing_profile_marker_missing",
+    "runtime_commit_simulated_signing_profile_detected",
+    "runtime_signing_profile_missing",
+    "runtime_signing_profile_mismatch",
+)
 
 
 def classify_overall_reason(status_value: str, reason_value: str) -> str:
@@ -150,6 +161,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(runtime_commit_live_policy_report_path, str) or not runtime_commit_live_policy_report_path.strip():
         reason_codes.append("runtime_commit_live_policy_report_path_missing")
 
+    runtime_signing_profile_contract_version = report.get("runtime_signing_profile_contract_version")
+    if runtime_signing_profile_contract_version != "v1":
+        reason_codes.append("runtime_signing_profile_contract_version_mismatch")
+
+    runtime_signing_profile = report.get("runtime_signing_profile")
+    if not isinstance(runtime_signing_profile, str) or not runtime_signing_profile.strip():
+        reason_codes.append("runtime_signing_profile_missing")
+    elif runtime_signing_profile != NATIVE_SIGNING_PROFILE_VALUE:
+        reason_codes.append("runtime_signing_profile_mismatch")
+
     checks = report.get("checks")
     check_status_by_id: dict[str, str] = {}
     check_entries_by_id: dict[str, list[dict[str, str]]] = {}
@@ -193,6 +214,9 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
+
+    runtime_integration_entry = check_entries_by_id.get("local_kamn_runtime_integration_run", [{}])[0]
+    runtime_integration_command = str(runtime_integration_entry.get("command", ""))
 
     reason_taxonomy = report.get("reason_taxonomy")
     if not isinstance(reason_taxonomy, dict):
@@ -315,6 +339,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             if runtime_commit_submit_finality_linked is not False:
                 reason_codes.append("runtime_commit_submit_finality_linkage_unexpected_in_dry_run")
         elif mode == "run":
+            if NATIVE_SIGNING_PROFILE_MARKER not in runtime_integration_command:
+                reason_codes.append("runtime_commit_native_signing_profile_marker_missing")
+            if "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in runtime_integration_command:
+                reason_codes.append("runtime_commit_simulated_signing_profile_detected")
             if runtime_commit_live_status != "ok":
                 reason_codes.append("runtime_commit_live_status_mismatch")
             if runtime_commit_submit_evidence_marker_present is not True:
@@ -373,12 +401,23 @@ def main() -> int:
         observed_final_decision = "NO-GO"
 
     final_decision, reason_codes = evaluate(report, args)
+    native_signer_reason_codes_value = (
+        ",".join(
+            reason_code
+            for reason_code in NATIVE_SIGNER_REASON_CODES
+            if reason_code in reason_codes
+        )
+        or "none"
+    )
     output = {
         "schema_version": "kamn.kolme.local-signed-to-kolme-demo-policy-report.v1",
         "report_file": str(report_path),
         "expected_final_decision": args.expected_final_decision,
         "ci_fast_gate": args.ci_fast_gate,
         "required_reason_codes": args.require_reason_code,
+        "native_signer_reason_taxonomy_version": NATIVE_SIGNER_REASON_TAXONOMY_VERSION,
+        "native_signer_reason_codes_csv": ",".join(NATIVE_SIGNER_REASON_CODES),
+        "native_signer_reason_codes_value": native_signer_reason_codes_value,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
@@ -396,6 +435,9 @@ def main() -> int:
     print(f"status={status}")
     print(f"final_decision={final_decision}")
     print(f"failed_checks={failed_checks}")
+    print(f"native_signer_reason_taxonomy_version={NATIVE_SIGNER_REASON_TAXONOMY_VERSION}")
+    print(f"native_signer_reason_codes_csv={','.join(NATIVE_SIGNER_REASON_CODES)}")
+    print(f"native_signer_reason_codes_value={native_signer_reason_codes_value}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
 

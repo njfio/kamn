@@ -301,6 +301,11 @@ python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
 # schema: kamn.kolme.local-signed-to-kolme-demo-summary.v1
 # runtime_commit_submit_evidence_marker_present=true
 # runtime_commit_finality_evidence_marker_present=true
+# runtime_signing_profile_contract_version=v1
+# runtime_signing_profile=kolme-fork-secp256k1-v1
+# native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1
+# native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch
+# native_signer_reason_codes_value=none|runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch
 ```
 
 ### Run Local Fork Profile Preflight Lane
