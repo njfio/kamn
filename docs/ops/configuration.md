@@ -123,6 +123,42 @@ Kolme-live keys:
 - `kolme_live_base_url`, `kolme_live_provider_hint`, `kolme_live_signing_profile`
 - `kolme_live_strict_signer_contracts`, `kolme_live_signer_profile`, `kolme_live_signer_key_source`
 
+## Signer Material Validation and Fallback Prohibition Contracts (Issues #4167, #4168)
+
+Kolme live signer configuration must remain explicit and fail closed for missing signer material,
+invalid signer secret hex, and fallback secret reintroduction.
+
+Deterministic signer-config policy markers:
+
+- `signer_config_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-signer-config-reason-taxonomy.v1`
+- `signer_config_reason_codes_csv=signer_secret_missing,signer_secret_invalid_hex,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing`
+- `signer_config_reason_codes_value=none|<csv>`
+
+Deterministic fail-closed signer-config reasons:
+
+- `signer_secret_missing`
+- `signer_secret_invalid_hex`
+- `fallback_signer_secret_present_violation`
+- `fallback_signer_secret_checkpoint_reason_mismatch`
+- `fallback_signer_secret_remediation_missing`
+
+Deterministic operator-facing remediation/error expectations:
+
+- missing signer material rejects with message `signer secret env is required for selected profile`.
+- fallback signer secret rejects with message `fallback signer secret env must not be set` and remediation
+  marker `remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`.
+
+Validation commands:
+
+- `bash scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh`
+- `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+
+Regression markers:
+
+- `Regression: #4167`
+- `Regression: #4168`
+
 ## Signer Secret Decode Buffer Zeroization Controls (Issues #4165, #4166)
 
 Signer secret ingestion and parse paths must explicitly scrub transient buffers on strict-policy

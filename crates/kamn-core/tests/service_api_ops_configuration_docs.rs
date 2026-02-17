@@ -119,6 +119,36 @@ fn service_api_ops_configuration_contains_in_memory_provider_rejection_controls(
 }
 
 #[test]
+fn service_api_ops_configuration_contains_signer_material_validation_and_fallback_prohibition_contracts(
+) {
+    assert!(DOC.contains(
+        "## Signer Material Validation and Fallback Prohibition Contracts (Issues #4167, #4168)"
+    ));
+    assert!(DOC.contains(
+        "signer_config_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-signer-config-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "signer_config_reason_codes_csv=signer_secret_missing,signer_secret_invalid_hex,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing"
+    ));
+    assert!(DOC.contains("signer_config_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains("signer_secret_missing"));
+    assert!(DOC.contains("signer_secret_invalid_hex"));
+    assert!(DOC.contains("fallback_signer_secret_present_violation"));
+    assert!(DOC.contains("fallback_signer_secret_checkpoint_reason_mismatch"));
+    assert!(DOC.contains("fallback_signer_secret_remediation_missing"));
+    assert!(DOC.contains("signer secret env is required for selected profile"));
+    assert!(DOC.contains("fallback signer secret env must not be set"));
+    assert!(DOC.contains("remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"));
+    assert!(DOC.contains("test_run_local_kolme_live_deployment_preflight_lane.sh"));
+    assert!(DOC.contains("test_check_local_kolme_live_deployment_preflight_policy.sh"));
+    assert!(DOC.contains(
+        "check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json"
+    ));
+    assert!(DOC.contains("Regression: #4167"));
+    assert!(DOC.contains("Regression: #4168"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_multi_signer_quorum_signature_decision_controls() {
     assert!(DOC
         .contains("## Multi-Signer Profile and Quorum Signature-Decision Controls (Issue #4357)"));

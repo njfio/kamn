@@ -20,6 +20,8 @@ TMP_REPORT_BUDGET_REASON_MISMATCH="$TMP_DIR/budget-reason-mismatch-report.json"
 TMP_REPORT_ROTATION_STALLED="$TMP_DIR/rotation-stalled-report.json"
 TMP_REPORT_CUSTODY_BYPASS="$TMP_DIR/custody-bypass-report.json"
 TMP_REPORT_QUORUM_PARITY_TAMPER="$TMP_DIR/quorum-parity-tamper-report.json"
+TMP_REPORT_SIGNER_SECRET_MISSING="$TMP_DIR/signer-secret-missing-report.json"
+TMP_REPORT_SIGNER_SECRET_INVALID="$TMP_DIR/signer-secret-invalid-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -323,6 +325,12 @@ if report.get("custody_reason_codes_csv") != "custody_evidence_missing,custody_e
     raise SystemExit("expected deterministic custody_reason_codes_csv marker")
 if report.get("custody_reason_codes_value") != "none":
     raise SystemExit("expected custody_reason_codes_value=none for GO deployment preflight report")
+if report.get("signer_config_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-signer-config-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signer_config_reason_taxonomy_version marker")
+if report.get("signer_config_reason_codes_csv") != "signer_secret_missing,signer_secret_invalid_hex,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing":
+    raise SystemExit("expected deterministic signer_config_reason_codes_csv marker")
+if report.get("signer_config_reason_codes_value") != "none":
+    raise SystemExit("expected signer_config_reason_codes_value=none for GO deployment preflight report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
@@ -678,6 +686,106 @@ if ! grep -q "quorum_evidence_approval_count_mismatch" "$TMP_ERR"; then
   echo "expected quorum_evidence_approval_count_mismatch reason for deployment preflight quorum marker parity failure" >&2
   exit 1
 fi
+
+python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_SIGNER_SECRET_MISSING" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["status"] = "fail"
+report["reason_code"] = "checkpoint_failed_signer_secret_contract"
+report["signer_secret_present"] = False
+report["signer_secret_hex_valid"] = False
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_SIGNER_SECRET_MISSING" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+signer_secret_missing_exit_code=$?
+set -e
+
+if [ "$signer_secret_missing_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when signer material is missing in run mode" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_secret_missing" "$TMP_ERR"; then
+  echo "expected signer_secret_missing deterministic config error reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("signer_config_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected signer_config_reason_codes_value string for missing signer material failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "signer_secret_missing" not in observed_codes:
+    raise SystemExit("expected signer_config_reason_codes_value to include signer_secret_missing")
+if "signer_secret_invalid_hex" in observed_codes:
+    raise SystemExit("expected signer_config_reason_codes_value to prioritize missing signer secret over invalid-hex classification")
+PY
+
+python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_SIGNER_SECRET_INVALID" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["status"] = "fail"
+report["reason_code"] = "checkpoint_failed_signer_secret_contract"
+report["signer_secret_present"] = True
+report["signer_secret_hex_valid"] = False
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_SIGNER_SECRET_INVALID" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+signer_secret_invalid_exit_code=$?
+set -e
+
+if [ "$signer_secret_invalid_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when signer secret hex is invalid in run mode" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_secret_invalid_hex" "$TMP_ERR"; then
+  echo "expected signer_secret_invalid_hex deterministic config error reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("signer_config_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected signer_config_reason_codes_value string for invalid signer material failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "signer_secret_invalid_hex" not in observed_codes:
+    raise SystemExit("expected signer_config_reason_codes_value to include signer_secret_invalid_hex")
+PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_MINIMUM" <<'PY'
 import json

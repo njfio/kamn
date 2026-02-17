@@ -63,6 +63,17 @@ CUSTODY_REASON_CODES = (
     "custody_continuity_bypass_detected",
 )
 CUSTODY_REASON_CODES_CSV = ",".join(CUSTODY_REASON_CODES)
+SIGNER_CONFIG_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-signer-config-reason-taxonomy.v1"
+)
+SIGNER_CONFIG_REASON_CODES = (
+    "signer_secret_missing",
+    "signer_secret_invalid_hex",
+    "fallback_signer_secret_present_violation",
+    "fallback_signer_secret_checkpoint_reason_mismatch",
+    "fallback_signer_secret_remediation_missing",
+)
+SIGNER_CONFIG_REASON_CODES_CSV = ",".join(SIGNER_CONFIG_REASON_CODES)
 
 
 def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> str:
@@ -79,6 +90,17 @@ def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> s
 def observed_custody_reason_codes_value(reason_codes: list[str]) -> str:
     observed = [
         reason_code for reason_code in CUSTODY_REASON_CODES if reason_code in reason_codes
+    ]
+    if not observed:
+        return "none"
+    return ",".join(observed)
+
+
+def observed_signer_config_reason_codes_value(reason_codes: list[str]) -> str:
+    observed = [
+        reason_code
+        for reason_code in SIGNER_CONFIG_REASON_CODES
+        if reason_code in reason_codes
     ]
     if not observed:
         return "none"
@@ -914,6 +936,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("fail_status_reason_code_mismatch")
 
     if mode == "run":
+        if isinstance(signer_secret_present, bool):
+            if signer_secret_present is not True:
+                reason_codes.append("signer_secret_missing")
+            elif signer_secret_hex_valid is not True:
+                reason_codes.append("signer_secret_invalid_hex")
         if budget_status == "not_run":
             reason_codes.append("run_mode_budget_status_not_run")
         if startup_latency_budget_exceeded and budget_status != "exceeded_budget":
@@ -1048,6 +1075,9 @@ def main() -> int:
         "custody_reason_taxonomy_version": CUSTODY_REASON_TAXONOMY_VERSION,
         "custody_reason_codes_csv": CUSTODY_REASON_CODES_CSV,
         "custody_reason_codes_value": observed_custody_reason_codes_value(reason_codes),
+        "signer_config_reason_taxonomy_version": SIGNER_CONFIG_REASON_TAXONOMY_VERSION,
+        "signer_config_reason_codes_csv": SIGNER_CONFIG_REASON_CODES_CSV,
+        "signer_config_reason_codes_value": observed_signer_config_reason_codes_value(reason_codes),
         "runtime_signer_drift_admission_matrix_decision": runtime_signer_drift_admission_matrix.get("decision"),
         "runtime_signer_drift_admission_matrix_class": runtime_signer_drift_admission_matrix.get("class"),
         "runtime_signer_drift_admission_matrix_reason_codes": runtime_signer_drift_admission_matrix.get("reason_codes"),
@@ -1077,6 +1107,12 @@ def main() -> int:
     print(f"custody_reason_taxonomy_version={CUSTODY_REASON_TAXONOMY_VERSION}")
     print(f"custody_reason_codes_csv={CUSTODY_REASON_CODES_CSV}")
     print(f"custody_reason_codes_value={observed_custody_reason_codes_value(reason_codes)}")
+    print(f"signer_config_reason_taxonomy_version={SIGNER_CONFIG_REASON_TAXONOMY_VERSION}")
+    print(f"signer_config_reason_codes_csv={SIGNER_CONFIG_REASON_CODES_CSV}")
+    print(
+        "signer_config_reason_codes_value="
+        f"{observed_signer_config_reason_codes_value(reason_codes)}"
+    )
     print(f"failed_checks={failed_checks}")
 
     return 0 if final_decision == "GO" else 1
