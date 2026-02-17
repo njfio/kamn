@@ -66,6 +66,16 @@ cat >"$TMP_REPORT" <<'JSON'
   "runtime_phase_module_parity_status": "verified",
   "runtime_extraction_evidence_output_status": "verified",
   "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
+  "runtime_module_boundary_parity_reason_taxonomy_version": "kamn.runtime.module-boundary-parity-reason-taxonomy.v1",
+  "runtime_module_boundary_parity_reason_codes_csv": "runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded",
+  "runtime_module_boundary_evidence_outputs_csv": "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status",
+  "runtime_orchestration_dispatch_boundary_status": "verified",
+  "runtime_daemon_phase_boundary_status": "verified",
+  "runtime_kolme_live_boundary_status": "verified",
+  "runtime_module_boundary_parity_status": "verified",
+  "runtime_module_boundary_evidence_status": "verified",
+  "ci_local_runtime_module_boundary_budget_boundary_status": "verified",
+  "runtime_module_boundary_reason_codes_value": "none",
   "combined_transport_reason_codes": ["fork_choice_stale_block_height"],
   "combined_kolme_runtime_reason_code": "not_run",
   "kolme_runtime_commit_failure_taxonomy_version": "v1",
@@ -115,8 +125,24 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
   echo "expected local full-stack integration policy normalized reason_codes_value marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runtime_module_boundary_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration policy runtime module boundary reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runtime_module_boundary_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration policy runtime module boundary reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runtime_module_boundary_reason_codes_value=none$'; then
+  echo "expected local full-stack integration policy runtime module boundary normalized reason marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$policy_output" | grep -q '^runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status$'; then
   echo "expected local full-stack integration policy parity evidence output normalization marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status$'; then
+  echo "expected local full-stack integration policy runtime module boundary evidence output normalization marker" >&2
   exit 1
 fi
 
@@ -142,6 +168,14 @@ if payload.get("reason_codes_value") != "none":
     raise SystemExit("expected deterministic reason_codes_value=none marker")
 if payload.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
     raise SystemExit("expected deterministic runtime phase parity evidence output normalization marker")
+if payload.get("runtime_module_boundary_reason_taxonomy_version") != "kamn.runtime.module-boundary-parity-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic runtime module boundary reason taxonomy marker")
+if payload.get("runtime_module_boundary_reason_codes_csv") != "runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic runtime module boundary reason codes marker")
+if payload.get("runtime_module_boundary_reason_codes_value") != "none":
+    raise SystemExit("expected deterministic runtime module boundary reason_codes_value=none marker")
+if payload.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
+    raise SystemExit("expected deterministic runtime module boundary evidence output normalization marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -370,6 +404,41 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_orchestration_dispatch_boundary_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_module_boundary_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_module_boundary_code=$?
+set -e
+if [ "$tampered_module_boundary_code" -eq 0 ]; then
+  echo "expected runtime module boundary drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_module_boundary_output" | grep -q 'runtime_orchestration_dispatch_boundary_drift_detected'; then
+  echo "expected deterministic runtime module boundary drift reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_module_boundary_output" | grep -q '^runtime_module_boundary_reason_codes_value=runtime_orchestration_dispatch_boundary_drift_detected$'; then
+  echo "expected normalized runtime module boundary reason mapping for dispatch boundary drift" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
 payload["runtime_extraction_evidence_output_status"] = "drifted"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
@@ -425,6 +494,14 @@ if [ "$tampered_phase_budget_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_phase_budget_output" | grep -q 'ci_local_runtime_phase_parity_budget_boundary_exceeded'; then
   echo "expected deterministic runtime phase parity budget boundary reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_phase_budget_output" | grep -q 'ci_local_runtime_module_boundary_budget_boundary_exceeded'; then
+  echo "expected deterministic runtime module boundary budget boundary reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_phase_budget_output" | grep -q '^runtime_module_boundary_reason_codes_value=ci_local_runtime_module_boundary_budget_boundary_exceeded$'; then
+  echo "expected normalized runtime module boundary budget reason mapping marker" >&2
   exit 1
 fi
 

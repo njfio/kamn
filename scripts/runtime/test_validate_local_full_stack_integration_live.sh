@@ -147,6 +147,46 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_phase_parity_reason_
   echo "expected local full-stack integration runtime phase parity reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration runtime module boundary parity reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded$'; then
+  echo "expected local full-stack integration runtime module boundary parity reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status$'; then
+  echo "expected local full-stack integration runtime module boundary evidence outputs marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_orchestration_dispatch_boundary_status=verified$'; then
+  echo "expected local full-stack integration runtime orchestration dispatch boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_daemon_phase_boundary_status=verified$'; then
+  echo "expected local full-stack integration runtime daemon phase boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_kolme_live_boundary_status=verified$'; then
+  echo "expected local full-stack integration runtime kolme live boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_parity_status=verified$'; then
+  echo "expected local full-stack integration runtime module boundary parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_evidence_status=verified$'; then
+  echo "expected local full-stack integration runtime module boundary evidence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_runtime_module_boundary_budget_boundary_status=verified$'; then
+  echo "expected local full-stack integration runtime module boundary ci-local budget boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_module_boundary_reason_codes_value=none$'; then
+  echo "expected local full-stack integration runtime module boundary normalized reason marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^runtime_phase_module_parity_status=verified$'; then
   echo "expected local full-stack integration runtime phase module parity marker" >&2
   exit 1
@@ -281,6 +321,26 @@ if payload.get("runtime_phase_parity_reason_taxonomy_version") != "kamn.runtime.
     raise SystemExit("expected runtime_phase_parity_reason_taxonomy_version marker")
 if payload.get("runtime_phase_parity_reason_codes_csv") != "runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded":
     raise SystemExit("expected runtime_phase_parity_reason_codes_csv marker")
+if payload.get("runtime_module_boundary_parity_reason_taxonomy_version") != "kamn.runtime.module-boundary-parity-reason-taxonomy.v1":
+    raise SystemExit("expected runtime_module_boundary_parity_reason_taxonomy_version marker")
+if payload.get("runtime_module_boundary_parity_reason_codes_csv") != "runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded":
+    raise SystemExit("expected runtime_module_boundary_parity_reason_codes_csv marker")
+if payload.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
+    raise SystemExit("expected runtime_module_boundary_evidence_outputs_csv marker")
+if payload.get("runtime_orchestration_dispatch_boundary_status") != "verified":
+    raise SystemExit("expected runtime_orchestration_dispatch_boundary_status=verified")
+if payload.get("runtime_daemon_phase_boundary_status") != "verified":
+    raise SystemExit("expected runtime_daemon_phase_boundary_status=verified")
+if payload.get("runtime_kolme_live_boundary_status") != "verified":
+    raise SystemExit("expected runtime_kolme_live_boundary_status=verified")
+if payload.get("runtime_module_boundary_parity_status") != "verified":
+    raise SystemExit("expected runtime_module_boundary_parity_status=verified")
+if payload.get("runtime_module_boundary_evidence_status") != "verified":
+    raise SystemExit("expected runtime_module_boundary_evidence_status=verified")
+if payload.get("ci_local_runtime_module_boundary_budget_boundary_status") != "verified":
+    raise SystemExit("expected ci_local_runtime_module_boundary_budget_boundary_status=verified")
+if payload.get("runtime_module_boundary_reason_codes_value") != "none":
+    raise SystemExit("expected runtime_module_boundary_reason_codes_value=none")
 if payload.get("runtime_phase_module_parity_status") != "verified":
     raise SystemExit("expected runtime_phase_module_parity_status=verified")
 if payload.get("runtime_extraction_evidence_output_status") != "verified":
