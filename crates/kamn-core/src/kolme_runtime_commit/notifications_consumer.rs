@@ -113,11 +113,18 @@ where
                 }
             }
 
-            let result = self
-                .connection
-                .as_mut()
-                .expect("connection should exist before read")
-                .read_text_message();
+            let Some(connection) = self.connection.as_mut() else {
+                reconnect_attempts += 1;
+                if reconnect_attempts >= self.max_reconnect_attempts {
+                    return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: compose_kolme_notifications_reconnect_exhausted_reason_contract(
+                            self.max_reconnect_attempts,
+                        ),
+                    });
+                }
+                continue;
+            };
+            let result = connection.read_text_message();
             match result {
                 Ok(Some(payload)) => {
                     let event = parse_kolme_notification_event_contract(payload.as_str()).map_err(
