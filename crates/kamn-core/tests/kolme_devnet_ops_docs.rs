@@ -48,6 +48,33 @@ fn plan_contains_failover_sync_drill_lane_policy() {
 }
 
 #[test]
+fn plan_contains_service_api_websocket_evidence_convergence_contract() {
+    assert!(PLAN.contains("## Service API Websocket Session Evidence Convergence (Issue #4268)"));
+    assert!(PLAN.contains(
+        "check_service_api_websocket_live_evidence_convergence.sh --report-file /tmp/service-api-websocket-live-contract-lane-report.json --policy-file /tmp/service-api-websocket-live-policy-report.json --output-json /tmp/service-api-websocket-live-convergence-report.json"
+    ));
+    assert!(PLAN.contains("service_api_websocket_evidence_convergence_status=verified"));
+    assert!(PLAN.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(PLAN.contains(
+        "service_api_websocket_evidence_reason_taxonomy_version=kamn.runtime.service-api-websocket-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "service_api_websocket_evidence_reason_codes_csv=service_api_websocket_evidence_link_missing,service_api_websocket_evidence_payload_tamper_detected,service_api_websocket_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-websocket-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_codes_csv=service_api_websocket_policy_required_field_missing,service_api_websocket_policy_marker_missing,service_api_websocket_policy_reason_taxonomy_mismatch,service_api_websocket_policy_idle_timeout_contract_mismatch,ci_fast_gate_failed,service_api_websocket_policy_expected_decision_mismatch,service_api_websocket_policy_violation"
+    ));
+    assert!(PLAN.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(PLAN.contains("service_api_websocket_evidence_link_missing:source_report_file"));
+    assert!(PLAN.contains("service_api_websocket_promotion_decision_reason_mapping_mismatch"));
+    assert!(PLAN.contains("Regression: #4274"));
+    assert!(PLAN.contains("Regression: #4275"));
+}
+
+#[test]
 fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT
         .contains("## Drift Taxonomy and Runbook Marker Parity Contracts (Issue #4282)"));
