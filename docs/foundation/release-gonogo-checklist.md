@@ -616,6 +616,12 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - deterministic taxonomy/normalization markers:
     - `demo_evidence_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1`
     - `demo_evidence_normalization_version=kamn.kolme.local-signed-to-kolme-demo.evidence-normalization.v1`
+  - deterministic native signer markers:
+    - `runtime_signing_profile_contract_version=v1`
+    - `runtime_signing_profile=kolme-fork-secp256k1-v1`
+    - `native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1`
+    - `native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
+    - `native_signer_reason_codes_value=none|runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
@@ -633,6 +639,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - provider-failure taxonomy drift or non-deterministic provider-failure reason projection forces `NO-GO` (`Regression: #4378`).
   - signed-message checkpoint failures accepted alongside commit evidence success force `NO-GO` (`signed_message_commit_evidence_mismatch`) (`Regression: #4497`).
   - signed-to-Kolme taxonomy/normalized-evidence drift forces `NO-GO` (`reason_taxonomy_overall_mismatch`, `normalized_evidence_status_mismatch:local_kamn_runtime_integration_run`) (`Regression: #4498`).
+  - signed-to-Kolme simulated signing profile acceptance or native signer profile marker omission forces `NO-GO` (`runtime_commit_simulated_signing_profile_detected`, `runtime_commit_native_signing_profile_marker_missing`) (`Regression: #4373`).
+  - signed-to-Kolme runtime signing profile drift and native signer taxonomy drift force `NO-GO` (`runtime_signing_profile_mismatch`) (`Regression: #4380`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.
