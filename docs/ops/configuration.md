@@ -65,6 +65,26 @@ Shutdown signal failure matrix:
 - `SIGINT` and `SIGTERM` trigger graceful shutdown when `--daemon-shutdown-os-signals` is enabled.
 - Timeout transitions must project
   `graceful-shutdown-timeout:signal@<tick>;drain_ticks=<n>;timeout_ticks=<n>;ignored_signals=<n>`.
+- Graceful completion reasons fail closed when `drain_ticks > timeout_ticks` with
+  `full_supervisor_stop_graceful_drain_timeout_contract_mismatch`.
+- Invalid numeric shutdown metadata fails closed with:
+  - `full_supervisor_stop_invalid_drain_ticks`
+  - `full_supervisor_stop_invalid_timeout_ticks`
+  - `full_supervisor_stop_invalid_ignored_signals`
+- Shutdown checkpoint reconciliation drift fails closed under
+  `runtime_shutdown_invariant_violation:<reason_code>`.
+- Shutdown checkpoint reconciliation reason taxonomy marker:
+  - `shutdown_checkpoint_reconciliation_reason_taxonomy_version=kamn.runtime.shutdown-checkpoint-reconciliation-reason-taxonomy.v1`
+- Required reconciliation reason markers:
+  - `shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_timeout_checkpoint_mismatch`
+  - `shutdown_checkpoint_reconciliation_graceful_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_graceful_checkpoint_mismatch`
+  - `shutdown_checkpoint_reconciliation_not_signaled_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch`
+- Regression markers:
+  - `Regression: #4332`
+  - `Regression: #4333`
 - See `docs/ops/runbooks/shutdown.md` for deterministic reason-shape and operator validation steps.
 
 Kolme-live keys:

@@ -111,6 +111,20 @@ fn checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_shutdown_drain_checkpoint_reconciliation_gate() {
+    assert!(CHECKLIST
+        .contains("## Shutdown Drain/Checkpoint Reconciliation Gate (Issues #4332, #4333)"));
+    assert!(CHECKLIST.contains(
+        "shutdown_checkpoint_reconciliation_reason_taxonomy_version=kamn.runtime.shutdown-checkpoint-reconciliation-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("full_supervisor_stop_graceful_drain_timeout_contract_mismatch"));
+    assert!(CHECKLIST.contains("shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch"));
+    assert!(CHECKLIST.contains("shutdown_checkpoint_reconciliation_graceful_checkpoint_mismatch"));
+    assert!(CHECKLIST.contains("runtime_shutdown_invariant_violation"));
+    assert!(CHECKLIST.contains("Regression: #4333"));
+}
+
+#[test]
 fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
     assert!(CHECKLIST
         .contains("## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)"));

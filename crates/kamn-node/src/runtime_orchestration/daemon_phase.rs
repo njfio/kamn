@@ -138,6 +138,13 @@ pub(super) fn execute_daemon_runtime(
         daemon_completion.completion_reason.as_str(),
     )
     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    validate_shutdown_checkpoint_reconciliation(
+        daemon_completion.completion_reason.as_str(),
+        daemon_observability.reason_code.as_str(),
+        daemon_observability.transport_checkpoint_failures,
+        daemon_observability.signer_checkpoint_failures,
+        daemon_observability.commit_checkpoint_failures,
+    )?;
     let shutdown_drain_status =
         daemon_shutdown_drain_status(daemon_completion.completion_reason.as_str());
     let shutdown_snapshot_flush_status =

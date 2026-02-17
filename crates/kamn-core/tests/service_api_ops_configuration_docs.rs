@@ -50,3 +50,17 @@ fn service_api_ops_configuration_contains_multi_signer_quorum_signature_decision
     assert!(DOC.contains("runtime_signer_quorum_linkage_drift"));
     assert!(DOC.contains("Regression: #4357"));
 }
+
+#[test]
+fn service_api_ops_configuration_contains_shutdown_checkpoint_reconciliation_failure_modes() {
+    assert!(DOC.contains("Shutdown signal failure matrix"));
+    assert!(DOC.contains("full_supervisor_stop_graceful_drain_timeout_contract_mismatch"));
+    assert!(DOC.contains(
+        "shutdown_checkpoint_reconciliation_reason_taxonomy_version=kamn.runtime.shutdown-checkpoint-reconciliation-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch"));
+    assert!(DOC.contains("shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch"));
+    assert!(DOC.contains("runtime_shutdown_invariant_violation:<reason_code>"));
+    assert!(DOC.contains("Regression: #4332"));
+    assert!(DOC.contains("Regression: #4333"));
+}
