@@ -155,6 +155,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^replay_idempotency_runbook_reaso
   echo "expected sqlite crash-recovery policy checker replay idempotency runbook reason code marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected sqlite crash-recovery policy checker promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery policy checker promotion decision reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation$'; then
+  echo "expected sqlite crash-recovery policy checker promotion decision reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected sqlite crash-recovery policy checker promotion decision reason code marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -200,6 +216,14 @@ if payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_idempot
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker")
 if payload.get("replay_idempotency_runbook_reason_code") != "none":
     raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic promotion_decision_reason_mapping_status marker")
+if payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if payload.get("promotion_decision_reason_codes_csv") != "sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker")
 if payload.get("crash_recovery_readiness_progress_status") != "verified":
     raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
 if payload.get("snapshot_parity_status") != "verified":
