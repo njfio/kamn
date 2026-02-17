@@ -2,6 +2,7 @@
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+source "$KAMN_ROOT/scripts/lib/test_harness.sh"
 
 SCRIPT_NAME="$(basename "$0")"
 WAVE_NUMBER=""
@@ -40,13 +41,13 @@ fi
 DISPATCHER="$KAMN_ROOT/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 WRAPPERS_FILE="$KAMN_ROOT/scripts/framework/wave_definitions/non_kolme_wave${WAVE_NUMBER}_lightweight_wrappers.txt"
 
-if [[ ! -x "$DISPATCHER" ]]; then
-  echo "expected non-Kolme contract-lane dispatcher to be executable: $DISPATCHER" >&2
+if ! test_harness_require_executable "$DISPATCHER" \
+  "expected non-Kolme contract-lane dispatcher to be executable: $DISPATCHER"; then
   exit 1
 fi
 
-if [[ ! -f "$WRAPPERS_FILE" ]]; then
-  echo "expected non-Kolme wave wrapper definition file: $WRAPPERS_FILE" >&2
+if ! test_harness_require_file "$WRAPPERS_FILE" \
+  "expected non-Kolme wave wrapper definition file: $WRAPPERS_FILE"; then
   exit 1
 fi
 
@@ -66,8 +67,8 @@ for wrapper_rel_path in "${lane_wrappers[@]}"; do
   wrapper_path="$KAMN_ROOT/$wrapper_rel_path"
   wrapper_name="$(basename "$wrapper_path")"
 
-  if [[ ! -x "$wrapper_path" ]]; then
-    echo "expected lightweight wrapper to be executable: $wrapper_path" >&2
+  if ! test_harness_require_executable "$wrapper_path" \
+    "expected lightweight wrapper to be executable: $wrapper_path"; then
     exit 1
   fi
 
