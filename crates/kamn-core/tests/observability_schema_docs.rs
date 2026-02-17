@@ -24,6 +24,33 @@ fn observability_schema_contains_runtime_endpoint_fail_closed_envelope_markers()
 }
 
 #[test]
+fn observability_schema_contains_unified_local_heavy_correlation_schema_markers() {
+    assert!(DOC.contains("## Unified Local-Heavy Policy Taxonomy"));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.runtime.unified-api-observability-local-heavy-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "unified_api_observability_local_heavy_policy_correlation_schema_version_mismatch"
+    ));
+    assert!(DOC.contains(
+        "unified_api_observability_local_heavy_policy_correlation_required_fields_mismatch"
+    ));
+    assert!(DOC.contains(
+        "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch"
+    ));
+    assert!(DOC.contains(
+        "correlation_schema_version=kamn.runtime.unified-api-observability-correlation-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "correlation_required_fields_csv=correlation_id,trace_id,trace_parent,span_id,request_id"
+    ));
+    assert!(DOC.contains("correlation_id_propagation_status=verified"));
+    assert!(DOC.contains("api_correlation_id=unified-api-observability-local-heavy"));
+    assert!(DOC.contains("runtime_correlation_id=unified-api-observability-local-heavy"));
+    assert!(DOC.contains("kolme_correlation_id=unified-api-observability-local-heavy"));
+}
+
+#[test]
 fn observability_schema_contains_slo_threshold_and_gate_taxonomy_matrix() {
     assert!(DOC.contains("## SLO Threshold and Gate Reason Taxonomy Matrix (Issue #4462)"));
     assert!(DOC.contains(
