@@ -6,6 +6,8 @@ SMOKE_LANE="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_smoke
 SMOKE_LANE_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_partition_reconnect_smoke_lane.json"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -19,6 +21,14 @@ if [ ! -x "$SMOKE_LANE_IMPL" ]; then
 fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
   exit 1
 fi
 
@@ -43,10 +53,34 @@ if ! grep -q 'run_live_network_partition_reconnect_smoke_lane_impl.sh' "$MANIFES
   exit 1
 fi
 
-if ! grep -q 'live_network_partition_reconnect_contract.py' "$SMOKE_LANE_IMPL"; then
-  echo "expected partition/reconnect smoke lane implementation to delegate to partition/reconnect contract module" >&2
+if [ ! -L "$SMOKE_LANE_IMPL" ]; then
+  echo "expected partition/reconnect smoke lane implementation wrapper to be a symlink" >&2
   exit 1
 fi
+
+if [ "$(readlink -f "$SMOKE_LANE_IMPL")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected partition/reconnect smoke lane implementation wrapper to resolve to shared exec dispatcher" >&2
+  exit 1
+fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get("scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh")
+if not isinstance(entry, dict):
+    raise SystemExit("expected registry entry for partition/reconnect smoke lane implementation wrapper")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for partition/reconnect smoke lane implementation wrapper")
+if entry.get("target") != "scripts/runtime/live_network_partition_reconnect_contract.py":
+    raise SystemExit("expected partition/reconnect smoke lane implementation wrapper target in exec registry")
+if entry.get("args_prefix") != ["run-smoke"]:
+    raise SystemExit("expected partition/reconnect smoke lane implementation wrapper args_prefix to pin run-smoke mode")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for partition/reconnect smoke lane implementation wrapper")
+PY
 
 lane_output="$(bash "$SMOKE_LANE" --event-name pull_request --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$lane_output" | grep -q "live-network partition/reconnect smoke lane tests passed."; then

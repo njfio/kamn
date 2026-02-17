@@ -6,6 +6,8 @@ LANE_SCRIPT="$ROOT_DIR/scripts/runtime/run_live_validation_environment_lane.sh"
 LANE_IMPL_SCRIPT="$ROOT_DIR/scripts/runtime/run_live_validation_environment_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_validation_environment_lane.json"
+EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
+EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/live-validation-environment-summary.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -20,6 +22,14 @@ if [ ! -x "$LANE_IMPL_SCRIPT" ]; then
 fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$EXEC_DISPATCHER" ]; then
+  echo "expected shared exec dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$EXEC_REGISTRY" ]; then
+  echo "expected exec wrapper registry to exist" >&2
   exit 1
 fi
 if [ ! -L "$LANE_SCRIPT" ]; then
@@ -41,10 +51,33 @@ if ! grep -q 'run_live_validation_environment_lane_impl.sh' "$MANIFEST_FILE"; th
   echo "expected live validation environment lane manifest to dispatch implementation module" >&2
   exit 1
 fi
-if ! grep -q 'live_validation_environment_lane_contract.py' "$LANE_IMPL_SCRIPT"; then
-  echo "expected live validation environment lane implementation to delegate to environment lane contract module" >&2
+if [ ! -L "$LANE_IMPL_SCRIPT" ]; then
+  echo "expected live validation environment lane implementation wrapper to be a symlink" >&2
   exit 1
 fi
+if [ "$(readlink -f "$LANE_IMPL_SCRIPT")" != "$(readlink -f "$EXEC_DISPATCHER")" ]; then
+  echo "expected live validation environment lane implementation wrapper to resolve to shared exec dispatcher" >&2
+  exit 1
+fi
+
+python3 - "$EXEC_REGISTRY" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+entry = registry.get("entries", {}).get("scripts/runtime/run_live_validation_environment_lane_impl.sh")
+if not isinstance(entry, dict):
+    raise SystemExit("expected registry entry for live validation environment lane implementation wrapper")
+if entry.get("interpreter") != "python3":
+    raise SystemExit("expected python3 interpreter for live validation environment lane implementation wrapper")
+if entry.get("target") != "scripts/runtime/live_validation_environment_lane_contract.py":
+    raise SystemExit("expected live validation environment lane implementation wrapper target in exec registry")
+if entry.get("args_prefix") != []:
+    raise SystemExit("expected empty args_prefix for live validation environment lane implementation wrapper")
+if entry.get("passthrough") is not True:
+    raise SystemExit("expected passthrough=true for live validation environment lane implementation wrapper")
+PY
 
 lane_output="$(
   bash "$LANE_SCRIPT" \

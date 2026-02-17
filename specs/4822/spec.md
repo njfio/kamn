@@ -8,36 +8,41 @@
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Introduce a single exec-dispatch wrapper model that shrinks tiny wrapper shell LOC while preserving deterministic contract-lane behavior.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Tiny wrapper scripts were duplicating `exec ...` boilerplate across hundreds of files, inflating shell LOC and making lane wiring harder to maintain.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add shared dispatcher entrypoints and registry metadata
+- migrate eligible tiny wrappers to symlink-to-dispatcher form
+- update affected contract tests from file-content assertions to symlink+registry assertions
+- keep CI contract suites deterministic and green after migration
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- non-wrapper architectural refactors
+- protocol/wire-format behavior changes
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: Shared dispatcher exists and is executable: `scripts/lib/exec_dispatch.sh`, `scripts/lib/exec_dispatch.py`, `scripts/lib/exec_registry.json`.
+- AC-2: Eligible tiny wrappers are migrated to symlinks that resolve to `scripts/lib/exec_dispatch.sh`, with deterministic registry metadata that preserves prior target/args behavior.
+- AC-3: CI/runtime/frontend/sdk/compliance contract tests that previously asserted wrapper source content now validate symlink+registry semantics.
+- AC-4: Trend budget checks remain valid under symlink wrappers (symlink-aware LOC accounting; baseline fixtures updated where required).
+- AC-5: End-to-end CI tools regression suite remains green.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1/AC-2): `bash scripts/lib/test_exec_dispatch_registry.sh` passes.
+- C-02 (AC-3): wrapper matrix/contract tests for migrated lanes pass (runtime, sdk, frontend, compliance, ci contract lanes).
+- C-03 (AC-4): `bash scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh` passes with symlink-aware LOC semantics.
+- C-04 (AC-5): `bash scripts/ci/test_ci_tools.sh` passes.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Dispatcher registry test passes with deterministic wrapper resolution checks.
+- CI tool regression suite exits 0 after migration.
+- Wrapper tests assert stable contracts (symlink target + registry entry) instead of brittle inline script text.

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -78,11 +79,36 @@ def main() -> int:
         print("continuous runtime commit contract lane failed", file=sys.stderr)
         return 1
 
-    if "3 passed; 0 failed" not in test_output:
+    required_test_markers = (
+        "rejects_kolme_live_continuous_mode_without_tick_interval",
+        "rejects_kolme_live_continuous_mode_without_max_ticks",
+        "functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles",
+    )
+    missing_test_markers = [marker for marker in required_test_markers if marker not in test_output]
+    if missing_test_markers:
+        if test_output:
+            print(test_output, file=sys.stderr, end="")
+        print(
+            "expected continuous runtime contract test markers: "
+            + ",".join(missing_test_markers),
+            file=sys.stderr,
+        )
+        return 1
+
+    pass_count_match = re.search(r"test result: ok\. (\d+) passed; 0 failed;", test_output)
+    if pass_count_match is None:
         if test_output:
             print(test_output, file=sys.stderr, end="")
         print(
             "expected continuous runtime contract pass-count marker",
+            file=sys.stderr,
+        )
+        return 1
+    if int(pass_count_match.group(1)) < 3:
+        if test_output:
+            print(test_output, file=sys.stderr, end="")
+        print(
+            "expected at least three continuous runtime contract tests to pass",
             file=sys.stderr,
         )
         return 1

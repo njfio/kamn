@@ -1,0 +1,1692 @@
+{
+  "version": "kamn.exec-wrapper-registry.v1",
+  "entries": {
+    "scripts/bridge/check_bridge_adapter_conformance_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/bridge_adapter_conformance_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/check_bridge_replay_redaction_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/bridge_replay_redaction_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/check_cross_chain_outbound_intent_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/cross_chain_outbound_intent_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/check_localhost_bridge_demo_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/localhost_bridge_demo_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/generate_bridge_adapter_conformance_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/bridge_adapter_conformance_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/generate_bridge_replay_redaction_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/bridge_replay_redaction_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/generate_cross_chain_outbound_intent_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/cross_chain_outbound_intent_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/bridge/generate_localhost_bridge_demo_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/bridge/localhost_bridge_demo_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/canary/check_post_cutover_slo_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/canary/post_cutover_slo_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/canary/generate_post_cutover_slo_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/canary/post_cutover_slo_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/channel/check_channel_retention_redaction_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/channel/channel_retention_redaction_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/channel/generate_channel_retention_redaction_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/channel/channel_retention_redaction_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_fast_gate_budget_delta_threshold.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/fast_gate_budget_delta.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_kamn_core_live_https_dependency_posture.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_kamn_core_live_https_dependency_posture.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_kamn_node_main_rs_extraction_threshold.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_kamn_node_main_rs_extraction_threshold.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_kolme_wrapper_inventory_baseline.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/kolme_wrapper_inventory_baseline.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_legacy_ingress_parser_drift.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_legacy_ingress_parser_drift.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_no_production_expect.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_no_production_expect.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_observability_endpoint_drift_contract.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_observability_endpoint_drift_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_script_duplication_budget.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_script_duplication_budget.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_test_harness_loc_soft_budget.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_test_harness_loc_soft_budget.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/generate_fast_gate_budget_delta_report.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/fast_gate_budget_delta.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/generate_kolme_wrapper_inventory_baseline.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/kolme_wrapper_inventory_baseline.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/generate_test_harness_loc_report.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/generate_test_harness_loc_report.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "10"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave11_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "11"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave12_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "12"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave13_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "13"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave14_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "14"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave15_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "15"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave16_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "16"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave17_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "17"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave18_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "18"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave19_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "19"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave1_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "1"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave2_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "2"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave3_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "3"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave4_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "4"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave5_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "5"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave6_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "6"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave7_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "7"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave8_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "8"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_non_kolme_wave9_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "9"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "bootstrap_conformance_runtime_process"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "parity_demo_real_process"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "profile_selftest_portability"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "runtime_nonce"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "runtime_triadic_bootstrap_e2e"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "tranche1"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh",
+      "args_prefix": [
+        "--group",
+        "version_matrix"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/test_non_kolme_wave10_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "10"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave11_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "11"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave12_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "12"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave13_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "13"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave14_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "14"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave15_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "15"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave16_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "16"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave17_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "17"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave18_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "18"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave19_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "19"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave1_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "1"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave2_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "2"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave3_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "3"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave4_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "4"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave5_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "5"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave6_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "6"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave7_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "7"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave8_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "8"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_non_kolme_wave9_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "9"
+      ],
+      "passthrough": false
+    },
+    "scripts/compliance/check_classification_redaction_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/classification_redaction_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/compliance/check_dsar_legal_hold_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/dsar_legal_hold_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/compliance/check_soc2_control_evidence_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/soc2_control_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/compliance/generate_dsar_legal_hold_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/dsar_legal_hold_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/compliance/generate_soc2_control_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/soc2_control_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/compliance/run_classification_redaction_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/compliance/classification_redaction_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/cutover/check_cutover_rollback_evidence_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/cutover/cutover_rollback_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/cutover/generate_cutover_rollback_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/cutover/cutover_rollback_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/dashboard/check_backend_session_auth_freshness_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/dashboard/backend_session_auth_freshness_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/dashboard/check_dashboard_stale_error_budget_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/dashboard/stale_error_budget_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/dashboard/backend_session_auth_freshness_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/dashboard/stale_error_budget_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/deploy/check_deployment_slo_rollback_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/deployment_slo_rollback_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/deploy/check_gonogo_evidence_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/gonogo_evidence_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/check_local_compose_multinode_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/local_compose_multinode_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/check_release_slo_gates.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/dr_evidence_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/check_staging_rehearsal_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/staging_rehearsal_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/generate_dr_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/dr_evidence_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/generate_gonogo_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/gonogo_evidence_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/generate_staging_rehearsal_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/staging_rehearsal_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/deploy/run_deployment_slo_rollback_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/deployment_slo_rollback_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/deploy/validate_local_compose_multinode_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/deploy/local_compose_multinode_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/check_federated_did_handshake_deep_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/federated_did_handshake_deep_policy_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/check_federated_did_handshake_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/federated_did_handshake_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/check_lifecycle_operator_binding_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/lifecycle_operator_binding_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/check_multikey_algorithm_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/did_multikey_algorithm_policy_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/check_service_endpoint_canonicalization_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/did_service_endpoint_canonicalization_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/generate_federated_did_handshake_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/federated_did_handshake_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/generate_lifecycle_operator_binding_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/lifecycle_operator_binding_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/generate_multikey_algorithm_policy_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/did_multikey_algorithm_policy_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/did/generate_service_endpoint_canonicalization_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/did/did_service_endpoint_canonicalization_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/escrow/check_settlement_reconciliation_evidence_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/escrow/settlement_reconciliation_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/escrow/settlement_reconciliation_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/framework/run_manifest_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/framework/run_lane_from_manifest.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/frontend/run_dashboard_shell_determinism_matrix_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/frontend/dashboard_shell_determinism_matrix_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/governance/check_governance_lifecycle_rollback_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_lifecycle_rollback_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/governance/check_governance_simulation_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_simulation_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/governance/check_quorum_attestation_replay_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_quorum_attestation_replay_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/governance/check_stake_slash_risk_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/stake_slash_risk_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/governance/generate_governance_simulation_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_simulation_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/governance/generate_stake_slash_risk_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/stake_slash_risk_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/governance/run_governance_lifecycle_rollback_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_lifecycle_rollback_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/governance/governance_quorum_attestation_replay_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/kolme/managed_signer_backend_slo_telemetry_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/check_a2a_mcp_conformance_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/a2a_mcp_conformance_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/message/check_didcomm_envelope_compatibility_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/didcomm_envelope_compatibility_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/message/check_group_sender_replay_ratchet_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/group_sender_replay_ratchet_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/check_key_lifecycle_invariant_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/key_lifecycle_invariant_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/check_processor_proof_artifact_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/zk_processor_proof_artifact_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/generate_group_sender_replay_ratchet_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/group_sender_replay_ratchet_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/generate_key_lifecycle_invariant_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/key_lifecycle_invariant_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/message/generate_processor_proof_artifact_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/message/zk_processor_proof_artifact_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/check_reputation_dispute_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_dispute_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/check_reputation_recovery_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_recovery_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/check_reputation_signal_quarantine_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_signal_quarantine_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/check_weighted_decay_property_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/weighted_decay_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/generate_reputation_dispute_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_dispute_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/generate_reputation_recovery_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_recovery_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/reputation_signal_quarantine_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/reputation/generate_weighted_decay_property_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/reputation/weighted_decay_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_block_reconciliation_partition_rejoin_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/block_reconciliation_partition_rejoin_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_full_io_scenario_matrix_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/full_io_scenario_matrix_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_libp2p_convergence_process_isolated_live_evidence_convergence.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_convergence_process_isolated_live_contract.py",
+      "args_prefix": [
+        "check-evidence-convergence"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_convergence_process_isolated_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_libp2p_process_isolated_harness_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_process_isolated_harness_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_libp2p_three_node_discovery_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_three_node_discovery_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_live_network_partition_reconnect_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_partition_reconnect_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/check_live_transport_fault_matrix_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_transport_fault_matrix_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_full_runtime_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_full_runtime_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_full_stack_integration_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_full_stack_integration_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_metrics_scrape_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_metrics_scrape_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_observability_scrape_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_observability_scrape_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_retry_diagnostics_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_retry_diagnostics_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_local_signal_secret_hygiene_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_signal_secret_hygiene_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_processor_proof_admission_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/processor_proof_admission_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_runtime_observability_endpoint_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/runtime_observability_endpoint_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_axum_ingress_live_evidence_convergence.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_axum_ingress_live_contract.py",
+      "args_prefix": [
+        "check-evidence-convergence"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_axum_ingress_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_axum_ingress_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_graceful_shutdown_drain_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_graceful_shutdown_drain_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_observability_route_compatibility_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_observability_route_compatibility_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_prometheus_metrics_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_prometheus_metrics_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_reason_code_compatibility_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_reason_code_compatibility_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_serde_payload_parity_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_serde_payload_parity_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_shutdown_abrupt_close_regression_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_shutdown_abrupt_close_regression_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_validation_negative_matrix_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_websocket_live_evidence_convergence.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_websocket_live_contract.py",
+      "args_prefix": [
+        "check-evidence-convergence"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_service_api_websocket_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_websocket_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_recovery_live_contract.py",
+      "args_prefix": [
+        "check-evidence-convergence"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_sqlite_crash_recovery_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_recovery_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_structured_logging_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/structured_logging_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_unified_api_observability_local_heavy_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/unified_api_observability_local_heavy_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/check_watchdog_proof_consensus_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/watchdog_proof_consensus_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/generate_live_network_pilot_artifact_summary.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_pilot_artifact_summary_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/generate_processor_proof_admission_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/processor_proof_admission_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/generate_watchdog_proof_consensus_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/watchdog_proof_consensus_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/run_go_no_go_gate_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/go_no_go_gate_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_partition_reconnect_contract.py",
+      "args_prefix": [
+        "run-smoke"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/run_live_network_pilot_deep_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_pilot_deep_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/run_live_network_smoke_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_network_smoke_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/run_live_validation_environment_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_validation_environment_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/run_network_signer_finality_failure_drills_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/network_signer_finality_failure_drills_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/block_reconciliation_partition_rejoin_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_full_io_scenario_matrix_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/full_io_scenario_matrix_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_convergence_process_isolated_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_libp2p_process_isolated_harness.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_process_isolated_harness_contract.py",
+      "args_prefix": [
+        "run-harness"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_libp2p_three_node_discovery_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/libp2p_three_node_discovery_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_live_transport_fault_matrix_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/live_transport_fault_matrix_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_full_runtime_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_full_runtime_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_full_stack_integration_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_full_stack_integration_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_metrics_scrape_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_metrics_scrape_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_observability_scrape_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_observability_scrape_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_retry_diagnostics_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_retry_diagnostics_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_local_signal_secret_hygiene_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_signal_secret_hygiene_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_graceful_shutdown_drain_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_observability_route_compatibility_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_observability_route_compatibility_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_observability_route_compatibility_live_contract_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_observability_route_compatibility_contract.py",
+      "args_prefix": [
+        "run-contract-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_prometheus_metrics_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_prometheus_metrics_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_shutdown_abrupt_close_regression_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_validation_negative_matrix_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_validation_negative_matrix_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_sqlite_crash_recovery_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_recovery_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_unified_api_observability_local_heavy_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/unified_api_observability_local_heavy_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_unified_api_observability_local_heavy_live_contract_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/unified_api_observability_local_heavy_live_contract.py",
+      "args_prefix": [
+        "run-contract-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/check_example_fixture_drift_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/example_fixture_drift_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/sdk/check_live_transport_replay_tamper_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/live_transport_replay_tamper_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/check_live_transport_smoke_parity_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/live_transport_smoke_parity_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/sdk/check_localhost_signed_integration_evidence_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/localhost_signed_integration_evidence_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/sdk/check_sdk_schema_compatibility_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/sdk_schema_compatibility_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/live_transport_replay_tamper_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/generate_sdk_schema_compatibility_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/sdk_schema_compatibility_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/run_live_transport_replay_tamper_deep_lane_impl.sh": {
+      "interpreter": "bash",
+      "target": "scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh",
+      "args_prefix": [
+        "--mode",
+        "deep"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/run_live_transport_replay_tamper_fast_lane_impl.sh": {
+      "interpreter": "bash",
+      "target": "scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh",
+      "args_prefix": [
+        "--mode",
+        "fast"
+      ],
+      "passthrough": true
+    },
+    "scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/live_transport_smoke_parity_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/sdk/run_localhost_signed_integration_harness.sh": {
+      "interpreter": "python3",
+      "target": "scripts/sdk/localhost_signed_integration_harness_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/signer/check_secure_provider_key_lifecycle_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/signer/secure_provider_key_lifecycle_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/signer/check_signer_incident_recovery_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/signer/signer_incident_recovery_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/signer/generate_secure_provider_key_lifecycle_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/signer/secure_provider_key_lifecycle_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/task/check_federated_delegation_settlement_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/task/federated_delegation_settlement_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/task/generate_federated_delegation_settlement_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/task/federated_delegation_settlement_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/token/check_token_launch_handoff_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/token/token_launch_handoff_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/token/generate_token_launch_handoff_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/token/token_launch_handoff_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    },
+    "scripts/treasury/check_treasury_disbursement_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/treasury/treasury_disbursement_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/treasury/generate_treasury_disbursement_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/treasury/treasury_disbursement_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
+      "passthrough": true
+    }
+  }
+}
