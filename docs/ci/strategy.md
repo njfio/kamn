@@ -1297,8 +1297,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
     - `reason_codes_csv=rustdoc_navigation_parity_drift`
     - `reason_code=rustdoc_navigation_parity_drift`
+- Missing-docs allowlist/graduation delta evidence markers:
+  - `scripts/ci/check_kamn_core_missing_docs_policy.sh` emits deterministic `missing_docs_*` markers for reviewer/CI audit:
+    - `missing_docs_allowlisted_module_count=<int>`
+    - `missing_docs_graduated_module_count=<int>`
+    - `missing_docs_allowlisted_module_delta=<int>`
+    - `missing_docs_graduated_module_delta=<int>`
+    - `missing_docs_velocity_status=pass|fail`
+    - `missing_docs_velocity_final_decision=GO|HOLD`
+    - `missing_docs_velocity_reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1`
+    - `missing_docs_velocity_reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed`
+    - `missing_docs_velocity_reason_codes_value=<deterministic reason key>`
 - Regression: #2126
 - Regression: #2127
+- Regression: #4343
 
 ## Make and Selector Command-Surface Contract
 Contributor entrypoint commands must remain stable and synchronized across `Makefile`, `README.md`, and selector routing policy:
