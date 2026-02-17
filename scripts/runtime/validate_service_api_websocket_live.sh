@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
 API_DOC="$ROOT_DIR/docs/api/service-http-api.md"
+RELEASE_GONOGO_CHECKLIST="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
+EXPECTED_PROTOCOL_SESSION_REASON_TAXONOMY_VERSION="kamn.runtime.service-api.protocol-session-reason-taxonomy.v1"
+EXPECTED_PROTOCOL_SESSION_REASON_CODES_CSV="service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing"
 
 output_json=""
 max_seconds=180
@@ -42,6 +45,10 @@ if [ ! -f "$API_DOC" ]; then
   echo "expected service api docs file: $API_DOC" >&2
   exit 1
 fi
+if [ ! -f "$RELEASE_GONOGO_CHECKLIST" ]; then
+  echo "expected release go/no-go checklist docs file: $RELEASE_GONOGO_CHECKLIST" >&2
+  exit 1
+fi
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -56,7 +63,13 @@ trap cleanup EXIT
 start_epoch="$(date +%s)"
 
 config_matrix_report="$TMP_DIR/service-api-websocket-config-matrix.json"
-python3 - "$SOURCE_FILE" "$API_DOC" "$config_matrix_report" <<'PY'
+python3 - \
+  "$SOURCE_FILE" \
+  "$API_DOC" \
+  "$RELEASE_GONOGO_CHECKLIST" \
+  "$config_matrix_report" \
+  "$EXPECTED_PROTOCOL_SESSION_REASON_TAXONOMY_VERSION" \
+  "$EXPECTED_PROTOCOL_SESSION_REASON_CODES_CSV" <<'PY'
 import json
 import pathlib
 import re
@@ -64,10 +77,14 @@ import sys
 
 source_file = pathlib.Path(sys.argv[1])
 api_doc_file = pathlib.Path(sys.argv[2])
-report_file = pathlib.Path(sys.argv[3])
+release_checklist_file = pathlib.Path(sys.argv[3])
+report_file = pathlib.Path(sys.argv[4])
+expected_protocol_session_reason_taxonomy_version = sys.argv[5]
+expected_protocol_session_reason_codes_csv = sys.argv[6]
 
 source_text = source_file.read_text(encoding="utf-8")
 api_doc_text = api_doc_file.read_text(encoding="utf-8")
+release_checklist_text = release_checklist_file.read_text(encoding="utf-8")
 
 
 def parse_u64_const(name: str) -> int:
@@ -130,10 +147,43 @@ if missing_lifecycle_markers:
         + ",".join(missing_lifecycle_markers)
     )
 
+required_release_checklist_markers = [
+    (
+        "service_api_protocol_session_reason_taxonomy_version="
+        + expected_protocol_session_reason_taxonomy_version
+    ),
+    (
+        "service_api_protocol_session_reason_codes_csv="
+        + expected_protocol_session_reason_codes_csv
+    ),
+    "service_api_ws_upgrade_header_missing",
+    "service_api_ws_version_header_invalid",
+    "service_api_payload_json_syntax_invalid",
+    "service_api_auth_replay_nonce_detected",
+    "service_api_protocol_session_docs_marker_missing",
+]
+missing_release_checklist_markers = [
+    marker
+    for marker in required_release_checklist_markers
+    if marker not in release_checklist_text
+]
+if missing_release_checklist_markers:
+    raise SystemExit(
+        "release checklist missing service-api protocol/session markers: "
+        + ",".join(missing_release_checklist_markers)
+    )
+
 report = {
     "schema_version": "kamn.runtime.service-api-websocket-config-matrix.v1",
     "websocket_idle_timeout_contract_status": "verified",
     "websocket_reason_registry_status": "verified",
+    "protocol_session_docs_contract_status": "verified",
+    "service_api_protocol_session_reason_taxonomy_version": (
+        expected_protocol_session_reason_taxonomy_version
+    ),
+    "service_api_protocol_session_reason_codes_csv": (
+        expected_protocol_session_reason_codes_csv
+    ),
     "api_idle_timeout_default_ms": idle_timeout_default_ms,
 }
 report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -467,6 +517,33 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["websocket_reason_registry_status"])
 PY
 )"
+protocol_session_docs_contract_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["protocol_session_docs_contract_status"])
+PY
+)"
+service_api_protocol_session_reason_taxonomy_version="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["service_api_protocol_session_reason_taxonomy_version"])
+PY
+)"
+service_api_protocol_session_reason_codes_csv="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["service_api_protocol_session_reason_codes_csv"])
+PY
+)"
 api_idle_timeout_default_ms="$(python3 - "$config_matrix_report" <<'PY'
 import json
 import pathlib
@@ -536,6 +613,9 @@ cat >"$report_json" <<JSON
   "fail_closed_status": "${fail_closed_status}",
   "probe_status": "${probe_status}",
   "websocket_reason_registry_status": "${websocket_reason_registry_status}",
+  "protocol_session_docs_contract_status": "${protocol_session_docs_contract_status}",
+  "service_api_protocol_session_reason_taxonomy_version": "${service_api_protocol_session_reason_taxonomy_version}",
+  "service_api_protocol_session_reason_codes_csv": "${service_api_protocol_session_reason_codes_csv}",
   "websocket_lifecycle_reason_taxonomy_version": "${websocket_lifecycle_reason_taxonomy_version}",
   "websocket_lifecycle_reason_codes_csv": "${websocket_lifecycle_reason_codes_csv}",
   "api_idle_timeout_default_ms": ${api_idle_timeout_default_ms},
@@ -556,6 +636,9 @@ echo "websocket_idle_timeout_contract_status=${websocket_idle_timeout_contract_s
 echo "fail_closed_status=${fail_closed_status}"
 echo "probe_status=${probe_status}"
 echo "websocket_reason_registry_status=${websocket_reason_registry_status}"
+echo "protocol_session_docs_contract_status=${protocol_session_docs_contract_status}"
+echo "service_api_protocol_session_reason_taxonomy_version=${service_api_protocol_session_reason_taxonomy_version}"
+echo "service_api_protocol_session_reason_codes_csv=${service_api_protocol_session_reason_codes_csv}"
 echo "websocket_lifecycle_reason_taxonomy_version=${websocket_lifecycle_reason_taxonomy_version}"
 echo "websocket_lifecycle_reason_codes_csv=${websocket_lifecycle_reason_codes_csv}"
 echo "api_idle_timeout_default_ms=${api_idle_timeout_default_ms}"

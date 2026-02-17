@@ -76,9 +76,12 @@ def _check_policy(args: argparse.Namespace) -> int:
         fail(f"report file not found: {report_file}")
 
     report = load_json(report_file)
-    missing_fields = [field_name for field_name in REQUIRED_REPORT_FIELDS if field_name not in report]
-    if missing_fields:
-        fail(f"missing required report fields: {','.join(missing_fields)}")
+    decision = DecisionAccumulator()
+    for field_name in REQUIRED_REPORT_FIELDS:
+        decision.reject_if(
+            field_name not in report,
+            f"service_api_websocket_policy_required_field_missing:{field_name}",
+        )
 
     expected_final_decision = require_enum(
         "--expected-final-decision",
@@ -90,7 +93,6 @@ def _check_policy(args: argparse.Namespace) -> int:
     observed_status = report.get("status")
     observed_final_decision = report.get("final_decision")
 
-    decision = DecisionAccumulator()
     decision.reject_if(
         report.get("schema_version") != REPORT_SCHEMA,
         "service_api_websocket_policy_schema_mismatch",
@@ -141,6 +143,7 @@ def _check_policy(args: argparse.Namespace) -> int:
     final_decision, reason_codes = decision.finalize("none")
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "rejected"
+    reason_codes_value = ",".join(reason_codes)
 
     policy_report: dict[str, Any] = {
         "schema_version": POLICY_SCHEMA,
@@ -151,6 +154,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "reason_codes": reason_codes,
+        "reason_codes_value": reason_codes_value,
         "ci_fast_gate": ci_fast_gate,
         "websocket_lifecycle_reason_taxonomy_version": (
             EXPECTED_WEBSOCKET_LIFECYCLE_REASON_TAXONOMY_VERSION
@@ -167,16 +171,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         output_json = Path(args.output_json).resolve()
         write_json(output_json, policy_report)
 
-    reason_codes_csv = ",".join(reason_codes)
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"service_api_websocket_policy_status={policy_status}")
-    print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes={reason_codes_value}")
+    print(f"reason_codes_value={reason_codes_value}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 
     if final_decision != "GO":
-        fail(f"service api websocket live policy rejected: {reason_codes_csv}")
+        fail(f"service api websocket live policy rejected: {reason_codes_value}")
 
     return 0
 
