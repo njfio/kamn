@@ -83,9 +83,40 @@ Shutdown signal failure matrix:
   - `shutdown_checkpoint_reconciliation_not_signaled_reason_code_mismatch`
   - `shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch`
 - Regression markers:
-  - `Regression: #4332`
-  - `Regression: #4333`
+- `Regression: #4332`
+- `Regression: #4333`
 - See `docs/ops/runbooks/shutdown.md` for deterministic reason-shape and operator validation steps.
+
+## Full-Stack Harness Marker Completeness and Parity Mismatch Controls (Issue #4195)
+
+Full I/O scenario matrix policy checks fail closed when required harness markers drift or
+dry-run parity contracts are violated.
+
+Deterministic harness mismatch controls:
+
+- `full_io_harness_marker_completeness_status=verified`
+- `full_io_harness_marker_parity_status=verified`
+- `full_io_harness_policy_reason_taxonomy_version=kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1`
+- `full_io_harness_policy_reason_codes_csv=full_io_scenario_matrix_policy_process_harness_mismatch,full_io_scenario_matrix_policy_api_route_matrix_mismatch,full_io_scenario_matrix_policy_auth_failure_matrix_mismatch,full_io_scenario_matrix_policy_websocket_matrix_mismatch,full_io_scenario_matrix_policy_multinode_propagation_mismatch,full_io_scenario_matrix_policy_dry_run_command_count_mismatch,full_io_scenario_matrix_policy_dry_run_command_status_mismatch`
+
+Deterministic fail-closed mismatch reasons:
+
+- `full_io_scenario_matrix_policy_process_harness_mismatch`
+- `full_io_scenario_matrix_policy_api_route_matrix_mismatch`
+- `full_io_scenario_matrix_policy_auth_failure_matrix_mismatch`
+- `full_io_scenario_matrix_policy_websocket_matrix_mismatch`
+- `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
+- `full_io_scenario_matrix_policy_dry_run_command_count_mismatch`
+- `full_io_scenario_matrix_policy_dry_run_command_status_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh`
+- `bash scripts/runtime/test_validate_full_io_scenario_matrix_live_contract_lane.sh`
+
+Regression marker:
+
+- `Regression: #4195`
 
 Kolme-live keys:
 

@@ -105,4 +105,103 @@ if ! printf '%s\n' "$tampered_output" | grep -q 'full_io_scenario_matrix_policy_
   exit 1
 fi
 
+tampered_missing_harness_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_missing_harness_report"
+python3 - "$tampered_missing_harness_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("process_harness_contract_status", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_missing_harness_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$tampered_missing_harness_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_missing_harness_code=$?
+set -e
+rm -f "$tampered_missing_harness_report"
+if [ "$tampered_missing_harness_code" -eq 0 ]; then
+  echo "expected missing process harness marker to fail policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_missing_harness_output" | grep -q 'full_io_scenario_matrix_policy_process_harness_mismatch'; then
+  echo "expected deterministic process harness mismatch reason marker" >&2
+  exit 1
+fi
+
+tampered_dry_run_count_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_dry_run_count_report"
+python3 - "$tampered_dry_run_count_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["run_mode_command_count"] = 2
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_dry_run_count_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$tampered_dry_run_count_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_dry_run_count_code=$?
+set -e
+rm -f "$tampered_dry_run_count_report"
+if [ "$tampered_dry_run_count_code" -eq 0 ]; then
+  echo "expected dry-run command-count parity mismatch to fail policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_dry_run_count_output" | grep -q 'full_io_scenario_matrix_policy_dry_run_command_count_mismatch'; then
+  echo "expected deterministic dry-run command-count mismatch reason marker" >&2
+  exit 1
+fi
+
+tampered_dry_run_status_report="$(mktemp)"
+cp "$TMP_REPORT" "$tampered_dry_run_status_report"
+python3 - "$tampered_dry_run_status_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["run_mode_command_status"] = "executed"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_dry_run_status_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$tampered_dry_run_status_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_dry_run_status_code=$?
+set -e
+rm -f "$tampered_dry_run_status_report"
+if [ "$tampered_dry_run_status_code" -eq 0 ]; then
+  echo "expected dry-run command-status parity mismatch to fail policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_dry_run_status_output" | grep -q 'full_io_scenario_matrix_policy_dry_run_command_status_mismatch'; then
+  echo "expected deterministic dry-run command-status mismatch reason marker" >&2
+  exit 1
+fi
+
 echo "full I/O scenario matrix policy checker tests passed."
