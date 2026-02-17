@@ -44,6 +44,7 @@ VALIDATION_REQUIRED_MARKERS=(
   "admission_saturation_status=verified"
   "admission_queue_cap_enforcement_status=verified"
   "overload_evidence_normalization_status=verified"
+  "async_lifecycle_backpressure_projection_status=verified"
   "protocol_compliance_status=verified"
   "route_contract_parity_status=verified"
   "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
@@ -52,6 +53,8 @@ VALIDATION_REQUIRED_MARKERS=(
   "ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
   "admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1"
   "admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift"
+  "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
+  "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
   "request_validation_reason_registry_status=verified"
   "error_envelope_source_contract_status=verified"
   "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
@@ -70,6 +73,9 @@ POLICY_REQUIRED_MARKERS=(
   "status=ok"
   "final_decision=GO"
   "service_api_axum_ingress_policy_status=verified"
+  "reason_codes_value=none"
+  "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
+  "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
 )
 STRATEGY_REQUIRED_REFS=(
   "validate_service_api_axum_ingress_live.sh"
@@ -97,6 +103,7 @@ LANE_REPORT_SUMMARY_FIELDS=(
   admission_saturation_status
   admission_queue_cap_enforcement_status
   overload_evidence_normalization_status
+  async_lifecycle_backpressure_projection_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
@@ -105,6 +112,8 @@ LANE_REPORT_SUMMARY_FIELDS=(
   ingress_resilience_reason_codes_csv
   admission_reason_taxonomy_version
   admission_reason_codes_csv
+  service_api_lifecycle_rejection_reason_taxonomy_version
+  service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status
   error_envelope_source_contract_status
   request_validation_reason_taxonomy_version
@@ -129,6 +138,7 @@ OUTPUT_SUMMARY_FIELDS=(
   admission_saturation_status
   admission_queue_cap_enforcement_status
   overload_evidence_normalization_status
+  async_lifecycle_backpressure_projection_status
   protocol_compliance_status
   route_contract_parity_status
   protocol_compliance_reason_taxonomy_version
@@ -137,6 +147,8 @@ OUTPUT_SUMMARY_FIELDS=(
   ingress_resilience_reason_codes_csv
   admission_reason_taxonomy_version
   admission_reason_codes_csv
+  service_api_lifecycle_rejection_reason_taxonomy_version
+  service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status
   error_envelope_source_contract_status
   request_validation_reason_taxonomy_version

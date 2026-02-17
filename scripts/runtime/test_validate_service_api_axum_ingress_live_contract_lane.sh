@@ -97,6 +97,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^overload_evidence_normalization_st
   echo "expected service api axum ingress contract lane overload-evidence normalization marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^async_lifecycle_backpressure_projection_status=verified$'; then
+  echo "expected service api axum ingress contract lane async lifecycle backpressure projection marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane protocol-compliance reason taxonomy marker" >&2
   exit 1
@@ -143,6 +147,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^admission_reason_taxonomy_version=
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift$'; then
   echo "expected service api axum ingress contract lane admission reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid$'; then
+  echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy csv marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
@@ -212,6 +224,8 @@ if lane_payload.get("admission_queue_cap_enforcement_status") != "verified":
     raise SystemExit("expected admission_queue_cap_enforcement_status=verified")
 if lane_payload.get("overload_evidence_normalization_status") != "verified":
     raise SystemExit("expected overload_evidence_normalization_status=verified")
+if lane_payload.get("async_lifecycle_backpressure_projection_status") != "verified":
+    raise SystemExit("expected async_lifecycle_backpressure_projection_status=verified")
 if lane_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if lane_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
@@ -236,6 +250,10 @@ if lane_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.servic
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
 if lane_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
     raise SystemExit("expected deterministic admission_reason_codes_csv marker")
+if lane_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker")
+if lane_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_codes_csv marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -258,6 +276,8 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("service_api_axum_ingress_policy_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_policy_status=verified in policy report")
+if policy_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected deterministic reason_codes_value=none marker in policy report")
 if policy_payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker in policy report")
 if policy_payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
@@ -282,6 +302,10 @@ if policy_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.serv
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker in policy report")
 if policy_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
     raise SystemExit("expected deterministic admission_reason_codes_csv marker in policy report")
+if policy_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker in policy report")
+if policy_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then

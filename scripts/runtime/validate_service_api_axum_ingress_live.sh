@@ -144,6 +144,32 @@ if missing_request_validation_reason_markers:
         + ",".join(missing_request_validation_reason_markers)
     )
 
+service_api_lifecycle_rejection_reason_taxonomy_version = (
+    "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
+)
+service_api_lifecycle_rejection_reason_codes_csv = (
+    "service_api_ingress_concurrency_limit_exceeded,"
+    "service_api_ingress_rate_limit_exceeded,"
+    "service_api_ingress_sender_rate_limit_exceeded,"
+    "service_api_ingress_sender_suspended,"
+    "service_api_ingress_sender_duplicate_message_id,"
+    "service_api_ingress_sender_insufficient_deposit,"
+    "service_api_ingress_anti_spam_engine_invalid"
+)
+required_lifecycle_rejection_reason_markers = (
+    service_api_lifecycle_rejection_reason_codes_csv.split(",")
+)
+missing_lifecycle_rejection_reason_markers = [
+    marker
+    for marker in required_lifecycle_rejection_reason_markers
+    if marker not in source_text
+]
+if missing_lifecycle_rejection_reason_markers:
+    raise SystemExit(
+        "service api source missing lifecycle rejection reason markers: "
+        + ",".join(missing_lifecycle_rejection_reason_markers)
+    )
+
 required_error_envelope_markers = [
     "pub(crate) reason_code: String",
     "pub(crate) message: String",
@@ -163,6 +189,13 @@ report = {
     "docs_ingress_limit_matrix_status": "verified",
     "request_validation_reason_registry_status": "verified",
     "error_envelope_source_contract_status": "verified",
+    "async_lifecycle_backpressure_projection_status": "verified",
+    "service_api_lifecycle_rejection_reason_taxonomy_version": (
+        service_api_lifecycle_rejection_reason_taxonomy_version
+    ),
+    "service_api_lifecycle_rejection_reason_codes_csv": (
+        service_api_lifecycle_rejection_reason_codes_csv
+    ),
     "api_max_requests_default": max_requests_default,
     "api_idle_timeout_default_ms": idle_timeout_default_ms,
     "body_size_limit_bytes": body_size_limit_bytes,
@@ -647,6 +680,33 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["error_envelope_source_contract_status"])
 PY
 )"
+async_lifecycle_backpressure_projection_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["async_lifecycle_backpressure_projection_status"])
+PY
+)"
+service_api_lifecycle_rejection_reason_taxonomy_version="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["service_api_lifecycle_rejection_reason_taxonomy_version"])
+PY
+)"
+service_api_lifecycle_rejection_reason_codes_csv="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["service_api_lifecycle_rejection_reason_codes_csv"])
+PY
+)"
 api_max_requests_default="$(python3 - "$config_matrix_report" <<'PY'
 import json
 import pathlib
@@ -742,6 +802,7 @@ cat >"$report_json" <<JSON
   "admission_saturation_status": "${admission_saturation_status}",
   "admission_queue_cap_enforcement_status": "${admission_queue_cap_enforcement_status}",
   "overload_evidence_normalization_status": "${overload_evidence_normalization_status}",
+  "async_lifecycle_backpressure_projection_status": "${async_lifecycle_backpressure_projection_status}",
   "protocol_compliance_status": "${protocol_compliance_status}",
   "route_contract_parity_status": "${route_contract_parity_status}",
   "protocol_compliance_reason_taxonomy_version": "${protocol_compliance_reason_taxonomy_version}",
@@ -750,6 +811,8 @@ cat >"$report_json" <<JSON
   "ingress_resilience_reason_codes_csv": "${ingress_resilience_reason_codes_csv}",
   "admission_reason_taxonomy_version": "${admission_reason_taxonomy_version}",
   "admission_reason_codes_csv": "${admission_reason_codes_csv}",
+  "service_api_lifecycle_rejection_reason_taxonomy_version": "${service_api_lifecycle_rejection_reason_taxonomy_version}",
+  "service_api_lifecycle_rejection_reason_codes_csv": "${service_api_lifecycle_rejection_reason_codes_csv}",
   "request_validation_reason_registry_status": "${request_validation_reason_registry_status}",
   "error_envelope_source_contract_status": "${error_envelope_source_contract_status}",
   "request_validation_reason_taxonomy_version": "${request_validation_reason_taxonomy_version}",
@@ -791,6 +854,7 @@ echo "ci_local_promotion_budget_boundary_status=${ci_local_promotion_budget_boun
 echo "admission_saturation_status=${admission_saturation_status}"
 echo "admission_queue_cap_enforcement_status=${admission_queue_cap_enforcement_status}"
 echo "overload_evidence_normalization_status=${overload_evidence_normalization_status}"
+echo "async_lifecycle_backpressure_projection_status=${async_lifecycle_backpressure_projection_status}"
 echo "protocol_compliance_status=${protocol_compliance_status}"
 echo "route_contract_parity_status=${route_contract_parity_status}"
 echo "protocol_compliance_reason_taxonomy_version=${protocol_compliance_reason_taxonomy_version}"
@@ -799,6 +863,8 @@ echo "ingress_resilience_reason_taxonomy_version=${ingress_resilience_reason_tax
 echo "ingress_resilience_reason_codes_csv=${ingress_resilience_reason_codes_csv}"
 echo "admission_reason_taxonomy_version=${admission_reason_taxonomy_version}"
 echo "admission_reason_codes_csv=${admission_reason_codes_csv}"
+echo "service_api_lifecycle_rejection_reason_taxonomy_version=${service_api_lifecycle_rejection_reason_taxonomy_version}"
+echo "service_api_lifecycle_rejection_reason_codes_csv=${service_api_lifecycle_rejection_reason_codes_csv}"
 echo "request_validation_reason_registry_status=${request_validation_reason_registry_status}"
 echo "error_envelope_source_contract_status=${error_envelope_source_contract_status}"
 echo "request_validation_reason_taxonomy_version=${request_validation_reason_taxonomy_version}"

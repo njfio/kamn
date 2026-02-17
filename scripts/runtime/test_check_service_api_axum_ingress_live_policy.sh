@@ -34,12 +34,15 @@ cat >"$report_file" <<'JSON'
   "admission_saturation_status": "verified",
   "admission_queue_cap_enforcement_status": "verified",
   "overload_evidence_normalization_status": "verified",
+  "async_lifecycle_backpressure_projection_status": "verified",
   "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
   "protocol_compliance_reason_codes_csv": "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected",
   "ingress_resilience_reason_taxonomy_version": "kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1",
   "ingress_resilience_reason_codes_csv": "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
   "admission_reason_taxonomy_version": "kamn.runtime.service-api-admission-reason-taxonomy.v1",
   "admission_reason_codes_csv": "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift",
+  "service_api_lifecycle_rejection_reason_taxonomy_version": "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1",
+  "service_api_lifecycle_rejection_reason_codes_csv": "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid",
   "request_validation_reason_registry_status": "verified",
   "error_envelope_source_contract_status": "verified",
   "request_validation_reason_taxonomy_version": "kamn.runtime.service-api-request-validation-reason-taxonomy.v1",
@@ -79,6 +82,18 @@ if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_ingress_policy_
   echo "expected service api axum ingress policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected service api axum ingress policy checker normalized reason_codes_value marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress policy checker lifecycle rejection reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid$'; then
+  echo "expected service api axum ingress policy checker lifecycle rejection reason taxonomy csv marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -96,6 +111,8 @@ if payload.get("service_api_axum_ingress_policy_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected policy checker success normalized reason_codes_value marker")
 if payload.get("protocol_compliance_reason_taxonomy_version") != "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1":
     raise SystemExit("expected deterministic protocol_compliance_reason_taxonomy_version marker")
 if payload.get("protocol_compliance_reason_codes_csv") != "method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected":
@@ -110,6 +127,10 @@ if payload.get("admission_queue_cap_enforcement_status") != "verified":
     raise SystemExit("expected deterministic admission_queue_cap_enforcement_status marker")
 if payload.get("overload_evidence_normalization_status") != "verified":
     raise SystemExit("expected deterministic overload_evidence_normalization_status marker")
+if payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker")
+if payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
+    raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_codes_csv marker")
 if payload.get("admission_reason_taxonomy_version") != "kamn.runtime.service-api-admission-reason-taxonomy.v1":
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
 if payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
@@ -389,6 +410,175 @@ if [ "$tampered_admission_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_admission_taxonomy_output" | grep -q 'service_api_axum_policy_admission_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for admission taxonomy tamper" >&2
+  exit 1
+fi
+
+tampered_lifecycle_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.lifecycle-taxonomy.tampered.json"
+cp "$report_file" "$tampered_lifecycle_taxonomy_report"
+python3 - "$tampered_lifecycle_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["service_api_lifecycle_rejection_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_lifecycle_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_lifecycle_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.lifecycle-taxonomy.tampered.json" 2>&1
+)"
+tampered_lifecycle_taxonomy_code=$?
+set -e
+
+if [ "$tampered_lifecycle_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered lifecycle taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_lifecycle_taxonomy_output" | grep -q 'service_api_axum_policy_lifecycle_rejection_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for lifecycle taxonomy tamper" >&2
+  exit 1
+fi
+
+missing_lifecycle_reason_codes_csv_report="$TMP_DIR/service-api-axum-ingress-live-summary.lifecycle-reason-csv.missing.json"
+cp "$report_file" "$missing_lifecycle_reason_codes_csv_report"
+python3 - "$missing_lifecycle_reason_codes_csv_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("service_api_lifecycle_rejection_reason_codes_csv", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_lifecycle_reason_codes_csv_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$missing_lifecycle_reason_codes_csv_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.lifecycle-reason-csv.missing.json" 2>&1
+)"
+missing_lifecycle_reason_codes_csv_code=$?
+set -e
+
+if [ "$missing_lifecycle_reason_codes_csv_code" -eq 0 ]; then
+  echo "expected missing lifecycle reason taxonomy csv field to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_lifecycle_reason_codes_csv_output" | grep -q 'service_api_axum_policy_required_field_missing:service_api_lifecycle_rejection_reason_codes_csv'; then
+  echo "expected deterministic required-field reason code for missing lifecycle reason taxonomy csv field" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_lifecycle_reason_codes_csv_output" | grep -q '^reason_codes_value=.*service_api_axum_policy_required_field_missing:service_api_lifecycle_rejection_reason_codes_csv'; then
+  echo "expected normalized reason_codes_value output to include missing lifecycle taxonomy csv reason code" >&2
+  exit 1
+fi
+
+tampered_async_backpressure_projection_report="$TMP_DIR/service-api-axum-ingress-live-summary.async-backpressure-projection.tampered.json"
+cp "$report_file" "$tampered_async_backpressure_projection_report"
+python3 - "$tampered_async_backpressure_projection_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["async_lifecycle_backpressure_projection_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_async_backpressure_projection_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_async_backpressure_projection_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.async-backpressure-projection.tampered.json" 2>&1
+)"
+tampered_async_backpressure_projection_code=$?
+set -e
+
+if [ "$tampered_async_backpressure_projection_code" -eq 0 ]; then
+  echo "expected tampered async lifecycle backpressure projection status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_async_backpressure_projection_output" | grep -q 'service_api_axum_policy_marker_missing:async_lifecycle_backpressure_projection_status'; then
+  echo "expected deterministic mismatch reason code for async lifecycle backpressure projection status tamper" >&2
+  exit 1
+fi
+
+tampered_concurrency_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.concurrency-limit.tampered.json"
+cp "$report_file" "$tampered_concurrency_limit_report"
+python3 - "$tampered_concurrency_limit_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["api_concurrency_limit_default"] = 31
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_concurrency_limit_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_concurrency_limit_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.concurrency-limit.tampered.json" 2>&1
+)"
+tampered_concurrency_limit_code=$?
+set -e
+
+if [ "$tampered_concurrency_limit_code" -eq 0 ]; then
+  echo "expected tampered service api concurrency-limit default to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_concurrency_limit_output" | grep -q 'service_api_axum_policy_api_concurrency_limit_default_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered concurrency-limit default" >&2
+  exit 1
+fi
+
+tampered_rate_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.rate-limit.tampered.json"
+cp "$report_file" "$tampered_rate_limit_report"
+python3 - "$tampered_rate_limit_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["api_rate_limit_per_second_default"] = 119
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_rate_limit_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_rate_limit_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.rate-limit.tampered.json" 2>&1
+)"
+tampered_rate_limit_code=$?
+set -e
+
+if [ "$tampered_rate_limit_code" -eq 0 ]; then
+  echo "expected tampered service api rate-limit default to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_rate_limit_output" | grep -q 'service_api_axum_policy_api_rate_limit_per_second_default_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered rate-limit default" >&2
   exit 1
 fi
 
