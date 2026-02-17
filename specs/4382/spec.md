@@ -1,6 +1,6 @@
 # Spec — #4382 Subtask: composite gate taxonomy + CI smoke/local-heavy boundary enforcement
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4374
 Milestone: R27.34 Live Kolme provider integration, native secp256k1 signing, and end-to-end validation governance

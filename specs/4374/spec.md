@@ -1,6 +1,6 @@
 # Spec — #4374 Task: Live-Provider + Native-Signer Composite Promotion Gate with CI Smoke Boundaries
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4370
 Milestone: R27.34 Live Kolme provider integration, native secp256k1 signing, and end-to-end validation governance

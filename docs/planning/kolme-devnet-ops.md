@@ -548,6 +548,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_key_loading_error_classification_version=v1`
     - `runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
     - `runtime_signer_key_loading_error_classification=none`
+    - `composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1`
+    - `composite_gate_reason_codes_csv=dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded`
+    - `composite_gate_evidence_convergence_status=verified`
+    - `composite_gate_ci_smoke_local_heavy_boundary_status=verified`
+    - `composite_gate_ci_smoke_lane_cost_profile=low`
+    - `composite_gate_local_heavy_execution_mode=not_requested`
   - GO proof also supports deterministic secondary signer markers:
     - `runtime_signer_profile=ops-secondary`
     - `runtime_signer_previous_profile=ops-secondary`
@@ -719,6 +725,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_quorum_linkage_drift`
     - `runtime_signer_quorum_linkage_violation`
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
+  - composite gate summary/policy markers remain deterministic:
+    - `composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1`
+    - `composite_gate_reason_codes_csv=dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded`
+    - `composite_gate_evidence_convergence_status=verified`
+    - `composite_gate_ci_smoke_local_heavy_boundary_status=verified`
+    - `composite_gate_ci_smoke_lane_cost_profile=low`
+    - `composite_gate_local_heavy_execution_mode=not_requested`
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
   - finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency.
