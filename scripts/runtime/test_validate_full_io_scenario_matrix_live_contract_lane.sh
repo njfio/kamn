@@ -84,6 +84,12 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("full_io_scenario_matrix_policy_status") != "verified":
     raise SystemExit("expected full_io_scenario_matrix_policy_status=verified in policy report")
+if policy_payload.get("full_io_harness_policy_reason_taxonomy_version") != "kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic full I/O harness policy reason taxonomy marker")
+if policy_payload.get("full_io_harness_policy_reason_codes_csv") != "full_io_scenario_matrix_policy_schema_mismatch,full_io_scenario_matrix_policy_status_mismatch,full_io_scenario_matrix_policy_final_decision_mismatch,full_io_scenario_matrix_policy_ci_fast_gate_mismatch,full_io_scenario_matrix_policy_process_harness_mismatch,full_io_scenario_matrix_policy_api_route_matrix_mismatch,full_io_scenario_matrix_policy_auth_failure_matrix_mismatch,full_io_scenario_matrix_policy_websocket_matrix_mismatch,full_io_scenario_matrix_policy_multinode_propagation_mismatch,full_io_scenario_matrix_policy_fast_gate_exclusion_mismatch,full_io_scenario_matrix_policy_fast_gate_reason_mismatch,full_io_scenario_matrix_policy_lane_mode_invalid,full_io_scenario_matrix_policy_command_count_invalid,full_io_scenario_matrix_policy_artifact_paths_invalid,full_io_scenario_matrix_policy_dry_run_eligibility_mismatch,full_io_scenario_matrix_policy_dry_run_command_count_mismatch,full_io_scenario_matrix_policy_dry_run_command_status_mismatch,full_io_scenario_matrix_policy_dry_run_reason_code_mismatch,full_io_scenario_matrix_policy_run_mode_exclusion_mismatch,full_io_scenario_matrix_policy_run_mode_command_count_mismatch,full_io_scenario_matrix_policy_run_mode_command_status_mismatch,full_io_scenario_matrix_policy_run_mode_reason_code_mismatch,full_io_scenario_matrix_policy_expected_decision_mismatch":
+    raise SystemExit("expected deterministic full I/O harness policy reason codes csv marker")
+if policy_payload.get("full_io_harness_policy_reason_codes_value") != "none":
+    raise SystemExit("expected deterministic full I/O harness policy reason codes value marker")
 PY
 
 if ! grep -q "check_full_io_scenario_matrix_live_policy.sh" "$CONTRACT_LANE"; then
