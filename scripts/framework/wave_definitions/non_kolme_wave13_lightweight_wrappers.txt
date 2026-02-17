@@ -1,0 +1,4 @@
+scripts/did/run_did_registry_contract_lane.sh
+scripts/did/run_federated_did_handshake_contract_lane.sh
+scripts/did/run_lifecycle_operator_binding_contract_lane.sh
+scripts/did/run_multikey_algorithm_policy_contract_lane.sh

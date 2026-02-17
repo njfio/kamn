@@ -1,0 +1,4 @@
+scripts/message/run_a2a_mcp_conformance_contract_lane.sh
+scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh
+scripts/message/run_group_sender_replay_ratchet_contract_lane.sh
+scripts/message/run_key_hierarchy_invariant_contract_lane.sh
