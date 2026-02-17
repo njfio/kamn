@@ -3,7 +3,7 @@
 - Title: add red tests for compatibility marker matrix mismatch rejection
 - Parent: #4176
 - Milestone: R27.21 Kolme cross-version upgrade compatibility governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
