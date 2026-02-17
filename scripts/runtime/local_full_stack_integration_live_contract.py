@@ -15,6 +15,7 @@ import time
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
+DEFAULT_RUNBOOK_FILE = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
 
 from framework.contract_framework import (  # noqa: E402
     ContractError,
@@ -119,6 +120,24 @@ OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "local_full_stack_integration_live_validation_executed"
 FAST_GATE_EXCLUSION_REASON = "local_full_stack_integration_run_mode_excluded_from_fast_gate"
+LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1"
+)
+LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_CODES_CSV = (
+    "local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+)
+LOCAL_FULL_STACK_HARNESS_REQUIRED_TAXONOMY_MARKERS = [
+    "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+    "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1",
+    "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded",
+    "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1",
+    "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded",
+]
+LOCAL_FULL_STACK_HARNESS_REQUIRED_PARITY_MARKERS = [
+    "runtime_phase_module_parity_status=verified",
+    "runtime_module_boundary_parity_status=verified",
+    "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch",
+]
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -163,6 +182,29 @@ def _read_json_dict(path: Path, *, failure_reason: str) -> dict[str, object]:
     if not isinstance(payload, dict):
         fail(failure_reason)
     return payload
+
+
+def _evaluate_runbook_marker_parity(runbook_file: Path) -> tuple[str, str]:
+    try:
+        runbook = runbook_file.read_text(encoding="utf-8")
+    except OSError:
+        return "drifted", "runbook_marker_parity_mismatch"
+
+    missing_taxonomy_markers = [
+        marker
+        for marker in LOCAL_FULL_STACK_HARNESS_REQUIRED_TAXONOMY_MARKERS
+        if marker not in runbook
+    ]
+    if missing_taxonomy_markers:
+        return "drifted", "local_full_stack_harness_taxonomy_mapping_drift_detected"
+
+    missing_parity_markers = [
+        marker for marker in LOCAL_FULL_STACK_HARNESS_REQUIRED_PARITY_MARKERS if marker not in runbook
+    ]
+    if missing_parity_markers:
+        return "drifted", "runbook_marker_parity_mismatch"
+
+    return "verified", "none"
 
 
 def _require_local_kolme_checkout(
@@ -1021,6 +1063,10 @@ def check_policy(args: argparse.Namespace) -> int:
     report_file = Path(args.report_file)
     if not report_file.is_file():
         fail(f"report file does not exist: {report_file}")
+    runbook_file = Path(args.runbook_file)
+    runbook_marker_parity_status, runbook_reason_code = _evaluate_runbook_marker_parity(
+        runbook_file
+    )
 
     expected_final_decision = require_enum(
         "--expected-final-decision",
@@ -1704,6 +1750,11 @@ def check_policy(args: argparse.Namespace) -> int:
     observed_final_decision, decision_reasons = checks.finalize(
         "local_full_stack_integration_policy_verified"
     )
+    decision_reasons = list(decision_reasons)
+    if runbook_reason_code != "none":
+        observed_final_decision = "NO-GO"
+        if runbook_reason_code not in decision_reasons:
+            decision_reasons.append(runbook_reason_code)
     failed_checks: list[str] = []
     if observed_final_decision == "NO-GO":
         failed_checks.extend(decision_reasons)
@@ -1735,6 +1786,14 @@ def check_policy(args: argparse.Namespace) -> int:
         "runtime_module_boundary_reason_codes_csv": RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV,
         "runtime_module_boundary_reason_codes_value": runtime_module_boundary_reason_codes_value,
         "runtime_module_boundary_evidence_outputs_csv": RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV,
+        "local_full_stack_harness_runbook_marker_parity_status": runbook_marker_parity_status,
+        "local_full_stack_harness_runbook_reason_taxonomy_version": (
+            LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_TAXONOMY_VERSION
+        ),
+        "local_full_stack_harness_runbook_reason_codes_csv": (
+            LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_CODES_CSV
+        ),
+        "local_full_stack_harness_runbook_reason_code": runbook_reason_code,
         "local_full_stack_integration_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -1766,6 +1825,19 @@ def check_policy(args: argparse.Namespace) -> int:
         "runtime_module_boundary_evidence_outputs_csv="
         f"{RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV}"
     )
+    print(
+        "local_full_stack_harness_runbook_marker_parity_status="
+        f"{runbook_marker_parity_status}"
+    )
+    print(
+        "local_full_stack_harness_runbook_reason_taxonomy_version="
+        f"{LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "local_full_stack_harness_runbook_reason_codes_csv="
+        f"{LOCAL_FULL_STACK_HARNESS_RUNBOOK_REASON_CODES_CSV}"
+    )
+    print(f"local_full_stack_harness_runbook_reason_code={runbook_reason_code}")
     print(
         "local_full_stack_integration_policy_status="
         f"{'verified' if not failed_checks else 'failed'}"
@@ -1837,6 +1909,7 @@ def build_parser() -> argparse.ArgumentParser:
     policy_parser.add_argument("--report-file", required=True)
     policy_parser.add_argument("--expected-final-decision", default="GO")
     policy_parser.add_argument("--ci-fast-gate", default="PASS")
+    policy_parser.add_argument("--runbook-file", default=str(DEFAULT_RUNBOOK_FILE))
     policy_parser.add_argument("--output-json", default="")
     policy_parser.set_defaults(handler=check_policy)
     return parser

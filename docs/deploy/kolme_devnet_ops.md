@@ -48,7 +48,10 @@ Required checker/runbook parity markers:
 - `runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded`
 - `runtime_phase_module_parity_status=verified`
 - `runtime_module_boundary_parity_status=verified`
+- `local_full_stack_harness_runbook_marker_parity_status=verified`
+- `local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1`
 - `local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `local_full_stack_harness_runbook_reason_code=none|<reason>`
 
 Fail-closed drift reasons:
 
@@ -57,10 +60,12 @@ Fail-closed drift reasons:
 
 Validation commands:
 
+- `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/local-full-stack-integration-policy.json`
 - `bash scripts/runtime/test_check_local_full_stack_integration_live_policy.sh`
 - `bash scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh`
 
 - `Regression: #4197`
+- `Regression: #4198`
 
 ## Crash-Recovery Replay Idempotency Taxonomy and Runbook Marker Parity Contracts (Issue #4237)
 
