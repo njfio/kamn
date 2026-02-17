@@ -2,26 +2,43 @@
 
 ## Approach
 
-- Execute the smallest deterministic implementation slice that satisfies all ACs.
-- Add/extend red->green regression coverage before broad migration changes.
-- Preserve CI smoke/runtime budget boundaries and deterministic reason-taxonomy outputs.
+1. Add a canonical registry file (`lane_registry.json`) populated from current manifest and wrapper-symlink artifacts.
+2. Add generator/checker script that consumes the registry and supports:
+   - `--mode check` for repository drift detection
+   - `--mode render` for artifact rendering into an output root
+3. Add a shell contract test that validates check-mode markers and render-mode artifact output.
+4. Wire the new contract test into framework test runner and verify with full CI tools regression.
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact.
+- `scripts/framework/lane_registry.json`
+- `scripts/framework/generate_lane_artifacts.py`
+- `scripts/framework/test_lane_registry_generation.sh`
+- `scripts/framework/test_contract_framework.sh`
+- `docs/architecture/lane-registry-generation.md`
 
 ## Risks / Mitigations
 
-- Risk: migration drift or hidden coupling across scripts/wrappers/manifests.
-  Mitigation: phased rollout with deterministic regression suites and compatibility checks.
+- Risk: registry drift from repository artifacts.
+  Mitigation: generator check-mode compares registry payload against current manifests/symlink wiring.
+- Risk: render mode writes invalid wrapper links.
+  Mitigation: explicit wrapper metadata (`wrapper_relpath`, `wrapper_name`, `link_target`) with validation.
 - Risk: CI cost increase.
-  Mitigation: enforce bounded smoke limits and local-heavy opt-in boundaries.
+  Mitigation: add guard under existing framework suite and validate in existing `test_ci_tools` regression.
 
 ## Interfaces / Contracts
 
-- Preserve existing lane entrypoint compatibility unless explicitly versioned.
-- Emit stable key=value outputs and reason taxonomy/version markers on policy paths.
+- Registry schema version: `kamn.framework.lane-registry.v1`
+- Generator markers:
+  - `status=ok|fail`
+  - `validation_mode=check|render`
+  - `manifest_entries=<n>`
+  - `wrapper_entries=<n>`
+- Check mode fails closed on:
+  - missing manifest/wrapper
+  - manifest JSON payload mismatch
+  - wrapper symlink mismatch
 
 ## ADR
 
-- Required only if this issue introduces protocol/dependency/architecture decisions.
+No ADR required for this subtask. No dependency/protocol boundary change introduced.

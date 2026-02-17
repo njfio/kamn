@@ -1,0 +1,3360 @@
+{
+  "manifest_count": 171,
+  "manifests": [
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_adapter_conformance_contract_lane:v1",
+        "lane_id": "bridge.adapter_conformance.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_bridge_adapter_conformance_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_adapter_conformance_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_adapter_conformance_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_adapter_conformance_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_credentialed_contract_lane:v1",
+        "lane_id": "bridge.credentialed.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_bridge_credentialed_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_credentialed_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_credentialed_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_credentialed_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_credentialed_deep_lane:v1",
+        "lane_id": "bridge.credentialed.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/bridge/run_bridge_credentialed_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_credentialed_deep_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_credentialed_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_credentialed_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_ingress_relay_contract_lane:v1",
+        "lane_id": "bridge.ingress_relay.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_bridge_ingress_relay_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_ingress_relay_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_ingress_relay_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_ingress_relay_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_outbound_quorum_contract_lane:v1",
+        "lane_id": "bridge.outbound_quorum.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_bridge_outbound_quorum_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_outbound_quorum_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_outbound_quorum_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_outbound_quorum_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_replay_redaction_contract_lane:v1",
+        "lane_id": "bridge.replay_redaction.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_bridge_replay_redaction_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_replay_redaction_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_replay_redaction_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_replay_redaction_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_replay_redaction_deep_lane:v1",
+        "lane_id": "bridge.replay_redaction.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/bridge/run_bridge_replay_redaction_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_replay_redaction_deep_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_bridge_replay_redaction_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_bridge_replay_redaction_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_cross_chain_outbound_intent_contract_lane:v1",
+        "lane_id": "bridge.cross_chain_outbound_intent.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_cross_chain_outbound_intent_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_cross_chain_outbound_intent_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_cross_chain_outbound_intent_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_cross_chain_outbound_intent_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_cross_chain_outbound_intent_deep_lane:v1",
+        "lane_id": "bridge.cross_chain_outbound_intent.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/bridge/run_cross_chain_outbound_intent_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_cross_chain_outbound_intent_deep_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_cross_chain_outbound_intent_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_cross_chain_outbound_intent_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_localhost_bridge_demo_evidence_contract_lane:v1",
+        "lane_id": "bridge.localhost_bridge_demo_evidence.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_localhost_bridge_demo_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_localhost_bridge_demo_evidence_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_localhost_bridge_demo_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_localhost_bridge_relay_demo_contract_lane:v1",
+        "lane_id": "bridge.localhost_bridge_relay_demo.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_localhost_bridge_relay_demo_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_localhost_bridge_relay_demo_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_localhost_bridge_relay_demo_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_localhost_bridge_relay_demo_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "bridge_telegram_ingress_contract_lane:v1",
+        "lane_id": "bridge.telegram_ingress.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/bridge/run_telegram_ingress_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "bridge_telegram_ingress_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_telegram_ingress_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/bridge_telegram_ingress_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "launch_canary_contract_lane:v1",
+        "lane_id": "canary.launch_canary.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/canary/launch_canary_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "launch_canary_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_launch_canary_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/canary_launch_canary_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "post_cutover_slo_contract_lane:v1",
+        "lane_id": "canary.post_cutover_slo.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/canary/post_cutover_slo_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "post_cutover_slo_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_post_cutover_slo_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "channel_lifecycle_contract_lane:v1",
+        "lane_id": "channel.lifecycle.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/channel/channel_lifecycle_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "channel_lifecycle_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_channel_lifecycle_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/channel_channel_lifecycle_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "channel_policy_contract_lane:v1",
+        "lane_id": "channel.policy.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/channel/channel_policy_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "channel_policy_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_channel_policy_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/channel_channel_policy_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "channel_retention_redaction_contract_lane:v1",
+        "lane_id": "channel.channel_retention_redaction.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/channel/channel_retention_redaction_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "channel_retention_redaction_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_channel_retention_redaction_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/channel_channel_retention_redaction_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "ci_fast_gate_budget_delta_contract_lane:v1",
+        "lane_id": "ci.fast_gate_budget_delta.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "ci_fast_gate_budget_delta_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_fast_gate_budget_delta_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "ci_ignored_test_and_script_budget_trend_contract_lane:v1",
+        "lane_id": "ci.ignored_test_and_script_budget_trend.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "ci_ignored_test_and_script_budget_trend_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_ignored_test_and_script_budget_trend_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "ci_kamn_core_rustdoc_artifact_contract_lane:v1",
+        "lane_id": "ci.kamn_core_rustdoc_artifact.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/ci/kamn_core_rustdoc_artifact_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "ci_kamn_core_rustdoc_artifact_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_kamn_core_rustdoc_artifact_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "ci_kolme_test_harness_loc_soft_budget_contract_lane:v1",
+        "lane_id": "ci.kolme_test_harness_loc_soft_budget.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/ci/kolme_test_harness_loc_soft_budget_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "ci_kolme_test_harness_loc_soft_budget_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_kolme_test_harness_loc_soft_budget_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "ci_test_harness_loc_soft_budget_contract_lane:v1",
+        "lane_id": "ci.test_harness_loc_soft_budget.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/ci/test_harness_loc_soft_budget_contract_lane_impl.sh"
+          ]
+        },
+        "reason_key": "ci_test_harness_loc_soft_budget_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_test_harness_loc_soft_budget_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "compliance_classification_redaction_contract_lane:v1",
+        "lane_id": "compliance.classification_redaction.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/compliance/classification_redaction_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "compliance_classification_redaction_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_classification_redaction_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/compliance_classification_redaction_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "classification_redaction_lane:v1",
+        "lane_id": "compliance.classification_redaction.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/compliance/run_classification_redaction_lane_impl.sh"
+          ]
+        },
+        "reason_key": "classification_redaction_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_classification_redaction_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/compliance_classification_redaction_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "compliance_dsar_legal_hold_contract_lane:v1",
+        "lane_id": "compliance.dsar_legal_hold.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "compliance_dsar_legal_hold_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dsar_legal_hold_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "compliance_soc2_control_evidence_contract_lane:v1",
+        "lane_id": "compliance.soc2_control_evidence.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/compliance/soc2_control_evidence_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "compliance_soc2_control_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_soc2_control_evidence_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "cutover_rollback_contract_lane:v1",
+        "lane_id": "cutover.cutover_rollback.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/cutover/cutover_rollback_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "cutover_rollback_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_cutover_rollback_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/cutover_cutover_rollback_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "mainnet_cutover_contract_lane:v1",
+        "lane_id": "cutover.mainnet_cutover.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/cutover/mainnet_cutover_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "mainnet_cutover_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_mainnet_cutover_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/cutover_mainnet_cutover_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dashboard_backend_session_auth_freshness_contract_lane:v1",
+        "lane_id": "dashboard.backend_session_auth_freshness.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "dashboard_backend_session_auth_freshness_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_backend_session_auth_freshness_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/dashboard_backend_session_auth_freshness_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dashboard_backend_session_auth_freshness_lane:v1",
+        "lane_id": "dashboard.backend_session_auth_freshness.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh"
+          ]
+        },
+        "reason_key": "dashboard_backend_session_auth_freshness_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_backend_session_auth_freshness_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/dashboard_backend_session_auth_freshness_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dashboard_stale_error_budget_contract_lane:v1",
+        "lane_id": "dashboard.stale_error_budget.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/dashboard/stale_error_budget_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "dashboard_stale_error_budget_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dashboard_stale_error_budget_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/dashboard_stale_error_budget_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dashboard_stale_error_budget_lane:v1",
+        "lane_id": "dashboard.stale_error_budget.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh"
+          ]
+        },
+        "reason_key": "dashboard_stale_error_budget_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dashboard_stale_error_budget_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/dashboard_stale_error_budget_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "deployment_slo_rollback_contract_lane:v1",
+        "lane_id": "deploy.deployment_slo_rollback.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/deploy/deployment_slo_rollback_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "deployment_slo_rollback_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_deployment_slo_rollback_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "deployment_slo_rollback_lane:v1",
+        "lane_id": "deploy.deployment_slo_rollback.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/deploy/run_deployment_slo_rollback_lane_impl.sh"
+          ]
+        },
+        "reason_key": "deployment_slo_rollback_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_deployment_slo_rollback_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/deploy_deployment_slo_rollback_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dr_evidence_contract_lane:v1",
+        "lane_id": "deploy.dr_evidence.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/deploy/dr_evidence_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "dr_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dr_evidence_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/deploy_dr_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "gonogo_evidence_contract_lane:v1",
+        "lane_id": "deploy.gonogo_evidence.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/deploy/gonogo_evidence_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "gonogo_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_gonogo_evidence_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "staging_rehearsal_contract_lane:v1",
+        "lane_id": "deploy.staging_rehearsal.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/deploy/staging_rehearsal_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "staging_rehearsal_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_staging_rehearsal_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "did_registry_contract_lane:v1",
+        "lane_id": "did.did_registry.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/did/did_registry_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "did_registry_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_did_registry_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/did_did_registry_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "federated_did_handshake_contract_lane:v1",
+        "lane_id": "did.federated_did_handshake.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/did/federated_did_handshake_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "federated_did_handshake_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_federated_did_handshake_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/did_federated_did_handshake_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "lifecycle_operator_binding_contract_lane:v1",
+        "lane_id": "did.lifecycle_operator_binding.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/did/lifecycle_operator_binding_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "lifecycle_operator_binding_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_lifecycle_operator_binding_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/did_lifecycle_operator_binding_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "multikey_algorithm_policy_contract_lane:v1",
+        "lane_id": "did.multikey_algorithm_policy.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/did/multikey_algorithm_policy_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "multikey_algorithm_policy_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_multikey_algorithm_policy_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/did_multikey_algorithm_policy_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "did_service_endpoint_canonicalization_contract_lane:v1",
+        "lane_id": "did.service_endpoint_canonicalization.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/did/service_endpoint_canonicalization_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "did_service_endpoint_canonicalization_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_service_endpoint_canonicalization_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/did_service_endpoint_canonicalization_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "settlement_reconciliation_contract_lane:v1",
+        "lane_id": "escrow.settlement_reconciliation.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/escrow/settlement_reconciliation_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "settlement_reconciliation_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_settlement_reconciliation_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/escrow_settlement_reconciliation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "frontend_dashboard_shell_determinism_matrix_contract_lane:v1",
+        "lane_id": "frontend.dashboard_shell_determinism_matrix.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "frontend_dashboard_shell_determinism_matrix_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dashboard_shell_determinism_matrix_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/frontend_dashboard_shell_determinism_matrix_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "dashboard_shell_determinism_matrix_lane:v1",
+        "lane_id": "frontend.dashboard_shell_determinism_matrix.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/frontend/run_dashboard_shell_determinism_matrix_lane_impl.sh"
+          ]
+        },
+        "reason_key": "dashboard_shell_determinism_matrix_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_dashboard_shell_determinism_matrix_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/frontend_dashboard_shell_determinism_matrix_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_lifecycle_rollback_contract_lane:v1",
+        "lane_id": "governance.lifecycle_rollback.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "governance_lifecycle_rollback_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_governance_lifecycle_rollback_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_lifecycle_rollback_lane:v1",
+        "lane_id": "governance.lifecycle_rollback.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/governance/run_governance_lifecycle_rollback_lane_impl.sh"
+          ]
+        },
+        "reason_key": "governance_lifecycle_rollback_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_governance_lifecycle_rollback_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_lifecycle_rollback_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_quorum_attestation_replay_contract_lane:v1",
+        "lane_id": "governance.quorum_attestation_replay.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "governance_quorum_attestation_replay_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_quorum_attestation_replay_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_quorum_attestation_lane:v1",
+        "lane_id": "governance.quorum_attestation_replay_guard.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh"
+          ]
+        },
+        "reason_key": "governance_quorum_attestation_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_quorum_attestation_replay_guard_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_quorum_attestation_replay_guard_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_simulation_contract_lane:v1",
+        "lane_id": "governance.simulation.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/governance/governance_simulation_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "governance_simulation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_governance_simulation_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_simulation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "governance_stake_slash_risk_contract_lane:v1",
+        "lane_id": "governance.stake_slash_risk.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/governance/stake_slash_risk_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "governance_stake_slash_risk_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_stake_slash_risk_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "durable_guard_recovery_contract_lane:v1",
+        "lane_id": "guard.durable_guard_recovery.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/guard/durable_guard_recovery_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "durable_guard_recovery_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_durable_guard_recovery_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/guard_durable_guard_recovery_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_block_fallback_reconciliation_contract_lane:v1",
+        "lane_id": "kolme.block_fallback.reconciliation.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_block_fallback_reconciliation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_continuous_runtime_commit_contract_lane:v1",
+        "lane_id": "kolme.continuous_runtime_commit.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/continuous_runtime_commit_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_continuous_runtime_commit_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_continuous_runtime_commit_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_did_lifecycle_chain_adapter_contract_lane:v1",
+        "lane_id": "kolme.did_lifecycle_chain_adapter.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/did_lifecycle_chain_adapter_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_did_lifecycle_chain_adapter_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_did_lifecycle_chain_adapter_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_fast_gate_native_api_parity_contract_lane:v1",
+        "lane_id": "kolme.fast_gate_native_api_parity.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/fast_gate_native_api_parity_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_fast_gate_native_api_parity_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_bootstrap_health_checks_contract_lane:v1",
+        "lane_id": "kolme.local_bootstrap_health_checks.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_bootstrap_health_checks_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_bootstrap_health_checks_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_bootstrap_health_checks_lane:v1",
+        "lane_id": "kolme.local_bootstrap_health_checks.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_bootstrap_health_checks_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_bootstrap_health_checks_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_bootstrap_health_checks_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_e2e_integration_contract_lane:v1",
+        "lane_id": "kolme.local_e2e_integration.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_e2e_integration_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_e2e_integration_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_e2e_integration_lane:v1",
+        "lane_id": "kolme.local_e2e_integration.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_e2e_integration_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_e2e_integration_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_e2e_integration_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_portability_preflight_contract_lane:v1",
+        "lane_id": "kolme.local_fork_portability_preflight.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_fork_portability_preflight_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_fork_portability_preflight_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_profile_preflight_contract_lane:v1",
+        "lane_id": "kolme.local_fork_profile_preflight.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_fork_profile_preflight_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_fork_profile_preflight_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_rust_test_matrix_contract_lane:v1",
+        "lane_id": "kolme.local_fork_rust_test_matrix.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_fork_rust_test_matrix_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_fork_rust_test_matrix_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_self_test_contract_lane:v1",
+        "lane_id": "kolme.local_fork_self_test.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_fork_self_test_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_fork_self_test_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_smoke_evidence_lane:v1",
+        "lane_id": "kolme.local_fork_smoke_evidence.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_fork_smoke_evidence_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_fork_smoke_evidence_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_smoke_evidence_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_fork_sync_metadata_lane:v1",
+        "lane_id": "kolme.local_fork_sync_metadata.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_fork_sync_metadata_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_fork_sync_metadata_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_fork_sync_metadata_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_heavy_validation_matrix_contract_lane:v1",
+        "lane_id": "kolme.local_heavy_validation_matrix.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_heavy_validation_matrix_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_heavy_validation_matrix_lane:v1",
+        "lane_id": "kolme.local_heavy_validation_matrix.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_heavy_validation_matrix_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_heavy_validation_matrix_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_heavy_validation_matrix_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kamn_live_runtime_integration_contract_lane:v1",
+        "lane_id": "kolme.local_kamn_live_runtime_integration.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kamn_live_runtime_integration_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kamn_live_runtime_integration_lane:v1",
+        "lane_id": "kolme.local_kamn_live_runtime_integration.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kamn_live_runtime_integration_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kamn_live_runtime_real_node_profile_contract_lane:v1",
+        "lane_id": "kolme.local_kamn_live_runtime_real_node_profile.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kamn_live_runtime_real_node_profile_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kamn_live_runtime_real_node_profile_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kamn_live_runtime_real_node_profile_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_api_probe_lane:v1",
+        "lane_id": "kolme.local_kolme_api_probe.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_api_probe_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_api_probe_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_api_probe_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_api_smoke_lane:v1",
+        "lane_id": "kolme.local_kolme_api_smoke.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_api_smoke_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_api_smoke_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_api_smoke_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_bootstrap_readiness_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_bootstrap_readiness.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_fork_bootstrap_readiness_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_bootstrap_readiness_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_bootstrap_readiness_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_bootstrap_readiness.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_bootstrap_readiness_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_checkout_bootstrap_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_checkout_bootstrap.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_checkout_bootstrap_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_checkout_bootstrap_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_checkout_bootstrap.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_checkout_bootstrap_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_portability_preflight_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_portability_preflight.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_portability_preflight_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_portability_preflight_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_portability_preflight_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_process_lifecycle_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_process_lifecycle.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_process_lifecycle_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_process_lifecycle_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_process_lifecycle.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_process_lifecycle_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_process_lifecycle_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_profile_preflight_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_profile_preflight.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_profile_preflight_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_profile_preflight_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_profile_preflight_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_real_process_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_real_process.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_real_process_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_rust_test_matrix_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_rust_test_matrix.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_rust_test_matrix_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_rust_test_matrix_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_fork_self_test_lane:v1",
+        "lane_id": "kolme.local_kolme_fork_self_test.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_fork_self_test_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_fork_self_test_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_fork_self_test_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_live_api_conformance_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_live_api_conformance.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_live_api_conformance_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_live_api_conformance_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_live_deployment_preflight_contract_lane:v1",
+        "lane_id": "kolme.local_kolme_live_deployment_preflight.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_kolme_live_deployment_preflight_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_live_deployment_preflight_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_kolme_live_deployment_preflight_lane:v1",
+        "lane_id": "kolme.local_kolme_live_deployment_preflight.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_kolme_live_deployment_preflight_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_kolme_live_deployment_preflight_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_live_node_validation_bundle_contract_lane:v1",
+        "lane_id": "kolme.local_live_node_validation_bundle.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_live_node_validation_bundle_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_live_node_validation_bundle_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_live_node_validation_bundle_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_live_node_validation_bundle_lane:v1",
+        "lane_id": "kolme.local_live_node_validation_bundle.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_live_node_validation_bundle_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_live_node_validation_bundle_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_live_node_validation_bundle_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_live_provider_runtime_integration_contract_lane:v1",
+        "lane_id": "kolme.local_live_provider_runtime_integration.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_live_provider_runtime_integration_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_live_provider_runtime_integration_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_live_provider_runtime_integration_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_native_api_parity_live_proof_contract_lane:v1",
+        "lane_id": "kolme.local_native_api_parity_live_proof.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_native_api_parity_live_proof_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_native_api_parity_live_proof_lane:v1",
+        "lane_id": "kolme.local_native_api_parity_live_proof.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_native_api_parity_live_proof_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_native_api_parity_live_proof_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_native_api_parity_live_proof_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_runtime_commit_live_finality_evidence_contract_lane:v1",
+        "lane_id": "kolme.local_runtime_commit_live_finality_evidence.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_runtime_commit_live_finality_evidence_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_runtime_commit_live_finality_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_runtime_commit_live_finality_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_runtime_commit_live_lane:v1",
+        "lane_id": "kolme.local_runtime_commit_live.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_local_runtime_commit_live_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_local_runtime_commit_live_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_local_signed_to_kolme_demo_contract_lane:v1",
+        "lane_id": "kolme.local_signed_to_kolme_demo.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/local_signed_to_kolme_demo_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_local_signed_to_kolme_demo_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_managed_signer_backend_slo_policy_contract_lane:v1",
+        "lane_id": "kolme.managed_signer_backend_slo_policy.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/managed_signer_backend_slo_policy_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_managed_signer_backend_slo_policy_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_managed_signer_backend_slo_policy_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_managed_signer_backend_slo_telemetry_contract_lane:v1",
+        "lane_id": "kolme.managed_signer_backend_slo_telemetry.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/managed_signer_backend_slo_telemetry_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_managed_signer_backend_slo_telemetry_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_managed_signer_backend_slo_telemetry_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_managed_signer_startup_live_validation_contract_lane:v1",
+        "lane_id": "kolme.managed_signer_startup_live_validation.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/managed_signer_startup_live_validation_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_managed_signer_startup_live_validation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_managed_signer_startup_live_validation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_message_proof_anchoring_contract_lane:v1",
+        "lane_id": "kolme.message_proof_anchoring.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/message_proof_anchoring_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_message_proof_anchoring_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_message_proof_anchoring_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_nonce_broadcast_parity_contract_lane:v1",
+        "lane_id": "kolme.nonce_broadcast.parity.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_nonce_broadcast_parity_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_notifications_consumer_contract_lane:v1",
+        "lane_id": "kolme.notifications.consumer.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/notifications_consumer_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_notifications_consumer_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_onchain_lifecycle_evidence_bundle_lane:v1",
+        "lane_id": "kolme.onchain_lifecycle_evidence_bundle.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_onchain_lifecycle_evidence_bundle_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_onchain_lifecycle_evidence_bundle_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_onchain_lifecycle_evidence_contract_lane:v1",
+        "lane_id": "kolme.onchain_lifecycle_evidence.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/onchain_lifecycle_evidence_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_onchain_lifecycle_evidence_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_onchain_lifecycle_evidence_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_runtime_commit_adapter_contract_lane:v1",
+        "lane_id": "kolme.runtime_commit.adapter.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/runtime_commit_adapter_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_runtime_commit_adapter_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_runtime_commit_contract_lane:v1",
+        "lane_id": "kolme.runtime_commit.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/runtime_commit_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_runtime_commit_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_runtime_commit_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_runtime_commit_replay_contract_lane:v1",
+        "lane_id": "kolme.runtime_commit.replay.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/runtime_commit_replay_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_runtime_commit_replay_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_signature_parity_contract_lane:v1",
+        "lane_id": "kolme.signature_parity.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/signature_parity_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_signature_parity_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_signature_parity_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_snapshot_drift_contract_lane:v1",
+        "lane_id": "kolme.snapshot_drift.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/snapshot_drift_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_snapshot_drift_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_triadic_devnet_smoke_contract_lane:v1",
+        "lane_id": "kolme.triadic_devnet_smoke.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_triadic_devnet_smoke_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_version_compatibility_contract_lane:v1",
+        "lane_id": "kolme.version_compatibility.contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/kolme/contracts/version_compatibility_contract_lane.py"
+          ]
+        },
+        "reason_key": "kolme_version_compatibility_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_version_compatibility_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "kolme_version_compatibility_replay_deep_lane:v1",
+        "lane_id": "kolme.version_compatibility_replay_deep.run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/kolme/run_version_compatibility_replay_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "kolme_version_compatibility_replay_deep_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1"
+      },
+      "manifest_relpath": "scripts/framework/manifests/kolme_version_compatibility_replay_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "a2a_mcp_conformance_contract_lane:v1",
+        "lane_id": "message.a2a_mcp_conformance.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/a2a_mcp_conformance_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "a2a_mcp_conformance_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_a2a_mcp_conformance_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_a2a_mcp_conformance_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "didcomm_envelope_compatibility_contract_lane:v1",
+        "lane_id": "message.didcomm_envelope_compatibility.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/didcomm_envelope_compatibility_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "didcomm_envelope_compatibility_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_didcomm_envelope_compatibility_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_didcomm_envelope_compatibility_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "group_sender_replay_ratchet_contract_lane:v1",
+        "lane_id": "message.group_sender_replay_ratchet.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/group_sender_replay_ratchet_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "group_sender_replay_ratchet_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_group_sender_replay_ratchet_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_group_sender_replay_ratchet_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "key_hierarchy_invariant_contract_lane:v1",
+        "lane_id": "message.key_hierarchy_invariant.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/key_hierarchy_invariant_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "key_hierarchy_invariant_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_key_hierarchy_invariant_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_key_hierarchy_invariant_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "message_lifecycle_contract_lane:v1",
+        "lane_id": "message.message_lifecycle.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/message_lifecycle_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "message_lifecycle_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_message_lifecycle_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_message_lifecycle_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "processor_proof_artifact_contract_lane:v1",
+        "lane_id": "message.processor_proof_artifact.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/message/processor_proof_artifact_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "processor_proof_artifact_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_processor_proof_artifact_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/message_processor_proof_artifact_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "reputation_dispute_contract_lane:v1",
+        "lane_id": "reputation.dispute.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/reputation/reputation_dispute_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "reputation_dispute_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_reputation_dispute_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/reputation_dispute_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "reputation_recovery_contract_lane:v1",
+        "lane_id": "reputation.reputation_recovery.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/reputation/reputation_recovery_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "reputation_recovery_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_reputation_recovery_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/reputation_reputation_recovery_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "reputation_signal_quarantine_contract_lane:v1",
+        "lane_id": "reputation.reputation_signal_quarantine.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/reputation/reputation_signal_quarantine_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "reputation_signal_quarantine_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_reputation_signal_quarantine_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/reputation_reputation_signal_quarantine_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "weighted_decay_contract_lane:v1",
+        "lane_id": "reputation.weighted_decay.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/reputation/weighted_decay_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "weighted_decay_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_weighted_decay_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/reputation_weighted_decay_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_concurrency_state_mutation_contract_lane:v1",
+        "lane_id": "runtime.concurrency_state_mutation.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/concurrency_state_mutation_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_concurrency_state_mutation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_concurrency_state_mutation_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_concurrency_state_mutation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "concurrency_state_mutation_deep_lane:v1",
+        "lane_id": "runtime.concurrency_state_mutation.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_concurrency_state_mutation_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_concurrency_state_mutation_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_concurrency_state_mutation_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_concurrency_state_mutation_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "failover_sync_drill_deep_lane:v1",
+        "lane_id": "runtime.failover_sync_drill.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_failover_sync_drill_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_failover_sync_drill_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_failover_sync_drill_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_failover_sync_drill_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_failover_sync_drill_preflight_contract_lane:v1",
+        "lane_id": "runtime.failover_sync_drill_preflight.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_failover_sync_drill_preflight_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_failover_sync_drill_preflight_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_failover_sync_drill_preflight_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "go_no_go_gate_lane:v1",
+        "lane_id": "runtime.go_no_go_gate.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_go_no_go_gate_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_go_no_go_gate_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_go_no_go_gate_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_go_no_go_gate_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_input_mutation_contract_lane:v1",
+        "lane_id": "runtime.input_mutation.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/input_mutation_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_input_mutation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_input_mutation_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_input_mutation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_input_mutation_coverage_guided_contract_lane:v1",
+        "lane_id": "runtime.input_mutation_coverage_guided.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/input_mutation_coverage_guided_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_input_mutation_coverage_guided_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_input_mutation_coverage_guided_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_input_mutation_coverage_guided_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "input_mutation_coverage_guided_deep_lane:v1",
+        "lane_id": "runtime.input_mutation_coverage_guided.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_input_mutation_coverage_guided_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_input_mutation_coverage_guided_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_input_mutation_coverage_guided_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_input_mutation_coverage_guided_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_invariant_fuzz_concurrency_contract_lane:v1",
+        "lane_id": "runtime.invariant_fuzz_concurrency.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/invariant_fuzz_concurrency_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_invariant_fuzz_concurrency_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_invariant_fuzz_concurrency_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_invariant_fuzz_concurrency_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_lifecycle_property_contract_lane:v1",
+        "lane_id": "runtime.lifecycle_property.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/lifecycle_property_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_lifecycle_property_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_lifecycle_property_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_lifecycle_property_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_live_network_partition_reconnect_contract_lane:v1",
+        "lane_id": "runtime.live_network_partition_reconnect.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/live_network_partition_reconnect_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_partition_reconnect_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_partition_reconnect_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_partition_reconnect_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_network_partition_reconnect_deep_lane:v1",
+        "lane_id": "runtime.live_network_partition_reconnect.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "python3",
+            "scripts/runtime/live_network_partition_reconnect_contract.py",
+            "run-deep"
+          ]
+        },
+        "reason_key": "runtime_live_network_partition_reconnect_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_partition_reconnect_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_partition_reconnect_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_network_partition_reconnect_smoke_lane:v1",
+        "lane_id": "runtime.live_network_partition_reconnect_smoke.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_partition_reconnect_smoke_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_partition_reconnect_smoke_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_partition_reconnect_smoke_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_live_network_pilot_deep_contract_lane:v1",
+        "lane_id": "runtime.live_network_pilot_deep.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/live_network_pilot_deep_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_pilot_deep_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_pilot_deep_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_pilot_deep_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_network_pilot_deep_lane:v1",
+        "lane_id": "runtime.live_network_pilot_deep.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_live_network_pilot_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_pilot_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_pilot_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_pilot_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_live_network_smoke_contract_lane:v1",
+        "lane_id": "runtime.live_network_smoke.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/live_network_smoke_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_smoke_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_smoke_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_smoke_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_network_smoke_lane:v1",
+        "lane_id": "runtime.live_network_smoke.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_live_network_smoke_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_live_network_smoke_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_network_smoke_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_network_smoke_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_validation_environment_lane:v1",
+        "lane_id": "runtime.live_validation_environment.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_live_validation_environment_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_live_validation_environment_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_validation_environment_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_live_validation_environment_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "network_signer_finality_failure_drills_lane:v1",
+        "lane_id": "runtime.network_signer_finality_failure_drills.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/runtime/run_network_signer_finality_failure_drills_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_network_signer_finality_failure_drills_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_network_signer_finality_failure_drills_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_network_signer_finality_failure_drills_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_processor_proof_admission_contract_lane:v1",
+        "lane_id": "runtime.processor_proof_admission.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/processor_proof_admission_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_processor_proof_admission_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_processor_proof_admission_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_processor_proof_admission_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_runtime_snapshot_contract_lane:v1",
+        "lane_id": "runtime.runtime_snapshot.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/runtime_snapshot_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_runtime_snapshot_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_runtime_snapshot_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_runtime_snapshot_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_snapshot_deep_lane:v1",
+        "lane_id": "runtime.runtime_snapshot.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_runtime_snapshot_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_snapshot_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_runtime_snapshot_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_runtime_snapshot_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_watchdog_proof_consensus_contract_lane:v1",
+        "lane_id": "runtime.watchdog_proof_consensus.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/watchdog_proof_consensus_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_watchdog_proof_consensus_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_watchdog_proof_consensus_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_watchdog_proof_consensus_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "watchdog_proof_consensus_deep_lane:v1",
+        "lane_id": "runtime.watchdog_proof_consensus.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_watchdog_proof_consensus_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_watchdog_proof_consensus_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_watchdog_proof_consensus_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_watchdog_proof_consensus_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "runtime_zk_witness_mutation_contract_lane:v1",
+        "lane_id": "runtime.zk_witness_mutation.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/runtime/zk_witness_mutation_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "runtime_zk_witness_mutation_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_zk_witness_mutation_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_zk_witness_mutation_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "zk_witness_mutation_deep_lane:v1",
+        "lane_id": "runtime.zk_witness_mutation.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/runtime/run_zk_witness_mutation_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "runtime_zk_witness_mutation_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_zk_witness_mutation_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/runtime_zk_witness_mutation_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_example_fixture_drift_contract_lane:v1",
+        "lane_id": "sdk.example_fixture_drift.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/example_fixture_drift_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_example_fixture_drift_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_example_fixture_drift_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_example_fixture_drift_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_live_transport_parity_contract_lane:v1",
+        "lane_id": "sdk.live_transport_parity.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/live_transport_parity_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_live_transport_parity_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_parity_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_parity_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_live_transport_replay_tamper_contract_lane:v1",
+        "lane_id": "sdk.live_transport_replay_tamper.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_live_transport_replay_tamper_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_replay_tamper_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_replay_tamper_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_transport_replay_tamper_deep_lane:v1",
+        "lane_id": "sdk.live_transport_replay_tamper_deep.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/sdk/run_live_transport_replay_tamper_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "live_transport_replay_tamper_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_replay_tamper_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_replay_tamper_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "live_transport_replay_tamper_fast_lane:v1",
+        "lane_id": "sdk.live_transport_replay_tamper_fast.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/sdk/run_live_transport_replay_tamper_fast_lane_impl.sh"
+          ]
+        },
+        "reason_key": "live_transport_replay_tamper_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_replay_tamper_fast_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_replay_tamper_fast_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_live_transport_smoke_parity_contract_lane:v1",
+        "lane_id": "sdk.live_transport_smoke_parity.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/live_transport_smoke_parity_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_live_transport_smoke_parity_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_smoke_parity_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_smoke_parity_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_live_transport_smoke_parity_lane:v1",
+        "lane_id": "sdk.live_transport_smoke_parity.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "bash",
+            "scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh"
+          ]
+        },
+        "reason_key": "sdk_live_transport_smoke_parity_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_live_transport_smoke_parity_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_live_transport_smoke_parity_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "localhost_signed_demo_contract_lane:v1",
+        "lane_id": "sdk.localhost_signed_demo.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/sdk/localhost_signed_demo_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "localhost_signed_demo_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_localhost_signed_demo_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_localhost_signed_demo_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_localhost_signed_integration_contract_lane:v1",
+        "lane_id": "sdk.localhost_signed_integration.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_localhost_signed_integration_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_localhost_signed_integration_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_localhost_signed_integration_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_rust_live_transport_contract_lane:v1",
+        "lane_id": "sdk.rust_live_transport.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/sdk/rust_live_transport_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "sdk_rust_live_transport_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_rust_live_transport_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_rust_live_transport_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "sdk_schema_compatibility_contract_lane:v1",
+        "lane_id": "sdk.schema_compatibility.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/sdk/sdk_schema_compatibility_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "sdk_schema_compatibility_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_sdk_schema_compatibility_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/sdk_schema_compatibility_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "secure_provider_key_lifecycle_contract_lane:v1",
+        "lane_id": "signer.secure_provider_key_lifecycle.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/signer/secure_provider_key_lifecycle_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "secure_provider_key_lifecycle_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_secure_provider_key_lifecycle_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_secure_provider_key_lifecycle_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_emulator_contract_lane:v1",
+        "lane_id": "signer.signer_emulator.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/signer/signer_emulator_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "signer_emulator_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_emulator_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_emulator_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_incident_recovery_contract_lane:v1",
+        "lane_id": "signer.incident_recovery.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/signer/signer_incident_recovery_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "signer_incident_recovery_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_incident_recovery_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_incident_recovery_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_incident_recovery_deep_lane:v1",
+        "lane_id": "signer.signer_incident_recovery.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/signer/run_signer_incident_recovery_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "signer_incident_recovery_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_incident_recovery_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_incident_recovery_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_incident_recovery_lane:v1",
+        "lane_id": "signer.signer_incident_recovery.run",
+        "phase": "run",
+        "phases": {
+          "run": [
+            "python3",
+            "scripts/signer/signer_incident_recovery_lane.py"
+          ]
+        },
+        "reason_key": "signer_incident_recovery_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_incident_recovery_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_incident_recovery_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_policy_contract_lane:v1",
+        "lane_id": "signer.signer_policy.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/signer/signer_policy_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "signer_policy_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_policy_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_policy_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "signer_provider_deep_lane:v1",
+        "lane_id": "signer.signer_provider.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/signer/run_signer_provider_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "signer_provider_deep_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_signer_provider_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/signer_signer_provider_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "federated_delegation_settlement_contract_lane:v1",
+        "lane_id": "task.federated_delegation_settlement.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/task/federated_delegation_settlement_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "federated_delegation_settlement_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_federated_delegation_settlement_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/task_federated_delegation_settlement_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "federated_delegation_settlement_deep_lane:v1",
+        "lane_id": "task.federated_delegation_settlement.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/task/run_federated_delegation_settlement_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "federated_delegation_settlement_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_federated_delegation_settlement_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/task_federated_delegation_settlement_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "task_operation_snapshot_contract_lane:v1",
+        "lane_id": "task.task_operation_snapshot.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "bash",
+            "scripts/task/task_operation_snapshot_contract_lane_contract.sh"
+          ]
+        },
+        "reason_key": "task_operation_snapshot_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_task_operation_snapshot_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/task_task_operation_snapshot_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "task_operation_snapshot_deep_lane:v1",
+        "lane_id": "task.task_operation_snapshot.deep",
+        "phase": "deep",
+        "phases": {
+          "deep": [
+            "bash",
+            "scripts/task/run_task_operation_snapshot_deep_lane_impl.sh"
+          ]
+        },
+        "reason_key": "task_operation_snapshot_deep_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_task_operation_snapshot_deep_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/task_task_operation_snapshot_deep_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "token_launch_handoff_contract_lane:v1",
+        "lane_id": "token.launch_handoff.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/token/token_launch_handoff_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "token_launch_handoff_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_token_launch_handoff_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/token_launch_handoff_contract_lane.json"
+    },
+    {
+      "manifest_payload": {
+        "evidence_key": "treasury_disbursement_contract_lane:v1",
+        "lane_id": "treasury.disbursement.contract",
+        "phase": "contract",
+        "phases": {
+          "contract": [
+            "python3",
+            "scripts/treasury/treasury_disbursement_contract_lane_contract.py"
+          ]
+        },
+        "reason_key": "treasury_disbursement_contract_lane_reason_codes:GO:v1",
+        "schema_version": "kamn.contract-lane.manifest.v1",
+        "wrapper_name": "run_treasury_disbursement_contract_lane.sh"
+      },
+      "manifest_relpath": "scripts/framework/manifests/treasury_disbursement_contract_lane.json"
+    }
+  ],
+  "registry_version": "2026-02-17",
+  "schema_version": "kamn.framework.lane-registry.v1",
+  "wrapper_count": 112,
+  "wrappers": [
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_adapter_conformance_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_credentialed_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_credentialed_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_credentialed_deep_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_credentialed_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_ingress_relay_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_ingress_relay_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_outbound_quorum_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_replay_redaction_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_replay_redaction_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_bridge_replay_redaction_deep_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_bridge_replay_redaction_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_cross_chain_outbound_intent_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_cross_chain_outbound_intent_deep_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_cross_chain_outbound_intent_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_localhost_bridge_demo_evidence_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_localhost_bridge_relay_demo_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_telegram_ingress_contract_lane.sh",
+      "wrapper_relpath": "scripts/bridge/run_telegram_ingress_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_launch_canary_contract_lane.sh",
+      "wrapper_relpath": "scripts/canary/run_launch_canary_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_post_cutover_slo_contract_lane.sh",
+      "wrapper_relpath": "scripts/canary/run_post_cutover_slo_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_channel_lifecycle_contract_lane.sh",
+      "wrapper_relpath": "scripts/channel/run_channel_lifecycle_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_channel_policy_contract_lane.sh",
+      "wrapper_relpath": "scripts/channel/run_channel_policy_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_channel_retention_redaction_contract_lane.sh",
+      "wrapper_relpath": "scripts/channel/run_channel_retention_redaction_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_fast_gate_budget_delta_contract_lane.sh",
+      "wrapper_relpath": "scripts/ci/run_fast_gate_budget_delta_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_ignored_test_and_script_budget_trend_contract_lane.sh",
+      "wrapper_relpath": "scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_kamn_core_rustdoc_artifact_contract_lane.sh",
+      "wrapper_relpath": "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
+      "wrapper_relpath": "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_test_harness_loc_soft_budget_contract_lane.sh",
+      "wrapper_relpath": "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_classification_redaction_contract_lane.sh",
+      "wrapper_relpath": "scripts/compliance/run_classification_redaction_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_classification_redaction_lane.sh",
+      "wrapper_relpath": "scripts/compliance/run_classification_redaction_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dsar_legal_hold_contract_lane.sh",
+      "wrapper_relpath": "scripts/compliance/run_dsar_legal_hold_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_soc2_control_evidence_contract_lane.sh",
+      "wrapper_relpath": "scripts/compliance/run_soc2_control_evidence_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_cutover_rollback_contract_lane.sh",
+      "wrapper_relpath": "scripts/cutover/run_cutover_rollback_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_mainnet_cutover_contract_lane.sh",
+      "wrapper_relpath": "scripts/cutover/run_mainnet_cutover_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_backend_session_auth_freshness_contract_lane.sh",
+      "wrapper_relpath": "scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_backend_session_auth_freshness_lane.sh",
+      "wrapper_relpath": "scripts/dashboard/run_backend_session_auth_freshness_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dashboard_stale_error_budget_contract_lane.sh",
+      "wrapper_relpath": "scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dashboard_stale_error_budget_lane.sh",
+      "wrapper_relpath": "scripts/dashboard/run_dashboard_stale_error_budget_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_deployment_slo_rollback_contract_lane.sh",
+      "wrapper_relpath": "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_deployment_slo_rollback_lane.sh",
+      "wrapper_relpath": "scripts/deploy/run_deployment_slo_rollback_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dr_evidence_contract_lane.sh",
+      "wrapper_relpath": "scripts/deploy/run_dr_evidence_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_gonogo_evidence_contract_lane.sh",
+      "wrapper_relpath": "scripts/deploy/run_gonogo_evidence_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_staging_rehearsal_contract_lane.sh",
+      "wrapper_relpath": "scripts/deploy/run_staging_rehearsal_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_did_registry_contract_lane.sh",
+      "wrapper_relpath": "scripts/did/run_did_registry_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_federated_did_handshake_contract_lane.sh",
+      "wrapper_relpath": "scripts/did/run_federated_did_handshake_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_lifecycle_operator_binding_contract_lane.sh",
+      "wrapper_relpath": "scripts/did/run_lifecycle_operator_binding_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_multikey_algorithm_policy_contract_lane.sh",
+      "wrapper_relpath": "scripts/did/run_multikey_algorithm_policy_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_service_endpoint_canonicalization_contract_lane.sh",
+      "wrapper_relpath": "scripts/did/run_service_endpoint_canonicalization_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_settlement_reconciliation_contract_lane.sh",
+      "wrapper_relpath": "scripts/escrow/run_settlement_reconciliation_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dashboard_shell_determinism_matrix_contract_lane.sh",
+      "wrapper_relpath": "scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_dashboard_shell_determinism_matrix_lane.sh",
+      "wrapper_relpath": "scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_governance_lifecycle_rollback_contract_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_governance_lifecycle_rollback_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_governance_lifecycle_rollback_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_governance_simulation_contract_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_governance_simulation_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_quorum_attestation_replay_contract_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_quorum_attestation_replay_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_quorum_attestation_replay_guard_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_quorum_attestation_replay_guard_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_stake_slash_risk_contract_lane.sh",
+      "wrapper_relpath": "scripts/governance/run_stake_slash_risk_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_durable_guard_recovery_contract_lane.sh",
+      "wrapper_relpath": "scripts/guard/run_durable_guard_recovery_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_a2a_mcp_conformance_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_a2a_mcp_conformance_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_didcomm_envelope_compatibility_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_group_sender_replay_ratchet_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_group_sender_replay_ratchet_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_key_hierarchy_invariant_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_key_hierarchy_invariant_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_message_lifecycle_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_message_lifecycle_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_processor_proof_artifact_contract_lane.sh",
+      "wrapper_relpath": "scripts/message/run_processor_proof_artifact_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_reputation_dispute_contract_lane.sh",
+      "wrapper_relpath": "scripts/reputation/run_reputation_dispute_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_reputation_recovery_contract_lane.sh",
+      "wrapper_relpath": "scripts/reputation/run_reputation_recovery_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_reputation_signal_quarantine_contract_lane.sh",
+      "wrapper_relpath": "scripts/reputation/run_reputation_signal_quarantine_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_weighted_decay_contract_lane.sh",
+      "wrapper_relpath": "scripts/reputation/run_weighted_decay_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_concurrency_state_mutation_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_concurrency_state_mutation_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_concurrency_state_mutation_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_concurrency_state_mutation_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_failover_sync_drill_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_failover_sync_drill_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_failover_sync_drill_preflight_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_go_no_go_gate_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_go_no_go_gate_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_input_mutation_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_input_mutation_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_input_mutation_coverage_guided_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_input_mutation_coverage_guided_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_invariant_fuzz_concurrency_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_lifecycle_property_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_lifecycle_property_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_partition_reconnect_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_partition_reconnect_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_partition_reconnect_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_partition_reconnect_smoke_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_partition_reconnect_smoke_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_pilot_deep_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_pilot_deep_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_pilot_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_pilot_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_smoke_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_smoke_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_network_smoke_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_network_smoke_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_validation_environment_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_live_validation_environment_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_network_signer_finality_failure_drills_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_network_signer_finality_failure_drills_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_processor_proof_admission_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_processor_proof_admission_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_runtime_snapshot_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_runtime_snapshot_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_runtime_snapshot_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_runtime_snapshot_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_watchdog_proof_consensus_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_watchdog_proof_consensus_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_watchdog_proof_consensus_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_zk_witness_mutation_contract_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_zk_witness_mutation_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_zk_witness_mutation_deep_lane.sh",
+      "wrapper_relpath": "scripts/runtime/run_zk_witness_mutation_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_example_fixture_drift_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_example_fixture_drift_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_parity_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_parity_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_replay_tamper_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_replay_tamper_deep_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_replay_tamper_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_replay_tamper_fast_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_smoke_parity_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_live_transport_smoke_parity_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_live_transport_smoke_parity_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_localhost_signed_demo_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_localhost_signed_demo_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_localhost_signed_integration_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_rust_live_transport_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_rust_live_transport_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_sdk_schema_compatibility_contract_lane.sh",
+      "wrapper_relpath": "scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_secure_provider_key_lifecycle_contract_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_emulator_contract_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_emulator_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_incident_recovery_contract_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_incident_recovery_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_incident_recovery_deep_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_incident_recovery_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_incident_recovery_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_incident_recovery_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_policy_contract_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_policy_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_signer_provider_deep_lane.sh",
+      "wrapper_relpath": "scripts/signer/run_signer_provider_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_federated_delegation_settlement_contract_lane.sh",
+      "wrapper_relpath": "scripts/task/run_federated_delegation_settlement_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_federated_delegation_settlement_deep_lane.sh",
+      "wrapper_relpath": "scripts/task/run_federated_delegation_settlement_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_task_operation_snapshot_contract_lane.sh",
+      "wrapper_relpath": "scripts/task/run_task_operation_snapshot_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_task_operation_snapshot_deep_lane.sh",
+      "wrapper_relpath": "scripts/task/run_task_operation_snapshot_deep_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_token_launch_handoff_contract_lane.sh",
+      "wrapper_relpath": "scripts/token/run_token_launch_handoff_contract_lane.sh"
+    },
+    {
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh",
+      "wrapper_name": "run_treasury_disbursement_contract_lane.sh",
+      "wrapper_relpath": "scripts/treasury/run_treasury_disbursement_contract_lane.sh"
+    }
+  ]
+}

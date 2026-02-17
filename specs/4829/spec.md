@@ -1,43 +1,45 @@
 # Spec — Issue #4829
 
-- Title: Subtask: create lane_registry source and manifest/symlink generation tooling
-- Parent: Parent task: #4816
+- Title: Subtask: create `lane_registry` source and manifest/symlink generation tooling
+- Parent: Parent task `#4816`
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Create a deterministic lane registry source artifact and generator that validates and renders manifest/symlink lane artifacts from that source.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Manifests and wrapper symlinks currently live as static artifacts without a first-class registry source and generator contract, making drift detection and future generation workflows harder to enforce.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add `scripts/framework/lane_registry.json` as source-of-truth registry
+- add `scripts/framework/generate_lane_artifacts.py` with `check` and `render` modes
+- add deterministic contract test for registry/generator behavior
+- document lane registry generation contract
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- full retirement of static/manual manifest maintenance path (handled in `#4830`)
+- broad lane behavioral changes unrelated to artifact generation
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: Registry source exists and includes all current manifest entries plus wrapper wiring metadata required for generated artifacts.
+- AC-2: Generator validates repository artifacts against registry (`check`) and can render equivalent artifacts to an isolated output root (`render`).
+- AC-3: Deterministic tests enforce generator contract behavior and remain green under framework + CI regression suites.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1, Conformance): `scripts/framework/lane_registry.json` contains `schema_version=kamn.framework.lane-registry.v1`, `manifest_count=171`, `wrapper_count=112` with matching entry arrays.
+- C-02 (AC-2, Functional): `bash scripts/framework/test_lane_registry_generation.sh` verifies check-mode markers and render-mode materialization of representative manifest/symlink artifacts.
+- C-03 (AC-3, Integration/Regression): `bash scripts/framework/test_contract_framework.sh` and `bash scripts/ci/test_ci_tools.sh` pass with lane-registry generation guard included.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Registry/generator contract can be executed deterministically from one command.
+- Framework test entrypoint includes lane-registry generation validation.
+- No drift reported by generator check-mode over repository artifacts.
