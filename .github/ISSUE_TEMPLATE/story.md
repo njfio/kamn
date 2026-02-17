@@ -47,5 +47,11 @@ Out of scope:
 ## Required Documentation Updates
 - `docs/<path>`: <what must be updated>
 
+## Shell-Surface Governance (Required when script/workflow/template surface changes)
+- `shell_loc_delta_estimate`: <integer|0>
+- `rust_loc_delta_estimate`: <integer|0>
+- `shell_to_rust_ratio_delta_estimate`: <float|0.0>
+- `shell_surface_mitigation_issue`: <issue-id|None>
+
 ## Dependencies
 - #<issue-id>

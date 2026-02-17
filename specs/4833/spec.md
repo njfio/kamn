@@ -3,41 +3,44 @@
 - Title: Subtask: update AGENTS/CONTRIBUTING and issue templates with shell-surface DoR/DoD gates
 - Parent: Parent task: #4818
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Add explicit shell-surface governance intake/closure gates to contributor contracts and issue templates, then enforce them via deterministic docs-contract tests.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Process contracts did not require explicit shell-vs-Rust impact fields at issue intake and closure time, allowing script-surface growth to bypass consistent DoR/DoD accounting.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add shell-surface DoR/DoD marker blocks to `AGENTS.md`
+- add shell-surface DoR/DoD marker blocks to `.github/CONTRIBUTING.md`
+- add shell-surface governance estimate fields to all issue templates
+- add deterministic docs-contract test for these markers
+- wire test into CI tools regression lane
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- PR template enforcement details (handled in `#4834`)
+- CI workflow policy threshold changes
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: AGENTS and CONTRIBUTING contracts include explicit shell-surface DoR/DoD marker requirements.
+- AC-2: Epic/Story/Task/Subtask issue templates require shell-surface estimate markers for script/workflow/template changes.
+- AC-3: CI docs-contract test fails closed when these governance markers drift or are removed.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1, Functional): `bash scripts/ci/test_shell_surface_issue_intake_contract.sh` validates AGENTS/CONTRIBUTING DoR/DoD markers.
+- C-02 (AC-2, Conformance): `bash scripts/ci/test_shell_surface_issue_intake_contract.sh` validates required shell-surface fields in all issue templates.
+- C-03 (AC-3, Integration/Regression): `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` passes with shell-surface intake contract test wired in.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Governance docs and templates expose deterministic shell-surface marker keys.
+- Missing marker regressions fail closed in CI tools regression.
+- Future intake/closure flow requires explicit shell-vs-Rust delta accounting fields.
