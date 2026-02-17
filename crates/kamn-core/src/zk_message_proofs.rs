@@ -752,6 +752,8 @@ pub enum ZkDesignError {
     },
     /// No options were supplied for ranking.
     EmptyOptionSet,
+    /// Non-empty option set did not produce a ranked recommendation.
+    RankingInvariantViolated,
     /// Private field selector is syntactically invalid.
     InvalidPrivateField(String),
     /// Requested private field selector was absent in envelope.
@@ -793,6 +795,12 @@ impl fmt::Display for ZkDesignError {
                 write!(f, "invalid option `{option}`: {reason}")
             }
             Self::EmptyOptionSet => write!(f, "at least one architecture option is required"),
+            Self::RankingInvariantViolated => {
+                write!(
+                    f,
+                    "non-empty architecture option set did not produce a ranked recommendation"
+                )
+            }
             Self::InvalidPrivateField(message) => write!(f, "invalid private field: {message}"),
             Self::MissingPrivateField(field) => {
                 write!(
@@ -1031,7 +1039,7 @@ pub fn recommend_phase4_plan(
 
     let (recommended_option, recommended_assessment) = ranked
         .first()
-        .expect("non-empty option set should produce ranked list");
+        .ok_or(ZkDesignError::RankingInvariantViolated)?;
     let recommended_option_name = recommended_option.name.clone();
     let recommended_score = recommended_assessment.score;
     let recommended_feasible = recommended_assessment.feasible;
