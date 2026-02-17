@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+import io
 
 from declarative_policy_checker import (  # noqa: E402
     OUTPUT_SCHEMA_VERSION,
@@ -164,6 +167,46 @@ class DeclarativePolicyCheckerTests(unittest.TestCase):
                         "GO",
                     ]
                 )
+
+    def test_main_legacy_delegate_executes_target_with_delegate_env(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            legacy_target = temp_path / "legacy_contract.py"
+            legacy_target.write_text(
+                "\n".join(
+                    (
+                        "#!/usr/bin/env python3",
+                        "import os",
+                        "import sys",
+                        "print('delegate_env=' + os.getenv('KAMN_DECLARATIVE_POLICY_CHECKER_DELEGATE', '0'))",
+                        "print('argv=' + ' '.join(sys.argv[1:]))",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            os.chmod(legacy_target, 0o755)
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                rc = main(
+                    [
+                        "--legacy-target",
+                        str(legacy_target),
+                        "--legacy-interpreter",
+                        "python3",
+                        "--legacy-args-prefix",
+                        "check",
+                        "--",
+                        "--report-file",
+                        "/tmp/demo-report.json",
+                    ]
+                )
+
+            self.assertEqual(rc, 0)
+            rendered = output.getvalue()
+            self.assertIn("delegate_env=1", rendered)
+            self.assertIn("argv=check --report-file /tmp/demo-report.json", rendered)
 
 
 if __name__ == "__main__":

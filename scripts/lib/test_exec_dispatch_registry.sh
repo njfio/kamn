@@ -17,8 +17,11 @@ fi
 
 python3 - "$ROOT_DIR" "$DISPATCHER" "$REGISTRY" <<'PY'
 import json
+import os
 import shlex
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -31,6 +34,7 @@ if not isinstance(entries, dict) or not entries:
     raise SystemExit("expected non-empty entries map in exec registry")
 
 invalid_entries: list[str] = []
+declarative_policy_migration_v1_candidates: list[str] = []
 for wrapper_rel, entry in sorted(entries.items()):
     wrapper_path = root / wrapper_rel
     if not wrapper_path.exists():
@@ -64,8 +68,123 @@ for wrapper_rel, entry in sorted(entries.items()):
     if not isinstance(passthrough, bool):
         invalid_entries.append(f"invalid passthrough for {wrapper_rel}: {passthrough!r}")
 
+    if (
+        isinstance(wrapper_rel, str)
+        and wrapper_rel.startswith("scripts/")
+        and "/check_" in wrapper_rel
+        and wrapper_rel.endswith(".sh")
+        and interpreter == "python3"
+        and isinstance(target, str)
+        and (target.endswith("_contract.py") or target.endswith("_policy_contract.py"))
+    ):
+        target_path = root / target
+        if target_path.is_file():
+            line_count = sum(1 for _ in target_path.read_text(encoding="utf-8").splitlines())
+            if line_count <= 500:
+                declarative_policy_migration_v1_candidates.append(wrapper_rel)
+
 if invalid_entries:
     raise SystemExit("\n".join(invalid_entries))
+
+if len(declarative_policy_migration_v1_candidates) != 60:
+    preview = "\n".join(declarative_policy_migration_v1_candidates[:80])
+    raise SystemExit(
+        "expected 60 declarative policy migration v1 wrapper candidates, "
+        f"found {len(declarative_policy_migration_v1_candidates)}\n{preview}"
+    )
+
+dispatcher_py = root / "scripts/lib/exec_dispatch.py"
+checker_py = root / "scripts/framework/declarative_policy_checker.py"
+framework_contract_py = root / "scripts/framework/contract_framework.py"
+framework_init_py = root / "scripts/framework/__init__.py"
+
+with tempfile.TemporaryDirectory() as temp_dir:
+    temp_root = Path(temp_dir)
+    (temp_root / "scripts/lib").mkdir(parents=True, exist_ok=True)
+    (temp_root / "scripts/framework").mkdir(parents=True, exist_ok=True)
+    (temp_root / "scripts/tmp").mkdir(parents=True, exist_ok=True)
+
+    # Copy only files required for delegated checker execution in this sandbox.
+    (temp_root / "scripts/framework/declarative_policy_checker.py").write_text(
+        checker_py.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (temp_root / "scripts/framework/contract_framework.py").write_text(
+        framework_contract_py.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (temp_root / "scripts/framework/__init__.py").write_text(
+        framework_init_py.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    wrapper_path = temp_root / "scripts/tmp/check_demo_policy.sh"
+    wrapper_path.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    os.chmod(wrapper_path, 0o755)
+
+    target_path = temp_root / "scripts/tmp/demo_contract.py"
+    target_path.write_text(
+        "\n".join(
+            (
+                "#!/usr/bin/env python3",
+                "import os",
+                "import sys",
+                "print(f\"delegate_env={os.getenv('KAMN_DECLARATIVE_POLICY_CHECKER_DELEGATE', '0')}\")",
+                "print(\"argv=\" + \" \".join(sys.argv[1:]))",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    os.chmod(target_path, 0o755)
+
+    sandbox_registry = temp_root / "scripts/lib/exec_registry.json"
+    sandbox_registry.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": {
+                    "scripts/tmp/check_demo_policy.sh": {
+                        "interpreter": "python3",
+                        "target": "scripts/tmp/demo_contract.py",
+                        "args_prefix": ["check"],
+                        "passthrough": True,
+                    }
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    command = [
+        "python3",
+        str(dispatcher_py),
+        "--registry",
+        str(sandbox_registry),
+        "--invoked-path",
+        str(wrapper_path),
+        "--",
+        "--report-file",
+        "/tmp/demo-report.json",
+    ]
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise SystemExit(
+            "expected declarative compatibility delegation command to succeed:\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+
+    if "delegate_env=1" not in result.stdout:
+        raise SystemExit(
+            "expected delegated checker execution marker delegate_env=1 in dispatcher output"
+        )
+    if "argv=check --report-file /tmp/demo-report.json" not in result.stdout:
+        raise SystemExit(
+            "expected delegated checker to preserve args_prefix + passthrough forwarding"
+        )
 
 prefixes = ("$ROOT_DIR/", "$KAMN_ROOT/", "${ROOT_DIR}/", "${KAMN_ROOT}/")
 remaining_tiny_wrappers: list[str] = []
