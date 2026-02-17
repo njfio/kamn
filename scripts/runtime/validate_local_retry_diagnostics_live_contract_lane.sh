@@ -14,6 +14,8 @@ ci_fast_gate="PASS"
 mode="dry-run"
 nonce_retry_script=""
 structured_logging_script=""
+EXPECTED_REASON_TAXONOMY_VERSION="kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2"
+EXPECTED_REASON_CODES_CSV="local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -132,11 +134,31 @@ if ! printf '%s\n' "$validation_output" | grep -q '^retry_jitter_parity_status=v
   echo "expected local retry/diagnostics live validation retry jitter parity marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_envelope_exhaustion_fail_closed_status=verified$'; then
+  echo "expected local retry/diagnostics live validation retry envelope exhaustion fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconnect_attempt_bound_status=verified$'; then
+  echo "expected local retry/diagnostics live validation reconnect-attempt bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconnect_backoff_bound_status=verified$'; then
+  echo "expected local retry/diagnostics live validation reconnect-backoff bound marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_envelope_max_attempts=3$'; then
+  echo "expected local retry/diagnostics live validation retry envelope max-attempts marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_envelope_max_backoff_seconds=8$'; then
+  echo "expected local retry/diagnostics live validation retry envelope max-backoff marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION$"; then
   echo "expected local retry/diagnostics live validation reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+if ! printf '%s\n' "$validation_output" | grep -q "^reason_codes_csv=$EXPECTED_REASON_CODES_CSV$"; then
   echo "expected local retry/diagnostics live validation reason codes taxonomy marker" >&2
   exit 1
 fi
@@ -160,11 +182,11 @@ if ! printf '%s\n' "$policy_output" | grep -q '^local_retry_diagnostics_policy_s
   echo "expected local retry/diagnostics policy checker status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION$"; then
   echo "expected local retry/diagnostics policy checker reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_codes_csv=$EXPECTED_REASON_CODES_CSV$"; then
   echo "expected local retry/diagnostics policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
@@ -270,6 +292,15 @@ lane_report = {
     ),
     "retry_readiness_status": summary_report.get("retry_readiness_status"),
     "retry_jitter_parity_status": summary_report.get("retry_jitter_parity_status"),
+    "retry_envelope_exhaustion_fail_closed_status": summary_report.get(
+        "retry_envelope_exhaustion_fail_closed_status"
+    ),
+    "reconnect_attempt_bound_status": summary_report.get("reconnect_attempt_bound_status"),
+    "reconnect_backoff_bound_status": summary_report.get("reconnect_backoff_bound_status"),
+    "retry_envelope_max_attempts": summary_report.get("retry_envelope_max_attempts"),
+    "retry_envelope_max_backoff_seconds": summary_report.get(
+        "retry_envelope_max_backoff_seconds"
+    ),
     "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
     "reason_codes_csv": summary_report.get("reason_codes_csv"),
     "docs_contract_status": "verified",
@@ -296,8 +327,13 @@ echo "local_retry_diagnostics_contract_status=verified"
 echo "local_retry_diagnostics_policy_status=verified"
 echo "retry_readiness_status=verified"
 echo "retry_jitter_parity_status=verified"
-echo "reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
-echo "reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded"
+echo "retry_envelope_exhaustion_fail_closed_status=verified"
+echo "reconnect_attempt_bound_status=verified"
+echo "reconnect_backoff_bound_status=verified"
+echo "retry_envelope_max_attempts=3"
+echo "retry_envelope_max_backoff_seconds=8"
+echo "reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION"
+echo "reason_codes_csv=$EXPECTED_REASON_CODES_CSV"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status"

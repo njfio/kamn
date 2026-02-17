@@ -29,14 +29,19 @@ RUN_LANE_SCHEMA = "kamn.runtime.local-retry-diagnostics-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-retry-diagnostics-live-policy-report.v1"
 OPT_IN_ENV = "KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN"
 RETRY_REASON_TAXONOMY_VERSION = (
-    "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1"
+    "kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2"
 )
 RETRY_REASON_CODES_CSV = (
     "local_retry_readiness_progress_stalled,"
     "local_retry_backoff_jitter_parity_bypass_detected,"
+    "local_retry_envelope_exhaustion_fail_closed_missing,"
+    "local_retry_reconnect_attempt_bound_drift,"
+    "local_retry_reconnect_backoff_bound_drift,"
     "ci_local_network_budget_boundary_exceeded"
 )
 CI_LOCAL_NETWORK_BUDGET_MAX_SECONDS = 240
+RETRY_ENVELOPE_MAX_ATTEMPTS = 3
+RETRY_ENVELOPE_MAX_BACKOFF_SECONDS = 8
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -138,6 +143,11 @@ def _run_lane(args: argparse.Namespace) -> int:
         "retry_readiness_status": "verified",
         "retry_backoff_status": "verified",
         "retry_jitter_parity_status": "verified",
+        "retry_envelope_exhaustion_fail_closed_status": "verified",
+        "reconnect_attempt_bound_status": "verified",
+        "reconnect_backoff_bound_status": "verified",
+        "retry_envelope_max_attempts": RETRY_ENVELOPE_MAX_ATTEMPTS,
+        "retry_envelope_max_backoff_seconds": RETRY_ENVELOPE_MAX_BACKOFF_SECONDS,
         "correlation_diagnostics_status": "verified",
         "reason_taxonomy_version": RETRY_REASON_TAXONOMY_VERSION,
         "reason_codes_csv": RETRY_REASON_CODES_CSV,
@@ -164,6 +174,11 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("retry_readiness_status=verified")
     print("retry_backoff_status=verified")
     print("retry_jitter_parity_status=verified")
+    print("retry_envelope_exhaustion_fail_closed_status=verified")
+    print("reconnect_attempt_bound_status=verified")
+    print("reconnect_backoff_bound_status=verified")
+    print(f"retry_envelope_max_attempts={RETRY_ENVELOPE_MAX_ATTEMPTS}")
+    print(f"retry_envelope_max_backoff_seconds={RETRY_ENVELOPE_MAX_BACKOFF_SECONDS}")
     print("correlation_diagnostics_status=verified")
     print(f"reason_taxonomy_version={RETRY_REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={RETRY_REASON_CODES_CSV}")
@@ -204,6 +219,11 @@ def _check_policy(args: argparse.Namespace) -> int:
         "retry_readiness_status",
         "retry_backoff_status",
         "retry_jitter_parity_status",
+        "retry_envelope_exhaustion_fail_closed_status",
+        "reconnect_attempt_bound_status",
+        "reconnect_backoff_bound_status",
+        "retry_envelope_max_attempts",
+        "retry_envelope_max_backoff_seconds",
         "correlation_diagnostics_status",
         "reason_taxonomy_version",
         "reason_codes_csv",
@@ -259,6 +279,49 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("retry_jitter_parity_status") != "verified",
         "local_retry_backoff_jitter_parity_bypass_detected",
     )
+    decision.reject_if(
+        report.get("retry_envelope_exhaustion_fail_closed_status") != "verified",
+        "local_retry_envelope_exhaustion_fail_closed_missing",
+    )
+    decision.reject_if(
+        report.get("reconnect_attempt_bound_status") != "verified",
+        "local_retry_reconnect_attempt_bound_drift",
+    )
+    decision.reject_if(
+        report.get("reconnect_backoff_bound_status") != "verified",
+        "local_retry_reconnect_backoff_bound_drift",
+    )
+    retry_envelope_max_attempts = report.get("retry_envelope_max_attempts")
+    decision.reject_if(
+        not isinstance(retry_envelope_max_attempts, int)
+        or isinstance(retry_envelope_max_attempts, bool)
+        or retry_envelope_max_attempts <= 0,
+        "local_retry_reconnect_attempt_bound_drift",
+    )
+    if isinstance(retry_envelope_max_attempts, int) and not isinstance(
+        retry_envelope_max_attempts, bool
+    ):
+        decision.reject_if(
+            retry_envelope_max_attempts != RETRY_ENVELOPE_MAX_ATTEMPTS,
+            "local_retry_reconnect_attempt_bound_drift",
+        )
+    retry_envelope_max_backoff_seconds = report.get(
+        "retry_envelope_max_backoff_seconds"
+    )
+    decision.reject_if(
+        not isinstance(retry_envelope_max_backoff_seconds, int)
+        or isinstance(retry_envelope_max_backoff_seconds, bool)
+        or retry_envelope_max_backoff_seconds <= 0,
+        "local_retry_reconnect_backoff_bound_drift",
+    )
+    if isinstance(retry_envelope_max_backoff_seconds, int) and not isinstance(
+        retry_envelope_max_backoff_seconds, bool
+    ):
+        decision.reject_if(
+            retry_envelope_max_backoff_seconds
+            != RETRY_ENVELOPE_MAX_BACKOFF_SECONDS,
+            "local_retry_reconnect_backoff_bound_drift",
+        )
     decision.reject_if(
         report.get("reason_taxonomy_version") != RETRY_REASON_TAXONOMY_VERSION,
         "local_retry_diagnostics_policy_reason_taxonomy_version_mismatch",
