@@ -1,6 +1,6 @@
 # Spec — #4389 Task: Durable State-Store Integrity Checks and Fail-Closed Persistence Evidence Gating
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4385
 Milestone: R27.35 Async API framework hardening, real peer transport, and durable state-store validation governance

@@ -1,6 +1,6 @@
 # Spec — #4397 Subtask: persistence gate reason taxonomy with CI smoke/local-heavy boundary enforcement
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4389
 Milestone: R27.35 Async API framework hardening, real peer transport, and durable state-store validation governance

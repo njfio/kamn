@@ -1,6 +1,6 @@
 # Tasks — #4396
 
-Status: Reviewed
+Status: Implemented
 
 T1
 - Add required marker assertions (stdout + JSON) for persistence gate taxonomy and boundary fields.

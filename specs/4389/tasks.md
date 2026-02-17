@@ -1,6 +1,6 @@
 # Tasks — #4389
 
-Status: Reviewed
+Status: Implemented
 
 T1 (RED)
 - Add failing assertions for persistence tamper/freshness and incomplete evidence acceptance (`#4396`).

@@ -1,6 +1,6 @@
 # Tasks — #4397
 
-Status: Reviewed
+Status: Implemented
 
 T1
 - Add deterministic persistence gate taxonomy and boundary marker outputs in validation script.
