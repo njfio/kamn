@@ -13,7 +13,7 @@ bash "$SCRIPT" --fixture "$FIXTURE" --output-json "$PASS_REPORT" >"$TMP_DIR/pass
 grep -q '"status": "pass"' "$PASS_REPORT"
 
 MISMATCH_FIXTURE="$TMP_DIR/mismatch.json"
-cat >"$MISMATCH_FIXTURE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$MISMATCH_FIXTURE" <<'JSON'
 {
   "cases": [
     {

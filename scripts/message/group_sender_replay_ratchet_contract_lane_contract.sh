@@ -71,7 +71,7 @@ cleanup() {
 trap cleanup EXIT
 
 report_file="$tmp_dir/group-sender-replay-ratchet-report.json"
-cat >"$report_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_file" <<'JSON'
 {
   "status": "pass",
   "nonce_replay_detected": false,

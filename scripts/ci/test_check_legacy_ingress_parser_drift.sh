@@ -25,7 +25,7 @@ fn main() {}
 EOF_RS
 
 BASELINE_FILE="$TMP_DIR/baseline.json"
-cat >"$BASELINE_FILE" <<'EOF_BASELINE'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$BASELINE_FILE" <<'EOF_BASELINE'
 {
   "schema_version": "kamn.ci.legacy-ingress-parser-baseline.v1",
   "exclude_path_fragments": [],
@@ -140,7 +140,7 @@ if ! printf '%s\n' "$missing_baseline_output" | grep -q '^reason_codes=legacy_in
   exit 1
 fi
 
-cat >"$BASELINE_FILE" <<'EOF_BASELINE'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$BASELINE_FILE" <<'EOF_BASELINE'
 {
   "schema_version": "bad-schema"
 }

@@ -761,7 +761,7 @@ if ! printf '%s\n' "$tampered_convergence_marker_output" | grep -q 'release_mani
 fi
 
 valid_waiver="$TMP_DIR/go-no-go-waiver.valid.json"
-cat >"$valid_waiver" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$valid_waiver" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
   "scope": "runtime_go_no_go_gate_required_artifacts",
@@ -828,7 +828,7 @@ if not isinstance(required_ids, list) or "dr_readiness" in required_ids:
 PY
 
 expired_waiver="$TMP_DIR/go-no-go-waiver.expired.json"
-cat >"$expired_waiver" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$expired_waiver" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
   "scope": "runtime_go_no_go_gate_required_artifacts",
@@ -858,7 +858,7 @@ if ! printf '%s\n' "$expired_waiver_output" | grep -q 'waiver_expired'; then
 fi
 
 scope_mismatch_waiver="$TMP_DIR/go-no-go-waiver.scope-mismatch.json"
-cat >"$scope_mismatch_waiver" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$scope_mismatch_waiver" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
   "scope": "runtime_go_no_go_gate_wrong_scope",

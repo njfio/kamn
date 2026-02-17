@@ -177,7 +177,7 @@ grep -q '^reason_codes=trend_threshold_total_shell_loc_invalid$' "$TMP_DIR/fail-
 grep -q 'max_total_shell_loc_increase' "$TMP_DIR/fail-missing-threshold-metadata.out"
 
 RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
-cat >"$RELAXED_THRESHOLD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RELAXED_THRESHOLD" <<'JSON'
 {
   "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
   "max_wrapper_count_increase": 1,
@@ -199,7 +199,7 @@ grep -q '^mode=trend$' "$TMP_DIR/relaxed.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/relaxed.out"
 
 REDUCTION_TARGET_THRESHOLD="$TMP_DIR/reduction-target-threshold.json"
-cat >"$REDUCTION_TARGET_THRESHOLD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REDUCTION_TARGET_THRESHOLD" <<'JSON'
 {
   "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
   "max_wrapper_count_increase": 0,

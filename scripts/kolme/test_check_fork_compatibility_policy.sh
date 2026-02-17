@@ -104,7 +104,7 @@ assert_eq "$(extract_value "$drift_policy_output" "status")" "ok" "expected poli
 assert_eq "$(extract_value "$drift_policy_output" "final_decision")" "GO" "expected GO policy decision when expected no-go reason code is present"
 
 malformed_report="$TMP_DIR/malformed-report.json"
-cat <<'JSON' >"$malformed_report"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$malformed_report" <<'JSON'
 {
   "schema_version": "kamn.kolme.fork-compatibility-report.v0",
   "upstream_release_tag": "v0.15.2",

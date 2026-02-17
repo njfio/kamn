@@ -70,7 +70,7 @@ cleanup() {
 trap cleanup EXIT
 
 retention_report_file="$tmp_dir/retention-report.json"
-cat >"$retention_report_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$retention_report_file" <<'JSON'
 {
   "status": "pass",
   "total_candidates": 3,
@@ -80,7 +80,7 @@ cat >"$retention_report_file" <<'JSON'
 JSON
 
 redaction_report_file="$tmp_dir/redaction-report.json"
-cat >"$redaction_report_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$redaction_report_file" <<'JSON'
 {
   "status": "pass",
   "applied_count": 2,

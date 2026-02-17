@@ -67,7 +67,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 report_json="$(mktemp)"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.p2p-transport-live-validation.v1",
   "status": "pass",

@@ -15,7 +15,7 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-cat >"$TMP_REPORT_OK" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-fork-portability-preflight-summary.v1",
   "summary_type": "checkpoints",
@@ -83,7 +83,7 @@ if report.get("reason_codes") != []:
     raise SystemExit("expected no failed checks for valid dry-run report")
 PY
 
-cat >"$TMP_REPORT_BAD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-fork-portability-preflight-summary.v1",
   "summary_type": "checkpoints",

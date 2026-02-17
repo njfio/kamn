@@ -94,7 +94,7 @@ TEST_HARNESS_SCRIPT_COUNT_BASELINE=20
 TEST_HARNESS_SHELL_LINE_TOTAL_BASELINE=200
 EOF_BASELINE
 
-cat >"$WITHIN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WITHIN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 10,
@@ -102,7 +102,7 @@ cat >"$WITHIN_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$EXCEEDED_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$EXCEEDED_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 21,
@@ -110,7 +110,7 @@ cat >"$EXCEEDED_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$WARN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WARN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 13,
@@ -118,7 +118,7 @@ cat >"$WARN_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$FAIL_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$FAIL_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 19,

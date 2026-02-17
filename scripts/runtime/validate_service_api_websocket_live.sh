@@ -601,7 +601,7 @@ websocket_lifecycle_reason_taxonomy_version="kamn.runtime.service-api-websocket-
 websocket_lifecycle_reason_codes_csv="service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing"
 
 report_json="$TMP_DIR/websocket-live-validation-report.json"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.service-api-websocket-live-validation.v1",
   "status": "pass",

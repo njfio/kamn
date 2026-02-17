@@ -37,7 +37,7 @@ if ! grep -q "reason=no-selected-cases" "$TMP_DIR/unknown-suite.out"; then
 fi
 
 INVALID_FIXTURE="$TMP_DIR/invalid.json"
-cat >"$INVALID_FIXTURE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$INVALID_FIXTURE" <<'JSON'
 {
   "cases": {}
 }
@@ -59,7 +59,7 @@ if ! grep -q "status=fail; reason=invalid-fixture-cases" "$TMP_DIR/invalid.out";
 fi
 
 MISMATCH_FIXTURE="$TMP_DIR/mismatch.json"
-cat >"$MISMATCH_FIXTURE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$MISMATCH_FIXTURE" <<'JSON'
 {
   "cases": [
     {

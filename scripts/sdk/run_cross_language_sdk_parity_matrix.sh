@@ -95,7 +95,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 report_json="$TMP_DIR/cross-language-sdk-parity-matrix-report.json"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.sdk.cross-language-parity.v1",
   "status": "pass",

@@ -71,7 +71,7 @@ WITHIN_REPORT="$tmp_dir/kolme-harness-within.json"
 WARN_REPORT="$tmp_dir/kolme-harness-warn.json"
 FAIL_REPORT="$tmp_dir/kolme-harness-fail.json"
 
-cat >"$WITHIN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WITHIN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 62,
@@ -79,7 +79,7 @@ cat >"$WITHIN_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$WARN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WARN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 70,
@@ -87,7 +87,7 @@ cat >"$WARN_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$FAIL_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$FAIL_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 90,
@@ -98,7 +98,7 @@ EOF_REPORT
 COMMAND_SURFACE_WITHIN_REPORT="$tmp_dir/kolme-command-surface-within.json"
 COMMAND_SURFACE_FAIL_REPORT="$tmp_dir/kolme-command-surface-fail.json"
 
-cat >"$COMMAND_SURFACE_WITHIN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$COMMAND_SURFACE_WITHIN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.script-surface-budget-report.v1",
   "status": "pass",
@@ -117,7 +117,7 @@ cat >"$COMMAND_SURFACE_WITHIN_REPORT" <<'EOF_REPORT'
 }
 EOF_REPORT
 
-cat >"$COMMAND_SURFACE_FAIL_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$COMMAND_SURFACE_FAIL_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.script-surface-budget-report.v1",
   "status": "pass",

@@ -172,7 +172,7 @@ if ! printf '%s\n' "$missing_baseline_output" | grep -q '^error=baseline file no
 fi
 
 WAIVER_FILE="$TMP_DIR/waiver.json"
-cat >"$WAIVER_FILE" <<'EOF_WAIVER'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_FILE" <<'EOF_WAIVER'
 {
   "reason": "temporary migration burst",
   "expires_on": "2099-12-31",
@@ -197,7 +197,7 @@ if ! printf '%s\n' "$waived_output" | grep -q '^waived=script_count$'; then
   exit 1
 fi
 
-cat >"$WAIVER_FILE" <<'EOF_WAIVER'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_FILE" <<'EOF_WAIVER'
 {
   "reason": "expired exception",
   "expires_on": "2020-01-01",

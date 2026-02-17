@@ -16,7 +16,7 @@ CURRENT_JSON="$TMP_DIR/current.json"
 BASELINE_ENV="$TMP_DIR/baseline.env"
 OUTPUT_JSON="$TMP_DIR/delta.json"
 
-cat >"$CURRENT_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$CURRENT_JSON" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "pass",

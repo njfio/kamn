@@ -104,7 +104,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 report_json="$TMP_DIR/go-no-go-gate-live-validation-report.json"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.go-no-go-gate-live-validation.v1",
   "status": "pass",

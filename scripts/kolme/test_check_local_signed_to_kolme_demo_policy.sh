@@ -44,7 +44,7 @@ if ! grep -q "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-k
   exit 1
 fi
 
-cat >"$TMP_REPORT_OK" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-signed-to-kolme-demo-summary.v1",
   "mode": "run",

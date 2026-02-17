@@ -12,7 +12,7 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 evidence_file="$TMP_DIR/process-harness-evidence.json"
-cat > "$evidence_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$evidence_file" <<'JSON'
 {
   "schema_version": "kamn.runtime.process-harness-evidence.v1",
   "status": "pass",
@@ -28,7 +28,7 @@ cat > "$evidence_file" <<'JSON'
 JSON
 
 report_file="$TMP_DIR/libp2p-process-isolated-harness-summary.json"
-cat > "$report_file" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_file" <<JSON
 {
   "schema_version": "kamn.runtime.libp2p-process-isolated-harness-report.v1",
   "status": "pass",

@@ -47,7 +47,7 @@ grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
 
 CORRUPT_THRESHOLD_FILE="$TMP_DIR/corrupt-threshold.json"
-cat >"$CORRUPT_THRESHOLD_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$CORRUPT_THRESHOLD_FILE" <<'JSON'
 { "schema_version":
 JSON
 
@@ -184,7 +184,7 @@ grep -q '^status=fail$' "$TMP_DIR/fail-stale.out"
 grep -q 'missing_baseline_scripts' "$TMP_DIR/fail-stale.out"
 
 RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
-cat >"$RELAXED_THRESHOLD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RELAXED_THRESHOLD" <<'JSON'
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-thresholds.v1",
   "threshold_refreshed_on": "2026-02-15",
@@ -229,7 +229,7 @@ grep -q '^status=fail$' "$TMP_DIR/fail-undocumented-growth.out"
 grep -q 'unexpected_current_scripts' "$TMP_DIR/fail-undocumented-growth.out"
 
 VALID_WAIVER_FILE="$TMP_DIR/valid-waiver.json"
-cat >"$VALID_WAIVER_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$VALID_WAIVER_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
   "scope": "non_kolme_wave_trend_test_loc_soft_budget",
@@ -258,7 +258,7 @@ grep -q 'waived_reason_codes=total_shell_loc_delta_threshold_exceeded' "$TMP_DIR
 grep -q 'delta_threshold_waiver_applied' "$TMP_DIR/waiver-pass.out"
 
 EXPIRED_WAIVER_FILE="$TMP_DIR/expired-waiver.json"
-cat >"$EXPIRED_WAIVER_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$EXPIRED_WAIVER_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
   "scope": "non_kolme_wave_trend_test_loc_soft_budget",
@@ -283,7 +283,7 @@ grep -q '^status=fail$' "$TMP_DIR/waiver-expired.out"
 grep -q '^reason_codes=waiver_expired$' "$TMP_DIR/waiver-expired.out"
 
 SCOPE_MISMATCH_WAIVER_FILE="$TMP_DIR/scope-mismatch-waiver.json"
-cat >"$SCOPE_MISMATCH_WAIVER_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$SCOPE_MISMATCH_WAIVER_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
   "scope": "non_kolme_wave_other_scope",

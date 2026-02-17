@@ -81,7 +81,7 @@ WAIVED_OUT="$tmp_dir/waived.out"
 STALE_OUT="$tmp_dir/stale.out"
 CORRUPT_OUT="$tmp_dir/corrupt.out"
 
-cat >"$CURRENT_PASS_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$CURRENT_PASS_JSON" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "pass",
@@ -91,7 +91,7 @@ cat >"$CURRENT_PASS_JSON" <<'JSON'
 }
 JSON
 
-cat >"$CURRENT_FAIL_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$CURRENT_FAIL_JSON" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "pass",
@@ -128,7 +128,7 @@ FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
 FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
 ENV
 
-cat >"$WAIVER_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_JSON" <<'JSON'
 {
   "reason": "Temporary migration overhead while lane framework settles",
   "expires_on": "2099-12-31",
@@ -249,7 +249,7 @@ if [ "$status" = "pass" ] && [ "$elapsed_seconds" -gt "$MAX_RUNTIME_SECONDS" ]; 
   reason_key="fast_gate_budget_delta_contract_runtime_budget_exceeded"
 fi
 
-cat >"$OUTPUT_JSON" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$OUTPUT_JSON" <<JSON
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-contract-report.v1",
   "status": "$status",

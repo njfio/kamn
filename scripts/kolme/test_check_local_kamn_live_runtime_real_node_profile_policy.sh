@@ -63,7 +63,7 @@ if ! grep -q "check_local_kamn_live_runtime_real_node_profile_policy.py" "$READM
   exit 1
 fi
 
-cat >"$TMP_REPORT_OK" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "mode": "dry-run",
@@ -1029,7 +1029,7 @@ if ! grep -q "runtime_signer_key_loading_error_classification_violation" "$TMP_E
   exit 1
 fi
 
-cat >"$TMP_REPORT_BAD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "mode": "dry-run",
@@ -1154,7 +1154,7 @@ if ! grep -q "check_missing:runtime_commit_endpoint" "$TMP_ERR"; then
   exit 1
 fi
 
-cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_SYNTHETIC" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "mode": "dry-run",
@@ -1322,7 +1322,7 @@ if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_ERR"; the
   exit 1
 fi
 
-cat >"$TMP_REPORT_INMEMORY" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_INMEMORY" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
   "mode": "dry-run",

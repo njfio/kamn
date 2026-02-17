@@ -15,7 +15,7 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-cat >"$TMP_REPORT_GO" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_GO" <<'JSON'
 {
   "schema_version": "kamn.kolme.signature-parity-matrix-report.v1",
   "status": "pass",
@@ -95,7 +95,7 @@ if report.get("reason_codes") != []:
     raise SystemExit("expected no signature parity policy reason codes for valid report")
 PY
 
-cat >"$TMP_REPORT_BAD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.signature-parity-matrix-report.v1",
   "status": "pass",
@@ -132,7 +132,7 @@ if ! grep -q "cases_missing" "$TMP_ERR"; then
   exit 1
 fi
 
-cat >"$TMP_REPORT_REASON_BAD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_REASON_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.signature-parity-matrix-report.v1",
   "status": "fail",
