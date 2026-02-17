@@ -4,12 +4,22 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh"
+EVIDENCE_CHECKER="$ROOT_DIR/scripts/runtime/check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 BLOCK_PIPELINE_DOC="$ROOT_DIR/docs/architecture/block-pipeline.md"
 RUNBOOK_DOC="${KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_RUNBOOK_DOC_OVERRIDE:-$ROOT_DIR/docs/deploy/kolme_devnet_ops.md}"
 
+EVIDENCE_REPORT_SCHEMA="kamn.runtime.libp2p-convergence-process-isolated-live-convergence-report.v1"
+EVIDENCE_REASON_TAXONOMY_VERSION="kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+EVIDENCE_REASON_CODES_CSV="libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch"
+PROMOTION_DECISION_REASON_TAXONOMY_VERSION="kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+PROMOTION_DECISION_REASON_CODES_CSV="libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation"
+EVIDENCE_TAMPER_REASON_CODE="libp2p_finality_promotion_decision_reason_mapping_mismatch"
+
 output_json=""
 policy_output_json=""
+convergence_output_json=""
+summary_output_json=""
 max_seconds="${KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_CONTRACT_MAX_SECONDS:-240}"
 ci_fast_gate="PASS"
 mode="dry-run"
@@ -23,6 +33,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --policy-output-json)
       policy_output_json="${2:-}"
+      shift 2
+      ;;
+    --convergence-output-json)
+      convergence_output_json="${2:-}"
+      shift 2
+      ;;
+    --summary-output-json)
+      summary_output_json="${2:-}"
       shift 2
       ;;
     --max-seconds)
@@ -69,7 +87,7 @@ if [[ "$lane_profile" != "smoke" && "$lane_profile" != "deep" ]]; then
   exit 1
 fi
 
-for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
+for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER" "$EVIDENCE_CHECKER"; do
   if [ ! -x "$required_exec" ]; then
     echo "expected required executable script '$required_exec'" >&2
     exit 1
@@ -89,6 +107,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 summary_report="$TMP_DIR/libp2p-convergence-process-isolated-live-summary.json"
 policy_report="$TMP_DIR/libp2p-convergence-process-isolated-live-policy.json"
 tampered_report="$TMP_DIR/libp2p-convergence-process-isolated-live-summary.tampered.json"
+convergence_report="$TMP_DIR/libp2p-convergence-process-isolated-live-convergence.json"
 
 validation_output="$(
   bash "$VALIDATION_SCRIPT" \
@@ -239,6 +258,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^finality_taxonomy_runbook_reason
   echo "expected process-isolated convergence policy finality taxonomy runbook reason code marker on GO path" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected process-isolated convergence policy promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q "^promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}$"; then
+  echo "expected process-isolated convergence policy promotion decision reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q "^promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}$"; then
+  echo "expected process-isolated convergence policy promotion decision reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected process-isolated convergence policy promotion decision reason code marker on GO path" >&2
+  exit 1
+fi
 
 cp "$summary_report" "$tampered_report"
 python3 - "$tampered_report" <<'PY'
@@ -275,9 +310,11 @@ fi
 for required_ref in \
   "validate_libp2p_convergence_process_isolated_live.sh" \
   "check_libp2p_convergence_process_isolated_live_policy.sh" \
+  "check_libp2p_convergence_process_isolated_live_evidence_convergence.sh" \
   "validate_libp2p_convergence_process_isolated_live_contract_lane.sh" \
   "test_validate_libp2p_convergence_process_isolated_live.sh" \
   "test_check_libp2p_convergence_process_isolated_live_policy.sh" \
+  "test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh" \
   "test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"; do
   if ! grep -q "$required_ref" "$STRATEGY_DOC"; then
     echo "expected CI strategy docs to reference $required_ref" >&2
@@ -294,6 +331,18 @@ if ! grep -q "finality taxonomy and runbook-marker parity remains deterministic 
 fi
 if ! grep -q "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1" "$STRATEGY_DOC"; then
   echo "expected CI strategy docs to include finality taxonomy runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "finality evidence convergence remains deterministic via:" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include finality evidence convergence heading" >&2
+  exit 1
+fi
+if ! grep -q "libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include libp2p finality evidence reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include libp2p promotion decision reason taxonomy marker" >&2
   exit 1
 fi
 if ! grep -q "libp2p_convergence_process_isolated_live_contract.py" "$BLOCK_PIPELINE_DOC"; then
@@ -406,6 +455,18 @@ lane_report = {
     "finality_taxonomy_runbook_reason_code": policy_report.get(
         "finality_taxonomy_runbook_reason_code"
     ),
+    "promotion_decision_reason_mapping_status": policy_report.get(
+        "promotion_decision_reason_mapping_status"
+    ),
+    "promotion_decision_reason_taxonomy_version": policy_report.get(
+        "promotion_decision_reason_taxonomy_version"
+    ),
+    "promotion_decision_reason_codes_csv": policy_report.get(
+        "promotion_decision_reason_codes_csv"
+    ),
+    "promotion_decision_reason_code": policy_report.get(
+        "promotion_decision_reason_code"
+    ),
     "transport_classification_normalization_status": summary_report.get(
         "transport_classification_normalization_status"
     ),
@@ -421,11 +482,149 @@ lane_report = {
 lane_report_file.write_text(json.dumps(lane_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
+source_report_file="$summary_report"
+if [[ -n "$summary_output_json" ]]; then
+  mkdir -p "$(dirname "$summary_output_json")"
+  cp "$summary_report" "$summary_output_json"
+  source_report_file="$summary_output_json"
+fi
+python3 - "$policy_report" "$source_report_file" <<'PY'
+import json
+import pathlib
+import sys
+
+policy_report_file = pathlib.Path(sys.argv[1])
+source_report_file = sys.argv[2]
+payload = json.loads(policy_report_file.read_text(encoding="utf-8"))
+payload["source_report_file"] = source_report_file
+policy_report_file.write_text(
+    json.dumps(payload, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+convergence_output="$(
+  bash "$EVIDENCE_CHECKER" \
+    --report-file "$lane_report" \
+    --policy-file "$policy_report" \
+    --output-json "$convergence_report"
+)"
+for marker in \
+  "status=ok" \
+  "final_decision=GO" \
+  "evidence_convergence_status=verified" \
+  "promotion_decision_reason_mapping_status=verified" \
+  "reason_taxonomy_version=${EVIDENCE_REASON_TAXONOMY_VERSION}" \
+  "reason_codes_csv=${EVIDENCE_REASON_CODES_CSV}" \
+  "reason_codes_value=none" \
+  "promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}" \
+  "promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}" \
+  "promotion_decision_reason_code=none"; do
+  if ! printf '%s\n' "$convergence_output" | grep -q "^${marker}$"; then
+    echo "expected process-isolated convergence evidence marker ${marker}" >&2
+    exit 1
+  fi
+done
+
+tampered_policy_report="$TMP_DIR/libp2p-convergence-process-isolated-live-policy.tampered-mapping.json"
+cp "$policy_report" "$tampered_policy_report"
+python3 - "$tampered_policy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["promotion_decision_reason_code"] = "tampered"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_convergence_output="$(
+  bash "$EVIDENCE_CHECKER" \
+    --report-file "$lane_report" \
+    --policy-file "$tampered_policy_report" \
+    --output-json "$TMP_DIR/libp2p-convergence-process-isolated-live-convergence.tampered-mapping.json" 2>&1
+)"
+tampered_convergence_code=$?
+set -e
+if [[ "$tampered_convergence_code" -eq 0 ]]; then
+  echo "expected tampered process-isolated convergence promotion mapping to fail evidence checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_convergence_output" | grep -q "$EVIDENCE_TAMPER_REASON_CODE"; then
+  echo "expected deterministic fail-closed reason for tampered process-isolated convergence promotion mapping" >&2
+  exit 1
+fi
+
+python3 - "$lane_report" "$convergence_report" "$EVIDENCE_REPORT_SCHEMA" "$EVIDENCE_REASON_TAXONOMY_VERSION" "$EVIDENCE_REASON_CODES_CSV" "$PROMOTION_DECISION_REASON_TAXONOMY_VERSION" "$PROMOTION_DECISION_REASON_CODES_CSV" <<'PY'
+import json
+import pathlib
+import sys
+
+lane_report_file = pathlib.Path(sys.argv[1])
+convergence_report_file = pathlib.Path(sys.argv[2])
+expected_schema = sys.argv[3]
+expected_reason_taxonomy_version = sys.argv[4]
+expected_reason_codes_csv = sys.argv[5]
+expected_promotion_reason_taxonomy_version = sys.argv[6]
+expected_promotion_reason_codes_csv = sys.argv[7]
+
+lane_payload = json.loads(lane_report_file.read_text(encoding="utf-8"))
+convergence_payload = json.loads(convergence_report_file.read_text(encoding="utf-8"))
+if convergence_payload.get("schema_version") != expected_schema:
+    raise SystemExit("unexpected process-isolated convergence evidence report schema")
+if convergence_payload.get("reason_taxonomy_version") != expected_reason_taxonomy_version:
+    raise SystemExit("unexpected process-isolated convergence evidence reason taxonomy marker")
+if convergence_payload.get("reason_codes_csv") != expected_reason_codes_csv:
+    raise SystemExit("unexpected process-isolated convergence evidence reason codes marker")
+if (
+    convergence_payload.get("promotion_decision_reason_taxonomy_version")
+    != expected_promotion_reason_taxonomy_version
+):
+    raise SystemExit("unexpected process-isolated convergence promotion reason taxonomy marker")
+if (
+    convergence_payload.get("promotion_decision_reason_codes_csv")
+    != expected_promotion_reason_codes_csv
+):
+    raise SystemExit("unexpected process-isolated convergence promotion reason codes marker")
+
+lane_payload["libp2p_finality_evidence_convergence_status"] = convergence_payload.get(
+    "evidence_convergence_status"
+)
+lane_payload["promotion_decision_reason_mapping_status"] = convergence_payload.get(
+    "promotion_decision_reason_mapping_status"
+)
+lane_payload["libp2p_finality_evidence_reason_taxonomy_version"] = (
+    convergence_payload.get("reason_taxonomy_version")
+)
+lane_payload["libp2p_finality_evidence_reason_codes_csv"] = convergence_payload.get(
+    "reason_codes_csv"
+)
+lane_payload["promotion_decision_reason_taxonomy_version"] = (
+    convergence_payload.get("promotion_decision_reason_taxonomy_version")
+)
+lane_payload["promotion_decision_reason_codes_csv"] = convergence_payload.get(
+    "promotion_decision_reason_codes_csv"
+)
+lane_payload["promotion_decision_reason_code"] = convergence_payload.get(
+    "promotion_decision_reason_code"
+)
+
+lane_report_file.write_text(
+    json.dumps(lane_payload, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
 if [[ -n "$output_json" ]]; then
   cp "$lane_report" "$output_json"
 fi
 if [[ -n "$policy_output_json" ]]; then
   cp "$policy_report" "$policy_output_json"
+fi
+if [[ -n "$convergence_output_json" ]]; then
+  cp "$convergence_report" "$convergence_output_json"
 fi
 
 echo "status=pass"
@@ -444,6 +643,13 @@ echo "runbook_marker_parity_status=verified"
 echo "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
 echo "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
 echo "finality_taxonomy_runbook_reason_code=none"
+echo "libp2p_finality_evidence_convergence_status=verified"
+echo "promotion_decision_reason_mapping_status=verified"
+echo "libp2p_finality_evidence_reason_taxonomy_version=${EVIDENCE_REASON_TAXONOMY_VERSION}"
+echo "libp2p_finality_evidence_reason_codes_csv=${EVIDENCE_REASON_CODES_CSV}"
+echo "promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}"
+echo "promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}"
+echo "promotion_decision_reason_code=none"
 echo "transport_classification_normalization_status=verified"
 echo "fork_choice_stale_height_classification_status=verified"
 echo "fail_closed_status=verified"
