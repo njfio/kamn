@@ -382,8 +382,18 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("request_payload_evidence_artifact_path_lineage_mismatch"));
     assert!(CHECKLIST.contains("submit_evidence_artifact_path_lineage_mismatch"));
     assert!(CHECKLIST.contains("finality_evidence_artifact_path_lineage_mismatch"));
+    assert!(CHECKLIST.contains("runtime_signing_profile_contract_version=v1"));
+    assert!(CHECKLIST.contains("runtime_signing_profile=kolme-fork-secp256k1-v1"));
+    assert!(CHECKLIST.contains(
+        "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch"
+    ));
     assert!(CHECKLIST.contains("Regression: #4372"));
+    assert!(CHECKLIST.contains("Regression: #4373"));
     assert!(CHECKLIST.contains("Regression: #4378"));
+    assert!(CHECKLIST.contains("Regression: #4380"));
 }
 
 #[test]
