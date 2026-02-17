@@ -34,6 +34,31 @@ present, including:
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
 - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
 
+## Crash-Recovery Replay Idempotency Taxonomy and Runbook Marker Parity Contracts (Issue #4237)
+
+Sqlite crash-recovery replay idempotency taxonomy markers and runbook marker declarations must stay
+synchronized so policy checks fail closed under drift.
+
+Required checker/runbook parity markers:
+
+- `replay_idempotency_taxonomy_mapping_status=verified`
+- `runbook_marker_parity_status=verified`
+- `replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1`
+- `replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `replay_idempotency_runbook_reason_code=none|<reason>`
+
+Fail-closed drift reasons:
+
+- `replay_idempotency_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation command:
+
+- `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/sqlite-crash-recovery-live-policy-report.json`
+
+- `Regression: #4242`
+- `Regression: #4243`
+
 ## Drift Taxonomy and Runbook Marker Parity Contracts (Issue #4282)
 
 Failover preflight drift governance remains deterministic only when checker taxonomy markers and

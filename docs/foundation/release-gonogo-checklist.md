@@ -331,6 +331,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - append/checkpoint mismatch rejection drift forces `NO-GO` (`Regression: #4240`, `Regression: #4241`).
 
+## Replay Idempotency Taxonomy/Runbook Parity Gate (Issues #4237, #4242, #4243)
+- Validation command:
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/sqlite-crash-recovery-live-policy-report.json`
+- Required deterministic checker/runbook parity markers:
+  - `replay_idempotency_taxonomy_mapping_status=verified`
+  - `runbook_marker_parity_status=verified`
+  - `replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1`
+  - `replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+  - `replay_idempotency_runbook_reason_code=none|<reason>`
+- Required fail-closed reason outputs:
+  - `replay_idempotency_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
+  - `sqlite_crash_recovery_policy_replay_idempotency_runbook_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_replay_idempotency_runbook_reason_codes_csv_mismatch`
+- Fail-closed policy:
+  - replay idempotency taxonomy marker drift or runbook marker divergence acceptance forces `NO-GO`.
+- Regression policy:
+  - replay taxonomy/runbook parity drift rejection remains deterministic (`Regression: #4242`, `Regression: #4243`).
+
 ## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)
 - SLO policy report command:
   - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`

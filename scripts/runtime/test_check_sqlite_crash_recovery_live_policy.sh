@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_sqlite_crash_recovery_live_policy.sh"
+RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
@@ -23,6 +24,9 @@ tmp_tampered_promotion_gate=""
 tmp_tampered_audit_parity=""
 tmp_tampered_durability_taxonomy=""
 tmp_tampered_ci_local_budget=""
+tmp_tampered_replay_taxonomy_mapping=""
+tmp_tampered_replay_runbook_taxonomy=""
+tmp_runbook_divergence=""
 cleanup() {
   rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"
   if [[ -n "$tmp_tampered_wal_checkpoint" ]]; then
@@ -73,6 +77,15 @@ cleanup() {
   if [[ -n "$tmp_tampered_ci_local_budget" ]]; then
     rm -f "$tmp_tampered_ci_local_budget"
   fi
+  if [[ -n "$tmp_tampered_replay_taxonomy_mapping" ]]; then
+    rm -f "$tmp_tampered_replay_taxonomy_mapping"
+  fi
+  if [[ -n "$tmp_tampered_replay_runbook_taxonomy" ]]; then
+    rm -f "$tmp_tampered_replay_runbook_taxonomy"
+  fi
+  if [[ -n "$tmp_runbook_divergence" ]]; then
+    rm -f "$tmp_runbook_divergence"
+  fi
 }
 trap cleanup EXIT
 
@@ -82,6 +95,10 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
 fi
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected sqlite crash-recovery policy checker script to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$RUNBOOK_DOC" ]; then
+  echo "expected sqlite crash-recovery runbook source to exist" >&2
   exit 1
 fi
 
@@ -116,6 +133,26 @@ if ! printf '%s\n' "$policy_output" | grep -q '^append_checkpoint_reason_taxonom
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch$'; then
   echo "expected sqlite crash-recovery policy checker append-checkpoint reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^replay_idempotency_taxonomy_mapping_status=verified$'; then
+  echo "expected sqlite crash-recovery policy checker replay idempotency taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery policy checker runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery policy checker replay idempotency runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected sqlite crash-recovery policy checker replay idempotency runbook reason csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^replay_idempotency_runbook_reason_code=none$'; then
+  echo "expected sqlite crash-recovery policy checker replay idempotency runbook reason code marker" >&2
   exit 1
 fi
 
@@ -153,6 +190,16 @@ if payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.journa
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker")
 if payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker")
+if payload.get("replay_idempotency_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected deterministic replay_idempotency_taxonomy_mapping_status marker")
+if payload.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected deterministic runbook_marker_parity_status marker")
+if payload.get("replay_idempotency_runbook_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_taxonomy_version marker")
+if payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker")
+if payload.get("replay_idempotency_runbook_reason_code") != "none":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker")
 if payload.get("crash_recovery_readiness_progress_status") != "verified":
     raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
 if payload.get("snapshot_parity_status") != "verified":
@@ -417,6 +464,89 @@ if [ "$journal_replay_taxonomy_tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$journal_replay_taxonomy_tampered_output" | grep -q 'sqlite_crash_recovery_policy_journal_replay_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic journal replay taxonomy mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_replay_taxonomy_mapping="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_replay_taxonomy_mapping"
+python3 - "$tmp_tampered_replay_taxonomy_mapping" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["replay_idempotency_taxonomy_mapping_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+replay_taxonomy_mapping_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_replay_taxonomy_mapping" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+replay_taxonomy_mapping_tampered_code=$?
+set -e
+if [ "$replay_taxonomy_mapping_tampered_code" -eq 0 ]; then
+  echo "expected replay idempotency taxonomy mapping drift sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$replay_taxonomy_mapping_tampered_output" | grep -q 'replay_idempotency_taxonomy_mapping_drift_detected'; then
+  echo "expected deterministic replay idempotency taxonomy mapping drift reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_replay_runbook_taxonomy="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_replay_runbook_taxonomy"
+python3 - "$tmp_tampered_replay_runbook_taxonomy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["replay_idempotency_runbook_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+replay_runbook_taxonomy_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_replay_runbook_taxonomy" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+replay_runbook_taxonomy_tampered_code=$?
+set -e
+if [ "$replay_runbook_taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected replay idempotency runbook taxonomy drift sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$replay_runbook_taxonomy_tampered_output" | grep -q 'sqlite_crash_recovery_policy_replay_idempotency_runbook_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic replay idempotency runbook taxonomy mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_runbook_divergence="$(mktemp)"
+printf '%s\n' '# runbook divergence fixture without required replay markers' > "$tmp_runbook_divergence"
+set +e
+runbook_divergence_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_REPORT" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --runbook-file "$tmp_runbook_divergence" 2>&1
+)"
+runbook_divergence_code=$?
+set -e
+if [ "$runbook_divergence_code" -eq 0 ]; then
+  echo "expected replay taxonomy runbook divergence sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
+  echo "expected deterministic runbook marker parity mismatch reason for sqlite crash-recovery runbook divergence" >&2
   exit 1
 fi
 

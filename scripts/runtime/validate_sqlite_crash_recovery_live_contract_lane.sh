@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_sqlite_crash_recovery_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
 output_json=""
 policy_output_json=""
@@ -65,6 +66,10 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
 done
 if [ ! -f "$STRATEGY_DOC" ]; then
   echo "expected required documentation file '$STRATEGY_DOC'" >&2
+  exit 1
+fi
+if [ ! -f "$RUNBOOK_DOC" ]; then
+  echo "expected required runbook file '$RUNBOOK_DOC'" >&2
   exit 1
 fi
 
@@ -163,6 +168,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_codes_
   echo "expected sqlite crash-recovery live validation journal replay taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_taxonomy_mapping_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation replay idempotency taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation replay idempotency runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected sqlite crash-recovery live validation replay idempotency runbook reason csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_code=none$'; then
+  echo "expected sqlite crash-recovery live validation replay idempotency runbook reason code marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
   echo "expected sqlite crash-recovery live validation readiness-progress marker" >&2
   exit 1
@@ -209,6 +234,7 @@ policy_output="$(
     --report-file "$summary_report" \
     --expected-final-decision GO \
     --ci-fast-gate "$ci_fast_gate" \
+    --runbook-file "$RUNBOOK_DOC" \
     --output-json "$policy_report"
 )"
 if ! printf '%s\n' "$policy_output" | grep -q '^status=ok$'; then
@@ -242,6 +268,7 @@ tampered_policy_output="$(
     --report-file "$tampered_report" \
     --expected-final-decision GO \
     --ci-fast-gate "$ci_fast_gate" \
+    --runbook-file "$RUNBOOK_DOC" \
     --output-json "$TMP_DIR/sqlite-crash-recovery-live-policy.tampered.json" 2>&1
 )"
 tampered_policy_code=$?
@@ -346,6 +373,21 @@ lane_report = {
     "journal_replay_reason_codes_csv": summary_report.get(
         "journal_replay_reason_codes_csv"
     ),
+    "replay_idempotency_taxonomy_mapping_status": summary_report.get(
+        "replay_idempotency_taxonomy_mapping_status"
+    ),
+    "runbook_marker_parity_status": summary_report.get(
+        "runbook_marker_parity_status"
+    ),
+    "replay_idempotency_runbook_reason_taxonomy_version": summary_report.get(
+        "replay_idempotency_runbook_reason_taxonomy_version"
+    ),
+    "replay_idempotency_runbook_reason_codes_csv": summary_report.get(
+        "replay_idempotency_runbook_reason_codes_csv"
+    ),
+    "replay_idempotency_runbook_reason_code": policy_report.get(
+        "replay_idempotency_runbook_reason_code"
+    ),
     "crash_recovery_readiness_progress_status": summary_report.get(
         "crash_recovery_readiness_progress_status"
     ),
@@ -409,6 +451,11 @@ echo "journal_replay_drift_detection_status=verified"
 echo "checkpoint_divergence_bypass_rejection_status=verified"
 echo "journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1"
 echo "journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
+echo "replay_idempotency_taxonomy_mapping_status=verified"
+echo "runbook_marker_parity_status=verified"
+echo "replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1"
+echo "replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+echo "replay_idempotency_runbook_reason_code=none"
 echo "crash_recovery_readiness_progress_status=verified"
 echo "snapshot_parity_status=verified"
 echo "ci_local_recovery_budget_boundary_status=verified"
