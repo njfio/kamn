@@ -75,6 +75,32 @@ fn service_api_ops_configuration_contains_retry_envelope_exhaustion_reconnect_bo
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_node_drift_marker_mismatch_policy_contracts() {
+    assert!(DOC.contains("### Live-Node Drift Marker Mismatch Policy Contracts (Issue #4281)"));
+    assert!(DOC.contains("failover_promotion_gate_status=verified"));
+    assert!(DOC.contains("live_node_drift_parity_status=verified"));
+    assert!(DOC.contains("ci_local_promotion_budget_boundary_status=verified"));
+    assert!(DOC.contains(
+        "failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("failover_sync_drift_policy_status=verified"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-policy"
+    ));
+    assert!(DOC.contains("live_node_drift_marker_parity_mismatch"));
+    assert!(DOC.contains("failover_readiness_progress_stalled"));
+    assert!(DOC.contains("ci_local_promotion_budget_boundary_exceeded"));
+    assert!(DOC.contains("failover_sync_drift_policy_required_field_missing:<field>"));
+    assert!(DOC.contains("failover_sync_drift_policy_reason_taxonomy_version_mismatch"));
+    assert!(DOC.contains("failover_sync_drift_policy_reason_codes_csv_mismatch"));
+    assert!(DOC.contains("Regression: #4285"));
+    assert!(DOC.contains("Regression: #4286"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_shutdown_checkpoint_reconciliation_failure_modes() {
     assert!(DOC.contains("Shutdown signal failure matrix"));
     assert!(DOC.contains("full_supervisor_stop_graceful_drain_timeout_contract_mismatch"));

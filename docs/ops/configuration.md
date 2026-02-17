@@ -384,6 +384,43 @@ Regression markers:
 - `Regression: #4300`
 - `Regression: #4301`
 
+### Live-Node Drift Marker Mismatch Policy Contracts (Issue #4281)
+
+Failover/sync preflight policy checks enforce deterministic fail-closed behavior for live-node drift
+marker divergence and missing-marker drift.
+
+Deterministic marker and taxonomy contracts:
+
+- `failover_promotion_gate_status=verified`
+- `live_node_drift_parity_status=verified`
+- `ci_local_promotion_budget_boundary_status=verified`
+- `failover_readiness_reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1`
+- `failover_readiness_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
+- `failover_sync_drift_policy_status=verified`
+
+Policy checker command:
+
+- `bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file <report.json> --expected-final-decision GO --ci-fast-gate PASS --output-json <policy.json>`
+
+Deterministic fail-closed reasons:
+
+- `live_node_drift_marker_parity_mismatch`
+- `failover_readiness_progress_stalled`
+- `ci_local_promotion_budget_boundary_exceeded`
+- `failover_sync_drift_policy_required_field_missing:<field>`
+- `failover_sync_drift_policy_reason_taxonomy_version_mismatch`
+- `failover_sync_drift_policy_reason_codes_csv_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh`
+- `bash scripts/runtime/test_run_failover_sync_drill_suite.sh`
+
+Regression markers:
+
+- `Regression: #4285`
+- `Regression: #4286`
+
 Regression marker:
 
 - `Regression: #4109`

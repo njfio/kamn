@@ -7,7 +7,8 @@ SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/failover_sync_drill_preflight_contrac
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_failover_sync_drill_preflight_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT"' EXIT
+TMP_DIR="$(mktemp -d)"
+trap 'rm -f "$TMP_REPORT"; rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$PREFLIGHT_LANE" ]; then
   echo "expected failover/sync preflight contract lane script to be executable" >&2
@@ -47,6 +48,152 @@ if payload.get("failover_readiness_reason_taxonomy_version") != "kamn.runtime.fa
     raise SystemExit("expected deterministic failover_readiness_reason_taxonomy_version marker")
 if payload.get("failover_readiness_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic failover_readiness_reason_codes_csv marker")
+PY
+
+policy_report="$TMP_DIR/failover-sync-preflight-policy.json"
+policy_output="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$TMP_REPORT" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$policy_report"
+)"
+if ! printf '%s\n' "$policy_output" | grep -q '^status=ok$'; then
+  echo "expected failover/sync preflight policy checker status=ok marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
+  echo "expected failover/sync preflight policy checker final_decision=GO marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^failover_sync_drift_policy_status=verified$'; then
+  echo "expected failover/sync preflight policy checker status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.runtime.failover-readiness-reason-taxonomy.v1$'; then
+  echo "expected deterministic failover/sync preflight policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+  echo "expected deterministic failover/sync preflight policy reason codes marker" >&2
+  exit 1
+fi
+
+python3 - "$policy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.failover-sync-drill-preflight-policy-report.v1":
+    raise SystemExit("unexpected failover/sync preflight policy report schema")
+if payload.get("status") != "pass":
+    raise SystemExit("expected failover/sync preflight policy status=pass")
+if payload.get("final_decision") != "GO":
+    raise SystemExit("expected failover/sync preflight policy final_decision=GO")
+if payload.get("failover_sync_drift_policy_status") != "verified":
+    raise SystemExit("expected failover/sync preflight policy status marker")
+if payload.get("reason_codes") != ["none"]:
+    raise SystemExit("expected failover/sync preflight policy success reason code ['none']")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.failover-readiness-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic failover/sync preflight reason taxonomy marker")
+if payload.get("reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
+    raise SystemExit("expected deterministic failover/sync preflight reason codes marker")
+PY
+
+missing_marker_report="$TMP_DIR/failover-sync-preflight-summary.missing-marker.json"
+cp "$TMP_REPORT" "$missing_marker_report"
+python3 - "$missing_marker_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("live_node_drift_parity_status", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_marker_output="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$missing_marker_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.missing-marker.json" 2>&1
+)"
+missing_marker_code=$?
+set -e
+if [ "$missing_marker_code" -eq 0 ]; then
+  echo "expected missing live-node drift marker report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_marker_output" | grep -q 'missing required report fields: live_node_drift_parity_status'; then
+  echo "expected deterministic missing marker reason output for failover/sync preflight policy checker" >&2
+  exit 1
+fi
+
+drift_marker_report="$TMP_DIR/failover-sync-preflight-summary.marker-drift.json"
+cp "$TMP_REPORT" "$drift_marker_report"
+python3 - "$drift_marker_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["live_node_drift_parity_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+drift_marker_output_first="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$drift_marker_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.marker-drift.first.json" 2>&1
+)"
+drift_marker_code_first=$?
+drift_marker_output_second="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$drift_marker_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.marker-drift.second.json" 2>&1
+)"
+drift_marker_code_second=$?
+set -e
+if [ "$drift_marker_code_first" -eq 0 ] || [ "$drift_marker_code_second" -eq 0 ]; then
+  echo "expected live-node drift parity mismatch report to fail policy checker deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$drift_marker_output_first" | grep -q 'live_node_drift_marker_parity_mismatch'; then
+  echo "expected deterministic live-node drift parity mismatch reason output on first run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$drift_marker_output_second" | grep -q 'live_node_drift_marker_parity_mismatch'; then
+  echo "expected deterministic live-node drift parity mismatch reason output on second run" >&2
+  exit 1
+fi
+
+python3 - \
+  "$TMP_DIR/failover-sync-preflight-policy.marker-drift.first.json" \
+  "$TMP_DIR/failover-sync-preflight-policy.marker-drift.second.json" <<'PY'
+import json
+import pathlib
+import sys
+
+first_payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+second_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+first_reasons = first_payload.get("reason_codes")
+second_reasons = second_payload.get("reason_codes")
+if not first_reasons:
+    raise SystemExit("expected failover/sync preflight marker-drift policy report to include non-empty reason codes")
+if first_reasons != second_reasons:
+    raise SystemExit("expected deterministic failover/sync preflight reason-code ordering across repeated marker-drift checks")
+if "live_node_drift_marker_parity_mismatch" not in first_reasons:
+    raise SystemExit("expected live_node_drift_marker_parity_mismatch reason code in failover/sync preflight marker-drift policy reports")
 PY
 
 set +e
