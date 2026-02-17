@@ -40,6 +40,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^kamn_core_rustdoc_artifact_status=
   echo "expected rustdoc artifact lane pass status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^rustdoc_navigation_ratio_status=within$'; then
+  echo "expected rustdoc navigation ratio status marker to remain within on default lane run" >&2
+  exit 1
+fi
 
 if [ ! -f "$REPORT_FILE" ]; then
   echo "expected rustdoc artifact report file" >&2
@@ -55,9 +59,30 @@ if ! grep -q '"reason_key": "kamn.ci.kamn-core-rustdoc-artifact.ok"' "$REPORT_FI
   echo "expected rustdoc artifact report success reason key" >&2
   exit 1
 fi
+if ! grep -q '"docs_contract_test_count":' "$REPORT_FILE"; then
+  echo "expected rustdoc artifact report docs_contract_test_count marker" >&2
+  exit 1
+fi
+if ! grep -q '"behavioral_test_count":' "$REPORT_FILE"; then
+  echo "expected rustdoc artifact report behavioral_test_count marker" >&2
+  exit 1
+fi
+if ! grep -q '"docs_contract_to_behavioral_ratio":' "$REPORT_FILE"; then
+  echo "expected rustdoc artifact report docs_contract_to_behavioral_ratio marker" >&2
+  exit 1
+fi
+if ! grep -q '"max_docs_contract_to_behavioral_ratio":' "$REPORT_FILE"; then
+  echo "expected rustdoc artifact report max_docs_contract_to_behavioral_ratio marker" >&2
+  exit 1
+fi
+if ! grep -q '"rustdoc_navigation_ratio_status": "within"' "$REPORT_FILE"; then
+  echo "expected rustdoc artifact report ratio status marker to be within on default lane run" >&2
+  exit 1
+fi
 
 bash "$POLICY_SCRIPT" --report-file "$REPORT_FILE" >"$TMP_DIR/policy.out"
 grep -q '^kamn_core_rustdoc_artifact_policy=ok$' "$TMP_DIR/policy.out"
+grep -q '^rustdoc_navigation_ratio_status=within$' "$TMP_DIR/policy.out"
 
 if [ ! -L "$LANE_SCRIPT" ]; then
   echo "expected rustdoc artifact contract lane wrapper to be a dispatcher symlink" >&2
