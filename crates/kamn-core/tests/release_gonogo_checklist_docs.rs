@@ -169,6 +169,36 @@ fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() 
 }
 
 #[test]
+fn checklist_contains_service_api_axum_admission_backpressure_evidence_convergence_gate() {
+    assert!(CHECKLIST.contains(
+        "## Service API Axum Admission/Backpressure Evidence Convergence Gate (Issues #4223, #4229, #4230)"
+    ));
+    assert!(CHECKLIST.contains(
+        "check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy-report.json --output-json /tmp/service-api-axum-ingress-convergence-report.json"
+    ));
+    assert!(CHECKLIST.contains("test_check_service_api_axum_ingress_live_evidence_convergence.sh"));
+    assert!(CHECKLIST.contains("service_api_axum_evidence_convergence_status=verified"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("service_api_axum_evidence_link_missing:source_report_file"));
+    assert!(CHECKLIST.contains("service_api_axum_promotion_decision_reason_mapping_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4229"));
+    assert!(CHECKLIST.contains("Regression: #4230"));
+}
+
+#[test]
 fn checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_gate() {
     assert!(CHECKLIST.contains(
         "## Block Reconciliation Partition-Healing Mismatch Mapping Gate (Issues #4251, #4255, #4256)"

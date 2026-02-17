@@ -144,6 +144,35 @@ Validation command:
 - `Regression: #4272`
 - `Regression: #4273`
 
+## Service API Axum Admission/Backpressure Evidence Convergence Contracts (Issue #4223)
+
+Service API axum admission/backpressure evidence linkage and promotion-reason mapping must remain
+deterministic across lane and policy artifacts.
+
+Required convergence markers:
+
+- `service_api_axum_evidence_convergence_status=verified`
+- `promotion_decision_reason_mapping_status=verified`
+- `service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1`
+- `service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch`
+- `promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
+- `promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
+- `promotion_decision_reason_code=none|<reason>`
+
+Fail-closed convergence reasons:
+
+- `service_api_axum_evidence_link_missing:source_report_file`
+- `service_api_axum_evidence_payload_tamper_detected:<field>`
+- `service_api_axum_promotion_decision_reason_mapping_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy-report.json --convergence-output-json /tmp/service-api-axum-ingress-convergence-report.json`
+- `bash scripts/runtime/check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy-report.json --output-json /tmp/service-api-axum-ingress-convergence-report.json`
+
+- `Regression: #4229`
+- `Regression: #4230`
+
 ## Fork-Choice Finality Taxonomy and Runbook Marker Parity Contracts (Issue #4252)
 
 Fork-choice finality reconciliation taxonomy markers and runbook marker declarations must remain
