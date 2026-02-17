@@ -700,6 +700,7 @@ assert_eq "$(extract_value "$tls_generate_output" "final_decision")" "GO" "expec
 assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_gate_final_decision")" "GO" "expected tls evidence gate decision to be GO"
 assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected deterministic tls evidence gate reason taxonomy marker"
 assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_reason_codes_csv")" "none" "expected deterministic tls evidence gate reason csv marker on pass path"
+assert_eq "$(extract_value "$tls_generate_output" "tls_evidence_reason_codes_value")" "none" "expected deterministic tls evidence gate reason value marker on pass path"
 
 python3 - "$tls_bundle" <<'PY'
 import json
@@ -721,6 +722,9 @@ PY
 tls_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_bundle")"
 assert_eq "$(extract_value "$tls_policy_output" "status")" "ok" "expected tls converged bundle policy check to pass"
 assert_eq "$(extract_value "$tls_policy_output" "tls_evidence_gate_final_decision")" "GO" "expected policy checker tls evidence decision to remain GO"
+assert_eq "$(extract_value "$tls_policy_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected policy checker to emit deterministic tls reason taxonomy marker"
+assert_eq "$(extract_value "$tls_policy_output" "tls_evidence_reason_codes_csv")" "none" "expected policy checker to emit deterministic tls reason csv marker on pass path"
+assert_eq "$(extract_value "$tls_policy_output" "tls_evidence_reason_codes_value")" "none" "expected policy checker to emit deterministic tls reason value marker on pass path"
 assert_eq "$(extract_value "$tls_policy_output" "final_decision")" "GO" "expected policy checker final decision to remain GO for converged tls evidence"
 
 tls_stale_report="$TMP_DIR/tls-evidence-stale-report.json"
@@ -750,6 +754,9 @@ assert_eq "$(extract_value "$tls_stale_generate_output" "final_decision")" "NO-G
 tls_stale_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_stale_bundle")"
 assert_eq "$(extract_value "$tls_stale_policy_output" "status")" "ok" "expected stale tls bundle policy check to pass deterministically"
 assert_eq "$(extract_value "$tls_stale_policy_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected stale tls evidence gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$tls_stale_policy_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected stale tls policy output to include deterministic reason taxonomy marker"
+assert_eq "$(extract_value "$tls_stale_policy_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_freshness_window_exceeded" "expected stale tls policy output to include deterministic reason csv marker"
+assert_eq "$(extract_value "$tls_stale_policy_output" "tls_evidence_reason_codes_value")" "gonogo_tls_evidence_freshness_window_exceeded" "expected stale tls policy output to include deterministic reason value marker"
 assert_eq "$(extract_value "$tls_stale_policy_output" "final_decision")" "NO-GO" "expected stale tls bundle policy decision to remain NO-GO"
 
 tls_missing_bundle="$TMP_DIR/gonogo-tls-missing.json"
@@ -770,7 +777,50 @@ tls_missing_generate_output="$(
 )"
 assert_eq "$(extract_value "$tls_missing_generate_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected tls evidence gate to fail closed for missing evidence file"
 assert_eq "$(extract_value "$tls_missing_generate_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_file_missing" "expected deterministic missing tls evidence reason code"
+assert_eq "$(extract_value "$tls_missing_generate_output" "tls_evidence_reason_codes_value")" "gonogo_tls_evidence_file_missing" "expected deterministic missing tls evidence reason value marker"
 assert_eq "$(extract_value "$tls_missing_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for missing tls evidence"
+
+tls_missing_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_missing_bundle")"
+assert_eq "$(extract_value "$tls_missing_policy_output" "status")" "ok" "expected missing tls bundle policy check to pass deterministically"
+assert_eq "$(extract_value "$tls_missing_policy_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected missing tls evidence gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$tls_missing_policy_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected missing tls policy output to include deterministic reason taxonomy marker"
+assert_eq "$(extract_value "$tls_missing_policy_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_file_missing" "expected missing tls policy output to include deterministic reason csv marker"
+assert_eq "$(extract_value "$tls_missing_policy_output" "tls_evidence_reason_codes_value")" "gonogo_tls_evidence_file_missing" "expected missing tls policy output to include deterministic reason value marker"
+assert_eq "$(extract_value "$tls_missing_policy_output" "final_decision")" "NO-GO" "expected missing tls bundle policy decision to remain NO-GO"
+
+tls_invalid_json_report="$TMP_DIR/tls-evidence-invalid-json-report.json"
+cat >"$tls_invalid_json_report" <<'JSON'
+{ invalid json payload
+JSON
+
+tls_invalid_json_bundle="$TMP_DIR/gonogo-tls-invalid-json.json"
+tls_invalid_json_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$tls_invalid_json_bundle" \
+    --release-candidate "v1.0.0-rc.10.1" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:tls-invalid-json" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --tls-evidence-report-file "$tls_invalid_json_report" \
+    --tls-evidence-max-age-seconds 1800
+)"
+assert_eq "$(extract_value "$tls_invalid_json_generate_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected tls evidence gate to fail closed for invalid json evidence"
+assert_eq "$(extract_value "$tls_invalid_json_generate_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_invalid_json" "expected deterministic invalid-json tls evidence reason code"
+assert_eq "$(extract_value "$tls_invalid_json_generate_output" "tls_evidence_reason_codes_value")" "gonogo_tls_evidence_invalid_json" "expected deterministic invalid-json tls evidence reason value marker"
+assert_eq "$(extract_value "$tls_invalid_json_generate_output" "final_decision")" "NO-GO" "expected final decision to fail closed for invalid-json tls evidence"
+
+tls_invalid_json_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_invalid_json_bundle")"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "status")" "ok" "expected invalid-json tls bundle policy check to pass deterministically"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "tls_evidence_gate_final_decision")" "NO-GO" "expected invalid-json tls evidence gate policy decision to remain NO-GO"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "tls_evidence_reason_taxonomy_version")" "kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1" "expected invalid-json tls policy output to include deterministic reason taxonomy marker"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "tls_evidence_reason_codes_csv")" "gonogo_tls_evidence_invalid_json" "expected invalid-json tls policy output to include deterministic reason csv marker"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "tls_evidence_reason_codes_value")" "gonogo_tls_evidence_invalid_json" "expected invalid-json tls policy output to include deterministic reason value marker"
+assert_eq "$(extract_value "$tls_invalid_json_policy_output" "final_decision")" "NO-GO" "expected invalid-json tls bundle policy decision to remain NO-GO"
 
 tls_tampered_bundle="$TMP_DIR/gonogo-tls-tampered.json"
 cp "$tls_bundle" "$tls_tampered_bundle"

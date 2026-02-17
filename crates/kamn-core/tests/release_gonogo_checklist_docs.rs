@@ -216,7 +216,14 @@ fn checklist_contains_tls_evidence_completeness_freshness_gate() {
     assert!(CHECKLIST.contains(
         "tls_evidence_reason_codes_csv=gonogo_tls_evidence_file_missing,gonogo_tls_evidence_invalid_json,gonogo_tls_evidence_schema_mismatch,gonogo_tls_evidence_status_not_pass,gonogo_tls_evidence_reason_taxonomy_version_mismatch,gonogo_tls_evidence_freshness_window_exceeded"
     ));
+    assert!(CHECKLIST.contains("tls_evidence_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains(
+        "generator and policy-checker command output must both project this marker set."
+    ));
+    assert!(CHECKLIST
+        .contains("invalid TLS evidence JSON must reject with `gonogo_tls_evidence_invalid_json`"));
     assert!(CHECKLIST.contains("tls_evidence_gate_final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("Regression: #4298"));
     assert!(CHECKLIST.contains("Regression: #4477"));
 }
 

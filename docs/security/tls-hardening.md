@@ -36,3 +36,26 @@ Regression markers:
 - `Regression: #4480`
 - `Regression: #4481`
 - `Regression: #4107`
+
+## Release Go/No-Go TLS Evidence Convergence Markers
+
+When TLS evidence is wired into `scripts/deploy/generate_gonogo_evidence_bundle.sh` and
+validated with `scripts/deploy/check_gonogo_evidence_policy.sh`, both command outputs must expose
+deterministic TLS markers:
+
+- `tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1`
+- `tls_evidence_reason_codes_csv=none|<csv>`
+- `tls_evidence_reason_codes_value=none|<csv>`
+- `tls_evidence_gate_final_decision=GO|NO-GO`
+
+Fail-closed drills that must remain stable:
+
+- missing report file -> `gonogo_tls_evidence_file_missing`
+- stale report mtime beyond max-age window -> `gonogo_tls_evidence_freshness_window_exceeded`
+- invalid report JSON payload -> `gonogo_tls_evidence_invalid_json`
+
+Regression markers:
+
+- `Regression: #4298`
+- `Regression: #4304`
+- `Regression: #4305`

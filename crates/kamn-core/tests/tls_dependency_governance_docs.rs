@@ -46,3 +46,17 @@ fn ops_configuration_doc_tracks_tls_runtime_transport_behavior_contracts() {
 fn security_tls_hardening_doc_tracks_reason_class_marker() {
     assert!(TLS_HARDENING_DOC.contains("reason_class=stable|violation"));
 }
+
+#[test]
+fn security_tls_hardening_doc_tracks_release_gonogo_tls_evidence_markers() {
+    assert!(TLS_HARDENING_DOC.contains("## Release Go/No-Go TLS Evidence Convergence Markers"));
+    assert!(TLS_HARDENING_DOC.contains(
+        "tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(TLS_HARDENING_DOC.contains("tls_evidence_reason_codes_csv=none|<csv>"));
+    assert!(TLS_HARDENING_DOC.contains("tls_evidence_reason_codes_value=none|<csv>"));
+    assert!(TLS_HARDENING_DOC.contains("gonogo_tls_evidence_file_missing"));
+    assert!(TLS_HARDENING_DOC.contains("gonogo_tls_evidence_freshness_window_exceeded"));
+    assert!(TLS_HARDENING_DOC.contains("gonogo_tls_evidence_invalid_json"));
+    assert!(TLS_HARDENING_DOC.contains("Regression: #4298"));
+}
