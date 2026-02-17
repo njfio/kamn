@@ -16,7 +16,10 @@ TMP_POLICY_REPORT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
 TMP_SIMULATED_SUMMARY="$(mktemp)"
 TMP_FALLBACK_SUMMARY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY"' EXIT
+TMP_COMPOSITE_TAMPER_SUMMARY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY"' EXIT
+COMPOSITE_GATE_REASON_TAXONOMY_VERSION="kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
+COMPOSITE_GATE_REASON_CODES_CSV="dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded"
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime integration contract lane runner to be executable" >&2
@@ -114,6 +117,12 @@ required_coverage_markers=(
   "runtime_signer_managed_external_raw_private_key_present_violation"
   "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF"
   "runtime_signer_raw_private_key_present=false"
+  "composite_gate_reason_taxonomy_version=${COMPOSITE_GATE_REASON_TAXONOMY_VERSION}"
+  "composite_gate_reason_codes_csv=${COMPOSITE_GATE_REASON_CODES_CSV}"
+  "composite_gate_evidence_convergence_status=verified"
+  "composite_gate_ci_smoke_local_heavy_boundary_status=verified"
+  "composite_gate_ci_smoke_lane_cost_profile=low"
+  "composite_gate_local_heavy_execution_mode=not_requested"
   "runtime_commit_failure_taxonomy_mismatch:finality.timeout"
   "runtime_profile_run_mode_mismatch"
   "runtime_signer_fallback_guard_contract_version=v2"
@@ -216,6 +225,36 @@ if ! grep -q "runtime_signer_raw_private_key_present=false" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "composite_gate_reason_taxonomy_version=${COMPOSITE_GATE_REASON_TAXONOMY_VERSION}" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate reason taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_reason_codes_csv=${COMPOSITE_GATE_REASON_CODES_CSV}" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate reason codes marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_ci_smoke_local_heavy_boundary_status=verified" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate ci/local boundary marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_evidence_convergence_status=verified" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate evidence convergence marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_ci_smoke_lane_cost_profile=low" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate lane cost marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_local_heavy_execution_mode=not_requested" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include composite gate local-heavy execution mode marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2302" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include fallback signer runtime regression marker" >&2
   exit 1
@@ -296,6 +335,36 @@ if ! grep -q "runtime_signer_raw_private_key_present=false" "$README_FILE"; then
   exit 1
 fi
 
+if ! grep -q "composite_gate_reason_taxonomy_version=${COMPOSITE_GATE_REASON_TAXONOMY_VERSION}" "$README_FILE"; then
+  echo "expected README to include composite gate reason taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_reason_codes_csv=${COMPOSITE_GATE_REASON_CODES_CSV}" "$README_FILE"; then
+  echo "expected README to include composite gate reason codes marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_evidence_convergence_status=verified" "$README_FILE"; then
+  echo "expected README to include composite gate evidence convergence marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_ci_smoke_local_heavy_boundary_status=verified" "$README_FILE"; then
+  echo "expected README to include composite gate ci/local boundary marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_ci_smoke_lane_cost_profile=low" "$README_FILE"; then
+  echo "expected README to include composite gate lane cost marker" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_local_heavy_execution_mode=not_requested" "$README_FILE"; then
+  echo "expected README to include composite gate local-heavy execution mode marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2302" "$README_FILE"; then
   echo "expected README to include fallback signer runtime regression marker" >&2
   exit 1
@@ -329,6 +398,18 @@ if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in contract-lane summary")
 if summary.get("runtime_profile") != "real-node":
     raise SystemExit("expected runtime_profile=real-node in contract-lane summary")
+if summary.get("composite_gate_reason_taxonomy_version") != "kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1":
+    raise SystemExit("expected composite gate reason taxonomy marker in contract-lane summary")
+if summary.get("composite_gate_reason_codes_csv") != "dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded":
+    raise SystemExit("expected composite gate reason codes marker in contract-lane summary")
+if summary.get("composite_gate_evidence_convergence_status") != "verified":
+    raise SystemExit("expected composite gate evidence convergence marker in contract-lane summary")
+if summary.get("composite_gate_ci_smoke_local_heavy_boundary_status") != "verified":
+    raise SystemExit("expected composite gate ci/local boundary marker in contract-lane summary")
+if summary.get("composite_gate_ci_smoke_lane_cost_profile") != "low":
+    raise SystemExit("expected composite gate ci smoke lane cost marker in contract-lane summary")
+if summary.get("composite_gate_local_heavy_execution_mode") != "not_requested":
+    raise SystemExit("expected composite gate local-heavy execution mode marker in contract-lane summary")
 if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
     raise SystemExit("expected fallback signer guard contract version marker in contract-lane summary")
 if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
@@ -422,6 +503,18 @@ if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integrati
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected local KAMN live runtime integration contract-lane policy final_decision GO")
+if policy.get("composite_gate_reason_taxonomy_version") != "kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1":
+    raise SystemExit("expected composite gate reason taxonomy marker in contract-lane policy")
+if policy.get("composite_gate_reason_codes_csv") != "dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded":
+    raise SystemExit("expected composite gate reason codes marker in contract-lane policy")
+if policy.get("composite_gate_evidence_convergence_status") != "verified":
+    raise SystemExit("expected composite gate evidence convergence marker in contract-lane policy")
+if policy.get("composite_gate_ci_smoke_local_heavy_boundary_status") != "verified":
+    raise SystemExit("expected composite gate ci/local boundary marker in contract-lane policy")
+if policy.get("composite_gate_ci_smoke_lane_cost_profile") != "low":
+    raise SystemExit("expected composite gate ci smoke lane cost marker in contract-lane policy")
+if policy.get("composite_gate_local_heavy_execution_mode") != "not_requested":
+    raise SystemExit("expected composite gate local-heavy execution mode marker in contract-lane policy")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_SIMULATED_SUMMARY" <<'PY'
@@ -498,11 +591,44 @@ if ! grep -q "runtime_commit_fallback_private_key_command_marker_detected" "$TMP
   exit 1
 fi
 
+python3 - "$TMP_REPORT" "$TMP_COMPOSITE_TAMPER_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+tampered_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+payload["composite_gate_evidence_convergence_status"] = "drifted"
+tampered_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_COMPOSITE_TAMPER_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+composite_tamper_policy_code=$?
+set -e
+
+if [ "$composite_tamper_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when composite gate evidence convergence marker drifts" >&2
+  exit 1
+fi
+
+if ! grep -q "composite_gate_evidence_convergence_status_mismatch" "$TMP_POLICY_ERR"; then
+  echo "expected composite_gate_evidence_convergence_status_mismatch reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
 TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_RUNTIME_OUTPUT="$(mktemp)"
 TMP_DIRECT_RUNTIME_POLICY="$(mktemp)"
 TMP_DIRECT_RUNTIME_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh" \
   --mode dry-run \

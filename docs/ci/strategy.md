@@ -2752,6 +2752,13 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json`
     - nested runtime step composes through `run_local_runtime_commit_live_finality_evidence_contract_lane.sh` and captures runtime policy artifacts.
     - integration summary must emit `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
+    - integration summary/policy must emit composite gate taxonomy/boundary markers:
+      - `composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1`
+      - `composite_gate_reason_codes_csv=dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded`
+      - `composite_gate_evidence_convergence_status=verified`
+      - `composite_gate_ci_smoke_local_heavy_boundary_status=verified`
+      - `composite_gate_ci_smoke_lane_cost_profile=low`
+      - `composite_gate_local_heavy_execution_mode=not_requested`
     - integration summary must emit `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`.
     - integration summary contracts must emit `runtime_profile` (`standard|real-node`) for deterministic operator/release evidence interpretation.
     - operator workflow reference: `Live Provider Operator Runbook (Issue #2114)` in `docs/planning/kolme-devnet-ops.md`.
@@ -2782,6 +2789,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_key_loading_error_classification_version=v1`
       - `runtime_signer_key_loading_error_classification_allowed_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
       - `runtime_signer_key_loading_error_classification=none`
+      - `composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1`
+      - `composite_gate_reason_codes_csv=dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded`
+      - `composite_gate_evidence_convergence_status=verified`
+      - `composite_gate_ci_smoke_local_heavy_boundary_status=verified`
+      - `composite_gate_ci_smoke_lane_cost_profile=low`
+      - `composite_gate_local_heavy_execution_mode=not_requested`
       - `contracts.runtime_signer_private_key_env_zeroization_required=true`
       - `contracts.runtime_signer_private_key_bytes_zeroization_required=true`
       - `contracts.runtime_signer_key_loading_panic_free_required=true`

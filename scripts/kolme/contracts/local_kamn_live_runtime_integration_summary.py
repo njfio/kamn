@@ -69,6 +69,27 @@ KEY_LOADING_ERROR_CLASSIFICATIONS = (
     "private_key_env_mismatch",
 )
 KEY_LOADING_ERROR_CLASSIFICATIONS_CSV = ",".join(KEY_LOADING_ERROR_CLASSIFICATIONS)
+COMPOSITE_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
+)
+COMPOSITE_GATE_REASON_CODES = (
+    "dry_run_no_commands_executed",
+    "live_runtime_integration_passed",
+    "runtime_signer_fallback_private_key_present_violation",
+    "runtime_signer_managed_external_raw_private_key_present_violation",
+    "local_opt_in_missing",
+    "bootstrap_readiness_failed",
+    "localhost_signed_integration_failed",
+    "live_api_conformance_failed",
+    "runtime_commit_endpoint_failed",
+    "runtime_commit_policy_failed",
+    "runtime_integration_budget_exceeded",
+)
+COMPOSITE_GATE_REASON_CODES_CSV = ",".join(COMPOSITE_GATE_REASON_CODES)
+COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE = "low"
+COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE = "not_requested"
 SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
@@ -279,6 +300,12 @@ summary = {
     "reason_code": reason_code,
     "local_only_enforced": True,
     "ci_fast_gate_eligible": False,
+    "composite_gate_reason_taxonomy_version": COMPOSITE_GATE_REASON_TAXONOMY_VERSION,
+    "composite_gate_reason_codes_csv": COMPOSITE_GATE_REASON_CODES_CSV,
+    "composite_gate_evidence_convergence_status": COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS,
+    "composite_gate_ci_smoke_local_heavy_boundary_status": COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS,
+    "composite_gate_ci_smoke_lane_cost_profile": COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE,
+    "composite_gate_local_heavy_execution_mode": COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE,
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "budget_status": budget_status,
@@ -339,6 +366,12 @@ summary = {
     "runtime_commit_failure_diagnostic_hint": runtime_commit_failure_diagnostic_hint,
     "contracts": {
         "ci_fast_gate_scope": "local-only",
+        "composite_gate_reason_taxonomy_version": COMPOSITE_GATE_REASON_TAXONOMY_VERSION,
+        "composite_gate_reason_codes_csv": COMPOSITE_GATE_REASON_CODES_CSV,
+        "composite_gate_evidence_convergence_status": COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS,
+        "composite_gate_ci_smoke_local_heavy_boundary_status": COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS,
+        "composite_gate_ci_smoke_lane_cost_profile": COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE,
+        "composite_gate_local_heavy_execution_mode": COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE,
         "runtime_provider_client_contract": runtime_provider_client_contract,
         "runtime_profile": runtime_profile,
         "runtime_signing_profile": runtime_signing_profile,

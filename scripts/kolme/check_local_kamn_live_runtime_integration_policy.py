@@ -29,6 +29,26 @@ RUNTIME_REAL_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
 RUNTIME_REAL_SIGNING_PROFILE_MARKER = (
     f"KAMN_KOLME_LIVE_SIGNING_PROFILE={RUNTIME_REAL_SIGNING_PROFILE_VALUE}"
 )
+COMPOSITE_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
+)
+COMPOSITE_GATE_REASON_CODES_CSV = (
+    "dry_run_no_commands_executed,"
+    "live_runtime_integration_passed,"
+    "runtime_signer_fallback_private_key_present_violation,"
+    "runtime_signer_managed_external_raw_private_key_present_violation,"
+    "local_opt_in_missing,"
+    "bootstrap_readiness_failed,"
+    "localhost_signed_integration_failed,"
+    "live_api_conformance_failed,"
+    "runtime_commit_endpoint_failed,"
+    "runtime_commit_policy_failed,"
+    "runtime_integration_budget_exceeded"
+)
+COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE = "low"
+COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE = "not_requested"
 
 
 ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES = {
@@ -167,6 +187,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("ci_fast_gate_eligible_invalid")
     elif ci_fast_gate_eligible is True:
         reason_codes.append("ci_fast_gate_eligibility_violation")
+
+    if report.get("composite_gate_reason_taxonomy_version") != COMPOSITE_GATE_REASON_TAXONOMY_VERSION:
+        reason_codes.append("composite_gate_reason_taxonomy_version_mismatch")
+    if report.get("composite_gate_reason_codes_csv") != COMPOSITE_GATE_REASON_CODES_CSV:
+        reason_codes.append("composite_gate_reason_codes_csv_mismatch")
+    if report.get("composite_gate_evidence_convergence_status") != COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS:
+        reason_codes.append("composite_gate_evidence_convergence_status_mismatch")
+    if (
+        report.get("composite_gate_ci_smoke_local_heavy_boundary_status")
+        != COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS
+    ):
+        reason_codes.append("composite_gate_ci_smoke_local_heavy_boundary_status_mismatch")
+    if report.get("composite_gate_ci_smoke_lane_cost_profile") != COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE:
+        reason_codes.append("composite_gate_ci_smoke_lane_cost_profile_mismatch")
+    if report.get("composite_gate_local_heavy_execution_mode") != COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE:
+        reason_codes.append("composite_gate_local_heavy_execution_mode_mismatch")
 
     elapsed_seconds = report.get("elapsed_seconds")
     if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
@@ -713,6 +749,28 @@ def main() -> int:
         "report_file": str(report_path),
         "expected_final_decision": args.expected_final_decision,
         "ci_fast_gate": args.ci_fast_gate,
+        "composite_gate_reason_taxonomy_version": COMPOSITE_GATE_REASON_TAXONOMY_VERSION,
+        "composite_gate_reason_codes_csv": COMPOSITE_GATE_REASON_CODES_CSV,
+        "composite_gate_evidence_convergence_status": COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS,
+        "composite_gate_ci_smoke_local_heavy_boundary_status": COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS,
+        "composite_gate_ci_smoke_lane_cost_profile": COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE,
+        "composite_gate_local_heavy_execution_mode": COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE,
+        "observed_composite_gate_reason_taxonomy_version": report.get(
+            "composite_gate_reason_taxonomy_version"
+        ),
+        "observed_composite_gate_reason_codes_csv": report.get("composite_gate_reason_codes_csv"),
+        "observed_composite_gate_evidence_convergence_status": report.get(
+            "composite_gate_evidence_convergence_status"
+        ),
+        "observed_composite_gate_ci_smoke_local_heavy_boundary_status": report.get(
+            "composite_gate_ci_smoke_local_heavy_boundary_status"
+        ),
+        "observed_composite_gate_ci_smoke_lane_cost_profile": report.get(
+            "composite_gate_ci_smoke_lane_cost_profile"
+        ),
+        "observed_composite_gate_local_heavy_execution_mode": report.get(
+            "composite_gate_local_heavy_execution_mode"
+        ),
         "required_reason_codes": args.require_reason_code,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
