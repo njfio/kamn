@@ -59,6 +59,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     `transport_fault_matrix`.
   - release gate runner consumes `validate_local_full_stack_integration_live_contract_lane.sh` and fails closed on missing/tampered evidence linkage.
   - release gate runner consumes `validate_local_full_runtime_live_contract_lane.sh` and `validate_block_reconciliation_partition_rejoin_live_contract_lane.sh` and fails closed on missing/tampered transport-fed convergence + fault-matrix evidence linkage.
+  - Convergence integrity markers:
+    - `required_artifact_ids` must include `local_full_runtime_convergence`.
+    - missing convergence evidence link must fail closed with `release_manifest_missing_required_artifact:local_full_runtime_convergence`.
+    - tampered local full-runtime convergence success-marker expectation must fail closed with `release_manifest_success_marker_mismatch:local_full_runtime_convergence`.
+    - `Regression: #4199`
 - Architecture boundary reference:
   - `docs/architecture/kolme-live-integration.md`
 

@@ -15,6 +15,8 @@ TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
 TMP_RUN_REPORT="$TMP_DIR/go-no-go-gate-run-mode-report.json"
 TMP_WAIVER_REPORT="$TMP_DIR/go-no-go-gate-waiver-report.json"
 TMP_MANIFEST_FAIL_REPORT="$TMP_DIR/go-no-go-gate-manifest-fail-report.json"
+TMP_CONVERGENCE_MISSING_REPORT="$TMP_DIR/go-no-go-gate-missing-convergence-report.json"
+TMP_CONVERGENCE_TAMPER_REPORT="$TMP_DIR/go-no-go-gate-tampered-convergence-marker-report.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$LANE_SCRIPT" ]; then
@@ -582,6 +584,74 @@ if [ "$manifest_fail_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$manifest_fail_output" | grep -q 'release_manifest_missing_required_artifact:dr_readiness'; then
   echo "expected deterministic missing-artifact reason marker for tampered release evidence manifest" >&2
+  exit 1
+fi
+
+tampered_convergence_missing_manifest="$TMP_DIR/release-evidence-manifest.missing-local-full-runtime.json"
+python3 - "$RELEASE_MANIFEST_FILE" "$tampered_convergence_missing_manifest" <<'PY'
+import json
+import pathlib
+import sys
+
+source_path = pathlib.Path(sys.argv[1])
+target_path = pathlib.Path(sys.argv[2])
+payload = json.loads(source_path.read_text(encoding="utf-8"))
+payload["required_artifacts"] = [
+    artifact
+    for artifact in payload.get("required_artifacts", [])
+    if artifact.get("artifact_id") != "local_full_runtime_convergence"
+]
+target_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_convergence_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_convergence_missing_manifest" \
+    --max-seconds 120 \
+    --output-json "$TMP_CONVERGENCE_MISSING_REPORT" 2>&1
+)"
+missing_convergence_code=$?
+set -e
+if [ "$missing_convergence_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane to fail closed when local full-runtime convergence evidence link is missing" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_convergence_output" | grep -q 'release_manifest_missing_required_artifact:local_full_runtime_convergence'; then
+  echo "expected deterministic missing-link reason marker for local full-runtime convergence evidence" >&2
+  exit 1
+fi
+
+tampered_convergence_marker_manifest="$TMP_DIR/release-evidence-manifest.tampered-local-full-runtime-marker.json"
+python3 - "$RELEASE_MANIFEST_FILE" "$tampered_convergence_marker_manifest" <<'PY'
+import json
+import pathlib
+import sys
+
+source_path = pathlib.Path(sys.argv[1])
+target_path = pathlib.Path(sys.argv[2])
+payload = json.loads(source_path.read_text(encoding="utf-8"))
+for artifact in payload.get("required_artifacts", []):
+    if artifact.get("artifact_id") == "local_full_runtime_convergence":
+        artifact["expected_success_marker"] = "local_full_runtime_policy_status=tampered"
+target_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_convergence_marker_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_convergence_marker_manifest" \
+    --max-seconds 120 \
+    --output-json "$TMP_CONVERGENCE_TAMPER_REPORT" 2>&1
+)"
+tampered_convergence_marker_code=$?
+set -e
+if [ "$tampered_convergence_marker_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane to fail closed when local full-runtime convergence success marker is tampered" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_convergence_marker_output" | grep -q 'release_manifest_success_marker_mismatch:local_full_runtime_convergence'; then
+  echo "expected deterministic tampered-marker reason for local full-runtime convergence evidence" >&2
   exit 1
 fi
 

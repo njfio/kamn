@@ -132,6 +132,19 @@ fn plan_contains_sqlite_crash_replay_evidence_convergence_contract() {
 }
 
 #[test]
+fn plan_contains_release_promotion_evidence_convergence_integrity_markers() {
+    assert!(PLAN.contains("Convergence integrity markers:"));
+    assert!(PLAN.contains("`required_artifact_ids` must include `local_full_runtime_convergence`."));
+    assert!(
+        PLAN.contains("release_manifest_missing_required_artifact:local_full_runtime_convergence")
+    );
+    assert!(
+        PLAN.contains("release_manifest_success_marker_mismatch:local_full_runtime_convergence")
+    );
+    assert!(PLAN.contains("Regression: #4199"));
+}
+
+#[test]
 fn deploy_compat_contains_local_full_stack_harness_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)"
