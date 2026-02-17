@@ -2,26 +2,30 @@
 
 ## Approach
 
-- Execute the smallest deterministic implementation slice that satisfies all ACs.
-- Add/extend red->green regression coverage before broad migration changes.
-- Preserve CI smoke/runtime budget boundaries and deterministic reason-taxonomy outputs.
+- Execute through two implementation tasks:
+  - `#4813`: parameterize wave/matrix scripts and remove duplicate family implementations.
+  - `#4814`: deploy shared test harness + JSON helper utilities and migrate high-duplication cohorts.
+- Keep contract lane outputs stable while replacing boilerplate with shared helper/runners.
+- Validate each subtask with RED->GREEN evidence and full `scripts/ci/test_ci_tools.sh` regression.
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact.
+- Parameterized runner scripts under `scripts/ci/` and `scripts/framework/` (task `#4813`).
+- Shared test harness and migrated wrapper-family tests (subtask `#4825`).
+- Shared JSON helper primitives/command and migrated manual JSON writers (subtask `#4826`).
 
 ## Risks / Mitigations
 
-- Risk: migration drift or hidden coupling across scripts/wrappers/manifests.
-  Mitigation: phased rollout with deterministic regression suites and compatibility checks.
-- Risk: CI cost increase.
-  Mitigation: enforce bounded smoke limits and local-heavy opt-in boundaries.
+- Risk: migration drift across numerous shell scripts.
+  Mitigation: phased subtask delivery with dedicated migration contract tests and full CI regression gates.
+- Risk: policy/output contract regression.
+  Mitigation: preserve key=value/reason taxonomy markers and verify via CI tool suite.
 
 ## Interfaces / Contracts
 
 - Preserve existing lane entrypoint compatibility unless explicitly versioned.
-- Emit stable key=value outputs and reason taxonomy/version markers on policy paths.
+- Maintain stable key=value outputs and reason taxonomy markers.
 
 ## ADR
 
-- Required only if this issue introduces protocol/dependency/architecture decisions.
+- Not required (no dependency/protocol/architecture changes in story closeout).
