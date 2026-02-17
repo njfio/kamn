@@ -127,6 +127,8 @@ Regression marker:
   reason code deterministic.
 - `Regression: #3670` keeps process-isolated two-node/three-node convergence
   marker taxonomy and stale-height reason-code coverage deterministic.
+- `Regression: #4257` keeps finality taxonomy drift fail-closed behavior deterministic.
+- `Regression: #4258` keeps runbook parity marker drift fail-closed behavior deterministic.
 
 ## Validation Commands
 
@@ -168,6 +170,10 @@ Expected live markers:
 - `three_node_publish_drop_recovery_status=verified`
 - `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`
 - `convergence_reason_codes_csv=fork_choice_stale_block_height`
+- `finality_taxonomy_mapping_status=verified`
+- `runbook_marker_parity_status=verified`
+- `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`
+- `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
 - `transport_classification_normalization_status=verified`
 - `fork_choice_stale_height_classification_status=verified`
 - `convergence_reason_codes=fork_choice_stale_block_height`

@@ -1,6 +1,6 @@
 # Spec — #4258 Subtask: Finality Taxonomy Enforcement and Runbook Marker Parity Checks
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4252
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

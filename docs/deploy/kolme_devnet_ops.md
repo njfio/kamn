@@ -90,6 +90,33 @@ Validation command:
 - `Regression: #4272`
 - `Regression: #4273`
 
+## Fork-Choice Finality Taxonomy and Runbook Marker Parity Contracts (Issue #4252)
+
+Fork-choice finality reconciliation taxonomy markers and runbook marker declarations must remain
+synchronized to keep partition-recovery promotion decisions deterministic.
+
+Required checker/runbook parity markers:
+
+- `finality_taxonomy_mapping_status=verified`
+- `runbook_marker_parity_status=verified`
+- `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`
+- `convergence_reason_codes_csv=fork_choice_stale_block_height`
+- `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`
+- `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+
+Fail-closed drift reasons:
+
+- `finality_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+- `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+
+- `Regression: #4257`
+- `Regression: #4258`
+
 ## TLS Dependency-Posture Compatibility Markers
 
 Live-HTTPS dependency posture must remain explicit in compatibility runbooks:

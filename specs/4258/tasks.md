@@ -1,6 +1,6 @@
 # Tasks — #4258 Finality Taxonomy Enforcement Implementation
 
-Status: Reviewed
+Status: Implemented
 
 - T1 (Implementation): add deterministic finality taxonomy/runbook marker constants and output fields.
 - T2 (Implementation): add runbook parity validation (`--runbook-file`) and fail-closed reason resolver in policy checker.

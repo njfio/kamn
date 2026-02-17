@@ -1,6 +1,6 @@
 # Spec — #4252 Task: Fork-Choice Finality Taxonomy and Runbook Parity Under Partition Recovery
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4249
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

@@ -1,6 +1,6 @@
 # Plan — #4257 Finality Taxonomy/Runbook Red Tests
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

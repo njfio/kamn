@@ -1,6 +1,6 @@
 # Tasks — #4252 Finality Taxonomy and Runbook Parity
 
-Status: Reviewed
+Status: Implemented
 
 - T1 (Regression): add Red tests for finality taxonomy drift and runbook marker divergence (`#4257`).
 - T2 (Implementation): add deterministic taxonomy/runbook parity markers and fail-closed reason mapping in convergence checker (`#4258`).

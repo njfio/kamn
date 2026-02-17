@@ -67,7 +67,17 @@ fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
     assert!(DOC.contains("block_pipeline_transport_convergence_live_sockets"));
     assert!(DOC.contains("Regression: #3652"));
     assert!(DOC.contains("Regression: #3670"));
+    assert!(DOC.contains("Regression: #4257"));
+    assert!(DOC.contains("Regression: #4258"));
     assert!(DOC.contains("p2p_transport_live_socket_send_failed"));
     assert!(DOC.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh"));
     assert!(DOC.contains("convergence_reason_codes=fork_choice_stale_block_height"));
+    assert!(DOC.contains("finality_taxonomy_mapping_status=verified"));
+    assert!(DOC.contains("runbook_marker_parity_status=verified"));
+    assert!(DOC.contains(
+        "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
 }

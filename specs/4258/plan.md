@@ -1,6 +1,6 @@
 # Plan — #4258 Finality Taxonomy Enforcement Implementation
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

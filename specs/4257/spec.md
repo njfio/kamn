@@ -1,6 +1,6 @@
 # Spec — #4257 Subtask: Red Tests for Finality Taxonomy Drift and Runbook Marker Divergence
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4252
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

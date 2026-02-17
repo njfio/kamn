@@ -574,7 +574,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode dry-run --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
   - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile smoke --ci-fast-gate PASS --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
   - `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN=1 bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile deep --ci-fast-gate FAIL --output-json /tmp/libp2p-convergence-process-isolated-live-deep-summary.json`
-  - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+  - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
   - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
   - `bash scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh`
   - `bash scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh`
@@ -595,6 +595,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic convergence reason taxonomy markers:
     `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`,
     `convergence_reason_codes_csv=fork_choice_stale_block_height`.
+  - finality taxonomy and runbook-marker parity remains deterministic via:
+    `finality_taxonomy_mapping_status=verified`,
+    `runbook_marker_parity_status=verified`,
+    `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`,
+    `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`,
+    `finality_taxonomy_runbook_reason_code=none|<reason>`.
   - lane emits deterministic transport classification normalization markers:
     `transport_classification_normalization_status=verified`,
     `fork_choice_stale_height_classification_status=verified`.
@@ -614,6 +620,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`
   - `libp2p_process_isolated_convergence_policy_convergence_reason_taxonomy_version_mismatch`
+  - `finality_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
   - `libp2p_process_isolated_convergence_policy_fork_choice_stale_height_classification_status_mismatch`
 
 ## Process Harness Primitive Contract

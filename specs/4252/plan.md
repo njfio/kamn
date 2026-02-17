@@ -1,6 +1,6 @@
 # Plan — #4252 Finality Taxonomy and Runbook Parity
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

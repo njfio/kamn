@@ -1,6 +1,6 @@
 # Tasks — #4257 Finality Taxonomy/Runbook Red Tests
 
-Status: Reviewed
+Status: Implemented
 
 - T1 (Regression): add taxonomy-version/csv tamper test expecting deterministic taxonomy-drift reason.
 - T2 (Regression): add runbook marker divergence tamper test expecting deterministic runbook-parity reason.

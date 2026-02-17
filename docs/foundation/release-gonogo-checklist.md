@@ -869,6 +869,27 @@ Peer adapter retry/timeout evidence must project deterministic reason classes an
 - Regression policy:
   - peer adapter reason projection drift and multi-process hook contract drift force `NO-GO` (`Regression: #4320`).
 
+## Fork-Choice Finality Taxonomy and Runbook Marker Parity Gate (Issues #4252, #4257, #4258)
+Fork-choice finality reconciliation taxonomy and runbook marker declarations must stay synchronized for partition-recovery promotion decisions.
+
+- Validation commands:
+  - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+- Required deterministic taxonomy/runbook parity markers:
+  - `finality_taxonomy_mapping_status=verified`
+  - `runbook_marker_parity_status=verified`
+  - `convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1`
+  - `convergence_reason_codes_csv=fork_choice_stale_block_height`
+  - `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`
+  - `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+  - `finality_taxonomy_runbook_reason_code=none|<reason>`
+- Deterministic fail-closed reasons:
+  - `finality_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
+- Regression policy:
+  - taxonomy marker drift acceptance and runbook marker divergence acceptance force `NO-GO` (`Regression: #4257`).
+  - finality taxonomy/runbook reason projection drift forces `NO-GO` (`Regression: #4258`).
+
 ## Live-Network Pilot Launch and Rollback Evidence Gates (Issue #830)
 Pilot launch gates require deterministic smoke and scheduled/manual deep-lane evidence before release approval.
 
