@@ -26,6 +26,25 @@ fn plan_contains_failover_sync_drill_lane_policy() {
     assert!(PLAN.contains("run_failover_sync_drill_deep_lane.sh"));
     assert!(PLAN.contains("run_failover_sync_drill_suite.sh"));
     assert!(PLAN.contains("kamn.runtime.failover-sync-drill-suite-report.v1"));
+    assert!(PLAN.contains(
+        "failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file /tmp/failover-sync-preflight-report.json --runbook-file docs/deploy/kolme_devnet_ops.md --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/failover-sync-preflight-policy.json"
+    ));
+    assert!(PLAN.contains(
+        "failover_sync_drill_preflight_contract_lane_contract.sh check-evidence-convergence --report-file /tmp/failover-sync-preflight-report.json --policy-file /tmp/failover-sync-preflight-policy.json --output-json /tmp/failover-sync-preflight-convergence.json"
+    ));
+    assert!(PLAN.contains(
+        "reason_taxonomy_version=kamn.runtime.failover-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "reason_codes_csv=failover_evidence_link_missing,failover_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.failover-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains("failover_evidence_link_missing:report_file"));
+    assert!(PLAN.contains("promotion_decision_reason_mapping_mismatch"));
+    assert!(PLAN.contains("Regression: #4289"));
+    assert!(PLAN.contains("Regression: #4290"));
 }
 
 #[test]
