@@ -58,7 +58,35 @@ expect_failure() {
 }
 
 reset_fixtures
-run_checker >/dev/null
+run_checker >"$TMP_DIR/pass.out"
+if ! grep -Eq '^missing_docs_allowlisted_module_count=[0-9]+$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_allowlisted_module_count marker" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_graduated_module_count=[0-9]+$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_graduated_module_count marker" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_allowlisted_module_delta=-?[0-9]+$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_allowlisted_module_delta marker" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_graduated_module_delta=-?[0-9]+$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_graduated_module_delta marker" >&2
+  exit 1
+fi
+if ! grep -q '^missing_docs_velocity_reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_velocity_reason_taxonomy_version marker" >&2
+  exit 1
+fi
+if ! grep -q '^missing_docs_velocity_reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_velocity_reason_codes_csv marker" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_velocity_reason_codes_value=[a-z0-9_]+$' "$TMP_DIR/pass.out"; then
+  echo "pass path should emit missing_docs_velocity_reason_codes_value marker" >&2
+  exit 1
+fi
 
 # Regression: #896
 reset_fixtures
@@ -137,6 +165,18 @@ payload["allowlisted_module_count"] = 1
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 expect_failure "velocity guard stagnation policy drift should fail"
+if ! grep -q '^missing_docs_velocity_reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1$' "$TMP_DIR/checker.err"; then
+  echo "stagnation failure should emit missing_docs velocity taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_velocity_reason_codes_value=(stagnation_window_exceeded|multiple_policy_violations|velocity_window_under_threshold)$' "$TMP_DIR/checker.err"; then
+  echo "stagnation failure should emit missing_docs velocity reason code marker for a deterministic failure reason" >&2
+  exit 1
+fi
+if ! grep -Eq '^missing_docs_allowlisted_module_delta=-?[0-9]+$' "$TMP_DIR/checker.err"; then
+  echo "stagnation failure should emit missing_docs_allowlisted_module_delta marker" >&2
+  exit 1
+fi
 
 # Regression: #1723
 reset_fixtures
