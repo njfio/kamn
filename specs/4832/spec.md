@@ -3,41 +3,47 @@
 - Title: Subtask: wire ratio and script-budget checks into CI fast gate with bounded runtime budgets
 - Parent: Parent task: #4817
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Wire shell-surface ratio and script-budget governance checks directly into `ci-fast-gate` so every scoped run enforces deterministic fail-closed policy contracts.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Script-surface budget checks existed in fast gate, but combined shell-surface ratio policy checks and deterministic shell-vs-Rust telemetry were not enforced directly in workflow execution.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add fast-gate workflow steps for:
+  - combined shell-surface trend report generation
+  - combined shell-surface policy enforcement
+  - shell-vs-Rust telemetry collection
+- add workflow artifact uploads for ratio/policy/telemetry outputs
+- ensure shell-surface checks remain behind `run_script_surface_budget_checks` selector gate
+- add deterministic workflow-wiring contract test and include it in CI tool regression lane
+- keep runtime bounded under existing fast-gate budget contract (`timeout-minutes: 20`)
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- threshold taxonomy redesign (existing policy checker contract retained)
+- non-fast-gate workflow changes
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: Fast-gate workflow runs combined shell-surface ratio report + policy checks with deterministic fail-closed behavior.
+- AC-2: Fast-gate workflow emits shell-vs-Rust telemetry and uploads ratio/policy/telemetry artifacts.
+- AC-3: Workflow checks remain selector-gated and preserve bounded fast-gate runtime budget.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1, Functional): `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh` verifies workflow includes ratio generation/policy check commands and threshold fixture wiring.
+- C-02 (AC-2, Conformance): `bash scripts/ci/test_collect_shell_rust_loc_telemetry.sh` verifies telemetry collector output contracts used by fast-gate workflow.
+- C-03 (AC-3, Integration/Regression): `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` passes with new workflow-wiring contract test and budget-gated command surface.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- `ci-fast-gate` includes deterministic ratio + script-budget governance commands under selector gate.
+- Workflow uploads `ci-combined-shell-surface-trend-*` and `ci-shell-rust-loc-telemetry-*` artifacts.
+- CI regression suite remains green with new workflow wiring contract test.
