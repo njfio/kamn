@@ -32,3 +32,14 @@ The generator `scripts/framework/generate_lane_artifacts.py` supports:
 - representative manifest + wrapper symlink materialization
 
 This guard is also included in `bash scripts/framework/test_contract_framework.sh`.
+
+## Static Maintenance Retirement
+
+Direct manual editing of `scripts/framework/manifests/*.json` or manifest-backed wrapper symlink wiring is no longer the maintenance path.
+
+Use registry-driven validation/generation:
+- `bash scripts/framework/check_lane_registry_drift.sh`
+- `python3 scripts/framework/generate_lane_artifacts.py --registry-file scripts/framework/lane_registry.json --repo-root . --mode render --output-root <dir>`
+
+`check_lane_registry_drift.sh` is fail-closed and emits deterministic reason taxonomy markers:
+- `kamn.framework.lane-registry-drift-reason-taxonomy.v1`

@@ -1,43 +1,45 @@
 # Spec — Issue #4830
 
 - Title: Subtask: retire static manifest maintenance path and add registry drift contract tests
-- Parent: Parent task: #4816
+- Parent: Parent task `#4816`
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Enforce registry-driven artifact maintenance by adding a fail-closed drift checker and deterministic tamper regression tests.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Without an explicit drift policy checker and tamper tests, static manifest/symlink maintenance can silently diverge from lane registry source-of-truth and regress generated architecture guarantees.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add fail-closed drift policy checker script for lane registry artifacts
+- add deterministic drift contract tests including tampered-manifest NO-GO path
+- wire drift checks into framework regression entrypoint
+- document retirement of manual static manifest maintenance path
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- redesigning lane registry schema introduced in `#4829`
+- unrelated lane behavior or runtime semantics changes
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: `check_lane_registry_drift.sh` emits deterministic GO/NO-GO decisions with stable reason taxonomy markers.
+- AC-2: Drift contract tests cover pass path and tampered-manifest fail path.
+- AC-3: Framework and CI regression suites include drift checks so static maintenance divergence fails closed.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1, Functional): `bash scripts/framework/check_lane_registry_drift.sh` over repository emits GO with `reason_codes=none`.
+- C-02 (AC-2, Conformance): `bash scripts/framework/test_check_lane_registry_drift.sh` verifies pass markers and tampered-manifest NO-GO reason mapping.
+- C-03 (AC-3, Integration/Regression): `bash scripts/framework/test_contract_framework.sh` and `bash scripts/ci/test_ci_tools.sh` pass with drift checker included.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Static manifest maintenance path is retired in docs and replaced by registry drift checks.
+- Drift checker failure modes emit deterministic reason taxonomy markers.
+- CI regression remains green while enforcing drift guard.
