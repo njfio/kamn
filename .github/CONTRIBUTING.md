@@ -57,6 +57,19 @@ A Task is ready for implementation when:
 - Risk level is stated: `low` / `med` / `high`.
 - Required labels (type, area, process, priority) are applied.
 
+## Shell-Surface DoR Gate
+
+If the change touches shell/python/workflow/template surface (`scripts/**`, `.github/workflows/**`, `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`), the issue body must include:
+
+```
+shell_loc_delta_estimate: <integer|0>
+rust_loc_delta_estimate: <integer|0>
+shell_to_rust_ratio_delta_estimate: <float|0.0>
+shell_surface_mitigation_issue: <issue-id|None>
+```
+
+Use conservative estimates when exact values are not yet known.
+
 ---
 
 ## 3) TDD Execution Standard (Mandatory)
@@ -250,6 +263,19 @@ A Task is done only when:
 **Test Summary:** <tests added/modified by category>
 **Follow-up:** <remaining work, or "None">
 ```
+
+## Shell-Surface DoD Gate
+
+When shell/python/workflow/template surface changed, PR summary and issue closure must include measured markers:
+
+```
+shell_loc_delta_actual: <integer|0>
+rust_loc_delta_actual: <integer|0>
+shell_to_rust_ratio_delta_actual: <float|0.0>
+shell_surface_ratio_target_status: improved|neutral|regressed_with_waiver
+```
+
+`regressed_with_waiver` requires a linked mitigation follow-up issue.
 
 ---
 

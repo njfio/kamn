@@ -81,6 +81,17 @@ No new namespaces w/o governance approval.
 
 **DoR (Definition of Ready):** parent linked; milestone set; deps linked; risk low/med/high; labels set; `spec.md` exists + accepted per §0 self-acceptance rules; ACs testable.
 
+## Shell-Surface DoR Gate
+
+When work touches shell/python/workflow/template surface (`scripts/**`, `.github/workflows/**`, `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`), the issue body must include explicit shell-surface impact estimates:
+
+    shell_loc_delta_estimate: <integer|0>
+    rust_loc_delta_estimate: <integer|0>
+    shell_to_rust_ratio_delta_estimate: <float|0.0>
+    shell_surface_mitigation_issue: <issue-id|None>
+
+If estimates are unknown at intake time, set conservative upper bounds and refine during implementation.
+
 ---
 
 ## 5) Spec-Driven Lifecycle (gated — but create-as-you-go)
@@ -218,6 +229,17 @@ Done iff: all ACs ✅; conformance ✅; tiers satisfied; regression green; mutat
     Conformance: <passed/total>
     Mutants: <caught/total>
     Follow-up: None | <issues>
+
+## Shell-Surface DoD Gate
+
+When shell/python/workflow/template surface changed, closure comments and PR summaries must include measured post-change markers:
+
+    shell_loc_delta_actual: <integer|0>
+    rust_loc_delta_actual: <integer|0>
+    shell_to_rust_ratio_delta_actual: <float|0.0>
+    shell_surface_ratio_target_status: improved|neutral|regressed_with_waiver
+
+`regressed_with_waiver` requires linked mitigation follow-up issue in the same closure comment.
 
 ---
 
