@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_service_api_axum_ingress_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
+RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -18,6 +19,10 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
 fi
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected service api axum ingress policy checker script to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$RUNBOOK_DOC" ]; then
+  echo "expected service api axum ingress runbook doc to exist" >&2
   exit 1
 fi
 
@@ -353,6 +358,70 @@ if [ "$blocked_fast_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$blocked_fast_gate_output" | grep -q 'ci_fast_gate_failed'; then
   echo "expected deterministic ci_fast_gate_failed marker for service api axum ingress contract lane" >&2
+  exit 1
+fi
+
+runbook_taxonomy_drift_file="$TMP_DIR/kolme_devnet_ops.taxonomy-drift.md"
+cp "$RUNBOOK_DOC" "$runbook_taxonomy_drift_file"
+python3 - "$runbook_taxonomy_drift_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
+    "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v2",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+set +e
+runbook_taxonomy_drift_output="$(
+  KAMN_SERVICE_API_AXUM_INGRESS_RUNBOOK_DOC_OVERRIDE="$runbook_taxonomy_drift_file" \
+    bash "$CONTRACT_LANE" 2>&1
+)"
+runbook_taxonomy_drift_code=$?
+set -e
+if [ "$runbook_taxonomy_drift_code" -eq 0 ]; then
+  echo "expected runbook taxonomy drift fixture to fail service api axum ingress contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_taxonomy_drift_output" | grep -q 'protocol_taxonomy_mapping_drift_detected'; then
+  echo "expected deterministic protocol taxonomy drift reason output for service api axum ingress contract lane" >&2
+  exit 1
+fi
+
+runbook_marker_divergence_file="$TMP_DIR/kolme_devnet_ops.marker-divergence.md"
+cp "$RUNBOOK_DOC" "$runbook_marker_divergence_file"
+python3 - "$runbook_marker_divergence_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)",
+    "## Removed Axum Protocol Taxonomy Parity Section",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+set +e
+runbook_marker_divergence_output="$(
+  KAMN_SERVICE_API_AXUM_INGRESS_RUNBOOK_DOC_OVERRIDE="$runbook_marker_divergence_file" \
+    bash "$CONTRACT_LANE" 2>&1
+)"
+runbook_marker_divergence_code=$?
+set -e
+if [ "$runbook_marker_divergence_code" -eq 0 ]; then
+  echo "expected runbook marker divergence fixture to fail service api axum ingress contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_marker_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
+  echo "expected deterministic runbook marker parity mismatch reason output for service api axum ingress contract lane" >&2
   exit 1
 fi
 

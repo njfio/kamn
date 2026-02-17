@@ -95,6 +95,38 @@ fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
 }
 
 #[test]
+fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)"
+    ));
+    assert!(DEPLOY_COMPAT.contains("protocol_taxonomy_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "protocol_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "protocol_taxonomy_runbook_reason_codes_csv=protocol_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains("protocol_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4272"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4273"));
+}
+
+#[test]
 fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
     assert!(PLAN.contains("## Runtime Commit Adapter Replay/Finality Fast Lane"));
     assert!(PLAN.contains("run_runtime_commit_adapter_contract_lane.sh"));
