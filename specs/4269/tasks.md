@@ -1,6 +1,6 @@
 # Tasks — #4269
 
-Status: Reviewed
+Status: Implemented
 
 T1 (Tests first)
 - Add RED checker fixtures for websocket-session marker drift and heavy session drill leakage (`#4276`).

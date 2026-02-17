@@ -1,6 +1,6 @@
 # Spec — #4277 Subtask: Websocket-Session Governance Docs and Drift-Contract Sync
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4269
 Milestone: R27.27 API protocol compliance and websocket-session governance

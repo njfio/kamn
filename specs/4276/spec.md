@@ -1,6 +1,6 @@
 # Spec — #4276 Subtask: Websocket-Session CI Smoke Checker and Heavy-Lane Exclusion
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4269
 Milestone: R27.27 API protocol compliance and websocket-session governance

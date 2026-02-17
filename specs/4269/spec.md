@@ -1,6 +1,6 @@
 # Spec — #4269 Task: CI Smoke Governance for Websocket-Session Marker Integrity
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4265
 Milestone: R27.27 API protocol compliance and websocket-session governance
