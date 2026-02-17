@@ -34,6 +34,13 @@ This contract defines fail-closed websocket protocol/session checks for Task #43
 
 - `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
 - `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
+- `async_lifecycle_backpressure_projection_status=verified`
+
+Deterministic policy projection markers:
+
+- `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
+- `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
+- `reason_codes_value=none|service_api_axum_policy_*`
 
 ## Async Lifecycle Rejection Projection Matrix
 
@@ -42,5 +49,10 @@ This contract defines fail-closed websocket protocol/session checks for Task #43
 | `async-lifecycle-limiter` | `service_api_ingress_concurrency_limit_exceeded` / `service_api_ingress_rate_limit_exceeded` |
 | `sender-admission-limiter` | `service_api_ingress_sender_rate_limit_exceeded` / `service_api_ingress_sender_suspended` / `service_api_ingress_sender_duplicate_message_id` / `service_api_ingress_sender_insufficient_deposit` |
 | `async-lifecycle-engine` | `service_api_ingress_anti_spam_engine_invalid` |
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
 
 - Regression: #4316

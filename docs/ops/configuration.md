@@ -69,9 +69,13 @@ Kolme-live keys:
 
 `kamn-node` async API ingress limits remain fail closed under bounded-concurrency pressure.
 
-Deterministic taxonomy marker:
+Deterministic taxonomy markers:
 
 - `service_api_backpressure_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
+- `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
+- `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
+- `async_lifecycle_backpressure_projection_status=verified`
+- `reason_codes_value=none|service_api_axum_policy_*`
 
 Backpressure reason markers:
 
@@ -92,6 +96,8 @@ Validation commands:
 - `cargo test -p kamn-node regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_across_rounds -- --exact`
 - `cargo test -p kamn-node functional_service_api_endpoint_backpressure_projection_covers_reason_codes -- --exact`
 - `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_async_backpressure_failure_modes -- --exact`
+- `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
 
 Regression marker:
 
