@@ -11,16 +11,22 @@ RUNTIME_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_ru
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
+KEY_MANAGEMENT_DOC_FILE="$ROOT_DIR/docs/security/key-management.md"
+RELEASE_CHECKLIST_DOC_FILE="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
 TMP_SIMULATED_SUMMARY="$(mktemp)"
 TMP_FALLBACK_SUMMARY="$(mktemp)"
+TMP_KEY_SOURCE_CONTRACT_VERSION_MISSING_SUMMARY="$(mktemp)"
+TMP_KEY_SOURCE_COMMAND_MARKER_MISSING_SUMMARY="$(mktemp)"
 TMP_COMPOSITE_TAMPER_SUMMARY="$(mktemp)"
 TMP_IN_MEMORY_SUMMARY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_IN_MEMORY_SUMMARY"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_KEY_SOURCE_CONTRACT_VERSION_MISSING_SUMMARY" "$TMP_KEY_SOURCE_COMMAND_MARKER_MISSING_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_IN_MEMORY_SUMMARY"' EXIT
 COMPOSITE_GATE_REASON_TAXONOMY_VERSION="kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
 COMPOSITE_GATE_REASON_CODES_CSV="dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded"
+KEY_SOURCE_REASON_TAXONOMY_VERSION="kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1"
+KEY_SOURCE_REASON_CODES_CSV="runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation"
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime integration contract lane runner to be executable" >&2
@@ -256,6 +262,21 @@ if ! grep -q "composite_gate_local_heavy_execution_mode=not_requested" "$DOC_FIL
   exit 1
 fi
 
+if ! grep -q "key_source_reason_taxonomy_version=${KEY_SOURCE_REASON_TAXONOMY_VERSION}" "$KEY_MANAGEMENT_DOC_FILE"; then
+  echo "expected key management doc to include key-source reason taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "key_source_reason_codes_csv=${KEY_SOURCE_REASON_CODES_CSV}" "$KEY_MANAGEMENT_DOC_FILE"; then
+  echo "expected key management doc to include key-source reason codes marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_signer_key_source_marker_missing" "$KEY_MANAGEMENT_DOC_FILE"; then
+  echo "expected key management doc to include key-source command marker missing reason" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2302" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include fallback signer runtime regression marker" >&2
   exit 1
@@ -363,6 +384,21 @@ fi
 
 if ! grep -q "composite_gate_local_heavy_execution_mode=not_requested" "$README_FILE"; then
   echo "expected README to include composite gate local-heavy execution mode marker" >&2
+  exit 1
+fi
+
+if ! grep -q "## Runtime Signer Key-Source/Fallback Reason Mapping Gate (Issue #4356)" "$RELEASE_CHECKLIST_DOC_FILE"; then
+  echo "expected release go/no-go checklist to include key-source/fallback reason mapping gate section" >&2
+  exit 1
+fi
+
+if ! grep -q "key_source_reason_taxonomy_version=${KEY_SOURCE_REASON_TAXONOMY_VERSION}" "$RELEASE_CHECKLIST_DOC_FILE"; then
+  echo "expected release go/no-go checklist to include key-source reason taxonomy marker" >&2
+  exit 1
+fi
+
+if ! grep -q "key_source_reason_codes_csv=${KEY_SOURCE_REASON_CODES_CSV}" "$RELEASE_CHECKLIST_DOC_FILE"; then
+  echo "expected release go/no-go checklist to include key-source reason codes marker" >&2
   exit 1
 fi
 
@@ -516,6 +552,12 @@ if policy.get("composite_gate_ci_smoke_lane_cost_profile") != "low":
     raise SystemExit("expected composite gate ci smoke lane cost marker in contract-lane policy")
 if policy.get("composite_gate_local_heavy_execution_mode") != "not_requested":
     raise SystemExit("expected composite gate local-heavy execution mode marker in contract-lane policy")
+if policy.get("key_source_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1":
+    raise SystemExit("expected key-source reason taxonomy marker in contract-lane policy")
+if policy.get("key_source_reason_codes_csv") != "runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation":
+    raise SystemExit("expected key-source reason codes marker in contract-lane policy")
+if policy.get("key_source_reason_codes_value") != "none":
+    raise SystemExit("expected key_source_reason_codes_value=none for GO contract-lane policy")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_SIMULATED_SUMMARY" <<'PY'
@@ -591,6 +633,121 @@ if ! grep -q "runtime_commit_fallback_private_key_command_marker_detected" "$TMP
   echo "expected runtime_commit_fallback_private_key_command_marker_detected reason for runtime integration policy failure" >&2
   exit 1
 fi
+
+python3 - "$TMP_REPORT" "$TMP_KEY_SOURCE_CONTRACT_VERSION_MISSING_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+target_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+payload.pop("runtime_signer_key_source_contract_version", None)
+contracts = payload.get("contracts")
+if isinstance(contracts, dict):
+    contracts.pop("runtime_signer_key_source_contract_version", None)
+target_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_KEY_SOURCE_CONTRACT_VERSION_MISSING_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+key_source_contract_version_missing_policy_code=$?
+set -e
+
+if [ "$key_source_contract_version_missing_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when key-source contract-version marker is missing" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_source_contract_version_missing" "$TMP_POLICY_ERR"; then
+  echo "expected runtime_signer_key_source_contract_version_missing reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+policy = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if policy.get("key_source_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic key-source reason taxonomy marker in failing policy output")
+if policy.get("key_source_reason_codes_csv") != "runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation":
+    raise SystemExit("expected deterministic key-source reason codes marker in failing policy output")
+observed_value = policy.get("key_source_reason_codes_value")
+if not isinstance(observed_value, str):
+    raise SystemExit("expected key_source_reason_codes_value string in failing policy output")
+observed = set([] if observed_value == "none" else observed_value.split(","))
+if "runtime_signer_key_source_contract_version_missing" not in observed:
+    raise SystemExit("expected key_source_reason_codes_value to include runtime_signer_key_source_contract_version_missing")
+PY
+
+python3 - "$TMP_REPORT" "$TMP_KEY_SOURCE_COMMAND_MARKER_MISSING_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+target_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+runtime_command = str(payload.get("runtime_commit_command", ""))
+sanitized_command = runtime_command.replace(
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local\\ ",
+    "",
+)
+if sanitized_command == runtime_command:
+    sanitized_command = runtime_command.replace(
+        "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local ",
+        "",
+    )
+payload["runtime_commit_command"] = sanitized_command
+target_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_KEY_SOURCE_COMMAND_MARKER_MISSING_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+key_source_command_marker_missing_policy_code=$?
+set -e
+
+if [ "$key_source_command_marker_missing_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when runtime command omits signer key-source marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_signer_key_source_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected runtime_commit_signer_key_source_marker_missing reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+policy = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed_value = policy.get("key_source_reason_codes_value")
+if not isinstance(observed_value, str):
+    raise SystemExit("expected key_source_reason_codes_value string for key-source command marker drift")
+observed = set([] if observed_value == "none" else observed_value.split(","))
+if "runtime_commit_signer_key_source_marker_missing" not in observed:
+    raise SystemExit("expected key_source_reason_codes_value to include runtime_commit_signer_key_source_marker_missing")
+PY
 
 python3 - "$TMP_REPORT" "$TMP_COMPOSITE_TAMPER_SUMMARY" <<'PY'
 from __future__ import annotations
