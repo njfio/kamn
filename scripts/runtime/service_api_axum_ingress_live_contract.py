@@ -51,6 +51,18 @@ EXPECTED_ADMISSION_REASON_CODES_CSV = (
     "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,"
     "admission_evidence_normalization_drift"
 )
+EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
+)
+EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV = (
+    "service_api_ingress_concurrency_limit_exceeded,"
+    "service_api_ingress_rate_limit_exceeded,"
+    "service_api_ingress_sender_rate_limit_exceeded,"
+    "service_api_ingress_sender_suspended,"
+    "service_api_ingress_sender_duplicate_message_id,"
+    "service_api_ingress_sender_insufficient_deposit,"
+    "service_api_ingress_anti_spam_engine_invalid"
+)
 EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
 )
@@ -87,6 +99,7 @@ REQUIRED_REPORT_FIELDS = [
     "admission_saturation_status",
     "admission_queue_cap_enforcement_status",
     "overload_evidence_normalization_status",
+    "async_lifecycle_backpressure_projection_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "protocol_compliance_reason_taxonomy_version",
@@ -95,6 +108,8 @@ REQUIRED_REPORT_FIELDS = [
     "ingress_resilience_reason_codes_csv",
     "admission_reason_taxonomy_version",
     "admission_reason_codes_csv",
+    "service_api_lifecycle_rejection_reason_taxonomy_version",
+    "service_api_lifecycle_rejection_reason_codes_csv",
     "request_validation_reason_registry_status",
     "error_envelope_source_contract_status",
     "request_validation_reason_taxonomy_version",
@@ -129,6 +144,7 @@ REQUIRED_VERIFIED_FIELDS = [
     "admission_saturation_status",
     "admission_queue_cap_enforcement_status",
     "overload_evidence_normalization_status",
+    "async_lifecycle_backpressure_projection_status",
     "protocol_compliance_status",
     "route_contract_parity_status",
     "request_validation_reason_registry_status",
@@ -153,9 +169,6 @@ def _check_policy(args: argparse.Namespace) -> int:
         fail(f"report file not found: {report_file}")
 
     report = load_json(report_file)
-    missing_fields = [field_name for field_name in REQUIRED_REPORT_FIELDS if field_name not in report]
-    if missing_fields:
-        fail(f"missing required report fields: {','.join(missing_fields)}")
 
     expected_final_decision = require_enum(
         "--expected-final-decision",
@@ -168,6 +181,14 @@ def _check_policy(args: argparse.Namespace) -> int:
     observed_final_decision = report.get("final_decision")
 
     decision = DecisionAccumulator()
+    missing_fields = [
+        field_name for field_name in REQUIRED_REPORT_FIELDS if field_name not in report
+    ]
+    for field_name in missing_fields:
+        decision.reject_if(
+            True,
+            f"service_api_axum_policy_required_field_missing:{field_name}",
+        )
     decision.reject_if(
         report.get("schema_version") != REPORT_SCHEMA,
         "service_api_axum_policy_schema_mismatch",
@@ -267,6 +288,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_admission_reason_codes_csv_mismatch",
     )
     decision.reject_if(
+        report.get("service_api_lifecycle_rejection_reason_taxonomy_version")
+        != EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_lifecycle_rejection_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("service_api_lifecycle_rejection_reason_codes_csv")
+        != EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
+        "service_api_axum_policy_lifecycle_rejection_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         report.get("request_validation_reason_taxonomy_version")
         != EXPECTED_REQUEST_VALIDATION_REASON_TAXONOMY_VERSION,
         "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
@@ -305,6 +336,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "reason_codes": reason_codes,
+        "reason_codes_value": ",".join(reason_codes),
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
         "protocol_compliance_reason_taxonomy_version": (
@@ -330,6 +362,12 @@ def _check_policy(args: argparse.Namespace) -> int:
             EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION
         ),
         "admission_reason_codes_csv": EXPECTED_ADMISSION_REASON_CODES_CSV,
+        "service_api_lifecycle_rejection_reason_taxonomy_version": (
+            EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION
+        ),
+        "service_api_lifecycle_rejection_reason_codes_csv": (
+            EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
+        ),
         "request_validation_reason_registry_status": (
             report.get("request_validation_reason_registry_status")
         ),
@@ -361,7 +399,16 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"service_api_axum_ingress_policy_status={policy_status}")
+    print(
+        "service_api_lifecycle_rejection_reason_taxonomy_version="
+        f"{EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "service_api_lifecycle_rejection_reason_codes_csv="
+        f"{EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV}"
+    )
     print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 
