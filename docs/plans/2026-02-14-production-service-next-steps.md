@@ -192,6 +192,21 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.29 Transport/Observability/TLS CI Smoke Convergence Closure
+- Active chain: `#4293 -> #4295 -> #4299 -> (#4306, #4307)`.
+- Convergence closure markers:
+  - `transport_observability_tls_ci_smoke_convergence_status=verified`
+  - `transport_observability_tls_reason_taxonomy_version=kamn.ci.transport-observability-tls-ci-smoke-convergence-reason-taxonomy.v1`
+  - `transport_observability_tls_ci_smoke_max_seconds=120`
+  - `transport_observability_tls_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_transport_observability_tls_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/transport-observability-tls-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh`
+- Local-heavy boundaries remain explicit and outside ci-fast-gate:
+  - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
+  - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --output-json /tmp/local-observability-scrape-live-summary.json`
+  - `KAMN_LIVE_TRANSPORT_FAULT_MATRIX_OPT_IN=1 bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/live-transport-fault-matrix-live-summary.json`
+
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.
 - Deterministic dry-run contract checks remain in PR path.
