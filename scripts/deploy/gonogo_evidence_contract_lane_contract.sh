@@ -109,6 +109,18 @@ if ! printf '%s\n' "$tls_generator_output" | grep -q "^tls_evidence_gate_final_d
   echo "expected tls evidence gate decision marker from generator output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$tls_generator_output" | grep -q "^tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1$"; then
+  echo "expected tls evidence reason taxonomy marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_generator_output" | grep -q "^tls_evidence_reason_codes_csv=none$"; then
+  echo "expected tls evidence reason csv marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_generator_output" | grep -q "^tls_evidence_reason_codes_value=none$"; then
+  echo "expected tls evidence reason value marker from generator output" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$tls_generator_output" | grep -q "^final_decision=GO$"; then
   echo "expected tls evidence contract lane bundle decision to be GO" >&2
   exit 1
@@ -117,6 +129,18 @@ fi
 tls_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$tls_bundle_file")"
 if ! printf '%s\n' "$tls_policy_output" | grep -q "^tls_evidence_gate_final_decision=GO$"; then
   echo "expected tls evidence gate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_policy_output" | grep -q "^tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1$"; then
+  echo "expected tls evidence reason taxonomy marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_policy_output" | grep -q "^tls_evidence_reason_codes_csv=none$"; then
+  echo "expected tls evidence reason csv marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tls_policy_output" | grep -q "^tls_evidence_reason_codes_value=none$"; then
+  echo "expected tls evidence reason value marker from policy output" >&2
   exit 1
 fi
 if ! printf '%s\n' "$tls_policy_output" | grep -q "^final_decision=GO$"; then
