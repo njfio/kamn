@@ -24,6 +24,8 @@ DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
 EXPECTED_REMOTE_URL = "https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF = "refs/heads/main"
+RUNTIME_SIGNING_PROFILE_CONTRACT_VERSION = "v1"
+RUNTIME_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
 PRIMARY_CHECK_ORDER = [
     "localhost_signed_demo_contract",
     "localhost_signed_integration_contract",
@@ -396,6 +398,8 @@ def main() -> int:
         "run_local_kamn_live_runtime_integration_lane.sh",
         "runtime_commit_submit_evidence_marker_present",
         "runtime_commit_finality_evidence_marker_present",
+        "runtime_signing_profile=kolme-fork-secp256k1-v1",
+        "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1",
         "Regression: #1640",
         "Regression: #2388",
     ):
@@ -408,6 +412,8 @@ def main() -> int:
         "check_local_signed_to_kolme_demo_policy.py",
         "runtime_commit_submit_evidence_marker_present",
         "runtime_commit_finality_evidence_marker_present",
+        "runtime_signing_profile=kolme-fork-secp256k1-v1",
+        "native_signer_reason_taxonomy_version=kamn.kolme.local-signed-to-kolme-demo-native-signer-reason-taxonomy.v1",
     ):
         if marker not in readme_text:
             print(f"expected README marker: {marker}", file=sys.stderr)
@@ -426,6 +432,8 @@ def main() -> int:
     runtime_commit_submit_finality_linked = False
     runtime_commit_live_reason_code = "not_run"
     runtime_commit_live_status = "not_run"
+    runtime_signing_profile_contract_version = RUNTIME_SIGNING_PROFILE_CONTRACT_VERSION
+    runtime_signing_profile = RUNTIME_SIGNING_PROFILE_VALUE
 
     checkpoint_commands = [
         ("localhost_signed_demo_contract", ["bash", str(SIGNED_DEMO)]),
@@ -586,6 +594,20 @@ def main() -> int:
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                         )
+                        runtime_integration_summary_path = Path(args.runtime_integration_summary)
+                        if runtime_integration_summary_path.is_file():
+                            try:
+                                runtime_integration_summary = _load_json(runtime_integration_summary_path)
+                            except json.JSONDecodeError:
+                                runtime_integration_summary = {}
+                            observed_runtime_signing_profile = runtime_integration_summary.get(
+                                "runtime_signing_profile"
+                            )
+                            if (
+                                isinstance(observed_runtime_signing_profile, str)
+                                and observed_runtime_signing_profile.strip()
+                            ):
+                                runtime_signing_profile = observed_runtime_signing_profile.strip()
                         if result.returncode == 0:
                             checks.append(
                                 {
@@ -698,6 +720,8 @@ def main() -> int:
         "runtime_commit_live_reason_code": runtime_commit_live_reason_code,
         "runtime_commit_live_summary_path": args.runtime_commit_live_summary,
         "runtime_commit_live_policy_report_path": args.runtime_commit_live_policy_report,
+        "runtime_signing_profile_contract_version": runtime_signing_profile_contract_version,
+        "runtime_signing_profile": runtime_signing_profile,
         "reason_taxonomy": {
             "schema_version": "kamn.kolme.local-signed-to-kolme-demo.reason-taxonomy.v1",
             "overall": _classify_overall_reason(status, reason_code),
