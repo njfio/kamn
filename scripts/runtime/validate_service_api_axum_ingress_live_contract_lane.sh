@@ -9,6 +9,7 @@ VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_service_api_axum_ingress_l
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+RUNBOOK_DOC="${KAMN_SERVICE_API_AXUM_INGRESS_RUNBOOK_DOC_OVERRIDE:-$ROOT_DIR/docs/deploy/kolme_devnet_ops.md}"
 
 LANE_LABEL="service api axum ingress"
 LANE_SLUG="service-api-axum-ingress-live"
@@ -24,6 +25,8 @@ TAMPER_REASON_CODE="service_api_axum_policy_marker_missing:websocket_upgrade_par
 ROADMAP_TASK_MARKER="Task #3308"
 ROADMAP_CONTRACT_SCRIPT_REF="scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh"
 ROADMAP_POLICY_SCRIPT_REF="scripts/runtime/check_service_api_axum_ingress_live_policy.sh"
+RUNBOOK_TAXONOMY_DRIFT_REASON_CODE="protocol_taxonomy_mapping_drift_detected"
+RUNBOOK_MARKER_PARITY_REASON_CODE="runbook_marker_parity_mismatch"
 ALLOW_MODE="0"
 
 VALIDATION_REQUIRED_MARKERS=(
@@ -95,6 +98,22 @@ STRATEGY_REQUIRED_MARKERS=(
   "ingress resilience governance remains deterministic via:"
   "admission saturation and queue-cap governance remains deterministic via:"
   "protocol mismatch reason mapping remains deterministic via:"
+  "protocol taxonomy and runbook-marker parity remains deterministic via:"
+)
+RUNBOOK_REQUIRED_MARKERS=(
+  "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)"
+  "protocol_taxonomy_mapping_status=verified"
+  "runbook_marker_parity_status=verified"
+  "protocol_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-taxonomy-runbook-reason-taxonomy.v1"
+  "protocol_taxonomy_runbook_reason_codes_csv=protocol_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+  "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+  "protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected"
+  "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+  "request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid"
+  "error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+  "error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found"
+  "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+  "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status

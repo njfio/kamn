@@ -36,6 +36,17 @@ service_api_contract_lane_run() {
   local ci_fast_gate="PASS"
   local allow_mode="${ALLOW_MODE:-0}"
   local mode="${DEFAULT_MODE:-dry-run}"
+  local runbook_doc="${RUNBOOK_DOC:-}"
+  local runbook_taxonomy_drift_reason_code="${RUNBOOK_TAXONOMY_DRIFT_REASON_CODE:-protocol_taxonomy_mapping_drift_detected}"
+  local runbook_marker_parity_reason_code="${RUNBOOK_MARKER_PARITY_REASON_CODE:-runbook_marker_parity_mismatch}"
+  local runbook_required_marker_count=0
+  if [[ "${RUNBOOK_REQUIRED_MARKERS+set}" == "set" ]]; then
+    runbook_required_marker_count="${#RUNBOOK_REQUIRED_MARKERS[@]}"
+  fi
+  if (( runbook_required_marker_count > 0 )) && [[ -z "$runbook_doc" ]]; then
+    echo "missing required lane configuration variable: RUNBOOK_DOC" >&2
+    exit 1
+  fi
 
   # shellcheck disable=SC2086
   max_seconds="${!MAX_SECONDS_ENV:-$MAX_SECONDS_DEFAULT}"
@@ -105,6 +116,10 @@ service_api_contract_lane_run() {
       exit 1
     fi
   done
+  if (( runbook_required_marker_count > 0 )) && [[ ! -f "$runbook_doc" ]]; then
+    echo "${runbook_marker_parity_reason_code}: expected required documentation file '$runbook_doc'" >&2
+    exit 1
+  fi
 
   local start_epoch
   start_epoch="$(date +%s)"
@@ -217,6 +232,20 @@ PY
   if ! grep -q "$ROADMAP_POLICY_SCRIPT_REF" "$ROADMAP_DOC"; then
     echo "expected roadmap to reference ${ROADMAP_POLICY_SCRIPT_REF}" >&2
     exit 1
+  fi
+
+  if (( runbook_required_marker_count > 0 )); then
+    for required_marker in "${RUNBOOK_REQUIRED_MARKERS[@]}"; do
+      if ! grep -Fq "$required_marker" "$runbook_doc"; then
+        local runbook_reason_code="$runbook_marker_parity_reason_code"
+        if [[ "$required_marker" == *"_reason_taxonomy_version="* ]] \
+          || [[ "$required_marker" == *"_reason_codes_csv="* ]]; then
+          runbook_reason_code="$runbook_taxonomy_drift_reason_code"
+        fi
+        echo "${runbook_reason_code}: missing runbook marker ${required_marker}" >&2
+        exit 1
+      fi
+    done
   fi
 
   local elapsed_seconds

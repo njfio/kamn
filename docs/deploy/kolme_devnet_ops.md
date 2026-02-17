@@ -58,6 +58,38 @@ Validation command:
 - `Regression: #4287`
 - `Regression: #4288`
 
+## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)
+
+Service API axum ingress protocol taxonomy markers and runbook marker declarations must remain
+synchronized to keep fail-closed remediation deterministic.
+
+Required checker/runbook parity markers:
+
+- `protocol_taxonomy_mapping_status=verified`
+- `runbook_marker_parity_status=verified`
+- `protocol_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-taxonomy-runbook-reason-taxonomy.v1`
+- `protocol_taxonomy_runbook_reason_codes_csv=protocol_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1`
+- `protocol_compliance_reason_codes_csv=method_path_contract_mismatch,payload_shape_contract_mismatch,route_contract_bypass_detected`
+- `request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1`
+- `request_validation_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid`
+- `error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1`
+- `error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found`
+- `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
+- `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
+
+Fail-closed drift reasons:
+
+- `protocol_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation command:
+
+- `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy-report.json`
+
+- `Regression: #4272`
+- `Regression: #4273`
+
 ## TLS Dependency-Posture Compatibility Markers
 
 Live-HTTPS dependency posture must remain explicit in compatibility runbooks:

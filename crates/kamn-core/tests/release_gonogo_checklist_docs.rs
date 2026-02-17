@@ -110,6 +110,37 @@ fn checklist_contains_service_api_axum_protocol_mismatch_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_service_api_axum_protocol_taxonomy_runbook_parity_gate() {
+    assert!(CHECKLIST
+        .contains("## Service API Axum Protocol Taxonomy/Runbook Parity Gate (Issue #4267)"));
+    assert!(CHECKLIST.contains("test_validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains("protocol_taxonomy_mapping_status=verified"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "protocol_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "protocol_taxonomy_runbook_reason_codes_csv=protocol_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "protocol_compliance_reason_taxonomy_version=kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "request_validation_reason_taxonomy_version=kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "error_envelope_reason_taxonomy_version=kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("protocol_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4272"));
+    assert!(CHECKLIST.contains("Regression: #4273"));
+}
+
+#[test]
 fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() {
     assert!(CHECKLIST
         .contains("## Service API Websocket Session Evidence Convergence Gate (Issue #4268)"));
