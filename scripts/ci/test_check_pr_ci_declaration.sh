@@ -18,7 +18,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/pass.json" <<'JSON'
 }
 JSON
 
-GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/pass.json" CI_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null
+GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/pass.json" CI_DECLARATION_FORCE_SENSITIVE=true SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=false "$SCRIPT" >/dev/null
 
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/fail_not_marked.json" <<'JSON'
 {
@@ -28,7 +28,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/fail_not_marked.json" 
 }
 JSON
 
-if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_not_marked.json" CI_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_not_marked.json" CI_DECLARATION_FORCE_SENSITIVE=true SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=false "$SCRIPT" >/dev/null 2>&1; then
   echo "Expected failure when CI impact is not marked present" >&2
   exit 1
 fi
@@ -41,7 +41,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/fail_both.json" <<'JSO
 }
 JSON
 
-if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_both.json" CI_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_both.json" CI_DECLARATION_FORCE_SENSITIVE=true SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=false "$SCRIPT" >/dev/null 2>&1; then
   echo "Expected failure when both CI impact options are checked" >&2
   exit 1
 fi
@@ -54,8 +54,57 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/fail_missing_field.jso
 }
 JSON
 
-if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_missing_field.json" CI_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/fail_missing_field.json" CI_DECLARATION_FORCE_SENSITIVE=true SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=false "$SCRIPT" >/dev/null 2>&1; then
   echo "Expected failure when a required CI impact field is blank" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_pass.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: -0.03\nshell_surface_ratio_target_status: improved\nshell_surface_mitigation_issue: None"
+  }
+}
+JSON
+
+GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_pass.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_not_marked.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [x] No shell-surface impact.\n- [ ] Shell-surface impact present (explain below)."
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_not_marked.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when shell-surface impact is not marked present" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_missing_field.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: -0.03\nshell_surface_ratio_target_status: \nshell_surface_mitigation_issue: None"
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_missing_field.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when a required shell-surface impact field is blank" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_invalid_status.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: -0.03\nshell_surface_ratio_target_status: unknown\nshell_surface_mitigation_issue: #9999"
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_invalid_status.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when shell_surface_ratio_target_status is invalid" >&2
   exit 1
 fi
 
