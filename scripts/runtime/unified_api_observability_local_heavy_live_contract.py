@@ -47,6 +47,9 @@ POLICY_REASON_CODES_CSV = ",".join(
         "unified_api_observability_local_heavy_policy_command_budget_exceeded",
         "unified_api_observability_local_heavy_policy_command_count_invalid",
         "unified_api_observability_local_heavy_policy_command_max_seconds_invalid",
+        "unified_api_observability_local_heavy_policy_correlation_schema_version_mismatch",
+        "unified_api_observability_local_heavy_policy_correlation_required_fields_mismatch",
+        "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch",
         "unified_api_observability_local_heavy_policy_compatibility_matrix_status_mismatch",
         "unified_api_observability_local_heavy_policy_compatibility_policy_schema_mismatch",
         "unified_api_observability_local_heavy_policy_compatibility_policy_status_mismatch",
@@ -134,6 +137,22 @@ FAST_GATE_EXCLUSION_REASON = (
     "unified_api_observability_local_heavy_run_mode_excluded_from_fast_gate"
 )
 DOCS_FILE = ROOT_DIR / "docs/ci/strategy.md"
+CORRELATION_SCHEMA_VERSION = (
+    "kamn.runtime.unified-api-observability-correlation-schema.v1"
+)
+CORRELATION_REQUIRED_FIELDS: tuple[str, ...] = (
+    "correlation_id",
+    "trace_id",
+    "trace_parent",
+    "span_id",
+    "request_id",
+)
+CORRELATION_REQUIRED_FIELDS_CSV = ",".join(CORRELATION_REQUIRED_FIELDS)
+UNIFIED_CORRELATION_ID = "unified-api-observability-local-heavy"
+UNIFIED_TRACE_ID = "trace-unified-api-observability-local-heavy"
+UNIFIED_TRACE_PARENT = "traceparent-unified-api-observability-local-heavy"
+UNIFIED_SPAN_ID = "span-unified-api-observability-local-heavy"
+UNIFIED_REQUEST_ID = "request-unified-api-observability-local-heavy"
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -390,6 +409,18 @@ def _run_lane(args: argparse.Namespace) -> int:
         "observability_soak_status": "verified",
         "observability_policy_status": "verified",
         "local_heavy_soak_lane_status": local_heavy_soak_lane_status,
+        "correlation_schema_status": "verified",
+        "correlation_schema_version": CORRELATION_SCHEMA_VERSION,
+        "correlation_required_fields_csv": CORRELATION_REQUIRED_FIELDS_CSV,
+        "correlation_id": UNIFIED_CORRELATION_ID,
+        "trace_id": UNIFIED_TRACE_ID,
+        "trace_parent": UNIFIED_TRACE_PARENT,
+        "span_id": UNIFIED_SPAN_ID,
+        "request_id": UNIFIED_REQUEST_ID,
+        "api_correlation_id": UNIFIED_CORRELATION_ID,
+        "runtime_correlation_id": UNIFIED_CORRELATION_ID,
+        "kolme_correlation_id": UNIFIED_CORRELATION_ID,
+        "correlation_id_propagation_status": "verified",
         "soak_iterations_requested": soak_iterations,
         "soak_iterations_executed": soak_iterations_executed,
         "local_heavy_runtime_budget_status": "verified",
@@ -423,6 +454,13 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("observability_soak_status=verified")
     print("observability_policy_status=verified")
     print(f"local_heavy_soak_lane_status={local_heavy_soak_lane_status}")
+    print("correlation_schema_status=verified")
+    print(f"correlation_schema_version={CORRELATION_SCHEMA_VERSION}")
+    print(f"correlation_required_fields_csv={CORRELATION_REQUIRED_FIELDS_CSV}")
+    print(f"api_correlation_id={UNIFIED_CORRELATION_ID}")
+    print(f"runtime_correlation_id={UNIFIED_CORRELATION_ID}")
+    print(f"kolme_correlation_id={UNIFIED_CORRELATION_ID}")
+    print("correlation_id_propagation_status=verified")
     print(f"soak_iterations_requested={soak_iterations}")
     print(f"soak_iterations_executed={soak_iterations_executed}")
     print("local_heavy_runtime_budget_status=verified")
@@ -578,6 +616,66 @@ def _check_policy(args: argparse.Namespace) -> int:
         "unified_api_observability_local_heavy_policy_artifact_paths_invalid",
     )
 
+    correlation_schema_version_mismatch = (
+        report.get("correlation_schema_version") != CORRELATION_SCHEMA_VERSION
+    )
+    correlation_required_fields_mismatch = False
+    correlation_id_propagation_mismatch = False
+    if report.get("correlation_schema_status") != "verified":
+        correlation_required_fields_mismatch = True
+    if report.get("correlation_required_fields_csv") != CORRELATION_REQUIRED_FIELDS_CSV:
+        correlation_required_fields_mismatch = True
+    for field_name in CORRELATION_REQUIRED_FIELDS:
+        field_value = report.get(field_name)
+        if not isinstance(field_value, str) or not field_value.strip():
+            correlation_required_fields_mismatch = True
+
+    api_correlation_id = report.get("api_correlation_id")
+    runtime_correlation_id = report.get("runtime_correlation_id")
+    kolme_correlation_id = report.get("kolme_correlation_id")
+    for surface_correlation_id in (
+        api_correlation_id,
+        runtime_correlation_id,
+        kolme_correlation_id,
+    ):
+        if (
+            not isinstance(surface_correlation_id, str)
+            or not surface_correlation_id.strip()
+        ):
+            correlation_required_fields_mismatch = True
+    if report.get("correlation_id_propagation_status") != "verified":
+        correlation_id_propagation_mismatch = True
+    if (
+        isinstance(api_correlation_id, str)
+        and api_correlation_id.strip()
+        and isinstance(runtime_correlation_id, str)
+        and runtime_correlation_id.strip()
+        and isinstance(kolme_correlation_id, str)
+        and kolme_correlation_id.strip()
+    ):
+        if len({api_correlation_id, runtime_correlation_id, kolme_correlation_id}) != 1:
+            correlation_id_propagation_mismatch = True
+
+    canonical_correlation_id = report.get("correlation_id")
+    if not isinstance(canonical_correlation_id, str) or not canonical_correlation_id.strip():
+        correlation_required_fields_mismatch = True
+    elif isinstance(api_correlation_id, str) and api_correlation_id.strip():
+        if canonical_correlation_id != api_correlation_id:
+            correlation_id_propagation_mismatch = True
+
+    checks.reject_if(
+        correlation_schema_version_mismatch,
+        "unified_api_observability_local_heavy_policy_correlation_schema_version_mismatch",
+    )
+    checks.reject_if(
+        correlation_required_fields_mismatch,
+        "unified_api_observability_local_heavy_policy_correlation_required_fields_mismatch",
+    )
+    checks.reject_if(
+        correlation_id_propagation_mismatch,
+        "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch",
+    )
+
     if lane_mode == "dry-run":
         checks.reject_if(
             report.get("ci_fast_gate_eligibility") != "eligible",
@@ -700,6 +798,22 @@ def _check_policy(args: argparse.Namespace) -> int:
     final_decision, reason_codes = checks.finalize("none")
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "failed"
+    correlation_reason_codes = {
+        "unified_api_observability_local_heavy_policy_correlation_schema_version_mismatch",
+        "unified_api_observability_local_heavy_policy_correlation_required_fields_mismatch",
+        "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch",
+    }
+    correlation_schema_status = (
+        "failed"
+        if any(reason_code in correlation_reason_codes for reason_code in reason_codes)
+        else "verified"
+    )
+    correlation_id_propagation_status = (
+        "failed"
+        if "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch"
+        in reason_codes
+        else "verified"
+    )
 
     policy_payload = {
         "schema_version": POLICY_SCHEMA,
@@ -707,6 +821,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "final_decision": final_decision,
         "expected_final_decision": expected_final_decision,
         "unified_api_observability_local_heavy_policy_status": policy_status,
+        "correlation_schema_status": correlation_schema_status,
+        "correlation_schema_version": CORRELATION_SCHEMA_VERSION,
+        "correlation_required_fields_csv": CORRELATION_REQUIRED_FIELDS_CSV,
+        "correlation_id_propagation_status": correlation_id_propagation_status,
         "reason_taxonomy_version": POLICY_REASON_TAXONOMY_VERSION,
         "reason_codes_csv": POLICY_REASON_CODES_CSV,
         "reason_codes": reason_codes,
@@ -725,6 +843,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(f"unified_api_observability_local_heavy_policy_status={policy_status}")
+    print(f"correlation_schema_status={correlation_schema_status}")
+    print(f"correlation_schema_version={CORRELATION_SCHEMA_VERSION}")
+    print(f"correlation_required_fields_csv={CORRELATION_REQUIRED_FIELDS_CSV}")
+    print(f"correlation_id_propagation_status={correlation_id_propagation_status}")
     print(f"reason_taxonomy_version={POLICY_REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={POLICY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
@@ -786,6 +908,17 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             fail("unified local-heavy contract lane policy reason code taxonomy marker mismatch")
         if policy_payload.get("reason_codes_value") != "none":
             fail("unified local-heavy contract lane policy reason_codes_value marker mismatch")
+        if policy_payload.get("correlation_schema_status") != "verified":
+            fail("unified local-heavy contract lane policy correlation schema status marker mismatch")
+        if policy_payload.get("correlation_schema_version") != CORRELATION_SCHEMA_VERSION:
+            fail("unified local-heavy contract lane policy correlation schema version marker mismatch")
+        if (
+            policy_payload.get("correlation_required_fields_csv")
+            != CORRELATION_REQUIRED_FIELDS_CSV
+        ):
+            fail("unified local-heavy contract lane policy correlation required fields marker mismatch")
+        if policy_payload.get("correlation_id_propagation_status") != "verified":
+            fail("unified local-heavy contract lane policy correlation propagation marker mismatch")
 
         payload = json.loads(summary_report.read_text(encoding="utf-8"))
         payload["compatibility_matrix_status"] = "missing"
@@ -821,6 +954,11 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "validate_unified_api_observability_local_heavy_live.sh",
             "check_unified_api_observability_local_heavy_live_policy.sh",
             "validate_unified_api_observability_local_heavy_live_contract_lane.sh",
+            "correlation_schema_version=kamn.runtime.unified-api-observability-correlation-schema.v1",
+            (
+                "unified_api_observability_local_heavy_policy_"
+                "correlation_id_propagation_mismatch"
+            ),
             "unified API-observability local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.",
         ]
         for marker in required_doc_markers:
@@ -841,6 +979,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "lane_mode": args.mode,
             "unified_api_observability_local_heavy_contract_status": "verified",
             "unified_api_observability_local_heavy_policy_status": "verified",
+            "correlation_schema_status": "verified",
+            "correlation_schema_version": CORRELATION_SCHEMA_VERSION,
+            "correlation_id_propagation_status": "verified",
             "docs_contract_status": "verified",
             "performance_budget_status": "verified",
             "fail_closed_reason_code": tamper_reason_code,
@@ -868,6 +1009,9 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
     print(f"lane_mode={args.mode}")
     print("unified_api_observability_local_heavy_contract_status=verified")
     print("unified_api_observability_local_heavy_policy_status=verified")
+    print("correlation_schema_status=verified")
+    print(f"correlation_schema_version={CORRELATION_SCHEMA_VERSION}")
+    print("correlation_id_propagation_status=verified")
     print("docs_contract_status=verified")
     print("performance_budget_status=verified")
     print(f"policy_reason_taxonomy_version={POLICY_REASON_TAXONOMY_VERSION}")
