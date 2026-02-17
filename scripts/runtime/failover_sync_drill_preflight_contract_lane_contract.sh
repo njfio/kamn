@@ -13,12 +13,15 @@ skip_suite=false
 
 failover_readiness_reason_taxonomy_version="kamn.runtime.failover-readiness-reason-taxonomy.v1"
 failover_readiness_reason_codes_csv="failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
+drift_taxonomy_runbook_reason_taxonomy_version="kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1"
+drift_taxonomy_runbook_reason_codes_csv="drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
 
 run_policy_check() {
   local report_file=""
   local expected_final_decision="GO"
   local ci_fast_gate="PASS"
   local policy_output_json="$ROOT_DIR/failover-sync-preflight-policy-report.json"
+  local runbook_file="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -38,6 +41,10 @@ run_policy_check() {
         policy_output_json="${2:-}"
         shift 2
         ;;
+      --runbook-file)
+        runbook_file="${2:-}"
+        shift 2
+        ;;
       --help|-h)
         cat <<'USAGE'
 Usage:
@@ -45,6 +52,7 @@ Usage:
     --report-file <path> \
     [--expected-final-decision GO|NO-GO] \
     [--ci-fast-gate PASS|FAIL] \
+    [--runbook-file <path>] \
     [--output-json <path>]
 USAGE
         exit 0
@@ -62,6 +70,10 @@ USAGE
   fi
   if [ ! -f "$report_file" ]; then
     echo "report file not found: $report_file" >&2
+    exit 1
+  fi
+  if [ ! -f "$runbook_file" ]; then
+    echo "runbook file not found: $runbook_file" >&2
     exit 1
   fi
   case "$expected_final_decision" in
@@ -88,6 +100,9 @@ USAGE
     "$policy_output_json" \
     "$failover_readiness_reason_taxonomy_version" \
     "$failover_readiness_reason_codes_csv" \
+    "$drift_taxonomy_runbook_reason_taxonomy_version" \
+    "$drift_taxonomy_runbook_reason_codes_csv" \
+    "$runbook_file" \
     <<'PY'
 import json
 import pathlib
@@ -100,10 +115,15 @@ import sys
     output_json,
     expected_reason_taxonomy_version,
     expected_reason_codes_csv,
+    expected_drift_taxonomy_reason_taxonomy_version,
+    expected_drift_taxonomy_reason_codes_csv,
+    runbook_file,
 ) = sys.argv[1:]
 
 report_path = pathlib.Path(report_file)
 report = json.loads(report_path.read_text(encoding="utf-8"))
+runbook_path = pathlib.Path(runbook_file)
+runbook_text = runbook_path.read_text(encoding="utf-8")
 required_fields = [
     "schema_version",
     "lane",
@@ -113,6 +133,10 @@ required_fields = [
     "ci_local_promotion_budget_boundary_status",
     "failover_readiness_reason_taxonomy_version",
     "failover_readiness_reason_codes_csv",
+    "drift_taxonomy_mapping_status",
+    "runbook_marker_parity_status",
+    "drift_taxonomy_runbook_reason_taxonomy_version",
+    "drift_taxonomy_runbook_reason_codes_csv",
 ]
 
 reason_codes: list[str] = []
@@ -164,6 +188,41 @@ add_reason(
     "failover_sync_drift_policy_reason_codes_csv_mismatch",
 )
 add_reason(
+    report.get("drift_taxonomy_mapping_status") != "verified",
+    "drift_taxonomy_mapping_drift_detected",
+)
+add_reason(
+    report.get("runbook_marker_parity_status") != "verified",
+    "runbook_marker_parity_mismatch",
+)
+add_reason(
+    report.get("drift_taxonomy_runbook_reason_taxonomy_version")
+    != expected_drift_taxonomy_reason_taxonomy_version,
+    "failover_sync_drift_policy_drift_taxonomy_reason_taxonomy_version_mismatch",
+)
+add_reason(
+    report.get("drift_taxonomy_runbook_reason_codes_csv")
+    != expected_drift_taxonomy_reason_codes_csv,
+    "failover_sync_drift_policy_drift_taxonomy_reason_codes_csv_mismatch",
+)
+
+required_runbook_markers = [
+    f"drift_taxonomy_runbook_reason_taxonomy_version={expected_drift_taxonomy_reason_taxonomy_version}",
+    f"drift_taxonomy_runbook_reason_codes_csv={expected_drift_taxonomy_reason_codes_csv}",
+    "drift_taxonomy_mapping_status=verified",
+    "runbook_marker_parity_status=verified",
+]
+missing_runbook_markers = [
+    marker for marker in required_runbook_markers if marker not in runbook_text
+]
+if missing_runbook_markers:
+    messages.append(
+        "runbook marker parity missing required markers: "
+        + ",".join(missing_runbook_markers)
+    )
+add_reason(bool(missing_runbook_markers), "runbook_marker_parity_mismatch")
+
+add_reason(
     ci_fast_gate != "PASS",
     "ci_fast_gate_failed",
 )
@@ -189,8 +248,11 @@ policy_payload = {
     "failover_sync_drift_policy_status": policy_status,
     "reason_taxonomy_version": expected_reason_taxonomy_version,
     "reason_codes_csv": expected_reason_codes_csv,
+    "drift_taxonomy_reason_taxonomy_version": expected_drift_taxonomy_reason_taxonomy_version,
+    "drift_taxonomy_reason_codes_csv": expected_drift_taxonomy_reason_codes_csv,
     "reason_codes": resolved_reason_codes,
     "report_file": str(report_path),
+    "runbook_file": str(runbook_path),
 }
 
 pathlib.Path(output_json).write_text(
@@ -203,6 +265,13 @@ print(f"final_decision={final_decision}")
 print(f"failover_sync_drift_policy_status={policy_status}")
 print(f"reason_taxonomy_version={expected_reason_taxonomy_version}")
 print(f"reason_codes_csv={expected_reason_codes_csv}")
+print(
+    f"drift_taxonomy_reason_taxonomy_version="
+    f"{expected_drift_taxonomy_reason_taxonomy_version}"
+)
+print(
+    f"drift_taxonomy_reason_codes_csv={expected_drift_taxonomy_reason_codes_csv}"
+)
 print(
     "reason_codes_value="
     + ("none" if status_pass else ",".join(reason_codes))
@@ -322,6 +391,8 @@ failure_reason=""
 failover_promotion_gate_status="verified"
 live_node_drift_parity_status="verified"
 ci_local_promotion_budget_boundary_status="verified"
+drift_taxonomy_mapping_status="verified"
+runbook_marker_parity_status="verified"
 
 if [ "$simulate_failover_stall" = true ]; then
   status="fail"
@@ -358,6 +429,10 @@ python3 - \
   "$ci_local_promotion_budget_boundary_status" \
   "$failover_readiness_reason_taxonomy_version" \
   "$failover_readiness_reason_codes_csv" \
+  "$drift_taxonomy_mapping_status" \
+  "$runbook_marker_parity_status" \
+  "$drift_taxonomy_runbook_reason_taxonomy_version" \
+  "$drift_taxonomy_runbook_reason_codes_csv" \
   <<'PY'
 import json
 import pathlib
@@ -377,6 +452,10 @@ import sys
     ci_local_promotion_budget_boundary_status,
     failover_readiness_reason_taxonomy_version,
     failover_readiness_reason_codes_csv,
+    drift_taxonomy_mapping_status,
+    runbook_marker_parity_status,
+    drift_taxonomy_runbook_reason_taxonomy_version,
+    drift_taxonomy_runbook_reason_codes_csv,
 ) = sys.argv[1:]
 
 payload = {
@@ -395,6 +474,10 @@ payload = {
     "ci_local_promotion_budget_boundary_status": ci_local_promotion_budget_boundary_status,
     "failover_readiness_reason_taxonomy_version": failover_readiness_reason_taxonomy_version,
     "failover_readiness_reason_codes_csv": failover_readiness_reason_codes_csv,
+    "drift_taxonomy_mapping_status": drift_taxonomy_mapping_status,
+    "runbook_marker_parity_status": runbook_marker_parity_status,
+    "drift_taxonomy_runbook_reason_taxonomy_version": drift_taxonomy_runbook_reason_taxonomy_version,
+    "drift_taxonomy_runbook_reason_codes_csv": drift_taxonomy_runbook_reason_codes_csv,
     "scenarios": {
         "processor_failover_prepare": "pass",
         "sync_window_converged": "pass",
