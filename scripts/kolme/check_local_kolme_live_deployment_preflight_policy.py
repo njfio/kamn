@@ -25,6 +25,44 @@ ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
 }
 REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE = "managed-external"
 MIN_PRODUCTION_REQUIRED_APPROVALS = 2
+ROTATION_PREFLIGHT_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1"
+)
+ROTATION_PREFLIGHT_REASON_CODES = (
+    "signer_key_source_contract_version_mismatch",
+    "signer_key_source_invalid",
+    "signer_key_source_production_managed_external_required",
+    "signer_quorum_minimum_not_met",
+    "signer_rotation_epoch_stale",
+    "signer_rotation_rehearsal_drift_detected",
+    "signer_rotation_promotion_stalled",
+    "fallback_signer_secret_present_violation",
+    "fallback_signer_secret_checkpoint_reason_mismatch",
+    "fallback_signer_secret_remediation_missing",
+    "quorum_evidence_missing",
+    "quorum_evidence_rotation_metadata_missing",
+    "quorum_evidence_rotation_metadata_invalid",
+    "runtime_signer_attestation_quorum_shortfall",
+    "runtime_signer_attestation_profile_not_approved",
+    "runtime_signer_drift_telemetry_missing",
+    "runtime_signer_drift_telemetry_rotation_delta_invalid",
+    "runtime_signer_drift_matrix_inputs_invalid",
+    "runtime_signer_drift_rotation_fail_threshold_exceeded",
+    "runtime_signer_drift_quorum_fail_threshold_exceeded",
+    "custody_continuity_bypass_detected",
+)
+ROTATION_PREFLIGHT_REASON_CODES_CSV = ",".join(ROTATION_PREFLIGHT_REASON_CODES)
+
+
+def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> str:
+    observed = [
+        reason_code
+        for reason_code in ROTATION_PREFLIGHT_REASON_CODES
+        if reason_code in reason_codes
+    ]
+    if not observed:
+        return "none"
+    return ",".join(observed)
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -982,6 +1020,11 @@ def main() -> int:
         "observed_reason_code": report.get("reason_code"),
         "reason_codes": reason_codes,
         "final_decision": final_decision,
+        "rotation_preflight_reason_taxonomy_version": ROTATION_PREFLIGHT_REASON_TAXONOMY_VERSION,
+        "rotation_preflight_reason_codes_csv": ROTATION_PREFLIGHT_REASON_CODES_CSV,
+        "rotation_preflight_reason_codes_value": observed_rotation_preflight_reason_codes_value(
+            reason_codes
+        ),
         "runtime_signer_drift_admission_matrix_decision": runtime_signer_drift_admission_matrix.get("decision"),
         "runtime_signer_drift_admission_matrix_class": runtime_signer_drift_admission_matrix.get("class"),
         "runtime_signer_drift_admission_matrix_reason_codes": runtime_signer_drift_admission_matrix.get("reason_codes"),
@@ -1002,6 +1045,12 @@ def main() -> int:
     failed_checks = ",".join(reason_codes) if reason_codes else "none"
     print(f"status={status}")
     print(f"final_decision={final_decision}")
+    print(f"rotation_preflight_reason_taxonomy_version={ROTATION_PREFLIGHT_REASON_TAXONOMY_VERSION}")
+    print(f"rotation_preflight_reason_codes_csv={ROTATION_PREFLIGHT_REASON_CODES_CSV}")
+    print(
+        "rotation_preflight_reason_codes_value="
+        f"{observed_rotation_preflight_reason_codes_value(reason_codes)}"
+    )
     print(f"failed_checks={failed_checks}")
 
     return 0 if final_decision == "GO" else 1

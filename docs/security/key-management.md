@@ -32,6 +32,30 @@ python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py \
   --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 ```
 
+## Rotation Preflight Evidence Matrix (Issue #4358)
+
+Deployment preflight checks for live signer rotation must emit deterministic key-policy/rotation reason mapping markers for rotate-ready and rotate-blocked promotion gates.
+
+- Required taxonomy outputs:
+  - `rotation_preflight_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1`
+  - `rotation_preflight_reason_codes_csv=signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected`
+  - `rotation_preflight_reason_codes_value=none|<csv>`
+- High-signal fail-closed rotation/key-policy reasons:
+  - `signer_rotation_rehearsal_drift_detected`
+  - `signer_key_source_production_managed_external_required`
+  - `runtime_signer_drift_rotation_fail_threshold_exceeded`
+  - `runtime_signer_drift_quorum_fail_threshold_exceeded`
+
+Policy checker reference:
+
+```bash
+python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py \
+  --report-file /tmp/kolme-local-live-deployment-preflight-summary.json \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
+```
+
 ## Native secp256k1 Signing Enforcement (Issue #4373)
 
 Production Kolme live-runtime flows must use native secp256k1 signing evidence and fail closed on simulated profiles.
