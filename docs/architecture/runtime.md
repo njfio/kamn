@@ -60,15 +60,17 @@ Phase parity entrypoints:
 - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
 - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --mode dry-run --max-seconds 240 --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
 
-## Runtime Module Boundary Parity Drift Cases (Issue #4450)
+## Runtime Module Boundary Parity Drift Cases (Issue #4329)
 
 Issue lineage:
-- Task: `#4446`
-- Subtask: `#4450`
+- Task: `#4329`
+- Subtasks: `#4336`, `#4337`
 
 Deterministic runtime module-boundary parity markers:
 - `runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1`
-- `runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected`
+- `runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded`
+- `runtime_module_boundary_reason_codes_value=<normalized runtime module-boundary reason key>`
+- `runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status`
 - `runtime_module_boundary_parity_status=verified`
 - `runtime_module_boundary_evidence_status=verified`
 - `ci_local_runtime_module_boundary_budget_boundary_status=verified`
@@ -77,6 +79,7 @@ Deterministic fail-closed boundary drift reasons:
 - `runtime_orchestration_dispatch_boundary_drift_detected`
 - `runtime_daemon_phase_boundary_drift_detected`
 - `runtime_kolme_live_boundary_drift_detected`
+- `ci_local_runtime_module_boundary_budget_boundary_exceeded`
 
 Boundary parity guard commands:
 - `cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture`
