@@ -277,6 +277,33 @@ Regression marker:
 
 - `Regression: #4371`
 
+## Multi-Signer Profile and Quorum Signature-Decision Controls (Issue #4357)
+
+Real-node runtime policy evidence must include deterministic signature-decision markers for
+profile/quorum checks so reviewer tooling can distinguish stable signer-governance failures.
+
+Deterministic signature-decision taxonomy markers:
+
+- `signature_decision_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signature-decision-reason-taxonomy.v1`
+- `signature_decision_reason_codes_csv=runtime_signer_profile_missing,runtime_signer_profile_invalid,runtime_signer_previous_profile_missing,runtime_signer_previous_profile_invalid,runtime_signer_failover_profile_unchanged,runtime_signer_profile_changed_without_failover,runtime_signer_rotation_epoch_stale,runtime_signer_attestation_schema_invalid,runtime_signer_attestation_required_approvals_invalid,runtime_signer_attestation_approved_signers_invalid,runtime_signer_attestation_approved_signers_not_unique,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_quorum_linkage_contract_version_invalid,runtime_signer_quorum_linkage_contract_version_mismatch,runtime_signer_quorum_required_approvals_invalid,runtime_signer_quorum_required_approvals_mismatch,runtime_signer_quorum_approved_signers_count_invalid,runtime_signer_quorum_approved_signers_count_mismatch,runtime_signer_quorum_profile_linked_invalid,runtime_signer_quorum_profile_linked_mismatch,runtime_signer_quorum_satisfied_invalid,runtime_signer_quorum_satisfied_mismatch,runtime_signer_quorum_linked_invalid,runtime_signer_quorum_linkage_drift,runtime_signer_quorum_linkage_violation,runtime_signer_failover_attestation_required_approvals_insufficient,runtime_signer_failover_attestation_previous_profile_not_approved`
+- `signature_decision_reason_codes_value=none|<csv>`
+
+Key fail-closed quorum/profile reasons:
+
+- `runtime_signer_attestation_quorum_shortfall`
+- `runtime_signer_quorum_linkage_drift`
+- `runtime_signer_quorum_linkage_violation`
+- `runtime_signer_failover_attestation_required_approvals_insufficient`
+
+Validation commands:
+
+- `bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
+- `bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
+
+Regression marker:
+
+- `Regression: #4357`
+
 ### Retry Decision Matrix and Jitter Seed Contracts
 
 `kamn-node` keeps retry behavior deterministic and bounded for live runtime submit/finality paths.
