@@ -56,6 +56,12 @@ JOURNAL_REPLAY_REASON_TAXONOMY_VERSION = (
 JOURNAL_REPLAY_REASON_CODES_CSV = (
     "journal_replay_drift_detected,checkpoint_divergence_bypass_detected"
 )
+REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1"
+)
+REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV = (
+    "replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+)
 STATE_CONSISTENCY_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1"
 )
@@ -70,6 +76,32 @@ DURABILITY_GOVERNANCE_REASON_CODES_CSV = (
     "crash_recovery_promotion_stalled,audit_trail_parity_mismatch,"
     "ci_local_promotion_budget_boundary_exceeded"
 )
+DEFAULT_RUNBOOK_FILE = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
+
+
+def _required_runbook_markers() -> list[str]:
+    return [
+        "replay_idempotency_taxonomy_mapping_status=verified",
+        "runbook_marker_parity_status=verified",
+        "replay_idempotency_runbook_reason_taxonomy_version="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION}",
+        "replay_idempotency_runbook_reason_codes_csv="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV}",
+    ]
+
+
+def _resolve_replay_idempotency_runbook_reason_code(
+    reason_codes: list[str], final_decision: str
+) -> str:
+    if final_decision == "GO":
+        return "none"
+    if "runbook_marker_parity_mismatch" in reason_codes:
+        return "runbook_marker_parity_mismatch"
+    if "replay_idempotency_taxonomy_mapping_drift_detected" in reason_codes:
+        return "replay_idempotency_taxonomy_mapping_drift_detected"
+    if reason_codes:
+        return reason_codes[0]
+    return "replay_idempotency_taxonomy_mapping_drift_detected"
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -206,6 +238,15 @@ def run_lane(args: argparse.Namespace) -> int:
             JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
         ),
         "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "replay_idempotency_taxonomy_mapping_status": "verified",
+        "runbook_marker_parity_status": "verified",
+        "replay_idempotency_runbook_reason_taxonomy_version": (
+            REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION
+        ),
+        "replay_idempotency_runbook_reason_codes_csv": (
+            REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV
+        ),
+        "replay_idempotency_runbook_reason_code": "none",
         "crash_recovery_readiness_progress_status": "verified",
         "snapshot_parity_status": "verified",
         "ci_local_recovery_budget_boundary_status": "verified",
@@ -276,6 +317,17 @@ def run_lane(args: argparse.Namespace) -> int:
         f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
     )
     print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print("replay_idempotency_taxonomy_mapping_status=verified")
+    print("runbook_marker_parity_status=verified")
+    print(
+        "replay_idempotency_runbook_reason_taxonomy_version="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "replay_idempotency_runbook_reason_codes_csv="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV}"
+    )
+    print("replay_idempotency_runbook_reason_code=none")
     print("crash_recovery_readiness_progress_status=verified")
     print("snapshot_parity_status=verified")
     print("ci_local_recovery_budget_boundary_status=verified")
@@ -315,6 +367,10 @@ def check_policy(args: argparse.Namespace) -> int:
         ("GO", "NO-GO"),
     )
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
+    runbook_file = Path(args.runbook_file).resolve()
+    if not runbook_file.is_file():
+        fail(f"runbook file not found: {runbook_file}")
+    runbook_text = runbook_file.read_text(encoding="utf-8")
     payload = load_json(report_file)
 
     checks = DecisionAccumulator()
@@ -422,6 +478,51 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("journal_replay_reason_codes_csv")
         != JOURNAL_REPLAY_REASON_CODES_CSV,
         "sqlite_crash_recovery_policy_journal_replay_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("replay_idempotency_taxonomy_mapping_status") != "verified",
+        "sqlite_crash_recovery_policy_replay_idempotency_taxonomy_mapping_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runbook_marker_parity_status") != "verified",
+        "runbook_marker_parity_mismatch",
+    )
+    checks.reject_if(
+        payload.get("replay_idempotency_runbook_reason_taxonomy_version")
+        != REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION,
+        (
+            "sqlite_crash_recovery_policy_"
+            "replay_idempotency_runbook_reason_taxonomy_version_mismatch"
+        ),
+    )
+    checks.reject_if(
+        payload.get("replay_idempotency_runbook_reason_codes_csv")
+        != REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV,
+        (
+            "sqlite_crash_recovery_policy_"
+            "replay_idempotency_runbook_reason_codes_csv_mismatch"
+        ),
+    )
+    checks.reject_if(
+        payload.get("journal_replay_drift_detection_status") != "verified"
+        or payload.get("checkpoint_divergence_bypass_rejection_status") != "verified"
+        or payload.get("journal_replay_reason_taxonomy_version")
+        != JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
+        or payload.get("journal_replay_reason_codes_csv") != JOURNAL_REPLAY_REASON_CODES_CSV
+        or payload.get("replay_idempotency_taxonomy_mapping_status") != "verified"
+        or payload.get("replay_idempotency_runbook_reason_taxonomy_version")
+        != REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION
+        or payload.get("replay_idempotency_runbook_reason_codes_csv")
+        != REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV,
+        "replay_idempotency_taxonomy_mapping_drift_detected",
+    )
+    required_runbook_markers = _required_runbook_markers()
+    missing_runbook_markers = [
+        marker for marker in required_runbook_markers if marker not in runbook_text
+    ]
+    checks.reject_if(
+        bool(missing_runbook_markers),
+        "runbook_marker_parity_mismatch",
     )
     checks.reject_if(
         payload.get("crash_recovery_readiness_progress_status") != "verified",
@@ -577,6 +678,19 @@ def check_policy(args: argparse.Namespace) -> int:
         failed_checks.extend(decision_reasons)
     if observed_final_decision != expected_final_decision:
         failed_checks.append("sqlite_crash_recovery_policy_expected_decision_mismatch")
+    replay_idempotency_taxonomy_mapping_status = (
+        "failed"
+        if "replay_idempotency_taxonomy_mapping_drift_detected" in decision_reasons
+        else "verified"
+    )
+    runbook_marker_parity_status = (
+        "failed" if "runbook_marker_parity_mismatch" in decision_reasons else "verified"
+    )
+    replay_idempotency_runbook_reason_code = (
+        _resolve_replay_idempotency_runbook_reason_code(
+            decision_reasons, observed_final_decision
+        )
+    )
 
     report_payload = {
         "schema_version": POLICY_SCHEMA,
@@ -615,6 +729,19 @@ def check_policy(args: argparse.Namespace) -> int:
             JOURNAL_REPLAY_REASON_TAXONOMY_VERSION
         ),
         "journal_replay_reason_codes_csv": JOURNAL_REPLAY_REASON_CODES_CSV,
+        "replay_idempotency_taxonomy_mapping_status": (
+            replay_idempotency_taxonomy_mapping_status
+        ),
+        "runbook_marker_parity_status": runbook_marker_parity_status,
+        "replay_idempotency_runbook_reason_taxonomy_version": (
+            REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION
+        ),
+        "replay_idempotency_runbook_reason_codes_csv": (
+            REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV
+        ),
+        "replay_idempotency_runbook_reason_code": (
+            replay_idempotency_runbook_reason_code
+        ),
         "state_consistency_reason_taxonomy_version": (
             STATE_CONSISTENCY_REASON_TAXONOMY_VERSION
         ),
@@ -627,6 +754,7 @@ def check_policy(args: argparse.Namespace) -> int:
         ),
         "sqlite_crash_recovery_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
+        "runbook_file": str(runbook_file),
     }
     if args.output_json:
         write_json(Path(args.output_json), report_payload)
@@ -668,6 +796,23 @@ def check_policy(args: argparse.Namespace) -> int:
         f"{JOURNAL_REPLAY_REASON_TAXONOMY_VERSION}"
     )
     print(f"journal_replay_reason_codes_csv={JOURNAL_REPLAY_REASON_CODES_CSV}")
+    print(
+        "replay_idempotency_taxonomy_mapping_status="
+        f"{replay_idempotency_taxonomy_mapping_status}"
+    )
+    print(f"runbook_marker_parity_status={runbook_marker_parity_status}")
+    print(
+        "replay_idempotency_runbook_reason_taxonomy_version="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "replay_idempotency_runbook_reason_codes_csv="
+        f"{REPLAY_IDEMPOTENCY_RUNBOOK_REASON_CODES_CSV}"
+    )
+    print(
+        "replay_idempotency_runbook_reason_code="
+        f"{replay_idempotency_runbook_reason_code}"
+    )
     print(
         "state_consistency_reason_taxonomy_version="
         f"{STATE_CONSISTENCY_REASON_TAXONOMY_VERSION}"
@@ -733,6 +878,10 @@ def build_parser() -> argparse.ArgumentParser:
     policy_parser.add_argument(
         "--ci-fast-gate",
         default="PASS",
+    )
+    policy_parser.add_argument(
+        "--runbook-file",
+        default=str(DEFAULT_RUNBOOK_FILE),
     )
     policy_parser.add_argument("--output-json", default="")
     policy_parser.set_defaults(handler=check_policy)
