@@ -70,6 +70,18 @@ if ! grep -q "^live_gonogo_local_heavy_max_seconds=900$" "$tmp_out"; then
   echo "expected go/no-go evidence contract lane to emit live gate local-heavy boundary max-seconds marker" >&2
   exit 1
 fi
+if ! grep -q "^deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit deployment safety gate reason taxonomy version marker" >&2
+  exit 1
+fi
+if ! grep -q "^deployment_safety_gate_reason_codes_csv=none$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit deployment safety gate reason csv marker on pass path" >&2
+  exit 1
+fi
+if ! grep -q "^deployment_safety_gate_reason_codes_value=none$" "$tmp_out"; then
+  echo "expected go/no-go evidence contract lane to emit deployment safety gate reason value marker on pass path" >&2
+  exit 1
+fi
 if ! grep -q "^ci_smoke_lane_cost_profile=low$" "$tmp_out"; then
   echo "expected go/no-go evidence contract lane to declare low-cost CI smoke profile marker" >&2
   exit 1
