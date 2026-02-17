@@ -177,6 +177,37 @@ Regression marker:
 
 - `Regression: #4315`
 
+## Upgrade Compatibility Marker Matrix Controls (Issue #4181)
+
+Compatibility promotion checks require deterministic matrix validation across version-report and
+fork-policy schema/taxonomy markers.
+
+Matrix policy checker command:
+
+- `python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json`
+
+Deterministic matrix checker markers:
+
+- `reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1`
+- `reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
+- `reason_codes_value=none|<csv>`
+
+Deterministic fail-closed mismatch reasons:
+
+- `version_report_schema_mismatch`
+- `version_report_reason_taxonomy_mismatch`
+- `version_report_reason_codes_csv_mismatch`
+- `fork_policy_report_reason_taxonomy_mismatch`
+- `fork_policy_report_reason_codes_csv_mismatch`
+- `fork_policy_report_rehearsal_bypass_guard_status_mismatch`
+- `expected_final_decision_mismatch`
+- `ci_fast_gate_failed`
+
+Regression markers:
+
+- `Regression: #4180`
+- `Regression: #4181`
+
 ## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)
 
 Service API axum ingress protocol compliance checker outputs remain deterministic for promotion/runbook decisions.

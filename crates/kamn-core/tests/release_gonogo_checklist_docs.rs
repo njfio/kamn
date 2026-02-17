@@ -901,6 +901,7 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("validate_version_compatibility.py"));
     assert!(CHECKLIST.contains("generate_fork_compatibility_evidence.py"));
     assert!(CHECKLIST.contains("check_fork_compatibility_policy.py"));
+    assert!(CHECKLIST.contains("check_upgrade_compatibility_marker_matrix_policy.py"));
     assert!(CHECKLIST.contains("run_version_compatibility_replay.py"));
     assert!(CHECKLIST.contains("check_runtime_commit_replay_policy.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_tamper_matrix.py"));
@@ -920,6 +921,16 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains(
         "provider_failure_reason_taxonomy_version=kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1"
     ));
+    assert!(CHECKLIST.contains(
+        "reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed"
+    ));
+    assert!(CHECKLIST.contains("version_report_schema_mismatch"));
+    assert!(CHECKLIST.contains("fork_policy_report_rehearsal_bypass_guard_status_mismatch"));
+    assert!(CHECKLIST.contains("expected_final_decision_mismatch"));
+    assert!(CHECKLIST.contains("ci_fast_gate_failed"));
     assert!(CHECKLIST.contains("provider_failure_reason_codes_csv=provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected"));
     assert!(CHECKLIST.contains("request_payload_evidence_artifact_path_lineage_mismatch"));
     assert!(CHECKLIST.contains("submit_evidence_artifact_path_lineage_mismatch"));
@@ -936,6 +947,8 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("Regression: #4373"));
     assert!(CHECKLIST.contains("Regression: #4378"));
     assert!(CHECKLIST.contains("Regression: #4380"));
+    assert!(CHECKLIST.contains("Regression: #4180"));
+    assert!(CHECKLIST.contains("Regression: #4181"));
 }
 
 #[test]
