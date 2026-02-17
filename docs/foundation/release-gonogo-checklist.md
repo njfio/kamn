@@ -652,6 +652,8 @@ Milestone go/no-go review must aggregate linked preflight/live/gate artifacts in
   - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-milestone.json --release-candidate v1.0.0-rc.5 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --deployment-preflight-summary-file /tmp/kolme-local-live-deployment-preflight-summary.json --deployment-preflight-policy-file /tmp/kolme-local-live-deployment-preflight-policy.json --live-node-validation-summary-file /tmp/kolme-local-live-node-validation-bundle-summary.json --live-node-validation-policy-file /tmp/kolme-local-live-node-validation-bundle-policy.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json`
 - Aggregate policy checker:
   - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-milestone.json`
+- Upgrade rehearsal lineage checker:
+  - `python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO`
 - Required aggregate marker surface:
   - `milestone_review_bundle`
   - `schema_version=kamn.release.milestone-review-bundle.v1`
@@ -664,9 +666,17 @@ Milestone go/no-go review must aggregate linked preflight/live/gate artifacts in
   - `contracts.operator_runbook_markers_required=true`
   - `contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider`
   - `contracts.go_no_go_gate_final_decision_required=GO`
+- Deterministic upgrade-lineage and promotion-gate mapping outputs:
+  - `upgrade_lineage_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `upgrade_lineage_reason_codes_csv=none|<csv>`
+  - `upgrade_lineage_reason_codes_value=none|<csv>`
+  - `promotion_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `promotion_gate_reason_codes_csv=none|<csv>`
+  - `promotion_gate_reason_codes_value=none|<csv>`
 - Decision contract:
   - aggregate lineage drift or missing linked artifacts force `NO-GO` through deterministic milestone reason codes.
   - missing operator runbook file/markers force `NO-GO` through milestone-review reason taxonomy.
+  - promotion-gate reason-csv/value drift fails closed (`promotion gate reason mapping mismatch`).
   - policy checker fails closed on tampered milestone lineage payloads (`milestone review bundle lineage mismatch`).
 
 ## Live Go/No-Go Evidence Convergence and Boundary Governance Gate (Issue #4434)

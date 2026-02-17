@@ -132,6 +132,26 @@ fn plan_contains_sqlite_crash_replay_evidence_convergence_contract() {
 }
 
 #[test]
+fn plan_contains_milestone_upgrade_lineage_policy_markers() {
+    assert!(PLAN.contains("## Milestone Review Aggregate Evidence Bundle (Issue #3247)"));
+    assert!(PLAN.contains(
+        "python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO"
+    ));
+    assert!(PLAN.contains(
+        "upgrade_lineage_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains("upgrade_lineage_reason_codes_csv=none|<csv>"));
+    assert!(PLAN.contains("upgrade_lineage_reason_codes_value=none|<csv>"));
+    assert!(PLAN.contains(
+        "promotion_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains("promotion_gate_reason_codes_csv=none|<csv>"));
+    assert!(PLAN.contains("promotion_gate_reason_codes_value=none|<csv>"));
+    assert!(PLAN.contains("promotion gate reason mapping mismatch"));
+    assert!(PLAN.contains("milestone review bundle lineage mismatch"));
+}
+
+#[test]
 fn plan_contains_release_promotion_evidence_convergence_integrity_markers() {
     assert!(PLAN.contains("Convergence integrity markers:"));
     assert!(PLAN.contains("`required_artifact_ids` must include `local_full_runtime_convergence`."));
