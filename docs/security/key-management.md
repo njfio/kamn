@@ -1,5 +1,37 @@
 # Key Management Policy
 
+## Explicit Runtime Key-Source and Fallback Rejection (Issue #4356)
+
+Local KAMN live runtime integration evidence must include explicit signer key-source markers and fail closed when fallback key paths are reachable.
+
+- Required summary/contract markers:
+  - `runtime_signer_key_source_contract_version=v1`
+  - `runtime_signer_key_source=env-local|managed-external`
+  - `contracts.runtime_signer_key_source_contract_version=v1`
+  - `contracts.runtime_signer_key_source=env-local|managed-external`
+- Required runtime command marker:
+  - `KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=<env-local|managed-external>`
+- Deterministic key-source taxonomy outputs:
+  - `key_source_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1`
+  - `key_source_reason_codes_csv=runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation`
+  - `key_source_reason_codes_value=none|<csv>`
+- Fail-closed key-source/fallback reasons:
+  - `runtime_signer_key_source_contract_version_missing`
+  - `runtime_signer_key_source_contract_version_contract_mismatch`
+  - `runtime_commit_signer_key_source_marker_missing`
+  - `runtime_commit_fallback_private_key_command_marker_detected`
+  - `runtime_signer_fallback_private_key_present_violation`
+
+Policy checker reference:
+
+```bash
+python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py \
+  --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
+```
+
 ## Native secp256k1 Signing Enforcement (Issue #4373)
 
 Production Kolme live-runtime flows must use native secp256k1 signing evidence and fail closed on simulated profiles.

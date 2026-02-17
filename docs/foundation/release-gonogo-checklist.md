@@ -25,6 +25,24 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - in-memory provider acceptance drift forces `NO-GO` (`Regression: #4371`).
 
+## Runtime Signer Key-Source/Fallback Reason Mapping Gate (Issue #4356)
+- Contract lane command:
+  - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+- Required deterministic taxonomy markers:
+  - `key_source_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1`
+  - `key_source_reason_codes_csv=runtime_signer_key_source_contract_version_missing,runtime_signer_key_source_contract_version_mismatch,runtime_signer_key_source_contract_version_contract_mismatch,runtime_signer_key_source_missing,runtime_signer_key_source_invalid,runtime_signer_key_source_profile_pair_disallowed,runtime_signer_key_source_contract_mismatch,runtime_commit_signer_key_source_marker_missing,runtime_commit_fallback_private_key_command_marker_detected,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation`
+  - `key_source_reason_codes_value=none|<csv>`
+- Required fail-closed rejection markers:
+  - `runtime_signer_key_source_contract_version_missing`
+  - `runtime_signer_key_source_contract_version_contract_mismatch`
+  - `runtime_commit_signer_key_source_marker_missing`
+  - `runtime_commit_fallback_private_key_command_marker_detected`
+  - `runtime_signer_fallback_private_key_present_violation`
+- Regression policy:
+  - implicit/default signer key-source acceptance or fallback-key leakage forces `NO-GO` (`Regression: #4356`).
+
 ## Invariant Property/Fuzz/Concurrency Reason Mapping Gate (Issue #4401)
 - Contract lane command:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
