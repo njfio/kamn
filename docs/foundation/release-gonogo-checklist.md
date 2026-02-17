@@ -217,6 +217,7 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Go/no-go policy checker command:
   - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-tls-evidence.json`
 - Required deterministic TLS evidence gate markers:
+  - generator and policy-checker command output must both project this marker set.
   - `tls_evidence_reason_taxonomy_version=kamn.release.gonogo-tls-evidence-convergence-reason-taxonomy.v1`
   - `tls_evidence_reason_codes_csv=gonogo_tls_evidence_file_missing,gonogo_tls_evidence_invalid_json,gonogo_tls_evidence_schema_mismatch,gonogo_tls_evidence_status_not_pass,gonogo_tls_evidence_reason_taxonomy_version_mismatch,gonogo_tls_evidence_freshness_window_exceeded`
   - `tls_evidence_reason_codes_value=none|<csv>`
@@ -224,9 +225,10 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Fail-closed drills:
   - missing TLS evidence report must reject with `gonogo_tls_evidence_file_missing`.
   - stale TLS evidence report beyond max age must reject with `gonogo_tls_evidence_freshness_window_exceeded`.
+  - invalid TLS evidence JSON must reject with `gonogo_tls_evidence_invalid_json`.
   - tampered TLS evidence gate payload must reject with `tls evidence gate convergence mismatch`.
 - Regression policy:
-  - TLS evidence completeness/freshness drift forces `NO-GO` (`Regression: #4477`).
+  - TLS evidence completeness/freshness drift forces `NO-GO` (`Regression: #4477`, `Regression: #4298`).
 
 ## Audit-Trail Integrity/Tamper Convergence Gate (Issue #4466)
 - Audit policy report command:
