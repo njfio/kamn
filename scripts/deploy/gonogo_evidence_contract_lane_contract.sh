@@ -144,7 +144,10 @@ JSON
 cat >"$milestone_preflight_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
-  "final_decision": "GO"
+  "final_decision": "GO",
+  "rotation_preflight_reason_taxonomy_version": "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1",
+  "rotation_preflight_reason_codes_csv": "signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected",
+  "rotation_preflight_reason_codes_value": "none"
 }
 JSON
 
@@ -178,6 +181,12 @@ cat >"$milestone_gate_report" <<'JSON'
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
   "final_decision": "GO",
+  "lane_mode": "dry-run",
+  "ci_fast_gate_eligible": true,
+  "ci_fast_gate_scope": "ci-fast-gate",
+  "fast_gate_exclusion_status": "verified",
+  "fast_gate_exclusion_reason_code": "go_no_go_gate_run_mode_excluded_from_fast_gate",
+  "run_mode_command_status": "dry_run_no_commands_executed",
   "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
   "combined_transport_reason_codes": [
     "fork_choice_stale_block_height"
@@ -214,10 +223,26 @@ if ! printf '%s\n' "$milestone_generator_output" | grep -q "^milestone_review_fi
   echo "expected milestone aggregate decision marker from generator output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$milestone_generator_output" | grep -q "^deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1$"; then
+  echo "expected deployment safety gate reason taxonomy marker from generator output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_generator_output" | grep -q "^deployment_safety_gate_reason_codes_csv=none$"; then
+  echo "expected deployment safety gate reason codes csv marker from generator output" >&2
+  exit 1
+fi
 
 milestone_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_bundle_file")"
 if ! printf '%s\n' "$milestone_policy_output" | grep -q "^milestone_review_final_decision=GO$"; then
   echo "expected milestone aggregate decision marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_policy_output" | grep -q "^deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1$"; then
+  echo "expected deployment safety gate reason taxonomy marker from policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_policy_output" | grep -q "^deployment_safety_gate_reason_codes_csv=none$"; then
+  echo "expected deployment safety gate reason codes csv marker from policy output" >&2
   exit 1
 fi
 if ! printf '%s\n' "$milestone_policy_output" | grep -q "^final_decision=GO$"; then
@@ -422,5 +447,8 @@ echo "live_gonogo_boundary_reason_taxonomy_version=$LIVE_GONOGO_BOUNDARY_REASON_
 echo "live_gonogo_boundary_reason_codes_csv=$LIVE_GONOGO_BOUNDARY_REASON_CODES_CSV"
 echo "live_gonogo_ci_smoke_max_seconds=$LIVE_GONOGO_CI_SMOKE_MAX_SECONDS"
 echo "live_gonogo_local_heavy_max_seconds=$LIVE_GONOGO_LOCAL_HEAVY_MAX_SECONDS"
+echo "deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+echo "deployment_safety_gate_reason_codes_csv=none"
+echo "deployment_safety_gate_reason_codes_value=none"
 echo "ci_smoke_lane_cost_profile=low"
 echo "go/no-go evidence contract lane tests passed."

@@ -99,9 +99,43 @@ DEFAULT_INCIDENT_READINESS_MAX_AGE_SECONDS = 1800
 
 PREFLIGHT_SUMMARY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
+PREFLIGHT_POLICY_ROTATION_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1"
+)
+PREFLIGHT_POLICY_ROTATION_REASON_CODES_CSV = (
+    "signer_key_source_contract_version_mismatch,"
+    "signer_key_source_invalid,"
+    "signer_key_source_production_managed_external_required,"
+    "signer_quorum_minimum_not_met,"
+    "signer_rotation_epoch_stale,"
+    "signer_rotation_rehearsal_drift_detected,"
+    "signer_rotation_promotion_stalled,"
+    "fallback_signer_secret_present_violation,"
+    "fallback_signer_secret_checkpoint_reason_mismatch,"
+    "fallback_signer_secret_remediation_missing,"
+    "quorum_evidence_missing,"
+    "quorum_evidence_rotation_metadata_missing,"
+    "quorum_evidence_rotation_metadata_invalid,"
+    "runtime_signer_attestation_quorum_shortfall,"
+    "runtime_signer_attestation_profile_not_approved,"
+    "runtime_signer_drift_telemetry_missing,"
+    "runtime_signer_drift_telemetry_rotation_delta_invalid,"
+    "runtime_signer_drift_matrix_inputs_invalid,"
+    "runtime_signer_drift_rotation_fail_threshold_exceeded,"
+    "runtime_signer_drift_quorum_fail_threshold_exceeded,"
+    "custody_continuity_bypass_detected"
+)
+PREFLIGHT_POLICY_ROTATION_REASON_CODES_VALUE = "none"
 LIVE_BUNDLE_SUMMARY_SCHEMA = "kamn.kolme.local-live-node-validation-bundle-summary.v1"
 LIVE_BUNDLE_POLICY_SCHEMA = "kamn.kolme.local-live-node-validation-bundle-policy-report.v1"
 GO_NO_GO_GATE_SCHEMA = "kamn.runtime.go-no-go-gate-report.v1"
+GO_NO_GO_GATE_BOUNDARY_LANE_MODE = "dry-run"
+GO_NO_GO_GATE_BOUNDARY_CI_FAST_GATE_SCOPE = "ci-fast-gate"
+GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_STATUS = "verified"
+GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_REASON_CODE = (
+    "go_no_go_gate_run_mode_excluded_from_fast_gate"
+)
+GO_NO_GO_GATE_BOUNDARY_RUN_MODE_COMMAND_STATUS = "dry_run_no_commands_executed"
 COMBINED_REASON_TAXONOMY_VERSION = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
 COMBINED_TRANSPORT_REASON_CODES = [  # deterministic singleton today; model as list for schema stability.
     "fork_choice_stale_block_height",
@@ -872,12 +906,40 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             reason_codes.append("milestone_review_deployment_preflight_scope_mismatch")
 
     preflight_policy_final_decision = ""
+    preflight_policy_rotation_reason_taxonomy_version = ""
+    preflight_policy_rotation_reason_codes_csv = ""
+    preflight_policy_rotation_reason_codes_value = ""
     if preflight_policy is not None:
         if preflight_policy.get("schema_version") != PREFLIGHT_POLICY_SCHEMA:
             reason_codes.append("milestone_review_deployment_preflight_policy_schema_mismatch")
         preflight_policy_final_decision = str(preflight_policy.get("final_decision", ""))
         if preflight_policy_final_decision != GO_DECISION:
             reason_codes.append("milestone_review_deployment_preflight_policy_final_decision_mismatch")
+        preflight_policy_rotation_reason_taxonomy_version = str(
+            preflight_policy.get("rotation_preflight_reason_taxonomy_version", "")
+        )
+        preflight_policy_rotation_reason_codes_csv = str(
+            preflight_policy.get("rotation_preflight_reason_codes_csv", "")
+        )
+        preflight_policy_rotation_reason_codes_value = str(
+            preflight_policy.get("rotation_preflight_reason_codes_value", "")
+        )
+        if (
+            preflight_policy_rotation_reason_taxonomy_version
+            != PREFLIGHT_POLICY_ROTATION_REASON_TAXONOMY_VERSION
+            or preflight_policy_rotation_reason_codes_csv
+            != PREFLIGHT_POLICY_ROTATION_REASON_CODES_CSV
+        ):
+            reason_codes.append(
+                "milestone_review_deployment_preflight_policy_rotation_reason_taxonomy_mismatch"
+            )
+        if (
+            preflight_policy_rotation_reason_codes_value
+            != PREFLIGHT_POLICY_ROTATION_REASON_CODES_VALUE
+        ):
+            reason_codes.append(
+                "milestone_review_deployment_preflight_policy_rotation_reason_codes_value_mismatch"
+            )
 
     live_status = ""
     live_scope = ""
@@ -936,6 +998,12 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
 
     gate_status = ""
     gate_final_decision = ""
+    gate_lane_mode = ""
+    gate_ci_fast_gate_eligible: object = None
+    gate_ci_fast_gate_scope = ""
+    gate_fast_gate_exclusion_status = ""
+    gate_fast_gate_exclusion_reason_code = ""
+    gate_run_mode_command_status = ""
     combined_reason_taxonomy_version = ""
     combined_transport_reason_codes: list[str] = []
     combined_kolme_runtime_reason_code = ""
@@ -953,6 +1021,32 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
         gate_final_decision = str(gate_report.get("final_decision", ""))
         if gate_final_decision != GO_DECISION:
             reason_codes.append("milestone_review_go_no_go_gate_final_decision_mismatch")
+        gate_lane_mode = str(gate_report.get("lane_mode", ""))
+        gate_ci_fast_gate_eligible = gate_report.get("ci_fast_gate_eligible")
+        gate_ci_fast_gate_scope = str(gate_report.get("ci_fast_gate_scope", ""))
+        gate_fast_gate_exclusion_status = str(
+            gate_report.get("fast_gate_exclusion_status", "")
+        )
+        gate_fast_gate_exclusion_reason_code = str(
+            gate_report.get("fast_gate_exclusion_reason_code", "")
+        )
+        gate_run_mode_command_status = str(
+            gate_report.get("run_mode_command_status", "")
+        )
+        if not (
+            gate_lane_mode == GO_NO_GO_GATE_BOUNDARY_LANE_MODE
+            and gate_ci_fast_gate_eligible is True
+            and gate_ci_fast_gate_scope == GO_NO_GO_GATE_BOUNDARY_CI_FAST_GATE_SCOPE
+            and gate_fast_gate_exclusion_status
+            == GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_STATUS
+            and gate_fast_gate_exclusion_reason_code
+            == GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_REASON_CODE
+            and gate_run_mode_command_status
+            == GO_NO_GO_GATE_BOUNDARY_RUN_MODE_COMMAND_STATUS
+        ):
+            reason_codes.append(
+                "milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch"
+            )
 
         combined_reason_taxonomy_version = str(gate_report.get("combined_reason_taxonomy_version", ""))
         if combined_reason_taxonomy_version != COMBINED_REASON_TAXONOMY_VERSION:
@@ -1040,10 +1134,27 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
         "observed": {
             "deployment_preflight_summary_status": preflight_status,
             "deployment_preflight_policy_final_decision": preflight_policy_final_decision,
+            "deployment_preflight_policy_rotation_reason_taxonomy_version": (
+                preflight_policy_rotation_reason_taxonomy_version
+            ),
+            "deployment_preflight_policy_rotation_reason_codes_csv": (
+                preflight_policy_rotation_reason_codes_csv
+            ),
+            "deployment_preflight_policy_rotation_reason_codes_value": (
+                preflight_policy_rotation_reason_codes_value
+            ),
             "live_node_validation_summary_status": live_status,
             "live_node_validation_policy_final_decision": live_policy_final_decision,
             "go_no_go_gate_status": gate_status,
             "go_no_go_gate_final_decision": gate_final_decision,
+            "go_no_go_gate_lane_mode": gate_lane_mode,
+            "go_no_go_gate_ci_fast_gate_eligible": gate_ci_fast_gate_eligible,
+            "go_no_go_gate_ci_fast_gate_scope": gate_ci_fast_gate_scope,
+            "go_no_go_gate_fast_gate_exclusion_status": gate_fast_gate_exclusion_status,
+            "go_no_go_gate_fast_gate_exclusion_reason_code": (
+                gate_fast_gate_exclusion_reason_code
+            ),
+            "go_no_go_gate_run_mode_command_status": gate_run_mode_command_status,
             "go_no_go_gate_combined_reason_taxonomy_version": combined_reason_taxonomy_version,
             "go_no_go_gate_combined_transport_reason_codes": combined_transport_reason_codes,
             "go_no_go_gate_combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
@@ -1070,6 +1181,15 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             "operator_runbook_markers_required": True,
             "operator_runbook_required_markers": list(REQUIRED_OPERATOR_RUNBOOK_MARKERS),
             "deployment_preflight_scope_required": "ci-fast-gate",
+            "deployment_preflight_rotation_reason_taxonomy_version_required": (
+                PREFLIGHT_POLICY_ROTATION_REASON_TAXONOMY_VERSION
+            ),
+            "deployment_preflight_rotation_reason_codes_csv_required": (
+                PREFLIGHT_POLICY_ROTATION_REASON_CODES_CSV
+            ),
+            "deployment_preflight_rotation_reason_codes_value_required": (
+                PREFLIGHT_POLICY_ROTATION_REASON_CODES_VALUE
+            ),
             "live_bundle_scope_required": "local-only",
             "live_bundle_runtime_provider_client_required": "KolmeRuntimeCommitLiveProvider",
             "live_bundle_rollback_recovery_lineage_required": True,
@@ -1077,6 +1197,21 @@ def _build_milestone_review_bundle(artifact_paths: dict[str, Path]) -> dict[str,
             "live_bundle_policy_final_decision_required": GO_DECISION,
             "go_no_go_gate_status_required": "pass",
             "go_no_go_gate_final_decision_required": GO_DECISION,
+            "go_no_go_gate_ci_local_boundary_contract_required": True,
+            "go_no_go_gate_lane_mode_required": GO_NO_GO_GATE_BOUNDARY_LANE_MODE,
+            "go_no_go_gate_ci_fast_gate_eligible_required": True,
+            "go_no_go_gate_ci_fast_gate_scope_required": (
+                GO_NO_GO_GATE_BOUNDARY_CI_FAST_GATE_SCOPE
+            ),
+            "go_no_go_gate_fast_gate_exclusion_status_required": (
+                GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_STATUS
+            ),
+            "go_no_go_gate_fast_gate_exclusion_reason_code_required": (
+                GO_NO_GO_GATE_BOUNDARY_FAST_GATE_EXCLUSION_REASON_CODE
+            ),
+            "go_no_go_gate_run_mode_command_status_required": (
+                GO_NO_GO_GATE_BOUNDARY_RUN_MODE_COMMAND_STATUS
+            ),
             "go_no_go_gate_combined_reason_taxonomy_version_required": (
                 COMBINED_REASON_TAXONOMY_VERSION
             ),
@@ -1498,6 +1633,18 @@ def generate_bundle(args: argparse.Namespace) -> int:
         print(f"milestone_review_final_decision={milestone_review_bundle['final_decision']}")
         print(f"live_gonogo_reason_taxonomy_version={LIVE_GONOGO_REASON_TAXONOMY_VERSION}")
         print(f"live_gonogo_reason_codes_csv={milestone_review_bundle['reason_codes_csv']}")
+        print(
+            "deployment_safety_gate_reason_taxonomy_version="
+            f"{LIVE_GONOGO_REASON_TAXONOMY_VERSION}"
+        )
+        print(
+            "deployment_safety_gate_reason_codes_csv="
+            f"{milestone_review_bundle['reason_codes_csv']}"
+        )
+        print(
+            "deployment_safety_gate_reason_codes_value="
+            f"{milestone_review_bundle['reason_codes_value']}"
+        )
     if tls_evidence_gate is not None:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate['final_decision']}")
         print(f"tls_evidence_reason_taxonomy_version={TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}")
@@ -1672,6 +1819,18 @@ def check_bundle(args: argparse.Namespace) -> int:
         print(f"live_gonogo_reason_taxonomy_version={LIVE_GONOGO_REASON_TAXONOMY_VERSION}")
         if milestone_bundle is not None:
             print(f"live_gonogo_reason_codes_csv={milestone_bundle['reason_codes_csv']}")
+            print(
+                "deployment_safety_gate_reason_taxonomy_version="
+                f"{LIVE_GONOGO_REASON_TAXONOMY_VERSION}"
+            )
+            print(
+                "deployment_safety_gate_reason_codes_csv="
+                f"{milestone_bundle['reason_codes_csv']}"
+            )
+            print(
+                "deployment_safety_gate_reason_codes_value="
+                f"{milestone_bundle['reason_codes_value']}"
+            )
     if "tls_evidence_gate" in payload:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate_decision}")
     if "audit_integrity_gate" in payload:
