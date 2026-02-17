@@ -8,6 +8,7 @@ use kamn_core::{
     ConfigError, KolmeApiBroadcastRequest, KolmeRuntimeCommitHttpTransport,
     KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix,
 };
+use zeroize::Zeroize;
 
 use super::wire_payload::render_kolme_live_native_direct_message;
 use super::{
@@ -151,8 +152,12 @@ fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecret
             selection.key_reference_env
         )));
     }
-    let private_key_hex = provider.read_private_key_hex(&selection)?;
-    ensure_kolme_live_strict_signer_secret_source_precedence(strict_signer_profile, &selection)?;
+    let mut private_key_hex = provider.read_private_key_hex(&selection)?;
+    ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize(
+        strict_signer_profile,
+        &selection,
+        &mut private_key_hex,
+    )?;
     Ok((private_key_hex, selection))
 }
 
@@ -185,6 +190,20 @@ fn ensure_kolme_live_strict_signer_secret_source_precedence(
             "{non_selected_private_key_env} must be valid utf-8 when present under strict signer source contracts (signer_secret_source_precedence_violation)"
         ))),
     }
+}
+
+fn ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize(
+    strict_signer_profile: Option<&str>,
+    selection: &KolmeLiveSignerSelection,
+    private_key_hex: &mut String,
+) -> Result<(), ConfigError> {
+    if let Err(error) =
+        ensure_kolme_live_strict_signer_secret_source_precedence(strict_signer_profile, selection)
+    {
+        private_key_hex.zeroize();
+        return Err(error);
+    }
+    Ok(())
 }
 
 fn ensure_kolme_live_managed_external_private_key_env_unset(
@@ -356,6 +375,44 @@ mod tests {
 
     fn is_zeroized_hex_buffer(value: &str) -> bool {
         value.as_bytes().iter().all(|byte| *byte == 0)
+    }
+
+    #[test]
+    fn regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer() {
+        // Regression: #4165
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _secondary_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            Some(TEST_PRIVATE_KEY_HEX_SECONDARY),
+        );
+
+        let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
+        let error = super::ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize(
+            Some("ops-primary"),
+            &test_primary_selection(),
+            &mut private_key_hex,
+        )
+        .expect_err("strict signer precedence violation must fail closed");
+
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("signer_secret_source_precedence_violation")),
+            "strict signer precedence violation must preserve deterministic reason marker"
+        );
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "strict signer precedence violation must scrub env-secret private key buffers"
+        );
+    }
+
+    #[test]
+    fn unit_build_kolme_live_managed_signing_key_zeroizes_transient_key_material() {
+        const SIGNER_ADAPTER_SOURCE: &str = include_str!("signer/signer_adapter.rs");
+        assert!(
+            SIGNER_ADAPTER_SOURCE.contains("key_material.zeroize()"),
+            "managed signing key transient key material must be explicitly zeroized after key construction"
+        );
     }
 
     #[test]

@@ -300,6 +300,25 @@ fn regression_signer_private_key_parse_path_requires_zeroize_markers() {
         SIGNER_ADAPTER_SOURCE.contains("private_key_bytes.zeroize()"),
         "decoded signer private key byte buffers must be explicitly zeroized after key setup"
     );
+    assert!(
+        SIGNER_ADAPTER_SOURCE.contains("key_material.zeroize()"),
+        "managed signer key material buffers must be explicitly zeroized after key setup"
+    );
+}
+
+#[test]
+fn regression_signer_secret_source_precedence_path_requires_zeroize_markers() {
+    // Regression: #4165
+    const SIGNER_SOURCE: &str = include_str!("../signer.rs");
+    assert!(
+        SIGNER_SOURCE
+            .contains("ensure_kolme_live_strict_signer_secret_source_precedence_and_zeroize"),
+        "signer source precedence path must route through explicit zeroization helper"
+    );
+    assert!(
+        SIGNER_SOURCE.contains("private_key_hex.zeroize()"),
+        "signer source precedence helper must explicitly zeroize env-secret buffers"
+    );
 }
 
 #[test]
