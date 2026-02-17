@@ -192,6 +192,19 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.25 Replay-Integrity CI Smoke Governance Closure
+- Active chain: `#4233 -> #4235 -> #4239 -> (#4246, #4247)`.
+- Convergence closure markers:
+  - `sqlite_crash_recovery_ci_smoke_convergence_status=verified`
+  - `sqlite_crash_recovery_ci_smoke_reason_taxonomy_version=kamn.ci.sqlite-crash-recovery-ci-smoke-convergence-reason-taxonomy.v1`
+  - `sqlite_crash_recovery_ci_smoke_max_seconds=120`
+  - `sqlite_crash_recovery_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_sqlite_crash_recovery_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/sqlite-crash-recovery-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh`
+- Local-heavy sqlite crash-recovery boundaries remain explicit and outside ci-fast-gate:
+  - `KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1 bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/sqlite-crash-recovery-live-summary.json`
+
 ### R27.29 Transport/Observability/TLS CI Smoke Convergence Closure
 - Active chain: `#4293 -> #4295 -> #4299 -> (#4306, #4307)`.
 - Convergence closure markers:

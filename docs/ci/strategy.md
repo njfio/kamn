@@ -389,6 +389,39 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
   - `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
 
+### SQLite Crash-Replay CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_sqlite_crash_recovery_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/sqlite-crash-recovery-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `sqlite_crash_recovery_ci_smoke_reason_taxonomy_version=kamn.ci.sqlite-crash-recovery-ci-smoke-convergence-reason-taxonomy.v1`
+  - `sqlite_crash_recovery_ci_smoke_reason_codes_csv=sqlite_crash_recovery_validate_ci_smoke_composition_missing,sqlite_crash_recovery_policy_ci_smoke_composition_missing,sqlite_crash_recovery_contract_lane_ci_smoke_composition_missing,sqlite_crash_recovery_evidence_ci_smoke_composition_missing,sqlite_crash_recovery_run_mode_command_leaked_in_fast_mode,ci_fast_gate_sqlite_crash_recovery_run_mode_not_excluded,ci_strategy_sqlite_crash_recovery_convergence_markers_missing,production_plan_sqlite_crash_recovery_convergence_markers_missing,sqlite_crash_recovery_ci_smoke_seconds_exceeded`
+  - `sqlite_crash_recovery_ci_smoke_max_seconds=120`
+  - `sqlite_crash_recovery_local_heavy_max_seconds=900`
+  - `sqlite_crash_recovery_ci_smoke_lane_cost_profile=low`
+  - `sqlite_crash_recovery_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live.sh`
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh`
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh`
+- Local-heavy boundary policy:
+  - sqlite crash-recovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - sqlite run-mode command (`validate_sqlite_crash_recovery_live.sh --mode run`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `sqlite_crash_recovery_validate_ci_smoke_composition_missing`
+  - `sqlite_crash_recovery_policy_ci_smoke_composition_missing`
+  - `sqlite_crash_recovery_contract_lane_ci_smoke_composition_missing`
+  - `sqlite_crash_recovery_evidence_ci_smoke_composition_missing`
+  - `sqlite_crash_recovery_run_mode_command_leaked_in_fast_mode`
+  - `ci_fast_gate_sqlite_crash_recovery_run_mode_not_excluded`
+  - `ci_strategy_sqlite_crash_recovery_convergence_markers_missing`
+  - `production_plan_sqlite_crash_recovery_convergence_markers_missing`
+  - `sqlite_crash_recovery_ci_smoke_seconds_exceeded`
+  - `Regression: #4246`
+  - `Regression: #4247`
+
 ## Runtime Failover Sync-Drill Governance Contract Lanes
 - Entry commands:
   - `bash scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh --output-json /tmp/failover-sync-preflight-report.json`
