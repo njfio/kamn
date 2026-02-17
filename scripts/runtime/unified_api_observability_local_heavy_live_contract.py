@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -39,6 +40,9 @@ POLICY_REASON_CODES_CSV = ",".join(
     [
         "ci_fast_gate_failed",
         "unified_api_observability_local_heavy_policy_artifact_paths_invalid",
+        "unified_api_observability_local_heavy_policy_evidence_artifact_missing",
+        "unified_api_observability_local_heavy_policy_evidence_convergence_mismatch",
+        "unified_api_observability_local_heavy_policy_evidence_links_incomplete",
         "unified_api_observability_local_heavy_policy_ci_fast_gate_mismatch",
         "unified_api_observability_local_heavy_policy_command_budget_exceeded",
         "unified_api_observability_local_heavy_policy_command_count_invalid",
@@ -99,6 +103,28 @@ COMPATIBILITY_POLICY_SCHEMA = (
 OBSERVABILITY_SCRAPE_RUN_SCHEMA = "kamn.runtime.local-observability-scrape-live-report.v1"
 OBSERVABILITY_SCRAPE_POLICY_SCHEMA = (
     "kamn.runtime.local-observability-scrape-live-policy-report.v1"
+)
+RUN_MODE_EVIDENCE_CONTRACTS: tuple[tuple[str, str, str], ...] = (
+    (
+        "compatibility_report",
+        COMPATIBILITY_RUN_SCHEMA,
+        "route_compatibility_matrix_status",
+    ),
+    (
+        "compatibility_policy_report",
+        COMPATIBILITY_POLICY_SCHEMA,
+        "service_api_observability_route_compatibility_policy_status",
+    ),
+    (
+        "observability_report",
+        OBSERVABILITY_SCRAPE_RUN_SCHEMA,
+        "local_heavy_soak_lane_status",
+    ),
+    (
+        "observability_policy_report",
+        OBSERVABILITY_SCRAPE_POLICY_SCHEMA,
+        "local_observability_scrape_policy_status",
+    ),
 )
 
 OPT_IN_ENV = "KAMN_UNIFIED_STACK_LOCAL_HEAVY_OPT_IN"
@@ -175,6 +201,21 @@ def _run_lane(args: argparse.Namespace) -> int:
     local_heavy_soak_lane_status = "not_executed"
     soak_iterations_executed = 0
     execution_reason_code = DRY_RUN_REASON
+    artifact_output_dir: Path | None = None
+
+    if mode == "run":
+        if args.output_json:
+            output_target = Path(args.output_json).resolve()
+            artifact_output_dir = (
+                output_target.parent / f"{output_target.stem}.artifacts"
+            )
+        else:
+            artifact_output_dir = Path(
+                tempfile.mkdtemp(
+                    prefix="unified-api-observability-local-heavy-run-artifacts-"
+                )
+            )
+        artifact_output_dir.mkdir(parents=True, exist_ok=True)
 
     if mode == "run":
         with tempfile.TemporaryDirectory(prefix="unified-api-observability-local-heavy-") as tmp:
@@ -312,12 +353,18 @@ def _run_lane(args: argparse.Namespace) -> int:
                 fail("local observability scrape soak_iterations_executed must be > 0 in run mode")
             execution_reason_code = RUN_REASON
 
-            artifact_paths = {
-                "compatibility_report": str(compatibility_report),
-                "compatibility_policy_report": str(compatibility_policy),
-                "observability_report": str(observability_report),
-                "observability_policy_report": str(observability_policy),
-            }
+            if artifact_output_dir is None:
+                fail("run mode artifact output directory is not configured")
+
+            for artifact_key, source_path in (
+                ("compatibility_report", compatibility_report),
+                ("compatibility_policy_report", compatibility_policy),
+                ("observability_report", observability_report),
+                ("observability_policy_report", observability_policy),
+            ):
+                destination_path = artifact_output_dir / f"{artifact_key}.json"
+                shutil.copyfile(source_path, destination_path)
+                artifact_paths[artifact_key] = str(destination_path)
 
     elapsed_seconds = int(time.time()) - start_epoch
     if elapsed_seconds > max_seconds:
@@ -525,8 +572,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("observability_policy_schema_version") != OBSERVABILITY_SCRAPE_POLICY_SCHEMA,
         "unified_api_observability_local_heavy_policy_observability_policy_schema_mismatch",
     )
+    artifact_paths = report.get("artifact_paths")
     checks.reject_if(
-        not isinstance(report.get("artifact_paths"), dict),
+        not isinstance(artifact_paths, dict),
         "unified_api_observability_local_heavy_policy_artifact_paths_invalid",
     )
 
@@ -592,6 +640,62 @@ def _check_policy(args: argparse.Namespace) -> int:
                 soak_requested != soak_executed,
                 "unified_api_observability_local_heavy_policy_run_mode_soak_iterations_mismatch",
             )
+
+        evidence_links_incomplete = False
+        evidence_artifact_missing = False
+        evidence_convergence_mismatch = False
+        evidence_payloads: dict[str, dict[str, Any]] = {}
+
+        if not isinstance(artifact_paths, dict):
+            evidence_links_incomplete = True
+        else:
+            for artifact_key, _, _ in RUN_MODE_EVIDENCE_CONTRACTS:
+                raw_path = artifact_paths.get(artifact_key)
+                if not isinstance(raw_path, str) or not raw_path.strip():
+                    evidence_links_incomplete = True
+                    continue
+
+                artifact_path = Path(raw_path)
+                if not artifact_path.is_file():
+                    evidence_artifact_missing = True
+                    continue
+
+                try:
+                    payload = load_json(artifact_path)
+                except (ContractError, OSError):
+                    evidence_artifact_missing = True
+                    continue
+                evidence_payloads[artifact_key] = dict(payload)
+
+        if (
+            not evidence_links_incomplete
+            and not evidence_artifact_missing
+            and isinstance(artifact_paths, dict)
+        ):
+            for artifact_key, expected_schema, required_status_marker in RUN_MODE_EVIDENCE_CONTRACTS:
+                payload = evidence_payloads.get(artifact_key)
+                if not isinstance(payload, dict):
+                    evidence_convergence_mismatch = True
+                    continue
+                if payload.get("schema_version") != expected_schema:
+                    evidence_convergence_mismatch = True
+                if payload.get("final_decision") != "GO":
+                    evidence_convergence_mismatch = True
+                if payload.get(required_status_marker) != "verified":
+                    evidence_convergence_mismatch = True
+
+        checks.reject_if(
+            evidence_links_incomplete,
+            "unified_api_observability_local_heavy_policy_evidence_links_incomplete",
+        )
+        checks.reject_if(
+            evidence_artifact_missing,
+            "unified_api_observability_local_heavy_policy_evidence_artifact_missing",
+        )
+        checks.reject_if(
+            evidence_convergence_mismatch,
+            "unified_api_observability_local_heavy_policy_evidence_convergence_mismatch",
+        )
 
     final_decision, reason_codes = checks.finalize("none")
     status = "pass" if final_decision == "GO" else "fail"
