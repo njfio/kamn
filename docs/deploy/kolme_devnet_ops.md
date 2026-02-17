@@ -59,6 +59,35 @@ Validation command:
 - `Regression: #4242`
 - `Regression: #4243`
 
+## Crash-Replay Evidence Convergence and Promotion Reason Mapping Contracts (Issue #4238)
+
+Sqlite crash-replay convergence and promotion decision reason mappings must remain deterministic
+across contract-lane and policy artifacts.
+
+Required convergence markers:
+
+- `sqlite_crash_replay_evidence_convergence_status=verified`
+- `promotion_decision_reason_mapping_status=verified`
+- `sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1`
+- `sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+- `promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1`
+- `promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation`
+- `promotion_decision_reason_code=none|<reason>`
+
+Fail-closed convergence reasons:
+
+- `sqlite_crash_replay_evidence_link_missing:source_report_file`
+- `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
+- `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-policy-report.json --summary-output-json /tmp/sqlite-crash-recovery-live-summary-report.json --convergence-output-json /tmp/sqlite-crash-recovery-live-convergence-report.json`
+- `bash scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh --report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-file /tmp/sqlite-crash-recovery-live-policy-report.json --output-json /tmp/sqlite-crash-recovery-live-convergence-report.json`
+
+- `Regression: #4244`
+- `Regression: #4245`
+
 ## Drift Taxonomy and Runbook Marker Parity Contracts (Issue #4282)
 
 Failover preflight drift governance remains deterministic only when checker taxonomy markers and

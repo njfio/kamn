@@ -350,6 +350,27 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - replay taxonomy/runbook parity drift rejection remains deterministic (`Regression: #4242`, `Regression: #4243`).
 
+## Crash-Replay Evidence Convergence/Promotion Reason Mapping Gate (Issues #4238, #4244, #4245)
+- Validation commands:
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh`
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_evidence_convergence.sh --report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-file /tmp/sqlite-crash-recovery-live-policy-report.json --output-json /tmp/sqlite-crash-recovery-live-convergence-report.json`
+- Required deterministic marker outputs:
+  - `sqlite_crash_replay_evidence_convergence_status=verified`
+  - `promotion_decision_reason_mapping_status=verified`
+  - `sqlite_crash_replay_evidence_reason_taxonomy_version=kamn.runtime.sqlite-crash-replay-evidence-convergence-reason-taxonomy.v1`
+  - `sqlite_crash_replay_evidence_reason_codes_csv=sqlite_crash_replay_evidence_link_missing,sqlite_crash_replay_evidence_payload_tamper_detected,sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-promotion-decision-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=sqlite_crash_recovery_policy_required_field_missing,sqlite_crash_recovery_policy_marker_missing,sqlite_crash_recovery_policy_reason_taxonomy_mismatch,sqlite_crash_recovery_policy_runtime_mode_contract_mismatch,replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_recovery_policy_expected_decision_mismatch,sqlite_crash_recovery_policy_violation`
+  - `promotion_decision_reason_code=none|<reason>`
+- Required fail-closed reason outputs:
+  - `sqlite_crash_replay_evidence_link_missing:source_report_file`
+  - `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
+  - `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
+- Fail-closed policy:
+  - missing or tampered crash-replay evidence lineage or promotion reason mapping drift acceptance forces `NO-GO`.
+- Regression policy:
+  - convergence link/mapping drift rejection remains deterministic (`Regression: #4244`, `Regression: #4245`).
+
 ## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)
 - SLO policy report command:
   - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`
