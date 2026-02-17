@@ -3728,11 +3728,22 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `live_gonogo_local_heavy_max_seconds=900`
   - `ci_smoke_lane_cost_profile=low`
   - `local_heavy_lane_execution_mode=opt_in`
+- Deterministic deployment safety convergence marker surface:
+  - `deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `deployment_safety_gate_reason_codes_csv=none|<csv>`
+  - `deployment_safety_gate_reason_codes_value=none|<csv>`
+  - `contracts.deployment_preflight_rotation_reason_taxonomy_version_required=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1`
+  - `contracts.go_no_go_gate_ci_local_boundary_contract_required=true`
+  - `contracts.go_no_go_gate_lane_mode_required=dry-run`
+  - `contracts.go_no_go_gate_fast_gate_exclusion_reason_code_required=go_no_go_gate_run_mode_excluded_from_fast_gate`
 - Deterministic fail-closed boundary reasons:
   - `live_gonogo_ci_smoke_seconds_exceeded`
   - `live_gonogo_local_heavy_seconds_exceeded`
   - `live_gonogo_local_heavy_opt_in_missing`
   - `live_gonogo_evidence_convergence_mismatch`
+  - `milestone_review_deployment_preflight_policy_rotation_reason_taxonomy_mismatch`
+  - `milestone_review_deployment_preflight_policy_rotation_reason_codes_value_mismatch`
+  - `milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch`
 - Regression coverage: `Regression: #4442`
 
 ## Flaky Reproducer Contract

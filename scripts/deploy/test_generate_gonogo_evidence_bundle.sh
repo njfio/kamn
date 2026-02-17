@@ -180,7 +180,10 @@ JSON
 cat >"$milestone_preflight_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
-  "final_decision": "GO"
+  "final_decision": "GO",
+  "rotation_preflight_reason_taxonomy_version": "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1",
+  "rotation_preflight_reason_codes_csv": "signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected",
+  "rotation_preflight_reason_codes_value": "none"
 }
 JSON
 
@@ -214,6 +217,12 @@ cat >"$milestone_gate_report" <<'JSON'
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
   "final_decision": "GO",
+  "lane_mode": "dry-run",
+  "ci_fast_gate_eligible": true,
+  "ci_fast_gate_scope": "ci-fast-gate",
+  "fast_gate_exclusion_status": "verified",
+  "fast_gate_exclusion_reason_code": "go_no_go_gate_run_mode_excluded_from_fast_gate",
+  "run_mode_command_status": "dry_run_no_commands_executed",
   "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
   "combined_transport_reason_codes": [
     "fork_choice_stale_block_height"
@@ -289,6 +298,10 @@ if contracts.get("go_no_go_gate_combined_kolme_runtime_reason_codes_allowed") !=
     raise SystemExit("expected milestone review allowed combined Kolme reason-code contract marker")
 if contracts.get("go_no_go_gate_combined_lane_marker_contract_status_required") != "verified":
     raise SystemExit("expected milestone review combined marker contract status contract marker")
+if contracts.get("deployment_preflight_rotation_reason_taxonomy_version_required") != "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1":
+    raise SystemExit("expected milestone review deployment preflight rotation reason taxonomy contract marker")
+if contracts.get("go_no_go_gate_ci_local_boundary_contract_required") is not True:
+    raise SystemExit("expected milestone review ci/local boundary contract marker")
 observed = milestone.get("observed")
 if not isinstance(observed, dict):
     raise SystemExit("expected milestone review observed object")
@@ -300,6 +313,14 @@ if observed.get("go_no_go_gate_combined_kolme_runtime_reason_code") != "not_run"
     raise SystemExit("expected observed combined Kolme reason code marker")
 if observed.get("go_no_go_gate_combined_lane_marker_contract_status") != "verified":
     raise SystemExit("expected observed combined lane marker contract status marker")
+if observed.get("deployment_preflight_policy_rotation_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1":
+    raise SystemExit("expected observed deployment preflight rotation reason taxonomy marker")
+if observed.get("go_no_go_gate_lane_mode") != "dry-run":
+    raise SystemExit("expected observed go/no-go lane mode boundary marker")
+if observed.get("go_no_go_gate_ci_fast_gate_scope") != "ci-fast-gate":
+    raise SystemExit("expected observed go/no-go ci fast-gate scope boundary marker")
+if observed.get("go_no_go_gate_fast_gate_exclusion_reason_code") != "go_no_go_gate_run_mode_excluded_from_fast_gate":
+    raise SystemExit("expected observed go/no-go fast-gate exclusion reason marker")
 PY
 
 milestone_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_bundle")"
@@ -520,6 +541,102 @@ PY
 milestone_taxonomy_drift_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_taxonomy_drift_bundle")"
 assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for taxonomy drift bundle"
 assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for taxonomy drift bundle"
+
+milestone_rotation_taxonomy_drift_preflight_policy="$TMP_DIR/milestone-preflight-policy.rotation-taxonomy-drift.json"
+cp "$milestone_preflight_policy" "$milestone_rotation_taxonomy_drift_preflight_policy"
+python3 - "$milestone_rotation_taxonomy_drift_preflight_policy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["rotation_preflight_reason_taxonomy_version"] = "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+milestone_rotation_taxonomy_drift_bundle="$TMP_DIR/gonogo-milestone-rotation-taxonomy-drift.json"
+milestone_rotation_taxonomy_drift_output="$(
+  bash "$GENERATOR" \
+    --output-file "$milestone_rotation_taxonomy_drift_bundle" \
+    --release-candidate "v1.0.0-rc.8" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:milestone-rotation-taxonomy-drift" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --deployment-preflight-summary-file "$milestone_preflight_summary" \
+    --deployment-preflight-policy-file "$milestone_rotation_taxonomy_drift_preflight_policy" \
+    --live-node-validation-summary-file "$milestone_live_bundle_summary" \
+    --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+    --go-no-go-gate-report-file "$milestone_gate_report"
+)"
+assert_eq "$(extract_value "$milestone_rotation_taxonomy_drift_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed on deployment preflight rotation taxonomy drift"
+
+python3 - "$milestone_rotation_taxonomy_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for deployment preflight rotation taxonomy drift case")
+if "milestone_review_deployment_preflight_policy_rotation_reason_taxonomy_mismatch" not in reason_codes:
+    raise SystemExit("expected deployment preflight rotation taxonomy mismatch reason code in milestone review bundle")
+PY
+
+milestone_boundary_drift_gate_report="$TMP_DIR/milestone-go-no-go-gate-report.boundary-drift.json"
+cp "$milestone_gate_report" "$milestone_boundary_drift_gate_report"
+python3 - "$milestone_boundary_drift_gate_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["lane_mode"] = "run"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+milestone_boundary_drift_bundle="$TMP_DIR/gonogo-milestone-boundary-drift.json"
+milestone_boundary_drift_output="$(
+  bash "$GENERATOR" \
+    --output-file "$milestone_boundary_drift_bundle" \
+    --release-candidate "v1.0.0-rc.9" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:milestone-boundary-drift" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --deployment-preflight-summary-file "$milestone_preflight_summary" \
+    --deployment-preflight-policy-file "$milestone_preflight_policy" \
+    --live-node-validation-summary-file "$milestone_live_bundle_summary" \
+    --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+    --go-no-go-gate-report-file "$milestone_boundary_drift_gate_report"
+)"
+assert_eq "$(extract_value "$milestone_boundary_drift_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed on go/no-go ci/local boundary drift"
+
+python3 - "$milestone_boundary_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for go/no-go boundary drift case")
+if "milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch" not in reason_codes:
+    raise SystemExit("expected go/no-go ci/local boundary mismatch reason code in milestone review bundle")
+PY
 
 milestone_lineage_tampered_bundle="$TMP_DIR/gonogo-milestone-lineage-tampered.json"
 cp "$milestone_bundle" "$milestone_lineage_tampered_bundle"
