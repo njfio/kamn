@@ -55,6 +55,8 @@ VALIDATION_REQUIRED_MARKERS=(
   "ci_local_promotion_budget_boundary_status=verified"
   "admission_saturation_status=verified"
   "admission_queue_cap_enforcement_status=verified"
+  "admission_inflight_budget_status=verified"
+  "admission_queue_budget_status=verified"
   "overload_evidence_normalization_status=verified"
   "async_lifecycle_backpressure_projection_status=verified"
   "protocol_compliance_status=verified"
@@ -65,6 +67,8 @@ VALIDATION_REQUIRED_MARKERS=(
   "ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
   "admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1"
   "admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift"
+  "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
+  "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
   "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
   "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
   "request_validation_reason_registry_status=verified"
@@ -77,6 +81,8 @@ VALIDATION_REQUIRED_MARKERS=(
 VALIDATION_REQUIRED_REGEX_MARKERS=(
   '^api_max_requests_default=[1-9][0-9]*$'
   '^api_idle_timeout_default_ms=[1-9][0-9]*$'
+  '^admission_inflight_budget_limit=[1-9][0-9]*$'
+  '^admission_queue_budget_limit=[1-9][0-9]*$'
   '^body_size_limit_bytes=[1-9][0-9]*$'
   '^api_concurrency_limit_default=[1-9][0-9]*$'
   '^api_rate_limit_per_second_default=[1-9][0-9]*$'
@@ -88,6 +94,12 @@ POLICY_REQUIRED_MARKERS=(
   "reason_codes_value=none"
   "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
   "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
+  "admission_inflight_budget_status=verified"
+  "admission_queue_budget_status=verified"
+  "admission_inflight_budget_limit=32"
+  "admission_queue_budget_limit=1"
+  "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
+  "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
   "service_api_axum_protocol_mismatch_reason_mapping_status=verified"
   "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
   "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
@@ -107,7 +119,7 @@ STRATEGY_REQUIRED_MARKERS=(
   "ingress limit config matrix defaults remain parity-checked against source constants and API docs"
   "request-validation and error-envelope taxonomy parity remains deterministic via:"
   "ingress resilience governance remains deterministic via:"
-  "admission saturation and queue-cap governance remains deterministic via:"
+  "admission saturation, in-flight, and queue-budget governance remains deterministic via:"
   "protocol mismatch reason mapping remains deterministic via:"
   "admission backpressure evidence convergence governance remains deterministic via:"
   "protocol taxonomy and runbook-marker parity remains deterministic via:"
@@ -138,6 +150,8 @@ LANE_REPORT_SUMMARY_FIELDS=(
   ci_local_promotion_budget_boundary_status
   admission_saturation_status
   admission_queue_cap_enforcement_status
+  admission_inflight_budget_status
+  admission_queue_budget_status
   overload_evidence_normalization_status
   async_lifecycle_backpressure_projection_status
   protocol_compliance_status
@@ -148,6 +162,8 @@ LANE_REPORT_SUMMARY_FIELDS=(
   ingress_resilience_reason_codes_csv
   admission_reason_taxonomy_version
   admission_reason_codes_csv
+  admission_budget_reason_taxonomy_version
+  admission_budget_reason_codes_csv
   service_api_lifecycle_rejection_reason_taxonomy_version
   service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status
@@ -158,6 +174,8 @@ LANE_REPORT_SUMMARY_FIELDS=(
   error_envelope_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
+  admission_inflight_budget_limit
+  admission_queue_budget_limit
   body_size_limit_bytes
   api_concurrency_limit_default
   api_rate_limit_per_second_default
@@ -173,6 +191,8 @@ OUTPUT_SUMMARY_FIELDS=(
   ci_local_promotion_budget_boundary_status
   admission_saturation_status
   admission_queue_cap_enforcement_status
+  admission_inflight_budget_status
+  admission_queue_budget_status
   overload_evidence_normalization_status
   async_lifecycle_backpressure_projection_status
   protocol_compliance_status
@@ -183,6 +203,8 @@ OUTPUT_SUMMARY_FIELDS=(
   ingress_resilience_reason_codes_csv
   admission_reason_taxonomy_version
   admission_reason_codes_csv
+  admission_budget_reason_taxonomy_version
+  admission_budget_reason_codes_csv
   service_api_lifecycle_rejection_reason_taxonomy_version
   service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status
@@ -193,6 +215,8 @@ OUTPUT_SUMMARY_FIELDS=(
   error_envelope_reason_codes_csv
   api_max_requests_default
   api_idle_timeout_default_ms
+  admission_inflight_budget_limit
+  admission_queue_budget_limit
   body_size_limit_bytes
   api_concurrency_limit_default
   api_rate_limit_per_second_default

@@ -98,6 +98,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^admission_queue_cap_enforcement_st
   echo "expected service api axum ingress contract lane queue-cap enforcement marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_inflight_budget_status=verified$'; then
+  echo "expected service api axum ingress contract lane in-flight budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_queue_budget_status=verified$'; then
+  echo "expected service api axum ingress contract lane queue budget status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^overload_evidence_normalization_status=verified$'; then
   echo "expected service api axum ingress contract lane overload-evidence normalization marker" >&2
   exit 1
@@ -154,6 +162,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^admission_reason_codes_csv=admissi
   echo "expected service api axum ingress contract lane admission reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane admission budget reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch$'; then
+  echo "expected service api axum ingress contract lane admission budget reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy marker" >&2
   exit 1
@@ -200,6 +216,14 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-
 fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_idle_timeout_default_ms=[1-9][0-9]*$'; then
   echo "expected service api axum ingress contract lane idle-timeout default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^admission_inflight_budget_limit=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane in-flight budget limit marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^admission_queue_budget_limit=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane queue budget limit marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^body_size_limit_bytes=[1-9][0-9]*$'; then
@@ -254,6 +278,10 @@ if lane_payload.get("admission_saturation_status") != "verified":
     raise SystemExit("expected admission_saturation_status=verified")
 if lane_payload.get("admission_queue_cap_enforcement_status") != "verified":
     raise SystemExit("expected admission_queue_cap_enforcement_status=verified")
+if lane_payload.get("admission_inflight_budget_status") != "verified":
+    raise SystemExit("expected admission_inflight_budget_status=verified")
+if lane_payload.get("admission_queue_budget_status") != "verified":
+    raise SystemExit("expected admission_queue_budget_status=verified")
 if lane_payload.get("overload_evidence_normalization_status") != "verified":
     raise SystemExit("expected overload_evidence_normalization_status=verified")
 if lane_payload.get("async_lifecycle_backpressure_projection_status") != "verified":
@@ -282,6 +310,10 @@ if lane_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.servic
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
 if lane_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
     raise SystemExit("expected deterministic admission_reason_codes_csv marker")
+if lane_payload.get("admission_budget_reason_taxonomy_version") != "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker")
+if lane_payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
+    raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker")
 if lane_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker")
 if lane_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
@@ -306,6 +338,10 @@ if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
     raise SystemExit("expected api_idle_timeout_default_ms=5000")
+if lane_payload.get("admission_inflight_budget_limit") != 32:
+    raise SystemExit("expected admission_inflight_budget_limit=32")
+if lane_payload.get("admission_queue_budget_limit") != 1:
+    raise SystemExit("expected admission_queue_budget_limit=1")
 if lane_payload.get("body_size_limit_bytes") != 65536:
     raise SystemExit("expected body_size_limit_bytes=65536")
 if lane_payload.get("api_concurrency_limit_default") != 32:
@@ -350,6 +386,18 @@ if policy_payload.get("admission_reason_taxonomy_version") != "kamn.runtime.serv
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker in policy report")
 if policy_payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
     raise SystemExit("expected deterministic admission_reason_codes_csv marker in policy report")
+if policy_payload.get("admission_inflight_budget_status") != "verified":
+    raise SystemExit("expected admission_inflight_budget_status=verified in policy report")
+if policy_payload.get("admission_queue_budget_status") != "verified":
+    raise SystemExit("expected admission_queue_budget_status=verified in policy report")
+if policy_payload.get("admission_inflight_budget_limit") != 32:
+    raise SystemExit("expected admission_inflight_budget_limit=32 in policy report")
+if policy_payload.get("admission_queue_budget_limit") != 1:
+    raise SystemExit("expected admission_queue_budget_limit=1 in policy report")
+if policy_payload.get("admission_budget_reason_taxonomy_version") != "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker in policy report")
+if policy_payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
+    raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker in policy report")
 if policy_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker in policy report")
 if policy_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":

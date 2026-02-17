@@ -705,6 +705,19 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
     assert!(DOC.contains(
         "admission backpressure evidence convergence governance remains deterministic via:"
     ));
+    assert!(DOC.contains(
+        "admission saturation, in-flight, and queue-budget governance remains deterministic via:"
+    ));
+    assert!(DOC.contains("admission_inflight_budget_status=verified"));
+    assert!(DOC.contains("admission_queue_budget_status=verified"));
+    assert!(DOC.contains("admission_inflight_budget_limit=32"));
+    assert!(DOC.contains("admission_queue_budget_limit=1"));
+    assert!(DOC.contains(
+        "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+    ));
     assert!(DOC.contains("service_api_axum_evidence_convergence_status=verified"));
     assert!(DOC.contains("promotion_decision_reason_mapping_status=verified"));
     assert!(DOC.contains(
@@ -714,6 +727,11 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
         "service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch"
     ));
     assert!(DOC.contains("service_api_axum_policy_marker_missing:concurrency_status"));
+    assert!(
+        DOC.contains("service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch")
+    );
+    assert!(DOC.contains("service_api_axum_policy_admission_inflight_budget_limit_mismatch"));
+    assert!(DOC.contains("service_api_axum_policy_admission_queue_budget_limit_mismatch"));
     assert!(DOC.contains("service_api_axum_evidence_link_missing:source_report_file"));
     assert!(DOC.contains("service_api_axum_promotion_decision_reason_mapping_mismatch"));
 }

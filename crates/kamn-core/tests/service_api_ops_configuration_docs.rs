@@ -9,6 +9,18 @@ fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
     assert!(DOC.contains("service_api_ingress_concurrency_limit_exceeded"));
     assert!(DOC.contains("service_api_ingress_rate_limit_exceeded"));
     assert!(DOC.contains("service_api_ingress_sender_rate_limit_exceeded"));
+    assert!(DOC.contains("admission_inflight_budget_status=verified"));
+    assert!(DOC.contains("admission_queue_budget_status=verified"));
+    assert!(DOC.contains("admission_inflight_budget_limit=32"));
+    assert!(DOC.contains("admission_queue_budget_limit=1"));
+    assert!(DOC.contains(
+        "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+    ));
+    assert!(DOC.contains("service_api_axum_policy_admission_inflight_budget_limit_mismatch"));
+    assert!(DOC.contains("service_api_axum_policy_admission_queue_budget_limit_mismatch"));
     assert!(DOC.contains("fail-closed response contract"));
     assert!(DOC.contains("Regression: #4315"));
 }
