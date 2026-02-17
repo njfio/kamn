@@ -3833,6 +3833,18 @@ When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.c
 
 Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
+## PR Shell-Surface Impact Declaration
+When shell-surface sensitive files are modified (`scripts/*`, `.github/workflows/*`, `.github/ISSUE_TEMPLATE/*`, `.github/pull_request_template.md`, `AGENTS.md`, `.github/CONTRIBUTING.md`), PR description must explicitly declare shell-surface impact.
+
+Required markers when `Shell-surface impact present` is checked:
+- `shell_loc_delta_actual:`
+- `rust_loc_delta_actual:`
+- `shell_to_rust_ratio_delta_actual:`
+- `shell_surface_ratio_target_status:` (`improved|neutral|regressed_with_waiver`)
+- `shell_surface_mitigation_issue:`
+
+Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
+
 ## Script Regression Coverage
 `ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` with `KAMN_CI_TOOLS_FAST_MODE=true` to keep PR-critical CI tooling checks bounded and cost-effective, while local/deep lanes continue to run the full script.
 
