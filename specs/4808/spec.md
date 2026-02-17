@@ -3,7 +3,7 @@
 - Title: Story: collapse test/matrix/json shell boilerplate into reusable harnesses
 - Parent: Parent epic: #4806
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
@@ -33,11 +33,13 @@ Out of scope:
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1): parameterized wave/matrix runner migrations from task `#4813` merged and validated (`PR #4840`, `PR #4841`).
+- C-02 (AC-2): harness migration contracts pass (`bash scripts/lib/test_test_harness_migration_contract.sh`) from task `#4814` / subtask `#4825` (`PR #4842`).
+- C-03 (AC-3): JSON helper migration contracts pass (`bash scripts/lib/test_json_write_helper_migration_contract.sh`) from task `#4814` / subtask `#4826` (`PR #4843`).
+- C-04 (AC-1..AC-3): `bash scripts/ci/test_ci_tools.sh` passes after migrations.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Wave/matrix duplicate logic collapsed into parameterized runners.
+- Shared harness and JSON helper utilities deployed and adopted across migrated cohorts.
+- Full CI regression suite remained green across merged slices.
