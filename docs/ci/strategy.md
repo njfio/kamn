@@ -395,6 +395,24 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `live_node_drift_marker_parity_mismatch`
   - `ci_local_promotion_budget_boundary_exceeded`
 
+### Failover Drift CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_failover_drift_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/failover-drift-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_failover_drift_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `failover_drift_ci_smoke_reason_taxonomy_version=kamn.ci.failover-drift-ci-smoke-convergence-reason-taxonomy.v1`
+  - `failover_drift_ci_smoke_reason_codes_csv=failover_selector_ci_smoke_composition_missing,failover_preflight_ci_smoke_composition_missing,failover_deep_lane_guard_ci_smoke_composition_missing,failover_suite_ci_smoke_composition_missing,failover_deep_lane_run_command_leaked_in_fast_mode,ci_fast_gate_failover_deep_lane_not_excluded,ci_strategy_failover_convergence_markers_missing,production_plan_failover_convergence_markers_missing,failover_drift_ci_smoke_seconds_exceeded`
+  - `failover_drift_ci_smoke_max_seconds=120`
+  - `failover_drift_local_heavy_max_seconds=900`
+  - `failover_drift_ci_smoke_lane_cost_profile=low`
+  - `failover_drift_local_heavy_execution_mode=opt_in`
+- Local-heavy boundary policy:
+  - signer rotation/failover drill lane remains local-heavy and excluded from ci-fast-gate.
+  - failover deep-lane run command (`run_failover_sync_drill_deep_lane.sh`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+  - `Regression: #4291`
+  - `Regression: #4292`
+
 ## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode dry-run --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`

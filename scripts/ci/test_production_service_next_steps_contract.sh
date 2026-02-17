@@ -50,6 +50,13 @@ required_markers = (
     "transport_observability_tls_ci_smoke_max_seconds=120",
     "transport_observability_tls_local_heavy_max_seconds=900",
     "test_check_transport_observability_tls_ci_smoke_convergence.sh",
+    "### R27.28 Drift/Failover CI Smoke Governance Closure",
+    "Active chain: `#4278 -> #4280 -> #4284 -> (#4291, #4292)`.",
+    "failover_drift_ci_smoke_convergence_status=verified",
+    "failover_drift_ci_smoke_reason_taxonomy_version=kamn.ci.failover-drift-ci-smoke-convergence-reason-taxonomy.v1",
+    "failover_drift_ci_smoke_max_seconds=120",
+    "failover_drift_local_heavy_max_seconds=900",
+    "test_check_failover_drift_ci_smoke_convergence.sh",
     "Historical Baseline (Superseded)",
 )
 for marker in required_markers:
