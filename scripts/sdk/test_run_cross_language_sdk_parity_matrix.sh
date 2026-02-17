@@ -13,7 +13,7 @@ if [ ! -x "$RUNNER" ]; then
 fi
 
 FIXTURE="$TMP_DIR/parity-fixture.json"
-cat >"$FIXTURE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$FIXTURE" <<'JSON'
 {
   "cases": [
     {

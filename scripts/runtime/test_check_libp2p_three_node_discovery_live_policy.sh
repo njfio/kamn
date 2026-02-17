@@ -12,7 +12,7 @@ if [ ! -x "$POLICY_CHECKER" ]; then
 fi
 
 report_file="$TMP_DIR/libp2p-three-node-discovery-summary.json"
-cat >"$report_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_file" <<'JSON'
 {
   "schema_version": "kamn.runtime.libp2p-three-node-discovery-live-report.v1",
   "status": "pass",

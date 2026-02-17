@@ -44,7 +44,7 @@ fi
 
 temp_config="$(mktemp)"
 trap 'rm -f "$temp_config" /tmp/kolme-migration-dispatch-unknown.out /tmp/kolme-migration-dispatch-missing-group.out /tmp/kolme-migration-dispatch-schema.out' EXIT
-cat > "$temp_config" <<'EOF'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$temp_config" <<'EOF'
 {"schema_version":"invalid-schema","groups":{}}
 EOF
 

@@ -67,7 +67,7 @@ if report.get("status") != "pass":
     raise SystemExit("expected capped signature parity matrix run to pass")
 PY
 
-cat >"$TMP_BAD_FIXTURE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_BAD_FIXTURE" <<'JSON'
 {"schema_version":"bad","vectors":[]}
 JSON
 

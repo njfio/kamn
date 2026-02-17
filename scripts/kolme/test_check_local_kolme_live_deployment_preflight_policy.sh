@@ -65,7 +65,7 @@ if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$README_FI
   exit 1
 fi
 
-cat >"$TMP_REPORT_OK" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
   "mode": "dry-run",
@@ -766,7 +766,7 @@ if ! grep -q "runtime_signer_drift_telemetry_rotation_delta_invalid" "$TMP_ERR";
   exit 1
 fi
 
-cat >"$TMP_REPORT_BAD" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
   "mode": "run",

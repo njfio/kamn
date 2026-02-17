@@ -49,3 +49,47 @@ emit_fallback_error() {
   echo "fallback_reason_code=$reason_code" >&2
   echo "fallback_reason_detail=$reason_detail" >&2
 }
+
+emit_json_object() {
+  if (( $# % 2 != 0 )); then
+    echo "emit_json_object requires key/value pairs" >&2
+    return 1
+  fi
+  python3 - "$@" <<'PY'
+import json
+import sys
+
+args = sys.argv[1:]
+payload = {}
+for idx in range(0, len(args), 2):
+    payload[args[idx]] = args[idx + 1]
+json.dump(payload, sys.stdout, sort_keys=True)
+sys.stdout.write("\n")
+PY
+}
+
+write_json_file() {
+  local output_file="$1"
+  mkdir -p "$(dirname "$output_file")"
+  cat >"$output_file"
+}
+
+write_json_object() {
+  local output_file="$1"
+  shift
+  emit_json_object "$@" >"$output_file"
+}
+
+write_decision_json() {
+  local output_file="$1"
+  local final_decision="$2"
+  local reason_taxonomy_version="$3"
+  local reason_codes_csv="$4"
+  shift 4
+  write_json_object \
+    "$output_file" \
+    "final_decision" "$final_decision" \
+    "reason_taxonomy_version" "$reason_taxonomy_version" \
+    "reason_codes_csv" "$reason_codes_csv" \
+    "$@"
+}

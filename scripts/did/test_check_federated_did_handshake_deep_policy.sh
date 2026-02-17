@@ -12,7 +12,7 @@ if [ ! -x "$CHECKER" ]; then
 fi
 
 go_report="$TMP_DIR/go-summary.json"
-cat >"$go_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$go_report" <<'JSON'
 {
   "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
   "event_name": "schedule",
@@ -42,7 +42,7 @@ if ! printf '%s\n' "$go_output" | grep -q "^final_decision=GO$"; then
 fi
 
 tampered_report="$TMP_DIR/tampered-summary.json"
-cat >"$tampered_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$tampered_report" <<'JSON'
 {
   "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
   "event_name": "schedule",

@@ -77,7 +77,7 @@ if ! printf '%s\n' "$live_output" | grep -q '^policy_decision='; then
 fi
 
 REPORT_WITHIN="$TMP_DIR/kolme-test-harness-report-within.json"
-cat >"$REPORT_WITHIN" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_WITHIN" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 62,
@@ -114,7 +114,7 @@ if ! printf '%s\n' "$within_output" | grep -q '^reason_codes=none$'; then
 fi
 
 REPORT_WARN="$TMP_DIR/kolme-test-harness-report-warn.json"
-cat >"$REPORT_WARN" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_WARN" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 70,
@@ -156,7 +156,7 @@ if ! printf '%s\n' "$warn_output" | grep -q 'harness_shell_line_total_trend_warn
 fi
 
 REPORT_FAIL="$TMP_DIR/kolme-test-harness-report-fail.json"
-cat >"$REPORT_FAIL" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_FAIL" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 90,
@@ -203,7 +203,7 @@ if ! printf '%s\n' "$enforced_fail_output" | grep -q '^trend_status=fail$'; then
 fi
 
 BROKEN_REPORT="$TMP_DIR/kolme-broken-report.json"
-cat >"$BROKEN_REPORT" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$BROKEN_REPORT" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.unexpected.v1",
   "harness_script_count": 1,

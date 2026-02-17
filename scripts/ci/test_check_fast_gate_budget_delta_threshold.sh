@@ -32,7 +32,7 @@ FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
 FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
 ENV
 
-cat >"$PASS_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$PASS_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",
@@ -49,7 +49,7 @@ cat >"$PASS_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$FAIL_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$FAIL_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",
@@ -66,7 +66,7 @@ cat >"$FAIL_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$WAIVER_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_JSON" <<'JSON'
 {
   "reason": "Temporary migration overhead while lane framework settles",
   "expires_on": "2099-12-31",
@@ -77,7 +77,7 @@ cat >"$WAIVER_JSON" <<'JSON'
 }
 JSON
 
-cat >"$EXPIRED_WAIVER_JSON" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$EXPIRED_WAIVER_JSON" <<'JSON'
 {
   "reason": "Expired override",
   "expires_on": "2000-01-01",
@@ -88,7 +88,7 @@ cat >"$EXPIRED_WAIVER_JSON" <<'JSON'
 }
 JSON
 
-cat >"$TAMPERED_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TAMPERED_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v0",
   "lane": "fast-gate",
@@ -96,7 +96,7 @@ cat >"$TAMPERED_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$LOCAL_HEAVY_SOFT_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$LOCAL_HEAVY_SOFT_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",
@@ -113,7 +113,7 @@ cat >"$LOCAL_HEAVY_SOFT_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$LOCAL_HEAVY_MARKER_MISSING_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$LOCAL_HEAVY_MARKER_MISSING_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",

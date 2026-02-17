@@ -259,7 +259,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 report_json="$TMP_DIR/service-api-live-validation-report.json"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.runtime.service-api-live-validation.v1",
   "status": "pass",

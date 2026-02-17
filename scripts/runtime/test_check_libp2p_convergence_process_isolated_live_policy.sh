@@ -17,7 +17,7 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 report_file="$TMP_DIR/libp2p-convergence-process-isolated-summary.json"
-cat > "$report_file" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_file" <<'JSON'
 {
   "schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1",
   "status": "pass",
@@ -254,7 +254,7 @@ if ! printf '%s\n' "$deep_fast_gate_output" | grep -q 'libp2p_process_isolated_c
 fi
 
 deep_harness_report="$TMP_DIR/libp2p-process-isolated-harness-summary.json"
-cat > "$deep_harness_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$deep_harness_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.libp2p-process-isolated-harness-report.v1",
   "status": "pass",
@@ -263,7 +263,7 @@ cat > "$deep_harness_report" <<'JSON'
 JSON
 
 deep_report="$TMP_DIR/libp2p-convergence-process-isolated-summary.deep.json"
-cat > "$deep_report" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$deep_report" <<JSON
 {
   "schema_version": "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1",
   "status": "pass",

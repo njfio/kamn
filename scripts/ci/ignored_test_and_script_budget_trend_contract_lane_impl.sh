@@ -140,7 +140,7 @@ fi
 
 combined_within_report="$tmp_dir/combined-shell-surface.within.json"
 combined_within_policy="$tmp_dir/combined-shell-surface.within-policy.json"
-cat >"$combined_within_report" <<'EOF_WITHIN'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$combined_within_report" <<'EOF_WITHIN'
 {
   "baseline": {
     "script_count": 100,

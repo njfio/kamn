@@ -21,7 +21,7 @@ if [ ! -x "$POLICY_SCRIPT" ]; then
   exit 1
 fi
 
-cat >"$TMP_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT" <<'JSON'
 {
   "schema_version": "kamn.runtime.full-io-scenario-matrix-live-report.v1",
   "status": "pass",

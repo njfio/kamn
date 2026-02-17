@@ -76,7 +76,7 @@ if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=GO$"; then
 fi
 
 tls_evidence_report="$TMP_DIR/tls-evidence-report.json"
-cat >"$tls_evidence_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$tls_evidence_report" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-core-live-https-dependency-posture-report.v1",
   "reason_taxonomy_version": "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
@@ -155,7 +155,7 @@ milestone_live_bundle_policy="$TMP_DIR/milestone-live-bundle-policy.json"
 milestone_gate_report="$TMP_DIR/milestone-go-no-go-gate-report.json"
 milestone_bundle_file="$TMP_DIR/gonogo-milestone-contract.json"
 
-cat >"$milestone_preflight_summary" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$milestone_preflight_summary" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
   "status": "ok",
@@ -165,7 +165,7 @@ cat >"$milestone_preflight_summary" <<'JSON'
 }
 JSON
 
-cat >"$milestone_preflight_policy" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$milestone_preflight_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
   "final_decision": "GO",
@@ -175,7 +175,7 @@ cat >"$milestone_preflight_policy" <<'JSON'
 }
 JSON
 
-cat >"$milestone_live_bundle_summary" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$milestone_live_bundle_summary" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-node-validation-bundle-summary.v1",
   "status": "ok",
@@ -193,14 +193,14 @@ cat >"$milestone_live_bundle_summary" <<'JSON'
 }
 JSON
 
-cat >"$milestone_live_bundle_policy" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$milestone_live_bundle_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-node-validation-bundle-policy-report.v1",
   "final_decision": "GO"
 }
 JSON
 
-cat >"$milestone_gate_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$milestone_gate_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
@@ -321,7 +321,7 @@ if ! printf '%s\n' "$milestone_missing_runbook_policy_output" | grep -q "^final_
 fi
 
 audit_integrity_report="$TMP_DIR/audit-integrity-policy-report.json"
-cat >"$audit_integrity_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$audit_integrity_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.sqlite-crash-recovery-live-policy-report.v1",
   "status": "ok",
@@ -368,7 +368,7 @@ if ! printf '%s\n' "$audit_policy_output" | grep -q "^final_decision=GO$"; then
 fi
 
 slo_policy_report="$TMP_DIR/slo-policy-report.json"
-cat >"$slo_policy_report" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$slo_policy_report" <<'JSON'
 {
   "schema_version": "kamn.deploy.slo-rollback-report.v1",
   "status": "pass",

@@ -33,7 +33,7 @@ write_dry_run_fixture_reports() {
   mkdir -p "$(dirname "$MESSAGE_REPORT_FILE")"
   mkdir -p "$(dirname "$RUNTIME_REPORT_FILE")"
 
-  cat >"$DID_REPORT_FILE" <<'JSON'
+  bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$DID_REPORT_FILE" <<'JSON'
 {
   "schema_version": "kamn.kolme.did-lifecycle-chain.live-validation.v1",
   "status": "pass",
@@ -47,7 +47,7 @@ write_dry_run_fixture_reports() {
 }
 JSON
 
-  cat >"$MESSAGE_REPORT_FILE" <<'JSON'
+  bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$MESSAGE_REPORT_FILE" <<'JSON'
 {
   "schema_version": "kamn.kolme.message-proof-anchoring.live-validation.v1",
   "status": "pass",
@@ -61,7 +61,7 @@ JSON
 }
 JSON
 
-  cat >"$RUNTIME_REPORT_FILE" <<'JSON'
+  bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RUNTIME_REPORT_FILE" <<'JSON'
 {
   "schema_version": "kamn.kolme.continuous-runtime-commit.live-validation.v1",
   "status": "pass",

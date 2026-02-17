@@ -104,7 +104,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 report_json="$TMP_DIR/python-sdk-packaging-contract-report.json"
-cat >"$report_json" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$report_json" <<JSON
 {
   "schema_version": "kamn.sdk.python-packaging-contract.v1",
   "status": "pass",

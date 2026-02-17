@@ -27,7 +27,7 @@ if ! printf '%s\n' "$default_output" | grep -q '^policy_decision='; then
 fi
 
 within_input="$TMP_DIR/kolme-trend-within-input.json"
-cat >"$within_input" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$within_input" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 62,
@@ -36,7 +36,7 @@ cat >"$within_input" <<'EOF_REPORT'
 EOF_REPORT
 
 command_surface_within_report="$TMP_DIR/kolme-command-surface-within-report.json"
-cat >"$command_surface_within_report" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$command_surface_within_report" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.script-surface-budget-report.v1",
   "status": "pass",
@@ -75,7 +75,7 @@ if ! printf '%s\n' "$within_output" | grep -q '^command_surface_policy_decision=
 fi
 
 fail_input="$TMP_DIR/kolme-trend-fail-input.json"
-cat >"$fail_input" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$fail_input" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.test-harness-loc-report.v1",
   "harness_script_count": 90,
@@ -95,7 +95,7 @@ if ! printf '%s\n' "$fail_output" | grep -q '^policy_decision=NO-GO$'; then
 fi
 
 command_surface_warn_report="$TMP_DIR/kolme-command-surface-warn-report.json"
-cat >"$command_surface_warn_report" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$command_surface_warn_report" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.script-surface-budget-report.v1",
   "status": "pass",
@@ -134,7 +134,7 @@ if ! printf '%s\n' "$command_surface_warn_output" | grep -q '^policy_decision=WA
 fi
 
 command_surface_fail_report="$TMP_DIR/kolme-command-surface-fail-report.json"
-cat >"$command_surface_fail_report" <<'EOF_REPORT'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$command_surface_fail_report" <<'EOF_REPORT'
 {
   "schema_version": "kamn.ci.script-surface-budget-report.v1",
   "status": "pass",

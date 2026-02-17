@@ -7,7 +7,7 @@ SCRIPT="$ROOT_DIR/scripts/ci/summarize_budget_artifacts.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-cat > "$TMP_DIR/a.json" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/a.json" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "pass",
@@ -20,7 +20,7 @@ cat > "$TMP_DIR/a.json" <<'JSON'
 }
 JSON
 
-cat > "$TMP_DIR/b.json" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/b.json" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "warn",
@@ -33,7 +33,7 @@ cat > "$TMP_DIR/b.json" <<'JSON'
 }
 JSON
 
-cat > "$TMP_DIR/c.json" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/c.json" <<'JSON'
 {
   "lane": "deep-validate",
   "status": "pass",

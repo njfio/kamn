@@ -127,7 +127,7 @@ if [ "$rustdoc_navigation_ratio_status" = "exceeded" ]; then
   reason_key="kamn.ci.kamn-core-rustdoc-artifact.docs-behavioral-ratio-threshold-exceeded"
 fi
 
-cat >"$OUTPUT_JSON" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$OUTPUT_JSON" <<JSON
 {
   "schema_version": "kamn.ci.kamn-core-rustdoc-artifact-report.v1",
   "status": "$status",

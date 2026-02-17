@@ -21,7 +21,7 @@ trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUO
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
 printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" >"$TMP_PROVENANCE"
 TMP_CUSTODY_SHA="$(sha256sum "$TMP_CUSTODY" | awk '{print $1}')"
-cat >"$TMP_QUORUM" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_QUORUM" <<JSON
 {
   "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
@@ -42,7 +42,7 @@ cat >"$TMP_QUORUM" <<JSON
 }
 JSON
 
-cat >"$TMP_QUORUM_SINGLE" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_QUORUM_SINGLE" <<JSON
 {
   "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 1,

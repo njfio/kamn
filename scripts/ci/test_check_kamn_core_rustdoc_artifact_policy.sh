@@ -20,7 +20,7 @@ ARTIFACT_BYTES="$(wc -c <"$ARTIFACT_FILE" | tr -d '[:space:]')"
 ARTIFACT_SHA256="$(sha256sum "$ARTIFACT_FILE" | awk '{print $1}')"
 
 REPORT_FILE="$TMP_DIR/report.json"
-cat >"$REPORT_FILE" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_FILE" <<JSON
 {
   "schema_version": "kamn.ci.kamn-core-rustdoc-artifact-report.v1",
   "status": "pass",
@@ -49,7 +49,7 @@ grep -Eq '^docs_contract_to_behavioral_ratio=[0-9]+(\.[0-9]+)?$' "$TMP_DIR/pass.
 grep -Eq '^max_docs_contract_to_behavioral_ratio=[0-9]+(\.[0-9]+)?$' "$TMP_DIR/pass.out"
 
 TAMPERED_REPORT="$TMP_DIR/tampered-report.json"
-cat >"$TAMPERED_REPORT" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TAMPERED_REPORT" <<JSON
 {
   "schema_version": "kamn.ci.kamn-core-rustdoc-artifact-report.v1",
   "status": "pass",
@@ -76,7 +76,7 @@ fi
 grep -q 'artifact_sha256 does not match file digest' "$TMP_DIR/fail.out"
 
 RATIO_FAIL_REPORT="$TMP_DIR/ratio-fail-report.json"
-cat >"$RATIO_FAIL_REPORT" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RATIO_FAIL_REPORT" <<JSON
 {
   "schema_version": "kamn.ci.kamn-core-rustdoc-artifact-report.v1",
   "status": "pass",

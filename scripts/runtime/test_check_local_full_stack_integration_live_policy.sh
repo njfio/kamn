@@ -28,7 +28,7 @@ if [ ! -f "$RUNBOOK_DOC" ]; then
   exit 1
 fi
 
-cat >"$TMP_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT" <<'JSON'
 {
   "schema_version": "kamn.runtime.local-full-stack-integration-live-report.v1",
   "status": "pass",

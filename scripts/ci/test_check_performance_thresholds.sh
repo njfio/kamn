@@ -12,7 +12,7 @@ PASS_REPORT="$TMP_DIR/pass.json"
 FAIL_REPORT="$TMP_DIR/fail.json"
 INVALID_REPORT="$TMP_DIR/invalid.json"
 
-cat >"$PASS_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$PASS_REPORT" <<'JSON'
 {
   "latency_p50_ms": 88,
   "latency_p99_ms": 300,
@@ -21,7 +21,7 @@ cat >"$PASS_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$FAIL_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$FAIL_REPORT" <<'JSON'
 {
   "latency_p50_ms": 101,
   "latency_p99_ms": 540,
@@ -30,7 +30,7 @@ cat >"$FAIL_REPORT" <<'JSON'
 }
 JSON
 
-cat >"$INVALID_REPORT" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$INVALID_REPORT" <<'JSON'
 {
   "latency_p50_ms": 90,
   "throughput_tps": 12000

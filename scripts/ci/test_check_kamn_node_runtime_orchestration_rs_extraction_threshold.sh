@@ -30,7 +30,7 @@ grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
 grep -q '^exception_status=not-required$' "$TMP_DIR/pass.out"
 
 WARN_THRESHOLD_FILE="$TMP_DIR/warn-threshold.json"
-cat >"$WARN_THRESHOLD_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WARN_THRESHOLD_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-node-runtime-orchestration-rs-extraction-thresholds.v1",
   "warn_line_count": 1000,
@@ -63,7 +63,7 @@ grep -q '^policy_decision=NO-GO$' "$TMP_DIR/fail.out"
 grep -q 'runtime_orchestration_rs_line_count_fail_threshold_exceeded' "$TMP_DIR/fail.out"
 
 EXCEPTION_FILE="$TMP_DIR/exception.json"
-cat >"$EXCEPTION_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$EXCEPTION_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-node-runtime-orchestration-rs-extraction-threshold-exception.v1",
   "reason": "temporary extraction bridge",
@@ -84,7 +84,7 @@ grep -q '^exception_status=applied$' "$TMP_DIR/exception-pass.out"
 grep -q '^reason_codes=runtime_orchestration_rs_threshold_exception_applied$' "$TMP_DIR/exception-pass.out"
 
 EXPIRED_EXCEPTION_FILE="$TMP_DIR/exception-expired.json"
-cat >"$EXPIRED_EXCEPTION_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$EXPIRED_EXCEPTION_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-node-runtime-orchestration-rs-extraction-threshold-exception.v1",
   "reason": "expired exception",
@@ -111,7 +111,7 @@ grep -q '^status=fail$' "$TMP_DIR/exception-expired.out"
 grep -q 'runtime_orchestration_rs_threshold_exception_expired' "$TMP_DIR/exception-expired.out"
 
 INVALID_THRESHOLD_FILE="$TMP_DIR/invalid-threshold.json"
-cat >"$INVALID_THRESHOLD_FILE" <<'JSON'
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$INVALID_THRESHOLD_FILE" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-node-runtime-orchestration-rs-extraction-thresholds.v1",
   "warn_line_count": 1400,

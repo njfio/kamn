@@ -59,7 +59,7 @@ if entry.get("passthrough") is not True:
 PY
 
 pass_report="$TMP_DIR/sdk-example-fixture-drift-report.pass.json"
-cat <<'JSON' > "$pass_report"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$pass_report" <<'JSON'
 {
   "schema_version": "kamn.sdk.example-fixture-drift-report.v1",
   "status": "pass",
@@ -83,7 +83,7 @@ if ! printf '%s\n' "$pass_output" | grep -q "^reason_codes=none$"; then
 fi
 
 invalid_schema_report="$TMP_DIR/sdk-example-fixture-drift-report.invalid-schema.json"
-cat <<'JSON' > "$invalid_schema_report"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$invalid_schema_report" <<'JSON'
 {
   "schema_version": "kamn.sdk.example-fixture-drift-report.v0",
   "status": "pass",
