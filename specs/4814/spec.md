@@ -3,7 +3,7 @@
 - Title: Task: deploy shared test harness and JSON helper utilities across shell contracts
 - Parent: Parent story: #4808
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
@@ -33,11 +33,12 @@ Out of scope:
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1): `bash scripts/lib/test_test_harness_migration_contract.sh` passes (subtask `#4825`, PR `#4842`).
+- C-02 (AC-2): `bash scripts/lib/test_json_write_helper_migration_contract.sh` passes with helper adoption and zero legacy ROOT_DIR cat JSON heredoc writers (subtask `#4826`, PR `#4843`).
+- C-03 (AC-3): `bash scripts/ci/test_ci_tools.sh` passes after both subtask migrations.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Shared test harness landed and adopted by migrated wrapper-family test flows.
+- Shared JSON write helper command landed and adopted across 89 scripts (168 write sites).
+- Full CI tool regression suite remains green post-migration.
