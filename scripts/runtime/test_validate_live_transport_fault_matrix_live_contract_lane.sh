@@ -8,7 +8,7 @@ POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_live_transport_fault_matrix_live
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 EXPECTED_REASON_TAXONOMY_VERSION="kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
-EXPECTED_REASON_CODES_CSV="ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
+EXPECTED_REASON_CODES_CSV="ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_peer_adapter_multi_process_validation_local_heavy_status_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_budget_exhausted_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
 EXPECTED_RESILIENCE_GATE_REASON_TAXONOMY_VERSION="kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1"
 EXPECTED_RESILIENCE_GATE_REASON_CODES_CSV="live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch"
 
@@ -63,6 +63,30 @@ if ! printf '%s\n' "$lane_output" | grep -q '^policy_reason_codes_value=none$'; 
   echo "expected live transport fault matrix policy normalized reason codes marker in contract lane output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1$'; then
+  echo "expected live transport fault matrix peer-adapter reason taxonomy marker in contract lane output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer$'; then
+  echo "expected live transport fault matrix peer-integrity fail-closed reason marker in contract lane output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout$'; then
+  echo "expected live transport fault matrix retry-timeout reason projection marker in contract lane output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted$'; then
+  echo "expected live transport fault matrix retry-budget-exhausted reason projection marker in contract lane output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_adapter_multi_process_validation_local_heavy_status=required$'; then
+  echo "expected live transport fault matrix peer-adapter multi-process local-heavy marker in contract lane output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^peer_reason_docs_contract_status=verified$'; then
+  echo "expected live transport fault matrix peer reason docs contract status marker in contract lane output" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^evidence_convergence_status=verified$'; then
   echo "expected live transport fault matrix evidence convergence marker in contract lane output" >&2
   exit 1
@@ -106,10 +130,22 @@ if lane_payload.get("live_transport_fault_matrix_contract_status") != "verified"
     raise SystemExit("expected live transport fault matrix contract lane status marker")
 if lane_payload.get("policy_reason_taxonomy_version") != "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1":
     raise SystemExit("expected deterministic policy reason taxonomy marker in contract lane report")
-if lane_payload.get("policy_reason_codes_csv") != "ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid":
+if lane_payload.get("policy_reason_codes_csv") != "ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_peer_adapter_multi_process_validation_local_heavy_status_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_budget_exhausted_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid":
     raise SystemExit("expected deterministic policy reason codes taxonomy marker in contract lane report")
 if lane_payload.get("policy_reason_codes_value") != "none":
     raise SystemExit("expected policy_reason_codes_value=none in contract lane report")
+if lane_payload.get("peer_adapter_reason_taxonomy_version") != "kamn.runtime.peer-adapter-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic peer_adapter_reason_taxonomy_version marker in contract lane report")
+if lane_payload.get("peer_integrity_fail_closed_reason_code") != "p2p_transport_unknown_sender_peer":
+    raise SystemExit("expected deterministic peer_integrity_fail_closed_reason_code marker in contract lane report")
+if lane_payload.get("peer_adapter_reason_projection_timeout_code") != "p2p_live_reconnect_retry_dial_timeout":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_timeout_code marker in contract lane report")
+if lane_payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "p2p_live_reconnect_retry_budget_exhausted":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker in contract lane report")
+if lane_payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
+    raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker in contract lane report")
+if lane_payload.get("peer_reason_docs_contract_status") != "verified":
+    raise SystemExit("expected peer_reason_docs_contract_status=verified in contract lane report")
 if lane_payload.get("evidence_convergence_status") != "verified":
     raise SystemExit("expected evidence_convergence_status=verified in contract lane report")
 if lane_payload.get("boundary_governance_status") != "verified":
@@ -130,6 +166,16 @@ if policy_payload.get("reason_taxonomy_version") != "kamn.runtime.live-transport
     raise SystemExit("expected deterministic reason taxonomy marker in policy report")
 if policy_payload.get("reason_codes_value") != "none":
     raise SystemExit("expected reason_codes_value=none in policy report")
+if policy_payload.get("peer_adapter_reason_taxonomy_version") != "kamn.runtime.peer-adapter-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic peer_adapter_reason_taxonomy_version marker in policy report")
+if policy_payload.get("peer_integrity_fail_closed_reason_code") != "p2p_transport_unknown_sender_peer":
+    raise SystemExit("expected deterministic peer_integrity_fail_closed_reason_code marker in policy report")
+if policy_payload.get("peer_adapter_reason_projection_timeout_code") != "p2p_live_reconnect_retry_dial_timeout":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_timeout_code marker in policy report")
+if policy_payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "p2p_live_reconnect_retry_budget_exhausted":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker in policy report")
+if policy_payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
+    raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker in policy report")
 PY
 
 set +e

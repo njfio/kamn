@@ -46,6 +46,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2
   echo "expected live transport fault matrix runtime transport marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1$'; then
+  echo "expected live transport fault matrix peer-adapter reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer$'; then
+  echo "expected live transport fault matrix peer-integrity fail-closed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout$'; then
+  echo "expected live transport fault matrix retry-timeout reason projection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted$'; then
+  echo "expected live transport fault matrix retry-budget-exhausted reason projection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^peer_adapter_multi_process_validation_local_heavy_status=required$'; then
+  echo "expected live transport fault matrix peer-adapter multi-process local-heavy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1$'; then
   echo "expected live transport fault matrix reason taxonomy version marker" >&2
   exit 1
@@ -69,6 +89,16 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected final_decision=GO")
 if payload.get("runtime_transport_mode") != "libp2p_live_fault_matrix":
     raise SystemExit("expected runtime transport mode marker")
+if payload.get("peer_adapter_reason_taxonomy_version") != "kamn.runtime.peer-adapter-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic peer_adapter_reason_taxonomy_version marker")
+if payload.get("peer_integrity_fail_closed_reason_code") != "p2p_transport_unknown_sender_peer":
+    raise SystemExit("expected deterministic peer_integrity_fail_closed_reason_code marker")
+if payload.get("peer_adapter_reason_projection_timeout_code") != "p2p_live_reconnect_retry_dial_timeout":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_timeout_code marker")
+if payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "p2p_live_reconnect_retry_budget_exhausted":
+    raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker")
+if payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
+    raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason taxonomy version marker")
 if payload.get("reason_codes") != ["none"]:

@@ -29,6 +29,13 @@ RUN_LANE_SCHEMA = "kamn.runtime.live-transport-fault-matrix-report.v1"
 POLICY_SCHEMA = "kamn.runtime.live-transport-fault-matrix-policy-report.v1"
 RUNTIME_TRANSPORT_MODE = "libp2p_live_fault_matrix"
 REASON_TAXONOMY_VERSION = "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
+PEER_ADAPTER_REASON_TAXONOMY_VERSION = "kamn.runtime.peer-adapter-reason-taxonomy.v1"
+PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE = "p2p_transport_unknown_sender_peer"
+PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE = "p2p_live_reconnect_retry_dial_timeout"
+PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE = (
+    "p2p_live_reconnect_retry_budget_exhausted"
+)
+PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS = "required"
 POLICY_REASON_CODES_CSV = ",".join(
     [
         "ci_fast_gate_failed",
@@ -40,6 +47,11 @@ POLICY_REASON_CODES_CSV = ",".join(
         "live_transport_fault_matrix_policy_final_decision_mismatch",
         "live_transport_fault_matrix_policy_lane_mode_invalid",
         "live_transport_fault_matrix_policy_marker_missing",
+        "live_transport_fault_matrix_policy_peer_adapter_multi_process_validation_local_heavy_status_mismatch",
+        "live_transport_fault_matrix_policy_peer_adapter_reason_projection_budget_exhausted_code_mismatch",
+        "live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch",
+        "live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch",
+        "live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch",
         "live_transport_fault_matrix_policy_reason_codes_classification_mismatch",
         "live_transport_fault_matrix_policy_reason_codes_invalid",
         "live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch",
@@ -185,6 +197,17 @@ def _run_lane(args: argparse.Namespace) -> int:
         "publish_drop_recovery_status": "verified",
         "replay_recovery_status": "verified",
         "peer_churn_recovery_status": "verified",
+        "peer_adapter_reason_taxonomy_version": PEER_ADAPTER_REASON_TAXONOMY_VERSION,
+        "peer_integrity_fail_closed_reason_code": PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE,
+        "peer_adapter_reason_projection_timeout_code": (
+            PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE
+        ),
+        "peer_adapter_reason_projection_budget_exhausted_code": (
+            PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE
+        ),
+        "peer_adapter_multi_process_validation_local_heavy_status": (
+            PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS
+        ),
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
         "reason_taxonomy_status": "verified",
         "reason_codes": ["none"],
@@ -216,6 +239,20 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("publish_drop_recovery_status=verified")
     print("replay_recovery_status=verified")
     print("peer_churn_recovery_status=verified")
+    print(f"peer_adapter_reason_taxonomy_version={PEER_ADAPTER_REASON_TAXONOMY_VERSION}")
+    print(f"peer_integrity_fail_closed_reason_code={PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE}")
+    print(
+        "peer_adapter_reason_projection_timeout_code="
+        f"{PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE}"
+    )
+    print(
+        "peer_adapter_reason_projection_budget_exhausted_code="
+        f"{PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE}"
+    )
+    print(
+        "peer_adapter_multi_process_validation_local_heavy_status="
+        f"{PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS}"
+    )
     print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
     print("reason_taxonomy_status=verified")
     print("reason_codes=none")
@@ -256,6 +293,11 @@ def _check_policy(args: argparse.Namespace) -> int:
         "publish_drop_recovery_status",
         "replay_recovery_status",
         "peer_churn_recovery_status",
+        "peer_adapter_reason_taxonomy_version",
+        "peer_integrity_fail_closed_reason_code",
+        "peer_adapter_reason_projection_timeout_code",
+        "peer_adapter_reason_projection_budget_exhausted_code",
+        "peer_adapter_multi_process_validation_local_heavy_status",
         "reason_taxonomy_version",
         "reason_taxonomy_status",
         "reason_codes",
@@ -307,6 +349,37 @@ def _check_policy(args: argparse.Namespace) -> int:
     decision.reject_if(
         report.get("reason_taxonomy_version") != REASON_TAXONOMY_VERSION,
         "live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("peer_adapter_reason_taxonomy_version")
+        != PEER_ADAPTER_REASON_TAXONOMY_VERSION,
+        "live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("peer_integrity_fail_closed_reason_code")
+        != PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE,
+        "live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch",
+    )
+    decision.reject_if(
+        report.get("peer_adapter_reason_projection_timeout_code")
+        != PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE,
+        "live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch",
+    )
+    decision.reject_if(
+        report.get("peer_adapter_reason_projection_budget_exhausted_code")
+        != PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE,
+        (
+            "live_transport_fault_matrix_policy_"
+            "peer_adapter_reason_projection_budget_exhausted_code_mismatch"
+        ),
+    )
+    decision.reject_if(
+        report.get("peer_adapter_multi_process_validation_local_heavy_status")
+        != PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS,
+        (
+            "live_transport_fault_matrix_policy_"
+            "peer_adapter_multi_process_validation_local_heavy_status_mismatch"
+        ),
     )
 
     observed_reason_codes = report.get("reason_codes")
@@ -385,6 +458,17 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
         "reason_codes_value": ",".join(reason_codes),
+        "peer_adapter_reason_taxonomy_version": PEER_ADAPTER_REASON_TAXONOMY_VERSION,
+        "peer_integrity_fail_closed_reason_code": PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE,
+        "peer_adapter_reason_projection_timeout_code": (
+            PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE
+        ),
+        "peer_adapter_reason_projection_budget_exhausted_code": (
+            PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE
+        ),
+        "peer_adapter_multi_process_validation_local_heavy_status": (
+            PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS
+        ),
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -403,6 +487,20 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"reason_codes_csv={POLICY_REASON_CODES_CSV}")
     print(f"reason_codes={reason_codes_csv}")
     print(f"reason_codes_value={reason_codes_csv}")
+    print(f"peer_adapter_reason_taxonomy_version={PEER_ADAPTER_REASON_TAXONOMY_VERSION}")
+    print(f"peer_integrity_fail_closed_reason_code={PEER_INTEGRITY_FAIL_CLOSED_REASON_CODE}")
+    print(
+        "peer_adapter_reason_projection_timeout_code="
+        f"{PEER_ADAPTER_REASON_PROJECTION_TIMEOUT_CODE}"
+    )
+    print(
+        "peer_adapter_reason_projection_budget_exhausted_code="
+        f"{PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE}"
+    )
+    print(
+        "peer_adapter_multi_process_validation_local_heavy_status="
+        f"{PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS}"
+    )
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 

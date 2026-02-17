@@ -6,9 +6,12 @@ VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_live_transport_fault_matri
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_live_transport_fault_matrix_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 NEXT_STEPS_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
+RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
+KOLME_DEVNET_OPS_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_SMOKE_MAX_SECONDS_BOUNDARY=240
 RESILIENCE_GATE_REASON_TAXONOMY_VERSION="kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1"
 RESILIENCE_GATE_REASON_CODES_CSV="live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch"
+POLICY_REASON_CODES_CSV="ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_peer_adapter_multi_process_validation_local_heavy_status_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_budget_exhausted_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
 
 output_json=""
 policy_output_json=""
@@ -82,7 +85,7 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
     exit 1
   fi
 done
-for required_doc in "$STRATEGY_DOC" "$NEXT_STEPS_DOC"; do
+for required_doc in "$STRATEGY_DOC" "$NEXT_STEPS_DOC" "$RELEASE_CHECKLIST_DOC" "$KOLME_DEVNET_OPS_DOC"; do
   if [ ! -f "$required_doc" ]; then
     echo "expected required documentation file '$required_doc'" >&2
     exit 1
@@ -110,6 +113,26 @@ if summary.get("reason_taxonomy_version") != policy.get("reason_taxonomy_version
 if summary.get("reason_codes") != policy.get("reason_codes"):
     raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
 if summary.get("reason_codes_value") != policy.get("reason_codes_value"):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("peer_adapter_reason_taxonomy_version") != policy.get(
+    "peer_adapter_reason_taxonomy_version"
+):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("peer_integrity_fail_closed_reason_code") != policy.get(
+    "peer_integrity_fail_closed_reason_code"
+):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("peer_adapter_reason_projection_timeout_code") != policy.get(
+    "peer_adapter_reason_projection_timeout_code"
+):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("peer_adapter_reason_projection_budget_exhausted_code") != policy.get(
+    "peer_adapter_reason_projection_budget_exhausted_code"
+):
+    raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
+if summary.get("peer_adapter_multi_process_validation_local_heavy_status") != policy.get(
+    "peer_adapter_multi_process_validation_local_heavy_status"
+):
     raise SystemExit("live_transport_fault_matrix_contract_evidence_convergence_mismatch")
 
 print("evidence_convergence_status=verified")
@@ -185,12 +208,32 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.run
   echo "expected live transport fault matrix policy reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid$'; then
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_codes_csv=$POLICY_REASON_CODES_CSV$"; then
   echo "expected live transport fault matrix policy reason codes taxonomy marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
   echo "expected live transport fault matrix policy normalized reason_codes_value marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1$'; then
+  echo "expected live transport fault matrix policy peer-adapter reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer$'; then
+  echo "expected live transport fault matrix policy peer-integrity fail-closed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout$'; then
+  echo "expected live transport fault matrix policy retry-timeout reason projection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted$'; then
+  echo "expected live transport fault matrix policy retry-budget-exhausted reason projection marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_multi_process_validation_local_heavy_status=required$'; then
+  echo "expected live transport fault matrix policy peer-adapter multi-process local-heavy marker" >&2
   exit 1
 fi
 
@@ -288,6 +331,38 @@ if ! grep -q "scripts/runtime/check_live_transport_fault_matrix_live_policy.sh" 
   echo "expected next-steps plan to reference live transport fault matrix policy checker script" >&2
   exit 1
 fi
+if ! grep -q "## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release checklist to include peer adapter reason projection and multi-process hooks section" >&2
+  exit 1
+fi
+if ! grep -q "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release checklist to include peer adapter reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release checklist to include peer adapter timeout reason projection marker" >&2
+  exit 1
+fi
+if ! grep -q "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release checklist to include peer adapter retry budget exhausted reason projection marker" >&2
+  exit 1
+fi
+if ! grep -q "peer_adapter_multi_process_validation_local_heavy_status=required" "$RELEASE_CHECKLIST_DOC"; then
+  echo "expected release checklist to include peer adapter multi-process local-heavy marker" >&2
+  exit 1
+fi
+if ! grep -q "peer sender-integrity drift fixtures must fail closed with \`p2p_transport_unknown_sender_peer\`" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected Kolme devnet ops docs to include peer sender-integrity drift fail-closed marker" >&2
+  exit 1
+fi
+if ! grep -q "p2p_live_reconnect_retry_dial_timeout" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected Kolme devnet ops docs to include retry-timeout reason projection marker" >&2
+  exit 1
+fi
+if ! grep -q "p2p_live_reconnect_retry_budget_exhausted" "$KOLME_DEVNET_OPS_DOC"; then
+  echo "expected Kolme devnet ops docs to include retry-budget-exhausted reason projection marker" >&2
+  exit 1
+fi
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -337,6 +412,22 @@ lane_report = {
     "policy_reason_taxonomy_version": policy_report.get("reason_taxonomy_version"),
     "policy_reason_codes_csv": policy_report.get("reason_codes_csv"),
     "policy_reason_codes_value": policy_report.get("reason_codes_value"),
+    "peer_adapter_reason_taxonomy_version": policy_report.get(
+        "peer_adapter_reason_taxonomy_version"
+    ),
+    "peer_integrity_fail_closed_reason_code": policy_report.get(
+        "peer_integrity_fail_closed_reason_code"
+    ),
+    "peer_adapter_reason_projection_timeout_code": policy_report.get(
+        "peer_adapter_reason_projection_timeout_code"
+    ),
+    "peer_adapter_reason_projection_budget_exhausted_code": policy_report.get(
+        "peer_adapter_reason_projection_budget_exhausted_code"
+    ),
+    "peer_adapter_multi_process_validation_local_heavy_status": policy_report.get(
+        "peer_adapter_multi_process_validation_local_heavy_status"
+    ),
+    "peer_reason_docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "convergence_fail_closed_reason_code": "live_transport_fault_matrix_contract_evidence_convergence_mismatch",
     "fail_closed_reason_code": "live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status",
@@ -368,8 +459,14 @@ echo "resilience_gate_reason_taxonomy_version=kamn.runtime.live-transport-fault-
 echo "resilience_gate_reason_codes_csv=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch"
 echo "resilience_gate_reason_codes_value=none"
 echo "policy_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1"
-echo "policy_reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid"
+echo "policy_reason_codes_csv=$POLICY_REASON_CODES_CSV"
 echo "policy_reason_codes_value=none"
+echo "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1"
+echo "peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer"
+echo "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
+echo "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted"
+echo "peer_adapter_multi_process_validation_local_heavy_status=required"
+echo "peer_reason_docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "convergence_fail_closed_reason_code=live_transport_fault_matrix_contract_evidence_convergence_mismatch"
 echo "fail_closed_reason_code=live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status"
