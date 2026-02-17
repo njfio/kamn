@@ -192,6 +192,24 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.20 Secret Material Zeroization and Signer-Rotation Governance Closure
+- Active chain: `#4158 -> #4160 -> #4164 -> (#4171, #4172)`.
+- Convergence closure markers:
+  - `custody_rotation_ci_smoke_convergence_status=verified`
+  - `custody_rotation_ci_smoke_reason_taxonomy_version=kamn.ci.custody-rotation-ci-smoke-convergence-reason-taxonomy.v1`
+  - `custody_rotation_ci_smoke_max_seconds=120`
+  - `custody_rotation_local_heavy_max_seconds=900`
+- Zeroization and custody parity closure markers:
+  - `runtime_signer_private_key_env_zeroization_violation`
+  - `runtime_signer_private_key_bytes_zeroization_violation`
+  - `quorum_evidence_custody_sha256_mismatch`
+  - `signer_rotation_promotion_stalled`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_custody_rotation_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/custody-rotation-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh`
+- Local-heavy boundary remains explicit and outside ci-fast-gate:
+  - `bash scripts/runtime/run_failover_sync_drill_deep_lane.sh`
+
 ### R27.21 Upgrade Compatibility CI Smoke Governance Closure
 - Active chain: `#4175 -> #4179 -> (#4186, #4187)`.
 - Convergence closure markers:

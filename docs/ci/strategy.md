@@ -558,6 +558,37 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `Regression: #4291`
   - `Regression: #4292`
 
+### Custody/Rotation CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_custody_rotation_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/custody-rotation-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `custody_rotation_ci_smoke_reason_taxonomy_version=kamn.ci.custody-rotation-ci-smoke-convergence-reason-taxonomy.v1`
+  - `custody_rotation_ci_smoke_reason_codes_csv=custody_rotation_smoke_contract_ci_smoke_composition_missing,failover_preflight_ci_smoke_composition_missing,failover_suite_ci_smoke_composition_missing,failover_deep_lane_command_leaked_in_fast_mode,ci_fast_gate_failover_deep_lane_not_excluded,ci_strategy_custody_rotation_convergence_markers_missing,production_plan_custody_rotation_convergence_markers_missing,custody_rotation_ci_smoke_seconds_exceeded`
+  - `custody_rotation_ci_smoke_max_seconds=120`
+  - `custody_rotation_local_heavy_max_seconds=900`
+  - `custody_rotation_ci_smoke_lane_cost_profile=low`
+  - `custody_rotation_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/ci/test_production_service_next_steps_contract.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh`
+  - `bash scripts/runtime/test_run_failover_sync_drill_suite.sh`
+- Local-heavy boundary policy:
+  - signer rotation/failover deep-lane run command remains excluded from ci-fast-gate and ci-tools fast mode.
+  - deep-lane run command (`run_failover_sync_drill_deep_lane.sh`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `custody_rotation_smoke_contract_ci_smoke_composition_missing`
+  - `failover_preflight_ci_smoke_composition_missing`
+  - `failover_suite_ci_smoke_composition_missing`
+  - `failover_deep_lane_command_leaked_in_fast_mode`
+  - `ci_fast_gate_failover_deep_lane_not_excluded`
+  - `ci_strategy_custody_rotation_convergence_markers_missing`
+  - `production_plan_custody_rotation_convergence_markers_missing`
+  - `custody_rotation_ci_smoke_seconds_exceeded`
+  - `Regression: #4171`
+  - `Regression: #4172`
+
 ### Websocket Session CI smoke convergence governance
 - Composite smoke checker command:
   - `python3 scripts/ci/check_websocket_session_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/websocket-session-ci-smoke-convergence-report.json`
