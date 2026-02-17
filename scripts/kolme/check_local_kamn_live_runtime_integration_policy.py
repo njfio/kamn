@@ -49,6 +49,7 @@ COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS = "verified"
 COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS = "verified"
 COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE = "low"
 COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE = "not_requested"
+IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 
 
 ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES = {
@@ -230,6 +231,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_simulated_signing_profile_detected")
         if f"{RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV}=" in runtime_commit_command:
             reason_codes.append("runtime_commit_fallback_private_key_command_marker_detected")
+        if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
+            reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
 
     runtime_provider_client_contract = report.get("runtime_provider_client_contract")
     if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
@@ -671,6 +674,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             observed_ids.add(check_id)
             if not isinstance(command, str) or not command.strip():
                 reason_codes.append(f"check_command_invalid:{check_id}")
+            elif check_id == "runtime_commit_policy" and IN_MEMORY_PROVIDER_MARKER in command:
+                reason_codes.append("runtime_commit_policy_check_in_memory_provider_reference_detected")
             if check_status not in ("planned", "pass", "fail", "skipped"):
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
