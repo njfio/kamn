@@ -371,6 +371,8 @@ fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
     assert!(CHECKLIST.contains(
         "peer_adapter_reason_taxonomy_version=kamn.runtime.peer-adapter-reason-taxonomy.v1"
     ));
+    assert!(CHECKLIST
+        .contains("peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer"));
     assert!(CHECKLIST.contains(
         "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
     ));
