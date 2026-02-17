@@ -12,6 +12,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Invariant Property/Fuzz/Concurrency Reason Mapping Gate (Issue #4401)
+- Contract lane command:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Required deterministic taxonomy markers:
+  - `reason_taxonomy_version=kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1`
+  - `reason_codes_csv=property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch`
+  - `reason_codes_value=none|<csv>`
+  - `final_decision=GO|NO-GO`
+- Required policy evidence markers:
+  - `invariant_policy_reason_taxonomy_version=kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1`
+  - `invariant_policy_reason_codes_value=none|<csv>`
+  - `invariant_policy_expected_reason_codes_value=none|<csv>`
+  - `invariant_policy_observed_reason_codes_value=none|<csv>`
+  - `invariant_policy_final_decision=GO|NO-GO`
+- Regression policy:
+  - invariant-lane acceptance drift or unstable taxonomy/evidence output drift forces `NO-GO` (`Regression: #4401`).
+
 ## Message Anchoring Mismatch/Tamper Gate (Issue #4419)
 - Contract lane command:
   - `bash scripts/kolme/run_message_proof_anchoring_contract_lane.sh --output-json /tmp/message-proof-anchoring-contract-report.json`
