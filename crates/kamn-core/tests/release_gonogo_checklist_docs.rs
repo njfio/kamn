@@ -683,6 +683,36 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_fork_choice_finality_taxonomy_runbook_parity_gate() {
+    assert!(CHECKLIST.contains(
+        "## Fork-Choice Finality Taxonomy and Runbook Marker Parity Gate (Issues #4252, #4257, #4258)"
+    ));
+    assert!(CHECKLIST.contains(
+        "check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json"
+    ));
+    assert!(
+        CHECKLIST.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh")
+    );
+    assert!(CHECKLIST.contains("finality_taxonomy_mapping_status=verified"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("convergence_reason_codes_csv=fork_choice_stale_block_height"));
+    assert!(CHECKLIST.contains(
+        "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("finality_taxonomy_runbook_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("finality_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4257"));
+    assert!(CHECKLIST.contains("Regression: #4258"));
+}
+
+#[test]
 fn checklist_contains_peer_adapter_reason_projection_multi_process_gate() {
     assert!(CHECKLIST.contains(
         "## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)"

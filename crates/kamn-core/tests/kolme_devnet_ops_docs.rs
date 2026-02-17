@@ -127,6 +127,34 @@ fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_mark
 }
 
 #[test]
+fn deploy_compat_contains_fork_choice_finality_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Fork-Choice Finality Taxonomy and Runbook Marker Parity Contracts (Issue #4252)"
+    ));
+    assert!(DEPLOY_COMPAT.contains("finality_taxonomy_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "convergence_reason_taxonomy_version=kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains("convergence_reason_codes_csv=fork_choice_stale_block_height"));
+    assert!(DEPLOY_COMPAT.contains(
+        "finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("finality_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json"
+    ));
+    assert!(DEPLOY_COMPAT
+        .contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4257"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4258"));
+}
+
+#[test]
 fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
     assert!(PLAN.contains("## Runtime Commit Adapter Replay/Finality Fast Lane"));
     assert!(PLAN.contains("run_runtime_commit_adapter_contract_lane.sh"));
