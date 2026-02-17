@@ -151,6 +151,33 @@ fn checklist_contains_runtime_observability_endpoint_payload_checker_gate() {
 }
 
 #[test]
+fn checklist_contains_unified_api_observability_payload_taxonomy_gate_markers() {
+    assert!(CHECKLIST.contains("## Unified API-Observability Payload Taxonomy Gate (Issue #4507)"));
+    assert!(CHECKLIST.contains(
+        "check_unified_api_observability_local_heavy_live_policy.sh --report-file /tmp/unified-api-observability-local-heavy-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/unified-api-observability-local-heavy-policy.json"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_taxonomy_version=kamn.runtime.unified-api-observability-local-heavy-policy-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "unified_api_observability_local_heavy_policy_correlation_schema_version_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "unified_api_observability_local_heavy_policy_correlation_required_fields_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "unified_api_observability_local_heavy_policy_correlation_id_propagation_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "correlation_schema_version=kamn.runtime.unified-api-observability-correlation-schema.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "correlation_required_fields_csv=correlation_id,trace_id,trace_parent,span_id,request_id"
+    ));
+    assert!(CHECKLIST.contains("correlation_id_propagation_status=verified"));
+}
+
+#[test]
 fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
     assert!(CHECKLIST
         .contains("## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)"));

@@ -34,6 +34,13 @@ for marker in \
   '^soak_iterations_requested=2$' \
   '^soak_iterations_executed=0$' \
   '^local_heavy_runtime_budget_status=verified$' \
+  '^correlation_schema_status=verified$' \
+  '^correlation_schema_version=kamn.runtime.unified-api-observability-correlation-schema.v1$' \
+  '^correlation_required_fields_csv=correlation_id,trace_id,trace_parent,span_id,request_id$' \
+  '^api_correlation_id=unified-api-observability-local-heavy$' \
+  '^runtime_correlation_id=unified-api-observability-local-heavy$' \
+  '^kolme_correlation_id=unified-api-observability-local-heavy$' \
+  '^correlation_id_propagation_status=verified$' \
   '^run_mode_command_status=dry_run_no_commands_executed$' \
   '^run_mode_command_count=0$' \
   '^execution_reason_code=dry_run_no_commands_executed$'; do
@@ -69,6 +76,20 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 in dry-run")
 if payload.get("execution_reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("correlation_schema_status") != "verified":
+    raise SystemExit("expected correlation_schema_status=verified")
+if payload.get("correlation_schema_version") != "kamn.runtime.unified-api-observability-correlation-schema.v1":
+    raise SystemExit("expected deterministic correlation_schema_version marker")
+if payload.get("correlation_required_fields_csv") != "correlation_id,trace_id,trace_parent,span_id,request_id":
+    raise SystemExit("expected deterministic correlation_required_fields_csv marker")
+if payload.get("api_correlation_id") != "unified-api-observability-local-heavy":
+    raise SystemExit("expected deterministic api_correlation_id marker")
+if payload.get("runtime_correlation_id") != "unified-api-observability-local-heavy":
+    raise SystemExit("expected deterministic runtime_correlation_id marker")
+if payload.get("kolme_correlation_id") != "unified-api-observability-local-heavy":
+    raise SystemExit("expected deterministic kolme_correlation_id marker")
+if payload.get("correlation_id_propagation_status") != "verified":
+    raise SystemExit("expected deterministic correlation_id_propagation_status marker")
 if payload.get("compatibility_report_schema_version") != "kamn.runtime.service-api-observability-route-compatibility-live-report.v1":
     raise SystemExit("expected compatibility report schema marker")
 if payload.get("observability_report_schema_version") != "kamn.runtime.local-observability-scrape-live-report.v1":
