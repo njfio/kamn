@@ -87,6 +87,34 @@ RUNTIME_PHASE_PARITY_EVIDENCE_REASON_MARKERS = {
     "local_full_stack_integration_policy_artifact_paths_invalid",
 }
 CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS = 240
+RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+)
+RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV = (
+    "runtime_orchestration_dispatch_boundary_drift_detected,"
+    "runtime_daemon_phase_boundary_drift_detected,"
+    "runtime_kolme_live_boundary_drift_detected,"
+    "ci_local_runtime_module_boundary_budget_boundary_exceeded"
+)
+RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES = (
+    RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV.split(",")
+)
+RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV = (
+    "runtime_module_boundary_parity_status,"
+    "runtime_module_boundary_evidence_status,"
+    "ci_local_runtime_module_boundary_budget_boundary_status"
+)
+RUNTIME_MODULE_BOUNDARY_BUDGET_REASON_MARKERS = {
+    "ci_local_runtime_module_boundary_budget_boundary_exceeded",
+    "local_full_stack_integration_policy_runtime_module_boundary_budget_boundary_status_mismatch",
+}
+RUNTIME_MODULE_BOUNDARY_EVIDENCE_REASON_MARKERS = {
+    "local_full_stack_integration_policy_runtime_module_boundary_parity_reason_taxonomy_version_mismatch",
+    "local_full_stack_integration_policy_runtime_module_boundary_parity_reason_codes_csv_mismatch",
+    "local_full_stack_integration_policy_runtime_module_boundary_evidence_outputs_csv_mismatch",
+    "local_full_stack_integration_policy_runtime_module_boundary_reason_codes_value_mismatch",
+}
+CI_LOCAL_RUNTIME_MODULE_BOUNDARY_BUDGET_MAX_SECONDS = 240
 OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "local_full_stack_integration_live_validation_executed"
@@ -225,6 +253,132 @@ def _normalize_runtime_phase_parity_reason_codes(failed_checks: list[str]) -> li
     return ordered_mapped_reason_codes or mapped_reason_codes
 
 
+def _read_text_if_present(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _check_runtime_module_boundary_parity() -> dict[str, object]:
+    main_rs = _read_text_if_present(ROOT_DIR / "crates/kamn-node/src/main.rs")
+    runtime_orchestration_rs = _read_text_if_present(
+        ROOT_DIR / "crates/kamn-node/src/runtime_orchestration.rs"
+    )
+    daemon_phase_rs = _read_text_if_present(
+        ROOT_DIR / "crates/kamn-node/src/runtime_orchestration/daemon_phase.rs"
+    )
+    runtime_kolme_live_rs = _read_text_if_present(
+        ROOT_DIR / "crates/kamn-node/src/runtime_kolme_live.rs"
+    )
+
+    evidence_status = "verified"
+    if not (main_rs and runtime_orchestration_rs and daemon_phase_rs and runtime_kolme_live_rs):
+        evidence_status = "missing"
+
+    dispatch_boundary_status = "verified"
+    if (
+        "use runtime_orchestration::{build_runtime_execution_id, execute};" not in main_rs
+        or "use daemon_phase::execute_daemon_runtime;" not in runtime_orchestration_rs
+        or "execute_kolme_live_runtime(" not in runtime_orchestration_rs
+        or "execute_kolme_live_runtime_continuous(" not in runtime_orchestration_rs
+    ):
+        dispatch_boundary_status = "drifted"
+
+    daemon_phase_boundary_status = "verified"
+    if (
+        "pub(super) fn execute_daemon_runtime(" not in daemon_phase_rs
+        or "fn daemon_shutdown_drain_status(" in runtime_orchestration_rs
+    ):
+        daemon_phase_boundary_status = "drifted"
+
+    kolme_live_boundary_status = "verified"
+    if (
+        "pub(crate) fn execute_kolme_live_runtime(" not in runtime_kolme_live_rs
+        or "fn build_kolme_live_request(" in runtime_orchestration_rs
+    ):
+        kolme_live_boundary_status = "drifted"
+
+    reason_codes: list[str] = []
+    if dispatch_boundary_status != "verified":
+        reason_codes.append("runtime_orchestration_dispatch_boundary_drift_detected")
+    if daemon_phase_boundary_status != "verified":
+        reason_codes.append("runtime_daemon_phase_boundary_drift_detected")
+    if kolme_live_boundary_status != "verified":
+        reason_codes.append("runtime_kolme_live_boundary_drift_detected")
+
+    if evidence_status != "verified" and not reason_codes:
+        reason_codes.append("runtime_orchestration_dispatch_boundary_drift_detected")
+
+    parity_status = "verified" if not reason_codes else "drifted"
+    return {
+        "runtime_orchestration_dispatch_boundary_status": dispatch_boundary_status,
+        "runtime_daemon_phase_boundary_status": daemon_phase_boundary_status,
+        "runtime_kolme_live_boundary_status": kolme_live_boundary_status,
+        "runtime_module_boundary_parity_status": parity_status,
+        "runtime_module_boundary_evidence_status": evidence_status,
+        "reason_codes": reason_codes,
+    }
+
+
+def _classify_runtime_module_boundary_failed_check(failed_check: str) -> str:
+    if failed_check in {
+        "local_full_stack_integration_policy_expected_decision_mismatch",
+        "local_full_stack_integration_policy_runtime_budget_exceeded",
+        "local_full_stack_integration_policy_runtime_budget_status_mismatch",
+        "local_full_stack_integration_policy_elapsed_seconds_invalid",
+        "local_full_stack_integration_policy_max_seconds_invalid",
+        "local_full_stack_integration_policy_command_max_seconds_invalid",
+        "local_full_stack_integration_policy_command_budget_exceeds_lane_budget",
+        "local_full_stack_integration_policy_runtime_phase_parity_budget_boundary_status_mismatch",
+        "ci_local_runtime_phase_parity_budget_boundary_exceeded",
+        "runtime_phase_module_parity_drift_detected",
+        "runtime_extraction_evidence_output_unstable",
+    }:
+        return ""
+    if failed_check in RUNTIME_MODULE_BOUNDARY_BUDGET_REASON_MARKERS:
+        return "ci_local_runtime_module_boundary_budget_boundary_exceeded"
+    if failed_check in RUNTIME_MODULE_BOUNDARY_EVIDENCE_REASON_MARKERS:
+        return "runtime_orchestration_dispatch_boundary_drift_detected"
+    if "runtime_orchestration_dispatch_boundary" in failed_check:
+        return "runtime_orchestration_dispatch_boundary_drift_detected"
+    if "runtime_daemon_phase_boundary" in failed_check:
+        return "runtime_daemon_phase_boundary_drift_detected"
+    if "runtime_kolme_live_boundary" in failed_check:
+        return "runtime_kolme_live_boundary_drift_detected"
+    if (
+        "runtime_module_boundary" in failed_check
+        and "budget_boundary" not in failed_check
+    ):
+        return "runtime_orchestration_dispatch_boundary_drift_detected"
+    if "ci_local_runtime_module_boundary_budget_boundary" in failed_check:
+        return "ci_local_runtime_module_boundary_budget_boundary_exceeded"
+    return ""
+
+
+def _normalize_runtime_module_boundary_reason_codes(failed_checks: list[str]) -> list[str]:
+    if not failed_checks:
+        return ["none"]
+
+    mapped_reason_codes: list[str] = []
+    for failed_check in failed_checks:
+        mapped_reason = _classify_runtime_module_boundary_failed_check(failed_check)
+        if not mapped_reason:
+            continue
+        if mapped_reason not in mapped_reason_codes:
+            mapped_reason_codes.append(mapped_reason)
+
+    if not mapped_reason_codes:
+        return ["none"]
+
+    ordered_mapped_reason_codes = [
+        reason_code
+        for reason_code in RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES
+        if reason_code in mapped_reason_codes
+    ]
+    return ordered_mapped_reason_codes or mapped_reason_codes
+
+
 def run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
@@ -233,6 +387,11 @@ def run_lane(args: argparse.Namespace) -> int:
         fail(
             "KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS exceeds ci-local phase parity budget boundary: "
             f"{max_seconds} > {CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS}"
+        )
+    if max_seconds > CI_LOCAL_RUNTIME_MODULE_BOUNDARY_BUDGET_MAX_SECONDS:
+        fail(
+            "KAMN_LOCAL_FULL_STACK_INTEGRATION_MAX_SECONDS exceeds ci-local module-boundary budget boundary: "
+            f"{max_seconds} > {CI_LOCAL_RUNTIME_MODULE_BOUNDARY_BUDGET_MAX_SECONDS}"
         )
     command_max_seconds = require_positive_int(
         "KAMN_LOCAL_FULL_STACK_INTEGRATION_COMMAND_MAX_SECONDS",
@@ -265,6 +424,31 @@ def run_lane(args: argparse.Namespace) -> int:
             expected_remote_url=kolme_expected_remote_url,
             expected_ref=kolme_expected_ref,
         )
+
+    runtime_module_boundary = _check_runtime_module_boundary_parity()
+    runtime_orchestration_dispatch_boundary_status = runtime_module_boundary[
+        "runtime_orchestration_dispatch_boundary_status"
+    ]
+    runtime_daemon_phase_boundary_status = runtime_module_boundary[
+        "runtime_daemon_phase_boundary_status"
+    ]
+    runtime_kolme_live_boundary_status = runtime_module_boundary[
+        "runtime_kolme_live_boundary_status"
+    ]
+    runtime_module_boundary_parity_status = runtime_module_boundary[
+        "runtime_module_boundary_parity_status"
+    ]
+    runtime_module_boundary_evidence_status = runtime_module_boundary[
+        "runtime_module_boundary_evidence_status"
+    ]
+    runtime_module_boundary_reason_codes = runtime_module_boundary["reason_codes"]
+    if not isinstance(runtime_module_boundary_reason_codes, list):
+        runtime_module_boundary_reason_codes = [
+            "runtime_orchestration_dispatch_boundary_drift_detected"
+        ]
+    if runtime_module_boundary_reason_codes:
+        fail(",".join(runtime_module_boundary_reason_codes))
+    runtime_module_boundary_reason_codes_value = "none"
 
     start_epoch = int(time.time())
     commands_executed = 0
@@ -599,6 +783,24 @@ def run_lane(args: argparse.Namespace) -> int:
             "kolme_base_url": kolme_base_url,
             "kolme_fork_chain_version": kolme_fork_chain_version,
             "combined_reason_taxonomy_version": COMBINED_REASON_TAXONOMY_VERSION,
+            "runtime_module_boundary_parity_reason_taxonomy_version": (
+                RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION
+            ),
+            "runtime_module_boundary_parity_reason_codes_csv": (
+                RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV
+            ),
+            "runtime_module_boundary_evidence_outputs_csv": (
+                RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV
+            ),
+            "runtime_orchestration_dispatch_boundary_status": (
+                runtime_orchestration_dispatch_boundary_status
+            ),
+            "runtime_daemon_phase_boundary_status": runtime_daemon_phase_boundary_status,
+            "runtime_kolme_live_boundary_status": runtime_kolme_live_boundary_status,
+            "runtime_module_boundary_parity_status": runtime_module_boundary_parity_status,
+            "runtime_module_boundary_evidence_status": runtime_module_boundary_evidence_status,
+            "ci_local_runtime_module_boundary_budget_boundary_status": "verified",
+            "runtime_module_boundary_reason_codes_value": runtime_module_boundary_reason_codes_value,
             "combined_transport_reason_codes": combined_transport_reason_codes,
             "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
             "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
@@ -680,6 +882,22 @@ def run_lane(args: argparse.Namespace) -> int:
         "runtime_phase_module_parity_status": "verified",
         "runtime_extraction_evidence_output_status": "verified",
         "ci_local_runtime_phase_parity_budget_boundary_status": "verified",
+        "runtime_module_boundary_parity_reason_taxonomy_version": (
+            RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION
+        ),
+        "runtime_module_boundary_parity_reason_codes_csv": (
+            RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV
+        ),
+        "runtime_module_boundary_evidence_outputs_csv": RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV,
+        "runtime_orchestration_dispatch_boundary_status": (
+            runtime_orchestration_dispatch_boundary_status
+        ),
+        "runtime_daemon_phase_boundary_status": runtime_daemon_phase_boundary_status,
+        "runtime_kolme_live_boundary_status": runtime_kolme_live_boundary_status,
+        "runtime_module_boundary_parity_status": runtime_module_boundary_parity_status,
+        "runtime_module_boundary_evidence_status": runtime_module_boundary_evidence_status,
+        "ci_local_runtime_module_boundary_budget_boundary_status": "verified",
+        "runtime_module_boundary_reason_codes_value": runtime_module_boundary_reason_codes_value,
         "combined_transport_reason_codes": combined_transport_reason_codes,
         "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
         "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
@@ -755,6 +973,28 @@ def run_lane(args: argparse.Namespace) -> int:
     print("runtime_phase_module_parity_status=verified")
     print("runtime_extraction_evidence_output_status=verified")
     print("ci_local_runtime_phase_parity_budget_boundary_status=verified")
+    print(
+        "runtime_module_boundary_parity_reason_taxonomy_version="
+        f"{RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "runtime_module_boundary_parity_reason_codes_csv="
+        f"{RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV}"
+    )
+    print(
+        "runtime_module_boundary_evidence_outputs_csv="
+        f"{RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV}"
+    )
+    print(
+        "runtime_orchestration_dispatch_boundary_status="
+        f"{runtime_orchestration_dispatch_boundary_status}"
+    )
+    print(f"runtime_daemon_phase_boundary_status={runtime_daemon_phase_boundary_status}")
+    print(f"runtime_kolme_live_boundary_status={runtime_kolme_live_boundary_status}")
+    print(f"runtime_module_boundary_parity_status={runtime_module_boundary_parity_status}")
+    print(f"runtime_module_boundary_evidence_status={runtime_module_boundary_evidence_status}")
+    print("ci_local_runtime_module_boundary_budget_boundary_status=verified")
+    print(f"runtime_module_boundary_reason_codes_value={runtime_module_boundary_reason_codes_value}")
     print(f"combined_transport_reason_codes={','.join(combined_transport_reason_codes)}")
     print(f"combined_kolme_runtime_reason_code={combined_kolme_runtime_reason_code}")
     print(
@@ -913,6 +1153,49 @@ def check_policy(args: argparse.Namespace) -> int:
         "local_full_stack_integration_policy_runtime_phase_parity_budget_boundary_status_mismatch",
     )
     checks.reject_if(
+        payload.get("runtime_module_boundary_parity_reason_taxonomy_version")
+        != RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION,
+        "local_full_stack_integration_policy_runtime_module_boundary_parity_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_module_boundary_parity_reason_codes_csv")
+        != RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV,
+        "local_full_stack_integration_policy_runtime_module_boundary_parity_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_module_boundary_evidence_outputs_csv")
+        != RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV,
+        "local_full_stack_integration_policy_runtime_module_boundary_evidence_outputs_csv_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_orchestration_dispatch_boundary_status") != "verified",
+        "runtime_orchestration_dispatch_boundary_drift_detected",
+    )
+    checks.reject_if(
+        payload.get("runtime_daemon_phase_boundary_status") != "verified",
+        "runtime_daemon_phase_boundary_drift_detected",
+    )
+    checks.reject_if(
+        payload.get("runtime_kolme_live_boundary_status") != "verified",
+        "runtime_kolme_live_boundary_drift_detected",
+    )
+    checks.reject_if(
+        payload.get("runtime_module_boundary_parity_status") != "verified",
+        "local_full_stack_integration_policy_runtime_module_boundary_parity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_module_boundary_evidence_status") != "verified",
+        "local_full_stack_integration_policy_runtime_module_boundary_evidence_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("ci_local_runtime_module_boundary_budget_boundary_status") != "verified",
+        "local_full_stack_integration_policy_runtime_module_boundary_budget_boundary_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_module_boundary_reason_codes_value") != "none",
+        "local_full_stack_integration_policy_runtime_module_boundary_reason_codes_value_mismatch",
+    )
+    checks.reject_if(
         payload.get("kolme_runtime_commit_failure_taxonomy_version")
         != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION,
         "local_full_stack_integration_policy_kolme_runtime_failure_taxonomy_version_mismatch",
@@ -975,6 +1258,10 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             max_seconds > CI_LOCAL_RUNTIME_PHASE_PARITY_BUDGET_MAX_SECONDS,
             "ci_local_runtime_phase_parity_budget_boundary_exceeded",
+        )
+        checks.reject_if(
+            max_seconds > CI_LOCAL_RUNTIME_MODULE_BOUNDARY_BUDGET_MAX_SECONDS,
+            "ci_local_runtime_module_boundary_budget_boundary_exceeded",
         )
     combined_transport_reason_codes = payload.get("combined_transport_reason_codes")
     checks.reject_if(
@@ -1424,6 +1711,12 @@ def check_policy(args: argparse.Namespace) -> int:
         failed_checks.append("local_full_stack_integration_policy_expected_decision_mismatch")
     normalized_reason_codes = _normalize_runtime_phase_parity_reason_codes(failed_checks)
     reason_codes_value = ",".join(normalized_reason_codes)
+    normalized_module_boundary_reason_codes = _normalize_runtime_module_boundary_reason_codes(
+        failed_checks
+    )
+    runtime_module_boundary_reason_codes_value = ",".join(
+        normalized_module_boundary_reason_codes
+    )
 
     report_payload = {
         "schema_version": POLICY_SCHEMA,
@@ -1436,6 +1729,12 @@ def check_policy(args: argparse.Namespace) -> int:
         "reason_codes_csv": RUNTIME_PHASE_PARITY_REASON_CODES_CSV,
         "reason_codes_value": reason_codes_value,
         "runtime_phase_parity_evidence_outputs_csv": RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV,
+        "runtime_module_boundary_reason_taxonomy_version": (
+            RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION
+        ),
+        "runtime_module_boundary_reason_codes_csv": RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV,
+        "runtime_module_boundary_reason_codes_value": runtime_module_boundary_reason_codes_value,
+        "runtime_module_boundary_evidence_outputs_csv": RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV,
         "local_full_stack_integration_policy_status": "verified" if not failed_checks else "failed",
         "failed_checks": failed_checks,
     }
@@ -1449,8 +1748,24 @@ def check_policy(args: argparse.Namespace) -> int:
     print(f"reason_taxonomy_version={RUNTIME_PHASE_PARITY_REASON_TAXONOMY_VERSION}")
     print(f"reason_codes_csv={RUNTIME_PHASE_PARITY_REASON_CODES_CSV}")
     print(f"reason_codes_value={reason_codes_value}")
+    print(
+        "runtime_module_boundary_reason_taxonomy_version="
+        f"{RUNTIME_MODULE_BOUNDARY_PARITY_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "runtime_module_boundary_reason_codes_csv="
+        f"{RUNTIME_MODULE_BOUNDARY_PARITY_REASON_CODES_CSV}"
+    )
+    print(
+        "runtime_module_boundary_reason_codes_value="
+        f"{runtime_module_boundary_reason_codes_value}"
+    )
     print(f"reason_codes={'none' if not failed_checks else ','.join(failed_checks)}")
     print(f"runtime_phase_parity_evidence_outputs_csv={RUNTIME_PHASE_PARITY_EVIDENCE_OUTPUTS_CSV}")
+    print(
+        "runtime_module_boundary_evidence_outputs_csv="
+        f"{RUNTIME_MODULE_BOUNDARY_EVIDENCE_OUTPUTS_CSV}"
+    )
     print(
         "local_full_stack_integration_policy_status="
         f"{'verified' if not failed_checks else 'failed'}"
