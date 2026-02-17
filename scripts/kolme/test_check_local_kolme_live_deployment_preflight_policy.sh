@@ -310,6 +310,12 @@ if report.get("runtime_signer_drift_admission_matrix_class") not in ("healthy", 
 matrix_reason_codes = report.get("runtime_signer_drift_admission_matrix_reason_codes")
 if not isinstance(matrix_reason_codes, list):
     raise SystemExit("expected runtime signer drift admission matrix reason-code list in deployment preflight policy report")
+if report.get("rotation_preflight_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic rotation_preflight_reason_taxonomy_version marker")
+if report.get("rotation_preflight_reason_codes_csv") != "signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected":
+    raise SystemExit("expected deterministic rotation_preflight_reason_codes_csv marker")
+if report.get("rotation_preflight_reason_codes_value") != "none":
+    raise SystemExit("expected rotation_preflight_reason_codes_value=none for GO deployment preflight report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
@@ -571,6 +577,20 @@ if ! grep -q "signer_rotation_rehearsal_drift_detected" "$TMP_ERR"; then
   exit 1
 fi
 
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("rotation_preflight_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected rotation_preflight_reason_codes_value string for rotation rehearsal drift failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "signer_rotation_rehearsal_drift_detected" not in observed_codes:
+    raise SystemExit("expected rotation_preflight_reason_codes_value to include signer_rotation_rehearsal_drift_detected")
+PY
+
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_CUSTODY_BYPASS" <<'PY'
 import json
 import pathlib
@@ -681,6 +701,22 @@ if ! grep -q "signer_key_source_production_managed_external_required" "$TMP_ERR"
   echo "expected signer_key_source_production_managed_external_required reason for deployment preflight policy failure" >&2
   exit 1
 fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("rotation_preflight_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected rotation_preflight_reason_codes_value string for key-source mismatch failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "signer_key_source_production_managed_external_required" not in observed_codes:
+    raise SystemExit(
+        "expected rotation_preflight_reason_codes_value to include signer_key_source_production_managed_external_required"
+    )
+PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_DRIFT_MALFORMED" <<'PY'
 import json
