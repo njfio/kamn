@@ -1,6 +1,6 @@
 # Spec — #4251 Task: Partition Fault Marker Checks and Deterministic Healing Reconciliation Contracts
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4249
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

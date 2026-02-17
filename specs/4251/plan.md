@@ -1,6 +1,6 @@
 # Plan — #4251 Partition-Healing Deterministic Reconciliation Contracts
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

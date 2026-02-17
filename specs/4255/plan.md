@@ -1,6 +1,6 @@
 # Plan — #4255 Partition Mismatch Red Tests
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

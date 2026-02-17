@@ -1,6 +1,6 @@
 # Spec — #4256 Subtask: Deterministic Partition-Healing Checker Outputs and Fail-Closed Reason Mapping
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4251
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

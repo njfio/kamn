@@ -1,6 +1,6 @@
 # Tasks — #4251 Partition-Healing Deterministic Reconciliation Contracts
 
-Status: Reviewed
+Status: Implemented
 
 - T1 (Regression): add missing-marker and nondeterministic mismatch red tests in policy checker harness.
 - T2 (Implementation): add deterministic partition-healing mismatch reason mapping markers to policy checker output.

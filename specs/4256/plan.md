@@ -1,6 +1,6 @@
 # Plan — #4256 Partition-Healing Mismatch Reason Mapping
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

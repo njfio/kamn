@@ -1,6 +1,6 @@
 # Spec — #4255 Subtask: Red Tests for Partition Marker Mismatch and Deterministic Healing Rejection
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4251
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

@@ -475,6 +475,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `reconciliation_peer_churn_recovery_failed`,
     `reconciliation_split_head_unresolved`,
     `reconciliation_replay_instability`.
+  - policy checker emits deterministic partition-healing mismatch mapping markers:
+    `partition_healing_mismatch_reason_mapping_status=verified`,
+    `partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1`,
+    `partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation`,
+    `partition_healing_mismatch_reason_code=none|<reason>`.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested lane commands and emits deterministic `dry_run_no_commands_executed`.
@@ -485,6 +490,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
   - `block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_required_field_missing:<field>`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
   - `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
 
