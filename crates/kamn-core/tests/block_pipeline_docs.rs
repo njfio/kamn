@@ -69,8 +69,11 @@ fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
     assert!(DOC.contains("Regression: #3670"));
     assert!(DOC.contains("Regression: #4257"));
     assert!(DOC.contains("Regression: #4258"));
+    assert!(DOC.contains("Regression: #4259"));
+    assert!(DOC.contains("Regression: #4260"));
     assert!(DOC.contains("p2p_transport_live_socket_send_failed"));
     assert!(DOC.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh"));
+    assert!(DOC.contains("check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"));
     assert!(DOC.contains("convergence_reason_codes=fork_choice_stale_block_height"));
     assert!(DOC.contains("finality_taxonomy_mapping_status=verified"));
     assert!(DOC.contains("runbook_marker_parity_status=verified"));
@@ -79,5 +82,18 @@ fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
     ));
     assert!(DOC.contains(
         "finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DOC.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation"
+    ));
+    assert!(DOC.contains("libp2p_finality_evidence_convergence_status=verified"));
+    assert!(DOC.contains(
+        "libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch"
     ));
 }

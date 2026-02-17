@@ -203,6 +203,38 @@ fn checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_ga
 }
 
 #[test]
+fn checklist_contains_fork_choice_finality_evidence_convergence_gate() {
+    assert!(CHECKLIST.contains(
+        "## Fork-Choice Finality Evidence Convergence Gate (Issues #4253, #4259, #4260)"
+    ));
+    assert!(CHECKLIST.contains(
+        "check_libp2p_convergence_process_isolated_live_evidence_convergence.sh --report-file /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-file /tmp/libp2p-convergence-process-isolated-live-policy-report.json --output-json /tmp/libp2p-convergence-process-isolated-live-convergence-report.json"
+    ));
+    assert!(CHECKLIST
+        .contains("test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"));
+    assert!(CHECKLIST.contains("libp2p_finality_evidence_convergence_status=verified"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("libp2p_finality_evidence_link_missing:source_report_file"));
+    assert!(CHECKLIST.contains("libp2p_finality_evidence_payload_tamper_detected:<field>"));
+    assert!(CHECKLIST.contains("libp2p_finality_promotion_decision_reason_mapping_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4259"));
+    assert!(CHECKLIST.contains("Regression: #4260"));
+}
+
+#[test]
 fn checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate() {
     assert!(CHECKLIST.contains("## Shutdown Signal Lifecycle Reason Mapping Gate (Issue #4331)"));
     assert!(CHECKLIST.contains(

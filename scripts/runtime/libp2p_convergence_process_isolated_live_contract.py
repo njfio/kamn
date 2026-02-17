@@ -27,6 +27,12 @@ from framework.contract_framework import (  # noqa: E402
 
 RUN_LANE_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1"
+CONTRACT_LANE_REPORT_SCHEMA = (
+    "kamn.runtime.libp2p-convergence-process-isolated-live-contract-lane-report.v1"
+)
+CONVERGENCE_SCHEMA = (
+    "kamn.runtime.libp2p-convergence-process-isolated-live-convergence-report.v1"
+)
 RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
 CONVERGENCE_REASON_TAXONOMY_VERSION = "kamn.runtime.libp2p-convergence-reason-taxonomy.v1"
 CONVERGENCE_REASON_CODES_CSV = "fork_choice_stale_block_height"
@@ -35,6 +41,28 @@ FINALITY_TAXONOMY_RUNBOOK_REASON_TAXONOMY_VERSION = (
 )
 FINALITY_TAXONOMY_RUNBOOK_REASON_CODES_CSV = (
     "finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+)
+PROMOTION_DECISION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+)
+PROMOTION_DECISION_REASON_CODES_CSV = (
+    "libp2p_process_isolated_convergence_policy_required_field_missing,"
+    "libp2p_process_isolated_convergence_policy_marker_missing,"
+    "libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,"
+    "libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,"
+    "finality_taxonomy_mapping_drift_detected,"
+    "runbook_marker_parity_mismatch,"
+    "ci_fast_gate_failed,"
+    "libp2p_process_isolated_convergence_policy_expected_decision_mismatch,"
+    "libp2p_process_isolated_convergence_policy_violation"
+)
+EVIDENCE_CONVERGENCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+)
+EVIDENCE_CONVERGENCE_REASON_CODES_CSV = (
+    "libp2p_finality_evidence_link_missing,"
+    "libp2p_finality_evidence_payload_tamper_detected,"
+    "libp2p_finality_promotion_decision_reason_mapping_mismatch"
 )
 DEFAULT_RUNBOOK_FILE = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
 LEGACY_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN"
@@ -127,6 +155,76 @@ def _resolve_finality_taxonomy_runbook_reason_code(
     if reason_codes:
         return reason_codes[0]
     return "finality_taxonomy_mapping_drift_detected"
+
+
+def _is_non_empty_string_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) > 0
+        and all(isinstance(item, str) and item for item in value)
+    )
+
+
+def _resolve_promotion_decision_reason_code(
+    reason_codes: list[str], final_decision: str
+) -> str:
+    if final_decision == "GO":
+        return "none"
+    if any(
+        code.startswith(
+            "libp2p_process_isolated_convergence_policy_required_field_missing:"
+        )
+        for code in reason_codes
+    ):
+        return "libp2p_process_isolated_convergence_policy_required_field_missing"
+    if any(
+        code.startswith("libp2p_process_isolated_convergence_policy_marker_missing:")
+        for code in reason_codes
+    ):
+        return "libp2p_process_isolated_convergence_policy_marker_missing"
+    if any(
+        code
+        in {
+            "libp2p_process_isolated_convergence_policy_"
+            "convergence_reason_taxonomy_version_mismatch",
+            "libp2p_process_isolated_convergence_policy_"
+            "convergence_reason_codes_csv_mismatch",
+            "libp2p_process_isolated_convergence_policy_"
+            "finality_taxonomy_runbook_reason_taxonomy_version_mismatch",
+            "libp2p_process_isolated_convergence_policy_"
+            "finality_taxonomy_runbook_reason_codes_csv_mismatch",
+        }
+        for code in reason_codes
+    ):
+        return "libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch"
+    if any(
+        code
+        in {
+            "libp2p_process_isolated_convergence_policy_runtime_transport_mode_mismatch",
+            "libp2p_process_isolated_convergence_policy_lane_mode_invalid",
+            "libp2p_process_isolated_convergence_policy_lane_profile_invalid",
+            "libp2p_process_isolated_convergence_policy_execution_reason_code_mismatch",
+            "libp2p_process_isolated_convergence_policy_command_count_invalid",
+            "libp2p_process_isolated_convergence_policy_command_count_mismatch",
+            "libp2p_process_isolated_convergence_policy_deep_lane_status_mismatch",
+            "libp2p_process_isolated_convergence_policy_deep_harness_report_missing",
+            "libp2p_process_isolated_convergence_policy_"
+            "deep_harness_final_decision_mismatch",
+            "libp2p_process_isolated_convergence_policy_elapsed_seconds_invalid",
+            "libp2p_process_isolated_convergence_policy_deep_fast_gate_exclusion_mismatch",
+        }
+        for code in reason_codes
+    ):
+        return "libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch"
+    if "finality_taxonomy_mapping_drift_detected" in reason_codes:
+        return "finality_taxonomy_mapping_drift_detected"
+    if "runbook_marker_parity_mismatch" in reason_codes:
+        return "runbook_marker_parity_mismatch"
+    if "libp2p_process_isolated_convergence_policy_ci_fast_gate_failed" in reason_codes:
+        return "ci_fast_gate_failed"
+    if "libp2p_process_isolated_convergence_policy_final_decision_mismatch" in reason_codes:
+        return "libp2p_process_isolated_convergence_policy_expected_decision_mismatch"
+    return "libp2p_process_isolated_convergence_policy_violation"
 
 
 def _run_command(
@@ -422,11 +520,13 @@ def _check_policy(args: argparse.Namespace) -> int:
         "command_count",
         "elapsed_seconds",
     ]
-    missing_fields = [field_name for field_name in required_fields if field_name not in report]
-    if missing_fields:
-        fail(f"missing required report fields: {','.join(missing_fields)}")
-
     decision = DecisionAccumulator()
+    for field_name in required_fields:
+        decision.reject_if(
+            field_name not in report,
+            f"libp2p_process_isolated_convergence_policy_required_field_missing:{field_name}",
+        )
+
     decision.reject_if(
         report.get("schema_version") != RUN_LANE_SCHEMA,
         "libp2p_process_isolated_convergence_policy_schema_mismatch",
@@ -700,8 +800,12 @@ def _check_policy(args: argparse.Namespace) -> int:
     finality_taxonomy_runbook_reason_code = (
         _resolve_finality_taxonomy_runbook_reason_code(reason_codes, final_decision)
     )
+    promotion_decision_reason_code = _resolve_promotion_decision_reason_code(
+        reason_codes, final_decision
+    )
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "rejected"
+    reason_codes_value = ",".join(reason_codes)
 
     policy_report = {
         "schema_version": POLICY_SCHEMA,
@@ -721,11 +825,20 @@ def _check_policy(args: argparse.Namespace) -> int:
         "finality_taxonomy_runbook_reason_code": (
             finality_taxonomy_runbook_reason_code
         ),
+        "promotion_decision_reason_mapping_status": "verified",
+        "promotion_decision_reason_taxonomy_version": (
+            PROMOTION_DECISION_REASON_TAXONOMY_VERSION
+        ),
+        "promotion_decision_reason_codes_csv": (
+            PROMOTION_DECISION_REASON_CODES_CSV
+        ),
+        "promotion_decision_reason_code": promotion_decision_reason_code,
         "transport_classification_normalization_status": "verified",
         "fork_choice_stale_height_classification_status": "verified",
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": report.get("final_decision"),
         "reason_codes": reason_codes,
+        "reason_codes_value": reason_codes_value,
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "runbook_file": str(runbook_file),
@@ -737,7 +850,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         output_json = Path(args.output_json).resolve()
         write_json(output_json, policy_report)
 
-    reason_codes_csv = ",".join(reason_codes)
+    reason_codes_csv = reason_codes_value
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
     print(
@@ -764,7 +877,21 @@ def _check_policy(args: argparse.Namespace) -> int:
         "finality_taxonomy_runbook_reason_code="
         f"{finality_taxonomy_runbook_reason_code}"
     )
+    print("promotion_decision_reason_mapping_status=verified")
+    print(
+        "promotion_decision_reason_taxonomy_version="
+        f"{PROMOTION_DECISION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "promotion_decision_reason_codes_csv="
+        f"{PROMOTION_DECISION_REASON_CODES_CSV}"
+    )
+    print(
+        "promotion_decision_reason_code="
+        f"{promotion_decision_reason_code}"
+    )
     print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_value}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 
@@ -772,6 +899,249 @@ def _check_policy(args: argparse.Namespace) -> int:
         fail(
             "libp2p process-isolated convergence policy rejected: "
             f"{reason_codes_csv}"
+        )
+
+    return 0
+
+
+def _check_evidence_convergence(args: argparse.Namespace) -> int:
+    report_file = Path(args.report_file).resolve()
+    policy_file = Path(args.policy_file).resolve()
+
+    if not report_file.is_file():
+        fail(f"report file not found: {report_file}")
+    if not policy_file.is_file():
+        fail(f"policy file not found: {policy_file}")
+
+    report = load_json(report_file)
+    policy = load_json(policy_file)
+    decision = DecisionAccumulator()
+
+    decision.reject_if(
+        report.get("schema_version") != CONTRACT_LANE_REPORT_SCHEMA,
+        "libp2p_finality_evidence_payload_tamper_detected:report_schema_version",
+    )
+    decision.reject_if(
+        policy.get("schema_version") != POLICY_SCHEMA,
+        "libp2p_finality_evidence_payload_tamper_detected:policy_schema_version",
+    )
+
+    report_final_decision = report.get("final_decision")
+    policy_final_decision = policy.get("final_decision")
+    decision.reject_if(
+        report_final_decision not in {"GO", "NO-GO"},
+        "libp2p_finality_evidence_payload_tamper_detected:final_decision",
+    )
+    decision.reject_if(
+        policy_final_decision not in {"GO", "NO-GO"},
+        "libp2p_finality_evidence_payload_tamper_detected:policy_final_decision",
+    )
+    decision.reject_if(
+        (
+            report_final_decision in {"GO", "NO-GO"}
+            and policy_final_decision in {"GO", "NO-GO"}
+            and report_final_decision != policy_final_decision
+        ),
+        "libp2p_finality_evidence_payload_tamper_detected:final_decision",
+    )
+    decision.reject_if(
+        report.get("libp2p_process_isolated_convergence_policy_status")
+        != policy.get("libp2p_process_isolated_convergence_policy_status"),
+        "libp2p_finality_evidence_payload_tamper_detected:libp2p_process_isolated_convergence_policy_status",
+    )
+
+    for field_name in (
+        "finality_taxonomy_mapping_status",
+        "runbook_marker_parity_status",
+        "finality_taxonomy_runbook_reason_taxonomy_version",
+        "finality_taxonomy_runbook_reason_codes_csv",
+        "finality_taxonomy_runbook_reason_code",
+        "promotion_decision_reason_mapping_status",
+        "promotion_decision_reason_taxonomy_version",
+        "promotion_decision_reason_codes_csv",
+        "promotion_decision_reason_code",
+    ):
+        decision.reject_if(
+            report.get(field_name) != policy.get(field_name),
+            f"libp2p_finality_evidence_payload_tamper_detected:{field_name}",
+        )
+
+    source_report_file = policy.get("source_report_file")
+    source_report = None
+    source_report_path: Path | None = None
+    if not isinstance(source_report_file, str) or source_report_file.strip() == "":
+        decision.reject_if(
+            True,
+            "libp2p_finality_evidence_link_missing:source_report_file",
+        )
+    else:
+        source_report_path = Path(source_report_file).resolve()
+        if source_report_path.is_file():
+            try:
+                source_report = load_json(source_report_path)
+            except ContractError:
+                decision.reject_if(
+                    True,
+                    "libp2p_finality_evidence_payload_tamper_detected:source_report_file",
+                )
+        else:
+            decision.reject_if(
+                True,
+                "libp2p_finality_evidence_link_missing:source_report_file",
+            )
+
+    if source_report is not None:
+        decision.reject_if(
+            source_report.get("schema_version") != RUN_LANE_SCHEMA,
+            "libp2p_finality_evidence_payload_tamper_detected:source_report_schema_version",
+        )
+        source_report_final_decision = source_report.get("final_decision")
+        decision.reject_if(
+            source_report_final_decision not in {"GO", "NO-GO"},
+            "libp2p_finality_evidence_payload_tamper_detected:source_report_final_decision",
+        )
+        decision.reject_if(
+            (
+                source_report_final_decision in {"GO", "NO-GO"}
+                and policy_final_decision in {"GO", "NO-GO"}
+                and source_report_final_decision != policy_final_decision
+            ),
+            "libp2p_finality_evidence_payload_tamper_detected:source_report_final_decision",
+        )
+
+    policy_reason_codes = policy.get("reason_codes")
+    policy_reason_codes_list: list[str] = []
+    if _is_non_empty_string_list(policy_reason_codes):
+        policy_reason_codes_list = list(policy_reason_codes)
+    else:
+        decision.reject_if(
+            True,
+            "libp2p_finality_evidence_payload_tamper_detected:reason_codes",
+        )
+
+    observed_reason_codes_value = policy.get("reason_codes_value")
+    decision.reject_if(
+        not isinstance(observed_reason_codes_value, str),
+        "libp2p_finality_evidence_payload_tamper_detected:reason_codes_value",
+    )
+    if isinstance(observed_reason_codes_value, str) and policy_reason_codes_list:
+        decision.reject_if(
+            observed_reason_codes_value != ",".join(policy_reason_codes_list),
+            "libp2p_finality_evidence_payload_tamper_detected:reason_codes_value",
+        )
+
+    if policy_final_decision == "GO" and policy_reason_codes_list:
+        decision.reject_if(
+            policy_reason_codes_list != ["none"],
+            "libp2p_finality_evidence_payload_tamper_detected:reason_codes",
+        )
+    if policy_final_decision == "NO-GO" and policy_reason_codes_list:
+        decision.reject_if(
+            "none" in policy_reason_codes_list,
+            "libp2p_finality_evidence_payload_tamper_detected:reason_codes",
+        )
+
+    expected_reason_code = _resolve_promotion_decision_reason_code(
+        policy_reason_codes_list if policy_reason_codes_list else ["none"],
+        policy_final_decision if policy_final_decision in {"GO", "NO-GO"} else "NO-GO",
+    )
+
+    decision.reject_if(
+        policy.get("promotion_decision_reason_mapping_status") != "verified",
+        "libp2p_finality_promotion_decision_reason_mapping_mismatch",
+    )
+    decision.reject_if(
+        policy.get("promotion_decision_reason_taxonomy_version")
+        != PROMOTION_DECISION_REASON_TAXONOMY_VERSION,
+        "libp2p_finality_promotion_decision_reason_mapping_mismatch",
+    )
+    decision.reject_if(
+        policy.get("promotion_decision_reason_codes_csv")
+        != PROMOTION_DECISION_REASON_CODES_CSV,
+        "libp2p_finality_promotion_decision_reason_mapping_mismatch",
+    )
+    decision.reject_if(
+        policy.get("promotion_decision_reason_code") != expected_reason_code,
+        "libp2p_finality_promotion_decision_reason_mapping_mismatch",
+    )
+
+    final_decision, reason_codes = decision.finalize("none")
+    status = "pass" if final_decision == "GO" else "fail"
+    evidence_convergence_status = "verified" if final_decision == "GO" else "failed"
+    promotion_decision_reason_mapping_status = (
+        "failed"
+        if "libp2p_finality_promotion_decision_reason_mapping_mismatch" in reason_codes
+        else "verified"
+    )
+    reason_codes_value = ",".join(reason_codes)
+
+    convergence_report: dict[str, Any] = {
+        "schema_version": CONVERGENCE_SCHEMA,
+        "status": status,
+        "final_decision": final_decision,
+        "evidence_convergence_status": evidence_convergence_status,
+        "promotion_decision_reason_mapping_status": (
+            promotion_decision_reason_mapping_status
+        ),
+        "reason_taxonomy_version": EVIDENCE_CONVERGENCE_REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": EVIDENCE_CONVERGENCE_REASON_CODES_CSV,
+        "reason_codes": reason_codes,
+        "reason_codes_value": reason_codes_value,
+        "promotion_decision_reason_taxonomy_version": (
+            PROMOTION_DECISION_REASON_TAXONOMY_VERSION
+        ),
+        "promotion_decision_reason_codes_csv": (
+            PROMOTION_DECISION_REASON_CODES_CSV
+        ),
+        "promotion_decision_reason_code": expected_reason_code,
+        "observed_promotion_decision_reason_code": policy.get(
+            "promotion_decision_reason_code"
+        ),
+        "report_file": str(report_file),
+        "policy_file": str(policy_file),
+        "source_report_file": (
+            str(source_report_path) if source_report_path is not None else ""
+        ),
+        "generated_at_epoch": int(time.time()),
+    }
+
+    output_json = None
+    if args.output_json:
+        output_json = Path(args.output_json).resolve()
+        write_json(output_json, convergence_report)
+
+    print(f"status={'ok' if final_decision == 'GO' else 'error'}")
+    print(f"final_decision={final_decision}")
+    print(f"evidence_convergence_status={evidence_convergence_status}")
+    print(
+        "promotion_decision_reason_mapping_status="
+        f"{promotion_decision_reason_mapping_status}"
+    )
+    print(
+        "reason_taxonomy_version="
+        f"{EVIDENCE_CONVERGENCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"reason_codes_csv={EVIDENCE_CONVERGENCE_REASON_CODES_CSV}")
+    print(f"reason_codes_value={reason_codes_value}")
+    print(
+        "promotion_decision_reason_taxonomy_version="
+        f"{PROMOTION_DECISION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "promotion_decision_reason_codes_csv="
+        f"{PROMOTION_DECISION_REASON_CODES_CSV}"
+    )
+    print(
+        "promotion_decision_reason_code="
+        f"{expected_reason_code}"
+    )
+    if output_json is not None:
+        print(f"convergence_report_file={output_json}")
+
+    if final_decision != "GO":
+        fail(
+            "libp2p process-isolated convergence evidence rejected: "
+            f"{reason_codes_value}"
         )
 
     return 0
@@ -882,6 +1252,27 @@ def main() -> int:
         help="Optional output path for policy report JSON.",
     )
     check_policy_parser.set_defaults(handler=_check_policy)
+
+    check_evidence_parser = subparsers.add_parser(
+        "check-evidence-convergence",
+        help="Validate evidence convergence across libp2p contract-lane and policy artifacts.",
+    )
+    check_evidence_parser.add_argument(
+        "--report-file",
+        required=True,
+        help="Path to libp2p process-isolated convergence contract-lane report JSON.",
+    )
+    check_evidence_parser.add_argument(
+        "--policy-file",
+        required=True,
+        help="Path to libp2p process-isolated convergence policy report JSON.",
+    )
+    check_evidence_parser.add_argument(
+        "--output-json",
+        default="",
+        help="Optional output path for evidence convergence report JSON.",
+    )
+    check_evidence_parser.set_defaults(handler=_check_evidence_convergence)
 
     args = parser.parse_args()
     return args.handler(args)
