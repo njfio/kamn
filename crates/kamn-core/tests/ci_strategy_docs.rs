@@ -1058,6 +1058,22 @@ fn doc_contains_live_gonogo_boundary_reason_taxonomy_markers() {
     assert!(DOC.contains("live_gonogo_local_heavy_seconds_exceeded"));
     assert!(DOC.contains("live_gonogo_local_heavy_opt_in_missing"));
     assert!(DOC.contains("live_gonogo_evidence_convergence_mismatch"));
+    assert!(DOC.contains(
+        "deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("deployment_safety_gate_reason_codes_csv=none|<csv>"));
+    assert!(DOC.contains("deployment_safety_gate_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains(
+        "contracts.deployment_preflight_rotation_reason_taxonomy_version_required=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("contracts.go_no_go_gate_ci_local_boundary_contract_required=true"));
+    assert!(DOC.contains(
+        "milestone_review_deployment_preflight_policy_rotation_reason_taxonomy_mismatch"
+    ));
+    assert!(DOC.contains(
+        "milestone_review_deployment_preflight_policy_rotation_reason_codes_value_mismatch"
+    ));
+    assert!(DOC.contains("milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch"));
     assert!(DOC.contains("Regression: #4442"));
 }
 
