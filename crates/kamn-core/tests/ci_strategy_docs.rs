@@ -1126,6 +1126,28 @@ fn doc_contains_transport_observability_tls_ci_smoke_convergence_governance() {
 }
 
 #[test]
+fn doc_contains_admission_backpressure_ci_smoke_convergence_governance() {
+    assert!(DOC.contains("### Admission-Backpressure CI smoke convergence governance"));
+    assert!(DOC.contains("python3 scripts/ci/check_admission_backpressure_ci_smoke_convergence.py"));
+    assert!(
+        DOC.contains("bash scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh")
+    );
+    assert!(DOC.contains(
+        "admission_backpressure_ci_smoke_reason_taxonomy_version=kamn.ci.admission-backpressure-ci-smoke-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_backpressure_ci_smoke_reason_codes_csv=service_api_axum_policy_ci_smoke_composition_missing,service_api_axum_contract_lane_ci_smoke_composition_missing,service_api_axum_run_command_leaked_in_fast_mode,ci_fast_gate_service_api_axum_run_command_not_excluded,ci_strategy_admission_backpressure_convergence_markers_missing,production_plan_admission_backpressure_convergence_markers_missing,admission_backpressure_ci_smoke_seconds_exceeded"
+    ));
+    assert!(DOC.contains("admission_backpressure_ci_smoke_max_seconds=120"));
+    assert!(DOC.contains("admission_backpressure_local_heavy_max_seconds=900"));
+    assert!(DOC.contains("admission_backpressure_ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("admission_backpressure_local_heavy_execution_mode=opt_in"));
+    assert!(DOC.contains("service_api_axum_run_command_leaked_in_fast_mode"));
+    assert!(DOC.contains("ci_fast_gate_service_api_axum_run_command_not_excluded"));
+    assert!(DOC.contains("admission_backpressure_ci_smoke_seconds_exceeded"));
+}
+
+#[test]
 fn doc_contains_sqlite_crash_replay_ci_smoke_convergence_governance() {
     assert!(DOC.contains("### SQLite Crash-Replay CI smoke convergence governance"));
     assert!(DOC.contains("python3 scripts/ci/check_sqlite_crash_recovery_ci_smoke_convergence.py"));

@@ -192,6 +192,19 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.24 Admission-Backpressure CI Smoke Governance Closure
+- Active chain: `#4218 -> #4220 -> #4224 -> (#4231, #4232)`.
+- Convergence closure markers:
+  - `admission_backpressure_ci_smoke_convergence_status=verified`
+  - `admission_backpressure_ci_smoke_reason_taxonomy_version=kamn.ci.admission-backpressure-ci-smoke-convergence-reason-taxonomy.v1`
+  - `admission_backpressure_ci_smoke_max_seconds=120`
+  - `admission_backpressure_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_admission_backpressure_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/admission-backpressure-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh`
+- Local-heavy admission/backpressure boundaries remain explicit and outside ci-fast-gate:
+  - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
+
 ### R27.25 Replay-Integrity CI Smoke Governance Closure
 - Active chain: `#4233 -> #4235 -> #4239 -> (#4246, #4247)`.
 - Convergence closure markers:
