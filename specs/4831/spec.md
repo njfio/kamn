@@ -3,41 +3,44 @@
 - Title: Subtask: implement shell-rust LOC telemetry collector and fail-closed reason taxonomy outputs
 - Parent: Parent task: #4817
 - Milestone: R27.42 Shell LOC reduction and script-to-Rust ratio inversion governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
 
-Deliver the scoped implementation slice with deterministic tests and fail-closed governance behavior.
+Add a deterministic shell-vs-Rust LOC telemetry collector that emits fail-closed decision markers and a stable reason taxonomy surface.
 
 ## Problem Statement
 
-Without this scoped slice, the broader shell-surface reduction program cannot safely progress with measurable, reversible increments.
+Combined shell-surface trend generation existed, but no single fail-closed telemetry wrapper exposed stable GO/NO-GO markers and taxonomy-coded failure paths for governance consumers.
 
 ## Scope
 
 In scope:
-- targeted implementation for the subtask objective
-- failing-to-passing contract tests for the changed surface
-- spec/docs updates for changed behavior
+- add `collect_shell_rust_loc_telemetry.sh` fail-closed collector wrapper
+- emit deterministic reason taxonomy/version and normalized reason markers
+- add deterministic pass/fail contract tests for telemetry collection
+- wire telemetry collector tests into CI tools regression entrypoint
+- update CI strategy docs with collector contract markers
 
 Out of scope:
-- phase work outside this subtask boundary
-- unrelated refactors
+- CI fast-gate workflow wiring changes (handled in `#4832`)
+- threshold policy redesign for combined shell-surface checker
 
 ## Acceptance Criteria
 
-- AC-1: Subtask implementation is complete and test-verified against deterministic acceptance behavior.
-- AC-2: Red/green regression evidence is captured in PR/issue process logs.
-- AC-3: No unintended script-surface expansion occurs without explicit accounting.
+- AC-1: Telemetry collector emits deterministic `status`, `final_decision`, taxonomy version, and reason-code markers with shell/Rust metrics.
+- AC-2: Collector contract tests cover both passing path and deterministic failing path.
+- AC-3: CI regression entrypoint includes collector contract tests so marker drift fails closed.
 
 ## Conformance Cases
 
-- C-01: verify AC-1 with deterministic pass/fail evidence and fail-closed reasons.
-- C-02: verify AC-2 with deterministic pass/fail evidence and fail-closed reasons.
-- C-03: verify AC-3 with deterministic pass/fail evidence and fail-closed reasons.
+- C-01 (AC-1, Functional): `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --output-json /tmp/shell-rust-loc-telemetry-report.json` emits `status=ok`, `final_decision=GO`, and `reason_codes=none` for repository baseline.
+- C-02 (AC-2, Conformance): `bash scripts/ci/test_collect_shell_rust_loc_telemetry.sh` validates pass markers and deterministic `shell_rust_loc_telemetry_report_missing` NO-GO failure mapping.
+- C-03 (AC-3, Integration/Regression): `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` passes with telemetry collector contract test wired in.
 
 ## Success Metrics / Signals
 
-- Required tests for this scope pass and emit deterministic governance markers.
-- Shell-surface reduction or containment impact is explicitly measurable for this scope.
+- Telemetry collector report schema `kamn.ci.shell-rust-loc-telemetry-report.v1` is generated deterministically.
+- Failures emit reason taxonomy `kamn.ci.shell-rust-loc-telemetry-reason-taxonomy.v1` and fail closed.
+- CI tools regression includes telemetry collector checks by default.
