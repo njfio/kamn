@@ -463,6 +463,26 @@ fn checklist_contains_audit_integrity_convergence_gate() {
 }
 
 #[test]
+fn checklist_contains_journal_append_checkpoint_integrity_gate() {
+    assert!(CHECKLIST.contains(
+        "## Journal Append/Checkpoint Integrity Determinism Gate (Issues #4236, #4240, #4241)"
+    ));
+    assert!(CHECKLIST.contains("test_check_sqlite_crash_recovery_live_policy.sh"));
+    assert!(CHECKLIST.contains("test_validate_sqlite_crash_recovery_live.sh"));
+    assert!(CHECKLIST.contains("test_validate_sqlite_crash_recovery_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains("append_checkpoint_integrity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4240"));
+    assert!(CHECKLIST.contains("Regression: #4241"));
+}
+
+#[test]
 fn checklist_contains_slo_threshold_policy_gate_convergence() {
     assert!(CHECKLIST.contains("## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)"));
     assert!(CHECKLIST.contains("--slo-policy-report-file /tmp/deployment-slo-rollback-report.json"));

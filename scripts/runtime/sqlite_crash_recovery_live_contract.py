@@ -36,6 +36,13 @@ WAL_DURABILITY_REASON_TAXONOMY_VERSION = (
 WAL_DURABILITY_REASON_CODES_CSV = (
     "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
 )
+APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1"
+)
+APPEND_CHECKPOINT_REASON_CODES_CSV = (
+    "wal_append_marker_missing,wal_checkpoint_marker_missing,"
+    "append_checkpoint_marker_parity_mismatch"
+)
 HISTORICAL_QUERY_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.historical-query-reason-taxonomy.v1"
 )
@@ -176,6 +183,11 @@ def run_lane(args: argparse.Namespace) -> int:
         "sqlite_crash_recovery_abrupt_kill_status": "verified",
         "wal_append_status": "verified",
         "wal_checkpoint_status": "verified",
+        "append_checkpoint_integrity_status": "verified",
+        "append_checkpoint_reason_taxonomy_version": (
+            APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION
+        ),
+        "append_checkpoint_reason_codes_csv": APPEND_CHECKPOINT_REASON_CODES_CSV,
         "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
         "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
         "historical_query_index_status": "verified",
@@ -234,6 +246,12 @@ def run_lane(args: argparse.Namespace) -> int:
     print("sqlite_crash_recovery_abrupt_kill_status=verified")
     print("wal_append_status=verified")
     print("wal_checkpoint_status=verified")
+    print("append_checkpoint_integrity_status=verified")
+    print(
+        "append_checkpoint_reason_taxonomy_version="
+        f"{APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"append_checkpoint_reason_codes_csv={APPEND_CHECKPOINT_REASON_CODES_CSV}")
     print(
         "wal_durability_reason_taxonomy_version="
         f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"
@@ -329,13 +347,35 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("sqlite_crash_recovery_abrupt_kill_status") != "verified",
         "sqlite_crash_recovery_policy_abrupt_kill_status_mismatch",
     )
+    wal_append_status = payload.get("wal_append_status")
+    wal_checkpoint_status = payload.get("wal_checkpoint_status")
     checks.reject_if(
-        payload.get("wal_append_status") != "verified",
+        wal_append_status != "verified",
         "sqlite_crash_recovery_policy_wal_append_status_mismatch",
     )
     checks.reject_if(
-        payload.get("wal_checkpoint_status") != "verified",
+        wal_checkpoint_status != "verified",
         "sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("append_checkpoint_integrity_status") != "verified",
+        "sqlite_crash_recovery_policy_append_checkpoint_integrity_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("append_checkpoint_reason_taxonomy_version")
+        != APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION,
+        "sqlite_crash_recovery_policy_append_checkpoint_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("append_checkpoint_reason_codes_csv")
+        != APPEND_CHECKPOINT_REASON_CODES_CSV,
+        "sqlite_crash_recovery_policy_append_checkpoint_reason_codes_csv_mismatch",
+    )
+    checks.reject_if(
+        isinstance(wal_append_status, str)
+        and isinstance(wal_checkpoint_status, str)
+        and wal_append_status != wal_checkpoint_status,
+        "sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch",
     )
     checks.reject_if(
         payload.get("wal_durability_reason_taxonomy_version")
@@ -545,6 +585,13 @@ def check_policy(args: argparse.Namespace) -> int:
         "expected_final_decision": expected_final_decision,
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
+        "append_checkpoint_integrity_status": payload.get(
+            "append_checkpoint_integrity_status"
+        ),
+        "append_checkpoint_reason_taxonomy_version": (
+            APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION
+        ),
+        "append_checkpoint_reason_codes_csv": APPEND_CHECKPOINT_REASON_CODES_CSV,
         "wal_durability_reason_taxonomy_version": WAL_DURABILITY_REASON_TAXONOMY_VERSION,
         "wal_durability_reason_codes_csv": WAL_DURABILITY_REASON_CODES_CSV,
         "historical_query_reason_taxonomy_version": (
@@ -595,6 +642,12 @@ def check_policy(args: argparse.Namespace) -> int:
     print("status=ok")
     print(f"final_decision={observed_final_decision}")
     print(f"expected_final_decision={expected_final_decision}")
+    print("append_checkpoint_integrity_status=verified")
+    print(
+        "append_checkpoint_reason_taxonomy_version="
+        f"{APPEND_CHECKPOINT_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"append_checkpoint_reason_codes_csv={APPEND_CHECKPOINT_REASON_CODES_CSV}")
     print(
         "wal_durability_reason_taxonomy_version="
         f"{WAL_DURABILITY_REASON_TAXONOMY_VERSION}"

@@ -45,6 +45,24 @@ fn service_api_ops_configuration_contains_audit_integrity_tamper_controls() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_journal_append_checkpoint_integrity_controls() {
+    assert!(DOC
+        .contains("## Journal Append/Checkpoint Integrity Controls (Issues #4236, #4240, #4241)"));
+    assert!(DOC.contains("append_checkpoint_integrity_status=verified"));
+    assert!(DOC.contains(
+        "append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch"
+    ));
+    assert!(DOC.contains("sqlite_crash_recovery_policy_wal_append_status_mismatch"));
+    assert!(DOC.contains("sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch"));
+    assert!(DOC.contains("sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch"));
+    assert!(DOC.contains("Regression: #4240"));
+    assert!(DOC.contains("Regression: #4241"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_in_memory_provider_rejection_controls() {
     assert!(DOC.contains("## Production-Mode In-Memory Provider Rejection Controls (Issue #4371)"));
     assert!(DOC.contains("runtime_commit_in_memory_provider_reference_detected"));

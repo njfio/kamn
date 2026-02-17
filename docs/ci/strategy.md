@@ -309,6 +309,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic markers for replay integrity (`sqlite_crash_recovery_state_replay_status=verified`).
   - lane emits deterministic markers for abrupt-kill recovery coverage (`sqlite_crash_recovery_abrupt_kill_status=verified`).
   - lane emits deterministic WAL durability markers (`wal_append_status=verified`, `wal_checkpoint_status=verified`).
+  - lane emits deterministic append/checkpoint integrity markers:
+    `append_checkpoint_integrity_status=verified`,
+    `append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1`,
+    `append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch`.
   - lane emits deterministic WAL durability taxonomy markers:
     `wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1`,
     `wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete`.
@@ -346,7 +350,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - sqlite crash-recovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
+  - `sqlite_crash_recovery_policy_wal_append_status_mismatch`
   - `sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_integrity_status_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch`
   - `sqlite_crash_recovery_policy_wal_durability_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_index_status_mismatch`
   - `sqlite_crash_recovery_policy_historical_query_reason_taxonomy_version_mismatch`

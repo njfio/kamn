@@ -310,6 +310,27 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - audit-trail integrity evidence drift and tamper acceptance force `NO-GO` (`Regression: #4466`).
 
+## Journal Append/Checkpoint Integrity Determinism Gate (Issues #4236, #4240, #4241)
+- Validation commands:
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh`
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live.sh`
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh`
+- Required deterministic marker outputs:
+  - `append_checkpoint_integrity_status=verified`
+  - `append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1`
+  - `append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch`
+- Required fail-closed reason outputs:
+  - `sqlite_crash_recovery_policy_wal_append_status_mismatch`
+  - `sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_integrity_status_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_reason_taxonomy_version_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_reason_codes_csv_mismatch`
+  - `sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch`
+- Fail-closed policy:
+  - append/checkpoint marker drift or parity mismatch acceptance forces `NO-GO`.
+- Regression policy:
+  - append/checkpoint mismatch rejection drift forces `NO-GO` (`Regression: #4240`, `Regression: #4241`).
+
 ## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)
 - SLO policy report command:
   - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`
