@@ -162,6 +162,34 @@ if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_re
   echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_axum_evidence_convergence_status=verified$'; then
+  echo "expected service api axum ingress contract lane evidence convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected service api axum ingress contract lane promotion decision reason mapping marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane evidence reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch$'; then
+  echo "expected service api axum ingress contract lane evidence reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane promotion reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation$'; then
+  echo "expected service api axum ingress contract lane promotion reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected service api axum ingress contract lane promotion reason code marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:websocket_upgrade_parity_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
@@ -258,6 +286,22 @@ if lane_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") !
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker")
 if lane_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_codes_csv marker")
+if lane_payload.get("service_api_axum_evidence_convergence_status") != "verified":
+    raise SystemExit("expected service_api_axum_evidence_convergence_status=verified")
+if lane_payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected promotion_decision_reason_mapping_status=verified")
+if lane_payload.get("service_api_axum_evidence_reason_taxonomy_version") != "kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_axum_evidence_reason_taxonomy_version marker")
+if lane_payload.get("service_api_axum_evidence_reason_codes_csv") != "service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic service_api_axum_evidence_reason_codes_csv marker")
+if lane_payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic promotion_decision_reason_taxonomy_version marker")
+if lane_payload.get("promotion_decision_reason_codes_csv") != "service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation":
+    raise SystemExit("expected deterministic promotion_decision_reason_codes_csv marker")
+if lane_payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic promotion_decision_reason_code marker")
+if not isinstance(lane_payload.get("service_api_axum_evidence_report_file"), str) or lane_payload.get("service_api_axum_evidence_report_file") == "":
+    raise SystemExit("expected service_api_axum_evidence_report_file marker")
 if lane_payload.get("api_max_requests_default") != 1:
     raise SystemExit("expected api_max_requests_default=1")
 if lane_payload.get("api_idle_timeout_default_ms") != 5000:
@@ -322,6 +366,10 @@ PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then
   echo "expected service api axum ingress contract lane to compose policy checker" >&2
+  exit 1
+fi
+if ! grep -q "check_service_api_axum_ingress_live_evidence_convergence.sh" "$CONTRACT_LANE"; then
+  echo "expected service api axum ingress contract lane to compose evidence convergence checker" >&2
   exit 1
 fi
 if ! grep -q "validate_service_api_axum_ingress_live.sh" "$CONTRACT_LANE"; then

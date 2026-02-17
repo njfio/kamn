@@ -1156,8 +1156,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
   - `bash scripts/runtime/check_service_api_axum_ingress_live_policy.sh --report-file /tmp/service-api-axum-ingress-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-axum-ingress-policy.json`
   - `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy.json`
+  - `bash scripts/runtime/check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy.json --output-json /tmp/service-api-axum-ingress-convergence-report.json`
   - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
   - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh`
 - ci-fast-gate mode: fast
 - local-dev mode: local
 - manual-hardened mode: manual
@@ -1197,6 +1199,14 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`,
     `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`,
     `service_api_axum_protocol_mismatch_reason_code=none|<reason>`.
+  - admission backpressure evidence convergence governance remains deterministic via:
+    `service_api_axum_evidence_convergence_status=verified`,
+    `promotion_decision_reason_mapping_status=verified`,
+    `service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1`,
+    `service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch`,
+    `promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`,
+    `promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`,
+    `promotion_decision_reason_code=none|<reason>`.
   - protocol taxonomy and runbook-marker parity remains deterministic via:
     `protocol_taxonomy_mapping_status=verified`,
     `runbook_marker_parity_status=verified`,
@@ -1216,6 +1226,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `service_api_axum_policy_body_size_limit_mismatch`
   - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_protocol_taxonomy_mismatch`
   - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch`
+  - `service_api_axum_evidence_link_missing:source_report_file`
+  - `service_api_axum_evidence_payload_tamper_detected:<field>`
+  - `service_api_axum_promotion_decision_reason_mapping_mismatch`
 
 ## Runtime Service API Websocket Live Contract Lane
 - Entry commands:

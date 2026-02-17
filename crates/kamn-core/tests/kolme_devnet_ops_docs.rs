@@ -75,6 +75,34 @@ fn plan_contains_service_api_websocket_evidence_convergence_contract() {
 }
 
 #[test]
+fn plan_contains_service_api_axum_admission_backpressure_evidence_convergence_contract() {
+    assert!(PLAN
+        .contains("## Service API Axum Admission/Backpressure Evidence Convergence (Issue #4223)"));
+    assert!(PLAN.contains(
+        "check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy-report.json --output-json /tmp/service-api-axum-ingress-convergence-report.json"
+    ));
+    assert!(PLAN.contains("service_api_axum_evidence_convergence_status=verified"));
+    assert!(PLAN.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(PLAN.contains(
+        "service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+    ));
+    assert!(PLAN.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(PLAN.contains("service_api_axum_evidence_link_missing:source_report_file"));
+    assert!(PLAN.contains("service_api_axum_promotion_decision_reason_mapping_mismatch"));
+    assert!(PLAN.contains("Regression: #4229"));
+    assert!(PLAN.contains("Regression: #4230"));
+}
+
+#[test]
 fn plan_contains_sqlite_crash_replay_evidence_convergence_contract() {
     assert!(PLAN.contains(
         "## Sqlite Crash-Replay Evidence Convergence and Promotion Reason Mapping Contract (Issue #4238)"
@@ -206,6 +234,34 @@ fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_mark
     assert!(DEPLOY_COMPAT.contains("validate_service_api_axum_ingress_live_contract_lane.sh"));
     assert!(DEPLOY_COMPAT.contains("Regression: #4272"));
     assert!(DEPLOY_COMPAT.contains("Regression: #4273"));
+}
+
+#[test]
+fn deploy_compat_contains_service_api_axum_admission_backpressure_evidence_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Service API Axum Admission/Backpressure Evidence Convergence Contracts (Issue #4223)"
+    ));
+    assert!(DEPLOY_COMPAT.contains("service_api_axum_evidence_convergence_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+    ));
+    assert!(DEPLOY_COMPAT.contains("service_api_axum_evidence_link_missing:source_report_file"));
+    assert!(DEPLOY_COMPAT.contains("service_api_axum_promotion_decision_reason_mapping_mismatch"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy-report.json --output-json /tmp/service-api-axum-ingress-convergence-report.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4229"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4230"));
 }
 
 #[test]

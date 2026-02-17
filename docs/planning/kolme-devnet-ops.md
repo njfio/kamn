@@ -1809,6 +1809,29 @@ Operator checkpoints:
   - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4244`).
   - tampered evidence payloads and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4245`).
 
+## Service API Axum Admission/Backpressure Evidence Convergence (Issue #4223)
+
+- Contract lane command:
+  - `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy-report.json --convergence-output-json /tmp/service-api-axum-ingress-convergence-report.json`
+- Evidence convergence checker:
+  - `bash scripts/runtime/check_service_api_axum_ingress_live_evidence_convergence.sh --report-file /tmp/service-api-axum-ingress-contract-lane-report.json --policy-file /tmp/service-api-axum-ingress-policy-report.json --output-json /tmp/service-api-axum-ingress-convergence-report.json`
+- Deterministic evidence convergence markers:
+  - `service_api_axum_evidence_convergence_status=verified`
+  - `promotion_decision_reason_mapping_status=verified`
+  - `service_api_axum_evidence_reason_taxonomy_version=kamn.runtime.service-api-axum-evidence-convergence-reason-taxonomy.v1`
+  - `service_api_axum_evidence_reason_codes_csv=service_api_axum_evidence_link_missing,service_api_axum_evidence_payload_tamper_detected,service_api_axum_promotion_decision_reason_mapping_mismatch`
+- Deterministic promotion decision reason mapping markers:
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
+  - `promotion_decision_reason_code=none|<reason>`
+- Deterministic fail-closed convergence reasons:
+  - `service_api_axum_evidence_link_missing:source_report_file`
+  - `service_api_axum_evidence_payload_tamper_detected:<field>`
+  - `service_api_axum_promotion_decision_reason_mapping_mismatch`
+- Regression policy:
+  - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4229`).
+  - tampered evidence payloads and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4230`).
+
 ## Service API Websocket Session Evidence Convergence (Issue #4268)
 
 - Contract lane command:
