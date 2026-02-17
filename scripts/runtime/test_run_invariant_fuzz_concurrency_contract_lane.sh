@@ -8,6 +8,8 @@ MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_invariant_fuzz_conc
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_invariant_fuzz_concurrency_policy.sh"
 TESTING_STRATEGY_DOC="$ROOT_DIR/docs/testing/invariant-and-fuzz-strategy.md"
+EXPECTED_REASON_TAXONOMY_VERSION="kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1"
+EXPECTED_REASON_CODES_CSV="property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -71,6 +73,10 @@ assert report["fuzz_replay_test_count"] >= 10
 assert report["concurrency_replay_schema_version"] == "kamn.runtime.concurrency-mutation-contract-report.v1"
 assert report["concurrency_replay_artifact_key"] == "concurrency_mutation_replay:v1"
 assert report["concurrency_replay_test_count"] >= 12
+assert report["reason_taxonomy_version"] == "kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1"
+assert report["reason_codes_csv"] == "property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch"
+assert report["reason_codes_value"] == "none"
+assert report["final_decision"] == "GO"
 assert report["reason_codes"] == ["none"]
 PY
 
@@ -102,6 +108,20 @@ fi
 
 if ! grep -Fq "invariant_fuzz_concurrency_contract_lane_contract.sh" "$MANIFEST_FILE"; then
   echo "expected invariant/fuzz/concurrency manifest to dispatch shared contract module" >&2
+  exit 1
+fi
+
+policy_output="$(bash "$POLICY_CHECKER" --report-file "$report_file")"
+if ! printf '%s\n' "$policy_output" | grep -Fq "invariant_policy_reason_taxonomy_version=$EXPECTED_REASON_TAXONOMY_VERSION"; then
+  echo "expected invariant/fuzz/concurrency checker taxonomy marker for contract-lane report" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -Fq "invariant_policy_reason_codes_csv=$EXPECTED_REASON_CODES_CSV"; then
+  echo "expected invariant/fuzz/concurrency checker reason codes csv marker for contract-lane report" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -Fq "invariant_policy_reason_codes_value=none"; then
+  echo "expected invariant/fuzz/concurrency checker reason value marker for contract-lane report" >&2
   exit 1
 fi
 
