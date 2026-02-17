@@ -1,27 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/message/generate_group_sender_replay_ratchet_evidence_bundle.sh"
-POLICY_CHECKER="$ROOT_DIR/scripts/message/check_group_sender_replay_ratchet_policy.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/message/generate_group_sender_replay_ratchet_evidence_bundle.sh"
+POLICY_CHECKER="$KAMN_ROOT/scripts/message/check_group_sender_replay_ratchet_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$GENERATOR" ]; then
   echo "expected group sender replay/ratchet evidence generator to be executable" >&2

@@ -1,17 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/runtime/generate_live_network_pilot_artifact_summary.sh"
-CHECKER="$ROOT_DIR/scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/runtime/generate_live_network_pilot_artifact_summary.sh"
+CHECKER="$KAMN_ROOT/scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
 
 if [[ ! -x "$GENERATOR" ]]; then
   echo "expected live-network pilot artifact summary generator to be executable" >&2

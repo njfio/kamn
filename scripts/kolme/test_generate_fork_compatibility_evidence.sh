@@ -1,27 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/kolme/generate_fork_compatibility_evidence.py"
-FIXTURE_FILE="$ROOT_DIR/fixtures/kolme_compatibility/fork_compatibility_cases.json"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/kolme/generate_fork_compatibility_evidence.py"
+FIXTURE_FILE="$KAMN_ROOT/fixtures/kolme_compatibility/fork_compatibility_cases.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$GENERATOR" ]; then
   echo "expected Kolme fork compatibility evidence generator to be executable" >&2
