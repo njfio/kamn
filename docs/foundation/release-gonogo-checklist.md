@@ -572,9 +572,28 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Admission policy decision matrix markers:
   - `runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO`
   - `runtime_signer_drift_admission_matrix_class=healthy|warning-edge|hard-fail`
-  - `runtime_signer_drift_admission_matrix_reason_codes`
-  - `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
-  - `runtime_signer_drift_thresholds_bundle`
+- `runtime_signer_drift_admission_matrix_reason_codes`
+- `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
+- `runtime_signer_drift_thresholds_bundle`
+
+## Rotation Preflight Quorum Marker Parity and Custody Reason Mapping Gate (Issues #4169, #4170)
+- Validation command:
+  - `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Required deterministic taxonomy markers:
+  - `rotation_preflight_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1`
+  - `rotation_preflight_reason_codes_csv=signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected`
+  - `rotation_preflight_reason_codes_value=none|<csv>`
+  - `custody_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1`
+  - `custody_reason_codes_csv=custody_evidence_missing,custody_evidence_sha256_invalid,custody_evidence_file_missing,quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected`
+  - `custody_reason_codes_value=none|<csv>`
+- Required fail-closed parity/tamper reasons:
+  - `quorum_evidence_approval_count_mismatch`
+  - `quorum_evidence_custody_sha256_mismatch`
+  - `custody_continuity_bypass_detected`
+- Regression policy:
+  - quorum marker parity drift or custody reason mapping drift forces `NO-GO` (`Regression: #4169`, `Regression: #4170`).
 
 ## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)
 Run-mode promotion requires deterministic local live-node rehearsal lineage evidence before GO decisions are accepted.

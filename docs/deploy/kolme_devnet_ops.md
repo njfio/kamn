@@ -34,6 +34,34 @@ present, including:
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
 - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
 
+## Rotation Preflight Quorum Marker Parity and Custody Tamper Contracts (Issues #4169, #4170)
+
+Deployment preflight rotation evidence must fail closed when quorum markers drift or custody
+continuity evidence is tampered.
+
+Required deterministic marker outputs:
+
+- `rotation_preflight_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1`
+- `rotation_preflight_reason_codes_csv=signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected`
+- `rotation_preflight_reason_codes_value=none|<csv>`
+- `custody_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1`
+- `custody_reason_codes_csv=custody_evidence_missing,custody_evidence_sha256_invalid,custody_evidence_file_missing,quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected`
+- `custody_reason_codes_value=none|<csv>`
+
+Fail-closed parity/tamper reasons:
+
+- `quorum_evidence_approval_count_mismatch`
+- `quorum_evidence_custody_sha256_mismatch`
+- `custody_continuity_bypass_detected`
+
+Validation commands:
+
+- `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+
+- `Regression: #4169`
+- `Regression: #4170`
+
 ## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)
 
 Kolme upgrade compatibility governance remains deterministic only when compatibility checker

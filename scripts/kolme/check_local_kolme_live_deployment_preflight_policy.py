@@ -52,6 +52,17 @@ ROTATION_PREFLIGHT_REASON_CODES = (
     "custody_continuity_bypass_detected",
 )
 ROTATION_PREFLIGHT_REASON_CODES_CSV = ",".join(ROTATION_PREFLIGHT_REASON_CODES)
+CUSTODY_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1"
+)
+CUSTODY_REASON_CODES = (
+    "custody_evidence_missing",
+    "custody_evidence_sha256_invalid",
+    "custody_evidence_file_missing",
+    "quorum_evidence_custody_sha256_mismatch",
+    "custody_continuity_bypass_detected",
+)
+CUSTODY_REASON_CODES_CSV = ",".join(CUSTODY_REASON_CODES)
 
 
 def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> str:
@@ -59,6 +70,15 @@ def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> s
         reason_code
         for reason_code in ROTATION_PREFLIGHT_REASON_CODES
         if reason_code in reason_codes
+    ]
+    if not observed:
+        return "none"
+    return ",".join(observed)
+
+
+def observed_custody_reason_codes_value(reason_codes: list[str]) -> str:
+    observed = [
+        reason_code for reason_code in CUSTODY_REASON_CODES if reason_code in reason_codes
     ]
     if not observed:
         return "none"
@@ -1025,6 +1045,9 @@ def main() -> int:
         "rotation_preflight_reason_codes_value": observed_rotation_preflight_reason_codes_value(
             reason_codes
         ),
+        "custody_reason_taxonomy_version": CUSTODY_REASON_TAXONOMY_VERSION,
+        "custody_reason_codes_csv": CUSTODY_REASON_CODES_CSV,
+        "custody_reason_codes_value": observed_custody_reason_codes_value(reason_codes),
         "runtime_signer_drift_admission_matrix_decision": runtime_signer_drift_admission_matrix.get("decision"),
         "runtime_signer_drift_admission_matrix_class": runtime_signer_drift_admission_matrix.get("class"),
         "runtime_signer_drift_admission_matrix_reason_codes": runtime_signer_drift_admission_matrix.get("reason_codes"),
@@ -1051,6 +1074,9 @@ def main() -> int:
         "rotation_preflight_reason_codes_value="
         f"{observed_rotation_preflight_reason_codes_value(reason_codes)}"
     )
+    print(f"custody_reason_taxonomy_version={CUSTODY_REASON_TAXONOMY_VERSION}")
+    print(f"custody_reason_codes_csv={CUSTODY_REASON_CODES_CSV}")
+    print(f"custody_reason_codes_value={observed_custody_reason_codes_value(reason_codes)}")
     print(f"failed_checks={failed_checks}")
 
     return 0 if final_decision == "GO" else 1
