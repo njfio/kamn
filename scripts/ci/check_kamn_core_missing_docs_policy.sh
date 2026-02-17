@@ -37,6 +37,82 @@ fail_with_reason() {
   exit 1
 }
 
+emit_missing_docs_evidence_markers() {
+  local throughput_report="$1"
+  local baseline_file="$2"
+  local velocity_policy_report="$3"
+  local velocity_markers_file="$4"
+  python3 - "$throughput_report" "$baseline_file" "$velocity_policy_report" "$velocity_markers_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+throughput_path = Path(sys.argv[1])
+baseline_path = Path(sys.argv[2])
+velocity_policy_path = Path(sys.argv[3])
+velocity_markers_path = Path(sys.argv[4])
+
+throughput_payload = json.loads(throughput_path.read_text(encoding="utf-8"))
+baseline_payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+current_allowlisted = int(throughput_payload.get("allowlisted_module_count", 0))
+current_graduated = int(throughput_payload.get("graduated_module_count", 0))
+baseline_allowlisted = int(baseline_payload.get("allowlisted_module_count", 0))
+baseline_graduated = int(baseline_payload.get("graduated_module_count", 0))
+
+allowlisted_delta = current_allowlisted - baseline_allowlisted
+graduated_delta = current_graduated - baseline_graduated
+
+marker_map: dict[str, str] = {}
+for raw_line in velocity_markers_path.read_text(encoding="utf-8").splitlines():
+    if "=" not in raw_line:
+        continue
+    key, value = raw_line.split("=", 1)
+    key = key.strip()
+    value = value.strip()
+    if key and key not in marker_map:
+        marker_map[key] = value
+
+policy_payload: dict[str, object] = {}
+if velocity_policy_path.is_file():
+    loaded_policy = json.loads(velocity_policy_path.read_text(encoding="utf-8"))
+    if isinstance(loaded_policy, dict):
+        policy_payload = loaded_policy
+        if "allowlisted_module_delta" in policy_payload:
+            allowlisted_delta = int(policy_payload["allowlisted_module_delta"])  # type: ignore[arg-type]
+        if "graduated_module_delta" in policy_payload:
+            graduated_delta = int(policy_payload["graduated_module_delta"])  # type: ignore[arg-type]
+
+status = str(policy_payload.get("status") or marker_map.get("status", "unknown"))
+final_decision = str(
+    policy_payload.get("final_decision") or marker_map.get("final_decision", "unknown")
+)
+reason_taxonomy_version = str(
+    policy_payload.get("reason_taxonomy_version")
+    or marker_map.get("reason_taxonomy_version", "unknown")
+)
+reason_codes_csv = str(
+    policy_payload.get("reason_codes_csv") or marker_map.get("reason_codes_csv", "unknown")
+)
+reason_codes_value = str(
+    policy_payload.get("reason_codes_value")
+    or policy_payload.get("reason_key")
+    or marker_map.get("reason_codes_value")
+    or marker_map.get("reason_key", "unknown")
+)
+
+print(f"missing_docs_allowlisted_module_count={current_allowlisted}")
+print(f"missing_docs_graduated_module_count={current_graduated}")
+print(f"missing_docs_allowlisted_module_delta={allowlisted_delta}")
+print(f"missing_docs_graduated_module_delta={graduated_delta}")
+print(f"missing_docs_velocity_status={status}")
+print(f"missing_docs_velocity_final_decision={final_decision}")
+print(f"missing_docs_velocity_reason_taxonomy_version={reason_taxonomy_version}")
+print(f"missing_docs_velocity_reason_codes_csv={reason_codes_csv}")
+print(f"missing_docs_velocity_reason_codes_value={reason_codes_value}")
+PY
+}
+
 require_file "$CORE_LIB_PATH" "kamn-core lib"
 require_file "$ALLOWLIST_PATH" "missing-docs allowlist fixture"
 require_file "$GRADUATED_MODULES_PATH" "missing-docs graduated-modules fixture"
@@ -290,15 +366,46 @@ if ! python3 "$THROUGHPUT_CONTRACT_SCRIPT_PATH" check \
 fi
 
 tmp_velocity_policy_report="$(mktemp)"
-if ! python3 "$VELOCITY_GUARD_SCRIPT_PATH" check \
+tmp_velocity_stdout="$(mktemp)"
+tmp_velocity_stderr="$(mktemp)"
+set +e
+python3 "$VELOCITY_GUARD_SCRIPT_PATH" check \
   --report-file "$tmp_throughput_report" \
   --baseline-file "$VELOCITY_BASELINE_PATH" \
   --threshold-file "$VELOCITY_THRESHOLD_PATH" \
-  --output-json "$tmp_velocity_policy_report" >/dev/null; then
+  --output-json "$tmp_velocity_policy_report" >"$tmp_velocity_stdout" 2>"$tmp_velocity_stderr"
+velocity_exit="$?"
+set -e
+cat "$tmp_velocity_stdout" "$tmp_velocity_stderr" >"$tmp_velocity_stdout.merged"
+
+if [ "$velocity_exit" -ne 0 ]; then
+  emit_missing_docs_evidence_markers \
+    "$tmp_throughput_report" \
+    "$VELOCITY_BASELINE_PATH" \
+    "$tmp_velocity_policy_report" \
+    "$tmp_velocity_stdout.merged" >&2
+  cat "$tmp_velocity_stderr" >&2
   echo "missing-docs policy contract failed: velocity guard policy check failed." >&2
-  rm -f "$tmp_throughput_report" "$tmp_velocity_policy_report"
+  rm -f \
+    "$tmp_throughput_report" \
+    "$tmp_velocity_policy_report" \
+    "$tmp_velocity_stdout" \
+    "$tmp_velocity_stderr" \
+    "$tmp_velocity_stdout.merged"
   exit 1
 fi
-rm -f "$tmp_throughput_report" "$tmp_velocity_policy_report"
+
+emit_missing_docs_evidence_markers \
+  "$tmp_throughput_report" \
+  "$VELOCITY_BASELINE_PATH" \
+  "$tmp_velocity_policy_report" \
+  "$tmp_velocity_stdout.merged"
+
+rm -f \
+  "$tmp_throughput_report" \
+  "$tmp_velocity_policy_report" \
+  "$tmp_velocity_stdout" \
+  "$tmp_velocity_stderr" \
+  "$tmp_velocity_stdout.merged"
 
 echo "kamn-core missing-docs policy contract passed."
