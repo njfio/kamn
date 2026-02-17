@@ -10,8 +10,11 @@ emission governance, and bounded CI smoke versus local-heavy lane policy enforce
 - #4403 Task: implement observability emission payload schema checks and deterministic fail-closed reason mapping
 - #4404 Task: enforce telemetry-validation gate convergence with low-cost ci smoke and local-heavy deep boundaries
 - #4401 Task: implement property-based invariant checks for critical runtime and promotion-gate contracts
+- #4402 Task: implement deterministic fuzz-concurrency checkers and failure taxonomy for deep validation lanes
 - #4405 Subtask: add red tests for invariant violations accepted by runtime and gate checks
 - #4406 Subtask: implement invariant failure reason mapping and deterministic evidence outputs
+- #4407 Subtask: add red tests for fuzz seed regressions and concurrency race misclassification
+- #4408 Subtask: implement fuzz-concurrency reason taxonomy and ci-local deep-lane boundary enforcement
 - #4409 Subtask: add red tests for telemetry emission schema drift and missing required fields
 - #4410 Subtask: implement deterministic telemetry failure reason mapping and normalized emission evidence outputs
 - #4411 Subtask: add red tests for telemetry gate evidence convergence gaps

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REASON_TAXONOMY_VERSION="kamn.runtime.invariant-fuzz-concurrency-policy-reason-taxonomy.v1"
-REASON_CODES_CSV="property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch"
+REASON_CODES_CSV="property_lane_failed,fuzz_lane_failed,concurrency_lane_failed,runtime_budget_exceeded,ci_smoke_local_heavy_boundary_status_mismatch,ci_smoke_lane_cost_profile_mismatch,local_heavy_lane_execution_mode_mismatch,missing_required_report_fields,schema_version_mismatch,status_value_invalid,lane_status_value_invalid,property_replay_schema_version_mismatch,property_replay_artifact_key_mismatch,property_replay_test_count_invalid,fuzz_replay_schema_version_mismatch,fuzz_replay_artifact_key_mismatch,fuzz_replay_test_count_invalid,concurrency_replay_schema_version_mismatch,concurrency_replay_artifact_key_mismatch,concurrency_replay_test_count_invalid,elapsed_seconds_invalid,max_seconds_invalid,reason_codes_payload_invalid,status_contract_mismatch,reason_codes_contract_mismatch,reason_taxonomy_version_mismatch,reason_codes_csv_mismatch,reason_codes_value_mismatch,final_decision_mismatch"
 
 usage() {
   cat <<'USAGE'
@@ -82,6 +82,9 @@ required_fields = (
     "property_lane_status",
     "fuzz_lane_status",
     "concurrency_lane_status",
+    "ci_smoke_local_heavy_boundary_status",
+    "ci_smoke_lane_cost_profile",
+    "local_heavy_lane_execution_mode",
     "property_replay_schema_version",
     "property_replay_artifact_key",
     "property_replay_test_count",
@@ -114,6 +117,15 @@ if status not in {"pass", "fail"}:
 for field in ("property_lane_status", "fuzz_lane_status", "concurrency_lane_status"):
     if payload.get(field) not in {"pass", "fail"}:
         add_reason("lane_status_value_invalid")
+
+if payload.get("ci_smoke_local_heavy_boundary_status") != "verified":
+    add_reason("ci_smoke_local_heavy_boundary_status_mismatch")
+
+if payload.get("ci_smoke_lane_cost_profile") != "low":
+    add_reason("ci_smoke_lane_cost_profile_mismatch")
+
+if payload.get("local_heavy_lane_execution_mode") != "opt_in":
+    add_reason("local_heavy_lane_execution_mode_mismatch")
 
 property_replay_schema_version = payload.get("property_replay_schema_version")
 expected_property_replay_schema_version = "kamn.runtime.lifecycle-property-contract-report.v1"
@@ -238,6 +250,13 @@ if output_json:
         "reason_codes_value": policy_reason_codes_value,
         "expected_reason_codes_value": expected_reason_codes_value,
         "observed_reason_codes_value": observed_reason_codes_value,
+        "ci_smoke_local_heavy_boundary_status": payload.get(
+            "ci_smoke_local_heavy_boundary_status"
+        ),
+        "ci_smoke_lane_cost_profile": payload.get("ci_smoke_lane_cost_profile"),
+        "local_heavy_lane_execution_mode": payload.get(
+            "local_heavy_lane_execution_mode"
+        ),
         "final_decision": policy_final_decision,
     }
     output_path.write_text(json.dumps(output_payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -251,6 +270,18 @@ print(f"invariant_policy_reason_codes_csv={reason_codes_csv}")
 print(f"invariant_policy_reason_codes_value={policy_reason_codes_value}")
 print(f"invariant_policy_expected_reason_codes_value={expected_reason_codes_value}")
 print(f"invariant_policy_observed_reason_codes_value={observed_reason_codes_value}")
+print(
+    "invariant_policy_ci_smoke_local_heavy_boundary_status="
+    f"{payload.get('ci_smoke_local_heavy_boundary_status')}"
+)
+print(
+    "invariant_policy_ci_smoke_lane_cost_profile="
+    f"{payload.get('ci_smoke_lane_cost_profile')}"
+)
+print(
+    "invariant_policy_local_heavy_lane_execution_mode="
+    f"{payload.get('local_heavy_lane_execution_mode')}"
+)
 print(f"invariant_policy_final_decision={policy_final_decision}")
 
 if policy_status != "verified":
