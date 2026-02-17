@@ -1,6 +1,6 @@
 # Tasks — #4277
 
-Status: Reviewed
+Status: Implemented
 
 T1: Update strategy + next-steps docs with websocket-session governance markers.
 

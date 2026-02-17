@@ -1,6 +1,6 @@
 # Tasks — #4276
 
-Status: Reviewed
+Status: Implemented
 
 T1: Write fixture-driven RED checks for missing marker and heavy-lane leakage cases.
 
