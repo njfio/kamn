@@ -27,6 +27,20 @@ const RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON: &str =
     "runtime_transport_profile_live_provider_missing";
 const RUNTIME_TRANSPORT_PROFILE_COMPILE_MODE_NOT_NATIVE_REASON: &str =
     "runtime_transport_profile_compile_mode_not_native";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_TIMEOUT_REASON_CODE_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_TIMEOUT_CHECKPOINT_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_timeout_checkpoint_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_GRACEFUL_REASON_CODE_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_graceful_reason_code_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_GRACEFUL_CHECKPOINT_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_graceful_checkpoint_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_NOT_SIGNALED_REASON_CODE_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_not_signaled_reason_code_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_NOT_SIGNALED_CHECKPOINT_MISMATCH: &str =
+    "shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch";
+const SHUTDOWN_CHECKPOINT_RECONCILIATION_UNKNOWN_COMPLETION_REASON: &str =
+    "shutdown_checkpoint_reconciliation_unknown_completion_reason";
 
 fn production_transport_profile_remediation(reason_code: &'static str) -> &'static str {
     match reason_code {
@@ -185,6 +199,18 @@ pub(crate) fn validate_full_bootstrap_component_contract(
     Ok(())
 }
 
+fn parse_nonempty_u64(value: &str) -> Option<u64> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    trimmed.parse::<u64>().ok()
+}
+
+fn parse_positive_u64(value: &str) -> Option<u64> {
+    parse_nonempty_u64(value).filter(|value| *value > 0)
+}
+
 pub(crate) fn classify_full_supervisor_stop_contract_violation(
     completion_reason: &str,
     shutdown_drain_status: &str,
@@ -205,6 +231,13 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
     if completion_reason == "tick-budget-exhausted"
         || completion_reason.starts_with("tick-budget-exhausted;ignored_signals=")
     {
+        if let Some(raw_ignored_signals) =
+            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+        {
+            if parse_nonempty_u64(raw_ignored_signals).is_none() {
+                return Some("full_supervisor_stop_invalid_ignored_signals");
+            }
+        }
         if shutdown_drain_status != "not-signaled" {
             return Some("full_supervisor_stop_not_signaled_status_mismatch");
         }
@@ -217,14 +250,31 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
         if daemon_shutdown_signal_tick(completion_reason).is_none() {
             return Some("full_supervisor_stop_missing_signal_tick");
         }
-        if daemon_shutdown_reason_field(completion_reason, "drain_ticks").is_none() {
+        let Some(raw_drain_ticks) = daemon_shutdown_reason_field(completion_reason, "drain_ticks")
+        else {
             return Some("full_supervisor_stop_missing_drain_ticks");
-        }
-        if daemon_shutdown_reason_field(completion_reason, "timeout_ticks").is_none() {
+        };
+        let Some(drain_ticks) = parse_positive_u64(raw_drain_ticks) else {
+            return Some("full_supervisor_stop_invalid_drain_ticks");
+        };
+        let Some(raw_timeout_ticks) =
+            daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
+        else {
             return Some("full_supervisor_stop_missing_timeout_ticks");
-        }
-        if daemon_shutdown_reason_field(completion_reason, "ignored_signals").is_none() {
+        };
+        let Some(timeout_ticks) = parse_positive_u64(raw_timeout_ticks) else {
+            return Some("full_supervisor_stop_invalid_timeout_ticks");
+        };
+        let Some(raw_ignored_signals) =
+            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+        else {
             return Some("full_supervisor_stop_missing_ignored_signals");
+        };
+        if parse_nonempty_u64(raw_ignored_signals).is_none() {
+            return Some("full_supervisor_stop_invalid_ignored_signals");
+        }
+        if drain_ticks > timeout_ticks {
+            return Some("full_supervisor_stop_graceful_drain_timeout_contract_mismatch");
         }
         if shutdown_drain_status != "completed" {
             return Some("full_supervisor_stop_graceful_status_mismatch");
@@ -238,14 +288,28 @@ pub(crate) fn classify_full_supervisor_stop_contract_violation(
         if daemon_shutdown_signal_tick(completion_reason).is_none() {
             return Some("full_supervisor_stop_missing_signal_tick");
         }
-        if daemon_shutdown_reason_field(completion_reason, "drain_ticks").is_none() {
+        let Some(raw_drain_ticks) = daemon_shutdown_reason_field(completion_reason, "drain_ticks")
+        else {
             return Some("full_supervisor_stop_missing_drain_ticks");
+        };
+        if parse_positive_u64(raw_drain_ticks).is_none() {
+            return Some("full_supervisor_stop_invalid_drain_ticks");
         }
-        if daemon_shutdown_reason_field(completion_reason, "timeout_ticks").is_none() {
+        let Some(raw_timeout_ticks) =
+            daemon_shutdown_reason_field(completion_reason, "timeout_ticks")
+        else {
             return Some("full_supervisor_stop_missing_timeout_ticks");
+        };
+        if parse_positive_u64(raw_timeout_ticks).is_none() {
+            return Some("full_supervisor_stop_invalid_timeout_ticks");
         }
-        if daemon_shutdown_reason_field(completion_reason, "ignored_signals").is_none() {
+        let Some(raw_ignored_signals) =
+            daemon_shutdown_reason_field(completion_reason, "ignored_signals")
+        else {
             return Some("full_supervisor_stop_missing_ignored_signals");
+        };
+        if parse_nonempty_u64(raw_ignored_signals).is_none() {
+            return Some("full_supervisor_stop_invalid_ignored_signals");
         }
         if shutdown_drain_status != "timeout" {
             return Some("full_supervisor_stop_graceful_timeout_status_mismatch");
@@ -270,6 +334,75 @@ pub(crate) fn validate_full_supervisor_stop_contract(
     ) {
         return Err(ConfigError::RuntimeDaemonLifecycle(format!(
             "full_supervisor_invariant_violation:{reason}"
+        )));
+    }
+    Ok(())
+}
+
+pub(crate) fn classify_shutdown_checkpoint_reconciliation_violation(
+    completion_reason: &str,
+    observability_reason_code: &str,
+    transport_checkpoint_failures: u64,
+    signer_checkpoint_failures: u64,
+    commit_checkpoint_failures: u64,
+) -> Option<&'static str> {
+    if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
+        if observability_reason_code != "daemon_shutdown_timeout" {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_TIMEOUT_REASON_CODE_MISMATCH);
+        }
+        if transport_checkpoint_failures != 0
+            || signer_checkpoint_failures != 0
+            || commit_checkpoint_failures != 1
+        {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_TIMEOUT_CHECKPOINT_MISMATCH);
+        }
+        return None;
+    }
+    if completion_reason.starts_with("graceful-shutdown:signal@") {
+        if observability_reason_code != "daemon_shutdown_signal" {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_GRACEFUL_REASON_CODE_MISMATCH);
+        }
+        if transport_checkpoint_failures != 0
+            || signer_checkpoint_failures != 0
+            || commit_checkpoint_failures != 0
+        {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_GRACEFUL_CHECKPOINT_MISMATCH);
+        }
+        return None;
+    }
+    if completion_reason == "tick-budget-exhausted"
+        || completion_reason.starts_with("tick-budget-exhausted;ignored_signals=")
+    {
+        if observability_reason_code != "none" {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_NOT_SIGNALED_REASON_CODE_MISMATCH);
+        }
+        if transport_checkpoint_failures != 0
+            || signer_checkpoint_failures != 0
+            || commit_checkpoint_failures != 0
+        {
+            return Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_NOT_SIGNALED_CHECKPOINT_MISMATCH);
+        }
+        return None;
+    }
+    Some(SHUTDOWN_CHECKPOINT_RECONCILIATION_UNKNOWN_COMPLETION_REASON)
+}
+
+pub(crate) fn validate_shutdown_checkpoint_reconciliation(
+    completion_reason: &str,
+    observability_reason_code: &str,
+    transport_checkpoint_failures: u64,
+    signer_checkpoint_failures: u64,
+    commit_checkpoint_failures: u64,
+) -> Result<(), ConfigError> {
+    if let Some(reason) = classify_shutdown_checkpoint_reconciliation_violation(
+        completion_reason,
+        observability_reason_code,
+        transport_checkpoint_failures,
+        signer_checkpoint_failures,
+        commit_checkpoint_failures,
+    ) {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "runtime_shutdown_invariant_violation:{reason}"
         )));
     }
     Ok(())

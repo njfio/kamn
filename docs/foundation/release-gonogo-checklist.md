@@ -99,6 +99,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
 
+## Shutdown Drain/Checkpoint Reconciliation Gate (Issues #4332, #4333)
+- Validation commands:
+  - `cargo test -p kamn-node regression_full_supervisor_stop_contract_classifier_rejects_graceful_drain_timeout_mismatch -- --exact`
+  - `cargo test -p kamn-node unit_shutdown_checkpoint_reconciliation_classifier_rejects_timeout_reason_mapping_drift -- --exact`
+  - `cargo test -p kamn-node regression_shutdown_checkpoint_reconciliation_validator_fails_closed_with_stable_reason -- --exact`
+- Required deterministic taxonomy marker:
+  - `shutdown_checkpoint_reconciliation_reason_taxonomy_version=kamn.runtime.shutdown-checkpoint-reconciliation-reason-taxonomy.v1`
+- Required fail-closed reason markers:
+  - `full_supervisor_stop_graceful_drain_timeout_contract_mismatch`
+  - `shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_timeout_checkpoint_mismatch`
+  - `shutdown_checkpoint_reconciliation_graceful_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_graceful_checkpoint_mismatch`
+  - `shutdown_checkpoint_reconciliation_not_signaled_reason_code_mismatch`
+  - `shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch`
+  - `runtime_shutdown_invariant_violation`
+- Regression policy:
+  - shutdown drain/checkpoint reconciliation drift acceptance forces `NO-GO` (`Regression: #4333`).
+
 ## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)
 - Checker command:
   - `scripts/ci/check_no_production_expect.sh --root crates/kamn-node/src --output-json /tmp/no-production-expect-report.json`

@@ -1323,6 +1323,101 @@ fn regression_full_supervisor_stop_contract_classifier_rejects_snapshot_flush_mi
 }
 
 #[test]
+fn regression_full_supervisor_stop_contract_classifier_rejects_graceful_drain_timeout_mismatch() {
+    // Regression: #4332
+    let reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown:signal@4;drain_ticks=5;timeout_ticks=2;ignored_signals=0",
+        "completed",
+        "snapshot-flushed",
+    );
+    assert_eq!(
+        reason,
+        Some("full_supervisor_stop_graceful_drain_timeout_contract_mismatch")
+    );
+}
+
+#[test]
+fn unit_full_supervisor_stop_contract_classifier_rejects_invalid_numeric_shutdown_fields() {
+    let invalid_drain_reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown:signal@4;drain_ticks=abc;timeout_ticks=2;ignored_signals=0",
+        "completed",
+        "snapshot-flushed",
+    );
+    assert_eq!(
+        invalid_drain_reason,
+        Some("full_supervisor_stop_invalid_drain_ticks")
+    );
+
+    let invalid_timeout_reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown-timeout:signal@4;drain_ticks=3;timeout_ticks=abc;ignored_signals=0",
+        "timeout",
+        "snapshot-flush-timeout",
+    );
+    assert_eq!(
+        invalid_timeout_reason,
+        Some("full_supervisor_stop_invalid_timeout_ticks")
+    );
+
+    let invalid_ignored_signals_reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown-timeout:signal@4;drain_ticks=3;timeout_ticks=1;ignored_signals=abc",
+        "timeout",
+        "snapshot-flush-timeout",
+    );
+    assert_eq!(
+        invalid_ignored_signals_reason,
+        Some("full_supervisor_stop_invalid_ignored_signals")
+    );
+}
+
+#[test]
+fn unit_shutdown_checkpoint_reconciliation_classifier_rejects_timeout_reason_mapping_drift() {
+    let reason = crate::classify_shutdown_checkpoint_reconciliation_violation(
+        "graceful-shutdown-timeout:signal@2;drain_ticks=3;timeout_ticks=1;ignored_signals=0",
+        "daemon_shutdown_signal",
+        0,
+        0,
+        1,
+    );
+    assert_eq!(
+        reason,
+        Some("shutdown_checkpoint_reconciliation_timeout_reason_code_mismatch")
+    );
+}
+
+#[test]
+fn regression_shutdown_checkpoint_reconciliation_classifier_rejects_checkpoint_counter_drift() {
+    // Regression: #4333
+    let reason = crate::classify_shutdown_checkpoint_reconciliation_violation(
+        "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
+        "daemon_shutdown_signal",
+        0,
+        0,
+        1,
+    );
+    assert_eq!(
+        reason,
+        Some("shutdown_checkpoint_reconciliation_graceful_checkpoint_mismatch")
+    );
+}
+
+#[test]
+fn regression_shutdown_checkpoint_reconciliation_validator_fails_closed_with_stable_reason() {
+    // Regression: #4333
+    let error = crate::validate_shutdown_checkpoint_reconciliation(
+        "tick-budget-exhausted",
+        "daemon_shutdown_timeout",
+        0,
+        0,
+        0,
+    )
+    .expect_err("shutdown checkpoint reconciliation drift must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("runtime_shutdown_invariant_violation:shutdown_checkpoint_reconciliation_not_signaled_reason_code_mismatch")),
+        "shutdown checkpoint reconciliation drift must map to deterministic reason"
+    );
+}
+
+#[test]
 fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
     let _lock = log_env_lock()
         .lock()
@@ -1369,6 +1464,22 @@ fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
             .as_deref()
             .is_some_and(|value| value.starts_with("graceful-shutdown-timeout:signal@")),
         "timeout shutdown flow must preserve deterministic graceful-shutdown-timeout reason marker"
+    );
+    assert_eq!(
+        report.daemon_observability_reason_code.as_deref(),
+        Some("daemon_shutdown_timeout")
+    );
+    assert_eq!(
+        report.daemon_observability_transport_checkpoint_failures,
+        Some(0)
+    );
+    assert_eq!(
+        report.daemon_observability_signer_checkpoint_failures,
+        Some(0)
+    );
+    assert_eq!(
+        report.daemon_observability_commit_checkpoint_failures,
+        Some(1)
     );
 }
 
