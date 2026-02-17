@@ -75,6 +75,12 @@ pub(crate) fn should_use_os_signal_shutdown(
     daemon_shutdown_os_signals: bool,
     daemon_shutdown_signal_ticks: &[u64],
 ) -> bool {
+    if !matches!(
+        runtime_mode.kind,
+        RuntimeModeKind::Daemon | RuntimeModeKind::Full
+    ) {
+        return false;
+    }
     if !daemon_shutdown_signal_ticks.is_empty() {
         return false;
     }
@@ -82,10 +88,6 @@ pub(crate) fn should_use_os_signal_shutdown(
         return true;
     }
     cfg!(unix)
-        && matches!(
-            runtime_mode.kind,
-            RuntimeModeKind::Daemon | RuntimeModeKind::Full
-        )
 }
 
 pub(crate) fn select_runtime_transport_profile_for_runtime_mode(

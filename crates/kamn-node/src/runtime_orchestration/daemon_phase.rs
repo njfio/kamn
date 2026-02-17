@@ -44,7 +44,9 @@ pub(super) fn daemon_shutdown_signal_tick(completion_reason: &str) -> Option<&st
     completion_reason
         .strip_prefix("graceful-shutdown:signal@")
         .or_else(|| completion_reason.strip_prefix("graceful-shutdown-timeout:signal@"))
-        .map(|value| value.split(';').next().unwrap_or(value))
+        .and_then(|value| value.split(';').next())
+        .map(str::trim)
+        .filter(|tick| !tick.is_empty() && tick.chars().all(|c| c.is_ascii_digit()))
 }
 
 pub(super) fn daemon_shutdown_reason_field<'a>(

@@ -87,6 +87,30 @@ fn checklist_contains_service_api_protocol_session_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate() {
+    assert!(CHECKLIST.contains("## Shutdown Signal Lifecycle Reason Mapping Gate (Issue #4331)"));
+    assert!(CHECKLIST.contains(
+        "main_tests::runtime_tests::regression_full_supervisor_stop_contract_classifier_rejects_empty_or_non_numeric_signal_tick -- --exact"
+    ));
+    assert!(CHECKLIST.contains(
+        "main_tests::runtime_tests::regression_shutdown_policy_rejects_os_signal_hooks_for_non_daemon_modes -- --exact"
+    ));
+    assert!(CHECKLIST.contains(
+        "shutdown_signal_reason_taxonomy_version=kamn.runtime.shutdown-signal-lifecycle-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "shutdown_signal_reason_codes_csv=full_supervisor_stop_invalid_shutdown_drain_status,full_supervisor_stop_invalid_shutdown_snapshot_flush_status,full_supervisor_stop_not_signaled_status_mismatch,full_supervisor_stop_not_signaled_snapshot_flush_mismatch,full_supervisor_stop_missing_signal_tick,full_supervisor_stop_missing_drain_ticks,full_supervisor_stop_missing_timeout_ticks,full_supervisor_stop_missing_ignored_signals,full_supervisor_stop_graceful_status_mismatch,full_supervisor_stop_graceful_snapshot_flush_status_mismatch,full_supervisor_stop_graceful_timeout_status_mismatch,full_supervisor_stop_graceful_timeout_snapshot_flush_status_mismatch,full_supervisor_stop_unknown_completion_reason"
+    ));
+    assert!(CHECKLIST.contains("shutdown_signal_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains("shutdown_signal_hook_runtime_modes=daemon|full"));
+    assert!(
+        CHECKLIST.contains("shutdown_signal_hook_explicit_override=--daemon-shutdown-os-signals")
+    );
+    assert!(CHECKLIST.contains("full_supervisor_stop_missing_signal_tick"));
+    assert!(CHECKLIST.contains("Regression: #4331"));
+}
+
+#[test]
 fn checklist_contains_panic_replacement_reason_taxonomy_and_runtime_evidence_gate() {
     assert!(CHECKLIST
         .contains("## Panic-Replacement Reason Taxonomy and Runtime Evidence Gate (Issue #4455)"));
