@@ -94,10 +94,6 @@ def _check_policy(args: argparse.Namespace) -> int:
         fail(f"report file not found: {report_file}")
 
     report = load_json(report_file)
-    missing_fields = [field_name for field_name in REQUIRED_REPORT_FIELDS if field_name not in report]
-    if missing_fields:
-        fail(f"missing required report fields: {','.join(missing_fields)}")
-
     expected_final_decision = require_enum(
         "--expected-final-decision",
         args.expected_final_decision,
@@ -109,6 +105,14 @@ def _check_policy(args: argparse.Namespace) -> int:
     observed_final_decision = report.get("final_decision")
 
     decision = DecisionAccumulator()
+    missing_fields = [
+        field_name for field_name in REQUIRED_REPORT_FIELDS if field_name not in report
+    ]
+    for field_name in missing_fields:
+        decision.reject_if(
+            True,
+            f"runtime_observability_policy_required_field_missing:{field_name}",
+        )
     decision.reject_if(
         report.get("schema_version") != REPORT_SCHEMA,
         "runtime_observability_policy_schema_mismatch",
@@ -190,6 +194,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "reason_codes": reason_codes,
+        "reason_codes_value": ",".join(reason_codes),
         "reason_taxonomy_version": OBSERVABILITY_REASON_TAXONOMY_VERSION,
         "reason_codes_csv": OBSERVABILITY_REASON_CODES_CSV,
         "observability_tls_negative_matrix_reason_codes_csv": OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV,
@@ -216,6 +221,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         f"{OBSERVABILITY_TLS_NEGATIVE_MATRIX_REASON_CODES_CSV}"
     )
     print(f"reason_codes={reason_codes_csv}")
+    print(f"reason_codes_value={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
 

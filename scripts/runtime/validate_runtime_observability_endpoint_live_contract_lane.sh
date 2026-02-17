@@ -145,6 +145,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_observa
   echo "expected runtime observability endpoint policy checker reason codes taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected runtime observability endpoint policy checker normalized reason_codes_value marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$policy_output" | grep -q '^observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected$'; then
   echo "expected runtime observability endpoint policy checker TLS negative matrix reason codes taxonomy marker" >&2
   exit 1
@@ -262,6 +266,7 @@ lane_report = {
     ),
     "reason_taxonomy_version": summary_report.get("reason_taxonomy_version"),
     "reason_codes_csv": summary_report.get("reason_codes_csv"),
+    "reason_codes_value": policy_report.get("reason_codes_value"),
     "observability_tls_negative_matrix_reason_codes_csv": summary_report.get(
         "observability_tls_negative_matrix_reason_codes_csv"
     ),
@@ -296,6 +301,7 @@ echo "observability_tls_route_contract_status=verified"
 echo "observability_tls_negative_matrix_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.observability-endpoint-reason-taxonomy.v1"
 echo "reason_codes_csv=runtime_observability_endpoint_readiness_progress_stalled,runtime_observability_stream_parity_bypass_detected,ci_local_observability_endpoint_budget_boundary_exceeded"
+echo "reason_codes_value=none"
 echo "observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected"
 echo "runtime_observability_policy_status=verified"
 echo "runtime_observability_contract_lane_status=verified"
