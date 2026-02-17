@@ -8,12 +8,59 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 from typing import Any
 
 BASELINE_SCHEMA_VERSION = "kamn.kolme.wrapper-inventory-baseline.v1"
 DELTA_REPORT_SCHEMA_VERSION = "kamn.kolme.wrapper-inventory-delta-report.v1"
 MATRIX_SCHEMA_VERSION = "kamn.kolme.lane-migration-matrix.v1"
 TREND_THRESHOLD_SCHEMA_VERSION = "kamn.kolme.wrapper-budget-trend-thresholds.v1"
+REASON_TAXONOMY_VERSION = "kamn.ci.wrapper-budget-trend-reason-taxonomy.v1"
+REASON_CODE_SET = (
+    "baseline_file_not_found",
+    "baseline_json_invalid",
+    "baseline_lane_id_duplicate",
+    "baseline_lane_object_invalid",
+    "baseline_lane_shell_loc_invalid",
+    "baseline_lanes_invalid",
+    "baseline_payload_not_object",
+    "baseline_regular_file_wrapper_count_invalid",
+    "baseline_schema_mismatch",
+    "baseline_symlink_wrapper_count_invalid",
+    "baseline_total_shell_loc_invalid",
+    "baseline_wrapper_count_invalid",
+    "ci_smoke_runtime_budget_exceeded",
+    "ci_smoke_runtime_budget_invalid",
+    "input_file_not_found",
+    "input_json_invalid",
+    "input_payload_not_object",
+    "lane_manifest_file_drift",
+    "lane_matrix_file_not_found",
+    "lane_matrix_json_invalid",
+    "lane_matrix_payload_not_object",
+    "lane_shell_loc_drift",
+    "lane_shell_loc_increase_violation",
+    "lane_source_entry_drift",
+    "lane_wrapper_kind_drift",
+    "missing_lanes_in_current_inventory",
+    "policy_validation_failed",
+    "total_shell_loc_delta_threshold_exceeded",
+    "total_shell_loc_reduction_target_unmet",
+    "trend_mode_required_for_threshold_file",
+    "trend_threshold_file_not_found",
+    "trend_threshold_json_invalid",
+    "trend_threshold_lane_nonincreasing_invalid",
+    "trend_threshold_min_total_shell_loc_reduction_invalid",
+    "trend_threshold_min_wrapper_reduction_invalid",
+    "trend_threshold_payload_not_object",
+    "trend_threshold_schema_mismatch",
+    "trend_threshold_total_shell_loc_invalid",
+    "trend_threshold_wrapper_count_invalid",
+    "unexpected_new_lanes_in_current_inventory",
+    "wrapper_count_delta_threshold_exceeded",
+    "wrapper_count_reduction_target_unmet",
+)
+REASON_CODES_CSV = ",".join(REASON_CODE_SET)
 
 
 class PolicyValidationError(Exception):
@@ -435,6 +482,7 @@ def index_lanes(payload: dict[str, Any], *, label: str) -> dict[str, dict[str, A
 
 
 def command_check(args: argparse.Namespace) -> int:
+    start_time = time.perf_counter()
     repo_root = Path(args.repo_root).resolve()
     matrix_file = Path(args.matrix_file).resolve()
     baseline_file = Path(args.baseline_file).resolve()
@@ -443,6 +491,7 @@ def command_check(args: argparse.Namespace) -> int:
     max_total_shell_loc_increase = int(args.max_total_shell_loc_increase)
     min_wrapper_count_reduction = int(args.min_wrapper_count_reduction)
     min_total_shell_loc_reduction = int(args.min_total_shell_loc_reduction)
+    max_runtime_seconds = float(args.max_runtime_seconds)
     enforce_lane_shell_loc_nonincreasing = True
 
     try:
@@ -462,6 +511,11 @@ def command_check(args: argparse.Namespace) -> int:
             fail_with_reason(
                 "trend_threshold_min_total_shell_loc_reduction_invalid",
                 "--min-total-shell-loc-reduction must be >= 0",
+            )
+        if max_runtime_seconds < 0:
+            fail_with_reason(
+                "ci_smoke_runtime_budget_invalid",
+                "--max-runtime-seconds must be >= 0",
             )
         if args.threshold_file and not trend_mode:
             fail_with_reason(
@@ -485,12 +539,21 @@ def command_check(args: argparse.Namespace) -> int:
 
         current = build_inventory(matrix_file=matrix_file, repo_root=repo_root)
     except PolicyValidationError as error:
+        elapsed_seconds = time.perf_counter() - start_time
+        budget_status = "exceeded" if elapsed_seconds > max_runtime_seconds else "within"
         print("status=fail")
         print(f"mode={'trend' if trend_mode else 'strict'}")
         print("wrapper_count_delta=0")
         print("total_shell_loc_delta=0")
         print("violation_count=1")
+        print("policy_decision=NO-GO")
+        print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+        print(f"reason_codes_csv={REASON_CODES_CSV}")
         print(f"reason_codes={error.reason_code}")
+        print(f"reason_codes_value={error.reason_code}")
+        print(f"ci_smoke_max_runtime_seconds={max_runtime_seconds:.3f}")
+        print(f"ci_smoke_elapsed_seconds={elapsed_seconds:.6f}")
+        print(f"ci_smoke_budget_status={budget_status}")
         print(f"error={error.message}")
         return 1
 
@@ -598,7 +661,19 @@ def command_check(args: argparse.Namespace) -> int:
             )
             reason_codes.add("total_shell_loc_reduction_target_unmet")
 
+    elapsed_seconds = time.perf_counter() - start_time
+    budget_status = "exceeded" if elapsed_seconds > max_runtime_seconds else "within"
+    if budget_status == "exceeded":
+        violations.append(
+            "ci smoke runtime budget exceeded: "
+            f"elapsed={elapsed_seconds:.6f}s "
+            f"max_runtime_seconds={max_runtime_seconds:.3f}s"
+        )
+        reason_codes.add("ci_smoke_runtime_budget_exceeded")
+
     sorted_reason_codes = sorted(reason_codes)
+    reason_codes_value = "none" if not sorted_reason_codes else ",".join(sorted_reason_codes)
+    policy_decision = "NO-GO" if violations else "GO"
 
     report_payload = {
         "schema_version": DELTA_REPORT_SCHEMA_VERSION,
@@ -623,11 +698,21 @@ def command_check(args: argparse.Namespace) -> int:
             "max_total_shell_loc_increase": max_total_shell_loc_increase,
             "min_wrapper_count_reduction": min_wrapper_count_reduction,
             "min_total_shell_loc_reduction": min_total_shell_loc_reduction,
+            "max_runtime_seconds": max_runtime_seconds,
             "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
         },
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
+        "reason_codes_value": reason_codes_value,
+        "policy_decision": policy_decision,
         "lane_deltas": lane_deltas,
         "reason_codes": sorted_reason_codes,
         "violations": violations,
+        "ci_smoke_budget": {
+            "status": budget_status,
+            "max_runtime_seconds": max_runtime_seconds,
+            "elapsed_seconds": elapsed_seconds,
+        },
         "status": "fail" if violations else "pass",
     }
 
@@ -639,7 +724,14 @@ def command_check(args: argparse.Namespace) -> int:
     print(f"wrapper_count_delta={totals_delta['wrapper_count_delta']}")
     print(f"total_shell_loc_delta={totals_delta['total_shell_loc_delta']}")
     print(f"violation_count={len(violations)}")
-    print(f"reason_codes={'none' if not sorted_reason_codes else ','.join(sorted_reason_codes)}")
+    print(f"policy_decision={policy_decision}")
+    print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"reason_codes_csv={REASON_CODES_CSV}")
+    print(f"reason_codes={reason_codes_value}")
+    print(f"reason_codes_value={reason_codes_value}")
+    print(f"ci_smoke_max_runtime_seconds={max_runtime_seconds:.3f}")
+    print(f"ci_smoke_elapsed_seconds={elapsed_seconds:.6f}")
+    print(f"ci_smoke_budget_status={budget_status}")
 
     if violations:
         for violation in violations:
@@ -704,6 +796,12 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--output-json",
         help="Optional output path for delta report JSON.",
+    )
+    check_parser.add_argument(
+        "--max-runtime-seconds",
+        type=float,
+        default=120.0,
+        help="Fail closed when checker elapsed runtime exceeds this CI smoke budget.",
     )
 
     return parser

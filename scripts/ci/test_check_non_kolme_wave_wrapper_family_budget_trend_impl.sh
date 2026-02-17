@@ -80,6 +80,10 @@ grep -q '^wrapper_count_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
+grep -q '^reason_taxonomy_version=kamn.ci.wrapper-budget-trend-reason-taxonomy.v1$' "$TMP_DIR/pass.out"
+grep -q '^reason_codes_value=none$' "$TMP_DIR/pass.out"
+grep -q '^policy_decision=GO$' "$TMP_DIR/pass.out"
+grep -q '^ci_smoke_budget_status=within$' "$TMP_DIR/pass.out"
 
 MUTATED_TOTAL_BASELINE="$TMP_DIR/mutated-total-baseline.json"
 cp "$BASELINE_FIXTURE" "$MUTATED_TOTAL_BASELINE"
@@ -104,6 +108,8 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/fail-total.out"
 grep -q '^mode=trend$' "$TMP_DIR/fail-total.out"
 grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/fail-total.out"
+grep -q '^policy_decision=NO-GO$' "$TMP_DIR/fail-total.out"
+grep -q '^reason_taxonomy_version=kamn.ci.wrapper-budget-trend-reason-taxonomy.v1$' "$TMP_DIR/fail-total.out"
 
 MUTATED_LANE_MATRIX="$TMP_DIR/mutated-lane-matrix.json"
 cp "$MATRIX_FIXTURE" "$MUTATED_LANE_MATRIX"
@@ -173,5 +179,19 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/fail-stale.out"
 grep -q '^mode=trend$' "$TMP_DIR/fail-stale.out"
 grep -q 'unexpected_new_lanes_in_current_inventory' "$TMP_DIR/fail-stale.out"
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$BASELINE_FIXTURE" \
+  --max-runtime-seconds 0 >"$TMP_DIR/fail-runtime-budget.out" 2>&1; then
+  echo "expected ${WAVE_LABEL} trend checker to fail when CI smoke runtime budget is exceeded" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-runtime-budget.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-runtime-budget.out"
+grep -q 'ci_smoke_runtime_budget_exceeded' "$TMP_DIR/fail-runtime-budget.out"
+grep -q '^ci_smoke_budget_status=exceeded$' "$TMP_DIR/fail-runtime-budget.out"
+grep -q '^policy_decision=NO-GO$' "$TMP_DIR/fail-runtime-budget.out"
 
 echo "${WAVE_LABEL} wrapper-family budget trend checker tests passed."

@@ -1550,6 +1550,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - selector outputs:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
+    - wave-19 CI smoke runtime budget guard:
+      - `KAMN_NON_KOLME_WAVE19_TREND_MAX_SECONDS=45` (default)
+      - `reason_codes=ci_smoke_runtime_budget_exceeded` when budget is exceeded
+      - `ci_smoke_budget_status=within|exceeded`
     - unknown-wrapper fallback emits deterministic taxonomy markers for this non-Kolme wave-19 path set:
       - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
       - `fallback_reason_codes_csv=dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped`
@@ -2302,7 +2306,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fixtures/ci/non_kolme_wave19_wrapper_family_trend_thresholds.json`
     - trend-policy command:
       - `bash scripts/ci/check_non_kolme_wave19_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/non_kolme_wave19_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave19_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave19-wrapper-family-trend-report.json`
+      - `bash scripts/ci/check_non_kolme_wave19_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/non_kolme_wave19_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave19_wrapper_family_baseline.json --max-runtime-seconds 45 --output-json /tmp/non-kolme-wave19-wrapper-family-trend-report.json`
     - fails closed on shell-LOC growth and stale lane-inventory drift for non-Kolme wrapper families.
+    - low-cost CI smoke budget policy remains explicit and deterministic:
+      - `ci_smoke_max_runtime_seconds=<float>`
+      - `ci_smoke_elapsed_seconds=<float>`
+      - `ci_smoke_budget_status=within|exceeded`
+      - `policy_decision=GO|NO-GO`
+      - `reason_taxonomy_version=kamn.ci.wrapper-budget-trend-reason-taxonomy.v1`
+      - `reason_codes_csv=...` (stable reason-code universe)
+      - `reason_codes_value=none|<csv>`
     - deterministic reason-code surface is emitted for automation:
       - `reason_codes=none` (pass)
       - `reason_codes=wrapper_count_delta_threshold_exceeded`
@@ -2311,7 +2324,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=wrapper_count_reduction_target_unmet`
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
-    - Regression: #2769
+      - `reason_codes=ci_smoke_runtime_budget_exceeded`
+    - Regression: #4342
   - Non-Kolme wave trend-test LOC soft-budget guard stays on PR fast gate:
     - `bash scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
     - baseline fixture:
