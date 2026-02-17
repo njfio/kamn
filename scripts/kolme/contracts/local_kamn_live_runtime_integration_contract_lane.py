@@ -18,6 +18,32 @@ DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
 FALLBACK_SIGNER_GUARD_CONTRACT_VERSION = "v2"
 FALLBACK_SIGNER_GUARD_MODE = "reject_if_present"
+COMPOSITE_GATE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
+)
+COMPOSITE_GATE_REASON_CODES_CSV = (
+    "dry_run_no_commands_executed,"
+    "live_runtime_integration_passed,"
+    "runtime_signer_fallback_private_key_present_violation,"
+    "runtime_signer_managed_external_raw_private_key_present_violation,"
+    "local_opt_in_missing,"
+    "bootstrap_readiness_failed,"
+    "localhost_signed_integration_failed,"
+    "live_api_conformance_failed,"
+    "runtime_commit_endpoint_failed,"
+    "runtime_commit_policy_failed,"
+    "runtime_integration_budget_exceeded"
+)
+COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS = "verified"
+COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE = "low"
+COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE = "not_requested"
+# composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1
+# composite_gate_reason_codes_csv=dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded
+# composite_gate_evidence_convergence_status=verified
+# composite_gate_ci_smoke_local_heavy_boundary_status=verified
+# composite_gate_ci_smoke_lane_cost_profile=low
+# composite_gate_local_heavy_execution_mode=not_requested
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -163,6 +189,61 @@ def main() -> int:
         )
 
         summary_payload = json.loads(Path(args.output_json).read_text(encoding="utf-8"))
+        policy_payload = json.loads(Path(args.policy_output_json).read_text(encoding="utf-8"))
+        if (
+            summary_payload.get("composite_gate_reason_taxonomy_version")
+            != COMPOSITE_GATE_REASON_TAXONOMY_VERSION
+        ):
+            print("expected composite gate reason taxonomy marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("composite_gate_reason_codes_csv") != COMPOSITE_GATE_REASON_CODES_CSV:
+            print("expected composite gate reason codes marker in dry-run summary", file=sys.stderr)
+            return 1
+        if (
+            summary_payload.get("composite_gate_evidence_convergence_status")
+            != COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS
+        ):
+            print("expected composite gate evidence convergence marker in dry-run summary", file=sys.stderr)
+            return 1
+        if (
+            summary_payload.get("composite_gate_ci_smoke_local_heavy_boundary_status")
+            != COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS
+        ):
+            print("expected composite gate ci/local boundary marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("composite_gate_ci_smoke_lane_cost_profile") != COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE:
+            print("expected composite gate ci smoke lane cost profile marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("composite_gate_local_heavy_execution_mode") != COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE:
+            print("expected composite gate local-heavy execution mode marker in dry-run summary", file=sys.stderr)
+            return 1
+        if (
+            policy_payload.get("composite_gate_reason_taxonomy_version")
+            != COMPOSITE_GATE_REASON_TAXONOMY_VERSION
+        ):
+            print("expected composite gate reason taxonomy marker in policy output", file=sys.stderr)
+            return 1
+        if policy_payload.get("composite_gate_reason_codes_csv") != COMPOSITE_GATE_REASON_CODES_CSV:
+            print("expected composite gate reason codes marker in policy output", file=sys.stderr)
+            return 1
+        if (
+            policy_payload.get("composite_gate_evidence_convergence_status")
+            != COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS
+        ):
+            print("expected composite gate evidence convergence marker in policy output", file=sys.stderr)
+            return 1
+        if (
+            policy_payload.get("composite_gate_ci_smoke_local_heavy_boundary_status")
+            != COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS
+        ):
+            print("expected composite gate ci/local boundary marker in policy output", file=sys.stderr)
+            return 1
+        if policy_payload.get("composite_gate_ci_smoke_lane_cost_profile") != COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE:
+            print("expected composite gate ci smoke lane cost profile marker in policy output", file=sys.stderr)
+            return 1
+        if policy_payload.get("composite_gate_local_heavy_execution_mode") != COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE:
+            print("expected composite gate local-heavy execution mode marker in policy output", file=sys.stderr)
+            return 1
         if summary_payload.get("runtime_commit_failure_taxonomy_version") != "v1":
             print("expected runtime commit failure taxonomy version marker v1 in summary", file=sys.stderr)
             return 1
@@ -843,6 +924,27 @@ def main() -> int:
     if "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" not in doc_text:
         print("expected Kolme devnet ops doc to include signer key reference env marker", file=sys.stderr)
         return 1
+    if f"composite_gate_reason_taxonomy_version={COMPOSITE_GATE_REASON_TAXONOMY_VERSION}" not in doc_text:
+        print("expected Kolme devnet ops doc to include composite gate reason taxonomy marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_reason_codes_csv={COMPOSITE_GATE_REASON_CODES_CSV}" not in doc_text:
+        print("expected Kolme devnet ops doc to include composite gate reason codes marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_evidence_convergence_status={COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS}" not in doc_text:
+        print("expected Kolme devnet ops doc to include composite gate evidence convergence marker", file=sys.stderr)
+        return 1
+    if (
+        f"composite_gate_ci_smoke_local_heavy_boundary_status={COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS}"
+        not in doc_text
+    ):
+        print("expected Kolme devnet ops doc to include composite gate ci/local boundary marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_ci_smoke_lane_cost_profile={COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE}" not in doc_text:
+        print("expected Kolme devnet ops doc to include composite gate ci smoke lane cost profile marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_local_heavy_execution_mode={COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE}" not in doc_text:
+        print("expected Kolme devnet ops doc to include composite gate local-heavy execution mode marker", file=sys.stderr)
+        return 1
     if "runtime_signer_raw_private_key_present=false" not in doc_text:
         print("expected Kolme devnet ops doc to include runtime signer raw private key presence marker", file=sys.stderr)
         return 1
@@ -920,6 +1022,27 @@ def main() -> int:
         return 1
     if "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" not in readme_text:
         print("expected README to include signer key reference env marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_reason_taxonomy_version={COMPOSITE_GATE_REASON_TAXONOMY_VERSION}" not in readme_text:
+        print("expected README to include composite gate reason taxonomy marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_reason_codes_csv={COMPOSITE_GATE_REASON_CODES_CSV}" not in readme_text:
+        print("expected README to include composite gate reason codes marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_evidence_convergence_status={COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS}" not in readme_text:
+        print("expected README to include composite gate evidence convergence marker", file=sys.stderr)
+        return 1
+    if (
+        f"composite_gate_ci_smoke_local_heavy_boundary_status={COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS}"
+        not in readme_text
+    ):
+        print("expected README to include composite gate ci/local boundary marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_ci_smoke_lane_cost_profile={COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE}" not in readme_text:
+        print("expected README to include composite gate ci smoke lane cost profile marker", file=sys.stderr)
+        return 1
+    if f"composite_gate_local_heavy_execution_mode={COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE}" not in readme_text:
+        print("expected README to include composite gate local-heavy execution mode marker", file=sys.stderr)
         return 1
     if "runtime_signer_raw_private_key_present=false" not in readme_text:
         print("expected README to include runtime signer raw private key presence marker", file=sys.stderr)
