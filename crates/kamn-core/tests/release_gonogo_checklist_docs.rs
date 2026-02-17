@@ -151,6 +151,26 @@ fn checklist_contains_runtime_observability_endpoint_payload_checker_gate() {
 }
 
 #[test]
+fn checklist_contains_failover_drift_taxonomy_runbook_parity_gate() {
+    assert!(CHECKLIST.contains("## Failover + Sync Drill Evidence Contract (Issues #787, #788)"));
+    assert!(CHECKLIST.contains(
+        "failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file /tmp/failover-sync-preflight-report.json --runbook-file docs/deploy/kolme_devnet_ops.md --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/failover-sync-preflight-policy.json"
+    ));
+    assert!(CHECKLIST.contains("drift_taxonomy_mapping_status=verified"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "drift_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "drift_taxonomy_runbook_reason_codes_csv=drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("drift_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4287"));
+    assert!(CHECKLIST.contains("Regression: #4288"));
+}
+
+#[test]
 fn checklist_contains_unified_api_observability_payload_taxonomy_gate_markers() {
     assert!(CHECKLIST.contains("## Unified API-Observability Payload Taxonomy Gate (Issue #4507)"));
     assert!(CHECKLIST.contains(

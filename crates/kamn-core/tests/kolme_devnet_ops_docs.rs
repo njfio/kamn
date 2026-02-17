@@ -1,4 +1,5 @@
 const PLAN: &str = include_str!("../../../docs/planning/kolme-devnet-ops.md");
+const DEPLOY_COMPAT: &str = include_str!("../../../docs/deploy/kolme_devnet_ops.md");
 
 #[test]
 fn plan_contains_triadic_smoke_contract_commands() {
@@ -25,6 +26,26 @@ fn plan_contains_failover_sync_drill_lane_policy() {
     assert!(PLAN.contains("run_failover_sync_drill_deep_lane.sh"));
     assert!(PLAN.contains("run_failover_sync_drill_suite.sh"));
     assert!(PLAN.contains("kamn.runtime.failover-sync-drill-suite-report.v1"));
+}
+
+#[test]
+fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT
+        .contains("## Drift Taxonomy and Runbook Marker Parity Contracts (Issue #4282)"));
+    assert!(DEPLOY_COMPAT.contains("drift_taxonomy_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "drift_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "drift_taxonomy_runbook_reason_codes_csv=drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("drift_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT
+        .contains("failover_sync_drill_preflight_contract_lane_contract.sh check-policy"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4287"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4288"));
 }
 
 #[test]

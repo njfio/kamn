@@ -46,6 +46,14 @@ if lane_report.get("failover_readiness_reason_taxonomy_version") != "kamn.runtim
     raise SystemExit("expected failover_readiness_reason_taxonomy_version marker in preflight lane report")
 if lane_report.get("failover_readiness_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic failover_readiness_reason_codes_csv marker in preflight lane report")
+if lane_report.get("drift_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected drift_taxonomy_mapping_status=verified in preflight lane report")
+if lane_report.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected runbook_marker_parity_status=verified in preflight lane report")
+if lane_report.get("drift_taxonomy_runbook_reason_taxonomy_version") != "kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected drift_taxonomy_runbook_reason_taxonomy_version marker in preflight lane report")
+if lane_report.get("drift_taxonomy_runbook_reason_codes_csv") != "drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic drift_taxonomy_runbook_reason_codes_csv marker in preflight lane report")
 PY
 
 deep_output="$(

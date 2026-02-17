@@ -48,6 +48,14 @@ if payload.get("failover_readiness_reason_taxonomy_version") != "kamn.runtime.fa
     raise SystemExit("expected deterministic failover_readiness_reason_taxonomy_version marker")
 if payload.get("failover_readiness_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic failover_readiness_reason_codes_csv marker")
+if payload.get("drift_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected drift_taxonomy_mapping_status=verified")
+if payload.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected runbook_marker_parity_status=verified")
+if payload.get("drift_taxonomy_runbook_reason_taxonomy_version") != "kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic drift_taxonomy_runbook_reason_taxonomy_version marker")
+if payload.get("drift_taxonomy_runbook_reason_codes_csv") != "drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic drift_taxonomy_runbook_reason_codes_csv marker")
 PY
 
 policy_report="$TMP_DIR/failover-sync-preflight-policy.json"
@@ -78,6 +86,14 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=failover_readin
   echo "expected deterministic failover/sync preflight policy reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^drift_taxonomy_reason_taxonomy_version=kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1$'; then
+  echo "expected deterministic failover/sync preflight drift taxonomy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^drift_taxonomy_reason_codes_csv=drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected deterministic failover/sync preflight drift taxonomy reason codes marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -99,6 +115,10 @@ if payload.get("reason_taxonomy_version") != "kamn.runtime.failover-readiness-re
     raise SystemExit("expected deterministic failover/sync preflight reason taxonomy marker")
 if payload.get("reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded":
     raise SystemExit("expected deterministic failover/sync preflight reason codes marker")
+if payload.get("drift_taxonomy_reason_taxonomy_version") != "kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic failover/sync preflight drift taxonomy reason taxonomy marker")
+if payload.get("drift_taxonomy_reason_codes_csv") != "drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic failover/sync preflight drift taxonomy reason codes marker")
 PY
 
 missing_marker_report="$TMP_DIR/failover-sync-preflight-summary.missing-marker.json"
@@ -195,6 +215,96 @@ if first_reasons != second_reasons:
 if "live_node_drift_marker_parity_mismatch" not in first_reasons:
     raise SystemExit("expected live_node_drift_marker_parity_mismatch reason code in failover/sync preflight marker-drift policy reports")
 PY
+
+taxonomy_drift_report="$TMP_DIR/failover-sync-preflight-summary.taxonomy-drift.json"
+cp "$TMP_REPORT" "$taxonomy_drift_report"
+python3 - "$taxonomy_drift_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["drift_taxonomy_mapping_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+taxonomy_drift_output_first="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$taxonomy_drift_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.taxonomy-drift.first.json" 2>&1
+)"
+taxonomy_drift_code_first=$?
+taxonomy_drift_output_second="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$taxonomy_drift_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.taxonomy-drift.second.json" 2>&1
+)"
+taxonomy_drift_code_second=$?
+set -e
+if [ "$taxonomy_drift_code_first" -eq 0 ] || [ "$taxonomy_drift_code_second" -eq 0 ]; then
+  echo "expected drift taxonomy mapping drift report to fail policy checker deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$taxonomy_drift_output_first" | grep -q 'drift_taxonomy_mapping_drift_detected'; then
+  echo "expected deterministic drift taxonomy mapping drift reason output on first run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$taxonomy_drift_output_second" | grep -q 'drift_taxonomy_mapping_drift_detected'; then
+  echo "expected deterministic drift taxonomy mapping drift reason output on second run" >&2
+  exit 1
+fi
+
+python3 - \
+  "$TMP_DIR/failover-sync-preflight-policy.taxonomy-drift.first.json" \
+  "$TMP_DIR/failover-sync-preflight-policy.taxonomy-drift.second.json" <<'PY'
+import json
+import pathlib
+import sys
+
+first_payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+second_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+first_reasons = first_payload.get("reason_codes")
+second_reasons = second_payload.get("reason_codes")
+if not first_reasons:
+    raise SystemExit("expected failover/sync preflight taxonomy-drift policy report to include non-empty reason codes")
+if first_reasons != second_reasons:
+    raise SystemExit("expected deterministic failover/sync preflight reason-code ordering across repeated taxonomy-drift checks")
+if "drift_taxonomy_mapping_drift_detected" not in first_reasons:
+    raise SystemExit("expected drift_taxonomy_mapping_drift_detected reason code in failover/sync preflight taxonomy-drift policy reports")
+PY
+
+runbook_divergence_file="$TMP_DIR/kolme_devnet_ops.marker-divergence.md"
+cat > "$runbook_divergence_file" <<'EOF'
+# marker divergence fixture
+
+This fixture intentionally omits required failover drift taxonomy marker declarations.
+EOF
+
+set +e
+runbook_divergence_output="$(
+  bash "$SHARED_CONTRACT" check-policy \
+    --report-file "$TMP_REPORT" \
+    --runbook-file "$runbook_divergence_file" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/failover-sync-preflight-policy.runbook-divergence.json" 2>&1
+)"
+runbook_divergence_code=$?
+set -e
+if [ "$runbook_divergence_code" -eq 0 ]; then
+  echo "expected runbook marker divergence fixture to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
+  echo "expected deterministic runbook marker parity mismatch reason output for failover/sync preflight policy checker" >&2
+  exit 1
+fi
 
 set +e
 over_budget_output="$(

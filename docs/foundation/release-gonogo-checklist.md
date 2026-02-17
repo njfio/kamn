@@ -738,9 +738,21 @@ Runtime failover and sync readiness requires deterministic lane routing, budget 
   - `KAMN_FAILOVER_SYNC_DEEP_CADENCE=scheduled bash scripts/runtime/run_failover_sync_drill_deep_lane.sh --output-json /tmp/failover-sync-deep-report.json`
 - Suite/artifact summary entrypoint:
   - `bash scripts/runtime/run_failover_sync_drill_suite.sh --event-name schedule --output-json /tmp/failover-sync-suite-report.json`
+- Drift taxonomy/runbook parity checker:
+  - `bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file /tmp/failover-sync-preflight-report.json --runbook-file docs/deploy/kolme_devnet_ops.md --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/failover-sync-preflight-policy.json`
+- Deterministic taxonomy/runbook markers:
+  - `drift_taxonomy_mapping_status=verified`
+  - `runbook_marker_parity_status=verified`
+  - `drift_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.failover-drift-taxonomy-runbook-reason-taxonomy.v1`
+  - `drift_taxonomy_runbook_reason_codes_csv=drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- Fail-closed taxonomy/runbook reasons:
+  - `drift_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
 - Regression policy:
   - preflight runtime budget overruns force lane failure (`Regression: #788`).
   - unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`).
+  - taxonomy-marker drift or runbook marker divergence force `NO-GO` (`Regression: #4287`).
+  - taxonomy reason-taxonomy/version mismatch and reason-codes mismatch force `NO-GO` (`Regression: #4288`).
 
 ## Peer Adapter Reason Projection and Multi-Process Validation Hooks (Issue #4320)
 Peer adapter retry/timeout evidence must project deterministic reason classes and remain repeatable across process-isolated multi-process validation lanes.
