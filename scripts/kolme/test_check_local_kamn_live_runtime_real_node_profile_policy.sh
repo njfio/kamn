@@ -284,6 +284,12 @@ if report.get("key_loading_error_classification_version") != "v1":
     raise SystemExit("expected deterministic key_loading_error_classification_version marker")
 if report.get("key_loading_error_classifications_csv") != "none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch":
     raise SystemExit("expected deterministic key_loading_error_classifications_csv marker")
+if report.get("signature_decision_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signature-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signature_decision_reason_taxonomy_version marker")
+if report.get("signature_decision_reason_codes_csv") != "runtime_signer_profile_missing,runtime_signer_profile_invalid,runtime_signer_previous_profile_missing,runtime_signer_previous_profile_invalid,runtime_signer_failover_profile_unchanged,runtime_signer_profile_changed_without_failover,runtime_signer_rotation_epoch_stale,runtime_signer_attestation_schema_invalid,runtime_signer_attestation_required_approvals_invalid,runtime_signer_attestation_approved_signers_invalid,runtime_signer_attestation_approved_signers_not_unique,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_quorum_linkage_contract_version_invalid,runtime_signer_quorum_linkage_contract_version_mismatch,runtime_signer_quorum_required_approvals_invalid,runtime_signer_quorum_required_approvals_mismatch,runtime_signer_quorum_approved_signers_count_invalid,runtime_signer_quorum_approved_signers_count_mismatch,runtime_signer_quorum_profile_linked_invalid,runtime_signer_quorum_profile_linked_mismatch,runtime_signer_quorum_satisfied_invalid,runtime_signer_quorum_satisfied_mismatch,runtime_signer_quorum_linked_invalid,runtime_signer_quorum_linkage_drift,runtime_signer_quorum_linkage_violation,runtime_signer_failover_attestation_required_approvals_insufficient,runtime_signer_failover_attestation_previous_profile_not_approved":
+    raise SystemExit("expected deterministic signature_decision_reason_codes_csv marker")
+if report.get("signature_decision_reason_codes_value") != "none":
+    raise SystemExit("expected signature_decision_reason_codes_value=none for GO real-node profile report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
@@ -353,6 +359,10 @@ if report.get("runtime_commit_failure_reason_taxonomy_version") != "kamn.kolme.l
     raise SystemExit("expected deterministic runtime_commit_failure_reason_taxonomy_version marker for secondary profile")
 if report.get("key_loading_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-key-loading-reason-taxonomy.v1":
     raise SystemExit("expected deterministic key_loading_reason_taxonomy_version marker for secondary profile")
+if report.get("signature_decision_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signature-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signature_decision_reason_taxonomy_version marker for secondary profile")
+if report.get("signature_decision_reason_codes_value") != "none":
+    raise SystemExit("expected signature_decision_reason_codes_value=none for GO secondary real-node profile report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_MANAGED" <<'PY'
@@ -894,6 +904,20 @@ if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
   exit 1
 fi
 
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("signature_decision_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected signature_decision_reason_codes_value string for attestation quorum shortfall failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "runtime_signer_attestation_quorum_shortfall" not in observed_codes:
+    raise SystemExit("expected signature_decision_reason_codes_value to include runtime_signer_attestation_quorum_shortfall")
+PY
+
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" <<'PY'
 import json
 import pathlib
@@ -926,6 +950,20 @@ if ! grep -q "runtime_signer_quorum_linkage_drift" "$TMP_ERR"; then
   echo "expected signer quorum linkage drift reason for policy failure" >&2
   exit 1
 fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+observed = report.get("signature_decision_reason_codes_value")
+if not isinstance(observed, str):
+    raise SystemExit("expected signature_decision_reason_codes_value string for quorum drift failure")
+observed_codes = set([] if observed == "none" else observed.split(","))
+if "runtime_signer_quorum_linkage_drift" not in observed_codes:
+    raise SystemExit("expected signature_decision_reason_codes_value to include runtime_signer_quorum_linkage_drift")
+PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" <<'PY'
 import json
