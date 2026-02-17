@@ -99,6 +99,23 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - protocol/session reason-class drift or docs marker drift forces `NO-GO` (`Regression: #4318`).
 
+## Service API Axum Protocol Mismatch Reason Mapping Gate (Issues #4266, #4270, #4271)
+- Validation commands:
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+  - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+- Deterministic mismatch mapping markers:
+  - `service_api_axum_protocol_mismatch_reason_mapping_status=verified`
+  - `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
+  - `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
+  - `service_api_axum_protocol_mismatch_reason_code=none|<reason>`
+- Deterministic fail-closed mismatch reasons:
+  - `service_api_axum_policy_marker_missing:<field>`
+  - `service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_body_size_limit_mismatch`
+- Regression policy:
+  - protocol marker mismatch rejection drift forces `NO-GO` (`Regression: #4270`).
+  - mismatch reason mapping drift forces `NO-GO` (`Regression: #4271`).
+
 ## Service API Websocket Session Evidence Convergence Gate (Issue #4268)
 - Lane and checker commands:
   - `bash scripts/runtime/validate_service_api_websocket_live_contract_lane.sh --output-json /tmp/service-api-websocket-live-contract-lane-report.json --policy-output-json /tmp/service-api-websocket-live-policy-report.json`

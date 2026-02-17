@@ -14,6 +14,25 @@ fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls() {
+    assert!(DOC.contains(
+        "## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)"
+    ));
+    assert!(DOC.contains("service_api_axum_protocol_mismatch_reason_mapping_status=verified"));
+    assert!(DOC.contains(
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+    ));
+    assert!(DOC.contains("service_api_axum_protocol_mismatch_reason_code=none|<reason>"));
+    assert!(DOC.contains("service_api_axum_policy_protocol_taxonomy_mismatch"));
+    assert!(DOC.contains("service_api_axum_policy_limit_contract_mismatch"));
+    assert!(DOC.contains("Regression: #4270"));
+    assert!(DOC.contains("Regression: #4271"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_audit_integrity_tamper_controls() {
     assert!(DOC.contains("## Audit Integrity Go/No-Go Policy Controls (Issue #4465)"));
     assert!(DOC.contains(
