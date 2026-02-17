@@ -3862,6 +3862,17 @@ Fast-mode CI tooling regression coverage includes:
   - script budget envelope:
     - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=36000`)
     - `.ci/script-surface-baseline.env` (post-#3740 refreshed baseline snapshot)
+- Shell-Rust LOC telemetry collector (`test_collect_shell_rust_loc_telemetry.sh`)
+  - collector command:
+    - `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --output-json /tmp/shell-rust-loc-telemetry-report.json`
+  - deterministic taxonomy markers:
+    - `reason_taxonomy_version=kamn.ci.shell-rust-loc-telemetry-reason-taxonomy.v1`
+    - `reason_codes_csv=shell_rust_loc_telemetry_argument_invalid,shell_rust_loc_telemetry_generator_failed,shell_rust_loc_telemetry_metric_type_invalid,shell_rust_loc_telemetry_metrics_missing,shell_rust_loc_telemetry_output_json_required,shell_rust_loc_telemetry_output_write_failed,shell_rust_loc_telemetry_report_missing,shell_rust_loc_telemetry_report_parse_failed,shell_rust_loc_telemetry_report_schema_mismatch,shell_rust_loc_telemetry_script_budget_exit_nonzero,shell_rust_loc_telemetry_script_budget_status_fail`
+  - normalized decision markers:
+    - `status=ok|fail`
+    - `final_decision=GO|NO-GO`
+    - `reason_codes=none|<csv>`
+    - `reason_codes_value=none|<csv>`
 - Combined shell-surface trend policy checker (`test_check_combined_shell_surface_trend_policy.sh`)
   - policy command:
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file /tmp/combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json /tmp/combined-shell-surface-trend-policy-report.json`
