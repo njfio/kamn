@@ -220,6 +220,37 @@ Regression marker:
 
 - `Regression: #4465`
 
+## Journal Append/Checkpoint Integrity Controls (Issues #4236, #4240, #4241)
+
+Sqlite crash-recovery durability checks project deterministic append/checkpoint integrity markers for
+operations and promotion policy consumers.
+
+Deterministic append/checkpoint markers:
+
+- `append_checkpoint_integrity_status=verified`
+- `append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1`
+- `append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch`
+
+Deterministic fail-closed mismatch reasons:
+
+- `sqlite_crash_recovery_policy_wal_append_status_mismatch`
+- `sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch`
+- `sqlite_crash_recovery_policy_append_checkpoint_integrity_status_mismatch`
+- `sqlite_crash_recovery_policy_append_checkpoint_reason_taxonomy_version_mismatch`
+- `sqlite_crash_recovery_policy_append_checkpoint_reason_codes_csv_mismatch`
+- `sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh`
+- `bash scripts/runtime/test_validate_sqlite_crash_recovery_live.sh`
+- `bash scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh`
+
+Regression markers:
+
+- `Regression: #4240`
+- `Regression: #4241`
+
 ## Structured Logging Bootstrap Contracts
 
 `kamn-node` logging bootstrap remains deterministic for all runtime modes.
