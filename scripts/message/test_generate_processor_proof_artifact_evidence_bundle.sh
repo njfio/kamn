@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/message/generate_processor_proof_artifact_evidence_bundle.sh"
-POLICY_CHECKER="$ROOT_DIR/scripts/message/check_processor_proof_artifact_policy.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/message/generate_processor_proof_artifact_evidence_bundle.sh"
+POLICY_CHECKER="$KAMN_ROOT/scripts/message/check_processor_proof_artifact_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 fail() {
   printf '%s\n' "$1" >&2
   exit 1
-}
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
 }
 
 if [ ! -x "$GENERATOR" ]; then

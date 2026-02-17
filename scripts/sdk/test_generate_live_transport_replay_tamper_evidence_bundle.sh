@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
 
 if [ ! -x "$GENERATOR" ]; then
   echo "expected live transport replay/tamper evidence generator to be executable" >&2
