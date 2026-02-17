@@ -1200,6 +1200,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`,
     `admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1`,
     `admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch`.
+  - admission decision taxonomy (accept/defer/reject) and runbook marker parity remains deterministic via:
+    `admission_decision_taxonomy_status=verified`,
+    `admission_decision_accept_status=verified`,
+    `admission_decision_defer_status=verified`,
+    `admission_decision_reject_status=verified`,
+    `admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1`,
+    `admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject`,
+    `admission_decision_taxonomy_mapping_status=verified`,
+    `admission_decision_runbook_marker_parity_status=verified`,
+    `admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1`,
+    `admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch`,
+    with runbook marker source: `docs/deploy/kolme_devnet_ops.md`.
   - protocol mismatch reason mapping remains deterministic via:
     `service_api_axum_protocol_mismatch_reason_mapping_status=verified`,
     `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`,
@@ -1229,6 +1241,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_admission_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_decision_reason_codes_csv_mismatch`
+  - `service_api_axum_policy_marker_missing:admission_decision_defer_status`
   - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_admission_inflight_budget_limit_mismatch`
   - `service_api_axum_policy_admission_queue_budget_limit_mismatch`

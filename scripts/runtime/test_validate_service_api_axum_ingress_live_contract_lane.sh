@@ -170,6 +170,30 @@ if ! printf '%s\n' "$lane_output" | grep -q '^admission_budget_reason_codes_csv=
   echo "expected service api axum ingress contract lane admission budget reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_taxonomy_status=verified$'; then
+  echo "expected service api axum ingress contract lane admission decision taxonomy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_accept_status=verified$'; then
+  echo "expected service api axum ingress contract lane admission decision accept status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_defer_status=verified$'; then
+  echo "expected service api axum ingress contract lane admission decision defer status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_reject_status=verified$'; then
+  echo "expected service api axum ingress contract lane admission decision reject status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress contract lane admission decision reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject$'; then
+  echo "expected service api axum ingress contract lane admission decision reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1$'; then
   echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy marker" >&2
   exit 1
@@ -314,6 +338,18 @@ if lane_payload.get("admission_budget_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker")
 if lane_payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
     raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker")
+if lane_payload.get("admission_decision_taxonomy_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_taxonomy_status marker")
+if lane_payload.get("admission_decision_accept_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_accept_status marker")
+if lane_payload.get("admission_decision_defer_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_defer_status marker")
+if lane_payload.get("admission_decision_reject_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_reject_status marker")
+if lane_payload.get("admission_decision_reason_taxonomy_version") != "kamn.runtime.service-api-admission-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_decision_reason_taxonomy_version marker")
+if lane_payload.get("admission_decision_reason_codes_csv") != "admission_decision_accept,admission_decision_defer,admission_decision_reject":
+    raise SystemExit("expected deterministic admission_decision_reason_codes_csv marker")
 if lane_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker")
 if lane_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
@@ -398,6 +434,18 @@ if policy_payload.get("admission_budget_reason_taxonomy_version") != "kamn.runti
     raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker in policy report")
 if policy_payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
     raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker in policy report")
+if policy_payload.get("admission_decision_taxonomy_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_taxonomy_status marker in policy report")
+if policy_payload.get("admission_decision_accept_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_accept_status marker in policy report")
+if policy_payload.get("admission_decision_defer_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_defer_status marker in policy report")
+if policy_payload.get("admission_decision_reject_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_reject_status marker in policy report")
+if policy_payload.get("admission_decision_reason_taxonomy_version") != "kamn.runtime.service-api-admission-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_decision_reason_taxonomy_version marker in policy report")
+if policy_payload.get("admission_decision_reason_codes_csv") != "admission_decision_accept,admission_decision_defer,admission_decision_reject":
+    raise SystemExit("expected deterministic admission_decision_reason_codes_csv marker in policy report")
 if policy_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker in policy report")
 if policy_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
@@ -489,6 +537,38 @@ if ! printf '%s\n' "$runbook_taxonomy_drift_output" | grep -q 'protocol_taxonomy
   exit 1
 fi
 
+admission_runbook_taxonomy_drift_file="$TMP_DIR/kolme_devnet_ops.admission-taxonomy-drift.md"
+cp "$RUNBOOK_DOC" "$admission_runbook_taxonomy_drift_file"
+python3 - "$admission_runbook_taxonomy_drift_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1",
+    "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v2",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+set +e
+admission_runbook_taxonomy_drift_output="$(
+  KAMN_SERVICE_API_AXUM_INGRESS_RUNBOOK_DOC_OVERRIDE="$admission_runbook_taxonomy_drift_file" \
+    bash "$CONTRACT_LANE" 2>&1
+)"
+admission_runbook_taxonomy_drift_code=$?
+set -e
+if [ "$admission_runbook_taxonomy_drift_code" -eq 0 ]; then
+  echo "expected admission runbook taxonomy drift fixture to fail service api axum ingress contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$admission_runbook_taxonomy_drift_output" | grep -q 'protocol_taxonomy_mapping_drift_detected'; then
+  echo "expected deterministic taxonomy drift reason output for admission runbook taxonomy drift fixture" >&2
+  exit 1
+fi
+
 runbook_marker_divergence_file="$TMP_DIR/kolme_devnet_ops.marker-divergence.md"
 cp "$RUNBOOK_DOC" "$runbook_marker_divergence_file"
 python3 - "$runbook_marker_divergence_file" <<'PY'
@@ -518,6 +598,38 @@ if [ "$runbook_marker_divergence_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$runbook_marker_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
   echo "expected deterministic runbook marker parity mismatch reason output for service api axum ingress contract lane" >&2
+  exit 1
+fi
+
+admission_runbook_marker_divergence_file="$TMP_DIR/kolme_devnet_ops.admission-marker-divergence.md"
+cp "$RUNBOOK_DOC" "$admission_runbook_marker_divergence_file"
+python3 - "$admission_runbook_marker_divergence_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "admission_decision_runbook_marker_parity_status=verified",
+    "admission_decision_runbook_marker_parity_status=missing",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+set +e
+admission_runbook_marker_divergence_output="$(
+  KAMN_SERVICE_API_AXUM_INGRESS_RUNBOOK_DOC_OVERRIDE="$admission_runbook_marker_divergence_file" \
+    bash "$CONTRACT_LANE" 2>&1
+)"
+admission_runbook_marker_divergence_code=$?
+set -e
+if [ "$admission_runbook_marker_divergence_code" -eq 0 ]; then
+  echo "expected admission runbook marker divergence fixture to fail service api axum ingress contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$admission_runbook_marker_divergence_output" | grep -q 'runbook_marker_parity_mismatch'; then
+  echo "expected deterministic runbook marker parity mismatch reason output for admission runbook marker divergence fixture" >&2
   exit 1
 fi
 

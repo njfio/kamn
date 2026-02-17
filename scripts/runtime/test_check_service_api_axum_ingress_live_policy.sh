@@ -45,6 +45,12 @@ cat >"$report_file" <<'JSON'
   "admission_reason_codes_csv": "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift",
   "admission_budget_reason_taxonomy_version": "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1",
   "admission_budget_reason_codes_csv": "admission_inflight_budget_mismatch,admission_queue_budget_mismatch",
+  "admission_decision_taxonomy_status": "verified",
+  "admission_decision_accept_status": "verified",
+  "admission_decision_defer_status": "verified",
+  "admission_decision_reject_status": "verified",
+  "admission_decision_reason_taxonomy_version": "kamn.runtime.service-api-admission-decision-reason-taxonomy.v1",
+  "admission_decision_reason_codes_csv": "admission_decision_accept,admission_decision_defer,admission_decision_reject",
   "service_api_lifecycle_rejection_reason_taxonomy_version": "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1",
   "service_api_lifecycle_rejection_reason_codes_csv": "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid",
   "request_validation_reason_registry_status": "verified",
@@ -124,6 +130,30 @@ if ! printf '%s\n' "$policy_output" | grep -q '^admission_budget_reason_codes_cs
   echo "expected service api axum ingress policy checker admission budget reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_taxonomy_status=verified$'; then
+  echo "expected service api axum ingress policy checker admission decision taxonomy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_accept_status=verified$'; then
+  echo "expected service api axum ingress policy checker admission decision accept status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_defer_status=verified$'; then
+  echo "expected service api axum ingress policy checker admission decision defer status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_reject_status=verified$'; then
+  echo "expected service api axum ingress policy checker admission decision reject status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress policy checker admission decision reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject$'; then
+  echo "expected service api axum ingress policy checker admission decision reason codes marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_mapping_status=verified$'; then
   echo "expected service api axum ingress policy checker protocol mismatch reason mapping status marker" >&2
   exit 1
@@ -189,6 +219,18 @@ if payload.get("admission_budget_reason_taxonomy_version") != "kamn.runtime.serv
     raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker")
 if payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
     raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker")
+if payload.get("admission_decision_taxonomy_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_taxonomy_status marker")
+if payload.get("admission_decision_accept_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_accept_status marker")
+if payload.get("admission_decision_defer_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_defer_status marker")
+if payload.get("admission_decision_reject_status") != "verified":
+    raise SystemExit("expected deterministic admission_decision_reject_status marker")
+if payload.get("admission_decision_reason_taxonomy_version") != "kamn.runtime.service-api-admission-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_decision_reason_taxonomy_version marker")
+if payload.get("admission_decision_reason_codes_csv") != "admission_decision_accept,admission_decision_defer,admission_decision_reject":
+    raise SystemExit("expected deterministic admission_decision_reason_codes_csv marker")
 if payload.get("admission_inflight_budget_limit") != 32:
     raise SystemExit("expected deterministic admission_inflight_budget_limit marker")
 if payload.get("admission_queue_budget_limit") != 1:
@@ -480,6 +522,109 @@ if [ "$tampered_admission_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_admission_taxonomy_output" | grep -q 'service_api_axum_policy_admission_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for admission taxonomy tamper" >&2
+  exit 1
+fi
+
+tampered_admission_decision_taxonomy_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-decision-taxonomy.tampered.json"
+cp "$report_file" "$tampered_admission_decision_taxonomy_report"
+python3 - "$tampered_admission_decision_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_decision_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_decision_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_decision_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-decision-taxonomy.tampered.json" 2>&1
+)"
+tampered_admission_decision_taxonomy_code=$?
+set -e
+
+if [ "$tampered_admission_decision_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered admission decision taxonomy to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_decision_taxonomy_output" | grep -q 'service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic mismatch reason code for admission decision taxonomy tamper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_decision_taxonomy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_protocol_taxonomy_mismatch$'; then
+  echo "expected deterministic protocol mismatch reason mapping code for admission decision taxonomy tamper" >&2
+  exit 1
+fi
+
+tampered_admission_decision_reason_codes_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-decision-reason-codes.tampered.json"
+cp "$report_file" "$tampered_admission_decision_reason_codes_report"
+python3 - "$tampered_admission_decision_reason_codes_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_decision_reason_codes_csv"] = "admission_decision_accept,admission_decision_reject"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_decision_reason_codes_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_decision_reason_codes_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-decision-reason-codes.tampered.json" 2>&1
+)"
+tampered_admission_decision_reason_codes_code=$?
+set -e
+
+if [ "$tampered_admission_decision_reason_codes_code" -eq 0 ]; then
+  echo "expected tampered admission decision reason codes to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_decision_reason_codes_output" | grep -q 'service_api_axum_policy_admission_decision_reason_codes_csv_mismatch'; then
+  echo "expected deterministic mismatch reason code for admission decision reason-codes tamper" >&2
+  exit 1
+fi
+
+tampered_admission_decision_defer_status_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-decision-defer-status.tampered.json"
+cp "$report_file" "$tampered_admission_decision_defer_status_report"
+python3 - "$tampered_admission_decision_defer_status_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_decision_defer_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_decision_defer_status_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_decision_defer_status_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-decision-defer-status.tampered.json" 2>&1
+)"
+tampered_admission_decision_defer_status_code=$?
+set -e
+
+if [ "$tampered_admission_decision_defer_status_code" -eq 0 ]; then
+  echo "expected tampered admission decision defer status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_decision_defer_status_output" | grep -q 'service_api_axum_policy_marker_missing:admission_decision_defer_status'; then
+  echo "expected deterministic mismatch reason code for admission decision defer status tamper" >&2
   exit 1
 fi
 

@@ -148,6 +148,32 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - taxonomy marker drift in runbook parity contracts forces `NO-GO` (`Regression: #4272`).
   - runbook marker divergence in parity contracts forces `NO-GO` (`Regression: #4273`).
 
+## Service API Axum Admission Decision Taxonomy/Runbook Parity Gate (Issues #4222, #4227, #4228)
+- Validation commands:
+  - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- Required deterministic admission decision taxonomy markers:
+  - `admission_decision_taxonomy_status=verified`
+  - `admission_decision_accept_status=verified`
+  - `admission_decision_defer_status=verified`
+  - `admission_decision_reject_status=verified`
+  - `admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1`
+  - `admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject`
+- Required deterministic checker/runbook parity markers:
+  - `admission_decision_taxonomy_mapping_status=verified`
+  - `admission_decision_runbook_marker_parity_status=verified`
+  - `admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1`
+  - `admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch`
+- Deterministic fail-closed drift reasons:
+  - `service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_decision_reason_codes_csv_mismatch`
+  - `service_api_axum_policy_marker_missing:admission_decision_defer_status`
+  - `protocol_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
+- Regression policy:
+  - admission decision taxonomy drift or classification marker divergence forces `NO-GO` (`Regression: #4227`).
+  - runbook parity marker drift/divergence for admission decision taxonomy forces `NO-GO` (`Regression: #4228`).
+
 ## Service API Axum Admission/Backpressure Evidence Convergence Gate (Issues #4223, #4229, #4230)
 - Lane and checker commands:
   - `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy-report.json --convergence-output-json /tmp/service-api-axum-ingress-convergence-report.json`

@@ -192,6 +192,10 @@ report = {
     "async_lifecycle_backpressure_projection_status": "verified",
     "admission_inflight_budget_status": "verified",
     "admission_queue_budget_status": "verified",
+    "admission_decision_taxonomy_status": "verified",
+    "admission_decision_accept_status": "verified",
+    "admission_decision_defer_status": "verified",
+    "admission_decision_reject_status": "verified",
     "service_api_lifecycle_rejection_reason_taxonomy_version": (
         service_api_lifecycle_rejection_reason_taxonomy_version
     ),
@@ -203,6 +207,12 @@ report = {
     ),
     "admission_budget_reason_codes_csv": (
         "admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+    ),
+    "admission_decision_reason_taxonomy_version": (
+        "kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+    ),
+    "admission_decision_reason_codes_csv": (
+        "admission_decision_accept,admission_decision_defer,admission_decision_reject"
     ),
     "api_max_requests_default": max_requests_default,
     "api_idle_timeout_default_ms": idle_timeout_default_ms,
@@ -776,12 +786,18 @@ admission_queue_budget_status="verified"
 overload_evidence_normalization_status="verified"
 ingress_resilience_reason_taxonomy_version="kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1"
 ingress_resilience_reason_codes_csv="ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
+admission_decision_taxonomy_status="verified"
+admission_decision_accept_status="verified"
+admission_decision_defer_status="verified"
+admission_decision_reject_status="verified"
 admission_reason_taxonomy_version="kamn.runtime.service-api-admission-reason-taxonomy.v1"
 admission_reason_codes_csv="admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift"
 admission_inflight_budget_limit="${api_concurrency_limit_default}"
 admission_queue_budget_limit="${api_max_requests_default}"
 admission_budget_reason_taxonomy_version="kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
 admission_budget_reason_codes_csv="admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+admission_decision_reason_taxonomy_version="kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+admission_decision_reason_codes_csv="admission_decision_accept,admission_decision_defer,admission_decision_reject"
 request_validation_reason_taxonomy_version="kamn.runtime.service-api-request-validation-reason-taxonomy.v1"
 request_validation_reason_codes_csv="service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_method_not_allowed,service_api_route_not_found,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid"
 error_envelope_reason_taxonomy_version="kamn.runtime.service-api-error-envelope-reason-taxonomy.v1"
@@ -819,6 +835,10 @@ cat >"$report_json" <<JSON
   "admission_queue_cap_enforcement_status": "${admission_queue_cap_enforcement_status}",
   "admission_inflight_budget_status": "${admission_inflight_budget_status}",
   "admission_queue_budget_status": "${admission_queue_budget_status}",
+  "admission_decision_taxonomy_status": "${admission_decision_taxonomy_status}",
+  "admission_decision_accept_status": "${admission_decision_accept_status}",
+  "admission_decision_defer_status": "${admission_decision_defer_status}",
+  "admission_decision_reject_status": "${admission_decision_reject_status}",
   "overload_evidence_normalization_status": "${overload_evidence_normalization_status}",
   "async_lifecycle_backpressure_projection_status": "${async_lifecycle_backpressure_projection_status}",
   "protocol_compliance_status": "${protocol_compliance_status}",
@@ -831,6 +851,8 @@ cat >"$report_json" <<JSON
   "admission_reason_codes_csv": "${admission_reason_codes_csv}",
   "admission_budget_reason_taxonomy_version": "${admission_budget_reason_taxonomy_version}",
   "admission_budget_reason_codes_csv": "${admission_budget_reason_codes_csv}",
+  "admission_decision_reason_taxonomy_version": "${admission_decision_reason_taxonomy_version}",
+  "admission_decision_reason_codes_csv": "${admission_decision_reason_codes_csv}",
   "service_api_lifecycle_rejection_reason_taxonomy_version": "${service_api_lifecycle_rejection_reason_taxonomy_version}",
   "service_api_lifecycle_rejection_reason_codes_csv": "${service_api_lifecycle_rejection_reason_codes_csv}",
   "request_validation_reason_registry_status": "${request_validation_reason_registry_status}",
@@ -877,6 +899,10 @@ echo "admission_saturation_status=${admission_saturation_status}"
 echo "admission_queue_cap_enforcement_status=${admission_queue_cap_enforcement_status}"
 echo "admission_inflight_budget_status=${admission_inflight_budget_status}"
 echo "admission_queue_budget_status=${admission_queue_budget_status}"
+echo "admission_decision_taxonomy_status=${admission_decision_taxonomy_status}"
+echo "admission_decision_accept_status=${admission_decision_accept_status}"
+echo "admission_decision_defer_status=${admission_decision_defer_status}"
+echo "admission_decision_reject_status=${admission_decision_reject_status}"
 echo "overload_evidence_normalization_status=${overload_evidence_normalization_status}"
 echo "async_lifecycle_backpressure_projection_status=${async_lifecycle_backpressure_projection_status}"
 echo "protocol_compliance_status=${protocol_compliance_status}"
@@ -889,6 +915,8 @@ echo "admission_reason_taxonomy_version=${admission_reason_taxonomy_version}"
 echo "admission_reason_codes_csv=${admission_reason_codes_csv}"
 echo "admission_budget_reason_taxonomy_version=${admission_budget_reason_taxonomy_version}"
 echo "admission_budget_reason_codes_csv=${admission_budget_reason_codes_csv}"
+echo "admission_decision_reason_taxonomy_version=${admission_decision_reason_taxonomy_version}"
+echo "admission_decision_reason_codes_csv=${admission_decision_reason_codes_csv}"
 echo "service_api_lifecycle_rejection_reason_taxonomy_version=${service_api_lifecycle_rejection_reason_taxonomy_version}"
 echo "service_api_lifecycle_rejection_reason_codes_csv=${service_api_lifecycle_rejection_reason_codes_csv}"
 echo "request_validation_reason_registry_status=${request_validation_reason_registry_status}"

@@ -144,6 +144,37 @@ Validation command:
 - `Regression: #4272`
 - `Regression: #4273`
 
+## Service API Axum Admission Decision Taxonomy and Runbook Marker Parity Contracts (Issue #4222)
+
+Service API axum ingress admission decision taxonomy markers and runbook marker declarations must
+remain synchronized so overload handling decisions remain deterministic across `accept`, `defer`,
+and `reject` classes.
+
+Required checker/runbook parity markers:
+
+- `admission_decision_taxonomy_mapping_status=verified`
+- `admission_decision_runbook_marker_parity_status=verified`
+- `admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1`
+- `admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch`
+- `admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1`
+- `admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject`
+- `admission_decision_taxonomy_status=verified`
+- `admission_decision_accept_status=verified`
+- `admission_decision_defer_status=verified`
+- `admission_decision_reject_status=verified`
+
+Fail-closed drift reasons:
+
+- `protocol_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation command:
+
+- `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy-report.json`
+
+- `Regression: #4227`
+- `Regression: #4228`
+
 ## Service API Axum Admission/Backpressure Evidence Convergence Contracts (Issue #4223)
 
 Service API axum admission/backpressure evidence linkage and promotion-reason mapping must remain

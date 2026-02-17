@@ -155,6 +155,44 @@ fn checklist_contains_service_api_axum_protocol_taxonomy_runbook_parity_gate() {
 }
 
 #[test]
+fn checklist_contains_service_api_axum_admission_decision_taxonomy_runbook_parity_gate() {
+    assert!(CHECKLIST.contains(
+        "## Service API Axum Admission Decision Taxonomy/Runbook Parity Gate (Issues #4222, #4227, #4228)"
+    ));
+    assert!(CHECKLIST.contains("test_validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains("test_check_service_api_axum_ingress_live_policy.sh"));
+    assert!(CHECKLIST.contains("admission_decision_taxonomy_status=verified"));
+    assert!(CHECKLIST.contains("admission_decision_accept_status=verified"));
+    assert!(CHECKLIST.contains("admission_decision_defer_status=verified"));
+    assert!(CHECKLIST.contains("admission_decision_reject_status=verified"));
+    assert!(CHECKLIST.contains(
+        "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
+    ));
+    assert!(CHECKLIST.contains("admission_decision_taxonomy_mapping_status=verified"));
+    assert!(CHECKLIST.contains("admission_decision_runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST
+        .contains("service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch"));
+    assert!(
+        CHECKLIST.contains("service_api_axum_policy_admission_decision_reason_codes_csv_mismatch")
+    );
+    assert!(CHECKLIST
+        .contains("service_api_axum_policy_marker_missing:admission_decision_defer_status"));
+    assert!(CHECKLIST.contains("protocol_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4227"));
+    assert!(CHECKLIST.contains("Regression: #4228"));
+}
+
+#[test]
 fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() {
     assert!(CHECKLIST
         .contains("## Service API Websocket Session Evidence Convergence Gate (Issue #4268)"));
