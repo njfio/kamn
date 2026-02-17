@@ -89,12 +89,14 @@ fn derive_kolme_live_managed_signing_key_material(key_reference: &str) -> [u8; 3
 pub(crate) fn build_kolme_live_managed_signing_key(
     key_reference: &str,
 ) -> Result<SigningKey, ConfigError> {
-    let key_material = derive_kolme_live_managed_signing_key_material(key_reference);
-    SigningKey::from_slice(&key_material).map_err(|error| {
+    let mut key_material = derive_kolme_live_managed_signing_key_material(key_reference);
+    let signing_key = SigningKey::from_slice(&key_material).map_err(|error| {
         ConfigError::RuntimeKolmeLive(format!(
             "failed to derive managed-external signer key material for {key_reference}: {error} (managed_signer_key_material_invalid)"
         ))
-    })
+    });
+    key_material.zeroize();
+    signing_key
 }
 
 #[cfg(test)]

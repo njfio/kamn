@@ -1,7 +1,7 @@
 {
   "schema_version": "kamn.ci.combined-shell-surface-trend-baseline.v1",
-  "script_count": 408,
-  "shell_line_total": 33972,
-  "rust_line_total": 115293,
-  "shell_to_rust_ratio": 0.294658
+  "script_count": 233,
+  "shell_line_total": 38902,
+  "rust_line_total": 125087,
+  "shell_to_rust_ratio": 0.311
 }

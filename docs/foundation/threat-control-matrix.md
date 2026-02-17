@@ -16,6 +16,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 | TM-008 | Validator/watchdog proof-consensus anomaly evidence missing or cadence/budget guard bypass | Require deterministic proof-consensus anomaly evidence with scheduled/manual deep-lane cadence and runtime budget policy checks | Runtime watchdog proof-consensus contract lane + deep lane policy checker | Runtime + Security | `run_watchdog_proof_consensus_contract_lane.sh` |
 | TM-009 | Kolme live signature conformance drift or malformed parity evidence | Enforce secp256k1 signature parity vectors with deterministic NO-GO reason codes and policy gating | Kolme signature parity contract lane + local heavy validation matrix policy | Security + Crypto + QA | `test_run_signature_parity_contract_lane.sh` |
 | TM-010 | Critical runtime output bypasses structured event contracts | Block ad-hoc `println!/eprintln!` usage in critical runtime and signer modules via deterministic source-contract tests | `kamn-node` runtime output contract tests | Backend + QA | `integration_runtime_output_contract_enforces_main_entrypoint_path` |
+| TM-011 | Env-sourced signer secrets persist in transient buffers after strict precedence rejection | Enforce explicit zeroization on strict signer-source precedence rejection and signer key material construction paths | `kamn-node` signer secret ingestion + adapter construction paths | Security + Backend | `regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer` |
 
 ## Governance Quorum Attestation Replay Contract
 - Fast lane:
@@ -85,6 +86,16 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 - Required fail-closed policy:
   - critical runtime/signer modules must not reintroduce ad-hoc `println!/eprintln!`
     output paths (`Regression: #4122`).
+
+## Signer Secret Zeroization Contract
+- Unit tests:
+  - `cargo test -p kamn-node signer::tests::regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer -- --exact`
+  - `cargo test -p kamn-node signer::tests::unit_build_kolme_live_managed_signing_key_zeroizes_transient_key_material -- --exact`
+- Source-contract regression test:
+  - `cargo test -p kamn-node regression_signer_secret_source_precedence_path_requires_zeroize_markers`
+- Required fail-closed policy:
+  - strict signer precedence rejection paths must zeroize env-secret buffers (`Regression: #4165`).
+  - transient managed signer key material must be zeroized after key construction attempts (`Regression: #4166`).
 
 ## Ownership and Review Cadence
 - Security owner reviews this matrix each milestone and when new threat classes are introduced.

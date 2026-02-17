@@ -159,6 +159,31 @@ Regression markers:
 - `Regression: #4167`
 - `Regression: #4168`
 
+## Signer Secret Decode Buffer Zeroization Controls (Issues #4165, #4166)
+
+Signer secret ingestion and parse paths must explicitly scrub transient buffers on strict-policy
+rejections and parse completion paths.
+
+Deterministic zeroization markers:
+
+- `signer_secret_source_precedence_zeroization_status=verified`
+- `signer_private_key_parse_zeroization_status=verified`
+- `signer_transient_key_material_zeroization_status=verified`
+- `signer_secret_source_precedence_violation`
+- `managed_signer_private_key_adapter_unsupported`
+
+Validation commands:
+
+- `cargo test -p kamn-node signer::tests::regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer -- --exact`
+- `cargo test -p kamn-node signer::tests::unit_build_kolme_live_managed_signing_key_zeroizes_transient_key_material -- --exact`
+- `cargo test -p kamn-node regression_signer_secret_source_precedence_path_requires_zeroize_markers`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_signer_secret_zeroization_controls -- --exact`
+
+Regression markers:
+
+- `Regression: #4165`
+- `Regression: #4166`
+
 ## Async API Backpressure Failure Modes (Issue #4315)
 
 `kamn-node` async API ingress limits remain fail closed under bounded-concurrency pressure.

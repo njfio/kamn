@@ -18,6 +18,8 @@ fn matrix_contains_core_threat_entries() {
     assert!(CONTROL_MATRIX.contains("TM-007"));
     assert!(CONTROL_MATRIX.contains("TM-008"));
     assert!(CONTROL_MATRIX.contains("TM-009"));
+    assert!(CONTROL_MATRIX.contains("TM-010"));
+    assert!(CONTROL_MATRIX.contains("TM-011"));
 }
 
 #[test]
@@ -50,6 +52,10 @@ fn matrix_maps_controls_to_tests() {
     assert!(CONTROL_MATRIX.contains("parity_signature_mismatch"));
     assert!(CONTROL_MATRIX.contains("parity_recovery_id_mismatch"));
     assert!(CONTROL_MATRIX.contains("parity_pubkey_mismatch"));
+    assert!(CONTROL_MATRIX
+        .contains("regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer"));
+    assert!(CONTROL_MATRIX
+        .contains("unit_build_kolme_live_managed_signing_key_zeroizes_transient_key_material"));
 }
 
 #[test]
@@ -79,4 +85,18 @@ fn matrix_contains_signature_parity_entry_details() {
     assert!(CONTROL_MATRIX
         .contains("Kolme live signature conformance drift or malformed parity evidence"));
     assert!(CONTROL_MATRIX.contains("`Regression: #2299`"));
+}
+
+#[test]
+fn matrix_contains_signer_secret_zeroization_entry_details() {
+    assert!(CONTROL_MATRIX.contains(
+        "Env-sourced signer secrets persist in transient buffers after strict precedence rejection"
+    ));
+    assert!(CONTROL_MATRIX.contains("## Signer Secret Zeroization Contract"));
+    assert!(CONTROL_MATRIX.contains(
+        "strict signer precedence rejection paths must zeroize env-secret buffers (`Regression: #4165`)."
+    ));
+    assert!(CONTROL_MATRIX.contains(
+        "transient managed signer key material must be zeroized after key construction attempts (`Regression: #4166`)."
+    ));
 }
