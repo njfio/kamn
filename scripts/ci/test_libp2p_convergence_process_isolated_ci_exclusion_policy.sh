@@ -20,17 +20,18 @@ fast_mode_block="$(
   ' "$CI_TOOLS_SCRIPT"
 )"
 
-if printf '%s\n' "$fast_mode_block" | grep -Fq 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"'; then
-  echo "expected process-isolated convergence contract lane to remain excluded from ci-tools fast mode" >&2
+if printf '%s\n' "$fast_mode_block" | grep -Eq 'validate_libp2p_convergence_process_isolated_live\\.sh.*--lane-profile[[:space:]]+deep.*--mode[[:space:]]+run|validate_libp2p_convergence_process_isolated_live\\.sh.*--mode[[:space:]]+run.*--lane-profile[[:space:]]+deep'; then
+  echo "expected process-isolated convergence deep run-mode lane to remain excluded from ci-tools fast mode" >&2
   exit 1
 fi
 
 for required_command in \
   'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"' \
   'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"' \
-  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"'; do
-  if ! grep -Fq "$required_command" "$CI_TOOLS_SCRIPT"; then
-    echo "expected ci-tools regression lane to include process-isolated convergence command: $required_command" >&2
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"' \
+  'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"'; do
+  if ! printf '%s\n' "$fast_mode_block" | grep -Fq "$required_command"; then
+    echo "expected ci-tools fast mode to include process-isolated convergence smoke command: $required_command" >&2
     exit 1
   fi
 done

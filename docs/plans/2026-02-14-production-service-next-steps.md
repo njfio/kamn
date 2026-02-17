@@ -207,6 +207,19 @@ This refreshed version separates:
   - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --output-json /tmp/local-observability-scrape-live-summary.json`
   - `KAMN_LIVE_TRANSPORT_FAULT_MATRIX_OPT_IN=1 bash scripts/runtime/validate_live_transport_fault_matrix_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/live-transport-fault-matrix-live-summary.json`
 
+### R27.30 Partition-Finality CI Smoke Governance Closure
+- Active chain: `#4250 -> #4254 -> (#4261, #4262)`.
+- Convergence closure markers:
+  - `partition_finality_ci_smoke_convergence_status=verified`
+  - `partition_finality_ci_smoke_reason_taxonomy_version=kamn.ci.partition-finality-ci-smoke-convergence-reason-taxonomy.v1`
+  - `partition_finality_ci_smoke_max_seconds=120`
+  - `partition_finality_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_partition_finality_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/partition-finality-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh`
+- Local-heavy partition-finality boundaries remain explicit and outside ci-fast-gate:
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile deep --ci-fast-gate FAIL --output-json /tmp/libp2p-convergence-process-isolated-live-deep-summary.json`
+
 ### R27.27 Websocket Session CI Smoke Governance Closure
 - Active chain: `#4265 -> #4269 -> (#4276, #4277)`.
 - Convergence closure markers:
