@@ -233,6 +233,36 @@ fn deploy_compat_contains_kolme_upgrade_compatibility_taxonomy_runbook_parity_ma
 }
 
 #[test]
+fn deploy_compat_contains_rotation_preflight_quorum_parity_and_custody_tamper_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Rotation Preflight Quorum Marker Parity and Custody Tamper Contracts (Issues #4169, #4170)"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "rotation_preflight_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "rotation_preflight_reason_codes_csv=signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected"
+    ));
+    assert!(DEPLOY_COMPAT.contains("rotation_preflight_reason_codes_value=none|<csv>"));
+    assert!(DEPLOY_COMPAT.contains(
+        "custody_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "custody_reason_codes_csv=custody_evidence_missing,custody_evidence_sha256_invalid,custody_evidence_file_missing,quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected"
+    ));
+    assert!(DEPLOY_COMPAT.contains("custody_reason_codes_value=none|<csv>"));
+    assert!(DEPLOY_COMPAT.contains("quorum_evidence_approval_count_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("quorum_evidence_custody_sha256_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("custody_continuity_bypass_detected"));
+    assert!(DEPLOY_COMPAT.contains("test_check_local_kolme_live_deployment_preflight_policy.sh"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4169"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4170"));
+}
+
+#[test]
 fn deploy_compat_contains_local_full_stack_harness_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)"

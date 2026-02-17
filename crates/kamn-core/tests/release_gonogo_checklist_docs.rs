@@ -57,6 +57,36 @@ fn checklist_contains_runtime_signer_key_source_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_rotation_preflight_quorum_parity_and_custody_reason_mapping_gate() {
+    assert!(CHECKLIST.contains(
+        "## Rotation Preflight Quorum Marker Parity and Custody Reason Mapping Gate (Issues #4169, #4170)"
+    ));
+    assert!(CHECKLIST.contains("test_check_local_kolme_live_deployment_preflight_policy.sh"));
+    assert!(CHECKLIST.contains(
+        "check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json"
+    ));
+    assert!(CHECKLIST.contains(
+        "rotation_preflight_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-rotation-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "rotation_preflight_reason_codes_csv=signer_key_source_contract_version_mismatch,signer_key_source_invalid,signer_key_source_production_managed_external_required,signer_quorum_minimum_not_met,signer_rotation_epoch_stale,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled,fallback_signer_secret_present_violation,fallback_signer_secret_checkpoint_reason_mismatch,fallback_signer_secret_remediation_missing,quorum_evidence_missing,quorum_evidence_rotation_metadata_missing,quorum_evidence_rotation_metadata_invalid,runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_drift_telemetry_missing,runtime_signer_drift_telemetry_rotation_delta_invalid,runtime_signer_drift_matrix_inputs_invalid,runtime_signer_drift_rotation_fail_threshold_exceeded,runtime_signer_drift_quorum_fail_threshold_exceeded,custody_continuity_bypass_detected"
+    ));
+    assert!(CHECKLIST.contains("rotation_preflight_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains(
+        "custody_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "custody_reason_codes_csv=custody_evidence_missing,custody_evidence_sha256_invalid,custody_evidence_file_missing,quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected"
+    ));
+    assert!(CHECKLIST.contains("custody_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains("quorum_evidence_approval_count_mismatch"));
+    assert!(CHECKLIST.contains("quorum_evidence_custody_sha256_mismatch"));
+    assert!(CHECKLIST.contains("custody_continuity_bypass_detected"));
+    assert!(CHECKLIST.contains("Regression: #4169"));
+    assert!(CHECKLIST.contains("Regression: #4170"));
+}
+
+#[test]
 fn checklist_contains_dry_run_workflow() {
     assert!(CHECKLIST.contains("## Deterministic Dry-Run Workflow"));
     assert!(CHECKLIST.contains("1. Create release candidate tag"));
