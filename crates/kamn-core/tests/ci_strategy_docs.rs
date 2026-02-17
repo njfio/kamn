@@ -1050,3 +1050,18 @@ fn doc_contains_live_gonogo_boundary_reason_taxonomy_markers() {
     assert!(DOC.contains("live_gonogo_evidence_convergence_mismatch"));
     assert!(DOC.contains("Regression: #4442"));
 }
+
+#[test]
+fn doc_contains_persistence_adapter_integrity_ci_boundary_markers() {
+    assert!(DOC.contains("## Persistence Adapter Integrity + CI Boundary Fast Lane"));
+    assert!(DOC.contains("test_validate_persistence_adapters_live.sh"));
+    assert!(DOC.contains(
+        "persistence_gate_reason_taxonomy_version=kamn.runtime.persistence-gate-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "persistence_gate_reason_codes_csv=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation"
+    ));
+    assert!(DOC.contains("persistence_ci_smoke_local_heavy_boundary_status=verified"));
+    assert!(DOC.contains("persistence_ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("persistence_local_heavy_execution_mode=opt_in"));
+}
