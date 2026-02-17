@@ -178,6 +178,25 @@ fn service_api_ops_configuration_contains_shutdown_checkpoint_reconciliation_fai
 }
 
 #[test]
+fn service_api_ops_configuration_contains_full_stack_harness_marker_mismatch_controls() {
+    assert!(DOC.contains(
+        "## Full-Stack Harness Marker Completeness and Parity Mismatch Controls (Issue #4195)"
+    ));
+    assert!(DOC.contains("full_io_harness_marker_completeness_status=verified"));
+    assert!(DOC.contains("full_io_harness_marker_parity_status=verified"));
+    assert!(DOC.contains(
+        "full_io_harness_policy_reason_taxonomy_version=kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "full_io_harness_policy_reason_codes_csv=full_io_scenario_matrix_policy_process_harness_mismatch,full_io_scenario_matrix_policy_api_route_matrix_mismatch,full_io_scenario_matrix_policy_auth_failure_matrix_mismatch,full_io_scenario_matrix_policy_websocket_matrix_mismatch,full_io_scenario_matrix_policy_multinode_propagation_mismatch,full_io_scenario_matrix_policy_dry_run_command_count_mismatch,full_io_scenario_matrix_policy_dry_run_command_status_mismatch"
+    ));
+    assert!(DOC.contains("full_io_scenario_matrix_policy_process_harness_mismatch"));
+    assert!(DOC.contains("full_io_scenario_matrix_policy_dry_run_command_count_mismatch"));
+    assert!(DOC.contains("full_io_scenario_matrix_policy_dry_run_command_status_mismatch"));
+    assert!(DOC.contains("Regression: #4195"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_partition_healing_mismatch_mapping_controls() {
     assert!(DOC.contains(
         "### Block Reconciliation Partition-Healing Mismatch Mapping Contracts (Issues #4251, #4255, #4256)"
