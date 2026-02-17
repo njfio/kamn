@@ -1,6 +1,6 @@
 # Spec — #4376 Subtask: deterministic in-memory provider rejection reason mapping
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4371
 Milestone: R27.34 Live Kolme provider integration, native secp256k1 signing, and end-to-end validation governance
