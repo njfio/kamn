@@ -49,6 +49,21 @@ COMPOSITE_GATE_EVIDENCE_CONVERGENCE_STATUS = "verified"
 COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS = "verified"
 COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE = "low"
 COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE = "not_requested"
+KEY_SOURCE_REASON_TAXONOMY_VERSION = "kamn.kolme.local-kamn-live-runtime-key-source-reason-taxonomy.v1"
+KEY_SOURCE_REASON_CODES = (
+    "runtime_signer_key_source_contract_version_missing",
+    "runtime_signer_key_source_contract_version_mismatch",
+    "runtime_signer_key_source_contract_version_contract_mismatch",
+    "runtime_signer_key_source_missing",
+    "runtime_signer_key_source_invalid",
+    "runtime_signer_key_source_profile_pair_disallowed",
+    "runtime_signer_key_source_contract_mismatch",
+    "runtime_commit_signer_key_source_marker_missing",
+    "runtime_commit_fallback_private_key_command_marker_detected",
+    "runtime_signer_fallback_private_key_present_violation",
+    "runtime_signer_managed_external_raw_private_key_present_violation",
+)
+KEY_SOURCE_REASON_CODES_CSV = ",".join(KEY_SOURCE_REASON_CODES)
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 
 
@@ -148,6 +163,13 @@ def expected_runtime_commit_failure_taxonomy(
     if isinstance(runtime_commit_nested_reason_code, str):
         return NESTED_RUNTIME_REASON_TO_TAXONOMY.get(runtime_commit_nested_reason_code, "runtime.unknown")
     return "runtime.unknown"
+
+
+def observed_key_source_reason_codes_value(reason_codes: list[str]) -> str:
+    observed = [reason_code for reason_code in KEY_SOURCE_REASON_CODES if reason_code in reason_codes]
+    if not observed:
+        return "none"
+    return ",".join(observed)
 
 
 def parse_args() -> argparse.Namespace:
@@ -306,6 +328,15 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     ):
         reason_codes.append("runtime_signer_rotation_epoch_stale")
 
+    runtime_signer_key_source_contract_version = report.get("runtime_signer_key_source_contract_version")
+    if (
+        not isinstance(runtime_signer_key_source_contract_version, str)
+        or not runtime_signer_key_source_contract_version.strip()
+    ):
+        reason_codes.append("runtime_signer_key_source_contract_version_missing")
+    elif runtime_signer_key_source_contract_version != "v1":
+        reason_codes.append("runtime_signer_key_source_contract_version_mismatch")
+
     runtime_signer_key_source = report.get("runtime_signer_key_source")
     normalized_runtime_signer_key_source = ""
     if not isinstance(runtime_signer_key_source, str) or not runtime_signer_key_source.strip():
@@ -319,6 +350,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and runtime_signer_profile == RUNTIME_SIGNER_PROFILE_SECONDARY
         ):
             reason_codes.append("runtime_signer_key_source_profile_pair_disallowed")
+    if (
+        isinstance(runtime_commit_command, str)
+        and runtime_commit_command.strip()
+        and normalized_runtime_signer_key_source
+    ):
+        expected_runtime_signer_key_source_marker = (
+            f"KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE={normalized_runtime_signer_key_source}"
+        )
+        if expected_runtime_signer_key_source_marker not in runtime_commit_command:
+            reason_codes.append("runtime_commit_signer_key_source_marker_missing")
 
     runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
     if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
@@ -544,6 +585,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         if isinstance(runtime_profile, str) and runtime_profile in ("standard", "real-node"):
             if contracts.get("runtime_profile") != runtime_profile:
                 reason_codes.append("runtime_profile_contract_mismatch")
+        if contracts.get("runtime_signer_key_source_contract_version") != "v1":
+            reason_codes.append("runtime_signer_key_source_contract_version_contract_mismatch")
         if normalized_runtime_signer_key_source and contracts.get("runtime_signer_key_source") != normalized_runtime_signer_key_source:
             reason_codes.append("runtime_signer_key_source_contract_mismatch")
         if (
@@ -760,6 +803,9 @@ def main() -> int:
         "composite_gate_ci_smoke_local_heavy_boundary_status": COMPOSITE_GATE_CI_SMOKE_LOCAL_HEAVY_BOUNDARY_STATUS,
         "composite_gate_ci_smoke_lane_cost_profile": COMPOSITE_GATE_CI_SMOKE_LANE_COST_PROFILE,
         "composite_gate_local_heavy_execution_mode": COMPOSITE_GATE_LOCAL_HEAVY_EXECUTION_MODE,
+        "key_source_reason_taxonomy_version": KEY_SOURCE_REASON_TAXONOMY_VERSION,
+        "key_source_reason_codes_csv": KEY_SOURCE_REASON_CODES_CSV,
+        "key_source_reason_codes_value": observed_key_source_reason_codes_value(reason_codes),
         "observed_composite_gate_reason_taxonomy_version": report.get(
             "composite_gate_reason_taxonomy_version"
         ),
