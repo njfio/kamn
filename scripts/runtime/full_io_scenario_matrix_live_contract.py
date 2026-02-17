@@ -31,6 +31,35 @@ OPT_IN_ENV = "KAMN_LOCAL_FULL_IO_SCENARIO_MATRIX_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "full_io_scenario_matrix_executed"
 FAST_GATE_EXCLUSION_REASON = "full_io_scenario_matrix_run_mode_excluded_from_fast_gate"
+FULL_IO_HARNESS_POLICY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1"
+)
+FULL_IO_HARNESS_POLICY_REASON_CODES = (
+    "full_io_scenario_matrix_policy_schema_mismatch",
+    "full_io_scenario_matrix_policy_status_mismatch",
+    "full_io_scenario_matrix_policy_final_decision_mismatch",
+    "full_io_scenario_matrix_policy_ci_fast_gate_mismatch",
+    "full_io_scenario_matrix_policy_process_harness_mismatch",
+    "full_io_scenario_matrix_policy_api_route_matrix_mismatch",
+    "full_io_scenario_matrix_policy_auth_failure_matrix_mismatch",
+    "full_io_scenario_matrix_policy_websocket_matrix_mismatch",
+    "full_io_scenario_matrix_policy_multinode_propagation_mismatch",
+    "full_io_scenario_matrix_policy_fast_gate_exclusion_mismatch",
+    "full_io_scenario_matrix_policy_fast_gate_reason_mismatch",
+    "full_io_scenario_matrix_policy_lane_mode_invalid",
+    "full_io_scenario_matrix_policy_command_count_invalid",
+    "full_io_scenario_matrix_policy_artifact_paths_invalid",
+    "full_io_scenario_matrix_policy_dry_run_eligibility_mismatch",
+    "full_io_scenario_matrix_policy_dry_run_command_count_mismatch",
+    "full_io_scenario_matrix_policy_dry_run_command_status_mismatch",
+    "full_io_scenario_matrix_policy_dry_run_reason_code_mismatch",
+    "full_io_scenario_matrix_policy_run_mode_exclusion_mismatch",
+    "full_io_scenario_matrix_policy_run_mode_command_count_mismatch",
+    "full_io_scenario_matrix_policy_run_mode_command_status_mismatch",
+    "full_io_scenario_matrix_policy_run_mode_reason_code_mismatch",
+    "full_io_scenario_matrix_policy_expected_decision_mismatch",
+)
+FULL_IO_HARNESS_POLICY_REASON_CODES_CSV = ",".join(FULL_IO_HARNESS_POLICY_REASON_CODES)
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -39,6 +68,10 @@ def _extract_line_value(output: str, key: str) -> str:
         if line.startswith(prefix):
             return line[len(prefix) :]
     return ""
+
+
+def _reason_codes_value(reason_codes: list[str]) -> str:
+    return ",".join(reason_codes) if reason_codes else "none"
 
 
 def _run_command(
@@ -329,6 +362,7 @@ def check_policy(args: argparse.Namespace) -> int:
     if observed_final_decision != expected_final_decision:
         failed_checks.append("full_io_scenario_matrix_policy_expected_decision_mismatch")
 
+    reason_codes_value = _reason_codes_value(failed_checks)
     report_payload = {
         "schema_version": POLICY_SCHEMA,
         "status": "ok" if not failed_checks else "fail",
@@ -337,6 +371,11 @@ def check_policy(args: argparse.Namespace) -> int:
         "ci_fast_gate": ci_fast_gate,
         "decision_reasons": decision_reasons,
         "full_io_scenario_matrix_policy_status": "verified" if not failed_checks else "failed",
+        "full_io_harness_policy_reason_taxonomy_version": (
+            FULL_IO_HARNESS_POLICY_REASON_TAXONOMY_VERSION
+        ),
+        "full_io_harness_policy_reason_codes_csv": FULL_IO_HARNESS_POLICY_REASON_CODES_CSV,
+        "full_io_harness_policy_reason_codes_value": reason_codes_value,
         "failed_checks": failed_checks,
     }
     if args.output_json:
@@ -350,7 +389,14 @@ def check_policy(args: argparse.Namespace) -> int:
         "full_io_scenario_matrix_policy_status="
         f"{'verified' if not failed_checks else 'failed'}"
     )
-    print(f"failed_checks={','.join(failed_checks)}")
+    print(
+        "full_io_harness_policy_reason_taxonomy_version="
+        f"{FULL_IO_HARNESS_POLICY_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"full_io_harness_policy_reason_codes_csv={FULL_IO_HARNESS_POLICY_REASON_CODES_CSV}")
+    print(f"full_io_harness_policy_reason_codes={reason_codes_value}")
+    print(f"full_io_harness_policy_reason_codes_value={reason_codes_value}")
+    print(f"failed_checks={reason_codes_value}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
 

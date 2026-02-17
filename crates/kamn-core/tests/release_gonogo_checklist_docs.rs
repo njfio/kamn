@@ -21,6 +21,27 @@ fn checklist_contains_production_mode_live_provider_enforcement_gate() {
 }
 
 #[test]
+fn checklist_contains_full_stack_harness_marker_checker_reason_mapping_gate() {
+    assert!(CHECKLIST
+        .contains("## Full-Stack Harness Marker Checker Reason Mapping Gate (Issue #4196)"));
+    assert!(CHECKLIST.contains("test_check_full_io_scenario_matrix_live_policy.sh"));
+    assert!(CHECKLIST.contains("test_validate_full_io_scenario_matrix_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains(
+        "full_io_harness_policy_reason_taxonomy_version=kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "full_io_harness_policy_reason_codes_csv=full_io_scenario_matrix_policy_schema_mismatch,full_io_scenario_matrix_policy_status_mismatch,full_io_scenario_matrix_policy_final_decision_mismatch,full_io_scenario_matrix_policy_ci_fast_gate_mismatch,full_io_scenario_matrix_policy_process_harness_mismatch,full_io_scenario_matrix_policy_api_route_matrix_mismatch,full_io_scenario_matrix_policy_auth_failure_matrix_mismatch,full_io_scenario_matrix_policy_websocket_matrix_mismatch,full_io_scenario_matrix_policy_multinode_propagation_mismatch,full_io_scenario_matrix_policy_fast_gate_exclusion_mismatch,full_io_scenario_matrix_policy_fast_gate_reason_mismatch,full_io_scenario_matrix_policy_lane_mode_invalid,full_io_scenario_matrix_policy_command_count_invalid,full_io_scenario_matrix_policy_artifact_paths_invalid,full_io_scenario_matrix_policy_dry_run_eligibility_mismatch,full_io_scenario_matrix_policy_dry_run_command_count_mismatch,full_io_scenario_matrix_policy_dry_run_command_status_mismatch,full_io_scenario_matrix_policy_dry_run_reason_code_mismatch,full_io_scenario_matrix_policy_run_mode_exclusion_mismatch,full_io_scenario_matrix_policy_run_mode_command_count_mismatch,full_io_scenario_matrix_policy_run_mode_command_status_mismatch,full_io_scenario_matrix_policy_run_mode_reason_code_mismatch,full_io_scenario_matrix_policy_expected_decision_mismatch"
+    ));
+    assert!(CHECKLIST.contains("full_io_harness_policy_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains("full_io_scenario_matrix_policy_status=verified|failed"));
+    assert!(CHECKLIST.contains("full_io_scenario_matrix_policy_process_harness_mismatch"));
+    assert!(CHECKLIST.contains("full_io_scenario_matrix_policy_dry_run_command_count_mismatch"));
+    assert!(CHECKLIST.contains("full_io_scenario_matrix_policy_dry_run_command_status_mismatch"));
+    assert!(CHECKLIST.contains("full_io_scenario_matrix_policy_expected_decision_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4196"));
+}
+
+#[test]
 fn checklist_contains_runtime_signer_key_source_reason_mapping_gate() {
     assert!(CHECKLIST
         .contains("## Runtime Signer Key-Source/Fallback Reason Mapping Gate (Issue #4356)"));

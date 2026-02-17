@@ -12,6 +12,27 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Full-Stack Harness Marker Checker Reason Mapping Gate (Issue #4196)
+- Validation commands:
+  - `bash scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh`
+  - `bash scripts/runtime/test_validate_full_io_scenario_matrix_live_contract_lane.sh`
+- Required deterministic checker markers:
+  - `full_io_harness_policy_reason_taxonomy_version=kamn.runtime.full-io-scenario-matrix-policy-reason-taxonomy.v1`
+  - `full_io_harness_policy_reason_codes_csv=full_io_scenario_matrix_policy_schema_mismatch,full_io_scenario_matrix_policy_status_mismatch,full_io_scenario_matrix_policy_final_decision_mismatch,full_io_scenario_matrix_policy_ci_fast_gate_mismatch,full_io_scenario_matrix_policy_process_harness_mismatch,full_io_scenario_matrix_policy_api_route_matrix_mismatch,full_io_scenario_matrix_policy_auth_failure_matrix_mismatch,full_io_scenario_matrix_policy_websocket_matrix_mismatch,full_io_scenario_matrix_policy_multinode_propagation_mismatch,full_io_scenario_matrix_policy_fast_gate_exclusion_mismatch,full_io_scenario_matrix_policy_fast_gate_reason_mismatch,full_io_scenario_matrix_policy_lane_mode_invalid,full_io_scenario_matrix_policy_command_count_invalid,full_io_scenario_matrix_policy_artifact_paths_invalid,full_io_scenario_matrix_policy_dry_run_eligibility_mismatch,full_io_scenario_matrix_policy_dry_run_command_count_mismatch,full_io_scenario_matrix_policy_dry_run_command_status_mismatch,full_io_scenario_matrix_policy_dry_run_reason_code_mismatch,full_io_scenario_matrix_policy_run_mode_exclusion_mismatch,full_io_scenario_matrix_policy_run_mode_command_count_mismatch,full_io_scenario_matrix_policy_run_mode_command_status_mismatch,full_io_scenario_matrix_policy_run_mode_reason_code_mismatch,full_io_scenario_matrix_policy_expected_decision_mismatch`
+  - `full_io_harness_policy_reason_codes_value=none|<csv>`
+  - `full_io_scenario_matrix_policy_status=verified|failed`
+- Required fail-closed reason mapping markers:
+  - `full_io_scenario_matrix_policy_process_harness_mismatch`
+  - `full_io_scenario_matrix_policy_api_route_matrix_mismatch`
+  - `full_io_scenario_matrix_policy_auth_failure_matrix_mismatch`
+  - `full_io_scenario_matrix_policy_websocket_matrix_mismatch`
+  - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
+  - `full_io_scenario_matrix_policy_dry_run_command_count_mismatch`
+  - `full_io_scenario_matrix_policy_dry_run_command_status_mismatch`
+  - `full_io_scenario_matrix_policy_expected_decision_mismatch`
+- Regression policy:
+  - checker output determinism drift or fail-closed reason mapping drift forces `NO-GO` (`Regression: #4196`).
+
 ## Production-Mode Live Provider Enforcement Gate (Issue #4371)
 - Contract lane command:
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
