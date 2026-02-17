@@ -1,6 +1,7 @@
 # R27.36 Deep validation hardening, concurrency safety, and observability-emission governance
 
-Milestone scope for deterministic property/fuzz/concurrency validation contracts, telemetry emission governance, and bounded CI smoke versus local-heavy lane policy enforcement.
+Milestone scope for deterministic property/fuzz/concurrency validation contracts, telemetry
+emission governance, and bounded CI smoke versus local-heavy lane policy enforcement.
 
 ## Linked Issues
 - #4398 Epic: converge deep validation hardening, concurrency safety, and observability-emission contracts
@@ -9,3 +10,4 @@ Milestone scope for deterministic property/fuzz/concurrency validation contracts
 - #4401 Task: implement property-based invariant checks for critical runtime and promotion-gate contracts
 - #4405 Subtask: add red tests for invariant violations accepted by runtime and gate checks
 - #4406 Subtask: implement invariant failure reason mapping and deterministic evidence outputs
+- #4735 Task: stabilize block-pipeline extraction follow-through and transport/service deployment fail-closed contracts

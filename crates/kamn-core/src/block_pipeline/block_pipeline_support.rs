@@ -1,21 +1,17 @@
 use super::*;
+use crate::config::NodeRole;
+use crate::p2p_transport::PeerGossipFrame;
+use std::collections::{BTreeMap, BTreeSet};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
 
-pub(super) fn validate_transport_payload_field_value(
-    field: &str,
-    value: &str,
-) -> Result<(), BlockPipelineError> {
-    if value.trim().is_empty() {
-        return Err(BlockPipelineError::TransportFeed(format!(
-            "transport candidate field is empty: {field} (transport_candidate_field_empty)"
-        )));
-    }
-    if value.contains('\n') || value.contains('\r') {
-        return Err(BlockPipelineError::TransportFeed(format!(
-            "transport candidate field contains line break: {field} (transport_candidate_field_line_break)"
-        )));
-    }
-    Ok(())
-}
+const TOPIC_MESSAGES_LEGACY: &str = "messages";
+const TOPIC_MESSAGES_V1: &str = "kamn/messages/v1";
+const TOPIC_BLOCKS_LEGACY: &str = "blocks";
+const TOPIC_BLOCKS_V1: &str = "kamn/blocks/v1";
 
 /// Decoded gossip ingress record classified by payload intent.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,6 +117,188 @@ impl GossipIngressAdapter {
         }
         Ok(batch)
     }
+}
+
+fn classify_gossip_topic(topic: &str) -> Result<GossipIngressTopicKind, GossipIngressError> {
+    match topic.trim() {
+        TOPIC_MESSAGES_LEGACY | TOPIC_MESSAGES_V1 => Ok(GossipIngressTopicKind::Transaction),
+        TOPIC_BLOCKS_LEGACY | TOPIC_BLOCKS_V1 => Ok(GossipIngressTopicKind::Block),
+        unsupported => Err(GossipIngressError::new(
+            "p2p_ingress_topic_unsupported",
+            format!("unsupported gossip topic for block pipeline ingress: {unsupported}"),
+        )),
+    }
+}
+
+fn parse_payload_fields(payload: &str) -> Result<BTreeMap<String, String>, GossipIngressError> {
+    if payload.trim().is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_empty",
+            "gossip ingress payload cannot be empty",
+        ));
+    }
+
+    let mut fields = BTreeMap::new();
+    for raw_line in payload.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let (raw_key, raw_value) = line.split_once('=').ok_or_else(|| {
+            GossipIngressError::new(
+                "p2p_ingress_payload_line_malformed",
+                format!("malformed key/value line: {line}"),
+            )
+        })?;
+        let key = raw_key.trim();
+        if key.is_empty() {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_payload_line_malformed",
+                format!("payload key cannot be empty: {line}"),
+            ));
+        }
+        if fields.contains_key(key) {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_payload_duplicate_field",
+                format!("duplicate payload field: {key}"),
+            ));
+        }
+        fields.insert(key.to_owned(), raw_value.trim().to_owned());
+    }
+
+    if fields.is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_empty",
+            "gossip ingress payload has no key/value fields",
+        ));
+    }
+
+    Ok(fields)
+}
+
+fn required_payload_field<'a>(
+    fields: &'a BTreeMap<String, String>,
+    field: &'static str,
+) -> Result<&'a str, GossipIngressError> {
+    let value = fields.get(field).ok_or_else(|| {
+        GossipIngressError::new(
+            "p2p_ingress_payload_missing_field",
+            format!("missing required payload field: {field}"),
+        )
+    })?;
+    if value.trim().is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_missing_field",
+            format!("required payload field is empty: {field}"),
+        ));
+    }
+    Ok(value.as_str())
+}
+
+fn decode_transaction_record(
+    fields: &BTreeMap<String, String>,
+) -> Result<GossipIngressRecord, GossipIngressError> {
+    let id = required_payload_field(fields, "id")?;
+    let sender = required_payload_field(fields, "sender")?;
+    let nonce_raw = required_payload_field(fields, "nonce")?;
+    let state_hash = required_payload_field(fields, "state_hash")?;
+    let payload = required_payload_field(fields, "payload")?;
+    let signature = required_payload_field(fields, "signature")?;
+
+    let nonce = nonce_raw.parse::<u64>().map_err(|_| {
+        GossipIngressError::new(
+            "p2p_ingress_payload_nonce_invalid",
+            format!("nonce field must be positive integer, found: {nonce_raw}"),
+        )
+    })?;
+    if nonce == 0 {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_nonce_invalid",
+            "nonce field must be positive integer, found: 0",
+        ));
+    }
+
+    let tx = BaselineTransaction {
+        id: id.to_owned(),
+        sender: sender.to_owned(),
+        nonce,
+        payload: payload.to_owned(),
+        state_hash: state_hash.to_owned(),
+        signature: signature.to_owned(),
+    };
+    if tx.signature != tx.expected_signature() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_tx_signature_invalid",
+            format!(
+                "transaction signature failed baseline profile validation for {}",
+                tx.id
+            ),
+        ));
+    }
+
+    Ok(GossipIngressRecord::Transaction(tx))
+}
+
+fn decode_block_candidate_record(
+    fields: &BTreeMap<String, String>,
+) -> Result<GossipIngressRecord, GossipIngressError> {
+    let block_height_raw = required_payload_field(fields, "block_height")?;
+    let block_height = block_height_raw.parse::<u64>().map_err(|_| {
+        GossipIngressError::new(
+            "p2p_ingress_block_height_invalid",
+            format!("block_height field must be positive integer, found: {block_height_raw}"),
+        )
+    })?;
+    if block_height == 0 {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_block_height_invalid",
+            "block_height field must be positive integer, found: 0",
+        ));
+    }
+
+    let producer_role_raw = required_payload_field(fields, "producer_role")?;
+    let producer_role = match producer_role_raw {
+        "processor" => NodeRole::Processor,
+        "listener" => NodeRole::Listener,
+        "approver" => NodeRole::Approver,
+        other => {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_block_role_invalid",
+                format!("unsupported producer_role field value: {other}"),
+            ));
+        }
+    };
+
+    let payload_digest = required_payload_field(fields, "payload_digest")?;
+    let transaction_ids_raw = required_payload_field(fields, "transaction_ids")?;
+
+    let mut seen_ids = BTreeSet::new();
+    let mut transaction_ids = Vec::new();
+    for tx_id in transaction_ids_raw.split(',').map(|value| value.trim()) {
+        if tx_id.is_empty() {
+            continue;
+        }
+        if !seen_ids.insert(tx_id.to_owned()) {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_block_transaction_ids_invalid",
+                format!("duplicate transaction id in block candidate payload: {tx_id}"),
+            ));
+        }
+        transaction_ids.push(tx_id.to_owned());
+    }
+    if transaction_ids.is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_block_transaction_ids_invalid",
+            "transaction_ids field must contain at least one identifier",
+        ));
+    }
+
+    Ok(GossipIngressRecord::BlockCandidate(CanonicalCommitRecord {
+        block_height,
+        producer_role,
+        payload_digest: payload_digest.to_owned(),
+        transaction_ids,
+    }))
 }
 
 /// Transport feed adapter that decodes gossip frames into mempool candidates.
@@ -812,6 +990,126 @@ fn map_sqlite_commit_store_error(error: SqliteStoreBackendError) -> BlockPipelin
             "canonical commit sqlite backend operation failed: {other} (canonical_commit_store_io)"
         )),
     }
+}
+
+fn serialize_canonical_commit_record(
+    record: &CanonicalCommitRecord,
+) -> Result<String, BlockPipelineError> {
+    if record.block_height == 0 {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit block height must be positive (canonical_commit_store_block_height_invalid)"
+                .to_owned(),
+        ));
+    }
+    if record.transaction_ids.is_empty() {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit transaction ids cannot be empty (canonical_commit_store_transaction_ids_invalid)"
+                .to_owned(),
+        ));
+    }
+    validation::validate_canonical_commit_store_field(
+        "payload_digest",
+        record.payload_digest.as_str(),
+    )?;
+    let mut encoded_ids = Vec::with_capacity(record.transaction_ids.len());
+    for tx_id in &record.transaction_ids {
+        validation::validate_canonical_commit_store_field("transaction_id", tx_id.as_str())?;
+        if tx_id.contains(',') {
+            return Err(BlockPipelineError::CommitStore(
+                "canonical commit transaction id cannot contain ',' (canonical_commit_store_transaction_ids_invalid)"
+                    .to_owned(),
+            ));
+        }
+        encoded_ids.push(tx_id.as_str());
+    }
+
+    Ok(format!(
+        "{}|{}|{}|{}\n",
+        record.block_height,
+        record.producer_role.as_str(),
+        record.payload_digest,
+        encoded_ids.join(",")
+    ))
+}
+
+fn parse_canonical_commit_record(line: &str) -> Result<CanonicalCommitRecord, BlockPipelineError> {
+    let mut segments = line.split('|');
+    let block_height_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let producer_role_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let payload_digest = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    let transaction_ids_raw = segments.next().ok_or_else(|| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        ))
+    })?;
+    if segments.next().is_some() {
+        return Err(BlockPipelineError::CommitStore(format!(
+            "canonical commit record malformed: {line} (canonical_commit_store_record_malformed)"
+        )));
+    }
+
+    let block_height = block_height_raw.parse::<u64>().map_err(|_| {
+        BlockPipelineError::CommitStore(format!(
+            "canonical commit block height is invalid: {block_height_raw} (canonical_commit_store_block_height_invalid)"
+        ))
+    })?;
+    if block_height == 0 {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit block height must be positive (canonical_commit_store_block_height_invalid)"
+                .to_owned(),
+        ));
+    }
+    let producer_role = match producer_role_raw {
+        "processor" => NodeRole::Processor,
+        "listener" => NodeRole::Listener,
+        "approver" => NodeRole::Approver,
+        other => {
+            return Err(BlockPipelineError::CommitStore(format!(
+                "canonical commit producer role is invalid: {other} (canonical_commit_store_producer_role_invalid)"
+            )));
+        }
+    };
+    validation::validate_canonical_commit_store_field("payload_digest", payload_digest)?;
+
+    let mut seen_ids = BTreeSet::new();
+    let mut transaction_ids = Vec::new();
+    for tx_id in transaction_ids_raw.split(',').map(|value| value.trim()) {
+        if tx_id.is_empty() {
+            continue;
+        }
+        validation::validate_canonical_commit_store_field("transaction_id", tx_id)?;
+        if !seen_ids.insert(tx_id.to_owned()) {
+            return Err(BlockPipelineError::CommitStore(format!(
+                "canonical commit transaction id is duplicated: {tx_id} (canonical_commit_store_transaction_ids_invalid)"
+            )));
+        }
+        transaction_ids.push(tx_id.to_owned());
+    }
+    if transaction_ids.is_empty() {
+        return Err(BlockPipelineError::CommitStore(
+            "canonical commit transaction ids cannot be empty (canonical_commit_store_transaction_ids_invalid)"
+                .to_owned(),
+        ));
+    }
+
+    Ok(CanonicalCommitRecord {
+        block_height,
+        producer_role,
+        payload_digest: payload_digest.to_owned(),
+        transaction_ids,
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
