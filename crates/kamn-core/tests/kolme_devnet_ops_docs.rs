@@ -145,6 +145,26 @@ fn plan_contains_release_promotion_evidence_convergence_integrity_markers() {
 }
 
 #[test]
+fn plan_contains_r27_21_upgrade_compatibility_ci_smoke_governance_closure_markers() {
+    assert!(
+        PLAN.contains("## R27.21 Upgrade Compatibility CI Smoke Governance Closure (Issue #4187)")
+    );
+    assert!(PLAN.contains(
+        "check_upgrade_compatibility_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/upgrade-compatibility-ci-smoke-convergence-report.json"
+    ));
+    assert!(PLAN.contains("test_check_upgrade_compatibility_ci_smoke_convergence.sh"));
+    assert!(PLAN.contains("upgrade_compatibility_ci_smoke_convergence_status=verified"));
+    assert!(PLAN.contains(
+        "upgrade_compatibility_ci_smoke_reason_taxonomy_version=kamn.ci.upgrade-compatibility-ci-smoke-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "upgrade_compatibility_ci_smoke_reason_codes_csv=upgrade_compatibility_fork_evidence_ci_smoke_composition_missing,upgrade_compatibility_fork_policy_ci_smoke_composition_missing,upgrade_compatibility_replay_command_leaked_in_fast_mode,ci_fast_gate_upgrade_compatibility_replay_command_not_excluded,ci_strategy_upgrade_compatibility_convergence_markers_missing,production_plan_upgrade_compatibility_convergence_markers_missing,upgrade_compatibility_ci_smoke_seconds_exceeded"
+    ));
+    assert!(PLAN.contains("upgrade_compatibility_ci_smoke_max_seconds=120"));
+    assert!(PLAN.contains("upgrade_compatibility_local_heavy_max_seconds=900"));
+}
+
+#[test]
 fn plan_contains_r27_22_full_stack_ci_smoke_governance_closure_markers() {
     assert!(PLAN.contains("## R27.22 Full-Stack CI Smoke Governance Closure (Issue #4202)"));
     assert!(PLAN.contains(

@@ -6,6 +6,7 @@ CHECKER="$ROOT_DIR/scripts/ci/check_upgrade_compatibility_ci_smoke_convergence.p
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+PLAN_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected upgrade compatibility ci smoke convergence checker to be executable" >&2
@@ -18,6 +19,7 @@ if ! python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$CI_TOOLS_SCRIPT" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 \
   --output-json "$safe_report" >"$safe_log" 2>&1; then
   cat "$safe_log" >&2
@@ -58,6 +60,7 @@ if python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$missing_evidence_ci_tools" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 >"$missing_evidence_log" 2>&1; then
   cat "$missing_evidence_log" >&2
   echo "expected missing fork-compatibility evidence smoke command fixture to fail checker" >&2
@@ -77,6 +80,7 @@ if python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$missing_policy_ci_tools" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 >"$missing_policy_log" 2>&1; then
   cat "$missing_policy_log" >&2
   echo "expected missing fork-compatibility policy smoke command fixture to fail checker" >&2
@@ -105,6 +109,7 @@ if python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$leaked_replay_ci_tools" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 >"$leaked_replay_log" 2>&1; then
   cat "$leaked_replay_log" >&2
   echo "expected leaked upgrade compatibility replay command fixture in ci-tools fast mode to fail checker" >&2
@@ -128,6 +133,7 @@ if python3 "$CHECKER" \
   --workflow-file "$leaked_workflow" \
   --ci-tools-file "$CI_TOOLS_SCRIPT" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 >"$leaked_workflow_log" 2>&1; then
   cat "$leaked_workflow_log" >&2
   echo "expected leaked replay command workflow fixture to fail checker" >&2
@@ -147,6 +153,7 @@ if python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$CI_TOOLS_SCRIPT" \
   --strategy-doc "$strategy_drift_doc" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 120 >"$strategy_drift_log" 2>&1; then
   cat "$strategy_drift_log" >&2
   echo "expected strategy marker drift fixture to fail checker" >&2
@@ -158,11 +165,32 @@ if ! grep -Fq "ci_strategy_upgrade_compatibility_convergence_markers_missing" "$
   exit 1
 fi
 
+plan_drift_doc="$(mktemp)"
+grep -Fv "### R27.21 Upgrade Compatibility CI Smoke Governance Closure" "$PLAN_DOC" >"$plan_drift_doc"
+
+plan_drift_log="$(mktemp)"
+if python3 "$CHECKER" \
+  --workflow-file "$FAST_WORKFLOW" \
+  --ci-tools-file "$CI_TOOLS_SCRIPT" \
+  --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$plan_drift_doc" \
+  --max-seconds 120 >"$plan_drift_log" 2>&1; then
+  cat "$plan_drift_log" >&2
+  echo "expected production-plan marker drift fixture to fail checker" >&2
+  exit 1
+fi
+if ! grep -Fq "production_plan_upgrade_compatibility_convergence_markers_missing" "$plan_drift_log"; then
+  cat "$plan_drift_log" >&2
+  echo "expected production-plan marker drift fixture to emit deterministic reason code" >&2
+  exit 1
+fi
+
 budget_overflow_log="$(mktemp)"
 if python3 "$CHECKER" \
   --workflow-file "$FAST_WORKFLOW" \
   --ci-tools-file "$CI_TOOLS_SCRIPT" \
   --strategy-doc "$STRATEGY_DOC" \
+  --plan-doc "$PLAN_DOC" \
   --max-seconds 121 >"$budget_overflow_log" 2>&1; then
   cat "$budget_overflow_log" >&2
   echo "expected max-seconds overflow fixture to fail checker" >&2
@@ -181,6 +209,7 @@ rm -f \
   "$leaked_replay_ci_tools" "$leaked_replay_log" \
   "$leaked_workflow" "$leaked_workflow_log" \
   "$strategy_drift_doc" "$strategy_drift_log" \
+  "$plan_drift_doc" "$plan_drift_log" \
   "$budget_overflow_log"
 
 echo "upgrade compatibility ci smoke convergence checker tests passed."

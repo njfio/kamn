@@ -192,6 +192,19 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.21 Upgrade Compatibility CI Smoke Governance Closure
+- Active chain: `#4175 -> #4179 -> (#4186, #4187)`.
+- Convergence closure markers:
+  - `upgrade_compatibility_ci_smoke_convergence_status=verified`
+  - `upgrade_compatibility_ci_smoke_reason_taxonomy_version=kamn.ci.upgrade-compatibility-ci-smoke-convergence-reason-taxonomy.v1`
+  - `upgrade_compatibility_ci_smoke_max_seconds=120`
+  - `upgrade_compatibility_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_upgrade_compatibility_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/upgrade-compatibility-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh`
+- Local-heavy upgrade replay boundary remains explicit and outside ci-fast-gate:
+  - `bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json /tmp/kolme-version-compatibility-deep-lane-report.json`
+
 ### R27.22 Full-Stack CI Smoke Governance Closure
 - Active chain: `#4188 -> #4190 -> #4194 -> (#4201, #4202)`.
 - Convergence closure markers:
