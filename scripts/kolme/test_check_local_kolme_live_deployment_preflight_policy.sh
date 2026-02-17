@@ -19,6 +19,7 @@ TMP_REPORT_BUDGET_BYPASS="$TMP_DIR/budget-bypass-report.json"
 TMP_REPORT_BUDGET_REASON_MISMATCH="$TMP_DIR/budget-reason-mismatch-report.json"
 TMP_REPORT_ROTATION_STALLED="$TMP_DIR/rotation-stalled-report.json"
 TMP_REPORT_CUSTODY_BYPASS="$TMP_DIR/custody-bypass-report.json"
+TMP_REPORT_QUORUM_PARITY_TAMPER="$TMP_DIR/quorum-parity-tamper-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -316,6 +317,12 @@ if report.get("rotation_preflight_reason_codes_csv") != "signer_key_source_contr
     raise SystemExit("expected deterministic rotation_preflight_reason_codes_csv marker")
 if report.get("rotation_preflight_reason_codes_value") != "none":
     raise SystemExit("expected rotation_preflight_reason_codes_value=none for GO deployment preflight report")
+if report.get("custody_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-custody-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic custody_reason_taxonomy_version marker")
+if report.get("custody_reason_codes_csv") != "custody_evidence_missing,custody_evidence_sha256_invalid,custody_evidence_file_missing,quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected":
+    raise SystemExit("expected deterministic custody_reason_codes_csv marker")
+if report.get("custody_reason_codes_value") != "none":
+    raise SystemExit("expected custody_reason_codes_value=none for GO deployment preflight report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
@@ -621,6 +628,54 @@ fi
 
 if ! grep -q "custody_continuity_bypass_detected" "$TMP_ERR"; then
   echo "expected custody_continuity_bypass_detected reason for deployment preflight custody continuity bypass failure" >&2
+  exit 1
+fi
+
+if ! grep -q "quorum_evidence_custody_sha256_mismatch" "$TMP_ERR"; then
+  echo "expected quorum_evidence_custody_sha256_mismatch reason for deployment preflight custody continuity bypass failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("custody_reason_codes_value") != "quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected":
+    raise SystemExit("expected custody reason mapping value to include deterministic quorum/custody bypass pair")
+PY
+
+python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_QUORUM_PARITY_TAMPER" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["quorum_evidence_approval_count"] = 1
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_QUORUM_PARITY_TAMPER" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-reason-code deployment_preflight_passed \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+quorum_parity_tamper_exit_code=$?
+set -e
+
+if [ "$quorum_parity_tamper_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when quorum evidence approval-count marker parity drifts" >&2
+  exit 1
+fi
+
+if ! grep -q "quorum_evidence_approval_count_mismatch" "$TMP_ERR"; then
+  echo "expected quorum_evidence_approval_count_mismatch reason for deployment preflight quorum marker parity failure" >&2
   exit 1
 fi
 
