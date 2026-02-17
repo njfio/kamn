@@ -71,6 +71,9 @@ required_markers=(
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
+  "request_payload_evidence_artifact_path_lineage_mismatch"
+  "submit_evidence_artifact_path_lineage_mismatch"
+  "finality_evidence_artifact_path_lineage_mismatch"
   "finality_retry_contract_version"
   "finality_retry_max_attempts"
   "finality_retry_backoff_seconds"
@@ -84,6 +87,9 @@ required_markers=(
   "submit_finality_reason_taxonomy_version"
   "submit_finality_reason_codes_csv"
   "submit_finality_reason_codes_value"
+  "provider_failure_reason_taxonomy_version"
+  "provider_failure_reason_codes_csv"
+  "provider_failure_reason_codes_value"
   "submit_finality_reason_mismatch_for_finality_enabled_run"
   "submit_finality_reason_mismatch_for_submit_only_run"
   "native_payload_pubkey_marker_present"
@@ -115,6 +121,9 @@ required_doc_markers=(
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
+  "request_payload_evidence_artifact_path_lineage_mismatch"
+  "submit_evidence_artifact_path_lineage_mismatch"
+  "finality_evidence_artifact_path_lineage_mismatch"
   "finality_retry_contract_version"
   "finality_retry_max_attempts"
   "finality_retry_backoff_seconds"
@@ -126,6 +135,9 @@ required_doc_markers=(
   "submit_finality_reason_taxonomy_version"
   "submit_finality_reason_codes_csv"
   "submit_finality_reason_codes_value"
+  "provider_failure_reason_taxonomy_version"
+  "provider_failure_reason_codes_csv"
+  "provider_failure_reason_codes_value"
   "submit_finality_reason_mismatch_for_finality_enabled_run"
   "submit_finality_reason_mismatch_for_submit_only_run"
   "native_payload_pubkey_marker_present"
@@ -237,12 +249,19 @@ if policy.get("submit_finality_reason_codes_csv") != "submit_finality_reason_mis
     raise SystemExit("expected deterministic submit_finality_reason_codes_csv in runtime-commit live finality evidence policy")
 if policy.get("submit_finality_reason_codes_value") != "none":
     raise SystemExit("expected submit_finality_reason_codes_value=none in runtime-commit live finality evidence policy")
+if policy.get("provider_failure_reason_taxonomy_version") != "kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1":
+    raise SystemExit("expected provider_failure_reason_taxonomy_version in runtime-commit live finality evidence policy")
+if policy.get("provider_failure_reason_codes_csv") != "provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected":
+    raise SystemExit("expected deterministic provider_failure_reason_codes_csv in runtime-commit live finality evidence policy")
+if policy.get("provider_failure_reason_codes_value") != "none":
+    raise SystemExit("expected provider_failure_reason_codes_value=none in runtime-commit live finality evidence policy")
 PY
 
 TMP_LINKAGE_DRIFT_REPORT="$(mktemp)"
+TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 python3 - "$TMP_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" <<'PY'
 import json
@@ -296,9 +315,54 @@ if ! grep -q "replay_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
   exit 1
 fi
 
+python3 - "$TMP_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+base_summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+drift_summary = dict(base_summary)
+drift_summary["request_payload_evidence_artifact_path"] = str(base_summary.get("finality_output_file", ""))
+drift_summary["submit_evidence_artifact_path"] = str(base_summary.get("finality_output_file", ""))
+drift_summary["finality_evidence_artifact_path"] = str(base_summary.get("live_output_file", ""))
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+lineage_cross_link_exit_code=$?
+set -e
+
+if [ "$lineage_cross_link_exit_code" -eq 0 ]; then
+  echo "expected checker to fail closed for submission/finality lineage cross-link drift" >&2
+  exit 1
+fi
+
+if ! grep -q "request_payload_evidence_artifact_path_lineage_mismatch" "$TMP_NEGATIVE_ERR"; then
+  echo "expected request_payload_evidence_artifact_path_lineage_mismatch reason in cross-link drift output" >&2
+  exit 1
+fi
+
+if ! grep -q "submit_evidence_artifact_path_lineage_mismatch" "$TMP_NEGATIVE_ERR"; then
+  echo "expected submit_evidence_artifact_path_lineage_mismatch reason in cross-link drift output" >&2
+  exit 1
+fi
+
+if ! grep -q "finality_evidence_artifact_path_lineage_mismatch" "$TMP_NEGATIVE_ERR"; then
+  echo "expected finality_evidence_artifact_path_lineage_mismatch reason in cross-link drift output" >&2
+  exit 1
+fi
+
 TMP_RETRY_DRIFT_REPORT="$(mktemp)"
 TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR" "$TMP_RETRY_DRIFT_REPORT" "$TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR" "$TMP_RETRY_DRIFT_REPORT" "$TMP_SUBMIT_FINALITY_REASON_DRIFT_REPORT"' EXIT
 
 python3 - "$TMP_REPORT" "$TMP_RETRY_DRIFT_REPORT" <<'PY'
 import json

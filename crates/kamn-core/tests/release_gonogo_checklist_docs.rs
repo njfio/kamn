@@ -375,6 +375,15 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("run_version_compatibility_replay_deep_lane.sh"));
     assert!(CHECKLIST.contains("fixtures/kolme_compatibility/version_compatibility_cases.json"));
     assert!(CHECKLIST.contains("fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"));
+    assert!(CHECKLIST.contains(
+        "provider_failure_reason_taxonomy_version=kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("provider_failure_reason_codes_csv=provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected"));
+    assert!(CHECKLIST.contains("request_payload_evidence_artifact_path_lineage_mismatch"));
+    assert!(CHECKLIST.contains("submit_evidence_artifact_path_lineage_mismatch"));
+    assert!(CHECKLIST.contains("finality_evidence_artifact_path_lineage_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4372"));
+    assert!(CHECKLIST.contains("Regression: #4378"));
 }
 
 #[test]
