@@ -1,6 +1,26 @@
 const DOC: &str = include_str!("../../../docs/ops/configuration.md");
 
 #[test]
+fn service_api_ops_configuration_contains_signer_secret_zeroization_controls() {
+    assert!(
+        DOC.contains("## Signer Secret Decode Buffer Zeroization Controls (Issues #4165, #4166)")
+    );
+    assert!(DOC.contains("signer_secret_source_precedence_zeroization_status=verified"));
+    assert!(DOC.contains("signer_private_key_parse_zeroization_status=verified"));
+    assert!(DOC.contains("signer_transient_key_material_zeroization_status=verified"));
+    assert!(DOC.contains("signer_secret_source_precedence_violation"));
+    assert!(DOC.contains("managed_signer_private_key_adapter_unsupported"));
+    assert!(DOC.contains(
+        "signer::tests::regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer"
+    ));
+    assert!(DOC.contains(
+        "signer::tests::unit_build_kolme_live_managed_signing_key_zeroizes_transient_key_material"
+    ));
+    assert!(DOC.contains("Regression: #4165"));
+    assert!(DOC.contains("Regression: #4166"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
     assert!(DOC.contains("## Async API Backpressure Failure Modes (Issue #4315)"));
     assert!(DOC.contains(
