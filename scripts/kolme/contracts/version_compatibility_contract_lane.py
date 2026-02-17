@@ -14,6 +14,9 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 VALIDATOR = ROOT_DIR / "scripts/kolme/validate_version_compatibility.py"
 FORK_EVIDENCE_GENERATOR = ROOT_DIR / "scripts/kolme/generate_fork_compatibility_evidence.py"
 FORK_POLICY_CHECKER = ROOT_DIR / "scripts/kolme/check_fork_compatibility_policy.py"
+MATRIX_POLICY_CHECKER = (
+    ROOT_DIR / "scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py"
+)
 REPLAY_RUNNER = ROOT_DIR / "scripts/kolme/run_version_compatibility_replay.py"
 RUNTIME_COMMIT_LANE = ROOT_DIR / "scripts/kolme/run_runtime_commit_contract_lane.sh"
 RUNTIME_COMMIT_REPLAY_LANE = ROOT_DIR / "scripts/kolme/run_runtime_commit_replay_contract_lane.sh"
@@ -33,12 +36,16 @@ FORK_FIXTURE_FILE = ROOT_DIR / "fixtures/kolme_compatibility/fork_compatibility_
 ROADMAP_DOC = ROOT_DIR / "docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
 CI_STRATEGY_DOC = ROOT_DIR / "docs/ci/strategy.md"
+OPS_CONFIG_DOC = ROOT_DIR / "docs/ops/configuration.md"
 MAX_SECONDS = 60
 VERSION_COMPAT_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.version-compatibility-reason-taxonomy.v1"
 )
 FORK_COMPAT_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.fork-compatibility-reason-taxonomy.v1"
+)
+UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
 )
 LIVE_HTTPS_POSTURE_REASON_TAXONOMY_VERSION = (
     "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
@@ -95,6 +102,11 @@ def main() -> int:
         "expected Kolme fork compatibility policy checker to be executable",
     ):
         return 1
+    if not require_executable(
+        MATRIX_POLICY_CHECKER,
+        "expected Kolme upgrade compatibility marker matrix checker to be executable",
+    ):
+        return 1
     if not require_executable(REPLAY_RUNNER, "expected Kolme version compatibility replay runner to be executable"):
         return 1
     if not require_executable(
@@ -139,8 +151,11 @@ def main() -> int:
     if not FORK_FIXTURE_FILE.is_file():
         print("expected Kolme fork compatibility fixture file to exist", file=sys.stderr)
         return 1
-    if not ROADMAP_DOC.is_file() or not GONOGO_DOC.is_file():
-        print("expected Kolme roadmap and release go/no-go docs to exist", file=sys.stderr)
+    if not ROADMAP_DOC.is_file() or not GONOGO_DOC.is_file() or not OPS_CONFIG_DOC.is_file():
+        print(
+            "expected Kolme roadmap, release go/no-go, and ops configuration docs to exist",
+            file=sys.stderr,
+        )
         return 1
 
     start_epoch = time.monotonic()
@@ -305,6 +320,44 @@ def main() -> int:
             print("expected fork policy checker bypass guard marker for GO path", file=sys.stderr)
             return 1
 
+        matrix_policy_go_code, matrix_policy_go_output = run_capture(
+            [
+                "python3",
+                str(MATRIX_POLICY_CHECKER),
+                "--version-report-file",
+                str(temp_path / "go-report.json"),
+                "--fork-policy-report-file",
+                str(temp_path / "fork-policy-go-report.json"),
+                "--expected-final-decision",
+                "GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--output-json",
+                str(temp_path / "compatibility-marker-matrix-go-report.json"),
+            ]
+        )
+        if matrix_policy_go_code != 0:
+            print(matrix_policy_go_output, file=sys.stderr)
+            return matrix_policy_go_code
+        if "final_decision=GO" not in matrix_policy_go_output:
+            print("expected compatibility marker matrix GO path to produce GO", file=sys.stderr)
+            return 1
+        if (
+            "reason_taxonomy_version="
+            f"{UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION}"
+        ) not in matrix_policy_go_output:
+            print(
+                "expected compatibility marker matrix checker taxonomy marker for GO path",
+                file=sys.stderr,
+            )
+            return 1
+        if "reason_codes_value=none" not in matrix_policy_go_output:
+            print(
+                "expected compatibility marker matrix checker reason_codes_value=none for GO path",
+                file=sys.stderr,
+            )
+            return 1
+
         fork_policy_no_go_code, fork_policy_no_go_output = run_capture(
             [
                 "python3",
@@ -332,6 +385,43 @@ def main() -> int:
             return fork_policy_no_go_code
         if "final_decision=GO" not in fork_policy_no_go_output:
             print("expected fork policy checker expected-NO-GO path to pass", file=sys.stderr)
+            return 1
+
+        tampered_version_report = temp_path / "go-report.version-schema-tampered.json"
+        version_payload = json.loads((temp_path / "go-report.json").read_text(encoding="utf-8"))
+        version_payload["schema_version"] = "kamn.kolme.version-compatibility-report.v0"
+        tampered_version_report.write_text(
+            json.dumps(version_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        matrix_policy_tampered_code, matrix_policy_tampered_output = run_capture(
+            [
+                "python3",
+                str(MATRIX_POLICY_CHECKER),
+                "--version-report-file",
+                str(tampered_version_report),
+                "--fork-policy-report-file",
+                str(temp_path / "fork-policy-go-report.json"),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--output-json",
+                str(temp_path / "compatibility-marker-matrix-tampered-report.json"),
+            ]
+        )
+        if matrix_policy_tampered_code == 0:
+            print(
+                "expected compatibility marker matrix checker to fail closed for tampered schema",
+                file=sys.stderr,
+            )
+            return 1
+        if "version_report_schema_mismatch" not in matrix_policy_tampered_output:
+            print(
+                "expected compatibility marker matrix checker to emit version_report_schema_mismatch",
+                file=sys.stderr,
+            )
             return 1
 
         replay_code, replay_output = run_capture(
@@ -522,6 +612,7 @@ def main() -> int:
     roadmap_doc_text = ROADMAP_DOC.read_text(encoding="utf-8")
     gonogo_doc_text = GONOGO_DOC.read_text(encoding="utf-8")
     ci_strategy_doc_text = CI_STRATEGY_DOC.read_text(encoding="utf-8")
+    ops_config_doc_text = OPS_CONFIG_DOC.read_text(encoding="utf-8")
     fast_gate_workflow_text = FAST_GATE_WORKFLOW.read_text(encoding="utf-8")
     ci_tools_fast_mode_block = extract_ci_tools_fast_mode_block(
         CI_TOOLS_SCRIPT.read_text(encoding="utf-8")
@@ -561,6 +652,30 @@ def main() -> int:
         return 1
     if "check_fork_compatibility_policy.py" not in gonogo_doc_text:
         print("expected release go/no-go doc to reference fork compatibility policy checker command", file=sys.stderr)
+        return 1
+    if "check_upgrade_compatibility_marker_matrix_policy.py" not in gonogo_doc_text:
+        print(
+            "expected release go/no-go doc to reference compatibility marker matrix checker command",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION not in gonogo_doc_text:
+        print(
+            "expected release go/no-go doc to reference compatibility marker matrix taxonomy marker",
+            file=sys.stderr,
+        )
+        return 1
+    if "check_upgrade_compatibility_marker_matrix_policy.py" not in ops_config_doc_text:
+        print(
+            "expected ops configuration doc to reference compatibility marker matrix checker command",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION not in ops_config_doc_text:
+        print(
+            "expected ops configuration doc to reference compatibility marker matrix taxonomy marker",
+            file=sys.stderr,
+        )
         return 1
     if (
         "retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."

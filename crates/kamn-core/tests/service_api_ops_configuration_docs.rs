@@ -197,6 +197,25 @@ fn service_api_ops_configuration_contains_full_stack_harness_marker_mismatch_con
 }
 
 #[test]
+fn service_api_ops_configuration_contains_upgrade_compatibility_marker_matrix_controls() {
+    assert!(DOC.contains("## Upgrade Compatibility Marker Matrix Controls (Issue #4181)"));
+    assert!(DOC.contains(
+        "check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json"
+    ));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed"
+    ));
+    assert!(DOC.contains("version_report_schema_mismatch"));
+    assert!(DOC.contains("fork_policy_report_reason_codes_csv_mismatch"));
+    assert!(DOC.contains("fork_policy_report_rehearsal_bypass_guard_status_mismatch"));
+    assert!(DOC.contains("Regression: #4180"));
+    assert!(DOC.contains("Regression: #4181"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_partition_healing_mismatch_mapping_controls() {
     assert!(DOC.contains(
         "### Block Reconciliation Partition-Healing Mismatch Mapping Contracts (Issues #4251, #4255, #4256)"

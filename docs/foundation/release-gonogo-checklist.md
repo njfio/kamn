@@ -921,6 +921,12 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/generate_fork_compatibility_evidence.py --upstream-release-tag v0.15.2 --fork-release-tag v0.15.2 --fork-repo njfio/kolme_fork --fork-ref refs/heads/main --ci-fast-gate PASS --output-json /tmp/kolme-fork-compatibility-report.json`
 - Fork compatibility policy checker:
   - `python3 scripts/kolme/check_fork_compatibility_policy.py --report-file /tmp/kolme-fork-compatibility-report.json --expected-upstream-release-tag v0.15.2 --expected-fork-release-tag v0.15.2 --expected-fork-repo njfio/kolme_fork --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fork-compatibility-policy-report.json`
+- Upgrade compatibility marker matrix checker:
+  - `python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json`
+  - deterministic matrix taxonomy markers:
+    - `reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1`
+    - `reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
+    - `reason_codes_value=none|version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
 - Replay matrix runner:
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
 - Runtime commit replay policy checker:
@@ -977,6 +983,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`).
   - fork release-tag drift remains blocked (`Regression: #1401`).
   - fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`).
+  - compatibility marker matrix checker rejects schema/taxonomy/rehearsal-marker drift (`Regression: #4180`).
+  - compatibility marker matrix command/taxonomy markers stay synchronized across release go/no-go and ops controls (`Regression: #4181`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
   - runtime commit replay recovery/nonce-idempotency taxonomy drift forces `NO-GO` (`Regression: #4422`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
