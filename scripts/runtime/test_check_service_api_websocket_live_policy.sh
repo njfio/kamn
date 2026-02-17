@@ -51,6 +51,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^service_api_websocket_policy_sta
   echo "expected websocket live policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected websocket live policy checker normalized reason_codes_value marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -68,6 +72,8 @@ if payload.get("service_api_websocket_policy_status") != "verified":
     raise SystemExit("expected service_api_websocket_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected policy checker success normalized reason_codes_value marker")
 if payload.get("websocket_lifecycle_reason_taxonomy_version") != "kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1":
     raise SystemExit("expected deterministic websocket_lifecycle_reason_taxonomy_version marker")
 if payload.get("websocket_lifecycle_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing":
@@ -137,6 +143,47 @@ if [ "$tampered_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'service_api_websocket_policy_websocket_lifecycle_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for websocket lifecycle taxonomy tamper" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q '^reason_codes_value=service_api_websocket_policy_websocket_lifecycle_reason_taxonomy_version_mismatch$'; then
+  echo "expected normalized reason_codes_value marker for websocket lifecycle taxonomy tamper" >&2
+  exit 1
+fi
+
+missing_required_field_report="$TMP_DIR/service-api-websocket-live-summary.required-field-missing.json"
+cp "$report_file" "$missing_required_field_report"
+python3 - "$missing_required_field_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("websocket_lifecycle_reason_codes_csv", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_required_field_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$missing_required_field_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-websocket-live-policy.required-field-missing.json" 2>&1
+)"
+missing_required_field_code=$?
+set -e
+
+if [ "$missing_required_field_code" -eq 0 ]; then
+  echo "expected missing required websocket field tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_required_field_output" | grep -q 'service_api_websocket_policy_required_field_missing:websocket_lifecycle_reason_codes_csv'; then
+  echo "expected deterministic required-field reason code for missing websocket_lifecycle_reason_codes_csv" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_required_field_output" | grep -q '^reason_codes_value=.*service_api_websocket_policy_required_field_missing:websocket_lifecycle_reason_codes_csv'; then
+  echo "expected normalized reason_codes_value output to include missing required websocket field reason code" >&2
   exit 1
 fi
 

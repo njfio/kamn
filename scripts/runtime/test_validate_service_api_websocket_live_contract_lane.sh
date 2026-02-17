@@ -61,6 +61,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^websocket_reason_registry_status=v
   echo "expected websocket reason registry status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^protocol_session_docs_contract_status=verified$'; then
+  echo "expected protocol/session docs contract status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1$'; then
+  echo "expected protocol/session reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing$'; then
+  echo "expected protocol/session reason taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1$'; then
   echo "expected websocket lifecycle reason taxonomy marker" >&2
   exit 1
@@ -98,6 +110,12 @@ if lane_payload.get("websocket_idle_timeout_contract_status") != "verified":
     raise SystemExit("expected websocket_idle_timeout_contract_status=verified")
 if lane_payload.get("websocket_reason_registry_status") != "verified":
     raise SystemExit("expected websocket_reason_registry_status=verified")
+if lane_payload.get("protocol_session_docs_contract_status") != "verified":
+    raise SystemExit("expected protocol_session_docs_contract_status=verified")
+if lane_payload.get("service_api_protocol_session_reason_taxonomy_version") != "kamn.runtime.service-api.protocol-session-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_protocol_session_reason_taxonomy_version marker")
+if lane_payload.get("service_api_protocol_session_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing":
+    raise SystemExit("expected deterministic service_api_protocol_session_reason_codes_csv marker")
 if lane_payload.get("websocket_lifecycle_reason_taxonomy_version") != "kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1":
     raise SystemExit("expected deterministic websocket_lifecycle_reason_taxonomy_version marker")
 if lane_payload.get("websocket_lifecycle_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing":
@@ -114,6 +132,8 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected websocket policy final_decision=GO")
 if policy_payload.get("service_api_websocket_policy_status") != "verified":
     raise SystemExit("expected service_api_websocket_policy_status=verified in policy report")
+if policy_payload.get("reason_codes_value") != "none":
+    raise SystemExit("expected policy reason_codes_value=none marker in policy report")
 if policy_payload.get("websocket_lifecycle_reason_taxonomy_version") != "kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1":
     raise SystemExit("expected deterministic websocket_lifecycle_reason_taxonomy_version marker in policy report")
 if policy_payload.get("websocket_lifecycle_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing":
