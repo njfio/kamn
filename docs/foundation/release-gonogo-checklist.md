@@ -927,6 +927,11 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
     - `reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1`
     - `reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
     - `reason_codes_value=none|version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
+  - deterministic runbook parity markers:
+    - `upgrade_compatibility_runbook_marker_parity_status=verified`
+    - `upgrade_compatibility_runbook_reason_taxonomy_version=kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1`
+    - `upgrade_compatibility_runbook_reason_codes_csv=upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+    - `upgrade_compatibility_runbook_reason_code=none|<reason>`
 - Replay matrix runner:
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
 - Runtime commit replay policy checker:
@@ -985,6 +990,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`).
   - compatibility marker matrix checker rejects schema/taxonomy/rehearsal-marker drift (`Regression: #4180`).
   - compatibility marker matrix command/taxonomy markers stay synchronized across release go/no-go and ops controls (`Regression: #4181`).
+  - upgrade compatibility runbook taxonomy mapping and marker parity drift force `NO-GO` (`upgrade_compatibility_taxonomy_mapping_drift_detected`, `runbook_marker_parity_mismatch`) (`Regression: #4182`).
+  - upgrade compatibility runbook marker parity command/taxonomy drift remains fail-closed (`Regression: #4183`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
   - runtime commit replay recovery/nonce-idempotency taxonomy drift forces `NO-GO` (`Regression: #4422`).
   - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).

@@ -183,6 +183,36 @@ fn plan_contains_r27_22_full_stack_ci_smoke_governance_closure_markers() {
 }
 
 #[test]
+fn deploy_compat_contains_kolme_upgrade_compatibility_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed"
+    ));
+    assert!(DEPLOY_COMPAT.contains("upgrade_compatibility_runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "upgrade_compatibility_runbook_reason_taxonomy_version=kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "upgrade_compatibility_runbook_reason_codes_csv=upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("upgrade_compatibility_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains(
+        "python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains("bash scripts/kolme/run_version_compatibility_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT
+        .contains("bash scripts/kolme/test_run_version_compatibility_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4182"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4183"));
+}
+
+#[test]
 fn deploy_compat_contains_local_full_stack_harness_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)"

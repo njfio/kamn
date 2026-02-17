@@ -927,6 +927,16 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains(
         "reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed"
     ));
+    assert!(CHECKLIST.contains("upgrade_compatibility_runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "upgrade_compatibility_runbook_reason_taxonomy_version=kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "upgrade_compatibility_runbook_reason_codes_csv=upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("upgrade_compatibility_runbook_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("upgrade_compatibility_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
     assert!(CHECKLIST.contains("version_report_schema_mismatch"));
     assert!(CHECKLIST.contains("fork_policy_report_rehearsal_bypass_guard_status_mismatch"));
     assert!(CHECKLIST.contains("expected_final_decision_mismatch"));
@@ -949,6 +959,8 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("Regression: #4380"));
     assert!(CHECKLIST.contains("Regression: #4180"));
     assert!(CHECKLIST.contains("Regression: #4181"));
+    assert!(CHECKLIST.contains("Regression: #4182"));
+    assert!(CHECKLIST.contains("Regression: #4183"));
 }
 
 #[test]
