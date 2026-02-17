@@ -724,6 +724,28 @@ fn checklist_contains_live_gonogo_convergence_boundary_governance_gate() {
 }
 
 #[test]
+fn checklist_contains_local_full_stack_harness_runbook_parity_gate() {
+    assert!(CHECKLIST
+        .contains("## Local Full-Stack Harness Taxonomy and Runbook Parity Gate (Issue #4198)"));
+    assert!(CHECKLIST.contains("validate_local_full_stack_integration_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains(
+        "check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/local-full-stack-integration-policy.json"
+    ));
+    assert!(CHECKLIST.contains("local_full_stack_harness_runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("local_full_stack_harness_runbook_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("local_full_stack_harness_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4197"));
+    assert!(CHECKLIST.contains("Regression: #4198"));
+}
+
+#[test]
 fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
     assert!(CHECKLIST.contains("staging_rehearsal_contract.py"));

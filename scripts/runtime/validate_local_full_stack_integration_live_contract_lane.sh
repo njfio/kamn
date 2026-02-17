@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_full_stack_integration_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_full_stack_integration_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
 output_json=""
 policy_output_json=""
@@ -16,6 +17,7 @@ kolme_expected_remote_url="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_EXPECTED_RE
 kolme_expected_ref="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_EXPECTED_REF:-refs/heads/main}"
 kolme_base_url="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_BASE_URL:-http://127.0.0.1:3000}"
 kolme_fork_chain_version="${KAMN_LOCAL_FULL_STACK_INTEGRATION_KOLME_FORK_CHAIN_VERSION:-v0.15.2}"
+runbook_file="${KAMN_LOCAL_FULL_STACK_INTEGRATION_RUNBOOK_FILE:-$RUNBOOK_DOC}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -59,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       kolme_fork_chain_version="${2:-}"
       shift 2
       ;;
+    --runbook-file)
+      runbook_file="${2:-}"
+      shift 2
+      ;;
     *)
       echo "unknown argument: $1" >&2
       exit 1
@@ -95,6 +101,10 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
 done
 if [ ! -f "$STRATEGY_DOC" ]; then
   echo "expected required documentation file '$STRATEGY_DOC'" >&2
+  exit 1
+fi
+if [ ! -f "$runbook_file" ]; then
+  echo "expected required runbook file '$runbook_file'" >&2
   exit 1
 fi
 
@@ -259,6 +269,7 @@ policy_output="$(
     --report-file "$summary_report" \
     --expected-final-decision GO \
     --ci-fast-gate "$ci_fast_gate" \
+    --runbook-file "$runbook_file" \
     --output-json "$policy_report"
 )"
 if ! printf '%s\n' "$policy_output" | grep -q '^status=ok$'; then
@@ -279,6 +290,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.run
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded$'; then
   echo "expected local full-stack integration policy checker reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^local_full_stack_harness_runbook_marker_parity_status=verified$'; then
+  echo "expected local full-stack integration policy checker runbook parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration policy checker runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected local full-stack integration policy checker runbook reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^local_full_stack_harness_runbook_reason_code=none$'; then
+  echo "expected local full-stack integration policy checker runbook normalized reason marker" >&2
   exit 1
 fi
 
@@ -617,6 +644,22 @@ lane_report = {
         "runtime_module_boundary_reason_codes_value",
         "",
     ),
+    "local_full_stack_harness_runbook_marker_parity_status": policy_report.get(
+        "local_full_stack_harness_runbook_marker_parity_status",
+        "",
+    ),
+    "local_full_stack_harness_runbook_reason_taxonomy_version": policy_report.get(
+        "local_full_stack_harness_runbook_reason_taxonomy_version",
+        "",
+    ),
+    "local_full_stack_harness_runbook_reason_codes_csv": policy_report.get(
+        "local_full_stack_harness_runbook_reason_codes_csv",
+        "",
+    ),
+    "local_full_stack_harness_runbook_reason_code": policy_report.get(
+        "local_full_stack_harness_runbook_reason_code",
+        "",
+    ),
     "runtime_phase_module_parity_status": summary_report.get(
         "runtime_phase_module_parity_status",
         "unknown",
@@ -729,6 +772,10 @@ echo "runtime_module_boundary_reason_taxonomy_version=kamn.runtime.module-bounda
 echo "runtime_module_boundary_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
 echo "runtime_module_boundary_reason_codes_value=none"
 echo "runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status"
+echo "local_full_stack_harness_runbook_marker_parity_status=verified"
+echo "local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1"
+echo "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+echo "local_full_stack_harness_runbook_reason_code=none"
 echo "combined_transport_reason_codes=fork_choice_stale_block_height"
 if [[ "$mode" == "run" ]]; then
   echo "combined_kolme_runtime_reason_code=live_runtime_integration_passed"

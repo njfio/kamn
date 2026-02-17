@@ -28,42 +28,6 @@ if [ ! -f "$RUNBOOK_DOC" ]; then
   exit 1
 fi
 
-check_local_full_stack_runbook_parity() {
-  local runbook_file="${1:?runbook file is required}"
-  python3 - "$runbook_file" <<'PY'
-import pathlib
-import sys
-
-runbook_file = pathlib.Path(sys.argv[1])
-runbook = runbook_file.read_text(encoding="utf-8")
-
-required_taxonomy_markers = [
-    "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)",
-    "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
-    "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1",
-    "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded",
-    "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1",
-    "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded",
-]
-missing_taxonomy_markers = [
-    marker for marker in required_taxonomy_markers if marker not in runbook
-]
-if missing_taxonomy_markers:
-    raise SystemExit("local_full_stack_harness_taxonomy_mapping_drift_detected")
-
-required_runbook_parity_markers = [
-    "runtime_phase_module_parity_status=verified",
-    "runtime_module_boundary_parity_status=verified",
-    "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch",
-]
-missing_parity_markers = [
-    marker for marker in required_runbook_parity_markers if marker not in runbook
-]
-if missing_parity_markers:
-    raise SystemExit("runbook_marker_parity_mismatch")
-PY
-}
-
 lane_report="$TMP_DIR/local-full-stack-integration-contract-lane-report.json"
 policy_report="$TMP_DIR/local-full-stack-integration-policy-report.json"
 
@@ -71,6 +35,7 @@ lane_output="$(
   bash "$CONTRACT_LANE" \
     --mode dry-run \
     --max-seconds 120 \
+    --runbook-file "$RUNBOOK_DOC" \
     --output-json "$lane_report" \
     --policy-output-json "$policy_report"
 )"
@@ -250,6 +215,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^runtime_phase_parity_evidence_outp
   echo "expected local full-stack integration contract lane parity evidence output normalization marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_full_stack_harness_runbook_marker_parity_status=verified$'; then
+  echo "expected local full-stack integration contract lane runbook parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1$'; then
+  echo "expected local full-stack integration contract lane runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected local full-stack integration contract lane runbook reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_full_stack_harness_runbook_reason_code=none$'; then
+  echo "expected local full-stack integration contract lane runbook normalized reason marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
   echo "expected local full-stack integration contract lane combined transport reason marker" >&2
   exit 1
@@ -414,6 +395,14 @@ if lane_payload.get("runtime_module_boundary_reason_codes_value") != "none":
     raise SystemExit("expected runtime_module_boundary_reason_codes_value=none marker")
 if lane_payload.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
     raise SystemExit("expected runtime_phase_parity_evidence_outputs_csv marker")
+if lane_payload.get("local_full_stack_harness_runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected local_full_stack_harness_runbook_marker_parity_status=verified")
+if lane_payload.get("local_full_stack_harness_runbook_reason_taxonomy_version") != "kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected local_full_stack_harness_runbook_reason_taxonomy_version marker")
+if lane_payload.get("local_full_stack_harness_runbook_reason_codes_csv") != "local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected local_full_stack_harness_runbook_reason_codes_csv marker")
+if lane_payload.get("local_full_stack_harness_runbook_reason_code") != "none":
+    raise SystemExit("expected local_full_stack_harness_runbook_reason_code=none marker")
 if lane_payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected combined_transport_reason_codes marker")
 if lane_payload.get("combined_kolme_runtime_reason_code") != "not_run":
@@ -474,9 +463,15 @@ if policy_payload.get("runtime_module_boundary_reason_codes_value") != "none":
     raise SystemExit("expected policy runtime_module_boundary_reason_codes_value=none marker")
 if policy_payload.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
     raise SystemExit("expected policy runtime_module_boundary_evidence_outputs_csv marker")
+if policy_payload.get("local_full_stack_harness_runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected policy local_full_stack_harness_runbook_marker_parity_status=verified")
+if policy_payload.get("local_full_stack_harness_runbook_reason_taxonomy_version") != "kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected policy local_full_stack_harness_runbook_reason_taxonomy_version marker")
+if policy_payload.get("local_full_stack_harness_runbook_reason_codes_csv") != "local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected policy local_full_stack_harness_runbook_reason_codes_csv marker")
+if policy_payload.get("local_full_stack_harness_runbook_reason_code") != "none":
+    raise SystemExit("expected policy local_full_stack_harness_runbook_reason_code=none marker")
 PY
-
-check_local_full_stack_runbook_parity "$RUNBOOK_DOC"
 
 runbook_taxonomy_drift_file="$TMP_DIR/kolme-devnet-ops.taxonomy-drift.md"
 cp "$RUNBOOK_DOC" "$runbook_taxonomy_drift_file"
@@ -495,7 +490,10 @@ PY
 
 set +e
 runbook_taxonomy_drift_output="$(
-  check_local_full_stack_runbook_parity "$runbook_taxonomy_drift_file" 2>&1
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --max-seconds 120 \
+    --runbook-file "$runbook_taxonomy_drift_file" 2>&1
 )"
 runbook_taxonomy_drift_code=$?
 set -e
@@ -526,7 +524,10 @@ PY
 
 set +e
 runbook_marker_divergence_output="$(
-  check_local_full_stack_runbook_parity "$runbook_marker_divergence_file" 2>&1
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --max-seconds 120 \
+    --runbook-file "$runbook_marker_divergence_file" 2>&1
 )"
 runbook_marker_divergence_code=$?
 set -e

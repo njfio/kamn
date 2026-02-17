@@ -692,6 +692,26 @@ CI smoke/local-heavy boundary governance.
   - mismatch/tamper and partial evidence acceptance drift force `NO-GO` (`Regression: #4441`).
   - CI smoke/local-heavy boundary drift forces `NO-GO` (`Regression: #4442`).
 
+## Local Full-Stack Harness Taxonomy and Runbook Parity Gate (Issue #4198)
+Local full-stack runtime/transport/consensus contract verification must fail closed when checker
+taxonomy markers drift from runbook marker declarations.
+
+- Contract-lane command:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --mode dry-run --max-seconds 120 --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy-report.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/local-full-stack-integration-policy.json`
+- Required deterministic runbook parity markers:
+  - `local_full_stack_harness_runbook_marker_parity_status=verified`
+  - `local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1`
+  - `local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+  - `local_full_stack_harness_runbook_reason_code=none|<reason>`
+- Fail-closed runbook drift reasons:
+  - `local_full_stack_harness_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
+- Regression policy:
+  - runbook taxonomy marker drift forces `NO-GO` (`Regression: #4197`).
+  - runbook marker parity divergence in checker/lane integration forces `NO-GO` (`Regression: #4198`).
+
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.
 

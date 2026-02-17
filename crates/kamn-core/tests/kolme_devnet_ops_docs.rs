@@ -153,16 +153,27 @@ fn deploy_compat_contains_local_full_stack_harness_taxonomy_runbook_parity_marke
     ));
     assert!(DEPLOY_COMPAT.contains("runtime_phase_module_parity_status=verified"));
     assert!(DEPLOY_COMPAT.contains("runtime_module_boundary_parity_status=verified"));
+    assert!(
+        DEPLOY_COMPAT.contains("local_full_stack_harness_runbook_marker_parity_status=verified")
+    );
+    assert!(DEPLOY_COMPAT.contains(
+        "local_full_stack_harness_runbook_reason_taxonomy_version=kamn.runtime.local-full-stack-harness-runbook-reason-taxonomy.v1"
+    ));
     assert!(DEPLOY_COMPAT.contains(
         "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
     ));
+    assert!(DEPLOY_COMPAT.contains("local_full_stack_harness_runbook_reason_code=none|<reason>"));
     assert!(DEPLOY_COMPAT.contains("local_full_stack_harness_taxonomy_mapping_drift_detected"));
     assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/local-full-stack-integration-policy.json"
+    ));
     assert!(DEPLOY_COMPAT.contains("test_check_local_full_stack_integration_live_policy.sh"));
     assert!(
         DEPLOY_COMPAT.contains("test_validate_local_full_stack_integration_live_contract_lane.sh")
     );
     assert!(DEPLOY_COMPAT.contains("Regression: #4197"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4198"));
 }
 
 #[test]
