@@ -1,6 +1,6 @@
 # Spec — #4259 Subtask: Red Tests for Finality Evidence Convergence Completeness and Tamper Rejection
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4253
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

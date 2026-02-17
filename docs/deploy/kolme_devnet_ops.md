@@ -103,19 +103,32 @@ Required checker/runbook parity markers:
 - `convergence_reason_codes_csv=fork_choice_stale_block_height`
 - `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`
 - `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `promotion_decision_reason_mapping_status=verified`
+- `promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1`
+- `promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation`
+- `promotion_decision_reason_code=none|<reason>`
+- `libp2p_finality_evidence_convergence_status=verified`
+- `libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1`
+- `libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch`
 
 Fail-closed drift reasons:
 
 - `finality_taxonomy_mapping_drift_detected`
 - `runbook_marker_parity_mismatch`
+- `libp2p_finality_evidence_link_missing:source_report_file`
+- `libp2p_finality_evidence_payload_tamper_detected:<field>`
+- `libp2p_finality_promotion_decision_reason_mapping_mismatch`
 
 Validation commands:
 
 - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
-- `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+- `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_evidence_convergence.sh --report-file /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-file /tmp/libp2p-convergence-process-isolated-live-policy.json --output-json /tmp/libp2p-convergence-process-isolated-live-convergence-report.json`
+- `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json --summary-output-json /tmp/libp2p-convergence-process-isolated-live-summary.json --convergence-output-json /tmp/libp2p-convergence-process-isolated-live-convergence-report.json`
 
 - `Regression: #4257`
 - `Regression: #4258`
+- `Regression: #4259`
+- `Regression: #4260`
 
 ## TLS Dependency-Posture Compatibility Markers
 

@@ -1,6 +1,6 @@
 # Plan — #4260 Deterministic Finality Evidence Verifier + Promotion Reason Mapping
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

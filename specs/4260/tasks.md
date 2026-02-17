@@ -1,6 +1,6 @@
 # Tasks — #4260 Finality Evidence Verifier + Promotion Reason Mapping
 
-Status: Reviewed
+Status: Implemented
 
 - T1: implement promotion decision reason mapping markers in policy checker output.
 - T2: implement evidence convergence checker command and shell wrapper.

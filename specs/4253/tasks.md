@@ -1,6 +1,6 @@
 # Tasks — #4253 Finality Evidence Convergence Checker
 
-Status: Reviewed
+Status: Implemented
 
 - T1 (Conformance/Regression): add red tests for missing-link, payload tamper, and promotion-reason mapping drift (`#4259`).
 - T2 (Implementation): add deterministic promotion reason mapping and evidence-convergence subcommand (`#4260`).

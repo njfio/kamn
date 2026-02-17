@@ -1,6 +1,6 @@
 # Plan — #4259 Red Tests for Finality Evidence Convergence
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

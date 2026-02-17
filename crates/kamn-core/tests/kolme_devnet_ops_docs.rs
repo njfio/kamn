@@ -148,10 +148,55 @@ fn deploy_compat_contains_fork_choice_finality_taxonomy_runbook_parity_markers()
     assert!(DEPLOY_COMPAT.contains(
         "check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json"
     ));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_libp2p_convergence_process_isolated_live_evidence_convergence.sh --report-file /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-file /tmp/libp2p-convergence-process-isolated-live-policy.json --output-json /tmp/libp2p-convergence-process-isolated-live-convergence-report.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation"
+    ));
+    assert!(DEPLOY_COMPAT.contains("libp2p_finality_evidence_convergence_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("libp2p_finality_evidence_link_missing:source_report_file"));
+    assert!(DEPLOY_COMPAT.contains("libp2p_finality_promotion_decision_reason_mapping_mismatch"));
     assert!(DEPLOY_COMPAT
         .contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh"));
     assert!(DEPLOY_COMPAT.contains("Regression: #4257"));
     assert!(DEPLOY_COMPAT.contains("Regression: #4258"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4259"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4260"));
+}
+
+#[test]
+fn plan_contains_fork_choice_finality_evidence_convergence_contract() {
+    assert!(PLAN.contains(
+        "## Fork-Choice Finality Evidence Convergence and Promotion Reason Mapping Contract (Issue #4253)"
+    ));
+    assert!(PLAN.contains(
+        "check_libp2p_convergence_process_isolated_live_evidence_convergence.sh --report-file /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-file /tmp/libp2p-convergence-process-isolated-live-policy.json --output-json /tmp/libp2p-convergence-process-isolated-live-convergence-report.json"
+    ));
+    assert!(PLAN.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(PLAN.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains("libp2p_finality_evidence_convergence_status=verified"));
+    assert!(PLAN.contains(
+        "libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(PLAN.contains(
+        "libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(PLAN.contains("libp2p_finality_evidence_link_missing:source_report_file"));
+    assert!(PLAN.contains("libp2p_finality_promotion_decision_reason_mapping_mismatch"));
+    assert!(PLAN.contains("Regression: #4259"));
+    assert!(PLAN.contains("Regression: #4260"));
 }
 
 #[test]

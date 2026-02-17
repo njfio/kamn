@@ -1,6 +1,6 @@
 # Spec — #4253 Task: Finality Evidence Convergence Checker Across Partition Lane and Promotion Artifacts
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4250
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance

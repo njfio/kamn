@@ -1,6 +1,6 @@
 # Plan — #4253 Finality Evidence Convergence Checker
 
-Status: Reviewed
+Status: Implemented
 
 ## Approach
 

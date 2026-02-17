@@ -129,6 +129,8 @@ Regression marker:
   marker taxonomy and stale-height reason-code coverage deterministic.
 - `Regression: #4257` keeps finality taxonomy drift fail-closed behavior deterministic.
 - `Regression: #4258` keeps runbook parity marker drift fail-closed behavior deterministic.
+- `Regression: #4259` keeps finality evidence-link convergence fail-closed behavior deterministic.
+- `Regression: #4260` keeps promotion decision reason mapping parity fail-closed behavior deterministic.
 
 ## Validation Commands
 
@@ -155,6 +157,7 @@ scripts/runtime/validate_block_pipeline_live.sh
 scripts/runtime/test_validate_block_pipeline_live.sh
 scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh
 scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh
+scripts/runtime/check_libp2p_convergence_process_isolated_live_evidence_convergence.sh
 scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh
 ```
 
@@ -174,6 +177,11 @@ Expected live markers:
 - `runbook_marker_parity_status=verified`
 - `finality_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-taxonomy-runbook-reason-taxonomy.v1`
 - `finality_taxonomy_runbook_reason_codes_csv=finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `promotion_decision_reason_taxonomy_version=kamn.runtime.libp2p-process-isolated-convergence-promotion-decision-reason-taxonomy.v1`
+- `promotion_decision_reason_codes_csv=libp2p_process_isolated_convergence_policy_required_field_missing,libp2p_process_isolated_convergence_policy_marker_missing,libp2p_process_isolated_convergence_policy_reason_taxonomy_mismatch,libp2p_process_isolated_convergence_policy_runtime_mode_contract_mismatch,finality_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,libp2p_process_isolated_convergence_policy_expected_decision_mismatch,libp2p_process_isolated_convergence_policy_violation`
+- `libp2p_finality_evidence_convergence_status=verified`
+- `libp2p_finality_evidence_reason_taxonomy_version=kamn.runtime.libp2p-fork-choice-finality-evidence-convergence-reason-taxonomy.v1`
+- `libp2p_finality_evidence_reason_codes_csv=libp2p_finality_evidence_link_missing,libp2p_finality_evidence_payload_tamper_detected,libp2p_finality_promotion_decision_reason_mapping_mismatch`
 - `transport_classification_normalization_status=verified`
 - `fork_choice_stale_height_classification_status=verified`
 - `convergence_reason_codes=fork_choice_stale_block_height`

@@ -1,6 +1,6 @@
 # Tasks — #4259 Red Tests for Finality Evidence Convergence
 
-Status: Reviewed
+Status: Implemented
 
 - T1: add new convergence checker test harness script with GO and tamper cases.
 - T2: extend contract-lane test for convergence markers.

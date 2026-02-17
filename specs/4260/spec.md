@@ -1,6 +1,6 @@
 # Spec — #4260 Subtask: Implement Finality Evidence Convergence Verifier and Deterministic Promotion Decision Reason Mapping
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4253
 Milestone: R27.26 Multi-node partition-healing and finality-convergence governance
