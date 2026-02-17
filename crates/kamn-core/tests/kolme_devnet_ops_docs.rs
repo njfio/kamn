@@ -132,6 +132,40 @@ fn plan_contains_sqlite_crash_replay_evidence_convergence_contract() {
 }
 
 #[test]
+fn deploy_compat_contains_local_full_stack_harness_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+    ));
+    assert!(DEPLOY_COMPAT.contains("runtime_phase_module_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("runtime_module_boundary_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("local_full_stack_harness_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("test_check_local_full_stack_integration_live_policy.sh"));
+    assert!(
+        DEPLOY_COMPAT.contains("test_validate_local_full_stack_integration_live_contract_lane.sh")
+    );
+    assert!(DEPLOY_COMPAT.contains("Regression: #4197"));
+}
+
+#[test]
 fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT
         .contains("## Drift Taxonomy and Runbook Marker Parity Contracts (Issue #4282)"));

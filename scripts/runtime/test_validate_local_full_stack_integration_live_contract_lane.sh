@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_full_stack_integration_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_full_stack_integration_live_policy.sh"
+RUNBOOK_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
+RUNBOOK_TAXONOMY_REASON_CODE="local_full_stack_harness_taxonomy_mapping_drift_detected"
+RUNBOOK_MARKER_PARITY_REASON_CODE="runbook_marker_parity_mismatch"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -20,6 +23,46 @@ if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected local full-stack integration policy checker script to be executable" >&2
   exit 1
 fi
+if [ ! -f "$RUNBOOK_DOC" ]; then
+  echo "expected local full-stack integration runbook doc to exist" >&2
+  exit 1
+fi
+
+check_local_full_stack_runbook_parity() {
+  local runbook_file="${1:?runbook file is required}"
+  python3 - "$runbook_file" <<'PY'
+import pathlib
+import sys
+
+runbook_file = pathlib.Path(sys.argv[1])
+runbook = runbook_file.read_text(encoding="utf-8")
+
+required_taxonomy_markers = [
+    "## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)",
+    "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+    "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1",
+    "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded",
+    "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1",
+    "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded",
+]
+missing_taxonomy_markers = [
+    marker for marker in required_taxonomy_markers if marker not in runbook
+]
+if missing_taxonomy_markers:
+    raise SystemExit("local_full_stack_harness_taxonomy_mapping_drift_detected")
+
+required_runbook_parity_markers = [
+    "runtime_phase_module_parity_status=verified",
+    "runtime_module_boundary_parity_status=verified",
+    "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch",
+]
+missing_parity_markers = [
+    marker for marker in required_runbook_parity_markers if marker not in runbook
+]
+if missing_parity_markers:
+    raise SystemExit("runbook_marker_parity_mismatch")
+PY
+}
 
 lane_report="$TMP_DIR/local-full-stack-integration-contract-lane-report.json"
 policy_report="$TMP_DIR/local-full-stack-integration-policy-report.json"
@@ -432,6 +475,69 @@ if policy_payload.get("runtime_module_boundary_reason_codes_value") != "none":
 if policy_payload.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
     raise SystemExit("expected policy runtime_module_boundary_evidence_outputs_csv marker")
 PY
+
+check_local_full_stack_runbook_parity "$RUNBOOK_DOC"
+
+runbook_taxonomy_drift_file="$TMP_DIR/kolme-devnet-ops.taxonomy-drift.md"
+cp "$RUNBOOK_DOC" "$runbook_taxonomy_drift_file"
+python3 - "$runbook_taxonomy_drift_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = path.read_text(encoding="utf-8")
+payload = payload.replace(
+    "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+    "combined_reason_taxonomy_version=v0",
+)
+path.write_text(payload, encoding="utf-8")
+PY
+
+set +e
+runbook_taxonomy_drift_output="$(
+  check_local_full_stack_runbook_parity "$runbook_taxonomy_drift_file" 2>&1
+)"
+runbook_taxonomy_drift_code=$?
+set -e
+if [ "$runbook_taxonomy_drift_code" -eq 0 ]; then
+  echo "expected runbook taxonomy drift to fail local full-stack runbook parity check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_taxonomy_drift_output" | grep -q "$RUNBOOK_TAXONOMY_REASON_CODE"; then
+  echo "expected deterministic runbook taxonomy drift reason marker" >&2
+  exit 1
+fi
+
+runbook_marker_divergence_file="$TMP_DIR/kolme-devnet-ops.runbook-divergence.md"
+cp "$RUNBOOK_DOC" "$runbook_marker_divergence_file"
+python3 - "$runbook_marker_divergence_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = path.read_text(encoding="utf-8")
+payload = payload.replace(
+    "local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch",
+    "",
+    1,
+)
+path.write_text(payload, encoding="utf-8")
+PY
+
+set +e
+runbook_marker_divergence_output="$(
+  check_local_full_stack_runbook_parity "$runbook_marker_divergence_file" 2>&1
+)"
+runbook_marker_divergence_code=$?
+set -e
+if [ "$runbook_marker_divergence_code" -eq 0 ]; then
+  echo "expected runbook marker divergence to fail local full-stack runbook parity check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_marker_divergence_output" | grep -q "$RUNBOOK_MARKER_PARITY_REASON_CODE"; then
+  echo "expected deterministic runbook marker divergence reason marker" >&2
+  exit 1
+fi
 
 if ! grep -q "check_local_full_stack_integration_live_policy.sh" "$CONTRACT_LANE"; then
   echo "expected local full-stack integration contract lane to compose policy checker" >&2

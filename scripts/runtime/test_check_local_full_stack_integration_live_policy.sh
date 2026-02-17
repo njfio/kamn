@@ -8,6 +8,10 @@ TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"' EXIT
 
+EXPECTED_RUNTIME_PHASE_REASON_TAXONOMY_VERSION="kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
+EXPECTED_RUNTIME_PHASE_REASON_CODES_CSV="runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+EXPECTED_RUNTIME_MODULE_BOUNDARY_REASON_CODES_CSV="runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+
 if [ ! -x "$POLICY_SCRIPT" ]; then
   echo "expected local full-stack integration policy script to be executable" >&2
   exit 1
@@ -331,6 +335,113 @@ if [ "$tampered_reason_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_reason_taxonomy_output" | grep -q 'local_full_stack_integration_policy_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic reason marker for tampered combined reason taxonomy version" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_phase_parity_reason_taxonomy_version"] = "v0"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_runtime_phase_reason_taxonomy_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_runtime_phase_reason_taxonomy_code=$?
+set -e
+if [ "$tampered_runtime_phase_reason_taxonomy_code" -eq 0 ]; then
+  echo "expected runtime phase parity reason taxonomy drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_phase_reason_taxonomy_output" | grep -q 'local_full_stack_integration_policy_runtime_phase_parity_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic reason marker for runtime phase parity reason taxonomy drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_phase_reason_taxonomy_output" | grep -q '^reason_codes_value=runtime_extraction_evidence_output_unstable$'; then
+  echo "expected normalized reason mapping for runtime phase parity reason taxonomy drift" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" "$EXPECTED_RUNTIME_PHASE_REASON_CODES_CSV" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_phase_parity_reason_codes_csv"] = expected.split(",")[0]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_runtime_phase_reason_codes_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_runtime_phase_reason_codes_code=$?
+set -e
+if [ "$tampered_runtime_phase_reason_codes_code" -eq 0 ]; then
+  echo "expected runtime phase parity reason code drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_phase_reason_codes_output" | grep -q 'local_full_stack_integration_policy_runtime_phase_parity_reason_codes_csv_mismatch'; then
+  echo "expected deterministic reason marker for runtime phase parity reason code drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_phase_reason_codes_output" | grep -q '^reason_codes_value=runtime_extraction_evidence_output_unstable$'; then
+  echo "expected normalized reason mapping for runtime phase parity reason code drift" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" "$EXPECTED_RUNTIME_MODULE_BOUNDARY_REASON_CODES_CSV" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+expected = sys.argv[2]
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_module_boundary_parity_reason_codes_csv"] = expected.split(",")[0]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_runtime_module_boundary_reason_codes_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_runtime_module_boundary_reason_codes_code=$?
+set -e
+if [ "$tampered_runtime_module_boundary_reason_codes_code" -eq 0 ]; then
+  echo "expected runtime module boundary reason code drift to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_module_boundary_reason_codes_output" | grep -q 'local_full_stack_integration_policy_runtime_module_boundary_parity_reason_codes_csv_mismatch'; then
+  echo "expected deterministic reason marker for runtime module boundary reason code drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_module_boundary_reason_codes_output" | grep -q '^runtime_module_boundary_reason_codes_value=runtime_orchestration_dispatch_boundary_drift_detected$'; then
+  echo "expected normalized runtime module boundary reason mapping for reason code drift" >&2
   exit 1
 fi
 

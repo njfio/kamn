@@ -34,6 +34,34 @@ present, including:
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
 - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
 
+## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)
+
+Local full-stack harness taxonomy markers and runbook marker declarations must remain synchronized
+to keep fail-closed remediation deterministic for runtime/transport/consensus convergence checks.
+
+Required checker/runbook parity markers:
+
+- `combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+- `runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1`
+- `runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded`
+- `runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1`
+- `runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded`
+- `runtime_phase_module_parity_status=verified`
+- `runtime_module_boundary_parity_status=verified`
+- `local_full_stack_harness_runbook_reason_codes_csv=local_full_stack_harness_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+
+Fail-closed drift reasons:
+
+- `local_full_stack_harness_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_local_full_stack_integration_live_policy.sh`
+- `bash scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh`
+
+- `Regression: #4197`
+
 ## Crash-Recovery Replay Idempotency Taxonomy and Runbook Marker Parity Contracts (Issue #4237)
 
 Sqlite crash-recovery replay idempotency taxonomy markers and runbook marker declarations must stay
