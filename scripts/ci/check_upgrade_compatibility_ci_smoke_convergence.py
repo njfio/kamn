@@ -17,11 +17,13 @@ REASON_CODES_CSV = (
     "workflow_file_missing,"
     "ci_tools_file_missing,"
     "strategy_doc_missing,"
+    "plan_doc_missing,"
     "upgrade_compatibility_fork_evidence_ci_smoke_composition_missing,"
     "upgrade_compatibility_fork_policy_ci_smoke_composition_missing,"
     "upgrade_compatibility_replay_command_leaked_in_fast_mode,"
     "ci_fast_gate_upgrade_compatibility_replay_command_not_excluded,"
     "ci_strategy_upgrade_compatibility_convergence_markers_missing,"
+    "production_plan_upgrade_compatibility_convergence_markers_missing,"
     "upgrade_compatibility_ci_smoke_seconds_exceeded"
 )
 REASON_CODES_ORDER = tuple(REASON_CODES_CSV.split(","))
@@ -45,13 +47,25 @@ UPGRADE_COMPATIBILITY_REPLAY_WORKFLOW_COMMAND = (
 STRATEGY_REQUIRED_MARKERS = (
     "### Upgrade Compatibility CI smoke convergence governance",
     "python3 scripts/ci/check_upgrade_compatibility_ci_smoke_convergence.py",
+    "--plan-doc docs/plans/2026-02-14-production-service-next-steps.md",
     "bash scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh",
     "upgrade_compatibility_ci_smoke_reason_taxonomy_version=kamn.ci.upgrade-compatibility-ci-smoke-convergence-reason-taxonomy.v1",
-    "upgrade_compatibility_ci_smoke_reason_codes_csv=upgrade_compatibility_fork_evidence_ci_smoke_composition_missing,upgrade_compatibility_fork_policy_ci_smoke_composition_missing,upgrade_compatibility_replay_command_leaked_in_fast_mode,ci_fast_gate_upgrade_compatibility_replay_command_not_excluded,ci_strategy_upgrade_compatibility_convergence_markers_missing,upgrade_compatibility_ci_smoke_seconds_exceeded",
+    "upgrade_compatibility_ci_smoke_reason_codes_csv=upgrade_compatibility_fork_evidence_ci_smoke_composition_missing,upgrade_compatibility_fork_policy_ci_smoke_composition_missing,upgrade_compatibility_replay_command_leaked_in_fast_mode,ci_fast_gate_upgrade_compatibility_replay_command_not_excluded,ci_strategy_upgrade_compatibility_convergence_markers_missing,production_plan_upgrade_compatibility_convergence_markers_missing,upgrade_compatibility_ci_smoke_seconds_exceeded",
     "upgrade_compatibility_ci_smoke_max_seconds=120",
     "upgrade_compatibility_local_heavy_max_seconds=900",
     "upgrade_compatibility_ci_smoke_lane_cost_profile=low",
     "upgrade_compatibility_local_heavy_execution_mode=opt_in",
+)
+
+PLAN_REQUIRED_MARKERS = (
+    "### R27.21 Upgrade Compatibility CI Smoke Governance Closure",
+    "Active chain: `#4175 -> #4179 -> (#4186, #4187)`.",
+    "upgrade_compatibility_ci_smoke_convergence_status=verified",
+    "upgrade_compatibility_ci_smoke_reason_taxonomy_version=kamn.ci.upgrade-compatibility-ci-smoke-convergence-reason-taxonomy.v1",
+    "upgrade_compatibility_ci_smoke_max_seconds=120",
+    "upgrade_compatibility_local_heavy_max_seconds=900",
+    "check_upgrade_compatibility_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/upgrade-compatibility-ci-smoke-convergence-report.json",
+    "test_check_upgrade_compatibility_ci_smoke_convergence.sh",
 )
 
 
@@ -60,6 +74,7 @@ class CheckInputs:
     workflow_file: Path
     ci_tools_file: Path
     strategy_doc: Path
+    plan_doc: Path
     max_seconds: int
     output_json: Path | None
 
@@ -69,6 +84,7 @@ def parse_args() -> CheckInputs:
     parser.add_argument("--workflow-file", type=Path, required=True)
     parser.add_argument("--ci-tools-file", type=Path, required=True)
     parser.add_argument("--strategy-doc", type=Path, required=True)
+    parser.add_argument("--plan-doc", type=Path, required=True)
     parser.add_argument("--max-seconds", type=int, default=CI_SMOKE_MAX_SECONDS)
     parser.add_argument("--output-json", type=Path)
     args = parser.parse_args()
@@ -76,6 +92,7 @@ def parse_args() -> CheckInputs:
         workflow_file=args.workflow_file,
         ci_tools_file=args.ci_tools_file,
         strategy_doc=args.strategy_doc,
+        plan_doc=args.plan_doc,
         max_seconds=args.max_seconds,
         output_json=args.output_json,
     )
@@ -129,6 +146,12 @@ def main() -> int:
     else:
         strategy_text = args.strategy_doc.read_text(encoding="utf-8")
 
+    plan_text = ""
+    if not args.plan_doc.exists():
+        raw_reason_codes.append("plan_doc_missing")
+    else:
+        plan_text = args.plan_doc.read_text(encoding="utf-8")
+
     if workflow_text and UPGRADE_COMPATIBILITY_REPLAY_WORKFLOW_COMMAND in workflow_text:
         raw_reason_codes.append(
             "ci_fast_gate_upgrade_compatibility_replay_command_not_excluded"
@@ -157,6 +180,12 @@ def main() -> int:
                 "ci_strategy_upgrade_compatibility_convergence_markers_missing"
             )
 
+    if plan_text:
+        if any(marker not in plan_text for marker in PLAN_REQUIRED_MARKERS):
+            raw_reason_codes.append(
+                "production_plan_upgrade_compatibility_convergence_markers_missing"
+            )
+
     normalized_reasons = normalize_reason_codes(raw_reason_codes)
     reason_value = reason_codes_value(normalized_reasons)
 
@@ -181,6 +210,7 @@ def main() -> int:
             "workflow_file": str(args.workflow_file),
             "ci_tools_file": str(args.ci_tools_file),
             "strategy_doc": str(args.strategy_doc),
+            "plan_doc": str(args.plan_doc),
             "max_seconds": args.max_seconds,
         },
     }
