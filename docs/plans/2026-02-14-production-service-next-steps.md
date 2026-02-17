@@ -192,6 +192,19 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.22 Full-Stack CI Smoke Governance Closure
+- Active chain: `#4188 -> #4190 -> #4194 -> (#4201, #4202)`.
+- Convergence closure markers:
+  - `local_full_stack_ci_smoke_convergence_status=verified`
+  - `local_full_stack_ci_smoke_reason_taxonomy_version=kamn.ci.local-full-stack-integration-ci-smoke-convergence-reason-taxonomy.v1`
+  - `local_full_stack_ci_smoke_max_seconds=120`
+  - `local_full_stack_local_heavy_max_seconds=900`
+- Composite smoke checker coverage:
+  - `python3 scripts/ci/check_local_full_stack_integration_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/local-full-stack-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh`
+- Local-heavy full-stack boundaries remain explicit and outside ci-fast-gate:
+  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-stack-integration-summary.json`
+
 ### R27.24 Admission-Backpressure CI Smoke Governance Closure
 - Active chain: `#4218 -> #4220 -> #4224 -> (#4231, #4232)`.
 - Convergence closure markers:

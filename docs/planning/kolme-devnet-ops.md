@@ -67,6 +67,28 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Architecture boundary reference:
   - `docs/architecture/kolme-live-integration.md`
 
+## R27.22 Full-Stack CI Smoke Governance Closure (Issue #4202)
+
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_local_full_stack_integration_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/local-full-stack-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh`
+- Deterministic closure markers:
+  - `local_full_stack_ci_smoke_convergence_status=verified`
+  - `local_full_stack_ci_smoke_reason_taxonomy_version=kamn.ci.local-full-stack-integration-ci-smoke-convergence-reason-taxonomy.v1`
+  - `local_full_stack_ci_smoke_reason_codes_csv=local_full_stack_exclusion_policy_ci_smoke_composition_missing,local_full_stack_validate_ci_smoke_composition_missing,local_full_stack_policy_ci_smoke_composition_missing,local_full_stack_contract_lane_ci_smoke_composition_missing,local_full_stack_run_mode_command_leaked_in_fast_mode,ci_fast_gate_local_full_stack_run_mode_not_excluded,ci_strategy_local_full_stack_convergence_markers_missing,production_plan_local_full_stack_convergence_markers_missing,local_full_stack_ci_smoke_seconds_exceeded`
+  - `local_full_stack_ci_smoke_max_seconds=120`
+  - `local_full_stack_local_heavy_max_seconds=900`
+  - `local_full_stack_ci_smoke_lane_cost_profile=low`
+  - `local_full_stack_local_heavy_execution_mode=opt_in`
+- Local-heavy boundary policy:
+  - local full-stack run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - local-only run mode remains explicit via `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
+- Deterministic fail-closed drift reasons:
+  - `ci_strategy_local_full_stack_convergence_markers_missing`
+  - `production_plan_local_full_stack_convergence_markers_missing`
+  - `local_full_stack_ci_smoke_seconds_exceeded`
+
 ## Fork-Choice Finality Evidence Convergence and Promotion Reason Mapping Contract (Issue #4253)
 
 - Convergence and policy commands:
