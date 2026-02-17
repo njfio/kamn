@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_deep_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json"
@@ -17,8 +18,22 @@ if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_LANE"; then
   exit 1
 fi
 
-if ! grep -q 'compliance_dsar_legal_hold_contract_lane.json' "$CONTRACT_LANE"; then
-  echo "expected DSAR legal-hold contract lane wrapper to reference DSAR manifest" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected DSAR legal-hold contract lane wrapper to resolve DSAR manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -q '"wrapper_name": "run_dsar_legal_hold_contract_lane.sh"' "$MANIFEST"; then
+  echo "expected DSAR manifest wrapper_name metadata marker" >&2
+  exit 1
+fi
+if ! grep -q '"phase": "contract"' "$MANIFEST"; then
+  echo "expected DSAR manifest phase metadata marker" >&2
   exit 1
 fi
 

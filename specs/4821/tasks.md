@@ -14,3 +14,10 @@
   - `bash scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh`
   - `for t in scripts/framework/test_non_kolme*contract_lane_dispatch_wrapper_matrix.sh; do bash \"$t\"; done`
   - `bash scripts/bridge/test_bridge_deep_lane_dispatch_wrapper_matrix.sh`
+  - `bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh`
+  - `bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh`
+  - `bash scripts/compliance/test_run_classification_redaction_contract_lane.sh`
+  - `bash scripts/governance/test_run_governance_simulation_contract_lane.sh`
+  - `bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh`
+  - `bash scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh`
+  - `bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh`
