@@ -12,6 +12,19 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Production-Mode Live Provider Enforcement Gate (Issue #4371)
+- Contract lane command:
+  - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- Real-node profile command:
+  - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh`
+- Required deterministic rejection markers:
+  - `runtime_commit_in_memory_provider_reference_detected`
+  - `runtime_commit_policy_check_in_memory_provider_reference_detected`
+- In-memory provider marker forbidden in production command surfaces:
+  - `InMemoryKolmeRuntimeCommitClient`
+- Regression policy:
+  - in-memory provider acceptance drift forces `NO-GO` (`Regression: #4371`).
+
 ## Invariant Property/Fuzz/Concurrency Reason Mapping Gate (Issue #4401)
 - Contract lane command:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`

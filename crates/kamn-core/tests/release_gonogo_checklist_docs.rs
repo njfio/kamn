@@ -10,6 +10,17 @@ fn checklist_contains_preflight_gates() {
 }
 
 #[test]
+fn checklist_contains_production_mode_live_provider_enforcement_gate() {
+    assert!(CHECKLIST.contains("## Production-Mode Live Provider Enforcement Gate (Issue #4371)"));
+    assert!(CHECKLIST.contains("test_run_local_kamn_live_runtime_integration_contract_lane.sh"));
+    assert!(CHECKLIST.contains("test_run_local_kamn_live_runtime_integration_real_node_profile.sh"));
+    assert!(CHECKLIST.contains("runtime_commit_in_memory_provider_reference_detected"));
+    assert!(CHECKLIST.contains("runtime_commit_policy_check_in_memory_provider_reference_detected"));
+    assert!(CHECKLIST.contains("InMemoryKolmeRuntimeCommitClient"));
+    assert!(CHECKLIST.contains("Regression: #4371"));
+}
+
+#[test]
 fn checklist_contains_dry_run_workflow() {
     assert!(CHECKLIST.contains("## Deterministic Dry-Run Workflow"));
     assert!(CHECKLIST.contains("1. Create release candidate tag"));

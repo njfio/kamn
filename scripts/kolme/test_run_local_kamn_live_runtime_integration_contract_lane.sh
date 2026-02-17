@@ -17,7 +17,8 @@ TMP_POLICY_ERR="$(mktemp)"
 TMP_SIMULATED_SUMMARY="$(mktemp)"
 TMP_FALLBACK_SUMMARY="$(mktemp)"
 TMP_COMPOSITE_TAMPER_SUMMARY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY"' EXIT
+TMP_IN_MEMORY_SUMMARY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_IN_MEMORY_SUMMARY"' EXIT
 COMPOSITE_GATE_REASON_TAXONOMY_VERSION="kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
 COMPOSITE_GATE_REASON_CODES_CSV="dry_run_no_commands_executed,live_runtime_integration_passed,runtime_signer_fallback_private_key_present_violation,runtime_signer_managed_external_raw_private_key_present_violation,local_opt_in_missing,bootstrap_readiness_failed,localhost_signed_integration_failed,live_api_conformance_failed,runtime_commit_endpoint_failed,runtime_commit_policy_failed,runtime_integration_budget_exceeded"
 
@@ -624,11 +625,48 @@ if ! grep -q "composite_gate_evidence_convergence_status_mismatch" "$TMP_POLICY_
   exit 1
 fi
 
+python3 - "$TMP_REPORT" "$TMP_IN_MEMORY_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+in_memory_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+runtime_command = str(payload.get("runtime_commit_command", ""))
+payload["runtime_commit_command"] = (
+    "KAMN_KOLME_LIVE_PROVIDER_HINT=InMemoryKolmeRuntimeCommitClient "
+    f"{runtime_command}"
+)
+in_memory_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_IN_MEMORY_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+in_memory_provider_policy_code=$?
+set -e
+
+if [ "$in_memory_provider_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when runtime command references in-memory provider marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_POLICY_ERR"; then
+  echo "expected runtime_commit_in_memory_provider_reference_detected reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
 TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_RUNTIME_OUTPUT="$(mktemp)"
 TMP_DIRECT_RUNTIME_POLICY="$(mktemp)"
 TMP_DIRECT_RUNTIME_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_COMPOSITE_TAMPER_SUMMARY" "$TMP_IN_MEMORY_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh" \
   --mode dry-run \

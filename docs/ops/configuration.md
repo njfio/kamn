@@ -254,6 +254,29 @@ Fail-closed mismatch reasons:
 - `submit_finality_reason_mismatch_for_finality_enabled_run`
 - `submit_finality_reason_mismatch_for_submit_only_run`
 
+## Production-Mode In-Memory Provider Rejection Controls (Issue #4371)
+
+Production-mode runtime integration must fail closed if command surfaces drift back to in-memory
+provider references.
+
+Deterministic rejection markers:
+
+- `runtime_commit_in_memory_provider_reference_detected`
+- `runtime_commit_policy_check_in_memory_provider_reference_detected`
+
+In-memory provider marker that must never appear in production command surfaces:
+
+- `InMemoryKolmeRuntimeCommitClient`
+
+Validation commands:
+
+- `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh`
+
+Regression marker:
+
+- `Regression: #4371`
+
 ### Retry Decision Matrix and Jitter Seed Contracts
 
 `kamn-node` keeps retry behavior deterministic and bounded for live runtime submit/finality paths.

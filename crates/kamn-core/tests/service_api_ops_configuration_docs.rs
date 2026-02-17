@@ -24,3 +24,13 @@ fn service_api_ops_configuration_contains_audit_integrity_tamper_controls() {
     assert!(DOC.contains("audit integrity gate convergence mismatch"));
     assert!(DOC.contains("Regression: #4465"));
 }
+
+#[test]
+fn service_api_ops_configuration_contains_in_memory_provider_rejection_controls() {
+    assert!(DOC.contains("## Production-Mode In-Memory Provider Rejection Controls (Issue #4371)"));
+    assert!(DOC.contains("runtime_commit_in_memory_provider_reference_detected"));
+    assert!(DOC.contains("runtime_commit_policy_check_in_memory_provider_reference_detected"));
+    assert!(DOC.contains("InMemoryKolmeRuntimeCommitClient"));
+    assert!(DOC.contains("test_run_local_kamn_live_runtime_integration_contract_lane.sh"));
+    assert!(DOC.contains("Regression: #4371"));
+}
