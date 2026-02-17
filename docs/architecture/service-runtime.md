@@ -94,13 +94,21 @@ Deterministic retry governance markers:
 - `retry_readiness_status=verified`
 - `retry_backoff_status=verified`
 - `retry_jitter_parity_status=verified`
-- `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v1`
-- `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,ci_local_network_budget_boundary_exceeded`
+- `retry_envelope_exhaustion_fail_closed_status=verified`
+- `reconnect_attempt_bound_status=verified`
+- `reconnect_backoff_bound_status=verified`
+- `retry_envelope_max_attempts=3`
+- `retry_envelope_max_backoff_seconds=8`
+- `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2`
+- `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded`
 
 Fail-closed drift/budget markers:
 
 - `local_retry_readiness_progress_stalled`
 - `local_retry_backoff_jitter_parity_bypass_detected`
+- `local_retry_envelope_exhaustion_fail_closed_missing`
+- `local_retry_reconnect_attempt_bound_drift`
+- `local_retry_reconnect_backoff_bound_drift`
 - `ci_local_network_budget_boundary_exceeded`
 
 CI-local budget is explicitly bounded and fail-closed:

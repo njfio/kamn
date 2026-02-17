@@ -352,6 +352,38 @@ Operational note:
 
 - Active runtime marker emission remains on the deterministic non-jitter schedule (`deterministic_retry_backoff_millis`) until rollout issue `#4110` wires jitter into runtime retry markers.
 
+### Retry Envelope Exhaustion and Reconnect Bound Governance (Issue #4296)
+
+Local retry diagnostics policy enforces deterministic reconnect envelope boundaries in addition to
+readiness/jitter markers.
+
+Deterministic taxonomy markers:
+
+- `reason_taxonomy_version=kamn.runtime.local-retry-diagnostics-reason-taxonomy.v2`
+- `reason_codes_csv=local_retry_readiness_progress_stalled,local_retry_backoff_jitter_parity_bypass_detected,local_retry_envelope_exhaustion_fail_closed_missing,local_retry_reconnect_attempt_bound_drift,local_retry_reconnect_backoff_bound_drift,ci_local_network_budget_boundary_exceeded`
+- `retry_envelope_exhaustion_fail_closed_status=verified`
+- `reconnect_attempt_bound_status=verified`
+- `reconnect_backoff_bound_status=verified`
+- `retry_envelope_max_attempts=3`
+- `retry_envelope_max_backoff_seconds=8`
+
+Deterministic fail-closed reasons:
+
+- `local_retry_envelope_exhaustion_fail_closed_missing`
+- `local_retry_reconnect_attempt_bound_drift`
+- `local_retry_reconnect_backoff_bound_drift`
+
+Validation commands:
+
+- `bash scripts/runtime/test_validate_local_retry_diagnostics_live.sh`
+- `bash scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh`
+- `bash scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh`
+
+Regression markers:
+
+- `Regression: #4300`
+- `Regression: #4301`
+
 Regression marker:
 
 - `Regression: #4109`
