@@ -169,6 +169,40 @@ fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() 
 }
 
 #[test]
+fn checklist_contains_block_reconciliation_partition_healing_mismatch_mapping_gate() {
+    assert!(CHECKLIST.contains(
+        "## Block Reconciliation Partition-Healing Mismatch Mapping Gate (Issues #4251, #4255, #4256)"
+    ));
+    assert!(CHECKLIST.contains("test_check_block_reconciliation_partition_rejoin_live_policy.sh"));
+    assert!(CHECKLIST
+        .contains("test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains("partition_healing_mismatch_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("partition_healing_mismatch_reason_code=none|<reason>"));
+    assert!(CHECKLIST
+        .contains("block_reconciliation_partition_rejoin_policy_required_field_missing:<field>"));
+    assert!(CHECKLIST.contains(
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid"
+    ));
+    assert!(CHECKLIST.contains(
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch"
+    ));
+    assert!(CHECKLIST.contains("Regression: #4255"));
+    assert!(CHECKLIST.contains("Regression: #4256"));
+}
+
+#[test]
 fn checklist_contains_shutdown_signal_lifecycle_reason_mapping_gate() {
     assert!(CHECKLIST.contains("## Shutdown Signal Lifecycle Reason Mapping Gate (Issue #4331)"));
     assert!(CHECKLIST.contains(

@@ -13,7 +13,9 @@ TMP_TAMPERED_TAXONOMY="$(mktemp)"
 TMP_TAMPERED_CONSISTENCY="$(mktemp)"
 TMP_TAMPERED_TRANSPORT_EVIDENCE="$(mktemp)"
 TMP_TAMPERED_REASON_CODES_CSV="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY" "$TMP_TAMPERED_TAXONOMY" "$TMP_TAMPERED_CONSISTENCY" "$TMP_TAMPERED_TRANSPORT_EVIDENCE" "$TMP_TAMPERED_REASON_CODES_CSV"' EXIT
+TMP_TAMPERED_MISSING_MARKER="$(mktemp)"
+TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY" "$TMP_TAMPERED_TAXONOMY" "$TMP_TAMPERED_CONSISTENCY" "$TMP_TAMPERED_TRANSPORT_EVIDENCE" "$TMP_TAMPERED_REASON_CODES_CSV" "$TMP_TAMPERED_MISSING_MARKER" "$TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected block reconciliation partition/rejoin validation script to be executable" >&2
@@ -45,6 +47,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^block_reconciliation_partition_r
   echo "expected block reconciliation partition/rejoin policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_mapping_status=verified$'; then
+  echo "expected deterministic partition-healing mismatch reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1$'; then
+  echo "expected deterministic partition-healing mismatch reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation$'; then
+  echo "expected deterministic partition-healing mismatch reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_code=none$'; then
+  echo "expected deterministic partition-healing mismatch reason code marker on GO path" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -72,6 +90,14 @@ if payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.ru
     raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker")
 if payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
     raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker")
+if payload.get("partition_healing_mismatch_reason_mapping_status") != "verified":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_mapping_status marker")
+if payload.get("partition_healing_mismatch_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_taxonomy_version marker")
+if payload.get("partition_healing_mismatch_reason_codes_csv") != "block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_codes_csv marker")
+if payload.get("partition_healing_mismatch_reason_code") != "none":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_code marker on GO path")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -298,5 +324,111 @@ if ! printf '%s\n' "$tampered_reason_codes_csv_output" | grep -q 'block_reconcil
   echo "expected deterministic reconciliation-reason-csv mismatch reason for block reconciliation partition/rejoin report" >&2
   exit 1
 fi
+
+if ! printf '%s\n' "$tampered_reason_codes_csv_output" | grep -q 'partition_healing_mismatch_reason_code=block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch'; then
+  echo "expected deterministic partition-healing mismatch reason mapping for reconciliation-taxonomy drift" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_MISSING_MARKER"
+python3 - "$TMP_TAMPERED_MISSING_MARKER" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("block_reconciliation_rejoin_status", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_missing_marker_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_MISSING_MARKER" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_missing_marker_code=$?
+set -e
+if [ "$tampered_missing_marker_code" -eq 0 ]; then
+  echo "expected missing-marker tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_missing_marker_output" | grep -q 'block_reconciliation_partition_rejoin_policy_required_field_missing:block_reconciliation_rejoin_status'; then
+  echo "expected deterministic required-field-missing reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_missing_marker_output" | grep -q 'partition_healing_mismatch_reason_code=block_reconciliation_partition_rejoin_policy_required_field_missing'; then
+  echo "expected deterministic partition-healing mismatch reason mapping for missing marker path" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES"
+python3 - "$TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reconciliation_reason_codes"] = [
+    "reconciliation_split_head_unresolved",
+    "reconciliation_partition_transition_failed",
+    "reconciliation_split_head_unresolved",
+]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_nondeterministic_output_first="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_nondeterministic_code_first=$?
+tampered_nondeterministic_output_second="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_NONDETERMINISTIC_REASON_CODES" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_nondeterministic_code_second=$?
+set -e
+if [ "$tampered_nondeterministic_code_first" -eq 0 ] || [ "$tampered_nondeterministic_code_second" -eq 0 ]; then
+  echo "expected nondeterministic-reason-codes tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_nondeterministic_output_first" | grep -q 'block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid'; then
+  echo "expected deterministic reconciliation_reason_codes_invalid reason in first nondeterministic mismatch run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_nondeterministic_output_second" | grep -q 'block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid'; then
+  echo "expected deterministic reconciliation_reason_codes_invalid reason in second nondeterministic mismatch run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_nondeterministic_output_first" | grep -q 'partition_healing_mismatch_reason_code=block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid'; then
+  echo "expected deterministic mismatch reason-code projection for nondeterministic reason-codes path" >&2
+  exit 1
+fi
+
+python3 - "$tampered_nondeterministic_output_first" "$tampered_nondeterministic_output_second" <<'PY'
+import sys
+
+first = sys.argv[1]
+second = sys.argv[2]
+
+def marker(output: str, key: str) -> str:
+    for line in output.splitlines():
+        if line.startswith(f"{key}="):
+            return line
+    raise SystemExit(f"missing {key} marker in policy output")
+
+if marker(first, "failed_checks") != marker(second, "failed_checks"):
+    raise SystemExit("expected deterministic failed_checks ordering for repeated nondeterministic mismatch runs")
+if marker(first, "partition_healing_mismatch_reason_code") != marker(second, "partition_healing_mismatch_reason_code"):
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_code for repeated nondeterministic mismatch runs")
+PY
 
 echo "block reconciliation partition/rejoin live policy tests passed."

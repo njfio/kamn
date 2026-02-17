@@ -57,6 +57,21 @@ RECONCILIATION_CONSISTENCY_REASON_CODES_CSV = (
     "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,"
     "consistency_classification_mismatch"
 )
+PARTITION_HEALING_MISMATCH_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1"
+)
+PARTITION_HEALING_MISMATCH_REASON_CODES_CSV = (
+    "block_reconciliation_partition_rejoin_policy_required_field_missing,"
+    "block_reconciliation_partition_rejoin_policy_marker_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,"
+    "block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,"
+    "block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,"
+    "block_reconciliation_partition_rejoin_policy_violation"
+)
 RECONCILIATION_REASON_CODES_ALLOWED = {
     "none",
     "reconciliation_partition_transition_failed",
@@ -70,6 +85,44 @@ RECONCILIATION_REASON_CODES_ALLOWED = {
     "reconciliation_runtime_budget_exceeded",
     "reconciliation_ci_fast_gate_failed",
 }
+REQUIRED_POLICY_REPORT_FIELDS = [
+    "schema_version",
+    "status",
+    "final_decision",
+    "lane_mode",
+    "ci_fast_gate",
+    "ci_fast_gate_eligibility",
+    "fast_gate_exclusion_status",
+    "fast_gate_exclusion_reason_code",
+    "block_reconciliation_partition_status",
+    "block_reconciliation_rejoin_status",
+    "canonical_convergence_status",
+    "runtime_transport_mode",
+    "transport_evidence_schema_version",
+    "transport_evidence_normalization_status",
+    "transport_evidence_source_contract_status",
+    "transport_state_transition_status",
+    "reconciliation_reason_taxonomy_version",
+    "reconciliation_reason_codes_csv",
+    "reconciliation_reason_taxonomy_status",
+    "snapshot_wal_reconciliation_status",
+    "consistency_classification_status",
+    "reconciliation_consistency_reason_taxonomy_version",
+    "reconciliation_consistency_reason_codes_csv",
+    "reconciliation_reason_codes",
+    "head_alignment_status",
+    "quorum_restore_status",
+    "replay_stabilization_status",
+    "publish_drop_recovery_status",
+    "peer_churn_recovery_status",
+    "run_mode_command_status",
+    "run_mode_command_count",
+    "reason_code",
+    "elapsed_seconds",
+    "max_seconds",
+    "command_max_seconds",
+    "commands",
+]
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -161,6 +214,95 @@ def _derive_recovery_markers(reconciliation_reason_codes: list[str]) -> dict[str
             "reconciliation_peer_churn_recovery_failed"
         ),
     }
+
+
+def _resolve_partition_healing_mismatch_reason_code(
+    failed_checks: list[str], final_decision: str
+) -> str:
+    if final_decision == "GO":
+        return "none"
+
+    if any(
+        code.startswith("block_reconciliation_partition_rejoin_policy_required_field_missing:")
+        for code in failed_checks
+    ):
+        return "block_reconciliation_partition_rejoin_policy_required_field_missing"
+
+    marker_mismatch_checks = {
+        "block_reconciliation_partition_rejoin_policy_schema_mismatch",
+        "block_reconciliation_partition_rejoin_policy_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_final_decision_mismatch",
+        "block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch",
+        "block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_reason_mismatch",
+        "block_reconciliation_partition_rejoin_policy_partition_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_rejoin_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_canonical_convergence_status_mismatch",
+    }
+    if any(code in marker_mismatch_checks for code in failed_checks):
+        return "block_reconciliation_partition_rejoin_policy_marker_mismatch"
+
+    transport_contract_checks = {
+        "block_reconciliation_partition_rejoin_policy_transport_mode_mismatch",
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_schema_version_mismatch",
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_normalization_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_transport_evidence_source_contract_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_transport_transition_status_mismatch",
+    }
+    if any(code in transport_contract_checks for code in failed_checks):
+        return "block_reconciliation_partition_rejoin_policy_transport_contract_mismatch"
+
+    reconciliation_taxonomy_checks = {
+        "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch",
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch",
+        "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch",
+        "block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_codes_csv_mismatch",
+    }
+    if any(code in reconciliation_taxonomy_checks for code in failed_checks):
+        return "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch"
+
+    recovery_contract_checks = {
+        "block_reconciliation_partition_rejoin_policy_snapshot_wal_reconciliation_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_head_alignment_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_quorum_restore_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_replay_stabilization_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_publish_drop_recovery_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_peer_churn_recovery_status_mismatch",
+    }
+    if any(code in recovery_contract_checks for code in failed_checks):
+        return "block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch"
+
+    if (
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid"
+        in failed_checks
+    ):
+        return "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid"
+
+    lane_mode_contract_checks = {
+        "block_reconciliation_partition_rejoin_policy_lane_mode_invalid",
+        "block_reconciliation_partition_rejoin_policy_command_count_invalid",
+        "block_reconciliation_partition_rejoin_policy_dry_run_eligibility_mismatch",
+        "block_reconciliation_partition_rejoin_policy_dry_run_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_dry_run_command_count_mismatch",
+        "block_reconciliation_partition_rejoin_policy_dry_run_reason_code_mismatch",
+        "block_reconciliation_partition_rejoin_policy_dry_run_reconciliation_reason_codes_mismatch",
+        "block_reconciliation_partition_rejoin_policy_run_mode_exclusion_mismatch",
+        "block_reconciliation_partition_rejoin_policy_run_mode_status_mismatch",
+        "block_reconciliation_partition_rejoin_policy_run_mode_command_count_mismatch",
+        "block_reconciliation_partition_rejoin_policy_run_mode_reason_code_mismatch",
+        "block_reconciliation_partition_rejoin_policy_run_mode_reconciliation_reason_codes_mismatch",
+    }
+    if any(code in lane_mode_contract_checks for code in failed_checks):
+        return "block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch"
+
+    if "block_reconciliation_partition_rejoin_policy_ci_fast_gate_mismatch" in failed_checks:
+        return "block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed"
+
+    if "block_reconciliation_partition_rejoin_policy_expected_decision_mismatch" in failed_checks:
+        return "block_reconciliation_partition_rejoin_policy_expected_decision_mismatch"
+
+    return "block_reconciliation_partition_rejoin_policy_violation"
 
 
 def _validate_partition_reconnect_report_payload(partition_payload: dict[str, object]) -> None:
@@ -357,6 +499,11 @@ def check_policy(args: argparse.Namespace) -> int:
     payload = load_json(report_file)
 
     checks = DecisionAccumulator()
+    for field_name in REQUIRED_POLICY_REPORT_FIELDS:
+        checks.reject_if(
+            field_name not in payload,
+            f"block_reconciliation_partition_rejoin_policy_required_field_missing:{field_name}",
+        )
     checks.reject_if(
         payload.get("schema_version") != RUN_LANE_SCHEMA,
         "block_reconciliation_partition_rejoin_policy_schema_mismatch",
@@ -554,11 +701,16 @@ def check_policy(args: argparse.Namespace) -> int:
         failed_checks.append(
             "block_reconciliation_partition_rejoin_policy_expected_decision_mismatch"
         )
+    final_decision = "GO" if not failed_checks else "NO-GO"
+    partition_healing_mismatch_reason_code = _resolve_partition_healing_mismatch_reason_code(
+        failed_checks,
+        final_decision,
+    )
 
     report_payload = {
         "schema_version": POLICY_SCHEMA,
         "status": "ok" if not failed_checks else "fail",
-        "final_decision": "GO" if not failed_checks else "NO-GO",
+        "final_decision": final_decision,
         "expected_final_decision": expected_final_decision,
         "observed_final_decision": observed_final_decision,
         "failed_checks": failed_checks,
@@ -577,6 +729,16 @@ def check_policy(args: argparse.Namespace) -> int:
         "block_reconciliation_partition_rejoin_policy_status": (
             "verified" if not failed_checks else "failed"
         ),
+        "partition_healing_mismatch_reason_mapping_status": "verified",
+        "partition_healing_mismatch_reason_taxonomy_version": (
+            PARTITION_HEALING_MISMATCH_REASON_TAXONOMY_VERSION
+        ),
+        "partition_healing_mismatch_reason_codes_csv": (
+            PARTITION_HEALING_MISMATCH_REASON_CODES_CSV
+        ),
+        "partition_healing_mismatch_reason_code": (
+            partition_healing_mismatch_reason_code
+        ),
     }
 
     if args.output_json:
@@ -592,6 +754,19 @@ def check_policy(args: argparse.Namespace) -> int:
     print(
         "block_reconciliation_partition_rejoin_policy_status="
         f"{report_payload['block_reconciliation_partition_rejoin_policy_status']}"
+    )
+    print("partition_healing_mismatch_reason_mapping_status=verified")
+    print(
+        "partition_healing_mismatch_reason_taxonomy_version="
+        f"{PARTITION_HEALING_MISMATCH_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "partition_healing_mismatch_reason_codes_csv="
+        f"{PARTITION_HEALING_MISMATCH_REASON_CODES_CSV}"
+    )
+    print(
+        "partition_healing_mismatch_reason_code="
+        f"{partition_healing_mismatch_reason_code}"
     )
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")

@@ -132,3 +132,26 @@ fn service_api_ops_configuration_contains_shutdown_checkpoint_reconciliation_fai
     assert!(DOC.contains("Regression: #4332"));
     assert!(DOC.contains("Regression: #4333"));
 }
+
+#[test]
+fn service_api_ops_configuration_contains_partition_healing_mismatch_mapping_controls() {
+    assert!(DOC.contains(
+        "### Block Reconciliation Partition-Healing Mismatch Mapping Contracts (Issues #4251, #4255, #4256)"
+    ));
+    assert!(DOC.contains("partition_healing_mismatch_reason_mapping_status=verified"));
+    assert!(DOC.contains(
+        "partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation"
+    ));
+    assert!(DOC.contains("partition_healing_mismatch_reason_code=none|<reason>"));
+    assert!(
+        DOC.contains("block_reconciliation_partition_rejoin_policy_required_field_missing:<field>")
+    );
+    assert!(DOC.contains(
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid"
+    ));
+    assert!(DOC.contains("Regression: #4255"));
+    assert!(DOC.contains("Regression: #4256"));
+}

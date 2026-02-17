@@ -453,6 +453,43 @@ Regression markers:
 - `Regression: #4285`
 - `Regression: #4286`
 
+### Block Reconciliation Partition-Healing Mismatch Mapping Contracts (Issues #4251, #4255, #4256)
+
+Block reconciliation partition/rejoin policy checks enforce deterministic fail-closed mismatch mapping
+for marker completeness, transport/recovery contracts, and reconciliation taxonomy drift.
+
+Deterministic marker and taxonomy contracts:
+
+- `reconciliation_reason_taxonomy_status=verified`
+- `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
+- `reconciliation_reason_codes_csv=reconciliation_partition_transition_failed,reconciliation_rejoin_transition_failed,reconciliation_publish_drop_recovery_failed,reconciliation_peer_churn_recovery_failed,reconciliation_split_head_unresolved,reconciliation_replay_instability,reconciliation_fixture_contract_failed,reconciliation_unclassified_scenario_failed,reconciliation_runtime_budget_exceeded,reconciliation_ci_fast_gate_failed`
+- `partition_healing_mismatch_reason_mapping_status=verified`
+- `partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1`
+- `partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation`
+- `partition_healing_mismatch_reason_code=none|<reason>`
+
+Policy checker command:
+
+- `bash scripts/runtime/check_block_reconciliation_partition_rejoin_live_policy.sh --report-file <report.json> --expected-final-decision GO --ci-fast-gate PASS --output-json <policy.json>`
+
+Deterministic fail-closed reasons:
+
+- `block_reconciliation_partition_rejoin_policy_required_field_missing:<field>`
+- `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
+- `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+- `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
+- `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh`
+- `bash scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh`
+
+Regression markers:
+
+- `Regression: #4255`
+- `Regression: #4256`
+
 Regression marker:
 
 - `Regression: #4109`

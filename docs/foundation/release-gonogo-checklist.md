@@ -358,6 +358,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - partition/rejoin tamper must reject with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
   - unstable reason classification tamper must reject with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.
 
+## Block Reconciliation Partition-Healing Mismatch Mapping Gate (Issues #4251, #4255, #4256)
+- Validation commands:
+  - `bash scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh`
+  - `bash scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh`
+- Required deterministic mismatch mapping markers:
+  - `partition_healing_mismatch_reason_mapping_status=verified`
+  - `partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1`
+  - `partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation`
+  - `partition_healing_mismatch_reason_code=none|<reason>`
+- Deterministic fail-closed mismatch reasons:
+  - `block_reconciliation_partition_rejoin_policy_required_field_missing:<field>`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_csv_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
+- Regression policy:
+  - missing partition/healing marker acceptance and nondeterministic mismatch payload acceptance force `NO-GO` (`Regression: #4255`).
+  - mismatch reason-category mapping drift forces `NO-GO` (`Regression: #4256`).
+
 ## Persisted Block Commit Mismatch/Tamper Gate (Issue #4321)
 - Replay tamper matrix selector:
   - `cargo test -p kamn-core --test block_commit_persistence_tamper_matrix`
