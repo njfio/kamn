@@ -60,6 +60,13 @@ Runtime/API keys:
 - `observability_endpoint_health_path`, `observability_endpoint_max_requests`
 - `observability_endpoint_idle_timeout_ms`
 
+Shutdown signal failure matrix:
+
+- `SIGINT` and `SIGTERM` trigger graceful shutdown when `--daemon-shutdown-os-signals` is enabled.
+- Timeout transitions must project
+  `graceful-shutdown-timeout:signal@<tick>;drain_ticks=<n>;timeout_ticks=<n>;ignored_signals=<n>`.
+- See `docs/ops/runbooks/shutdown.md` for deterministic reason-shape and operator validation steps.
+
 Kolme-live keys:
 
 - `kolme_live_base_url`, `kolme_live_provider_hint`, `kolme_live_signing_profile`

@@ -51,8 +51,8 @@ matrix references are explicit and consistent with runbook contracts.
 
 - C-03 (AC-3, Docs Contract):
   - Test:
-    `cargo test -p kamn-node runtime_processor_ha_docs -- --exact`
-  - Expectation: docs suite remains green after configuration guidance update.
+    `cargo test -p kamn-core --test service_api_ops_configuration_docs`
+  - Expectation: ops configuration docs contract suite remains green after guidance update.
 
 ## Success Metrics / Observable Signals
 

@@ -20,9 +20,9 @@ T3 (DOCS)
 T4 (VERIFY)
 - Run:
   - `cargo test -p kamn-node daemon_shutdown::tests::integration_daemon_completion_with_os_signals_applies_sigint_graceful_shutdown -- --exact`
-  - `cargo test -p kamn-node regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field_parity -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field_parity -- --exact`
   - `cargo test -p kamn-node daemon_shutdown::tests::integration_daemon_completion_with_os_signals_applies_graceful_shutdown -- --exact`
-  - `cargo test -p kamn-node runtime_processor_ha_docs -- --exact`
+  - `cargo test -p kamn-core --test service_api_ops_configuration_docs`
 
 ## TDD Evidence
 
