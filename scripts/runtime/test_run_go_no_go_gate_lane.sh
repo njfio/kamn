@@ -109,6 +109,38 @@ if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runti
   echo "expected go/no-go gate lane reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_evidence_convergence_status=verified$'; then
+  echo "expected go/no-go gate lane promotion evidence convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_evidence_reason_taxonomy_version=kamn.runtime.go-no-go-gate-evidence-convergence-reason-taxonomy.v1$'; then
+  echo "expected go/no-go gate lane promotion evidence reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_evidence_reason_codes_csv=promotion_evidence_link_missing,promotion_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch$'; then
+  echo "expected go/no-go gate lane promotion evidence reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_evidence_reason_code=none$'; then
+  echo "expected go/no-go gate lane promotion evidence reason marker normalization" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected go/no-go gate lane promotion decision mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.go-no-go-gate-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected go/no-go gate lane promotion decision reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_codes_csv=release_manifest_missing_required_artifact,release_manifest_success_marker_mismatch,gate_required_artifact_status_mismatch,gate_decision_fault_injection_triggered,runtime_budget_exceeded,gate_policy_unknown_reason_code,gate_policy_native_libp2p_provider_marker_mismatch,gate_policy_libp2p_fallback_marker_blocklist_mismatch,gate_policy_libp2p_fallback_markers_detected,gate_policy_native_libp2p_provider_marker_contract_status_mismatch$'; then
+  echo "expected go/no-go gate lane promotion decision reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected go/no-go gate lane promotion decision reason marker normalization" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1$'; then
   echo "expected go/no-go gate lane combined reason taxonomy marker" >&2
   exit 1
@@ -216,6 +248,22 @@ if payload.get("fault_profile") != "none":
     raise SystemExit("expected go/no-go gate report fault_profile=none")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.go-no-go-gate-reason-taxonomy.v1":
     raise SystemExit("expected go/no-go gate report reason taxonomy version marker")
+if payload.get("promotion_evidence_convergence_status") != "verified":
+    raise SystemExit("expected promotion_evidence_convergence_status=verified")
+if payload.get("promotion_evidence_reason_taxonomy_version") != "kamn.runtime.go-no-go-gate-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected promotion_evidence_reason_taxonomy_version marker")
+if payload.get("promotion_evidence_reason_codes_csv") != "promotion_evidence_link_missing,promotion_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected promotion_evidence_reason_codes_csv marker")
+if payload.get("promotion_evidence_reason_code") != "none":
+    raise SystemExit("expected promotion_evidence_reason_code=none in baseline")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected promotion_decision_reason_mapping_status=verified")
+if payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.go-no-go-gate-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected promotion_decision_reason_taxonomy_version marker")
+if payload.get("promotion_decision_reason_codes_csv") != "release_manifest_missing_required_artifact,release_manifest_success_marker_mismatch,gate_required_artifact_status_mismatch,gate_decision_fault_injection_triggered,runtime_budget_exceeded,gate_policy_unknown_reason_code,gate_policy_native_libp2p_provider_marker_mismatch,gate_policy_libp2p_fallback_marker_blocklist_mismatch,gate_policy_libp2p_fallback_markers_detected,gate_policy_native_libp2p_provider_marker_contract_status_mismatch":
+    raise SystemExit("expected promotion_decision_reason_codes_csv marker")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected promotion_decision_reason_code=none in baseline")
 if payload.get("go_no_go_evidence_status") != "dry_run_pending":
     raise SystemExit("expected go_no_go_evidence_status=dry_run_pending")
 if payload.get("rollback_readiness_status") != "dry_run_pending":
@@ -417,6 +465,22 @@ if ! printf '%s\n' "$run_mode_output" | grep -q '^reason_codes=none$'; then
   echo "expected go/no-go gate lane run-mode reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^promotion_evidence_convergence_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode promotion evidence convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^promotion_evidence_reason_code=none$'; then
+  echo "expected go/no-go gate lane run-mode promotion evidence normalized reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode promotion decision mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected go/no-go gate lane run-mode promotion decision normalized reason marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_RUN_REPORT" <<'PY'
 import json
@@ -440,6 +504,14 @@ if payload.get("fast_gate_exclusion_reason_code") != "go_no_go_gate_run_mode_exc
     raise SystemExit("expected deterministic fast-gate exclusion reason marker in run-mode go/no-go gate report")
 if payload.get("reason_codes") != []:
     raise SystemExit("expected empty reason_codes list for run-mode go/no-go gate report")
+if payload.get("promotion_evidence_convergence_status") != "verified":
+    raise SystemExit("expected promotion_evidence_convergence_status=verified in run-mode report")
+if payload.get("promotion_evidence_reason_code") != "none":
+    raise SystemExit("expected promotion_evidence_reason_code=none in run-mode report")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected promotion_decision_reason_mapping_status=verified in run-mode report")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected promotion_decision_reason_code=none in run-mode report")
 if payload.get("go_no_go_evidence_status") != "verified":
     raise SystemExit("expected go_no_go_evidence_status=verified in run-mode go/no-go gate report")
 if payload.get("rollback_readiness_status") != "verified":
