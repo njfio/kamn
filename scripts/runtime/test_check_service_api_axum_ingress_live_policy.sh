@@ -94,6 +94,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^service_api_lifecycle_rejection_
   echo "expected service api axum ingress policy checker lifecycle rejection reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_mapping_status=verified$'; then
+  echo "expected service api axum ingress policy checker protocol mismatch reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress policy checker protocol mismatch reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation$'; then
+  echo "expected service api axum ingress policy checker protocol mismatch reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=none$'; then
+  echo "expected service api axum ingress policy checker protocol mismatch reason code marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -147,6 +163,14 @@ if payload.get("error_envelope_reason_taxonomy_version") != "kamn.runtime.servic
     raise SystemExit("expected deterministic error_envelope_reason_taxonomy_version marker")
 if payload.get("error_envelope_reason_codes_csv") != "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found":
     raise SystemExit("expected deterministic error_envelope_reason_codes_csv marker")
+if payload.get("service_api_axum_protocol_mismatch_reason_mapping_status") != "verified":
+    raise SystemExit("expected service_api_axum_protocol_mismatch_reason_mapping_status=verified")
+if payload.get("service_api_axum_protocol_mismatch_reason_taxonomy_version") != "kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_taxonomy_version marker")
+if payload.get("service_api_axum_protocol_mismatch_reason_codes_csv") != "service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_codes_csv marker")
+if payload.get("service_api_axum_protocol_mismatch_reason_code") != "none":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_code marker")
 PY
 
 tampered_report="$TMP_DIR/service-api-axum-ingress-live-summary.tampered.json"
@@ -311,6 +335,10 @@ if [ "$tampered_protocol_taxonomy_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_protocol_taxonomy_output" | grep -q 'service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch'; then
   echo "expected deterministic mismatch reason code for tampered protocol taxonomy" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_protocol_taxonomy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_protocol_taxonomy_mismatch$'; then
+  echo "expected deterministic protocol mismatch reason mapping code for protocol taxonomy tamper" >&2
   exit 1
 fi
 
@@ -548,6 +576,10 @@ if ! printf '%s\n' "$tampered_concurrency_limit_output" | grep -q 'service_api_a
   echo "expected deterministic mismatch reason code for tampered concurrency-limit default" >&2
   exit 1
 fi
+if ! printf '%s\n' "$tampered_concurrency_limit_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch$'; then
+  echo "expected deterministic protocol mismatch reason mapping code for concurrency-limit default tamper" >&2
+  exit 1
+fi
 
 tampered_rate_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.rate-limit.tampered.json"
 cp "$report_file" "$tampered_rate_limit_report"
@@ -614,5 +646,76 @@ if ! printf '%s\n' "$tampered_threshold_output" | grep -q 'service_api_axum_poli
   echo "expected deterministic mismatch reason code for tampered body-size threshold" >&2
   exit 1
 fi
+
+multi_mismatch_report="$TMP_DIR/service-api-axum-ingress-live-summary.multi-mismatch.json"
+cp "$report_file" "$multi_mismatch_report"
+python3 - "$multi_mismatch_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["route_contract_parity_status"] = "missing"
+payload["protocol_compliance_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+multi_mismatch_output_first="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$multi_mismatch_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.multi-mismatch.first.json" 2>&1
+)"
+multi_mismatch_code_first=$?
+multi_mismatch_output_second="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$multi_mismatch_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.multi-mismatch.second.json" 2>&1
+)"
+multi_mismatch_code_second=$?
+set -e
+
+if [ "$multi_mismatch_code_first" -eq 0 ] || [ "$multi_mismatch_code_second" -eq 0 ]; then
+  echo "expected multi-mismatch protocol marker drift to fail policy checker deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$multi_mismatch_output_first" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_marker_missing$'; then
+  echo "expected deterministic mapped reason code on first multi-mismatch run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$multi_mismatch_output_second" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_marker_missing$'; then
+  echo "expected deterministic mapped reason code on second multi-mismatch run" >&2
+  exit 1
+fi
+
+python3 - \
+  "$TMP_DIR/service-api-axum-ingress-live-policy.multi-mismatch.first.json" \
+  "$TMP_DIR/service-api-axum-ingress-live-policy.multi-mismatch.second.json" <<'PY'
+import json
+import pathlib
+import sys
+
+first = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+second = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+first_reasons = first.get("reason_codes")
+second_reasons = second.get("reason_codes")
+if not first_reasons:
+    raise SystemExit("expected non-empty first reason_codes for multi-mismatch output")
+if first_reasons != second_reasons:
+    raise SystemExit("expected deterministic reason-code ordering across repeated multi-mismatch runs")
+if "service_api_axum_policy_marker_missing:route_contract_parity_status" not in first_reasons:
+    raise SystemExit("expected route-contract parity marker mismatch reason in multi-mismatch output")
+if "service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch" not in first_reasons:
+    raise SystemExit("expected protocol taxonomy mismatch reason in multi-mismatch output")
+if first.get("service_api_axum_protocol_mismatch_reason_code") != "service_api_axum_policy_marker_missing":
+    raise SystemExit("expected deterministic mapped reason code for first multi-mismatch output")
+if second.get("service_api_axum_protocol_mismatch_reason_code") != "service_api_axum_policy_marker_missing":
+    raise SystemExit("expected deterministic mapped reason code for second multi-mismatch output")
+PY
 
 echo "service api axum ingress live policy checker tests passed."

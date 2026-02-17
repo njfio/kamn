@@ -130,6 +130,38 @@ Regression marker:
 
 - `Regression: #4315`
 
+## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)
+
+Service API axum ingress protocol compliance checker outputs remain deterministic for promotion/runbook decisions.
+
+Deterministic protocol mismatch mapping markers:
+
+- `service_api_axum_protocol_mismatch_reason_mapping_status=verified`
+- `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
+- `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
+- `service_api_axum_protocol_mismatch_reason_code=none|<reason>`
+
+Deterministic mismatch reason classes:
+
+- `service_api_axum_policy_required_field_missing`
+- `service_api_axum_policy_marker_missing`
+- `service_api_axum_policy_protocol_taxonomy_mismatch`
+- `service_api_axum_policy_limit_contract_mismatch`
+- `ci_fast_gate_failed`
+- `service_api_axum_policy_expected_decision_mismatch`
+- `service_api_axum_policy_violation`
+
+Validation commands:
+
+- `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls -- --exact`
+
+Regression markers:
+
+- `Regression: #4270`
+- `Regression: #4271`
+
 ## TLS Runtime Transport Behavior Contracts
 
 Runtime-commit HTTPS execution in `kolme-live` mode uses an in-process rustls

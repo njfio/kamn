@@ -79,6 +79,18 @@ EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV = (
     "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,"
     "service_api_route_not_found"
 )
+EXPECTED_PROTOCOL_MISMATCH_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+)
+EXPECTED_PROTOCOL_MISMATCH_REASON_CODES_CSV = (
+    "service_api_axum_policy_required_field_missing,"
+    "service_api_axum_policy_marker_missing,"
+    "service_api_axum_policy_protocol_taxonomy_mismatch,"
+    "service_api_axum_policy_limit_contract_mismatch,"
+    "ci_fast_gate_failed,"
+    "service_api_axum_policy_expected_decision_mismatch,"
+    "service_api_axum_policy_violation"
+)
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -161,6 +173,67 @@ def _is_non_negative_int(value: Any) -> bool:
 
 def _is_positive_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _resolve_protocol_mismatch_reason_code(
+    reason_codes: list[str],
+    final_decision: str,
+) -> str:
+    if final_decision == "GO":
+        return "none"
+
+    if any(
+        code.startswith("service_api_axum_policy_required_field_missing:")
+        for code in reason_codes
+    ):
+        return "service_api_axum_policy_required_field_missing"
+
+    if any(
+        code.startswith("service_api_axum_policy_marker_missing:")
+        for code in reason_codes
+    ):
+        return "service_api_axum_policy_marker_missing"
+
+    taxonomy_mismatch_reason_codes = {
+        "service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_protocol_compliance_reason_codes_csv_mismatch",
+        "service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_ingress_resilience_reason_codes_csv_mismatch",
+        "service_api_axum_policy_admission_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_admission_reason_codes_csv_mismatch",
+        "service_api_axum_policy_lifecycle_rejection_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_lifecycle_rejection_reason_codes_csv_mismatch",
+        "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_request_validation_reason_codes_csv_mismatch",
+        "service_api_axum_policy_error_envelope_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_error_envelope_reason_codes_csv_mismatch",
+    }
+    if any(code in taxonomy_mismatch_reason_codes for code in reason_codes):
+        return "service_api_axum_policy_protocol_taxonomy_mismatch"
+
+    limit_contract_reason_codes = {
+        "service_api_axum_policy_fail_closed_reason_code_mismatch",
+        "service_api_axum_policy_body_size_limit_invalid",
+        "service_api_axum_policy_body_size_limit_mismatch",
+        "service_api_axum_policy_api_max_requests_default_invalid",
+        "service_api_axum_policy_api_max_requests_default_mismatch",
+        "service_api_axum_policy_api_idle_timeout_default_invalid",
+        "service_api_axum_policy_api_idle_timeout_default_mismatch",
+        "service_api_axum_policy_api_concurrency_limit_default_invalid",
+        "service_api_axum_policy_api_concurrency_limit_default_mismatch",
+        "service_api_axum_policy_api_rate_limit_per_second_default_invalid",
+        "service_api_axum_policy_api_rate_limit_per_second_default_mismatch",
+    }
+    if any(code in limit_contract_reason_codes for code in reason_codes):
+        return "service_api_axum_policy_limit_contract_mismatch"
+
+    if "ci_fast_gate_failed" in reason_codes:
+        return "ci_fast_gate_failed"
+
+    if "service_api_axum_policy_final_decision_mismatch" in reason_codes:
+        return "service_api_axum_policy_expected_decision_mismatch"
+
+    return "service_api_axum_policy_violation"
 
 
 def _check_policy(args: argparse.Namespace) -> int:
@@ -326,6 +399,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     final_decision, reason_codes = decision.finalize("none")
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "rejected"
+    protocol_mismatch_reason_code = _resolve_protocol_mismatch_reason_code(
+        reason_codes,
+        final_decision,
+    )
 
     policy_report: dict[str, Any] = {
         "schema_version": POLICY_SCHEMA,
@@ -386,6 +463,16 @@ def _check_policy(args: argparse.Namespace) -> int:
         "error_envelope_reason_codes_csv": (
             EXPECTED_ERROR_ENVELOPE_REASON_CODES_CSV
         ),
+        "service_api_axum_protocol_mismatch_reason_mapping_status": "verified",
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version": (
+            EXPECTED_PROTOCOL_MISMATCH_REASON_TAXONOMY_VERSION
+        ),
+        "service_api_axum_protocol_mismatch_reason_codes_csv": (
+            EXPECTED_PROTOCOL_MISMATCH_REASON_CODES_CSV
+        ),
+        "service_api_axum_protocol_mismatch_reason_code": (
+            protocol_mismatch_reason_code
+        ),
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }
@@ -406,6 +493,19 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(
         "service_api_lifecycle_rejection_reason_codes_csv="
         f"{EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV}"
+    )
+    print("service_api_axum_protocol_mismatch_reason_mapping_status=verified")
+    print(
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version="
+        f"{EXPECTED_PROTOCOL_MISMATCH_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "service_api_axum_protocol_mismatch_reason_codes_csv="
+        f"{EXPECTED_PROTOCOL_MISMATCH_REASON_CODES_CSV}"
+    )
+    print(
+        "service_api_axum_protocol_mismatch_reason_code="
+        f"{protocol_mismatch_reason_code}"
     )
     print(f"reason_codes={reason_codes_csv}")
     print(f"reason_codes_value={reason_codes_csv}")

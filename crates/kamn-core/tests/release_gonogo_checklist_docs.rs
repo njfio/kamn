@@ -87,6 +87,29 @@ fn checklist_contains_service_api_protocol_session_reason_mapping_gate() {
 }
 
 #[test]
+fn checklist_contains_service_api_axum_protocol_mismatch_reason_mapping_gate() {
+    assert!(CHECKLIST.contains(
+        "## Service API Axum Protocol Mismatch Reason Mapping Gate (Issues #4266, #4270, #4271)"
+    ));
+    assert!(CHECKLIST.contains("test_check_service_api_axum_ingress_live_policy.sh"));
+    assert!(CHECKLIST.contains("test_validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(CHECKLIST.contains("service_api_axum_protocol_mismatch_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("service_api_axum_protocol_mismatch_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("service_api_axum_policy_marker_missing:<field>"));
+    assert!(CHECKLIST
+        .contains("service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch"));
+    assert!(CHECKLIST.contains("service_api_axum_policy_body_size_limit_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4270"));
+    assert!(CHECKLIST.contains("Regression: #4271"));
+}
+
+#[test]
 fn checklist_contains_service_api_websocket_session_evidence_convergence_gate() {
     assert!(CHECKLIST
         .contains("## Service API Websocket Session Evidence Convergence Gate (Issue #4268)"));

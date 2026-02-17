@@ -1046,6 +1046,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `overload_evidence_normalization_status=verified`,
     `admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1`,
     `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`.
+  - protocol mismatch reason mapping remains deterministic via:
+    `service_api_axum_protocol_mismatch_reason_mapping_status=verified`,
+    `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`,
+    `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`,
+    `service_api_axum_protocol_mismatch_reason_code=none|<reason>`.
   - ingress limit config matrix defaults remain parity-checked against source constants and API docs (`api_max_requests_default=1`, `api_idle_timeout_default_ms=5000`, `body_size_limit_bytes=65536`, `api_concurrency_limit_default=32`, `api_rate_limit_per_second_default=120`).
   - runtime budget is bounded via `KAMN_SERVICE_API_AXUM_INGRESS_CONTRACT_MAX_SECONDS`.
   - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
@@ -1057,6 +1062,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `service_api_axum_policy_admission_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
+  - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_protocol_taxonomy_mismatch`
+  - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch`
 
 ## Runtime Service API Websocket Live Contract Lane
 - Entry commands:

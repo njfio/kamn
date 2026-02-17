@@ -157,6 +157,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^service_api_lifecycle_rejection_re
   echo "expected service api axum ingress contract lane lifecycle rejection reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:websocket_upgrade_parity_status$'; then
+  echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
   echo "expected service api axum ingress contract lane max-requests default marker" >&2
   exit 1
@@ -177,11 +181,6 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^api_rate_limit_per_second_default
   echo "expected service api axum ingress contract lane rate-limit default marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:websocket_upgrade_parity_status$'; then
-  echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
-  exit 1
-fi
-
 python3 - "$lane_report" "$policy_report" <<'PY'
 import json
 import pathlib
@@ -306,6 +305,14 @@ if policy_payload.get("service_api_lifecycle_rejection_reason_taxonomy_version")
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_taxonomy_version marker in policy report")
 if policy_payload.get("service_api_lifecycle_rejection_reason_codes_csv") != "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid":
     raise SystemExit("expected deterministic service_api_lifecycle_rejection_reason_codes_csv marker in policy report")
+if policy_payload.get("service_api_axum_protocol_mismatch_reason_mapping_status") != "verified":
+    raise SystemExit("expected service_api_axum_protocol_mismatch_reason_mapping_status=verified in policy report")
+if policy_payload.get("service_api_axum_protocol_mismatch_reason_taxonomy_version") != "kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_taxonomy_version marker in policy report")
+if policy_payload.get("service_api_axum_protocol_mismatch_reason_codes_csv") != "service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_codes_csv marker in policy report")
+if policy_payload.get("service_api_axum_protocol_mismatch_reason_code") != "none":
+    raise SystemExit("expected deterministic service_api_axum_protocol_mismatch_reason_code marker in policy report")
 PY
 
 if ! grep -q "check_service_api_axum_ingress_live_policy.sh" "$CONTRACT_LANE"; then

@@ -76,6 +76,10 @@ POLICY_REQUIRED_MARKERS=(
   "reason_codes_value=none"
   "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
   "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
+  "service_api_axum_protocol_mismatch_reason_mapping_status=verified"
+  "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
+  "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+  "service_api_axum_protocol_mismatch_reason_code=none"
 )
 STRATEGY_REQUIRED_REFS=(
   "validate_service_api_axum_ingress_live.sh"
@@ -90,6 +94,7 @@ STRATEGY_REQUIRED_MARKERS=(
   "request-validation and error-envelope taxonomy parity remains deterministic via:"
   "ingress resilience governance remains deterministic via:"
   "admission saturation and queue-cap governance remains deterministic via:"
+  "protocol mismatch reason mapping remains deterministic via:"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status
