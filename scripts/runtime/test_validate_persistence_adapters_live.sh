@@ -56,6 +56,34 @@ if ! printf '%s\n' "$validation_output" | grep -q '^performance_budget_status=ve
   echo "expected persistence adapter live validation performance marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_gate_reason_taxonomy_version=kamn.runtime.persistence-gate-reason-taxonomy.v1$'; then
+  echo "expected persistence adapter live validation reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_gate_reason_codes_csv=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation$'; then
+  echo "expected persistence adapter live validation reason codes csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_tamper_freshness_drift_fail_closed_status=verified$'; then
+  echo "expected persistence adapter live validation tamper/freshness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_evidence_completeness_status=verified$'; then
+  echo "expected persistence adapter live validation completeness marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_ci_smoke_local_heavy_boundary_status=verified$'; then
+  echo "expected persistence adapter live validation ci/local boundary marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_ci_smoke_lane_cost_profile=low$'; then
+  echo "expected persistence adapter live validation ci smoke cost profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^persistence_local_heavy_execution_mode=opt_in$'; then
+  echo "expected persistence adapter live validation local-heavy execution marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -87,6 +115,20 @@ if payload.get("execution_scope") != "local-scheduled":
     raise SystemExit("expected execution_scope=local-scheduled")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if payload.get("persistence_gate_reason_taxonomy_version") != "kamn.runtime.persistence-gate-reason-taxonomy.v1":
+    raise SystemExit("expected persistence_gate_reason_taxonomy_version contract marker")
+if payload.get("persistence_gate_reason_codes_csv") != "content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation":
+    raise SystemExit("expected persistence_gate_reason_codes_csv contract marker")
+if payload.get("persistence_tamper_freshness_drift_fail_closed_status") != "verified":
+    raise SystemExit("expected persistence_tamper_freshness_drift_fail_closed_status=verified")
+if payload.get("persistence_evidence_completeness_status") != "verified":
+    raise SystemExit("expected persistence_evidence_completeness_status=verified")
+if payload.get("persistence_ci_smoke_local_heavy_boundary_status") != "verified":
+    raise SystemExit("expected persistence_ci_smoke_local_heavy_boundary_status=verified")
+if payload.get("persistence_ci_smoke_lane_cost_profile") != "low":
+    raise SystemExit("expected persistence_ci_smoke_lane_cost_profile=low")
+if payload.get("persistence_local_heavy_execution_mode") != "opt_in":
+    raise SystemExit("expected persistence_local_heavy_execution_mode=opt_in")
 reason_codes = payload.get("fail_closed_reason_codes")
 if reason_codes != [
     "content_storage_corrupt_payload_rejected",
@@ -99,6 +141,10 @@ if reason_codes != [
     "message_lifecycle_snapshot_schema_mismatch_rejected",
     "runtime_snapshot_corrupt_payload_rejected",
     "runtime_snapshot_state_version_regression_rejected",
+    "persistence_evidence_tamper_detected",
+    "persistence_evidence_freshness_window_exceeded",
+    "persistence_evidence_incomplete",
+    "persistence_ci_smoke_local_heavy_boundary_violation",
 ]:
     raise SystemExit("expected deterministic fail_closed_reason_codes contract list")
 PY

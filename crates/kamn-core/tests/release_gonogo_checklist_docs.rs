@@ -250,6 +250,24 @@ fn checklist_contains_durable_guard_recovery_evidence() {
 }
 
 #[test]
+fn checklist_contains_persistence_evidence_tamper_freshness_gate() {
+    assert!(CHECKLIST.contains("## Persistence Evidence Tamper/Freshness Gate (Issue #4389)"));
+    assert!(CHECKLIST.contains("validate_persistence_adapters_live.sh"));
+    assert!(CHECKLIST.contains(
+        "persistence_gate_reason_taxonomy_version=kamn.runtime.persistence-gate-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "persistence_gate_reason_codes_csv=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation"
+    ));
+    assert!(CHECKLIST.contains("persistence_tamper_freshness_drift_fail_closed_status=verified"));
+    assert!(CHECKLIST.contains("persistence_evidence_completeness_status=verified"));
+    assert!(CHECKLIST.contains("persistence_ci_smoke_local_heavy_boundary_status=verified"));
+    assert!(CHECKLIST.contains("persistence_ci_smoke_lane_cost_profile=low"));
+    assert!(CHECKLIST.contains("persistence_local_heavy_execution_mode=opt_in"));
+    assert!(CHECKLIST.contains("Regression: #4389"));
+}
+
+#[test]
 fn checklist_contains_signer_incident_recovery_contract_and_cadence() {
     assert!(CHECKLIST
         .contains("## Signer Incident Recovery Contract and Deep-Lane Cadence (Issue #989)"));
