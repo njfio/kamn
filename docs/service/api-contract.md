@@ -9,6 +9,13 @@ This contract defines fail-closed websocket protocol/session checks for Task #43
 - `service_api_websocket_session_reason_taxonomy_version=kamn.runtime.service-api.websocket-session-reason-taxonomy.v1`
 - `service_api_websocket_session_reason_codes_csv=service_api_ws_protocol_contract_drift_detected,service_api_ws_session_frame_too_short,service_api_ws_session_frame_opcode_invalid,service_api_ws_session_frame_mask_invalid,service_api_ws_session_frame_length_mismatch,service_api_ws_session_frame_payload_utf8_invalid`
 
+## Release Go/No-Go Protocol/Session Markers (Issue #4387)
+
+- `service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1`
+- `service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing`
+
+Release checklist parity checks consume these markers and fail closed on drift.
+
 ## Invalid-Frame Handling Matrix
 
 | Condition | Fail-closed reason code | Expected behavior |
