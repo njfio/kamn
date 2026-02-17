@@ -57,6 +57,10 @@ VALIDATION_REQUIRED_MARKERS=(
   "admission_queue_cap_enforcement_status=verified"
   "admission_inflight_budget_status=verified"
   "admission_queue_budget_status=verified"
+  "admission_decision_taxonomy_status=verified"
+  "admission_decision_accept_status=verified"
+  "admission_decision_defer_status=verified"
+  "admission_decision_reject_status=verified"
   "overload_evidence_normalization_status=verified"
   "async_lifecycle_backpressure_projection_status=verified"
   "protocol_compliance_status=verified"
@@ -69,6 +73,8 @@ VALIDATION_REQUIRED_MARKERS=(
   "admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift"
   "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
   "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+  "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+  "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
   "service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
   "service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid"
   "request_validation_reason_registry_status=verified"
@@ -100,6 +106,12 @@ POLICY_REQUIRED_MARKERS=(
   "admission_queue_budget_limit=1"
   "admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
   "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+  "admission_decision_taxonomy_status=verified"
+  "admission_decision_accept_status=verified"
+  "admission_decision_defer_status=verified"
+  "admission_decision_reject_status=verified"
+  "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+  "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
   "service_api_axum_protocol_mismatch_reason_mapping_status=verified"
   "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
   "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
@@ -120,6 +132,7 @@ STRATEGY_REQUIRED_MARKERS=(
   "request-validation and error-envelope taxonomy parity remains deterministic via:"
   "ingress resilience governance remains deterministic via:"
   "admission saturation, in-flight, and queue-budget governance remains deterministic via:"
+  "admission decision taxonomy (accept/defer/reject) and runbook marker parity remains deterministic via:"
   "protocol mismatch reason mapping remains deterministic via:"
   "admission backpressure evidence convergence governance remains deterministic via:"
   "protocol taxonomy and runbook-marker parity remains deterministic via:"
@@ -138,6 +151,13 @@ RUNBOOK_REQUIRED_MARKERS=(
   "error_envelope_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found"
   "service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1"
   "service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation"
+  "## Service API Axum Admission Decision Taxonomy and Runbook Marker Parity Contracts (Issue #4222)"
+  "admission_decision_taxonomy_mapping_status=verified"
+  "admission_decision_runbook_marker_parity_status=verified"
+  "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1"
+  "admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch"
+  "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+  "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
 )
 LANE_REPORT_SUMMARY_FIELDS=(
   ingress_limit_config_status
@@ -152,6 +172,10 @@ LANE_REPORT_SUMMARY_FIELDS=(
   admission_queue_cap_enforcement_status
   admission_inflight_budget_status
   admission_queue_budget_status
+  admission_decision_taxonomy_status
+  admission_decision_accept_status
+  admission_decision_defer_status
+  admission_decision_reject_status
   overload_evidence_normalization_status
   async_lifecycle_backpressure_projection_status
   protocol_compliance_status
@@ -164,6 +188,8 @@ LANE_REPORT_SUMMARY_FIELDS=(
   admission_reason_codes_csv
   admission_budget_reason_taxonomy_version
   admission_budget_reason_codes_csv
+  admission_decision_reason_taxonomy_version
+  admission_decision_reason_codes_csv
   service_api_lifecycle_rejection_reason_taxonomy_version
   service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status
@@ -193,6 +219,10 @@ OUTPUT_SUMMARY_FIELDS=(
   admission_queue_cap_enforcement_status
   admission_inflight_budget_status
   admission_queue_budget_status
+  admission_decision_taxonomy_status
+  admission_decision_accept_status
+  admission_decision_defer_status
+  admission_decision_reject_status
   overload_evidence_normalization_status
   async_lifecycle_backpressure_projection_status
   protocol_compliance_status
@@ -205,6 +235,8 @@ OUTPUT_SUMMARY_FIELDS=(
   admission_reason_codes_csv
   admission_budget_reason_taxonomy_version
   admission_budget_reason_codes_csv
+  admission_decision_reason_taxonomy_version
+  admission_decision_reason_codes_csv
   service_api_lifecycle_rejection_reason_taxonomy_version
   service_api_lifecycle_rejection_reason_codes_csv
   request_validation_reason_registry_status

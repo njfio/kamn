@@ -19,8 +19,22 @@ fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
     assert!(DOC.contains(
         "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
     ));
+    assert!(DOC.contains("admission_decision_taxonomy_status=verified"));
+    assert!(DOC.contains("admission_decision_accept_status=verified"));
+    assert!(DOC.contains("admission_decision_defer_status=verified"));
+    assert!(DOC.contains("admission_decision_reject_status=verified"));
+    assert!(DOC.contains(
+        "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
+    ));
     assert!(DOC.contains("service_api_axum_policy_admission_inflight_budget_limit_mismatch"));
     assert!(DOC.contains("service_api_axum_policy_admission_queue_budget_limit_mismatch"));
+    assert!(
+        DOC.contains("service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch")
+    );
+    assert!(DOC.contains("service_api_axum_policy_admission_decision_reason_codes_csv_mismatch"));
     assert!(DOC.contains("fail-closed response contract"));
     assert!(DOC.contains("Regression: #4315"));
 }

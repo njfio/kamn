@@ -237,6 +237,36 @@ fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_mark
 }
 
 #[test]
+fn deploy_compat_contains_service_api_axum_admission_decision_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Service API Axum Admission Decision Taxonomy and Runbook Marker Parity Contracts (Issue #4222)"
+    ));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_taxonomy_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
+    ));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_taxonomy_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_accept_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_defer_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("admission_decision_reject_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("protocol_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4227"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4228"));
+}
+
+#[test]
 fn deploy_compat_contains_service_api_axum_admission_backpressure_evidence_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Service API Axum Admission/Backpressure Evidence Convergence Contracts (Issue #4223)"

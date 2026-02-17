@@ -708,6 +708,9 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
     assert!(DOC.contains(
         "admission saturation, in-flight, and queue-budget governance remains deterministic via:"
     ));
+    assert!(DOC.contains(
+        "admission decision taxonomy (accept/defer/reject) and runbook marker parity remains deterministic via:"
+    ));
     assert!(DOC.contains("admission_inflight_budget_status=verified"));
     assert!(DOC.contains("admission_queue_budget_status=verified"));
     assert!(DOC.contains("admission_inflight_budget_limit=32"));
@@ -717,6 +720,24 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
     ));
     assert!(DOC.contains(
         "admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+    ));
+    assert!(DOC.contains("admission_decision_taxonomy_status=verified"));
+    assert!(DOC.contains("admission_decision_accept_status=verified"));
+    assert!(DOC.contains("admission_decision_defer_status=verified"));
+    assert!(DOC.contains("admission_decision_reject_status=verified"));
+    assert!(DOC.contains(
+        "admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject"
+    ));
+    assert!(DOC.contains("admission_decision_taxonomy_mapping_status=verified"));
+    assert!(DOC.contains("admission_decision_runbook_marker_parity_status=verified"));
+    assert!(DOC.contains(
+        "admission_decision_taxonomy_runbook_reason_taxonomy_version=kamn.runtime.service-api-axum-admission-decision-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "admission_decision_taxonomy_runbook_reason_codes_csv=admission_decision_taxonomy_mapping_drift_detected,admission_runbook_marker_parity_mismatch"
     ));
     assert!(DOC.contains("service_api_axum_evidence_convergence_status=verified"));
     assert!(DOC.contains("promotion_decision_reason_mapping_status=verified"));
@@ -730,6 +751,11 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
     assert!(
         DOC.contains("service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch")
     );
+    assert!(
+        DOC.contains("service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch")
+    );
+    assert!(DOC.contains("service_api_axum_policy_admission_decision_reason_codes_csv_mismatch"));
+    assert!(DOC.contains("service_api_axum_policy_marker_missing:admission_decision_defer_status"));
     assert!(DOC.contains("service_api_axum_policy_admission_inflight_budget_limit_mismatch"));
     assert!(DOC.contains("service_api_axum_policy_admission_queue_budget_limit_mismatch"));
     assert!(DOC.contains("service_api_axum_evidence_link_missing:source_report_file"));

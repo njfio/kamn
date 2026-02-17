@@ -108,6 +108,12 @@ Deterministic taxonomy markers:
 - `admission_queue_budget_limit=1`
 - `admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1`
 - `admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch`
+- `admission_decision_taxonomy_status=verified`
+- `admission_decision_accept_status=verified`
+- `admission_decision_defer_status=verified`
+- `admission_decision_reject_status=verified`
+- `admission_decision_reason_taxonomy_version=kamn.runtime.service-api-admission-decision-reason-taxonomy.v1`
+- `admission_decision_reason_codes_csv=admission_decision_accept,admission_decision_defer,admission_decision_reject`
 - `reason_codes_value=none|service_api_axum_policy_*`
 
 Backpressure reason markers:
@@ -117,6 +123,8 @@ Backpressure reason markers:
 - `service_api_ingress_sender_rate_limit_exceeded`
 - `service_api_axum_policy_admission_inflight_budget_limit_mismatch`
 - `service_api_axum_policy_admission_queue_budget_limit_mismatch`
+- `service_api_axum_policy_admission_decision_reason_taxonomy_version_mismatch`
+- `service_api_axum_policy_admission_decision_reason_codes_csv_mismatch`
 
 fail-closed response contract:
 
