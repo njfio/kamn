@@ -483,6 +483,35 @@ fn checklist_contains_journal_append_checkpoint_integrity_gate() {
 }
 
 #[test]
+fn checklist_contains_replay_idempotency_taxonomy_runbook_parity_gate() {
+    assert!(CHECKLIST.contains(
+        "## Replay Idempotency Taxonomy/Runbook Parity Gate (Issues #4237, #4242, #4243)"
+    ));
+    assert!(CHECKLIST.contains(
+        "check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/sqlite-crash-recovery-live-policy-report.json"
+    ));
+    assert!(CHECKLIST.contains("replay_idempotency_taxonomy_mapping_status=verified"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(CHECKLIST.contains("replay_idempotency_runbook_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("replay_idempotency_taxonomy_mapping_drift_detected"));
+    assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains(
+        "sqlite_crash_recovery_policy_replay_idempotency_runbook_reason_taxonomy_version_mismatch"
+    ));
+    assert!(CHECKLIST.contains(
+        "sqlite_crash_recovery_policy_replay_idempotency_runbook_reason_codes_csv_mismatch"
+    ));
+    assert!(CHECKLIST.contains("Regression: #4242"));
+    assert!(CHECKLIST.contains("Regression: #4243"));
+}
+
+#[test]
 fn checklist_contains_slo_threshold_policy_gate_convergence() {
     assert!(CHECKLIST.contains("## SLO Threshold/Policy Gate Convergence Gate (Issue #4468)"));
     assert!(CHECKLIST.contains("--slo-policy-report-file /tmp/deployment-slo-rollback-report.json"));

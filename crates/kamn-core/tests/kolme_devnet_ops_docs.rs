@@ -95,6 +95,29 @@ fn deploy_compat_contains_drift_taxonomy_runbook_parity_markers() {
 }
 
 #[test]
+fn deploy_compat_contains_sqlite_replay_idempotency_taxonomy_runbook_parity_markers() {
+    assert!(DEPLOY_COMPAT.contains(
+        "## Crash-Recovery Replay Idempotency Taxonomy and Runbook Marker Parity Contracts (Issue #4237)"
+    ));
+    assert!(DEPLOY_COMPAT.contains("replay_idempotency_taxonomy_mapping_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("replay_idempotency_runbook_reason_code=none|<reason>"));
+    assert!(DEPLOY_COMPAT.contains("replay_idempotency_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --output-json /tmp/sqlite-crash-recovery-live-policy-report.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4242"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4243"));
+}
+
+#[test]
 fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)"

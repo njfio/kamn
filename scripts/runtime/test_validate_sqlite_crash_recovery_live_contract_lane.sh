@@ -104,6 +104,26 @@ if ! printf '%s\n' "$lane_output" | grep -q '^journal_replay_reason_codes_csv=jo
   echo "expected sqlite crash-recovery contract lane journal replay reason taxonomy csv marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^replay_idempotency_taxonomy_mapping_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane replay idempotency taxonomy mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+  echo "expected sqlite crash-recovery contract lane runbook marker parity status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery contract lane replay idempotency runbook reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+  echo "expected sqlite crash-recovery contract lane replay idempotency runbook reason csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^replay_idempotency_runbook_reason_code=none$'; then
+  echo "expected sqlite crash-recovery contract lane replay idempotency runbook reason code marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
   echo "expected sqlite crash-recovery contract lane crash-recovery readiness progress marker" >&2
   exit 1
@@ -199,6 +219,16 @@ if lane_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime.j
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker")
 if lane_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker")
+if lane_payload.get("replay_idempotency_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected deterministic replay_idempotency_taxonomy_mapping_status marker")
+if lane_payload.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected deterministic runbook_marker_parity_status marker")
+if lane_payload.get("replay_idempotency_runbook_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_taxonomy_version marker")
+if lane_payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker")
+if lane_payload.get("replay_idempotency_runbook_reason_code") != "none":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker")
 if lane_payload.get("crash_recovery_readiness_progress_status") != "verified":
     raise SystemExit("expected deterministic crash_recovery_readiness_progress_status marker")
 if lane_payload.get("snapshot_parity_status") != "verified":
@@ -249,6 +279,16 @@ if policy_payload.get("journal_replay_reason_taxonomy_version") != "kamn.runtime
     raise SystemExit("expected deterministic journal_replay_reason_taxonomy_version marker in policy report")
 if policy_payload.get("journal_replay_reason_codes_csv") != "journal_replay_drift_detected,checkpoint_divergence_bypass_detected":
     raise SystemExit("expected deterministic journal_replay_reason_codes_csv marker in policy report")
+if policy_payload.get("replay_idempotency_taxonomy_mapping_status") != "verified":
+    raise SystemExit("expected deterministic replay_idempotency_taxonomy_mapping_status marker in policy report")
+if policy_payload.get("runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected deterministic runbook_marker_parity_status marker in policy report")
+if policy_payload.get("replay_idempotency_runbook_reason_taxonomy_version") != "kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_taxonomy_version marker in policy report")
+if policy_payload.get("replay_idempotency_runbook_reason_codes_csv") != "replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_codes_csv marker in policy report")
+if policy_payload.get("replay_idempotency_runbook_reason_code") != "none":
+    raise SystemExit("expected deterministic replay_idempotency_runbook_reason_code marker in policy report")
 if policy_payload.get("state_consistency_reason_taxonomy_version") != "kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1":
     raise SystemExit("expected deterministic state_consistency_reason_taxonomy_version marker in policy report")
 if policy_payload.get("state_consistency_reason_codes_csv") != "crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded":
