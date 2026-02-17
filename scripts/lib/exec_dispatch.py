@@ -48,6 +48,35 @@ def absolute_invoked_path(invoked_path: str) -> Path:
     return Path(os.path.abspath(Path.cwd() / candidate))
 
 
+def count_lines(path: Path) -> int:
+    with path.open("r", encoding="utf-8") as handle:
+        return sum(1 for _ in handle)
+
+
+def is_declarative_policy_migration_v1_candidate(
+    *,
+    wrapper_rel: str,
+    interpreter: Any,
+    target: Any,
+    target_abs: Path,
+) -> bool:
+    if interpreter != "python3":
+        return False
+    if not isinstance(wrapper_rel, str):
+        return False
+    if not wrapper_rel.startswith("scripts/"):
+        return False
+    if "/check_" not in wrapper_rel or not wrapper_rel.endswith(".sh"):
+        return False
+    if not isinstance(target, str):
+        return False
+    if not (target.endswith("_contract.py") or target.endswith("_policy_contract.py")):
+        return False
+    if not target_abs.is_file():
+        return False
+    return count_lines(target_abs) <= 500
+
+
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     registry_path = Path(args.registry)
@@ -118,6 +147,29 @@ def main(argv: list[str]) -> int:
     forward_args = list(args.forward_args)
     if forward_args and forward_args[0] == "--":
         forward_args = forward_args[1:]
+
+    if is_declarative_policy_migration_v1_candidate(
+        wrapper_rel=wrapper_rel,
+        interpreter=interpreter,
+        target=target,
+        target_abs=target_abs,
+    ):
+        checker = repo_root / "scripts/framework/declarative_policy_checker.py"
+        command = [
+            "python3",
+            str(checker),
+            "--legacy-interpreter",
+            interpreter,
+            "--legacy-target",
+            str(target_abs),
+        ]
+        for prefix_arg in args_prefix:
+            command.extend(("--legacy-args-prefix", prefix_arg))
+        if passthrough:
+            command.append("--")
+            command.extend(forward_args)
+        os.execvp(command[0], command)
+        return 0
 
     command: list[str] = [interpreter, str(target_abs), *args_prefix]
     if passthrough:

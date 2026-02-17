@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 from typing import Any
 
@@ -39,8 +41,13 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate a report JSON file against declarative policy checks."
     )
-    parser.add_argument("--policy-file", required=True, help="Declarative policy JSON file.")
-    parser.add_argument("--report-file", required=True, help="Report JSON file.")
+    parser.add_argument("--policy-file", default="", help="Declarative policy JSON file.")
+    parser.add_argument("--report-file", default="", help="Report JSON file.")
+    parser.add_argument(
+        "--bundle-file",
+        default="",
+        help="Compatibility alias for --report-file.",
+    )
     parser.add_argument(
         "--expected-final-decision",
         choices=("GO", "NO-GO"),
@@ -57,7 +64,49 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default="",
         help="Optional output path for checker evaluation report JSON.",
     )
+    parser.add_argument(
+        "--legacy-target",
+        default="",
+        help="Compatibility mode: execute legacy checker target path directly.",
+    )
+    parser.add_argument(
+        "--legacy-interpreter",
+        choices=("python3", "bash"),
+        default="python3",
+        help="Compatibility mode interpreter for --legacy-target.",
+    )
+    parser.add_argument(
+        "--legacy-args-prefix",
+        action="append",
+        default=[],
+        help="Compatibility mode prefix argument; may be repeated.",
+    )
+    parser.add_argument("forward_args", nargs=argparse.REMAINDER)
     return parser.parse_args(argv)
+
+
+def _run_legacy_delegate(args: argparse.Namespace, forward_args: list[str]) -> int:
+    legacy_target = Path(args.legacy_target).resolve()
+    if not legacy_target.is_file():
+        fail(f"legacy target file not found: {legacy_target}")
+
+    command: list[str] = [args.legacy_interpreter, str(legacy_target), *args.legacy_args_prefix]
+    command.extend(forward_args)
+
+    env = dict(os.environ)
+    env["KAMN_DECLARATIVE_POLICY_CHECKER_DELEGATE"] = "1"
+    completed = subprocess.run(
+        command,
+        check=False,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    if completed.stdout:
+        print(completed.stdout, end="")
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+    return int(completed.returncode)
 
 
 def _validate_policy(policy: dict[str, Any]) -> dict[str, Any]:
@@ -206,8 +255,25 @@ def _evaluate(policy: dict[str, Any], report_payload: dict[str, Any]) -> dict[st
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
 
-    policy_file = Path(args.policy_file).resolve()
-    report_file = Path(args.report_file).resolve()
+    forward_args = list(args.forward_args)
+    if forward_args and forward_args[0] == "--":
+        forward_args = forward_args[1:]
+
+    if args.legacy_target:
+        return _run_legacy_delegate(args, forward_args)
+
+    if forward_args:
+        fail(f"unexpected positional arguments: {' '.join(forward_args)}")
+
+    policy_arg = args.policy_file
+    report_arg = args.report_file or args.bundle_file
+    if not policy_arg:
+        fail("--policy-file is required")
+    if not report_arg:
+        fail("--report-file is required")
+
+    policy_file = Path(policy_arg).resolve()
+    report_file = Path(report_arg).resolve()
 
     if not policy_file.is_file():
         fail(f"policy file not found: {policy_file}")
