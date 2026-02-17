@@ -1,22 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
 SCRIPT_NAME="$(basename "$0")"
 WRAPPER_NAME="$SCRIPT_NAME"
 RESOLVE_MANIFEST_ONLY=0
 FALLBACK_REASON_TAXONOMY_VERSION="kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1"
 FALLBACK_REASON_CODES_CSV="dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped"
-
-emit_fallback_error() {
-  local reason_code="$1"
-  local reason_detail="$2"
-  echo "dispatch_status=fail" >&2
-  echo "fallback_reason_taxonomy_version=$FALLBACK_REASON_TAXONOMY_VERSION" >&2
-  echo "fallback_reason_codes_csv=$FALLBACK_REASON_CODES_CSV" >&2
-  echo "fallback_reason_code=$reason_code" >&2
-  echo "fallback_reason_detail=$reason_detail" >&2
-}
 
 usage() {
   cat <<'USAGE'
@@ -228,7 +218,7 @@ if [[ -z "$MANIFEST_FILE" ]]; then
   exit 1
 fi
 
-MANIFEST_PATH="$ROOT_DIR/scripts/framework/manifests/$MANIFEST_FILE"
+MANIFEST_PATH="$KAMN_ROOT/scripts/framework/manifests/$MANIFEST_FILE"
 if [[ ! -f "$MANIFEST_PATH" ]]; then
   emit_fallback_error \
     "dispatcher_manifest_missing" \
@@ -249,7 +239,7 @@ if [[ -z "$PHASE_NAME" ]]; then
   exit 1
 fi
 
-exec bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
+exec bash "$KAMN_ROOT/scripts/framework/run_manifest_lane.sh" \
   --manifest "$MANIFEST_PATH" \
   --phase "$PHASE_NAME" \
   -- \

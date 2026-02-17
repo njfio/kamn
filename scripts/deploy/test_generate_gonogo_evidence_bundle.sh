@@ -1,28 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-GENERATOR="$ROOT_DIR/scripts/deploy/generate_gonogo_evidence_bundle.sh"
-POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_gonogo_evidence_policy.sh"
-UPGRADE_LINEAGE_CHECKER="$ROOT_DIR/scripts/deploy/check_upgrade_rehearsal_lineage_policy.py"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+GENERATOR="$KAMN_ROOT/scripts/deploy/generate_gonogo_evidence_bundle.sh"
+POLICY_CHECKER="$KAMN_ROOT/scripts/deploy/check_gonogo_evidence_policy.sh"
+UPGRADE_LINEAGE_CHECKER="$KAMN_ROOT/scripts/deploy/check_upgrade_rehearsal_lineage_policy.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$GENERATOR" ]; then
   echo "expected go/no-go evidence bundle generator to be executable" >&2
@@ -353,27 +337,27 @@ integration_live_bundle_policy="$TMP_DIR/integration-live-bundle-policy.json"
 integration_gate_report="$TMP_DIR/integration-go-no-go-gate-report.json"
 integration_milestone_bundle="$TMP_DIR/gonogo-milestone-integration.json"
 
-bash "$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh" \
+bash "$KAMN_ROOT/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh" \
   --mode dry-run \
   --output-json "$integration_preflight_summary" >/dev/null
-python3 "$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py" \
+python3 "$KAMN_ROOT/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py" \
   --report-file "$integration_preflight_summary" \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --require-reason-code dry_run_no_commands_executed \
   --output-json "$integration_preflight_policy" >/dev/null
 
-bash "$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane.sh" \
+bash "$KAMN_ROOT/scripts/kolme/run_local_live_node_validation_bundle_lane.sh" \
   --mode dry-run \
   --output-json "$integration_live_bundle_summary" >/dev/null
-python3 "$ROOT_DIR/scripts/kolme/check_local_live_node_validation_bundle_policy.py" \
+python3 "$KAMN_ROOT/scripts/kolme/check_local_live_node_validation_bundle_policy.py" \
   --report-file "$integration_live_bundle_summary" \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --require-reason-code dry_run_no_commands_executed \
   --output-json "$integration_live_bundle_policy" >/dev/null
 
-bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" \
+bash "$KAMN_ROOT/scripts/runtime/run_go_no_go_gate_lane.sh" \
   --max-seconds 120 \
   --output-json "$integration_gate_report" >/dev/null
 
@@ -1203,7 +1187,7 @@ if ! printf '%s\n' "$slo_policy_tampered_output" | grep -q "slo policy gate conv
 fi
 
 incident_readiness_report="$TMP_DIR/incident-readiness-report.json"
-bash "$ROOT_DIR/scripts/deploy/generate_staging_rehearsal_bundle.sh" \
+bash "$KAMN_ROOT/scripts/deploy/generate_staging_rehearsal_bundle.sh" \
   --output-file "$incident_readiness_report" \
   --release-candidate "v1.0.0-incident-readiness" \
   --deploy-status PASS \
