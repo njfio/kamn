@@ -111,6 +111,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^wal_checkpoint_status=verifi
   echo "expected sqlite crash-recovery live validation wal-checkpoint marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_integrity_status=verified$'; then
+  echo "expected sqlite crash-recovery live validation append-checkpoint integrity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery live validation append-checkpoint taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch$'; then
+  echo "expected sqlite crash-recovery live validation append-checkpoint taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1$'; then
   echo "expected sqlite crash-recovery live validation wal-durability taxonomy marker" >&2
   exit 1
@@ -295,6 +307,15 @@ lane_report = {
     "lane_mode": mode,
     "wal_append_status": summary_report.get("wal_append_status"),
     "wal_checkpoint_status": summary_report.get("wal_checkpoint_status"),
+    "append_checkpoint_integrity_status": summary_report.get(
+        "append_checkpoint_integrity_status"
+    ),
+    "append_checkpoint_reason_taxonomy_version": summary_report.get(
+        "append_checkpoint_reason_taxonomy_version"
+    ),
+    "append_checkpoint_reason_codes_csv": summary_report.get(
+        "append_checkpoint_reason_codes_csv"
+    ),
     "wal_durability_reason_taxonomy_version": summary_report.get(
         "wal_durability_reason_taxonomy_version"
     ),
@@ -375,6 +396,9 @@ echo "final_decision=GO"
 echo "lane_mode=$mode"
 echo "wal_append_status=verified"
 echo "wal_checkpoint_status=verified"
+echo "append_checkpoint_integrity_status=verified"
+echo "append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1"
+echo "append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch"
 echo "wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1"
 echo "wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete"
 echo "historical_query_index_status=verified"
