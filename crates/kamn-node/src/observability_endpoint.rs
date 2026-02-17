@@ -40,6 +40,14 @@ const OBSERVABILITY_READINESS_SCHEMA_VERSION: &str = "kamn.runtime.observability
 const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = "kamn.runtime.observability.stream.v1";
 const OBSERVABILITY_READINESS_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.observability.readiness.reason-taxonomy.v1";
+const OBSERVABILITY_ENDPOINT_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.observability-endpoint-reason-taxonomy.v1";
+const OBSERVABILITY_ENDPOINT_FAIL_CLOSED_SCHEMA_VERSION: &str =
+    "kamn.runtime.observability.endpoint-fail-closed.v1";
+const OBSERVABILITY_ENDPOINT_REQUIRED_FIELD_MISSING_REASON_PREFIX: &str =
+    "runtime_observability_policy_required_field_missing";
+const OBSERVABILITY_ENDPOINT_SCHEMA_DRIFT_REASON_PREFIX: &str =
+    "runtime_observability_policy_schema_drift";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ObservabilityEndpointConfig {
@@ -65,6 +73,25 @@ pub(crate) struct RuntimeObservabilitySnapshot {
     pub(crate) transport_checkpoint_failures: u64,
     pub(crate) signer_checkpoint_failures: u64,
     pub(crate) commit_checkpoint_failures: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ObservabilityEndpointPayloadSurface {
+    Metrics,
+    Health,
+    Readiness,
+    Stream,
+}
+
+impl ObservabilityEndpointPayloadSurface {
+    fn reason_surface(self) -> &'static str {
+        match self {
+            Self::Metrics => "metrics",
+            Self::Health => "health",
+            Self::Readiness => "readiness",
+            Self::Stream => "stream",
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -569,41 +596,41 @@ async fn dispatch_observability_endpoint_request(
 async fn handle_observability_metrics_path(
     snapshot: &RuntimeObservabilitySnapshot,
 ) -> ObservabilityEndpointResponse {
-    ObservabilityEndpointResponse {
-        status_code: 200,
-        content_type: "text/plain; version=0.0.4",
-        body: render_metrics_body(snapshot),
-    }
+    enforce_observability_endpoint_payload_contract(
+        ObservabilityEndpointPayloadSurface::Metrics,
+        "text/plain; version=0.0.4",
+        render_metrics_body(snapshot),
+    )
 }
 
 async fn handle_observability_health_path(
     snapshot: &RuntimeObservabilitySnapshot,
 ) -> ObservabilityEndpointResponse {
-    ObservabilityEndpointResponse {
-        status_code: 200,
-        content_type: "application/json",
-        body: render_health_body(snapshot),
-    }
+    enforce_observability_endpoint_payload_contract(
+        ObservabilityEndpointPayloadSurface::Health,
+        "application/json",
+        render_health_body(snapshot),
+    )
 }
 
 async fn handle_observability_readiness_path(
     snapshot: &RuntimeObservabilitySnapshot,
 ) -> ObservabilityEndpointResponse {
-    ObservabilityEndpointResponse {
-        status_code: 200,
-        content_type: "application/json",
-        body: render_readiness_body(snapshot),
-    }
+    enforce_observability_endpoint_payload_contract(
+        ObservabilityEndpointPayloadSurface::Readiness,
+        "application/json",
+        render_readiness_body(snapshot),
+    )
 }
 
 async fn handle_observability_stream_path(
     snapshot: &RuntimeObservabilitySnapshot,
 ) -> ObservabilityEndpointResponse {
-    ObservabilityEndpointResponse {
-        status_code: 200,
-        content_type: "application/x-ndjson",
-        body: render_stream_body(snapshot),
-    }
+    enforce_observability_endpoint_payload_contract(
+        ObservabilityEndpointPayloadSurface::Stream,
+        "application/x-ndjson",
+        render_stream_body(snapshot),
+    )
 }
 
 async fn handle_observability_not_found_path() -> ObservabilityEndpointResponse {
@@ -623,38 +650,481 @@ fn render_observability_endpoint_response_with_paths(
     stream_path: &str,
 ) -> ObservabilityEndpointResponse {
     if path == metrics_path {
-        return ObservabilityEndpointResponse {
-            status_code: 200,
-            content_type: "text/plain; version=0.0.4",
-            body: render_metrics_body(snapshot),
-        };
+        return enforce_observability_endpoint_payload_contract(
+            ObservabilityEndpointPayloadSurface::Metrics,
+            "text/plain; version=0.0.4",
+            render_metrics_body(snapshot),
+        );
     }
     if path == health_path {
-        return ObservabilityEndpointResponse {
-            status_code: 200,
-            content_type: "application/json",
-            body: render_health_body(snapshot),
-        };
+        return enforce_observability_endpoint_payload_contract(
+            ObservabilityEndpointPayloadSurface::Health,
+            "application/json",
+            render_health_body(snapshot),
+        );
     }
     if path == readiness_path {
-        return ObservabilityEndpointResponse {
-            status_code: 200,
-            content_type: "application/json",
-            body: render_readiness_body(snapshot),
-        };
+        return enforce_observability_endpoint_payload_contract(
+            ObservabilityEndpointPayloadSurface::Readiness,
+            "application/json",
+            render_readiness_body(snapshot),
+        );
     }
     if path == stream_path {
-        return ObservabilityEndpointResponse {
-            status_code: 200,
-            content_type: "application/x-ndjson",
-            body: render_stream_body(snapshot),
-        };
+        return enforce_observability_endpoint_payload_contract(
+            ObservabilityEndpointPayloadSurface::Stream,
+            "application/x-ndjson",
+            render_stream_body(snapshot),
+        );
     }
     ObservabilityEndpointResponse {
         status_code: 404,
         content_type: "text/plain; charset=utf-8",
         body: "not found\n".to_owned(),
     }
+}
+
+pub(crate) fn enforce_observability_endpoint_payload_contract(
+    surface: ObservabilityEndpointPayloadSurface,
+    content_type: &'static str,
+    payload: String,
+) -> ObservabilityEndpointResponse {
+    match validate_observability_endpoint_payload_contract(surface, payload.as_str()) {
+        Ok(()) => ObservabilityEndpointResponse {
+            status_code: 200,
+            content_type,
+            body: payload,
+        },
+        Err(reason_code) => ObservabilityEndpointResponse {
+            status_code: 503,
+            content_type: "application/json",
+            body: render_observability_endpoint_fail_closed_body(surface, reason_code.as_str()),
+        },
+    }
+}
+
+pub(crate) fn validate_observability_endpoint_payload_contract(
+    surface: ObservabilityEndpointPayloadSurface,
+    payload: &str,
+) -> Result<(), String> {
+    match surface {
+        ObservabilityEndpointPayloadSurface::Metrics => {
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_latency_p50_ms ",
+                "kamn_observability_latency_p50_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_latency_p99_ms ",
+                "kamn_observability_latency_p99_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_throughput_tps ",
+                "kamn_observability_throughput_tps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_error_rate_bps ",
+                "kamn_observability_error_rate_bps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_availability_bps ",
+                "kamn_observability_availability_bps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_alert_count ",
+                "kamn_observability_alert_count",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_transport_checkpoint_failures ",
+                "kamn_observability_transport_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_signer_checkpoint_failures ",
+                "kamn_observability_signer_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_commit_checkpoint_failures ",
+                "kamn_observability_commit_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_ready ",
+                "kamn_observability_ready",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_source{source=\"",
+                "kamn_observability_source",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_runtime_mode{runtime_mode=\"",
+                "kamn_observability_runtime_mode",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_reason_code{reason_code=\"",
+                "kamn_observability_reason_code",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_readiness_reason_code{readiness_reason_code=\"",
+                "kamn_observability_readiness_reason_code",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_transport_dependency_status{status=\"",
+                "kamn_observability_transport_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_signer_dependency_status{status=\"",
+                "kamn_observability_signer_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_commit_dependency_status{status=\"",
+                "kamn_observability_commit_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "kamn_observability_health{health=\"",
+                "kamn_observability_health",
+            )?;
+            Ok(())
+        }
+        ObservabilityEndpointPayloadSurface::Health => {
+            validate_json_schema_version(
+                surface,
+                payload,
+                OBSERVABILITY_HEALTH_SCHEMA_VERSION,
+                "schema_version",
+            )?;
+            validate_required_field_marker(surface, payload, "\"source\":", "source")?;
+            validate_required_field_marker(surface, payload, "\"runtime_mode\":", "runtime_mode")?;
+            validate_required_field_marker(surface, payload, "\"health\":", "health")?;
+            validate_required_field_marker(surface, payload, "\"alert_count\":", "alert_count")?;
+            validate_required_field_marker(surface, payload, "\"reason_code\":", "reason_code")?;
+            validate_required_field_marker(surface, payload, "\"ready\":", "ready")?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"readiness_reason_code\":",
+                "readiness_reason_code",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"readiness_reason_taxonomy_version\":",
+                "readiness_reason_taxonomy_version",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_dependency_status\":",
+                "transport_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_dependency_status\":",
+                "signer_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_dependency_status\":",
+                "commit_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_checkpoint_failures\":",
+                "transport_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_checkpoint_failures\":",
+                "signer_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_checkpoint_failures\":",
+                "commit_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"latency_p50_ms\":",
+                "latency_p50_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"latency_p99_ms\":",
+                "latency_p99_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"throughput_tps\":",
+                "throughput_tps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"error_rate_bps\":",
+                "error_rate_bps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"availability_bps\":",
+                "availability_bps",
+            )?;
+            Ok(())
+        }
+        ObservabilityEndpointPayloadSurface::Readiness => {
+            validate_json_schema_version(
+                surface,
+                payload,
+                OBSERVABILITY_READINESS_SCHEMA_VERSION,
+                "schema_version",
+            )?;
+            validate_required_field_marker(surface, payload, "\"source\":", "source")?;
+            validate_required_field_marker(surface, payload, "\"runtime_mode\":", "runtime_mode")?;
+            validate_required_field_marker(surface, payload, "\"ready\":", "ready")?;
+            validate_required_field_marker(surface, payload, "\"health\":", "health")?;
+            validate_required_field_marker(surface, payload, "\"reason_code\":", "reason_code")?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"readiness_reason_code\":",
+                "readiness_reason_code",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"readiness_reason_taxonomy_version\":",
+                "readiness_reason_taxonomy_version",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_dependency_status\":",
+                "transport_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_dependency_status\":",
+                "signer_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_dependency_status\":",
+                "commit_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_checkpoint_failures\":",
+                "transport_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_checkpoint_failures\":",
+                "signer_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_checkpoint_failures\":",
+                "commit_checkpoint_failures",
+            )?;
+            Ok(())
+        }
+        ObservabilityEndpointPayloadSurface::Stream => {
+            validate_json_schema_version(
+                surface,
+                payload,
+                OBSERVABILITY_STREAM_SCHEMA_VERSION,
+                "schema_version",
+            )?;
+            validate_required_field_marker(surface, payload, "\"source\":", "source")?;
+            validate_required_field_marker(surface, payload, "\"runtime_mode\":", "runtime_mode")?;
+            validate_required_field_marker(surface, payload, "\"health\":", "health")?;
+            validate_required_field_marker(surface, payload, "\"alert_count\":", "alert_count")?;
+            validate_required_field_marker(surface, payload, "\"reason_code\":", "reason_code")?;
+            validate_required_field_marker(surface, payload, "\"ready\":", "ready")?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"readiness_reason_code\":",
+                "readiness_reason_code",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_dependency_status\":",
+                "transport_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_dependency_status\":",
+                "signer_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_dependency_status\":",
+                "commit_dependency_status",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"transport_checkpoint_failures\":",
+                "transport_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"signer_checkpoint_failures\":",
+                "signer_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"commit_checkpoint_failures\":",
+                "commit_checkpoint_failures",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"latency_p50_ms\":",
+                "latency_p50_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"latency_p99_ms\":",
+                "latency_p99_ms",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"throughput_tps\":",
+                "throughput_tps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"error_rate_bps\":",
+                "error_rate_bps",
+            )?;
+            validate_required_field_marker(
+                surface,
+                payload,
+                "\"availability_bps\":",
+                "availability_bps",
+            )?;
+            Ok(())
+        }
+    }
+}
+
+fn validate_json_schema_version(
+    surface: ObservabilityEndpointPayloadSurface,
+    payload: &str,
+    expected_schema_version: &str,
+    field_name: &str,
+) -> Result<(), String> {
+    validate_required_field_marker(surface, payload, "\"schema_version\":", "schema_version")?;
+    let schema_marker = format!("\"schema_version\":\"{expected_schema_version}\"");
+    if payload.contains(schema_marker.as_str()) {
+        return Ok(());
+    }
+    Err(schema_drift_reason_code(surface, field_name))
+}
+
+fn validate_required_field_marker(
+    surface: ObservabilityEndpointPayloadSurface,
+    payload: &str,
+    marker: &str,
+    field_name: &str,
+) -> Result<(), String> {
+    if payload.contains(marker) {
+        return Ok(());
+    }
+    Err(required_field_missing_reason_code(surface, field_name))
+}
+
+fn required_field_missing_reason_code(
+    surface: ObservabilityEndpointPayloadSurface,
+    field_name: &str,
+) -> String {
+    format!(
+        "{}:{}.{}",
+        OBSERVABILITY_ENDPOINT_REQUIRED_FIELD_MISSING_REASON_PREFIX,
+        surface.reason_surface(),
+        field_name
+    )
+}
+
+fn schema_drift_reason_code(
+    surface: ObservabilityEndpointPayloadSurface,
+    field_name: &str,
+) -> String {
+    format!(
+        "{}:{}.{}",
+        OBSERVABILITY_ENDPOINT_SCHEMA_DRIFT_REASON_PREFIX,
+        surface.reason_surface(),
+        field_name
+    )
+}
+
+fn render_observability_endpoint_fail_closed_body(
+    surface: ObservabilityEndpointPayloadSurface,
+    reason_code: &str,
+) -> String {
+    format!(
+        "{{\"schema_version\":\"{}\",\"status\":\"fail_closed\",\"final_decision\":\"NO-GO\",\"surface\":\"{}\",\"reason_taxonomy_version\":\"{}\",\"reason_code\":\"{}\"}}",
+        OBSERVABILITY_ENDPOINT_FAIL_CLOSED_SCHEMA_VERSION,
+        surface.reason_surface(),
+        OBSERVABILITY_ENDPOINT_REASON_TAXONOMY_VERSION,
+        escape_json_string(reason_code),
+    )
 }
 
 fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
