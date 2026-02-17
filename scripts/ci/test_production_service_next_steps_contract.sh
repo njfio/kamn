@@ -43,6 +43,13 @@ required_markers = (
     "retry_tls_live_https_taxonomy_version=kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
     "retry_tls_submit_finality_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1",
     "retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.",
+    "R27.29 Transport/Observability/TLS CI Smoke Convergence Closure",
+    "Active chain: `#4293 -> #4295 -> #4299 -> (#4306, #4307)`.",
+    "transport_observability_tls_ci_smoke_convergence_status=verified",
+    "transport_observability_tls_reason_taxonomy_version=kamn.ci.transport-observability-tls-ci-smoke-convergence-reason-taxonomy.v1",
+    "transport_observability_tls_ci_smoke_max_seconds=120",
+    "transport_observability_tls_local_heavy_max_seconds=900",
+    "test_check_transport_observability_tls_ci_smoke_convergence.sh",
     "Historical Baseline (Superseded)",
 )
 for marker in required_markers:
