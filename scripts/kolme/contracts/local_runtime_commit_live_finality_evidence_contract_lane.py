@@ -26,6 +26,27 @@ SUBMIT_FINALITY_REASON_CODES_CSV = (
     "submit_finality_reason_mismatch_for_finality_enabled_run,"
     "submit_finality_reason_mismatch_for_submit_only_run"
 )
+PROVIDER_FAILURE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1"
+)
+PROVIDER_FAILURE_REASON_CODES_CSV = (
+    "provider_client_contract_mismatch,"
+    "provider_contract_enforcement_mode_mismatch,"
+    "provider_live_contract_marker_mismatch,"
+    "provider_live_contract_marker_missing,"
+    "provider_in_memory_reference_detected,"
+    "provider_hint_in_memory_provider_reference_detected,"
+    "provider_submit_profile_contract_mismatch,"
+    "provider_command_marker_mismatch,"
+    "provider_command_marker_missing,"
+    "provider_signing_profile_marker_mismatch,"
+    "provider_signing_profile_marker_missing,"
+    "provider_signing_profile_simulated_detected,"
+    "provider_signer_adapter_contract_mismatch,"
+    "provider_signing_curve_contract_mismatch,"
+    "provider_signing_profile_contract_version_mismatch,"
+    "live_command_in_memory_provider_reference_detected"
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -149,6 +170,9 @@ def main() -> int:
         "request_payload_evidence_marker_missing",
         "finality_evidence_artifact_path_missing",
         "request_finality_evidence_linkage_missing",
+        "request_payload_evidence_artifact_path_lineage_mismatch",
+        "submit_evidence_artifact_path_lineage_mismatch",
+        "finality_evidence_artifact_path_lineage_mismatch",
         "finality_retry_contract_version",
         "finality_retry_max_attempts",
         "finality_retry_backoff_seconds",
@@ -162,6 +186,9 @@ def main() -> int:
         "submit_finality_reason_taxonomy_version",
         "submit_finality_reason_codes_csv",
         "submit_finality_reason_codes_value",
+        "provider_failure_reason_taxonomy_version",
+        "provider_failure_reason_codes_csv",
+        "provider_failure_reason_codes_value",
         "submit_finality_reason_mismatch_for_finality_enabled_run",
         "submit_finality_reason_mismatch_for_submit_only_run",
         "Regression: #2099",
@@ -434,10 +461,33 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    if (
+        policy_payload.get("provider_failure_reason_taxonomy_version")
+        != PROVIDER_FAILURE_REASON_TAXONOMY_VERSION
+    ):
+        print(
+            "expected provider_failure_reason_taxonomy_version in policy output",
+            file=sys.stderr,
+        )
+        return 1
+    if policy_payload.get("provider_failure_reason_codes_csv") != PROVIDER_FAILURE_REASON_CODES_CSV:
+        print(
+            "expected provider_failure_reason_codes_csv in policy output",
+            file=sys.stderr,
+        )
+        return 1
+    if policy_payload.get("provider_failure_reason_codes_value") != "none":
+        print(
+            "expected provider_failure_reason_codes_value=none in policy output",
+            file=sys.stderr,
+        )
+        return 1
 
     with tempfile.TemporaryDirectory(prefix="runtime-commit-finality-negative-") as temp_dir:
         negative_root = Path(temp_dir)
         linkage_drift_summary_file = negative_root / "linkage_drift_summary.json"
+        lineage_cross_link_drift_summary_file = negative_root / "lineage_cross_link_drift_summary.json"
+        lineage_cross_link_drift_policy_file = negative_root / "lineage_cross_link_drift_policy.json"
         linkage_drift_policy_file = negative_root / "linkage_drift_policy.json"
 
         linkage_drift_summary = dict(summary_payload)
@@ -504,6 +554,79 @@ def main() -> int:
             )
             return 1
 
+        lineage_cross_link_drift_summary = dict(summary_payload)
+        lineage_cross_link_drift_summary["request_payload_evidence_artifact_path"] = str(
+            summary_payload.get("finality_output_file", "")
+        )
+        lineage_cross_link_drift_summary["submit_evidence_artifact_path"] = str(
+            summary_payload.get("finality_output_file", "")
+        )
+        lineage_cross_link_drift_summary["finality_evidence_artifact_path"] = str(
+            summary_payload.get("live_output_file", "")
+        )
+        lineage_cross_link_drift_summary_file.write_text(
+            json.dumps(lineage_cross_link_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        lineage_cross_link_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(lineage_cross_link_drift_summary_file),
+                "--expected-final-decision",
+                "GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--output-json",
+                str(lineage_cross_link_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if lineage_cross_link_drift_result.returncode == 0:
+            print("expected lineage cross-link drift proof to fail closed", file=sys.stderr)
+            return 1
+        lineage_cross_link_drift_policy = json.loads(
+            lineage_cross_link_drift_policy_file.read_text(encoding="utf-8")
+        )
+        lineage_cross_link_drift_reason_codes = lineage_cross_link_drift_policy.get("reason_codes")
+        if not isinstance(lineage_cross_link_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in lineage cross-link drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "request_payload_evidence_artifact_path_lineage_mismatch"
+            not in lineage_cross_link_drift_reason_codes
+        ):
+            print(
+                "expected request_payload_evidence_artifact_path_lineage_mismatch in policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "submit_evidence_artifact_path_lineage_mismatch" not in lineage_cross_link_drift_reason_codes:
+            print(
+                "expected submit_evidence_artifact_path_lineage_mismatch in policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "finality_evidence_artifact_path_lineage_mismatch"
+            not in lineage_cross_link_drift_reason_codes
+        ):
+            print(
+                "expected finality_evidence_artifact_path_lineage_mismatch in policy output",
+                file=sys.stderr,
+            )
+            return 1
+
         provider_drift_summary_file = negative_root / "provider_drift_summary.json"
         provider_drift_policy_file = negative_root / "provider_drift_policy.json"
         provider_drift_summary = dict(summary_payload)
@@ -544,6 +667,15 @@ def main() -> int:
         if "provider_in_memory_reference_detected" not in provider_drift_reason_codes:
             print(
                 "expected provider_in_memory_reference_detected in provider drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            provider_drift_policy.get("provider_failure_reason_codes_value")
+            != "provider_in_memory_reference_detected"
+        ):
+            print(
+                "expected normalized provider_failure_reason_codes_value in provider drift policy output",
                 file=sys.stderr,
             )
             return 1
@@ -662,6 +794,27 @@ def main() -> int:
         if retry_drift_policy.get("submit_finality_reason_codes_value") != "none":
             print(
                 "expected submit/finality taxonomy value=none in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            retry_drift_policy.get("provider_failure_reason_taxonomy_version")
+            != PROVIDER_FAILURE_REASON_TAXONOMY_VERSION
+        ):
+            print(
+                "expected provider failure taxonomy version in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if retry_drift_policy.get("provider_failure_reason_codes_csv") != PROVIDER_FAILURE_REASON_CODES_CSV:
+            print(
+                "expected provider failure taxonomy ordering in retry drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if retry_drift_policy.get("provider_failure_reason_codes_value") != "none":
+            print(
+                "expected provider failure taxonomy value=none in retry drift policy output",
                 file=sys.stderr,
             )
             return 1
