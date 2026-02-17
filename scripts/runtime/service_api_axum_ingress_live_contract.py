@@ -53,6 +53,12 @@ EXPECTED_ADMISSION_REASON_CODES_CSV = (
     "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,"
     "admission_evidence_normalization_drift"
 )
+EXPECTED_ADMISSION_BUDGET_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1"
+)
+EXPECTED_ADMISSION_BUDGET_REASON_CODES_CSV = (
+    "admission_inflight_budget_mismatch,admission_queue_budget_mismatch"
+)
 EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1"
 )
@@ -120,6 +126,8 @@ REQUIRED_REPORT_FIELDS = [
     "ci_local_promotion_budget_boundary_status",
     "admission_saturation_status",
     "admission_queue_cap_enforcement_status",
+    "admission_inflight_budget_status",
+    "admission_queue_budget_status",
     "overload_evidence_normalization_status",
     "async_lifecycle_backpressure_projection_status",
     "protocol_compliance_status",
@@ -130,6 +138,8 @@ REQUIRED_REPORT_FIELDS = [
     "ingress_resilience_reason_codes_csv",
     "admission_reason_taxonomy_version",
     "admission_reason_codes_csv",
+    "admission_budget_reason_taxonomy_version",
+    "admission_budget_reason_codes_csv",
     "service_api_lifecycle_rejection_reason_taxonomy_version",
     "service_api_lifecycle_rejection_reason_codes_csv",
     "request_validation_reason_registry_status",
@@ -140,6 +150,8 @@ REQUIRED_REPORT_FIELDS = [
     "error_envelope_reason_codes_csv",
     "api_max_requests_default",
     "api_idle_timeout_default_ms",
+    "admission_inflight_budget_limit",
+    "admission_queue_budget_limit",
     "body_size_limit_bytes",
     "api_concurrency_limit_default",
     "api_rate_limit_per_second_default",
@@ -165,6 +177,8 @@ REQUIRED_VERIFIED_FIELDS = [
     "ci_local_promotion_budget_boundary_status",
     "admission_saturation_status",
     "admission_queue_cap_enforcement_status",
+    "admission_inflight_budget_status",
+    "admission_queue_budget_status",
     "overload_evidence_normalization_status",
     "async_lifecycle_backpressure_projection_status",
     "protocol_compliance_status",
@@ -219,6 +233,8 @@ def _resolve_protocol_mismatch_reason_code(
         "service_api_axum_policy_ingress_resilience_reason_codes_csv_mismatch",
         "service_api_axum_policy_admission_reason_taxonomy_version_mismatch",
         "service_api_axum_policy_admission_reason_codes_csv_mismatch",
+        "service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch",
+        "service_api_axum_policy_admission_budget_reason_codes_csv_mismatch",
         "service_api_axum_policy_lifecycle_rejection_reason_taxonomy_version_mismatch",
         "service_api_axum_policy_lifecycle_rejection_reason_codes_csv_mismatch",
         "service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch",
@@ -239,6 +255,10 @@ def _resolve_protocol_mismatch_reason_code(
         "service_api_axum_policy_api_idle_timeout_default_mismatch",
         "service_api_axum_policy_api_concurrency_limit_default_invalid",
         "service_api_axum_policy_api_concurrency_limit_default_mismatch",
+        "service_api_axum_policy_admission_inflight_budget_limit_invalid",
+        "service_api_axum_policy_admission_inflight_budget_limit_mismatch",
+        "service_api_axum_policy_admission_queue_budget_limit_invalid",
+        "service_api_axum_policy_admission_queue_budget_limit_mismatch",
         "service_api_axum_policy_api_rate_limit_per_second_default_invalid",
         "service_api_axum_policy_api_rate_limit_per_second_default_mismatch",
     }
@@ -379,6 +399,33 @@ def _check_policy(args: argparse.Namespace) -> int:
         "service_api_axum_policy_admission_reason_codes_csv_mismatch",
     )
     decision.reject_if(
+        report.get("admission_budget_reason_taxonomy_version")
+        != EXPECTED_ADMISSION_BUDGET_REASON_TAXONOMY_VERSION,
+        "service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch",
+    )
+    decision.reject_if(
+        report.get("admission_budget_reason_codes_csv")
+        != EXPECTED_ADMISSION_BUDGET_REASON_CODES_CSV,
+        "service_api_axum_policy_admission_budget_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("admission_inflight_budget_limit")),
+        "service_api_axum_policy_admission_inflight_budget_limit_invalid",
+    )
+    decision.reject_if(
+        report.get("admission_inflight_budget_limit")
+        != EXPECTED_API_CONCURRENCY_LIMIT_DEFAULT,
+        "service_api_axum_policy_admission_inflight_budget_limit_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("admission_queue_budget_limit")),
+        "service_api_axum_policy_admission_queue_budget_limit_invalid",
+    )
+    decision.reject_if(
+        report.get("admission_queue_budget_limit") != EXPECTED_API_MAX_REQUESTS_DEFAULT,
+        "service_api_axum_policy_admission_queue_budget_limit_mismatch",
+    )
+    decision.reject_if(
         report.get("service_api_lifecycle_rejection_reason_taxonomy_version")
         != EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
         "service_api_axum_policy_lifecycle_rejection_reason_taxonomy_version_mismatch",
@@ -450,13 +497,25 @@ def _check_policy(args: argparse.Namespace) -> int:
         "admission_queue_cap_enforcement_status": (
             report.get("admission_queue_cap_enforcement_status")
         ),
+        "admission_inflight_budget_status": report.get(
+            "admission_inflight_budget_status"
+        ),
+        "admission_queue_budget_status": report.get("admission_queue_budget_status"),
         "overload_evidence_normalization_status": (
             report.get("overload_evidence_normalization_status")
         ),
+        "admission_inflight_budget_limit": report.get(
+            "admission_inflight_budget_limit"
+        ),
+        "admission_queue_budget_limit": report.get("admission_queue_budget_limit"),
         "admission_reason_taxonomy_version": (
             EXPECTED_ADMISSION_REASON_TAXONOMY_VERSION
         ),
         "admission_reason_codes_csv": EXPECTED_ADMISSION_REASON_CODES_CSV,
+        "admission_budget_reason_taxonomy_version": (
+            EXPECTED_ADMISSION_BUDGET_REASON_TAXONOMY_VERSION
+        ),
+        "admission_budget_reason_codes_csv": EXPECTED_ADMISSION_BUDGET_REASON_CODES_CSV,
         "service_api_lifecycle_rejection_reason_taxonomy_version": (
             EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION
         ),
@@ -511,6 +570,18 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(
         "service_api_lifecycle_rejection_reason_codes_csv="
         f"{EXPECTED_SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV}"
+    )
+    print(f"admission_inflight_budget_status={report.get('admission_inflight_budget_status')}")
+    print(f"admission_queue_budget_status={report.get('admission_queue_budget_status')}")
+    print(f"admission_inflight_budget_limit={report.get('admission_inflight_budget_limit')}")
+    print(f"admission_queue_budget_limit={report.get('admission_queue_budget_limit')}")
+    print(
+        "admission_budget_reason_taxonomy_version="
+        f"{EXPECTED_ADMISSION_BUDGET_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "admission_budget_reason_codes_csv="
+        f"{EXPECTED_ADMISSION_BUDGET_REASON_CODES_CSV}"
     )
     print("service_api_axum_protocol_mismatch_reason_mapping_status=verified")
     print(

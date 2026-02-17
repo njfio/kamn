@@ -1188,12 +1188,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `ci_local_promotion_budget_boundary_status=verified`,
     `ingress_resilience_reason_taxonomy_version=kamn.runtime.service-api-ingress-resilience-reason-taxonomy.v1`,
     `ingress_resilience_reason_codes_csv=ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`.
-  - admission saturation and queue-cap governance remains deterministic via:
+  - admission saturation, in-flight, and queue-budget governance remains deterministic via:
     `admission_saturation_status=verified`,
     `admission_queue_cap_enforcement_status=verified`,
+    `admission_inflight_budget_status=verified`,
+    `admission_queue_budget_status=verified`,
     `overload_evidence_normalization_status=verified`,
+    `admission_inflight_budget_limit=32`,
+    `admission_queue_budget_limit=1`,
     `admission_reason_taxonomy_version=kamn.runtime.service-api-admission-reason-taxonomy.v1`,
-    `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`.
+    `admission_reason_codes_csv=admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift`,
+    `admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1`,
+    `admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch`.
   - protocol mismatch reason mapping remains deterministic via:
     `service_api_axum_protocol_mismatch_reason_mapping_status=verified`,
     `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`,
@@ -1222,7 +1228,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_ingress_resilience_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_admission_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch`
   - `service_api_axum_policy_request_validation_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_inflight_budget_limit_mismatch`
+  - `service_api_axum_policy_admission_queue_budget_limit_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
   - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_protocol_taxonomy_mismatch`
   - `service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch`

@@ -33,6 +33,8 @@ cat >"$report_file" <<'JSON'
   "ci_local_promotion_budget_boundary_status": "verified",
   "admission_saturation_status": "verified",
   "admission_queue_cap_enforcement_status": "verified",
+  "admission_inflight_budget_status": "verified",
+  "admission_queue_budget_status": "verified",
   "overload_evidence_normalization_status": "verified",
   "async_lifecycle_backpressure_projection_status": "verified",
   "protocol_compliance_reason_taxonomy_version": "kamn.runtime.service-api-protocol-compliance-reason-taxonomy.v1",
@@ -41,6 +43,8 @@ cat >"$report_file" <<'JSON'
   "ingress_resilience_reason_codes_csv": "ingress_readiness_progress_stalled,websocket_upgrade_parity_mismatch,ci_local_promotion_budget_boundary_exceeded",
   "admission_reason_taxonomy_version": "kamn.runtime.service-api-admission-reason-taxonomy.v1",
   "admission_reason_codes_csv": "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift",
+  "admission_budget_reason_taxonomy_version": "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1",
+  "admission_budget_reason_codes_csv": "admission_inflight_budget_mismatch,admission_queue_budget_mismatch",
   "service_api_lifecycle_rejection_reason_taxonomy_version": "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1",
   "service_api_lifecycle_rejection_reason_codes_csv": "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid",
   "request_validation_reason_registry_status": "verified",
@@ -51,6 +55,8 @@ cat >"$report_file" <<'JSON'
   "error_envelope_reason_codes_csv": "service_api_ws_upgrade_header_missing,service_api_method_not_allowed,service_api_route_not_found",
   "api_max_requests_default": 1,
   "api_idle_timeout_default_ms": 5000,
+  "admission_inflight_budget_limit": 32,
+  "admission_queue_budget_limit": 1,
   "body_size_limit_bytes": 65536,
   "api_concurrency_limit_default": 32,
   "api_rate_limit_per_second_default": 120,
@@ -92,6 +98,30 @@ if ! printf '%s\n' "$policy_output" | grep -q '^service_api_lifecycle_rejection_
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid$'; then
   echo "expected service api axum ingress policy checker lifecycle rejection reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_inflight_budget_status=verified$'; then
+  echo "expected service api axum ingress policy checker in-flight budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_queue_budget_status=verified$'; then
+  echo "expected service api axum ingress policy checker queue budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_inflight_budget_limit=32$'; then
+  echo "expected service api axum ingress policy checker in-flight budget limit marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_queue_budget_limit=1$'; then
+  echo "expected service api axum ingress policy checker queue budget limit marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1$'; then
+  echo "expected service api axum ingress policy checker admission budget reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch$'; then
+  echo "expected service api axum ingress policy checker admission budget reason codes marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$policy_output" | grep -q '^service_api_axum_protocol_mismatch_reason_mapping_status=verified$'; then
@@ -141,6 +171,10 @@ if payload.get("admission_saturation_status") != "verified":
     raise SystemExit("expected deterministic admission_saturation_status marker")
 if payload.get("admission_queue_cap_enforcement_status") != "verified":
     raise SystemExit("expected deterministic admission_queue_cap_enforcement_status marker")
+if payload.get("admission_inflight_budget_status") != "verified":
+    raise SystemExit("expected deterministic admission_inflight_budget_status marker")
+if payload.get("admission_queue_budget_status") != "verified":
+    raise SystemExit("expected deterministic admission_queue_budget_status marker")
 if payload.get("overload_evidence_normalization_status") != "verified":
     raise SystemExit("expected deterministic overload_evidence_normalization_status marker")
 if payload.get("service_api_lifecycle_rejection_reason_taxonomy_version") != "kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1":
@@ -151,6 +185,14 @@ if payload.get("admission_reason_taxonomy_version") != "kamn.runtime.service-api
     raise SystemExit("expected deterministic admission_reason_taxonomy_version marker")
 if payload.get("admission_reason_codes_csv") != "admission_queue_saturation_detected,admission_queue_cap_bypass_detected,admission_evidence_normalization_drift":
     raise SystemExit("expected deterministic admission_reason_codes_csv marker")
+if payload.get("admission_budget_reason_taxonomy_version") != "kamn.runtime.service-api-admission-budget-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic admission_budget_reason_taxonomy_version marker")
+if payload.get("admission_budget_reason_codes_csv") != "admission_inflight_budget_mismatch,admission_queue_budget_mismatch":
+    raise SystemExit("expected deterministic admission_budget_reason_codes_csv marker")
+if payload.get("admission_inflight_budget_limit") != 32:
+    raise SystemExit("expected deterministic admission_inflight_budget_limit marker")
+if payload.get("admission_queue_budget_limit") != 1:
+    raise SystemExit("expected deterministic admission_queue_budget_limit marker")
 if payload.get("request_validation_reason_registry_status") != "verified":
     raise SystemExit("expected deterministic request_validation_reason_registry_status marker")
 if payload.get("error_envelope_source_contract_status") != "verified":
@@ -544,6 +586,80 @@ if ! printf '%s\n' "$tampered_async_backpressure_projection_output" | grep -q 's
   exit 1
 fi
 
+tampered_admission_inflight_budget_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-inflight-budget-limit.tampered.json"
+cp "$report_file" "$tampered_admission_inflight_budget_limit_report"
+python3 - "$tampered_admission_inflight_budget_limit_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_inflight_budget_limit"] = 31
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_inflight_budget_limit_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_inflight_budget_limit_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-inflight-budget-limit.tampered.json" 2>&1
+)"
+tampered_admission_inflight_budget_limit_code=$?
+set -e
+
+if [ "$tampered_admission_inflight_budget_limit_code" -eq 0 ]; then
+  echo "expected tampered service api in-flight budget limit to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_inflight_budget_limit_output" | grep -q 'service_api_axum_policy_admission_inflight_budget_limit_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered in-flight budget limit" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_inflight_budget_limit_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch$'; then
+  echo "expected deterministic protocol mismatch reason mapping code for in-flight budget limit tamper" >&2
+  exit 1
+fi
+
+tampered_admission_queue_budget_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.admission-queue-budget-limit.tampered.json"
+cp "$report_file" "$tampered_admission_queue_budget_limit_report"
+python3 - "$tampered_admission_queue_budget_limit_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_queue_budget_limit"] = 2
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_admission_queue_budget_limit_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_admission_queue_budget_limit_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.admission-queue-budget-limit.tampered.json" 2>&1
+)"
+tampered_admission_queue_budget_limit_code=$?
+set -e
+
+if [ "$tampered_admission_queue_budget_limit_code" -eq 0 ]; then
+  echo "expected tampered service api queue budget limit to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_queue_budget_limit_output" | grep -q 'service_api_axum_policy_admission_queue_budget_limit_mismatch'; then
+  echo "expected deterministic mismatch reason code for tampered queue budget limit" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_admission_queue_budget_limit_output" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch$'; then
+  echo "expected deterministic protocol mismatch reason mapping code for queue budget limit tamper" >&2
+  exit 1
+fi
+
 tampered_concurrency_limit_report="$TMP_DIR/service-api-axum-ingress-live-summary.concurrency-limit.tampered.json"
 cp "$report_file" "$tampered_concurrency_limit_report"
 python3 - "$tampered_concurrency_limit_report" <<'PY'
@@ -646,6 +762,77 @@ if ! printf '%s\n' "$tampered_threshold_output" | grep -q 'service_api_axum_poli
   echo "expected deterministic mismatch reason code for tampered body-size threshold" >&2
   exit 1
 fi
+
+budget_multi_mismatch_report="$TMP_DIR/service-api-axum-ingress-live-summary.budget-multi-mismatch.json"
+cp "$report_file" "$budget_multi_mismatch_report"
+python3 - "$budget_multi_mismatch_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["admission_inflight_budget_limit"] = 31
+payload["admission_queue_budget_limit"] = 2
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+budget_multi_mismatch_output_first="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$budget_multi_mismatch_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.budget-multi-mismatch.first.json" 2>&1
+)"
+budget_multi_mismatch_code_first=$?
+budget_multi_mismatch_output_second="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$budget_multi_mismatch_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-axum-ingress-live-policy.budget-multi-mismatch.second.json" 2>&1
+)"
+budget_multi_mismatch_code_second=$?
+set -e
+
+if [ "$budget_multi_mismatch_code_first" -eq 0 ] || [ "$budget_multi_mismatch_code_second" -eq 0 ]; then
+  echo "expected admission budget multi-mismatch report to fail policy checker deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$budget_multi_mismatch_output_first" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch$'; then
+  echo "expected deterministic limit-contract mapped reason code on first admission budget multi-mismatch run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$budget_multi_mismatch_output_second" | grep -q '^service_api_axum_protocol_mismatch_reason_code=service_api_axum_policy_limit_contract_mismatch$'; then
+  echo "expected deterministic limit-contract mapped reason code on second admission budget multi-mismatch run" >&2
+  exit 1
+fi
+
+python3 - \
+  "$TMP_DIR/service-api-axum-ingress-live-policy.budget-multi-mismatch.first.json" \
+  "$TMP_DIR/service-api-axum-ingress-live-policy.budget-multi-mismatch.second.json" <<'PY'
+import json
+import pathlib
+import sys
+
+first = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+second = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+first_reasons = first.get("reason_codes")
+second_reasons = second.get("reason_codes")
+if not first_reasons:
+    raise SystemExit("expected non-empty first reason_codes for admission budget multi-mismatch output")
+if first_reasons != second_reasons:
+    raise SystemExit("expected deterministic admission budget reason-code ordering across repeated multi-mismatch runs")
+if "service_api_axum_policy_admission_inflight_budget_limit_mismatch" not in first_reasons:
+    raise SystemExit("expected in-flight budget mismatch reason in admission budget multi-mismatch output")
+if "service_api_axum_policy_admission_queue_budget_limit_mismatch" not in first_reasons:
+    raise SystemExit("expected queue budget mismatch reason in admission budget multi-mismatch output")
+if first.get("service_api_axum_protocol_mismatch_reason_code") != "service_api_axum_policy_limit_contract_mismatch":
+    raise SystemExit("expected deterministic mapped reason code for first admission budget multi-mismatch output")
+if second.get("service_api_axum_protocol_mismatch_reason_code") != "service_api_axum_policy_limit_contract_mismatch":
+    raise SystemExit("expected deterministic mapped reason code for second admission budget multi-mismatch output")
+PY
 
 multi_mismatch_report="$TMP_DIR/service-api-axum-ingress-live-summary.multi-mismatch.json"
 cp "$report_file" "$multi_mismatch_report"

@@ -108,9 +108,18 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `service_api_axum_protocol_mismatch_reason_taxonomy_version=kamn.runtime.service-api-axum-protocol-mismatch-reason-taxonomy.v1`
   - `service_api_axum_protocol_mismatch_reason_codes_csv=service_api_axum_policy_required_field_missing,service_api_axum_policy_marker_missing,service_api_axum_policy_protocol_taxonomy_mismatch,service_api_axum_policy_limit_contract_mismatch,ci_fast_gate_failed,service_api_axum_policy_expected_decision_mismatch,service_api_axum_policy_violation`
   - `service_api_axum_protocol_mismatch_reason_code=none|<reason>`
+  - `admission_inflight_budget_status=verified`
+  - `admission_queue_budget_status=verified`
+  - `admission_inflight_budget_limit=32`
+  - `admission_queue_budget_limit=1`
+  - `admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1`
+  - `admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch`
 - Deterministic fail-closed mismatch reasons:
   - `service_api_axum_policy_marker_missing:<field>`
   - `service_api_axum_policy_protocol_compliance_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_budget_reason_taxonomy_version_mismatch`
+  - `service_api_axum_policy_admission_inflight_budget_limit_mismatch`
+  - `service_api_axum_policy_admission_queue_budget_limit_mismatch`
   - `service_api_axum_policy_body_size_limit_mismatch`
 - Regression policy:
   - protocol marker mismatch rejection drift forces `NO-GO` (`Regression: #4270`).

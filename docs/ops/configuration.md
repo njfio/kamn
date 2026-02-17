@@ -102,6 +102,12 @@ Deterministic taxonomy markers:
 - `service_api_lifecycle_rejection_reason_taxonomy_version=kamn.runtime.service-api.lifecycle-rejection-reason-taxonomy.v1`
 - `service_api_lifecycle_rejection_reason_codes_csv=service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid`
 - `async_lifecycle_backpressure_projection_status=verified`
+- `admission_inflight_budget_status=verified`
+- `admission_queue_budget_status=verified`
+- `admission_inflight_budget_limit=32`
+- `admission_queue_budget_limit=1`
+- `admission_budget_reason_taxonomy_version=kamn.runtime.service-api-admission-budget-reason-taxonomy.v1`
+- `admission_budget_reason_codes_csv=admission_inflight_budget_mismatch,admission_queue_budget_mismatch`
 - `reason_codes_value=none|service_api_axum_policy_*`
 
 Backpressure reason markers:
@@ -109,6 +115,8 @@ Backpressure reason markers:
 - `service_api_ingress_concurrency_limit_exceeded`
 - `service_api_ingress_rate_limit_exceeded`
 - `service_api_ingress_sender_rate_limit_exceeded`
+- `service_api_axum_policy_admission_inflight_budget_limit_mismatch`
+- `service_api_axum_policy_admission_queue_budget_limit_mismatch`
 
 fail-closed response contract:
 
