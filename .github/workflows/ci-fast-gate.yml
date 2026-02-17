@@ -100,6 +100,48 @@ jobs:
           path: ci-script-surface-budget.json
           if-no-files-found: error
 
+      - name: Generate combined shell-surface trend report
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/generate_combined_shell_surface_trend_report.sh \
+            --budget-file .ci/script-surface-budget.env \
+            --script-baseline-file .ci/script-surface-baseline.env \
+            --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json \
+            --output-json ci-combined-shell-surface-trend-report.json
+
+      - name: Check combined shell-surface trend policy
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_combined_shell_surface_trend_policy.sh \
+            --report-file ci-combined-shell-surface-trend-report.json \
+            --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json \
+            --output-json ci-combined-shell-surface-trend-policy.json
+
+      - name: Collect shell-rust LOC telemetry
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/collect_shell_rust_loc_telemetry.sh \
+            --report-file ci-combined-shell-surface-trend-report.json \
+            --output-json ci-shell-rust-loc-telemetry.json
+
+      - name: Upload combined shell-surface trend telemetry
+        if: always() && (hashFiles('ci-combined-shell-surface-trend-report.json') != '' || hashFiles('ci-combined-shell-surface-trend-policy.json') != '')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-combined-shell-surface-trend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-combined-shell-surface-trend-report.json
+            ci-combined-shell-surface-trend-policy.json
+          if-no-files-found: error
+
+      - name: Upload shell-rust LOC telemetry
+        if: always() && hashFiles('ci-shell-rust-loc-telemetry.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-shell-rust-loc-telemetry-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-shell-rust-loc-telemetry.json
+          if-no-files-found: error
+
       - name: Run deploy preflight tests
         if: steps.scope.outputs.run_deploy_preflight_tests == 'true'
         run: |

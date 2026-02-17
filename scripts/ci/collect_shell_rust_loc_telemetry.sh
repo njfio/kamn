@@ -18,6 +18,7 @@ emit_failure_markers() {
 
 output_json=""
 report_generator="$DEFAULT_REPORT_GENERATOR"
+report_file=""
 forwarded_args=()
 
 while [[ $# -gt 0 ]]; do
@@ -28,6 +29,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --report-generator)
       report_generator="${2:-}"
+      shift 2
+      ;;
+    --report-file)
+      report_file="${2:-}"
       shift 2
       ;;
     --scripts-root|--rust-root|--budget-file|--script-baseline-file|--combined-baseline-file)
@@ -53,26 +58,37 @@ if [[ -z "$output_json" ]]; then
   exit 2
 fi
 
-if [[ ! -f "$report_generator" ]]; then
-  echo "report generator not found: $report_generator" >&2
-  emit_failure_markers "shell_rust_loc_telemetry_generator_failed"
-  exit 1
+if [[ -n "$report_file" && ${#forwarded_args[@]} -gt 0 ]]; then
+  echo "--report-file cannot be combined with generator source arguments" >&2
+  emit_failure_markers "shell_rust_loc_telemetry_argument_invalid"
+  exit 2
 fi
 
 tmp_dir="$(mktemp -d)"
 cleanup_tmp_dir=true
 trap '[ "$cleanup_tmp_dir" = true ] && rm -rf "$tmp_dir"' EXIT
 
-generated_report="$tmp_dir/combined-shell-surface-trend-report.json"
-set +e
-generator_output="$(bash "$report_generator" --output-json "$generated_report" "${forwarded_args[@]}" 2>&1)"
-generator_exit_code=$?
-set -e
+generated_report=""
+if [[ -n "$report_file" ]]; then
+  generated_report="$report_file"
+else
+  if [[ ! -f "$report_generator" ]]; then
+    echo "report generator not found: $report_generator" >&2
+    emit_failure_markers "shell_rust_loc_telemetry_generator_failed"
+    exit 1
+  fi
 
-if [[ "$generator_exit_code" -ne 0 ]]; then
-  printf '%s\n' "$generator_output" >&2
-  emit_failure_markers "shell_rust_loc_telemetry_generator_failed"
-  exit 1
+  generated_report="$tmp_dir/combined-shell-surface-trend-report.json"
+  set +e
+  generator_output="$(bash "$report_generator" --output-json "$generated_report" "${forwarded_args[@]}" 2>&1)"
+  generator_exit_code=$?
+  set -e
+
+  if [[ "$generator_exit_code" -ne 0 ]]; then
+    printf '%s\n' "$generator_output" >&2
+    emit_failure_markers "shell_rust_loc_telemetry_generator_failed"
+    exit 1
+  fi
 fi
 
 if [[ ! -f "$generated_report" ]]; then
