@@ -116,3 +116,13 @@ Missing-docs graduation evidence marker contract (`check_kamn_core_missing_docs_
 - `missing_docs_velocity_reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-velocity-reason-taxonomy.v1`
 - `missing_docs_velocity_reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed`
 - `missing_docs_velocity_reason_codes_value=<deterministic reason key>`
+
+Rustdoc navigation publication ratio-governance marker contract (`check_kamn_core_rustdoc_artifact_policy.sh`):
+- `rustdoc_navigation_ratio_status=within|exceeded`
+- `docs_contract_test_count=<int>`
+- `behavioral_test_count=<int>`
+- `docs_contract_to_behavioral_ratio=<float>`
+- `max_docs_contract_to_behavioral_ratio=<float>`
+- `reason_taxonomy_version=kamn.ci.kamn-core-rustdoc-navigation-governance-reason-taxonomy.v1`
+- `reason_codes_csv=docs_behavioral_ratio_threshold_exceeded,rustdoc_artifact_policy_validation_failed`
+- `reason_code=docs_behavioral_ratio_threshold_exceeded`
