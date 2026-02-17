@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GENERATOR="$ROOT_DIR/scripts/deploy/generate_gonogo_evidence_bundle.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_gonogo_evidence_policy.sh"
+UPGRADE_LINEAGE_CHECKER="$ROOT_DIR/scripts/deploy/check_upgrade_rehearsal_lineage_policy.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -30,6 +31,11 @@ fi
 
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected go/no-go evidence policy checker to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$UPGRADE_LINEAGE_CHECKER" ]; then
+  echo "expected upgrade rehearsal lineage checker to be executable" >&2
   exit 1
 fi
 
@@ -327,6 +333,19 @@ milestone_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_bund
 assert_eq "$(extract_value "$milestone_policy_output" "status")" "ok" "expected milestone bundle policy check to pass"
 assert_eq "$(extract_value "$milestone_policy_output" "final_decision")" "GO" "expected milestone bundle policy to keep GO decision"
 
+milestone_lineage_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_bundle" \
+    --expected-final-decision GO
+)"
+assert_eq "$(extract_value "$milestone_lineage_output" "status")" "ok" "expected upgrade lineage checker to pass for valid milestone bundle"
+assert_eq "$(extract_value "$milestone_lineage_output" "upgrade_lineage_final_decision")" "GO" "expected upgrade lineage checker GO decision for valid milestone bundle"
+assert_eq "$(extract_value "$milestone_lineage_output" "upgrade_lineage_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic upgrade lineage reason taxonomy marker"
+assert_eq "$(extract_value "$milestone_lineage_output" "upgrade_lineage_reason_codes_csv")" "none" "expected deterministic upgrade lineage reason csv marker on pass path"
+assert_eq "$(extract_value "$milestone_lineage_output" "promotion_gate_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic promotion-gate reason taxonomy marker"
+assert_eq "$(extract_value "$milestone_lineage_output" "promotion_gate_reason_codes_csv")" "none" "expected deterministic promotion-gate reason csv marker on pass path"
+assert_eq "$(extract_value "$milestone_lineage_output" "promotion_gate_reason_codes_value")" "none" "expected deterministic promotion-gate reason value marker on pass path"
+
 integration_preflight_summary="$TMP_DIR/integration-preflight-summary.json"
 integration_preflight_policy="$TMP_DIR/integration-preflight-policy.json"
 integration_live_bundle_summary="$TMP_DIR/integration-live-bundle-summary.json"
@@ -381,6 +400,13 @@ assert_eq "$(extract_value "$integration_milestone_generate_output" "final_decis
 integration_milestone_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$integration_milestone_bundle")"
 assert_eq "$(extract_value "$integration_milestone_policy_output" "status")" "ok" "expected policy checker to pass for integration milestone bundle"
 assert_eq "$(extract_value "$integration_milestone_policy_output" "final_decision")" "GO" "expected policy checker to keep GO for integration milestone bundle"
+integration_milestone_lineage_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$integration_milestone_bundle" \
+    --expected-final-decision GO
+)"
+assert_eq "$(extract_value "$integration_milestone_lineage_output" "status")" "ok" "expected upgrade lineage checker to pass for integration milestone bundle"
+assert_eq "$(extract_value "$integration_milestone_lineage_output" "upgrade_lineage_final_decision")" "GO" "expected upgrade lineage checker GO decision for integration milestone bundle"
 
 milestone_missing_artifact_bundle="$TMP_DIR/gonogo-milestone-missing-artifact.json"
 milestone_missing_artifact_output="$(
@@ -426,6 +452,14 @@ PY
 milestone_missing_artifact_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_missing_artifact_bundle")"
 assert_eq "$(extract_value "$milestone_missing_artifact_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for missing artifact bundle"
 assert_eq "$(extract_value "$milestone_missing_artifact_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing linked artifact bundle"
+milestone_missing_artifact_lineage_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_missing_artifact_bundle" \
+    --expected-final-decision NO-GO \
+    --require-reason-code milestone_review_go_no_go_gate_report_missing
+)"
+assert_eq "$(extract_value "$milestone_missing_artifact_lineage_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing artifact bundle"
+assert_eq "$(extract_value "$milestone_missing_artifact_lineage_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing linked artifact bundle"
 
 milestone_missing_runbook_marker_doc="$TMP_DIR/milestone-runbook-marker-missing.md"
 cat >"$milestone_missing_runbook_marker_doc" <<'TXT'
@@ -483,6 +517,15 @@ milestone_missing_runbook_policy_output="$(
 )"
 assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for missing runbook marker bundle"
 assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing runbook marker bundle"
+milestone_missing_runbook_lineage_output="$(
+  KAMN_GONOGO_RUNBOOK_DOC_FILE="$milestone_missing_runbook_marker_doc" \
+    python3 "$UPGRADE_LINEAGE_CHECKER" \
+      --bundle-file "$milestone_missing_runbook_bundle" \
+      --expected-final-decision NO-GO \
+      --require-reason-code milestone_review_operator_runbook_markers_missing
+)"
+assert_eq "$(extract_value "$milestone_missing_runbook_lineage_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing runbook marker bundle"
+assert_eq "$(extract_value "$milestone_missing_runbook_lineage_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing runbook marker bundle"
 
 milestone_taxonomy_drift_gate_report="$TMP_DIR/milestone-go-no-go-gate-report.taxonomy-drift.json"
 cp "$milestone_gate_report" "$milestone_taxonomy_drift_gate_report"
@@ -541,6 +584,14 @@ PY
 milestone_taxonomy_drift_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_taxonomy_drift_bundle")"
 assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for taxonomy drift bundle"
 assert_eq "$(extract_value "$milestone_taxonomy_drift_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for taxonomy drift bundle"
+milestone_taxonomy_drift_lineage_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_taxonomy_drift_bundle" \
+    --expected-final-decision NO-GO \
+    --require-reason-code milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch
+)"
+assert_eq "$(extract_value "$milestone_taxonomy_drift_lineage_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for taxonomy drift bundle"
+assert_eq "$(extract_value "$milestone_taxonomy_drift_lineage_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for taxonomy drift bundle"
 
 milestone_rotation_taxonomy_drift_preflight_policy="$TMP_DIR/milestone-preflight-policy.rotation-taxonomy-drift.json"
 cp "$milestone_preflight_policy" "$milestone_rotation_taxonomy_drift_preflight_policy"
@@ -638,6 +689,15 @@ if "milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch" not in r
     raise SystemExit("expected go/no-go ci/local boundary mismatch reason code in milestone review bundle")
 PY
 
+milestone_boundary_drift_lineage_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_boundary_drift_bundle" \
+    --expected-final-decision NO-GO \
+    --require-reason-code milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch
+)"
+assert_eq "$(extract_value "$milestone_boundary_drift_lineage_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for go/no-go boundary drift bundle"
+assert_eq "$(extract_value "$milestone_boundary_drift_lineage_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for go/no-go boundary drift bundle"
+
 milestone_lineage_tampered_bundle="$TMP_DIR/gonogo-milestone-lineage-tampered.json"
 cp "$milestone_bundle" "$milestone_lineage_tampered_bundle"
 python3 - "$milestone_lineage_tampered_bundle" <<'PY'
@@ -663,6 +723,57 @@ fi
 
 if ! printf '%s\n' "$milestone_lineage_tampered_output" | grep -q "milestone review bundle lineage mismatch"; then
   echo "expected deterministic milestone lineage mismatch error from policy checker" >&2
+  exit 1
+fi
+
+set +e
+milestone_lineage_tampered_checker_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_lineage_tampered_bundle" \
+    --expected-final-decision GO 2>&1
+)"
+milestone_lineage_tampered_checker_code=$?
+set -e
+
+if [ "$milestone_lineage_tampered_checker_code" -eq 0 ]; then
+  echo "expected upgrade lineage checker to fail for tampered milestone lineage markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$milestone_lineage_tampered_checker_output" | grep -q "milestone review bundle lineage mismatch"; then
+  echo "expected deterministic milestone lineage mismatch error from upgrade lineage checker" >&2
+  exit 1
+fi
+
+milestone_promotion_mapping_drift_bundle="$TMP_DIR/gonogo-milestone-promotion-mapping-drift.json"
+cp "$milestone_bundle" "$milestone_promotion_mapping_drift_bundle"
+python3 - "$milestone_promotion_mapping_drift_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["milestone_review_bundle"]["reason_codes_value"] = "milestone_review_go_no_go_gate_report_missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+milestone_promotion_mapping_drift_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_promotion_mapping_drift_bundle" \
+    --expected-final-decision GO 2>&1
+)"
+milestone_promotion_mapping_drift_code=$?
+set -e
+
+if [ "$milestone_promotion_mapping_drift_code" -eq 0 ]; then
+  echo "expected upgrade lineage checker to fail on promotion-gate reason mapping drift" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$milestone_promotion_mapping_drift_output" | grep -q "promotion gate reason mapping mismatch"; then
+  echo "expected deterministic promotion-gate reason mapping mismatch error from upgrade lineage checker" >&2
   exit 1
 fi
 
