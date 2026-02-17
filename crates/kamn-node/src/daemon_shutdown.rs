@@ -346,6 +346,33 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn integration_daemon_completion_with_os_signals_applies_sigint_graceful_shutdown() {
+        configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(
+            5,
+            OsSignalTestKind::Sigint,
+        )]);
+        let completion = evaluate_daemon_completion_with_os_signals(40, 1, Some(2), Some(5))
+            .expect("daemon completion with SIGINT handling should succeed");
+        assert!(
+            completion
+                .completion_reason
+                .starts_with("graceful-shutdown:signal@"),
+            "expected graceful shutdown completion reason for SIGINT, got {}",
+            completion.completion_reason
+        );
+        assert!(
+            completion.completion_reason.contains("ignored_signals=0"),
+            "single SIGINT trigger should not increment ignored signals, got {}",
+            completion.completion_reason
+        );
+        assert!(
+            completion.executed_ticks <= 40,
+            "SIGINT-driven shutdown should remain bounded by max ticks"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn regression_daemon_completion_with_os_signals_counts_replayed_signals() {
         // Regression: #3596
         configure_os_signal_test_triggers(vec![
