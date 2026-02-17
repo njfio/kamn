@@ -1,6 +1,6 @@
 # Spec — #4337 Subtask: Runtime Module-Boundary Checker with CI Smoke Parity Governance
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4329
 Milestone: R27.31 Signal-safe daemon lifecycle, streaming observability, and runtime-decomposition governance

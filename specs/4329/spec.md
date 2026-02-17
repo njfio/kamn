@@ -1,6 +1,6 @@
 # Spec — #4329 Task: Runtime Decomposition Checkpoints with Deterministic Parity Checker Governance
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4325
 Milestone: R27.31 Signal-safe daemon lifecycle, streaming observability, and runtime-decomposition governance
