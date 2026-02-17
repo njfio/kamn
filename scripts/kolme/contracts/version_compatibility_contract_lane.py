@@ -37,6 +37,7 @@ ROADMAP_DOC = ROOT_DIR / "docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC = ROOT_DIR / "docs/foundation/release-gonogo-checklist.md"
 CI_STRATEGY_DOC = ROOT_DIR / "docs/ci/strategy.md"
 OPS_CONFIG_DOC = ROOT_DIR / "docs/ops/configuration.md"
+DEPLOY_OPS_DOC = ROOT_DIR / "docs/deploy/kolme_devnet_ops.md"
 MAX_SECONDS = 60
 VERSION_COMPAT_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.version-compatibility-reason-taxonomy.v1"
@@ -46,6 +47,15 @@ FORK_COMPAT_REASON_TAXONOMY_VERSION = (
 )
 UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION = (
     "kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
+)
+UPGRADE_COMPAT_RUNBOOK_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1"
+)
+UPGRADE_COMPAT_RUNBOOK_REASON_CODES_CSV = (
+    "upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+)
+UPGRADE_COMPAT_RUNBOOK_MARKER_PARITY_STATUS = (
+    "upgrade_compatibility_runbook_marker_parity_status=verified"
 )
 LIVE_HTTPS_POSTURE_REASON_TAXONOMY_VERSION = (
     "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1"
@@ -151,9 +161,14 @@ def main() -> int:
     if not FORK_FIXTURE_FILE.is_file():
         print("expected Kolme fork compatibility fixture file to exist", file=sys.stderr)
         return 1
-    if not ROADMAP_DOC.is_file() or not GONOGO_DOC.is_file() or not OPS_CONFIG_DOC.is_file():
+    if (
+        not ROADMAP_DOC.is_file()
+        or not GONOGO_DOC.is_file()
+        or not OPS_CONFIG_DOC.is_file()
+        or not DEPLOY_OPS_DOC.is_file()
+    ):
         print(
-            "expected Kolme roadmap, release go/no-go, and ops configuration docs to exist",
+            "expected Kolme roadmap, release go/no-go, ops configuration, and deploy ops docs to exist",
             file=sys.stderr,
         )
         return 1
@@ -613,6 +628,7 @@ def main() -> int:
     gonogo_doc_text = GONOGO_DOC.read_text(encoding="utf-8")
     ci_strategy_doc_text = CI_STRATEGY_DOC.read_text(encoding="utf-8")
     ops_config_doc_text = OPS_CONFIG_DOC.read_text(encoding="utf-8")
+    deploy_ops_doc_text = DEPLOY_OPS_DOC.read_text(encoding="utf-8")
     fast_gate_workflow_text = FAST_GATE_WORKFLOW.read_text(encoding="utf-8")
     ci_tools_fast_mode_block = extract_ci_tools_fast_mode_block(
         CI_TOOLS_SCRIPT.read_text(encoding="utf-8")
@@ -665,6 +681,27 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    if UPGRADE_COMPAT_RUNBOOK_REASON_TAXONOMY_VERSION not in gonogo_doc_text:
+        print(
+            "expected release go/no-go doc to reference upgrade compatibility runbook taxonomy marker",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        f"upgrade_compatibility_runbook_reason_codes_csv={UPGRADE_COMPAT_RUNBOOK_REASON_CODES_CSV}"
+        not in gonogo_doc_text
+    ):
+        print(
+            "expected release go/no-go doc to reference upgrade compatibility runbook reason-codes marker",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_RUNBOOK_MARKER_PARITY_STATUS not in gonogo_doc_text:
+        print(
+            "expected release go/no-go doc to reference upgrade compatibility runbook marker-parity status marker",
+            file=sys.stderr,
+        )
+        return 1
     if "check_upgrade_compatibility_marker_matrix_policy.py" not in ops_config_doc_text:
         print(
             "expected ops configuration doc to reference compatibility marker matrix checker command",
@@ -674,6 +711,39 @@ def main() -> int:
     if UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION not in ops_config_doc_text:
         print(
             "expected ops configuration doc to reference compatibility marker matrix taxonomy marker",
+            file=sys.stderr,
+        )
+        return 1
+    if "check_upgrade_compatibility_marker_matrix_policy.py" not in deploy_ops_doc_text:
+        print(
+            "expected deploy ops doc to reference compatibility marker matrix checker command",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_MATRIX_REASON_TAXONOMY_VERSION not in deploy_ops_doc_text:
+        print(
+            "expected deploy ops doc to reference compatibility marker matrix taxonomy marker",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_RUNBOOK_REASON_TAXONOMY_VERSION not in deploy_ops_doc_text:
+        print(
+            "expected deploy ops doc to reference upgrade compatibility runbook taxonomy marker",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        f"upgrade_compatibility_runbook_reason_codes_csv={UPGRADE_COMPAT_RUNBOOK_REASON_CODES_CSV}"
+        not in deploy_ops_doc_text
+    ):
+        print(
+            "expected deploy ops doc to reference upgrade compatibility runbook reason-codes marker",
+            file=sys.stderr,
+        )
+        return 1
+    if UPGRADE_COMPAT_RUNBOOK_MARKER_PARITY_STATUS not in deploy_ops_doc_text:
+        print(
+            "expected deploy ops doc to reference upgrade compatibility runbook marker-parity status marker",
             file=sys.stderr,
         )
         return 1

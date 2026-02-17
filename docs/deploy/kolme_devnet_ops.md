@@ -34,6 +34,33 @@ present, including:
 - `milestone_review_go_no_go_gate_kolme_fixture_profile_status_mismatch`
 - `milestone_review_go_no_go_gate_combined_lane_marker_contract_status_mismatch`
 
+## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)
+
+Kolme upgrade compatibility governance remains deterministic only when compatibility checker
+taxonomy markers and runbook marker declarations stay synchronized.
+
+Required checker/runbook parity markers:
+
+- `reason_taxonomy_version=kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1`
+- `reason_codes_csv=version_report_missing,fork_policy_report_missing,version_report_schema_mismatch,version_report_reason_taxonomy_mismatch,version_report_reason_codes_csv_mismatch,version_report_rehearsal_bypass_guard_status_mismatch,version_report_rehearsal_output_normalization_status_mismatch,fork_policy_report_schema_mismatch,fork_policy_report_reason_taxonomy_mismatch,fork_policy_report_reason_codes_csv_mismatch,fork_policy_report_rehearsal_bypass_guard_status_mismatch,fork_policy_report_rehearsal_output_normalization_status_mismatch,expected_final_decision_mismatch,ci_fast_gate_failed`
+- `upgrade_compatibility_runbook_marker_parity_status=verified`
+- `upgrade_compatibility_runbook_reason_taxonomy_version=kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1`
+- `upgrade_compatibility_runbook_reason_codes_csv=upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+
+Fail-closed drift reasons:
+
+- `upgrade_compatibility_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation commands:
+
+- `python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json`
+- `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
+- `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
+
+- `Regression: #4182`
+- `Regression: #4183`
+
 ## Local Full-Stack Harness Taxonomy and Runbook Marker Parity Contracts (Issue #4197)
 
 Local full-stack harness taxonomy markers and runbook marker declarations must remain synchronized

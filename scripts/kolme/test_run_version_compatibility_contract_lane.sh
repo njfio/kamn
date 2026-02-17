@@ -12,9 +12,23 @@ VALIDATOR="$ROOT_DIR/scripts/kolme/validate_version_compatibility.py"
 FORK_EVIDENCE_GENERATOR="$ROOT_DIR/scripts/kolme/generate_fork_compatibility_evidence.py"
 FORK_POLICY_CHECKER="$ROOT_DIR/scripts/kolme/check_fork_compatibility_policy.py"
 DEEP_LANE="$ROOT_DIR/scripts/kolme/run_version_compatibility_replay_deep_lane.sh"
+DEPLOY_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/version-compatibility-replay-deep-report.json"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DEPLOY_DOC_BACKUP="$TMP_DIR/kolme_devnet_ops.md.backup"
+
+restore_deploy_doc() {
+  if [ -f "$DEPLOY_DOC_BACKUP" ]; then
+    cp "$DEPLOY_DOC_BACKUP" "$DEPLOY_DOC"
+  fi
+}
+
+cleanup() {
+  restore_deploy_doc
+  rm -rf "$TMP_DIR"
+}
+
+trap cleanup EXIT
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected Kolme version compatibility contract lane script to be executable" >&2
@@ -71,6 +85,13 @@ if [ ! -f "$CONTRACT_IMPL" ]; then
   exit 1
 fi
 
+if [ ! -f "$DEPLOY_DOC" ]; then
+  echo "expected deploy ops doc to exist" >&2
+  exit 1
+fi
+
+cp "$DEPLOY_DOC" "$DEPLOY_DOC_BACKUP"
+
 if [ ! -x "$MATRIX_CHECKER" ]; then
   echo "expected upgrade compatibility marker matrix checker to be executable" >&2
   exit 1
@@ -105,6 +126,15 @@ fi
 required_coverage_markers=(
   "check_upgrade_compatibility_marker_matrix_policy.py"
   "kamn.kolme.upgrade-compatibility-marker-matrix-reason-taxonomy.v1"
+  "kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1"
+  "upgrade_compatibility_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+  "upgrade_compatibility_runbook_marker_parity_status=verified"
+  "docs/deploy/kolme_devnet_ops.md"
+  "expected deploy ops doc to reference compatibility marker matrix checker command"
+  "expected deploy ops doc to reference compatibility marker matrix taxonomy marker"
+  "expected deploy ops doc to reference upgrade compatibility runbook taxonomy marker"
+  "expected deploy ops doc to reference upgrade compatibility runbook reason-codes marker"
+  "expected deploy ops doc to reference upgrade compatibility runbook marker-parity status marker"
   "run_runtime_commit_contract_lane.sh"
   "run_runtime_commit_replay_contract_lane.sh"
   "run_nonce_broadcast_parity_contract_lane.sh"
@@ -126,12 +156,58 @@ for marker in "${required_coverage_markers[@]}"; do
   fi
 done
 
+tamper_deploy_marker() {
+  local marker="$1"
+  python3 - "$DEPLOY_DOC" "$marker" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+marker = sys.argv[2]
+text = path.read_text(encoding="utf-8")
+if marker not in text:
+    raise SystemExit(f"missing marker in deploy doc fixture: {marker}")
+path.write_text(text.replace(marker, "", 1), encoding="utf-8")
+PY
+}
+
 contract_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$contract_output" | grep -q "Kolme version compatibility contract lane tests passed."; then
   echo "expected Kolme version compatibility contract lane success marker" >&2
   exit 1
 fi
 
+restore_deploy_doc
+tamper_deploy_marker "kamn.kolme.upgrade-compatibility-runbook-reason-taxonomy.v1"
+set +e
+runbook_taxonomy_tampered_output="$(python3 "$CONTRACT_IMPL" 2>&1)"
+runbook_taxonomy_tampered_code=$?
+set -e
+if [ "$runbook_taxonomy_tampered_code" -eq 0 ]; then
+  echo "expected deploy runbook taxonomy tamper fixture to fail compatibility contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_taxonomy_tampered_output" | grep -q "expected deploy ops doc to reference upgrade compatibility runbook taxonomy marker"; then
+  echo "expected deterministic runbook taxonomy parity failure marker" >&2
+  exit 1
+fi
+
+restore_deploy_doc
+tamper_deploy_marker "check_upgrade_compatibility_marker_matrix_policy.py"
+set +e
+runbook_command_tampered_output="$(python3 "$CONTRACT_IMPL" 2>&1)"
+runbook_command_tampered_code=$?
+set -e
+if [ "$runbook_command_tampered_code" -eq 0 ]; then
+  echo "expected deploy runbook command tamper fixture to fail compatibility contract lane" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$runbook_command_tampered_output" | grep -q "expected deploy ops doc to reference compatibility marker matrix checker command"; then
+  echo "expected deterministic runbook command parity failure marker" >&2
+  exit 1
+fi
+
+restore_deploy_doc
 deep_output="$(bash "$DEEP_LANE" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$deep_output" | grep -q "Kolme version compatibility replay deep lane tests passed."; then
   echo "expected Kolme version compatibility deep lane success marker" >&2
