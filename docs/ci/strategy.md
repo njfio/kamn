@@ -421,6 +421,33 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_full_stack_ci_smoke_seconds_exceeded`
   - `Regression: #4201`
 
+### Upgrade Compatibility CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_upgrade_compatibility_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --max-seconds 120 --output-json /tmp/upgrade-compatibility-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `upgrade_compatibility_ci_smoke_reason_taxonomy_version=kamn.ci.upgrade-compatibility-ci-smoke-convergence-reason-taxonomy.v1`
+  - `upgrade_compatibility_ci_smoke_reason_codes_csv=upgrade_compatibility_fork_evidence_ci_smoke_composition_missing,upgrade_compatibility_fork_policy_ci_smoke_composition_missing,upgrade_compatibility_replay_command_leaked_in_fast_mode,ci_fast_gate_upgrade_compatibility_replay_command_not_excluded,ci_strategy_upgrade_compatibility_convergence_markers_missing,upgrade_compatibility_ci_smoke_seconds_exceeded`
+  - `upgrade_compatibility_ci_smoke_max_seconds=120`
+  - `upgrade_compatibility_local_heavy_max_seconds=900`
+  - `upgrade_compatibility_ci_smoke_lane_cost_profile=low`
+  - `upgrade_compatibility_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/kolme/test_generate_fork_compatibility_evidence.sh`
+  - `bash scripts/kolme/test_check_fork_compatibility_policy.sh`
+- Local-heavy boundary policy:
+  - upgrade-compatibility replay command remains excluded from ci-fast-gate and ci-tools fast mode.
+  - replay command (`run_version_compatibility_replay_deep_lane.sh`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `upgrade_compatibility_fork_evidence_ci_smoke_composition_missing`
+  - `upgrade_compatibility_fork_policy_ci_smoke_composition_missing`
+  - `upgrade_compatibility_replay_command_leaked_in_fast_mode`
+  - `ci_fast_gate_upgrade_compatibility_replay_command_not_excluded`
+  - `ci_strategy_upgrade_compatibility_convergence_markers_missing`
+  - `upgrade_compatibility_ci_smoke_seconds_exceeded`
+  - `Regression: #4186`
+
 ### Admission-Backpressure CI smoke convergence governance
 - Composite smoke checker command:
   - `python3 scripts/ci/check_admission_backpressure_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/admission-backpressure-ci-smoke-convergence-report.json`
