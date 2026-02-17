@@ -8,5 +8,7 @@
       "bash",
       "scripts/deploy/gonogo_evidence_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_gonogo_evidence_contract_lane.sh",
+  "phase": "contract"
 }

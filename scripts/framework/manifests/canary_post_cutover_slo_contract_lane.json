@@ -8,5 +8,7 @@
       "python3",
       "scripts/canary/post_cutover_slo_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_post_cutover_slo_contract_lane.sh",
+  "phase": "contract"
 }

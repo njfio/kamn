@@ -8,5 +8,7 @@
       "bash",
       "scripts/reputation/weighted_decay_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_weighted_decay_contract_lane.sh",
+  "phase": "contract"
 }

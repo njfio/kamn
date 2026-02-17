@@ -8,5 +8,7 @@
       "bash",
       "scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_fast_gate_budget_delta_contract_lane.sh",
+  "phase": "contract"
 }

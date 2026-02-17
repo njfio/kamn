@@ -8,5 +8,7 @@
       "bash",
       "scripts/bridge/run_telegram_ingress_contract_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_telegram_ingress_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_concurrency_state_mutation_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_concurrency_state_mutation_deep_lane.sh",
+  "phase": "deep"
 }

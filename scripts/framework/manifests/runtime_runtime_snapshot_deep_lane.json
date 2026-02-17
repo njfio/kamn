@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_runtime_snapshot_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_runtime_snapshot_deep_lane.sh",
+  "phase": "deep"
 }

@@ -8,5 +8,7 @@
       "python3",
       "scripts/compliance/classification_redaction_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_classification_redaction_contract_lane.sh",
+  "phase": "contract"
 }

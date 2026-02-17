@@ -8,5 +8,7 @@
       "python3",
       "scripts/token/token_launch_handoff_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_token_launch_handoff_contract_lane.sh",
+  "phase": "contract"
 }

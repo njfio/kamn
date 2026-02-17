@@ -8,5 +8,7 @@
       "python3",
       "scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_dashboard_shell_determinism_matrix_contract_lane.sh",
+  "phase": "contract"
 }

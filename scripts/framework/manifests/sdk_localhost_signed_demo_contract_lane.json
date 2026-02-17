@@ -8,5 +8,7 @@
       "bash",
       "scripts/sdk/localhost_signed_demo_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_localhost_signed_demo_contract_lane.sh",
+  "phase": "contract"
 }

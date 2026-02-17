@@ -8,5 +8,7 @@
       "bash",
       "scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_live_transport_smoke_parity_lane.sh",
+  "phase": "run"
 }

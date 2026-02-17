@@ -8,5 +8,7 @@
       "python3",
       "scripts/governance/governance_simulation_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_governance_simulation_contract_lane.sh",
+  "phase": "contract"
 }

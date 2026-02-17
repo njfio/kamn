@@ -8,5 +8,7 @@
       "python3",
       "scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_backend_session_auth_freshness_contract_lane.sh",
+  "phase": "contract"
 }

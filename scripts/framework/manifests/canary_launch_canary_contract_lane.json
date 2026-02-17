@@ -8,5 +8,7 @@
       "python3",
       "scripts/canary/launch_canary_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_launch_canary_contract_lane.sh",
+  "phase": "contract"
 }

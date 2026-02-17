@@ -8,5 +8,7 @@
       "bash",
       "scripts/bridge/run_cross_chain_outbound_intent_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_cross_chain_outbound_intent_deep_lane.sh",
+  "phase": "deep"
 }

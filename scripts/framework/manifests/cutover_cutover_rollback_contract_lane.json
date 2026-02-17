@@ -8,5 +8,7 @@
       "bash",
       "scripts/cutover/cutover_rollback_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_cutover_rollback_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/cutover/mainnet_cutover_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_mainnet_cutover_contract_lane.sh",
+  "phase": "contract"
 }

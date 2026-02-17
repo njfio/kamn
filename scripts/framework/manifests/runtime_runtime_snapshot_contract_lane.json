@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/runtime_snapshot_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_runtime_snapshot_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/task/federated_delegation_settlement_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_federated_delegation_settlement_contract_lane.sh",
+  "phase": "contract"
 }

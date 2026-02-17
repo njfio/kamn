@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_failover_sync_drill_preflight_contract_lane.sh",
+  "phase": "contract"
 }

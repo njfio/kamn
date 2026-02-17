@@ -8,5 +8,7 @@
       "bash",
       "scripts/did/federated_did_handshake_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_federated_did_handshake_contract_lane.sh",
+  "phase": "contract"
 }

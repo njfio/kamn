@@ -8,5 +8,7 @@
       "python3",
       "scripts/treasury/treasury_disbursement_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_treasury_disbursement_contract_lane.sh",
+  "phase": "contract"
 }

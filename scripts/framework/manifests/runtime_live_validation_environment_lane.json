@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_live_validation_environment_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_live_validation_environment_lane.sh",
+  "phase": "run"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_backend_session_auth_freshness_lane.sh",
+  "phase": "run"
 }

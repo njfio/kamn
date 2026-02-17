@@ -8,5 +8,7 @@
       "python3",
       "scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_live_transport_replay_tamper_contract_lane.sh",
+  "phase": "contract"
 }

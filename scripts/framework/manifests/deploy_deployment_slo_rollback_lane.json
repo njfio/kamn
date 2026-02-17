@@ -8,5 +8,7 @@
       "bash",
       "scripts/deploy/run_deployment_slo_rollback_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_deployment_slo_rollback_lane.sh",
+  "phase": "run"
 }

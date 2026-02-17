@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_network_signer_finality_failure_drills_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_network_signer_finality_failure_drills_lane.sh",
+  "phase": "run"
 }

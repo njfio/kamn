@@ -8,5 +8,7 @@
       "bash",
       "scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_dashboard_stale_error_budget_lane.sh",
+  "phase": "run"
 }

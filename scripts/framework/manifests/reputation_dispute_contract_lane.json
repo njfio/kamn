@@ -8,5 +8,7 @@
       "python3",
       "scripts/reputation/reputation_dispute_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_reputation_dispute_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/ci/kamn_core_rustdoc_artifact_contract_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_kamn_core_rustdoc_artifact_contract_lane.sh",
+  "phase": "contract"
 }

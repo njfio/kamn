@@ -8,5 +8,7 @@
       "bash",
       "scripts/signer/secure_provider_key_lifecycle_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_secure_provider_key_lifecycle_contract_lane.sh",
+  "phase": "contract"
 }

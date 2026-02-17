@@ -8,5 +8,7 @@
       "bash",
       "scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_quorum_attestation_replay_guard_lane.sh",
+  "phase": "run"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/compliance/run_classification_redaction_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_classification_redaction_lane.sh",
+  "phase": "run"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/did/service_endpoint_canonicalization_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_service_endpoint_canonicalization_contract_lane.sh",
+  "phase": "contract"
 }

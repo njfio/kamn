@@ -8,5 +8,7 @@
       "bash",
       "scripts/governance/run_governance_lifecycle_rollback_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_governance_lifecycle_rollback_lane.sh",
+  "phase": "run"
 }

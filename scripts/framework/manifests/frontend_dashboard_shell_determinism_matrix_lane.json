@@ -8,5 +8,7 @@
       "bash",
       "scripts/frontend/run_dashboard_shell_determinism_matrix_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_dashboard_shell_determinism_matrix_lane.sh",
+  "phase": "run"
 }
