@@ -36,6 +36,9 @@ VALIDATION_REQUIRED_MARKERS=(
   "fail_closed_status=verified"
   "probe_status=verified"
   "websocket_reason_registry_status=verified"
+  "protocol_session_docs_contract_status=verified"
+  "service_api_protocol_session_reason_taxonomy_version=kamn.runtime.service-api.protocol-session-reason-taxonomy.v1"
+  "service_api_protocol_session_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_payload_json_syntax_invalid,service_api_payload_structure_invalid,service_api_payload_io_error,service_api_auth_replay_nonce_detected,service_api_websocket_upgrade_required,service_api_protocol_session_docs_marker_missing"
   "websocket_lifecycle_reason_taxonomy_version=kamn.runtime.service-api-websocket-lifecycle-reason-taxonomy.v1"
   "websocket_lifecycle_reason_codes_csv=service_api_ws_upgrade_header_missing,service_api_ws_version_header_invalid,service_api_auth_sender_did_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing"
 )
@@ -46,6 +49,7 @@ POLICY_REQUIRED_MARKERS=(
   "status=ok"
   "final_decision=GO"
   "service_api_websocket_policy_status=verified"
+  "reason_codes_value=none"
 )
 STRATEGY_REQUIRED_REFS=(
   "validate_service_api_websocket_live.sh"
@@ -65,6 +69,9 @@ LANE_REPORT_SUMMARY_FIELDS=(
   websocket_heartbeat_timeout_status
   websocket_idle_timeout_contract_status
   websocket_reason_registry_status
+  protocol_session_docs_contract_status
+  service_api_protocol_session_reason_taxonomy_version
+  service_api_protocol_session_reason_codes_csv
   websocket_lifecycle_reason_taxonomy_version
   websocket_lifecycle_reason_codes_csv
   api_idle_timeout_default_ms
@@ -75,6 +82,9 @@ OUTPUT_SUMMARY_FIELDS=(
   websocket_heartbeat_timeout_status
   websocket_idle_timeout_contract_status
   websocket_reason_registry_status
+  protocol_session_docs_contract_status
+  service_api_protocol_session_reason_taxonomy_version
+  service_api_protocol_session_reason_codes_csv
   websocket_lifecycle_reason_taxonomy_version
   websocket_lifecycle_reason_codes_csv
   api_idle_timeout_default_ms
