@@ -1,6 +1,6 @@
 # Spec — #4296 Task: Deterministic Retry/Backoff/Reconnect Envelopes for Live Kolme Transport Flows
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4294
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence

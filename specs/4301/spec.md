@@ -1,6 +1,6 @@
 # Spec — #4301 Subtask: Reconnect Sequencing with Bounded Backoff and Deterministic Reason Projection
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4296
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence

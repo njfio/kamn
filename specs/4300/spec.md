@@ -1,6 +1,6 @@
 # Spec — #4300 Subtask: RED Tests for Retry Envelope Exhaustion and Deterministic Fail-Closed Outputs
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4296
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence
