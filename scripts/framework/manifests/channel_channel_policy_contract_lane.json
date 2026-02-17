@@ -8,5 +8,7 @@
       "python3",
       "scripts/channel/channel_policy_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_channel_policy_contract_lane.sh",
+  "phase": "contract"
 }

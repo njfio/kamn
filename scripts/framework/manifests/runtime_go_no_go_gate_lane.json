@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_go_no_go_gate_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_go_no_go_gate_lane.sh",
+  "phase": "run"
 }

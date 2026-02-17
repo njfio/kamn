@@ -8,5 +8,7 @@
       "python3",
       "scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_dsar_legal_hold_contract_lane.sh",
+  "phase": "contract"
 }

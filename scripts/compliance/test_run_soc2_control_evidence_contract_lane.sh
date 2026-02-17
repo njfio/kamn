@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/soc2_control_evidence_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_deep_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json"
@@ -17,8 +18,22 @@ if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_LANE"; then
   exit 1
 fi
 
-if ! grep -q 'compliance_soc2_control_evidence_contract_lane.json' "$CONTRACT_LANE"; then
-  echo "expected SOC2 contract-lane wrapper to reference SOC2 manifest" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected SOC2 contract-lane wrapper to resolve SOC2 manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -q '"wrapper_name": "run_soc2_control_evidence_contract_lane.sh"' "$MANIFEST"; then
+  echo "expected SOC2 manifest wrapper_name metadata marker" >&2
+  exit 1
+fi
+if ! grep -q '"phase": "contract"' "$MANIFEST"; then
+  echo "expected SOC2 manifest phase metadata marker" >&2
   exit 1
 fi
 

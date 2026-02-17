@@ -8,5 +8,7 @@
       "bash",
       "scripts/message/processor_proof_artifact_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_processor_proof_artifact_contract_lane.sh",
+  "phase": "contract"
 }

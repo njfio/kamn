@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_input_mutation_coverage_guided_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_input_mutation_coverage_guided_deep_lane.sh",
+  "phase": "deep"
 }

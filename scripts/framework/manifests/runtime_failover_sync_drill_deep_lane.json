@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_failover_sync_drill_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_failover_sync_drill_deep_lane.sh",
+  "phase": "deep"
 }

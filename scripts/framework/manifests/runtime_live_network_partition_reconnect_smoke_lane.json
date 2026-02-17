@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_live_network_partition_reconnect_smoke_lane.sh",
+  "phase": "run"
 }

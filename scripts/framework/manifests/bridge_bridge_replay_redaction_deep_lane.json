@@ -8,5 +8,7 @@
       "bash",
       "scripts/bridge/run_bridge_replay_redaction_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_bridge_replay_redaction_deep_lane.sh",
+  "phase": "deep"
 }

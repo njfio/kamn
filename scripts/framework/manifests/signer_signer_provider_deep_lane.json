@@ -8,5 +8,7 @@
       "bash",
       "scripts/signer/run_signer_provider_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_signer_provider_deep_lane.sh",
+  "phase": "deep"
 }

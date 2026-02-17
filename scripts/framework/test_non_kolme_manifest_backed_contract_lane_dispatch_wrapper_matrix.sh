@@ -39,6 +39,36 @@ for wrapper_rel_path in "${lane_wrappers[@]}"; do
     echo "expected dispatcher to resolve existing manifest for $wrapper_name: $manifest_path" >&2
     exit 1
   fi
+
+  python3 - "$manifest_path" "$wrapper_name" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+wrapper_name = sys.argv[2]
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+if payload.get("wrapper_name") != wrapper_name:
+    print(
+        f"expected wrapper_name={wrapper_name!r} in {manifest_path.name}, got {payload.get('wrapper_name')!r}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+phase = payload.get("phase")
+if not isinstance(phase, str) or phase.strip() == "":
+    print(f"expected non-empty phase field in {manifest_path.name}", file=sys.stderr)
+    raise SystemExit(1)
+
+phases = payload.get("phases")
+if not isinstance(phases, dict) or phase not in phases:
+    print(
+        f"expected phase {phase!r} to exist in phases for {manifest_path.name}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+PY
 done
 
 if bash "$DISPATCHER" --lane-wrapper run_missing_non_kolme_manifest_wrapper_contract_lane.sh --resolve-manifest-path >/dev/null 2>&1; then

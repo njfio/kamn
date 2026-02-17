@@ -8,5 +8,7 @@
       "bash",
       "scripts/sdk/rust_live_transport_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_rust_live_transport_contract_lane.sh",
+  "phase": "contract"
 }

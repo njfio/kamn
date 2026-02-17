@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/live_network_pilot_deep_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_live_network_pilot_deep_contract_lane.sh",
+  "phase": "contract"
 }

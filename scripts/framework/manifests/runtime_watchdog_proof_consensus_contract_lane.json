@@ -8,5 +8,7 @@
       "bash",
       "scripts/runtime/watchdog_proof_consensus_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_watchdog_proof_consensus_contract_lane.sh",
+  "phase": "contract"
 }

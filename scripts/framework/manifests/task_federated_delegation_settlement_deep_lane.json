@@ -8,5 +8,7 @@
       "bash",
       "scripts/task/run_federated_delegation_settlement_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_federated_delegation_settlement_deep_lane.sh",
+  "phase": "deep"
 }

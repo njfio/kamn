@@ -8,5 +8,7 @@
       "bash",
       "scripts/message/a2a_mcp_conformance_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_a2a_mcp_conformance_contract_lane.sh",
+  "phase": "contract"
 }

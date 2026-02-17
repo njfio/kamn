@@ -8,5 +8,7 @@
       "bash",
       "scripts/deploy/deployment_slo_rollback_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_deployment_slo_rollback_contract_lane.sh",
+  "phase": "contract"
 }

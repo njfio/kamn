@@ -8,5 +8,7 @@
       "python3",
       "scripts/signer/signer_incident_recovery_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_signer_incident_recovery_contract_lane.sh",
+  "phase": "contract"
 }

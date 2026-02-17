@@ -1,6 +1,23 @@
 # Tasks — Issue #4821
 
-- [ ] T1 (Red): add or update failing tests mapped to conformance cases before implementation.
-- [ ] T2 (Green): implement minimal changes to satisfy all acceptance criteria.
-- [ ] T3 (Refactor): consolidate duplication while preserving deterministic outputs/contracts.
-- [ ] T4 (Verify): run required test tiers, capture evidence, and update issue process log.
+- [x] T1 (Red): update manifest-backed dispatcher matrix test to require manifest `wrapper_name` and `phase`; capture failing output prior to migration.
+- [x] T2 (Green): add metadata-driven resolver and migrate non-Kolme manifests with `wrapper_name`/`phase`.
+- [x] T3 (Refactor): remove hardcoded dispatcher wrapper/phase case statements.
+- [x] T4 (Verify): run matrix/deep dispatch suites and record deterministic evidence.
+
+## Verification Evidence
+
+- RED:
+  - `bash scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh`
+  - failure excerpt: `expected wrapper_name='run_launch_canary_contract_lane.sh' in canary_launch_canary_contract_lane.json, got None`
+- GREEN:
+  - `bash scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh`
+  - `for t in scripts/framework/test_non_kolme*contract_lane_dispatch_wrapper_matrix.sh; do bash \"$t\"; done`
+  - `bash scripts/bridge/test_bridge_deep_lane_dispatch_wrapper_matrix.sh`
+  - `bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh`
+  - `bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh`
+  - `bash scripts/compliance/test_run_classification_redaction_contract_lane.sh`
+  - `bash scripts/governance/test_run_governance_simulation_contract_lane.sh`
+  - `bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh`
+  - `bash scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh`
+  - `bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh`

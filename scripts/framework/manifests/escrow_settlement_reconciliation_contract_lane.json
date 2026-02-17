@@ -8,5 +8,7 @@
       "bash",
       "scripts/escrow/settlement_reconciliation_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_settlement_reconciliation_contract_lane.sh",
+  "phase": "contract"
 }

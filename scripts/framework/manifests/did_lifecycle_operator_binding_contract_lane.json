@@ -8,5 +8,7 @@
       "bash",
       "scripts/did/lifecycle_operator_binding_contract_lane_contract.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_lifecycle_operator_binding_contract_lane.sh",
+  "phase": "contract"
 }

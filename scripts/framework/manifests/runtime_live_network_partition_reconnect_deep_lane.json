@@ -9,5 +9,7 @@
       "scripts/runtime/live_network_partition_reconnect_contract.py",
       "run-deep"
     ]
-  }
+  },
+  "wrapper_name": "run_live_network_partition_reconnect_deep_lane.sh",
+  "phase": "deep"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_ignored_test_and_script_budget_trend_contract_lane.sh",
+  "phase": "contract"
 }

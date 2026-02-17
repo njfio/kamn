@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 DEEP_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/governance/governance_simulation_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_simulation_contract_lane.json"
@@ -34,8 +35,21 @@ if ! grep -q "run_manifest_lane.sh" "$CONTRACT_LANE"; then
   echo "expected governance simulation contract lane wrapper to dispatch via manifest runner" >&2
   exit 1
 fi
-if ! grep -q "governance_simulation_contract_lane.json" "$CONTRACT_LANE"; then
-  echo "expected governance simulation contract lane wrapper to reference governance manifest" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected governance simulation contract lane wrapper to resolve governance manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -q '"wrapper_name": "run_governance_simulation_contract_lane.sh"' "$MANIFEST"; then
+  echo "expected governance simulation manifest wrapper_name metadata marker" >&2
+  exit 1
+fi
+if ! grep -q '"phase": "contract"' "$MANIFEST"; then
+  echo "expected governance simulation manifest phase metadata marker" >&2
   exit 1
 fi
 if ! grep -q "governance_simulation_contract_lane_contract.py" "$MANIFEST"; then

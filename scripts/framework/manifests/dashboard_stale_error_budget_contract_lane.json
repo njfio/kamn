@@ -8,5 +8,7 @@
       "python3",
       "scripts/dashboard/stale_error_budget_contract_lane_contract.py"
     ]
-  }
+  },
+  "wrapper_name": "run_dashboard_stale_error_budget_contract_lane.sh",
+  "phase": "contract"
 }
