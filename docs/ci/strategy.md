@@ -3905,6 +3905,11 @@ Fast-mode CI tooling regression coverage includes:
   - script budget envelope:
     - `.ci/script-surface-budget.env` (`SHELL_LINE_TOTAL_MAX=36000`)
     - `.ci/script-surface-baseline.env` (post-#3740 refreshed baseline snapshot)
+  - deterministic baseline refresh workflow markers:
+    - `combined_shell_surface_baseline_refresh_trigger_reason=combined_shell_surface_shell_line_total_delta_fail_exceeded`
+    - `combined_shell_surface_baseline_refresh_command=bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json /tmp/combined-shell-surface-trend-report.json`
+    - `combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics in the same PR`
+    - `combined_shell_surface_baseline_refresh_validation=bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
 - Shell-Rust LOC telemetry collector (`test_collect_shell_rust_loc_telemetry.sh`)
   - collector command:
     - `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --output-json /tmp/shell-rust-loc-telemetry-report.json`

@@ -943,6 +943,22 @@ fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers()
 }
 
 #[test]
+fn doc_contains_combined_shell_surface_baseline_refresh_workflow_markers() {
+    assert!(DOC.contains(
+        "combined_shell_surface_baseline_refresh_trigger_reason=combined_shell_surface_shell_line_total_delta_fail_exceeded"
+    ));
+    assert!(DOC.contains(
+        "combined_shell_surface_baseline_refresh_command=bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json /tmp/combined-shell-surface-trend-report.json"
+    ));
+    assert!(DOC.contains(
+        "combined_shell_surface_baseline_refresh_contract=update fixtures/ci/combined_shell_surface_trend_baseline.json with report.current metrics in the same PR"
+    ));
+    assert!(DOC.contains(
+        "combined_shell_surface_baseline_refresh_validation=bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
+    ));
+}
+
+#[test]
 fn doc_contains_test_harness_structural_budget_reason_taxonomy_and_ci_smoke_markers() {
     assert!(DOC.contains(
         "test_harness_loc_soft_budget_reason_taxonomy_version=kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1"
