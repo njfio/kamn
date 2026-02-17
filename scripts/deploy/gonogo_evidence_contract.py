@@ -1649,6 +1649,7 @@ def generate_bundle(args: argparse.Namespace) -> int:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate['final_decision']}")
         print(f"tls_evidence_reason_taxonomy_version={TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}")
         print(f"tls_evidence_reason_codes_csv={tls_evidence_gate['reason_codes_csv']}")
+        print(f"tls_evidence_reason_codes_value={tls_evidence_gate['reason_codes_value']}")
     if audit_integrity_gate is not None:
         print(
             "audit_integrity_gate_final_decision="
@@ -1774,9 +1775,10 @@ def check_bundle(args: argparse.Namespace) -> int:
         milestone_bundle, milestone_decision = _validated_expected_milestone_bundle(payload)
         expected_go = expected_go and milestone_decision == GO_DECISION
 
+    tls_evidence_gate: dict[str, Any] | None = None
     tls_evidence_gate_decision = GO_DECISION
     if "tls_evidence_gate" in payload:
-        _, tls_evidence_gate_decision = _validated_expected_tls_evidence_gate(
+        tls_evidence_gate, tls_evidence_gate_decision = _validated_expected_tls_evidence_gate(
             payload, generated_at
         )
         expected_go = expected_go and tls_evidence_gate_decision == GO_DECISION
@@ -1833,6 +1835,19 @@ def check_bundle(args: argparse.Namespace) -> int:
             )
     if "tls_evidence_gate" in payload:
         print(f"tls_evidence_gate_final_decision={tls_evidence_gate_decision}")
+        if tls_evidence_gate is not None:
+            print(
+                "tls_evidence_reason_taxonomy_version="
+                f"{TLS_EVIDENCE_GATE_REASON_TAXONOMY_VERSION}"
+            )
+            print(
+                "tls_evidence_reason_codes_csv="
+                f"{tls_evidence_gate['reason_codes_csv']}"
+            )
+            print(
+                "tls_evidence_reason_codes_value="
+                f"{tls_evidence_gate['reason_codes_value']}"
+            )
     if "audit_integrity_gate" in payload:
         print(f"audit_integrity_gate_final_decision={audit_integrity_gate_decision}")
     if "slo_policy_gate" in payload:
