@@ -244,6 +244,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - `durable_commit_checker_local_heavy_ci_fast_gate_mismatch`
     - `durable_commit_checker_local_heavy_opt_in_required`
 
+## Persistence Adapter Integrity + CI Boundary Fast Lane
+- For persistence adapter integrity and evidence gate taxonomy changes, keep PR checks bounded to:
+  - `bash scripts/runtime/test_validate_persistence_adapters_live.sh`
+- Deterministic reason-mapping and boundary markers:
+  - `persistence_gate_reason_taxonomy_version=kamn.runtime.persistence-gate-reason-taxonomy.v1`
+  - `persistence_gate_reason_codes_csv=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation`
+  - `persistence_ci_smoke_local_heavy_boundary_status=verified`
+  - `persistence_ci_smoke_lane_cost_profile=low`
+  - `persistence_local_heavy_execution_mode=opt_in`
+- CI/local-heavy boundary rules:
+  - ci-smoke execution remains low-cost and deterministic.
+  - local-heavy paths stay explicit opt-in and excluded from fast-gate defaults.
+
 ## Runtime Local Full-Mode Live Validation Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json`
