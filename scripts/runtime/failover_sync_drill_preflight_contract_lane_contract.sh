@@ -14,6 +14,216 @@ skip_suite=false
 failover_readiness_reason_taxonomy_version="kamn.runtime.failover-readiness-reason-taxonomy.v1"
 failover_readiness_reason_codes_csv="failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded"
 
+run_policy_check() {
+  local report_file=""
+  local expected_final_decision="GO"
+  local ci_fast_gate="PASS"
+  local policy_output_json="$ROOT_DIR/failover-sync-preflight-policy-report.json"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --report-file)
+        report_file="${2:-}"
+        shift 2
+        ;;
+      --expected-final-decision)
+        expected_final_decision="${2:-}"
+        shift 2
+        ;;
+      --ci-fast-gate)
+        ci_fast_gate="${2:-}"
+        shift 2
+        ;;
+      --output-json)
+        policy_output_json="${2:-}"
+        shift 2
+        ;;
+      --help|-h)
+        cat <<'USAGE'
+Usage:
+  bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-policy \
+    --report-file <path> \
+    [--expected-final-decision GO|NO-GO] \
+    [--ci-fast-gate PASS|FAIL] \
+    [--output-json <path>]
+USAGE
+        exit 0
+        ;;
+      *)
+        echo "unknown argument: $1" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [ -z "$report_file" ]; then
+    echo "--report-file is required in check-policy mode" >&2
+    exit 1
+  fi
+  if [ ! -f "$report_file" ]; then
+    echo "report file not found: $report_file" >&2
+    exit 1
+  fi
+  case "$expected_final_decision" in
+    GO|NO-GO) ;;
+    *)
+      echo "--expected-final-decision must be GO or NO-GO" >&2
+      exit 1
+      ;;
+  esac
+  case "$ci_fast_gate" in
+    PASS|FAIL) ;;
+    *)
+      echo "--ci-fast-gate must be PASS or FAIL" >&2
+      exit 1
+      ;;
+  esac
+
+  mkdir -p "$(dirname "$policy_output_json")"
+
+  python3 - \
+    "$report_file" \
+    "$expected_final_decision" \
+    "$ci_fast_gate" \
+    "$policy_output_json" \
+    "$failover_readiness_reason_taxonomy_version" \
+    "$failover_readiness_reason_codes_csv" \
+    <<'PY'
+import json
+import pathlib
+import sys
+
+(
+    report_file,
+    expected_final_decision,
+    ci_fast_gate,
+    output_json,
+    expected_reason_taxonomy_version,
+    expected_reason_codes_csv,
+) = sys.argv[1:]
+
+report_path = pathlib.Path(report_file)
+report = json.loads(report_path.read_text(encoding="utf-8"))
+required_fields = [
+    "schema_version",
+    "lane",
+    "status",
+    "failover_promotion_gate_status",
+    "live_node_drift_parity_status",
+    "ci_local_promotion_budget_boundary_status",
+    "failover_readiness_reason_taxonomy_version",
+    "failover_readiness_reason_codes_csv",
+]
+
+reason_codes: list[str] = []
+messages: list[str] = []
+
+
+def add_reason(condition: bool, code: str) -> None:
+    if condition and code not in reason_codes:
+        reason_codes.append(code)
+
+
+missing_fields = [field for field in required_fields if field not in report]
+if missing_fields:
+    messages.append(f"missing required report fields: {','.join(missing_fields)}")
+    for field in missing_fields:
+        add_reason(True, f"failover_sync_drift_policy_required_field_missing:{field}")
+
+add_reason(
+    report.get("schema_version") != "kamn.runtime.failover-sync-drill-report.v1",
+    "failover_sync_drift_policy_schema_mismatch",
+)
+add_reason(
+    report.get("lane") != "preflight",
+    "failover_sync_drift_policy_lane_mismatch",
+)
+add_reason(
+    report.get("status") not in {"pass", "fail"},
+    "failover_sync_drift_policy_status_invalid",
+)
+add_reason(
+    report.get("failover_promotion_gate_status") != "verified",
+    "failover_readiness_progress_stalled",
+)
+add_reason(
+    report.get("live_node_drift_parity_status") != "verified",
+    "live_node_drift_marker_parity_mismatch",
+)
+add_reason(
+    report.get("ci_local_promotion_budget_boundary_status") != "verified",
+    "ci_local_promotion_budget_boundary_exceeded",
+)
+add_reason(
+    report.get("failover_readiness_reason_taxonomy_version")
+    != expected_reason_taxonomy_version,
+    "failover_sync_drift_policy_reason_taxonomy_version_mismatch",
+)
+add_reason(
+    report.get("failover_readiness_reason_codes_csv") != expected_reason_codes_csv,
+    "failover_sync_drift_policy_reason_codes_csv_mismatch",
+)
+add_reason(
+    ci_fast_gate != "PASS",
+    "ci_fast_gate_failed",
+)
+
+computed_final_decision = "GO" if not reason_codes else "NO-GO"
+add_reason(
+    expected_final_decision != computed_final_decision,
+    "failover_sync_drift_policy_expected_decision_mismatch",
+)
+
+status_pass = len(reason_codes) == 0
+final_decision = "GO" if status_pass else "NO-GO"
+policy_status = "verified" if status_pass else "failed"
+status_marker = "ok" if status_pass else "error"
+resolved_reason_codes = ["none"] if status_pass else reason_codes
+
+policy_payload = {
+    "schema_version": "kamn.runtime.failover-sync-drill-preflight-policy-report.v1",
+    "status": "pass" if status_pass else "fail",
+    "final_decision": final_decision,
+    "expected_final_decision": expected_final_decision,
+    "ci_fast_gate": ci_fast_gate,
+    "failover_sync_drift_policy_status": policy_status,
+    "reason_taxonomy_version": expected_reason_taxonomy_version,
+    "reason_codes_csv": expected_reason_codes_csv,
+    "reason_codes": resolved_reason_codes,
+    "report_file": str(report_path),
+}
+
+pathlib.Path(output_json).write_text(
+    json.dumps(policy_payload, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+print(f"status={status_marker}")
+print(f"final_decision={final_decision}")
+print(f"failover_sync_drift_policy_status={policy_status}")
+print(f"reason_taxonomy_version={expected_reason_taxonomy_version}")
+print(f"reason_codes_csv={expected_reason_codes_csv}")
+print(
+    "reason_codes_value="
+    + ("none" if status_pass else ",".join(reason_codes))
+)
+print(f"report_file={output_json}")
+
+for message in messages:
+    print(message, file=sys.stderr)
+
+if not status_pass:
+    print(",".join(reason_codes), file=sys.stderr)
+    raise SystemExit(1)
+PY
+}
+
+if [ "${1:-}" = "check-policy" ]; then
+  shift
+  run_policy_check "$@"
+  exit 0
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output-json)
