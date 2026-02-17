@@ -114,6 +114,42 @@ KEY_LOADING_REASON_TAXONOMY_CODES = (
     "runtime_signer_key_loading_error_classification_violation",
 )
 KEY_LOADING_REASON_TAXONOMY_CODES_CSV = ",".join(KEY_LOADING_REASON_TAXONOMY_CODES)
+SIGNATURE_DECISION_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-signature-decision-reason-taxonomy.v1"
+)
+SIGNATURE_DECISION_REASON_TAXONOMY_CODES = (
+    "runtime_signer_profile_missing",
+    "runtime_signer_profile_invalid",
+    "runtime_signer_previous_profile_missing",
+    "runtime_signer_previous_profile_invalid",
+    "runtime_signer_failover_profile_unchanged",
+    "runtime_signer_profile_changed_without_failover",
+    "runtime_signer_rotation_epoch_stale",
+    "runtime_signer_attestation_schema_invalid",
+    "runtime_signer_attestation_required_approvals_invalid",
+    "runtime_signer_attestation_approved_signers_invalid",
+    "runtime_signer_attestation_approved_signers_not_unique",
+    "runtime_signer_attestation_quorum_shortfall",
+    "runtime_signer_attestation_profile_not_approved",
+    "runtime_signer_quorum_linkage_contract_version_invalid",
+    "runtime_signer_quorum_linkage_contract_version_mismatch",
+    "runtime_signer_quorum_required_approvals_invalid",
+    "runtime_signer_quorum_required_approvals_mismatch",
+    "runtime_signer_quorum_approved_signers_count_invalid",
+    "runtime_signer_quorum_approved_signers_count_mismatch",
+    "runtime_signer_quorum_profile_linked_invalid",
+    "runtime_signer_quorum_profile_linked_mismatch",
+    "runtime_signer_quorum_satisfied_invalid",
+    "runtime_signer_quorum_satisfied_mismatch",
+    "runtime_signer_quorum_linked_invalid",
+    "runtime_signer_quorum_linkage_drift",
+    "runtime_signer_quorum_linkage_violation",
+    "runtime_signer_failover_attestation_required_approvals_insufficient",
+    "runtime_signer_failover_attestation_previous_profile_not_approved",
+)
+SIGNATURE_DECISION_REASON_TAXONOMY_CODES_CSV = ",".join(
+    SIGNATURE_DECISION_REASON_TAXONOMY_CODES
+)
 KEY_LOADING_ERROR_CLASSIFICATION_VERSION = "v1"
 KEY_LOADING_ERROR_CLASSIFICATIONS = (
     "none",
@@ -196,6 +232,17 @@ def classify_expected_key_loading_error(
     ):
         return "private_key_env_mismatch"
     return "none"
+
+
+def observed_signature_decision_reason_codes_value(reason_codes: list[str]) -> str:
+    observed = [
+        reason_code
+        for reason_code in SIGNATURE_DECISION_REASON_TAXONOMY_CODES
+        if reason_code in reason_codes
+    ]
+    if not observed:
+        return "none"
+    return ",".join(observed)
 
 
 def parse_args() -> argparse.Namespace:
@@ -1085,6 +1132,15 @@ def main() -> int:
         "key_loading_reason_codes_csv": (
             KEY_LOADING_REASON_TAXONOMY_CODES_CSV
         ),
+        "signature_decision_reason_taxonomy_version": (
+            SIGNATURE_DECISION_REASON_TAXONOMY_VERSION
+        ),
+        "signature_decision_reason_codes_csv": (
+            SIGNATURE_DECISION_REASON_TAXONOMY_CODES_CSV
+        ),
+        "signature_decision_reason_codes_value": (
+            observed_signature_decision_reason_codes_value(reason_codes)
+        ),
         "key_loading_error_classification_version": (
             KEY_LOADING_ERROR_CLASSIFICATION_VERSION
         ),
@@ -1138,6 +1194,18 @@ def main() -> int:
     print(
         "key_loading_reason_codes_csv="
         f"{KEY_LOADING_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "signature_decision_reason_taxonomy_version="
+        f"{SIGNATURE_DECISION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "signature_decision_reason_codes_csv="
+        f"{SIGNATURE_DECISION_REASON_TAXONOMY_CODES_CSV}"
+    )
+    print(
+        "signature_decision_reason_codes_value="
+        f"{observed_signature_decision_reason_codes_value(reason_codes)}"
     )
     print(
         "key_loading_error_classification_version="
