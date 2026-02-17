@@ -5,8 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 python3 "$ROOT_DIR/scripts/framework/test_contract_framework.py"
 python3 "$ROOT_DIR/scripts/framework/test_contract_lane_helpers.py"
+python3 "$ROOT_DIR/scripts/framework/test_declarative_policy_checker.py"
 python3 "$ROOT_DIR/scripts/framework/test_lane_manifest.py"
 python3 "$ROOT_DIR/scripts/framework/test_manifest_wrapper_dispatch.py"
 python3 "$ROOT_DIR/scripts/framework/test_pilot_lane_manifests.py"
+bash "$ROOT_DIR/scripts/framework/test_declarative_policy_checker_contract.sh"
 
-echo "contract framework unit tests passed."
+echo "contract framework tests passed."
