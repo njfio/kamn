@@ -23,6 +23,30 @@ from framework.contract_framework import require_enum  # noqa: E402
 GATE_DECISION_FAULT_REASON = "gate_decision_fault_injection_triggered"
 RUNTIME_BUDGET_EXCEEDED_REASON = "runtime_budget_exceeded"
 GO_NO_GO_REASON_TAXONOMY_VERSION = "kamn.runtime.go-no-go-gate-reason-taxonomy.v1"
+PROMOTION_EVIDENCE_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.go-no-go-gate-evidence-convergence-reason-taxonomy.v1"
+)
+PROMOTION_EVIDENCE_REASON_CODES_CSV = (
+    "promotion_evidence_link_missing,"
+    "promotion_evidence_payload_tamper_detected,"
+    "promotion_decision_reason_mapping_mismatch"
+)
+PROMOTION_DECISION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.go-no-go-gate-promotion-decision-reason-taxonomy.v1"
+)
+PROMOTION_DECISION_REASON_CODES = [
+    "release_manifest_missing_required_artifact",
+    "release_manifest_success_marker_mismatch",
+    "gate_required_artifact_status_mismatch",
+    "gate_decision_fault_injection_triggered",
+    "runtime_budget_exceeded",
+    "gate_policy_unknown_reason_code",
+    "gate_policy_native_libp2p_provider_marker_mismatch",
+    "gate_policy_libp2p_fallback_marker_blocklist_mismatch",
+    "gate_policy_libp2p_fallback_markers_detected",
+    "gate_policy_native_libp2p_provider_marker_contract_status_mismatch",
+]
+PROMOTION_DECISION_REASON_CODES_CSV = ",".join(PROMOTION_DECISION_REASON_CODES)
 RELEASE_MANIFEST_SCHEMA = "kamn.runtime.release-evidence-manifest.v1"
 DEFAULT_RELEASE_MANIFEST_PATH = ROOT_DIR / "scripts/runtime/release_evidence_manifest.json"
 RUN_MODE_FAST_GATE_EXCLUSION_REASON = "go_no_go_gate_run_mode_excluded_from_fast_gate"
@@ -146,6 +170,43 @@ def _parse_csv_field(value: str) -> list[str]:
     if not normalized or normalized == "none":
         return []
     return [segment.strip() for segment in normalized.split(",") if segment.strip()]
+
+
+def _classify_promotion_decision_reason(reason_code: str) -> str:
+    if reason_code.startswith("release_manifest_missing_required_artifact:"):
+        return "release_manifest_missing_required_artifact"
+    if reason_code.startswith("release_manifest_success_marker_mismatch:"):
+        return "release_manifest_success_marker_mismatch"
+    if reason_code.startswith("gate_required_artifact_status_mismatch:"):
+        return "gate_required_artifact_status_mismatch"
+    if reason_code.startswith("gate_policy_unknown_reason_code:"):
+        return "gate_policy_unknown_reason_code"
+    if reason_code in PROMOTION_DECISION_REASON_CODES:
+        return reason_code
+    return "gate_policy_unknown_reason_code"
+
+
+def _normalize_promotion_decision_reason_codes(reason_codes: list[str]) -> list[str]:
+    mapped_reason_codes: list[str] = []
+    for reason_code in reason_codes:
+        mapped_reason = _classify_promotion_decision_reason(reason_code)
+        if mapped_reason not in mapped_reason_codes:
+            mapped_reason_codes.append(mapped_reason)
+    if not mapped_reason_codes:
+        return []
+    ordered_mapped_reason_codes = [
+        reason_code for reason_code in PROMOTION_DECISION_REASON_CODES if reason_code in mapped_reason_codes
+    ]
+    return ordered_mapped_reason_codes or mapped_reason_codes
+
+
+def _project_promotion_evidence_reason(reason_codes: list[str]) -> str:
+    for reason_code in reason_codes:
+        if reason_code.startswith("release_manifest_missing_required_artifact:"):
+            return "promotion_evidence_link_missing"
+        if reason_code.startswith("release_manifest_success_marker_mismatch:"):
+            return "promotion_evidence_payload_tamper_detected"
+    return "none"
 
 
 def _resolve_manifest_path(raw: str) -> Path:
@@ -644,10 +705,41 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         libp2p_fallback_markers_detected,
         native_libp2p_provider_marker_contract_status,
     )
+    promotion_decision_reason_codes_value = _normalize_promotion_decision_reason_codes(
+        evaluator_reason_codes
+    )
+    promotion_decision_reason_code = (
+        "none"
+        if not promotion_decision_reason_codes_value
+        else promotion_decision_reason_codes_value[0]
+    )
+    promotion_decision_reason_mapping_status = (
+        "verified"
+        if (not evaluator_reason_codes or promotion_decision_reason_codes_value)
+        else "failed"
+    )
+    promotion_evidence_reason_code = _project_promotion_evidence_reason(evaluator_reason_codes)
+    if (
+        promotion_evidence_reason_code == "none"
+        and evaluator_reason_codes
+        and promotion_decision_reason_mapping_status != "verified"
+    ):
+        promotion_evidence_reason_code = "promotion_decision_reason_mapping_mismatch"
+    promotion_evidence_convergence_status = (
+        "verified" if promotion_evidence_reason_code == "none" else "failed"
+    )
 
     report_payload = {
         "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
         "reason_taxonomy_version": GO_NO_GO_REASON_TAXONOMY_VERSION,
+        "promotion_evidence_convergence_status": promotion_evidence_convergence_status,
+        "promotion_evidence_reason_taxonomy_version": PROMOTION_EVIDENCE_REASON_TAXONOMY_VERSION,
+        "promotion_evidence_reason_codes_csv": PROMOTION_EVIDENCE_REASON_CODES_CSV,
+        "promotion_evidence_reason_code": promotion_evidence_reason_code,
+        "promotion_decision_reason_mapping_status": promotion_decision_reason_mapping_status,
+        "promotion_decision_reason_taxonomy_version": PROMOTION_DECISION_REASON_TAXONOMY_VERSION,
+        "promotion_decision_reason_codes_csv": PROMOTION_DECISION_REASON_CODES_CSV,
+        "promotion_decision_reason_code": promotion_decision_reason_code,
         "status": status,
         "policy_outcome": policy_outcome,
         "final_decision": final_decision,
@@ -737,6 +829,26 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
+    print(f"promotion_evidence_convergence_status={promotion_evidence_convergence_status}")
+    print(
+        "promotion_evidence_reason_taxonomy_version="
+        f"{PROMOTION_EVIDENCE_REASON_TAXONOMY_VERSION}"
+    )
+    print(f"promotion_evidence_reason_codes_csv={PROMOTION_EVIDENCE_REASON_CODES_CSV}")
+    print(f"promotion_evidence_reason_code={promotion_evidence_reason_code}")
+    print(
+        "promotion_decision_reason_mapping_status="
+        f"{promotion_decision_reason_mapping_status}"
+    )
+    print(
+        "promotion_decision_reason_taxonomy_version="
+        f"{PROMOTION_DECISION_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "promotion_decision_reason_codes_csv="
+        f"{PROMOTION_DECISION_REASON_CODES_CSV}"
+    )
+    print(f"promotion_decision_reason_code={promotion_decision_reason_code}")
     print("manifest_registry_status=verified")
     print(f"combined_reason_taxonomy_version={combined_reason_taxonomy_version}")
     print(f"combined_transport_reason_codes={','.join(combined_transport_reason_codes)}")

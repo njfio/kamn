@@ -712,6 +712,28 @@ taxonomy markers drift from runbook marker declarations.
   - runbook taxonomy marker drift forces `NO-GO` (`Regression: #4197`).
   - runbook marker parity divergence in checker/lane integration forces `NO-GO` (`Regression: #4198`).
 
+## Go/No-Go Promotion Evidence Convergence Reason Mapping Gate (Issue #4200)
+Go/no-go promotion decisions must expose deterministic convergence-verifier and reason-mapping
+markers so evidence linkage drift is auditable and stable across reruns.
+
+- Contract-lane command:
+  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+- Required convergence verifier markers:
+  - `promotion_evidence_convergence_status=verified`
+  - `promotion_evidence_reason_taxonomy_version=kamn.runtime.go-no-go-gate-evidence-convergence-reason-taxonomy.v1`
+  - `promotion_evidence_reason_codes_csv=promotion_evidence_link_missing,promotion_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch`
+  - `promotion_evidence_reason_code=none|<reason>`
+- Required promotion decision reason-mapping markers:
+  - `promotion_decision_reason_mapping_status=verified`
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.go-no-go-gate-promotion-decision-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=release_manifest_missing_required_artifact,release_manifest_success_marker_mismatch,gate_required_artifact_status_mismatch,gate_decision_fault_injection_triggered,runtime_budget_exceeded,gate_policy_unknown_reason_code,gate_policy_native_libp2p_provider_marker_mismatch,gate_policy_libp2p_fallback_marker_blocklist_mismatch,gate_policy_libp2p_fallback_markers_detected,gate_policy_native_libp2p_provider_marker_contract_status_mismatch`
+  - `promotion_decision_reason_code=none|<reason>`
+- Fail-closed convergence/mapping anchors:
+  - `release_manifest_missing_required_artifact`
+  - `release_manifest_success_marker_mismatch`
+- Regression policy:
+  - convergence verifier and mapped-reason projection drift force `NO-GO` (`Regression: #4200`).
+
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.
 

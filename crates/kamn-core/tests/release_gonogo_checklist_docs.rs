@@ -746,6 +746,34 @@ fn checklist_contains_local_full_stack_harness_runbook_parity_gate() {
 }
 
 #[test]
+fn checklist_contains_gonogo_promotion_convergence_reason_mapping_gate() {
+    assert!(CHECKLIST
+        .contains("## Go/No-Go Promotion Evidence Convergence Reason Mapping Gate (Issue #4200)"));
+    assert!(CHECKLIST.contains(
+        "run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json"
+    ));
+    assert!(CHECKLIST.contains("promotion_evidence_convergence_status=verified"));
+    assert!(CHECKLIST.contains(
+        "promotion_evidence_reason_taxonomy_version=kamn.runtime.go-no-go-gate-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_evidence_reason_codes_csv=promotion_evidence_link_missing,promotion_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(CHECKLIST.contains("promotion_evidence_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.go-no-go-gate-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_codes_csv=release_manifest_missing_required_artifact,release_manifest_success_marker_mismatch,gate_required_artifact_status_mismatch,gate_decision_fault_injection_triggered,runtime_budget_exceeded,gate_policy_unknown_reason_code,gate_policy_native_libp2p_provider_marker_mismatch,gate_policy_libp2p_fallback_marker_blocklist_mismatch,gate_policy_libp2p_fallback_markers_detected,gate_policy_native_libp2p_provider_marker_contract_status_mismatch"
+    ));
+    assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("release_manifest_missing_required_artifact"));
+    assert!(CHECKLIST.contains("release_manifest_success_marker_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4200"));
+}
+
+#[test]
 fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
     assert!(CHECKLIST.contains("staging_rehearsal_contract.py"));
