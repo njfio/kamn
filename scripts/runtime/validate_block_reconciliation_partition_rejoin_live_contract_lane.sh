@@ -155,6 +155,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^block_reconciliation_partition_r
   echo "expected block reconciliation partition/rejoin policy status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_mapping_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin policy mismatch reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1$'; then
+  echo "expected block reconciliation partition/rejoin policy mismatch reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation$'; then
+  echo "expected block reconciliation partition/rejoin policy mismatch reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^partition_healing_mismatch_reason_code=none$'; then
+  echo "expected block reconciliation partition/rejoin policy mismatch reason code marker on GO path" >&2
+  exit 1
+fi
 
 cp "$summary_report" "$tampered_report"
 python3 - "$tampered_report" <<'PY'
@@ -201,6 +217,14 @@ for required_ref in \
 done
 if ! grep -q "block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
   echo "expected CI strategy docs to include block reconciliation partition/rejoin run-mode exclusion marker" >&2
+  exit 1
+fi
+if ! grep -q "policy checker emits deterministic partition-healing mismatch mapping markers:" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include partition-healing mismatch mapping marker heading" >&2
+  exit 1
+fi
+if ! grep -q "partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include deterministic partition-healing mismatch reason taxonomy marker" >&2
   exit 1
 fi
 
@@ -267,6 +291,18 @@ lane_report = {
     "block_reconciliation_partition_rejoin_policy_status": policy_report.get(
         "block_reconciliation_partition_rejoin_policy_status"
     ),
+    "partition_healing_mismatch_reason_mapping_status": policy_report.get(
+        "partition_healing_mismatch_reason_mapping_status"
+    ),
+    "partition_healing_mismatch_reason_taxonomy_version": policy_report.get(
+        "partition_healing_mismatch_reason_taxonomy_version"
+    ),
+    "partition_healing_mismatch_reason_codes_csv": policy_report.get(
+        "partition_healing_mismatch_reason_codes_csv"
+    ),
+    "partition_healing_mismatch_reason_code": policy_report.get(
+        "partition_healing_mismatch_reason_code"
+    ),
     "docs_contract_status": "verified",
     "runtime_transport_mode_status": "verified",
     "transport_evidence_schema_version": summary_report.get("transport_evidence_schema_version"),
@@ -316,6 +352,10 @@ echo "final_decision=GO"
 echo "lane_mode=$mode"
 echo "block_reconciliation_partition_rejoin_contract_status=verified"
 echo "block_reconciliation_partition_rejoin_policy_status=verified"
+echo "partition_healing_mismatch_reason_mapping_status=verified"
+echo "partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1"
+echo "partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation"
+echo "partition_healing_mismatch_reason_code=none"
 echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
 echo "transport_evidence_normalization_status=verified"

@@ -52,6 +52,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^block_reconciliation_partition_rej
   echo "expected block reconciliation partition/rejoin contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^partition_healing_mismatch_reason_mapping_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin contract lane mismatch reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^partition_healing_mismatch_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1$'; then
+  echo "expected block reconciliation partition/rejoin contract lane mismatch reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^partition_healing_mismatch_reason_codes_csv=block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation$'; then
+  echo "expected block reconciliation partition/rejoin contract lane mismatch reason taxonomy csv marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^partition_healing_mismatch_reason_code=none$'; then
+  echo "expected block reconciliation partition/rejoin contract lane mismatch reason code marker on GO path" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^runtime_transport_mode_status=verified$'; then
   echo "expected block reconciliation partition/rejoin contract lane runtime transport mode marker" >&2
   exit 1
@@ -113,6 +129,14 @@ if lane_payload.get("block_reconciliation_partition_rejoin_policy_status") != "v
     raise SystemExit("expected block_reconciliation_partition_rejoin_policy_status=verified")
 if lane_payload.get("block_reconciliation_partition_rejoin_contract_status") != "verified":
     raise SystemExit("expected block_reconciliation_partition_rejoin_contract_status=verified")
+if lane_payload.get("partition_healing_mismatch_reason_mapping_status") != "verified":
+    raise SystemExit("expected partition_healing_mismatch_reason_mapping_status=verified")
+if lane_payload.get("partition_healing_mismatch_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_taxonomy_version marker")
+if lane_payload.get("partition_healing_mismatch_reason_codes_csv") != "block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_codes_csv marker")
+if lane_payload.get("partition_healing_mismatch_reason_code") != "none":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_code marker on GO path")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("runtime_transport_mode_status") != "verified":
@@ -159,6 +183,14 @@ if policy_payload.get("reconciliation_consistency_reason_taxonomy_version") != "
     raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker in policy report")
 if policy_payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
     raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker in policy report")
+if policy_payload.get("partition_healing_mismatch_reason_mapping_status") != "verified":
+    raise SystemExit("expected partition_healing_mismatch_reason_mapping_status=verified in policy report")
+if policy_payload.get("partition_healing_mismatch_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-healing-mismatch-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_taxonomy_version marker in policy report")
+if policy_payload.get("partition_healing_mismatch_reason_codes_csv") != "block_reconciliation_partition_rejoin_policy_required_field_missing,block_reconciliation_partition_rejoin_policy_marker_mismatch,block_reconciliation_partition_rejoin_policy_transport_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_mismatch,block_reconciliation_partition_rejoin_policy_recovery_contract_mismatch,block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid,block_reconciliation_partition_rejoin_policy_lane_mode_contract_mismatch,block_reconciliation_partition_rejoin_policy_ci_fast_gate_failed,block_reconciliation_partition_rejoin_policy_expected_decision_mismatch,block_reconciliation_partition_rejoin_policy_violation":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_codes_csv marker in policy report")
+if policy_payload.get("partition_healing_mismatch_reason_code") != "none":
+    raise SystemExit("expected deterministic partition_healing_mismatch_reason_code marker on GO path in policy report")
 PY
 
 if ! grep -q "check_block_reconciliation_partition_rejoin_live_policy.sh" "$CONTRACT_LANE"; then
