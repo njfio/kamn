@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PERSISTENCE_DOC="$ROOT_DIR/docs/architecture/persistence-backends.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
+CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+
+PERSISTENCE_GATE_REASON_TAXONOMY_VERSION="kamn.runtime.persistence-gate-reason-taxonomy.v1"
+PERSISTENCE_GATE_REASON_CODES_CSV="content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected,persistence_evidence_tamper_detected,persistence_evidence_freshness_window_exceeded,persistence_evidence_incomplete,persistence_ci_smoke_local_heavy_boundary_violation"
 
 output_json=""
 max_seconds=180
@@ -47,6 +52,14 @@ if [ ! -f "$ROADMAP_DOC" ]; then
   echo "expected roadmap doc to exist: $ROADMAP_DOC" >&2
   exit 1
 fi
+if [ ! -f "$RELEASE_CHECKLIST_DOC" ]; then
+  echo "expected release checklist doc to exist: $RELEASE_CHECKLIST_DOC" >&2
+  exit 1
+fi
+if [ ! -f "$CI_STRATEGY_DOC" ]; then
+  echo "expected ci strategy doc to exist: $CI_STRATEGY_DOC" >&2
+  exit 1
+fi
 
 for marker in \
   "validate_persistence_adapters_live.sh" \
@@ -83,6 +96,36 @@ for marker in \
   "runtime_snapshot_state_version_regression_rejected"; do
   if ! grep -q -- "$marker" "$ROADMAP_DOC"; then
     echo "expected roadmap marker for persistence live validation: $marker" >&2
+    exit 1
+  fi
+done
+
+for marker in \
+  "## Persistence Evidence Tamper/Freshness Gate (Issue #4389)" \
+  "validate_persistence_adapters_live.sh" \
+  "persistence_gate_reason_taxonomy_version=$PERSISTENCE_GATE_REASON_TAXONOMY_VERSION" \
+  "persistence_gate_reason_codes_csv=$PERSISTENCE_GATE_REASON_CODES_CSV" \
+  "persistence_tamper_freshness_drift_fail_closed_status=verified" \
+  "persistence_evidence_completeness_status=verified" \
+  "persistence_ci_smoke_local_heavy_boundary_status=verified" \
+  "persistence_ci_smoke_lane_cost_profile=low" \
+  "persistence_local_heavy_execution_mode=opt_in"; do
+  if ! grep -q -- "$marker" "$RELEASE_CHECKLIST_DOC"; then
+    echo "expected release checklist marker for persistence gate: $marker" >&2
+    exit 1
+  fi
+done
+
+for marker in \
+  "## Persistence Adapter Integrity + CI Boundary Fast Lane" \
+  "test_validate_persistence_adapters_live.sh" \
+  "persistence_gate_reason_taxonomy_version=$PERSISTENCE_GATE_REASON_TAXONOMY_VERSION" \
+  "persistence_gate_reason_codes_csv=$PERSISTENCE_GATE_REASON_CODES_CSV" \
+  "persistence_ci_smoke_local_heavy_boundary_status=verified" \
+  "persistence_ci_smoke_lane_cost_profile=low" \
+  "persistence_local_heavy_execution_mode=opt_in"; do
+  if ! grep -q -- "$marker" "$CI_STRATEGY_DOC"; then
+    echo "expected ci strategy marker for persistence gate: $marker" >&2
     exit 1
   fi
 done
@@ -150,6 +193,13 @@ cat >"$report_json" <<JSON
   "evidence_bundle_status": "verified",
   "execution_scope": "local-scheduled",
   "performance_budget_status": "verified",
+  "persistence_gate_reason_taxonomy_version": "$PERSISTENCE_GATE_REASON_TAXONOMY_VERSION",
+  "persistence_gate_reason_codes_csv": "$PERSISTENCE_GATE_REASON_CODES_CSV",
+  "persistence_tamper_freshness_drift_fail_closed_status": "verified",
+  "persistence_evidence_completeness_status": "verified",
+  "persistence_ci_smoke_local_heavy_boundary_status": "verified",
+  "persistence_ci_smoke_lane_cost_profile": "low",
+  "persistence_local_heavy_execution_mode": "opt_in",
   "fail_closed_reason_codes": [
     "content_storage_corrupt_payload_rejected",
     "did_registry_corrupt_payload_rejected",
@@ -160,7 +210,11 @@ cat >"$report_json" <<JSON
     "message_lifecycle_snapshot_corrupt_payload_rejected",
     "message_lifecycle_snapshot_schema_mismatch_rejected",
     "runtime_snapshot_corrupt_payload_rejected",
-    "runtime_snapshot_state_version_regression_rejected"
+    "runtime_snapshot_state_version_regression_rejected",
+    "persistence_evidence_tamper_detected",
+    "persistence_evidence_freshness_window_exceeded",
+    "persistence_evidence_incomplete",
+    "persistence_ci_smoke_local_heavy_boundary_violation"
   ],
   "elapsed_seconds": $elapsed_seconds
 }
@@ -181,4 +235,11 @@ echo "fail_closed_status=verified"
 echo "evidence_bundle_status=verified"
 echo "execution_scope=local-scheduled"
 echo "performance_budget_status=verified"
-echo "fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected"
+echo "persistence_gate_reason_taxonomy_version=$PERSISTENCE_GATE_REASON_TAXONOMY_VERSION"
+echo "persistence_gate_reason_codes_csv=$PERSISTENCE_GATE_REASON_CODES_CSV"
+echo "persistence_tamper_freshness_drift_fail_closed_status=verified"
+echo "persistence_evidence_completeness_status=verified"
+echo "persistence_ci_smoke_local_heavy_boundary_status=verified"
+echo "persistence_ci_smoke_lane_cost_profile=low"
+echo "persistence_local_heavy_execution_mode=opt_in"
+echo "fail_closed_reason_codes=$PERSISTENCE_GATE_REASON_CODES_CSV"
