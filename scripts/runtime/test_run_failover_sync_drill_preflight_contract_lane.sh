@@ -94,6 +94,22 @@ if ! printf '%s\n' "$policy_output" | grep -q '^drift_taxonomy_reason_codes_csv=
   echo "expected deterministic failover/sync preflight drift taxonomy reason codes marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected failover/sync preflight promotion decision reason mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_taxonomy_version=kamn.runtime.failover-promotion-decision-reason-taxonomy.v1$'; then
+  echo "expected deterministic failover/sync preflight promotion decision reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded,drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,failover_sync_drift_policy_expected_decision_mismatch,failover_sync_drift_policy_violation$'; then
+  echo "expected deterministic failover/sync preflight promotion decision reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+  echo "expected deterministic failover/sync preflight promotion decision reason code marker" >&2
+  exit 1
+fi
 
 python3 - "$policy_report" <<'PY'
 import json
@@ -119,7 +135,198 @@ if payload.get("drift_taxonomy_reason_taxonomy_version") != "kamn.runtime.failov
     raise SystemExit("expected deterministic failover/sync preflight drift taxonomy reason taxonomy marker")
 if payload.get("drift_taxonomy_reason_codes_csv") != "drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
     raise SystemExit("expected deterministic failover/sync preflight drift taxonomy reason codes marker")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected failover/sync preflight promotion decision reason mapping status marker")
+if payload.get("promotion_decision_reason_taxonomy_version") != "kamn.runtime.failover-promotion-decision-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic failover/sync preflight promotion decision reason taxonomy marker")
+if payload.get("promotion_decision_reason_codes_csv") != "failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded,drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,failover_sync_drift_policy_expected_decision_mismatch,failover_sync_drift_policy_violation":
+    raise SystemExit("expected deterministic failover/sync preflight promotion decision reason codes marker")
+if payload.get("promotion_decision_reason_code") != "none":
+    raise SystemExit("expected deterministic failover/sync preflight promotion decision reason code marker")
 PY
+
+convergence_report="$TMP_DIR/failover-sync-preflight-convergence.json"
+convergence_output="$(
+  bash "$SHARED_CONTRACT" check-evidence-convergence \
+    --report-file "$TMP_REPORT" \
+    --policy-file "$policy_report" \
+    --output-json "$convergence_report"
+)"
+if ! printf '%s\n' "$convergence_output" | grep -q '^status=ok$'; then
+  echo "expected failover/sync preflight convergence checker status=ok marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^final_decision=GO$'; then
+  echo "expected failover/sync preflight convergence checker final_decision=GO marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^evidence_convergence_status=verified$'; then
+  echo "expected failover/sync preflight convergence checker evidence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+  echo "expected failover/sync preflight convergence checker promotion mapping status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^reason_taxonomy_version=kamn.runtime.failover-evidence-convergence-reason-taxonomy.v1$'; then
+  echo "expected deterministic failover/sync preflight convergence reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^reason_codes_csv=failover_evidence_link_missing,failover_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch$'; then
+  echo "expected deterministic failover/sync preflight convergence reason codes marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$convergence_output" | grep -q '^reason_codes_value=none$'; then
+  echo "expected failover/sync preflight convergence checker reason_codes_value=none marker" >&2
+  exit 1
+fi
+
+python3 - "$convergence_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.failover-sync-drill-preflight-convergence-report.v1":
+    raise SystemExit("unexpected failover/sync preflight convergence report schema")
+if payload.get("status") != "pass":
+    raise SystemExit("expected failover/sync preflight convergence report status=pass")
+if payload.get("final_decision") != "GO":
+    raise SystemExit("expected failover/sync preflight convergence report final_decision=GO")
+if payload.get("evidence_convergence_status") != "verified":
+    raise SystemExit("expected failover/sync preflight convergence evidence status marker")
+if payload.get("promotion_decision_reason_mapping_status") != "verified":
+    raise SystemExit("expected failover/sync preflight convergence promotion mapping status marker")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.failover-evidence-convergence-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic failover/sync preflight convergence reason taxonomy marker")
+if payload.get("reason_codes_csv") != "failover_evidence_link_missing,failover_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch":
+    raise SystemExit("expected deterministic failover/sync preflight convergence reason codes marker")
+if payload.get("reason_codes") != ["none"]:
+    raise SystemExit("expected failover/sync preflight convergence success reason code ['none']")
+PY
+
+missing_link_policy="$TMP_DIR/failover-sync-preflight-policy.missing-link.json"
+cp "$policy_report" "$missing_link_policy"
+python3 - "$missing_link_policy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload.pop("report_file", None)
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+missing_link_output_first="$(
+  bash "$SHARED_CONTRACT" check-evidence-convergence \
+    --report-file "$TMP_REPORT" \
+    --policy-file "$missing_link_policy" \
+    --output-json "$TMP_DIR/failover-sync-preflight-convergence.missing-link.first.json" 2>&1
+)"
+missing_link_code_first=$?
+missing_link_output_second="$(
+  bash "$SHARED_CONTRACT" check-evidence-convergence \
+    --report-file "$TMP_REPORT" \
+    --policy-file "$missing_link_policy" \
+    --output-json "$TMP_DIR/failover-sync-preflight-convergence.missing-link.second.json" 2>&1
+)"
+missing_link_code_second=$?
+set -e
+if [ "$missing_link_code_first" -eq 0 ] || [ "$missing_link_code_second" -eq 0 ]; then
+  echo "expected failover/sync preflight convergence checker to reject missing evidence link marker deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_link_output_first" | grep -q 'failover_evidence_link_missing:report_file'; then
+  echo "expected deterministic failover/sync preflight missing evidence link reason output on first run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_link_output_second" | grep -q 'failover_evidence_link_missing:report_file'; then
+  echo "expected deterministic failover/sync preflight missing evidence link reason output on second run" >&2
+  exit 1
+fi
+
+python3 - \
+  "$TMP_DIR/failover-sync-preflight-convergence.missing-link.first.json" \
+  "$TMP_DIR/failover-sync-preflight-convergence.missing-link.second.json" <<'PY'
+import json
+import pathlib
+import sys
+
+first_payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+second_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+first_reasons = first_payload.get("reason_codes")
+second_reasons = second_payload.get("reason_codes")
+if not first_reasons:
+    raise SystemExit("expected failover/sync preflight missing-link convergence report to include non-empty reason codes")
+if first_reasons != second_reasons:
+    raise SystemExit("expected deterministic failover/sync preflight convergence reason-code ordering across repeated missing-link checks")
+if "failover_evidence_link_missing:report_file" not in first_reasons:
+    raise SystemExit("expected failover_evidence_link_missing:report_file reason code in failover/sync preflight missing-link convergence reports")
+PY
+
+tampered_mapping_policy="$TMP_DIR/failover-sync-preflight-policy.tampered-mapping.json"
+cp "$policy_report" "$tampered_mapping_policy"
+python3 - "$tampered_mapping_policy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["promotion_decision_reason_code"] = "live_node_drift_marker_parity_mismatch"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_mapping_output="$(
+  bash "$SHARED_CONTRACT" check-evidence-convergence \
+    --report-file "$TMP_REPORT" \
+    --policy-file "$tampered_mapping_policy" \
+    --output-json "$TMP_DIR/failover-sync-preflight-convergence.tampered-mapping.json" 2>&1
+)"
+tampered_mapping_code=$?
+set -e
+if [ "$tampered_mapping_code" -eq 0 ]; then
+  echo "expected failover/sync preflight convergence checker to reject tampered promotion decision reason mapping" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_mapping_output" | grep -q 'promotion_decision_reason_mapping_mismatch'; then
+  echo "expected deterministic failover/sync preflight promotion reason mapping mismatch marker" >&2
+  exit 1
+fi
+
+tampered_payload_policy="$TMP_DIR/failover-sync-preflight-policy.tampered-payload.json"
+cp "$policy_report" "$tampered_payload_policy"
+python3 - "$tampered_payload_policy" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reason_codes"] = "none"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_payload_output="$(
+  bash "$SHARED_CONTRACT" check-evidence-convergence \
+    --report-file "$TMP_REPORT" \
+    --policy-file "$tampered_payload_policy" \
+    --output-json "$TMP_DIR/failover-sync-preflight-convergence.tampered-payload.json" 2>&1
+)"
+tampered_payload_code=$?
+set -e
+if [ "$tampered_payload_code" -eq 0 ]; then
+  echo "expected failover/sync preflight convergence checker to reject tampered convergence payload" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_payload_output" | grep -q 'failover_evidence_payload_tamper_detected'; then
+  echo "expected deterministic failover/sync preflight convergence payload tamper marker" >&2
+  exit 1
+fi
 
 missing_marker_report="$TMP_DIR/failover-sync-preflight-summary.missing-marker.json"
 cp "$TMP_REPORT" "$missing_marker_report"

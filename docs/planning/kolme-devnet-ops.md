@@ -1743,6 +1743,26 @@ Operator checkpoints:
 - CI-oriented suite entrypoint:
   - `bash scripts/runtime/run_failover_sync_drill_suite.sh --event-name schedule --output-json /tmp/failover-sync-suite-report.json`
   - suite report schema: `kamn.runtime.failover-sync-drill-suite-report.v1`.
+- Drift taxonomy/runbook parity checker:
+  - `bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file /tmp/failover-sync-preflight-report.json --runbook-file docs/deploy/kolme_devnet_ops.md --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/failover-sync-preflight-policy.json`
+- Evidence convergence checker:
+  - `bash scripts/runtime/failover_sync_drill_preflight_contract_lane_contract.sh check-evidence-convergence --report-file /tmp/failover-sync-preflight-report.json --policy-file /tmp/failover-sync-preflight-policy.json --output-json /tmp/failover-sync-preflight-convergence.json`
+- Deterministic failover evidence convergence markers:
+  - `evidence_convergence_status=verified`
+  - `promotion_decision_reason_mapping_status=verified`
+  - `reason_taxonomy_version=kamn.runtime.failover-evidence-convergence-reason-taxonomy.v1`
+  - `reason_codes_csv=failover_evidence_link_missing,failover_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch`
+- Deterministic promotion decision reason mapping markers:
+  - `promotion_decision_reason_taxonomy_version=kamn.runtime.failover-promotion-decision-reason-taxonomy.v1`
+  - `promotion_decision_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded,drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,failover_sync_drift_policy_expected_decision_mismatch,failover_sync_drift_policy_violation`
+  - `promotion_decision_reason_code=none|<reason>`
+- Deterministic fail-closed convergence reasons:
+  - `failover_evidence_link_missing:report_file`
+  - `failover_evidence_payload_tamper_detected:<field>`
+  - `promotion_decision_reason_mapping_mismatch`
+- Regression policy:
+  - missing evidence-link markers force convergence checker `NO-GO` (`Regression: #4289`).
+  - tampered policy payload and promotion reason mapping drift force convergence checker `NO-GO` (`Regression: #4290`).
 
 ## Regression Guard
 

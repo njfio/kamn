@@ -156,6 +156,9 @@ fn checklist_contains_failover_drift_taxonomy_runbook_parity_gate() {
     assert!(CHECKLIST.contains(
         "failover_sync_drill_preflight_contract_lane_contract.sh check-policy --report-file /tmp/failover-sync-preflight-report.json --runbook-file docs/deploy/kolme_devnet_ops.md --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/failover-sync-preflight-policy.json"
     ));
+    assert!(CHECKLIST.contains(
+        "failover_sync_drill_preflight_contract_lane_contract.sh check-evidence-convergence --report-file /tmp/failover-sync-preflight-report.json --policy-file /tmp/failover-sync-preflight-policy.json --output-json /tmp/failover-sync-preflight-convergence.json"
+    ));
     assert!(CHECKLIST.contains("drift_taxonomy_mapping_status=verified"));
     assert!(CHECKLIST.contains("runbook_marker_parity_status=verified"));
     assert!(CHECKLIST.contains(
@@ -166,8 +169,28 @@ fn checklist_contains_failover_drift_taxonomy_runbook_parity_gate() {
     ));
     assert!(CHECKLIST.contains("drift_taxonomy_mapping_drift_detected"));
     assert!(CHECKLIST.contains("runbook_marker_parity_mismatch"));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_taxonomy_version=kamn.runtime.failover-promotion-decision-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "promotion_decision_reason_codes_csv=failover_readiness_progress_stalled,live_node_drift_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded,drift_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch,ci_fast_gate_failed,failover_sync_drift_policy_expected_decision_mismatch,failover_sync_drift_policy_violation"
+    ));
+    assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("evidence_convergence_status=verified"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_status=verified"));
+    assert!(CHECKLIST.contains(
+        "reason_taxonomy_version=kamn.runtime.failover-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_codes_csv=failover_evidence_link_missing,failover_evidence_payload_tamper_detected,promotion_decision_reason_mapping_mismatch"
+    ));
+    assert!(CHECKLIST.contains("failover_evidence_link_missing:report_file"));
+    assert!(CHECKLIST.contains("failover_evidence_payload_tamper_detected:<field>"));
+    assert!(CHECKLIST.contains("promotion_decision_reason_mapping_mismatch"));
     assert!(CHECKLIST.contains("Regression: #4287"));
     assert!(CHECKLIST.contains("Regression: #4288"));
+    assert!(CHECKLIST.contains("Regression: #4289"));
+    assert!(CHECKLIST.contains("Regression: #4290"));
 }
 
 #[test]
