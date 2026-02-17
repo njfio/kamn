@@ -1,6 +1,6 @@
 # Spec — #4302 Subtask: Add RED Tests for API/Runtime/Kolme Correlation Schema Drift and Propagation Gaps
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4297
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence
