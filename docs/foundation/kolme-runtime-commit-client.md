@@ -317,6 +317,7 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - replay marker contract `replay_evidence_contract_version` must pass for GO decisions in run mode.
   - request/finality linkage markers `request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, and `request_finality_evidence_linked` must pass for GO decisions in run mode.
   - linkage drift fails closed with deterministic reason codes: `request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`.
+  - request/submit/finality artifact lineage cross-link drift fails closed with deterministic reasons: `request_payload_evidence_artifact_path_lineage_mismatch`, `submit_evidence_artifact_path_lineage_mismatch`, `finality_evidence_artifact_path_lineage_mismatch`.
   - bounded finality retry controls: `--finality-retry-max-attempts`, `--finality-retry-backoff-seconds`.
   - finality retry evidence markers: `finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`.
   - retry exhaustion reason codes are deterministic: `live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`.
@@ -325,6 +326,10 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `submit_finality_reason_taxonomy_version=kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1`
     - `submit_finality_reason_codes_csv=submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run`
     - `submit_finality_reason_codes_value=none|submit_finality_reason_mismatch_for_finality_enabled_run|submit_finality_reason_mismatch_for_submit_only_run`
+  - provider-failure taxonomy markers are deterministic in policy outputs:
+    - `provider_failure_reason_taxonomy_version=kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1`
+    - `provider_failure_reason_codes_csv=provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected`
+    - `provider_failure_reason_codes_value=none|provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected`
   - submit/finality reason-code mismatch remains fail-closed with deterministic checker reasons:
     - `submit_finality_reason_mismatch_for_finality_enabled_run`
     - `submit_finality_reason_mismatch_for_submit_only_run`

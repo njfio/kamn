@@ -15,9 +15,10 @@ TMP_FINALITY_REASON_MISMATCH_REPORT="$(mktemp)"
 TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT="$(mktemp)"
 TMP_PROVIDER_DRIFT_REPORT="$(mktemp)"
 TMP_SIGNER_ADAPTER_DRIFT_REPORT="$(mktemp)"
+TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_FINALITY_REASON_MISMATCH_REPORT" "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_FINALITY_REASON_MISMATCH_REPORT" "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
 
 extract_value() {
   local output="$1"
@@ -37,6 +38,8 @@ assert_eq() {
 
 EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION="kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
 EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV="submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run"
+EXPECTED_PROVIDER_FAILURE_REASON_TAXONOMY_VERSION="kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1"
+EXPECTED_PROVIDER_FAILURE_REASON_CODES_CSV="provider_client_contract_mismatch,provider_contract_enforcement_mode_mismatch,provider_live_contract_marker_mismatch,provider_live_contract_marker_missing,provider_in_memory_reference_detected,provider_hint_in_memory_provider_reference_detected,provider_submit_profile_contract_mismatch,provider_command_marker_mismatch,provider_command_marker_missing,provider_signing_profile_marker_mismatch,provider_signing_profile_marker_missing,provider_signing_profile_simulated_detected,provider_signer_adapter_contract_mismatch,provider_signing_curve_contract_mismatch,provider_signing_profile_contract_version_mismatch,live_command_in_memory_provider_reference_detected"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local runtime-commit live evidence policy checker to be executable" >&2
@@ -174,6 +177,20 @@ source["provider_signer_adapter_contract"] = "SimulatedSignerAdapter"
 pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
+python3 - "$TMP_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["request_payload_evidence_artifact_path"] = sys.argv[4]
+source["submit_evidence_artifact_path"] = sys.argv[4]
+source["finality_evidence_artifact_path"] = sys.argv[3]
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
 timeout_checker_output="$(
   python3 "$CHECKER" \
     --report-file "$TMP_TIMEOUT_REPORT" \
@@ -187,6 +204,9 @@ assert_eq "$(extract_value "$timeout_checker_output" "failed_checks")" "none" "e
 assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_taxonomy_version")" "$EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION" "expected deterministic submit/finality reason taxonomy version"
 assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_codes_csv")" "$EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV" "expected deterministic submit/finality reason code taxonomy ordering"
 assert_eq "$(extract_value "$timeout_checker_output" "submit_finality_reason_codes_value")" "none" "expected deterministic submit/finality reason code value for timeout mapping"
+assert_eq "$(extract_value "$timeout_checker_output" "provider_failure_reason_taxonomy_version")" "$EXPECTED_PROVIDER_FAILURE_REASON_TAXONOMY_VERSION" "expected deterministic provider failure reason taxonomy version"
+assert_eq "$(extract_value "$timeout_checker_output" "provider_failure_reason_codes_csv")" "$EXPECTED_PROVIDER_FAILURE_REASON_CODES_CSV" "expected deterministic provider failure reason code taxonomy ordering"
+assert_eq "$(extract_value "$timeout_checker_output" "provider_failure_reason_codes_value")" "none" "expected deterministic provider failure reason code value for timeout mapping"
 
 timeout_checker_output_repeat="$(
   python3 "$CHECKER" \
@@ -199,6 +219,9 @@ timeout_checker_output_repeat="$(
 assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_taxonomy_version")" "$EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION" "expected stable submit/finality reason taxonomy version across repeated runs"
 assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_codes_csv")" "$EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV" "expected stable submit/finality reason taxonomy ordering across repeated runs"
 assert_eq "$(extract_value "$timeout_checker_output_repeat" "submit_finality_reason_codes_value")" "none" "expected stable submit/finality reason classification value across repeated runs"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "provider_failure_reason_taxonomy_version")" "$EXPECTED_PROVIDER_FAILURE_REASON_TAXONOMY_VERSION" "expected stable provider failure reason taxonomy version across repeated runs"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "provider_failure_reason_codes_csv")" "$EXPECTED_PROVIDER_FAILURE_REASON_CODES_CSV" "expected stable provider failure reason taxonomy ordering across repeated runs"
+assert_eq "$(extract_value "$timeout_checker_output_repeat" "provider_failure_reason_codes_value")" "none" "expected stable provider failure reason classification value across repeated runs"
 
 python3 - "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" <<'PY'
 from __future__ import annotations
@@ -348,6 +371,35 @@ if [ "$provider_drift_code" -eq 0 ]; then
 fi
 if ! grep -q "provider_in_memory_reference_detected" "$TMP_ERR"; then
   echo "expected provider_in_memory_reference_detected reason from checker output" >&2
+  exit 1
+fi
+if ! grep -q "provider_failure_reason_codes_value=provider_in_memory_reference_detected" "$TMP_ERR"; then
+  echo "expected normalized provider failure taxonomy value from checker output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_ERR" 2>&1
+lineage_cross_link_drift_code=$?
+set -e
+
+if [ "$lineage_cross_link_drift_code" -eq 0 ]; then
+  echo "expected checker to fail closed for submission/finality lineage cross-link drift" >&2
+  exit 1
+fi
+if ! grep -q "request_payload_evidence_artifact_path_lineage_mismatch" "$TMP_ERR"; then
+  echo "expected request_payload_evidence_artifact_path_lineage_mismatch reason from checker output" >&2
+  exit 1
+fi
+if ! grep -q "submit_evidence_artifact_path_lineage_mismatch" "$TMP_ERR"; then
+  echo "expected submit_evidence_artifact_path_lineage_mismatch reason from checker output" >&2
+  exit 1
+fi
+if ! grep -q "finality_evidence_artifact_path_lineage_mismatch" "$TMP_ERR"; then
+  echo "expected finality_evidence_artifact_path_lineage_mismatch reason from checker output" >&2
   exit 1
 fi
 

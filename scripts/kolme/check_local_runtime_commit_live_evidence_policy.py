@@ -12,6 +12,27 @@ SUBMIT_FINALITY_REASON_CODES = (
     "submit_finality_reason_mismatch_for_finality_enabled_run",
     "submit_finality_reason_mismatch_for_submit_only_run",
 )
+PROVIDER_FAILURE_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-runtime-commit-provider-failure-reason-taxonomy.v1"
+)
+PROVIDER_FAILURE_REASON_CODES = (
+    "provider_client_contract_mismatch",
+    "provider_contract_enforcement_mode_mismatch",
+    "provider_live_contract_marker_mismatch",
+    "provider_live_contract_marker_missing",
+    "provider_in_memory_reference_detected",
+    "provider_hint_in_memory_provider_reference_detected",
+    "provider_submit_profile_contract_mismatch",
+    "provider_command_marker_mismatch",
+    "provider_command_marker_missing",
+    "provider_signing_profile_marker_mismatch",
+    "provider_signing_profile_marker_missing",
+    "provider_signing_profile_simulated_detected",
+    "provider_signer_adapter_contract_mismatch",
+    "provider_signing_curve_contract_mismatch",
+    "provider_signing_profile_contract_version_mismatch",
+    "live_command_in_memory_provider_reference_detected",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,7 +63,7 @@ def parse_args() -> argparse.Namespace:
 
 def evaluate(
     report: dict[str, object], args: argparse.Namespace
-) -> tuple[str, list[str], str]:
+) -> tuple[str, list[str], str, str]:
     reason_codes: list[str] = []
     submit_finality_reason_codes: list[str] = []
     in_memory_provider_marker = "InMemoryKolmeRuntimeCommitClient"
@@ -230,9 +251,17 @@ def evaluate(
     if not isinstance(submit_evidence_artifact_path, str) or not submit_evidence_artifact_path.strip():
         reason_codes.append("submit_evidence_artifact_path_invalid")
 
+    live_output_file = report.get("live_output_file")
+    if not isinstance(live_output_file, str) or not live_output_file.strip():
+        reason_codes.append("live_output_file_invalid")
+
     finality_evidence_artifact_path = report.get("finality_evidence_artifact_path")
     if not isinstance(finality_evidence_artifact_path, str):
         reason_codes.append("finality_evidence_artifact_path_invalid")
+
+    finality_output_file = report.get("finality_output_file")
+    if not isinstance(finality_output_file, str) or not finality_output_file.strip():
+        reason_codes.append("finality_output_file_invalid")
 
     if report.get("request_finality_evidence_contract_version") != "v1":
         reason_codes.append("request_finality_evidence_contract_version_mismatch")
@@ -343,12 +372,30 @@ def evaluate(
             reason_codes.append("request_payload_evidence_artifact_path_missing")
         if (
             mode == "run"
+            and isinstance(live_output_file, str)
+            and live_output_file.strip()
+            and isinstance(request_payload_evidence_artifact_path, str)
+            and request_payload_evidence_artifact_path.strip()
+            and request_payload_evidence_artifact_path != live_output_file
+        ):
+            reason_codes.append("request_payload_evidence_artifact_path_lineage_mismatch")
+        if (
+            mode == "run"
             and isinstance(artifact_paths, list)
             and isinstance(submit_evidence_artifact_path, str)
             and submit_evidence_artifact_path.strip()
             and submit_evidence_artifact_path not in artifact_paths
         ):
             reason_codes.append("submit_evidence_artifact_path_missing")
+        if (
+            mode == "run"
+            and isinstance(live_output_file, str)
+            and live_output_file.strip()
+            and isinstance(submit_evidence_artifact_path, str)
+            and submit_evidence_artifact_path.strip()
+            and submit_evidence_artifact_path != live_output_file
+        ):
+            reason_codes.append("submit_evidence_artifact_path_lineage_mismatch")
         if mode == "run" and finality_enabled is True:
             if (
                 isinstance(artifact_paths, list)
@@ -357,6 +404,14 @@ def evaluate(
                 and finality_evidence_artifact_path not in artifact_paths
             ):
                 reason_codes.append("finality_evidence_artifact_path_missing")
+            if (
+                isinstance(finality_output_file, str)
+                and finality_output_file.strip()
+                and isinstance(finality_evidence_artifact_path, str)
+                and finality_evidence_artifact_path.strip()
+                and finality_evidence_artifact_path != finality_output_file
+            ):
+                reason_codes.append("finality_evidence_artifact_path_lineage_mismatch")
             if request_finality_evidence_linked is not True:
                 reason_codes.append("request_finality_evidence_linkage_missing")
         if mode == "run" and args.require_non_synthetic_run_evidence:
@@ -426,8 +481,21 @@ def evaluate(
     submit_finality_reason_codes_value = (
         ",".join(sorted(set(submit_finality_reason_codes))) if submit_finality_reason_codes else "none"
     )
+    provider_failure_reason_codes_value = (
+        ",".join(
+            reason_code
+            for reason_code in PROVIDER_FAILURE_REASON_CODES
+            if reason_code in reason_codes
+        )
+        or "none"
+    )
     final_decision = "GO" if not reason_codes else "NO-GO"
-    return final_decision, reason_codes, submit_finality_reason_codes_value
+    return (
+        final_decision,
+        reason_codes,
+        submit_finality_reason_codes_value,
+        provider_failure_reason_codes_value,
+    )
 
 
 def main() -> int:
@@ -442,7 +510,12 @@ def main() -> int:
     elif observed_status == "fail":
         observed_final_decision = "NO-GO"
 
-    final_decision, reason_codes, submit_finality_reason_codes_value = evaluate(report, args)
+    (
+        final_decision,
+        reason_codes,
+        submit_finality_reason_codes_value,
+        provider_failure_reason_codes_value,
+    ) = evaluate(report, args)
     output = {
         "schema_version": "kamn.kolme.local-runtime-commit-live-policy-report.v1",
         "report_file": str(report_path),
@@ -469,6 +542,9 @@ def main() -> int:
         "submit_finality_reason_taxonomy_version": SUBMIT_FINALITY_REASON_TAXONOMY_VERSION,
         "submit_finality_reason_codes_csv": ",".join(SUBMIT_FINALITY_REASON_CODES),
         "submit_finality_reason_codes_value": submit_finality_reason_codes_value,
+        "provider_failure_reason_taxonomy_version": PROVIDER_FAILURE_REASON_TAXONOMY_VERSION,
+        "provider_failure_reason_codes_csv": ",".join(PROVIDER_FAILURE_REASON_CODES),
+        "provider_failure_reason_codes_value": provider_failure_reason_codes_value,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
         "reason_codes": reason_codes,
@@ -488,6 +564,9 @@ def main() -> int:
     print(f"submit_finality_reason_taxonomy_version={SUBMIT_FINALITY_REASON_TAXONOMY_VERSION}")
     print(f"submit_finality_reason_codes_csv={','.join(SUBMIT_FINALITY_REASON_CODES)}")
     print(f"submit_finality_reason_codes_value={submit_finality_reason_codes_value}")
+    print(f"provider_failure_reason_taxonomy_version={PROVIDER_FAILURE_REASON_TAXONOMY_VERSION}")
+    print(f"provider_failure_reason_codes_csv={','.join(PROVIDER_FAILURE_REASON_CODES)}")
+    print(f"provider_failure_reason_codes_value={provider_failure_reason_codes_value}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
 
