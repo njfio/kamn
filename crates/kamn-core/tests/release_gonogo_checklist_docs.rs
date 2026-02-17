@@ -679,6 +679,9 @@ fn checklist_contains_milestone_review_aggregate_lineage_gate() {
     assert!(CHECKLIST.contains("--live-node-validation-summary-file"));
     assert!(CHECKLIST.contains("--live-node-validation-policy-file"));
     assert!(CHECKLIST.contains("--go-no-go-gate-report-file"));
+    assert!(CHECKLIST.contains(
+        "python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO"
+    ));
     assert!(CHECKLIST.contains("milestone_review_bundle"));
     assert!(CHECKLIST.contains("schema_version=kamn.release.milestone-review-bundle.v1"));
     assert!(CHECKLIST.contains("contracts.linked_artifact_lineage_required=true"));
@@ -686,8 +689,19 @@ fn checklist_contains_milestone_review_aggregate_lineage_gate() {
         "contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider"
     ));
     assert!(CHECKLIST.contains("contracts.go_no_go_gate_final_decision_required=GO"));
+    assert!(CHECKLIST.contains(
+        "upgrade_lineage_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("upgrade_lineage_reason_codes_csv=none|<csv>"));
+    assert!(CHECKLIST.contains("upgrade_lineage_reason_codes_value=none|<csv>"));
+    assert!(CHECKLIST.contains(
+        "promotion_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains("promotion_gate_reason_codes_csv=none|<csv>"));
+    assert!(CHECKLIST.contains("promotion_gate_reason_codes_value=none|<csv>"));
     assert!(CHECKLIST.contains("milestone_review_go_no_go_gate_report_missing"));
     assert!(CHECKLIST.contains("milestone_review_live_node_validation_runtime_provider_mismatch"));
+    assert!(CHECKLIST.contains("promotion gate reason mapping mismatch"));
     assert!(CHECKLIST.contains("milestone review bundle lineage mismatch"));
 }
 

@@ -1275,18 +1275,28 @@ Operator checkpoints:
   - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-milestone.json --release-candidate v1.0.0-rc.5 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --deployment-preflight-summary-file /tmp/kolme-local-live-deployment-preflight-summary.json --deployment-preflight-policy-file /tmp/kolme-local-live-deployment-preflight-policy.json --live-node-validation-summary-file /tmp/kolme-local-live-node-validation-bundle-summary.json --live-node-validation-policy-file /tmp/kolme-local-live-node-validation-bundle-policy.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json`
 - Validate aggregate lineage policy:
   - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-milestone.json`
+- Validate upgrade rehearsal lineage + promotion mapping policy:
+  - `python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO`
 - Aggregate bundle contracts:
   - `milestone_review_bundle.schema_version=kamn.release.milestone-review-bundle.v1`
   - `milestone_review_bundle.contracts.linked_artifact_lineage_required=true`
   - `milestone_review_bundle.contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider`
   - `milestone_review_bundle.contracts.go_no_go_gate_final_decision_required=GO`
   - `milestone_review_bundle.lineage_status=verified|fail-closed`
+- Deterministic upgrade-lineage + promotion mapping markers:
+  - `upgrade_lineage_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `upgrade_lineage_reason_codes_csv=none|<csv>`
+  - `upgrade_lineage_reason_codes_value=none|<csv>`
+  - `promotion_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `promotion_gate_reason_codes_csv=none|<csv>`
+  - `promotion_gate_reason_codes_value=none|<csv>`
 - Fail-closed reason markers:
   - `milestone_review_deployment_preflight_summary_missing`
   - `milestone_review_live_node_validation_summary_missing`
   - `milestone_review_go_no_go_gate_report_missing`
   - `milestone_review_live_node_validation_runtime_provider_mismatch`
   - `milestone_review_go_no_go_gate_final_decision_mismatch`
+  - `promotion gate reason mapping mismatch`
   - `milestone review bundle lineage mismatch`
 
 ## Staged Rehearsal Signoff Artifact Contract (Issue #3241)
