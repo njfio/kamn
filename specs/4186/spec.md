@@ -3,7 +3,7 @@
 - Title: add ci smoke checker for upgrade compatibility-rehearsal marker drift and heavy-lane exclusions
 - Parent: #4179
 - Milestone: R27.21 Kolme cross-version upgrade compatibility governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
