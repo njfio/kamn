@@ -8,6 +8,7 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
 tmp_tampered_wal_checkpoint=""
+tmp_tampered_wal_append=""
 tmp_tampered_wal_taxonomy=""
 tmp_tampered_historical_query_index=""
 tmp_tampered_historical_query_taxonomy=""
@@ -26,6 +27,9 @@ cleanup() {
   rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"
   if [[ -n "$tmp_tampered_wal_checkpoint" ]]; then
     rm -f "$tmp_tampered_wal_checkpoint"
+  fi
+  if [[ -n "$tmp_tampered_wal_append" ]]; then
+    rm -f "$tmp_tampered_wal_append"
   fi
   if [[ -n "$tmp_tampered_wal_taxonomy" ]]; then
     rm -f "$tmp_tampered_wal_taxonomy"
@@ -102,6 +106,18 @@ if ! printf '%s\n' "$policy_output" | grep -q '^sqlite_crash_recovery_policy_sta
   echo "expected sqlite crash-recovery policy checker status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^append_checkpoint_integrity_status=verified$'; then
+  echo "expected sqlite crash-recovery policy checker append-checkpoint integrity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1$'; then
+  echo "expected sqlite crash-recovery policy checker append-checkpoint reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q '^append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch$'; then
+  echo "expected sqlite crash-recovery policy checker append-checkpoint reason taxonomy csv marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -115,6 +131,12 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected sqlite crash-recovery policy final_decision=GO")
 if payload.get("sqlite_crash_recovery_policy_status") != "verified":
     raise SystemExit("expected sqlite_crash_recovery_policy_status=verified")
+if payload.get("append_checkpoint_integrity_status") != "verified":
+    raise SystemExit("expected deterministic append_checkpoint_integrity_status marker")
+if payload.get("append_checkpoint_reason_taxonomy_version") != "kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic append_checkpoint_reason_taxonomy_version marker")
+if payload.get("append_checkpoint_reason_codes_csv") != "wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch":
+    raise SystemExit("expected deterministic append_checkpoint_reason_codes_csv marker")
 if payload.get("wal_durability_reason_taxonomy_version") != "kamn.runtime.wal-durability-reason-taxonomy.v1":
     raise SystemExit("expected deterministic wal_durability_reason_taxonomy_version marker")
 if payload.get("wal_durability_reason_codes_csv") != "wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete":
@@ -205,6 +227,41 @@ if [ "$wal_checkpoint_tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$wal_checkpoint_tampered_output" | grep -q 'sqlite_crash_recovery_policy_wal_checkpoint_status_mismatch'; then
   echo "expected deterministic wal-checkpoint mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$wal_checkpoint_tampered_output" | grep -q 'sqlite_crash_recovery_policy_append_checkpoint_parity_mismatch'; then
+  echo "expected deterministic append-checkpoint parity mismatch reason for tampered sqlite crash-recovery report" >&2
+  exit 1
+fi
+
+tmp_tampered_wal_append="$(mktemp)"
+cp "$TMP_REPORT" "$tmp_tampered_wal_append"
+python3 - "$tmp_tampered_wal_append" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["wal_append_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+wal_append_tampered_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tmp_tampered_wal_append" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+wal_append_tampered_code=$?
+set -e
+if [ "$wal_append_tampered_code" -eq 0 ]; then
+  echo "expected tampered wal-append sqlite crash-recovery report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$wal_append_tampered_output" | grep -q 'sqlite_crash_recovery_policy_wal_append_status_mismatch'; then
+  echo "expected deterministic wal-append mismatch reason for tampered sqlite crash-recovery report" >&2
   exit 1
 fi
 
