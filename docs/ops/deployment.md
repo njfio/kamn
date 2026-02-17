@@ -40,8 +40,23 @@ Compose file: `deploy/docker-compose.yml`
   - `processor_data`
   - `listener_data`
   - `approver_data`
+- TLS material volume is mounted read-only in each service: `./certs:/tls:ro`
+- service API TLS env markers are configured per role:
+  - `KAMN_SERVICE_API_TLS_MODE=require`
+  - `KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem`
+  - `KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem`
 - named bridge network: `kamn_mesh`
-- each service defines a compose `healthcheck` probing local `/healthz` endpoints.
+- each service defines a compose `healthcheck` probing local `/healthz` endpoints over HTTPS (`curl --insecure`), for example: `https://127.0.0.1:19081/healthz`.
+
+Generate local cert/key material before `docker compose up` (or follow `deploy/certs/README.md`):
+
+```bash
+mkdir -p deploy/certs
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+  -keyout deploy/certs/service-api-key.pem \
+  -out deploy/certs/service-api-cert.pem \
+  -subj "/CN=localhost"
+```
 - listener/approver service dependencies require `service_healthy` on processor.
 - each service includes `restart: unless-stopped` for resilient local process restarts.
 

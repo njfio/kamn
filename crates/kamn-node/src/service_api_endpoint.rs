@@ -787,7 +787,14 @@ async fn service_api_auth_middleware(
             let projection = service_api_lifecycle_rejection_policy(
                 REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
             )
-            .expect("known concurrency limiter reason code should have projection");
+            .unwrap_or(ServiceApiLifecycleRejectionPolicy {
+                rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER,
+                reason_code: REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
+                status_code: StatusCode::TOO_MANY_REQUESTS,
+                error_label: "too-many-requests",
+                outcome: "concurrency-limit",
+                default_message: "ingress concurrency limit exceeded",
+            });
             let _projection_class = projection.rejection_class;
             let correlation_id = format!(
                 "service-api:{}:{}:concurrency-limit",
@@ -930,7 +937,14 @@ async fn service_api_auth_middleware(
         if !ingress_rate_window.try_record_request(Instant::now()) {
             let projection =
                 service_api_lifecycle_rejection_policy(REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED)
-                    .expect("known ingress rate limiter reason code should have projection");
+                    .unwrap_or(ServiceApiLifecycleRejectionPolicy {
+                        rejection_class: LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER,
+                        reason_code: REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED,
+                        status_code: StatusCode::TOO_MANY_REQUESTS,
+                        error_label: "too-many-requests",
+                        outcome: "rate-limit",
+                        default_message: "ingress rate limit exceeded",
+                    });
             let _projection_class = projection.rejection_class;
             return service_api_middleware_error_response(
                 &state,

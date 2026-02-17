@@ -24,8 +24,12 @@ services:
     environment:
       - KAMN_NODE_CHAIN_ID=kamn-devnet
       - KAMN_NODE_CHAIN_VERSION=v0.1.0
+      - KAMN_SERVICE_API_TLS_MODE=require
+      - KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem
+      - KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem
     volumes:
       - processor_data:/data/processor
+      - ./certs:/tls:ro
     ports:
       - "19081:19081"
     networks:
@@ -33,7 +37,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl --fail --silent http://127.0.0.1:19081/healthz > /dev/null || exit 1
+        - curl --fail --silent --insecure https://127.0.0.1:19081/healthz > /dev/null || exit 1
       interval: 10s
       timeout: 3s
       retries: 5
@@ -60,8 +64,12 @@ services:
     environment:
       - KAMN_NODE_CHAIN_ID=kamn-devnet
       - KAMN_NODE_CHAIN_VERSION=v0.1.0
+      - KAMN_SERVICE_API_TLS_MODE=require
+      - KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem
+      - KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem
     volumes:
       - listener_data:/data/listener
+      - ./certs:/tls:ro
     ports:
       - "19082:19082"
     depends_on:
@@ -72,7 +80,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl --fail --silent http://127.0.0.1:19082/healthz > /dev/null || exit 1
+        - curl --fail --silent --insecure https://127.0.0.1:19082/healthz > /dev/null || exit 1
       interval: 10s
       timeout: 3s
       retries: 5
@@ -99,8 +107,12 @@ services:
     environment:
       - KAMN_NODE_CHAIN_ID=kamn-devnet
       - KAMN_NODE_CHAIN_VERSION=v0.1.0
+      - KAMN_SERVICE_API_TLS_MODE=require
+      - KAMN_SERVICE_API_TLS_CERT_FILE=/tls/service-api-cert.pem
+      - KAMN_SERVICE_API_TLS_KEY_FILE=/tls/service-api-key.pem
     volumes:
       - approver_data:/data/approver
+      - ./certs:/tls:ro
     ports:
       - "19083:19083"
     depends_on:
@@ -111,7 +123,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - curl --fail --silent http://127.0.0.1:19083/healthz > /dev/null || exit 1
+        - curl --fail --silent --insecure https://127.0.0.1:19083/healthz > /dev/null || exit 1
       interval: 10s
       timeout: 3s
       retries: 5
