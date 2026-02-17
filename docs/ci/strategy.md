@@ -389,6 +389,35 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `sqlite_crash_replay_evidence_payload_tamper_detected:<field>`
   - `sqlite_crash_replay_promotion_decision_reason_mapping_mismatch`
 
+### Admission-Backpressure CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_admission_backpressure_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/admission-backpressure-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `admission_backpressure_ci_smoke_reason_taxonomy_version=kamn.ci.admission-backpressure-ci-smoke-convergence-reason-taxonomy.v1`
+  - `admission_backpressure_ci_smoke_reason_codes_csv=service_api_axum_policy_ci_smoke_composition_missing,service_api_axum_contract_lane_ci_smoke_composition_missing,service_api_axum_run_command_leaked_in_fast_mode,ci_fast_gate_service_api_axum_run_command_not_excluded,ci_strategy_admission_backpressure_convergence_markers_missing,production_plan_admission_backpressure_convergence_markers_missing,admission_backpressure_ci_smoke_seconds_exceeded`
+  - `admission_backpressure_ci_smoke_max_seconds=120`
+  - `admission_backpressure_local_heavy_max_seconds=900`
+  - `admission_backpressure_ci_smoke_lane_cost_profile=low`
+  - `admission_backpressure_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+  - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+- Local-heavy boundary policy:
+  - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - service api axum run command (`validate_service_api_axum_ingress_live.sh`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `service_api_axum_policy_ci_smoke_composition_missing`
+  - `service_api_axum_contract_lane_ci_smoke_composition_missing`
+  - `service_api_axum_run_command_leaked_in_fast_mode`
+  - `ci_fast_gate_service_api_axum_run_command_not_excluded`
+  - `ci_strategy_admission_backpressure_convergence_markers_missing`
+  - `production_plan_admission_backpressure_convergence_markers_missing`
+  - `admission_backpressure_ci_smoke_seconds_exceeded`
+  - `Regression: #4231`
+  - `Regression: #4232`
+
 ### SQLite Crash-Replay CI smoke convergence governance
 - Composite smoke checker command:
   - `python3 scripts/ci/check_sqlite_crash_recovery_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/sqlite-crash-recovery-ci-smoke-convergence-report.json`
