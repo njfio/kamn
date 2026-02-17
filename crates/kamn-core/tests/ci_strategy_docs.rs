@@ -942,6 +942,23 @@ fn doc_contains_runtime_local_full_stack_runtime_budget_policy_markers() {
     assert!(DOC.contains("runtime_phase_module_parity_drift_detected"));
     assert!(DOC.contains("runtime_extraction_evidence_output_unstable"));
     assert!(DOC.contains("ci_local_runtime_phase_parity_budget_boundary_exceeded"));
+    assert!(DOC.contains(
+        "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains("runtime_module_boundary_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains(
+        "runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status"
+    ));
+    assert!(DOC.contains("runtime_orchestration_dispatch_boundary_status=verified"));
+    assert!(DOC.contains("runtime_daemon_phase_boundary_status=verified"));
+    assert!(DOC.contains("runtime_kolme_live_boundary_status=verified"));
+    assert!(DOC.contains("runtime_module_boundary_parity_status=verified"));
+    assert!(DOC.contains("runtime_module_boundary_evidence_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_module_boundary_budget_boundary_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_module_boundary_budget_boundary_exceeded"));
 }
 
 #[test]

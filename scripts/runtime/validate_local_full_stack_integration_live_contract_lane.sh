@@ -403,6 +403,26 @@ if summary_report.get("runtime_extraction_evidence_output_status") != "verified"
     raise SystemExit("expected runtime extraction evidence output status marker in summary report")
 if summary_report.get("ci_local_runtime_phase_parity_budget_boundary_status") != "verified":
     raise SystemExit("expected runtime phase parity budget boundary status marker in summary report")
+if summary_report.get("runtime_module_boundary_parity_reason_taxonomy_version") != "kamn.runtime.module-boundary-parity-reason-taxonomy.v1":
+    raise SystemExit("expected runtime module boundary parity reason taxonomy version marker in summary report")
+if summary_report.get("runtime_module_boundary_parity_reason_codes_csv") != "runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded":
+    raise SystemExit("expected runtime module boundary parity reason codes marker in summary report")
+if summary_report.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
+    raise SystemExit("expected runtime module boundary evidence output normalization marker in summary report")
+if summary_report.get("runtime_orchestration_dispatch_boundary_status") != "verified":
+    raise SystemExit("expected runtime orchestration dispatch boundary status marker in summary report")
+if summary_report.get("runtime_daemon_phase_boundary_status") != "verified":
+    raise SystemExit("expected runtime daemon phase boundary status marker in summary report")
+if summary_report.get("runtime_kolme_live_boundary_status") != "verified":
+    raise SystemExit("expected runtime kolme live boundary status marker in summary report")
+if summary_report.get("runtime_module_boundary_parity_status") != "verified":
+    raise SystemExit("expected runtime module boundary parity status marker in summary report")
+if summary_report.get("runtime_module_boundary_evidence_status") != "verified":
+    raise SystemExit("expected runtime module boundary evidence status marker in summary report")
+if summary_report.get("ci_local_runtime_module_boundary_budget_boundary_status") != "verified":
+    raise SystemExit("expected runtime module boundary budget boundary status marker in summary report")
+if summary_report.get("runtime_module_boundary_reason_codes_value") != "none":
+    raise SystemExit("expected runtime module boundary reason_codes_value=none marker in summary report")
 if summary_report.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected combined transport reason code marker in summary report")
 expected_combined_kolme_reason = "not_run" if mode == "dry-run" else "live_runtime_integration_passed"
@@ -457,6 +477,14 @@ if policy_report.get("reason_codes_value") != "none":
     raise SystemExit("expected policy reason_codes_value=none marker in policy report")
 if policy_report.get("runtime_phase_parity_evidence_outputs_csv") != "runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status":
     raise SystemExit("expected policy runtime phase parity evidence output normalization marker in policy report")
+if policy_report.get("runtime_module_boundary_reason_taxonomy_version") != "kamn.runtime.module-boundary-parity-reason-taxonomy.v1":
+    raise SystemExit("expected policy runtime module boundary reason taxonomy version marker in policy report")
+if policy_report.get("runtime_module_boundary_reason_codes_csv") != "runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded":
+    raise SystemExit("expected policy runtime module boundary reason codes marker in policy report")
+if policy_report.get("runtime_module_boundary_reason_codes_value") != "none":
+    raise SystemExit("expected policy runtime module boundary reason_codes_value=none marker in policy report")
+if policy_report.get("runtime_module_boundary_evidence_outputs_csv") != "runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status":
+    raise SystemExit("expected policy runtime module boundary evidence output normalization marker in policy report")
 
 for marker in (
     "transport_convergence_status",
@@ -539,6 +567,54 @@ lane_report = {
     ),
     "runtime_phase_parity_evidence_outputs_csv": summary_report.get(
         "runtime_phase_parity_evidence_outputs_csv",
+        "",
+    ),
+    "runtime_module_boundary_parity_reason_taxonomy_version": summary_report.get(
+        "runtime_module_boundary_parity_reason_taxonomy_version",
+        "",
+    ),
+    "runtime_module_boundary_parity_reason_codes_csv": summary_report.get(
+        "runtime_module_boundary_parity_reason_codes_csv",
+        "",
+    ),
+    "runtime_module_boundary_evidence_outputs_csv": summary_report.get(
+        "runtime_module_boundary_evidence_outputs_csv",
+        "",
+    ),
+    "runtime_orchestration_dispatch_boundary_status": summary_report.get(
+        "runtime_orchestration_dispatch_boundary_status",
+        "unknown",
+    ),
+    "runtime_daemon_phase_boundary_status": summary_report.get(
+        "runtime_daemon_phase_boundary_status",
+        "unknown",
+    ),
+    "runtime_kolme_live_boundary_status": summary_report.get(
+        "runtime_kolme_live_boundary_status",
+        "unknown",
+    ),
+    "runtime_module_boundary_parity_status": summary_report.get(
+        "runtime_module_boundary_parity_status",
+        "unknown",
+    ),
+    "runtime_module_boundary_evidence_status": summary_report.get(
+        "runtime_module_boundary_evidence_status",
+        "unknown",
+    ),
+    "ci_local_runtime_module_boundary_budget_boundary_status": summary_report.get(
+        "ci_local_runtime_module_boundary_budget_boundary_status",
+        "unknown",
+    ),
+    "runtime_module_boundary_reason_taxonomy_version": policy_report.get(
+        "runtime_module_boundary_reason_taxonomy_version",
+        "",
+    ),
+    "runtime_module_boundary_reason_codes_csv": policy_report.get(
+        "runtime_module_boundary_reason_codes_csv",
+        "",
+    ),
+    "runtime_module_boundary_reason_codes_value": policy_report.get(
+        "runtime_module_boundary_reason_codes_value",
         "",
     ),
     "runtime_phase_module_parity_status": summary_report.get(
@@ -635,11 +711,23 @@ echo "kolme_integration_policy_status=${domain_expected_status}"
 echo "combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
 echo "runtime_phase_parity_reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
 echo "runtime_phase_parity_reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
+echo "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+echo "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+echo "runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status"
+echo "runtime_orchestration_dispatch_boundary_status=verified"
+echo "runtime_daemon_phase_boundary_status=verified"
+echo "runtime_kolme_live_boundary_status=verified"
+echo "runtime_module_boundary_parity_status=verified"
+echo "runtime_module_boundary_evidence_status=verified"
+echo "ci_local_runtime_module_boundary_budget_boundary_status=verified"
 echo "runtime_phase_module_parity_status=verified"
 echo "runtime_extraction_evidence_output_status=verified"
 echo "reason_taxonomy_version=kamn.runtime.phase-module-extraction-parity-reason-taxonomy.v1"
 echo "reason_codes_csv=runtime_phase_module_parity_drift_detected,runtime_extraction_evidence_output_unstable,ci_local_runtime_phase_parity_budget_boundary_exceeded"
 echo "reason_codes_value=none"
+echo "runtime_module_boundary_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
+echo "runtime_module_boundary_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+echo "runtime_module_boundary_reason_codes_value=none"
 echo "runtime_phase_parity_evidence_outputs_csv=runtime_phase_module_parity_status,runtime_extraction_evidence_output_status,ci_local_runtime_phase_parity_budget_boundary_status"
 echo "combined_transport_reason_codes=fork_choice_stale_block_height"
 if [[ "$mode" == "run" ]]; then

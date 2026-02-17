@@ -657,6 +657,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
       `runtime_phase_module_parity_status=verified`,
       `runtime_extraction_evidence_output_status=verified`,
       `ci_local_runtime_phase_parity_budget_boundary_status=verified`
+    - deterministic runtime module-boundary parity taxonomy:
+      `runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1`,
+      `runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded`,
+      `runtime_module_boundary_reason_codes_value=none|<csv>`,
+      `runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status`
+    - deterministic runtime module-boundary governance markers:
+      `runtime_orchestration_dispatch_boundary_status=verified`,
+      `runtime_daemon_phase_boundary_status=verified`,
+      `runtime_kolme_live_boundary_status=verified`,
+      `runtime_module_boundary_parity_status=verified`,
+      `runtime_module_boundary_evidence_status=verified`,
+      `ci_local_runtime_module_boundary_budget_boundary_status=verified`
     - deterministic transport reason taxonomy (`fork_choice_stale_block_height`)
     - deterministic Kolme fixture profile (`real-node-non-synthetic-v1`, profile version `v1`)
   - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
@@ -671,12 +683,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - budget drift is fail-closed when lane runtime markers exceed configured max budget.
   - ci-local phase parity budget boundary rejects `--max-seconds > 240`.
+  - ci-local module-boundary budget boundary rejects `--max-seconds > 240`.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
   - `runtime_phase_module_parity_drift_detected`
   - `runtime_extraction_evidence_output_unstable`
   - `ci_local_runtime_phase_parity_budget_boundary_exceeded`
+  - `runtime_orchestration_dispatch_boundary_drift_detected`
+  - `runtime_daemon_phase_boundary_drift_detected`
+  - `runtime_kolme_live_boundary_drift_detected`
+  - `ci_local_runtime_module_boundary_budget_boundary_exceeded`
   - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`

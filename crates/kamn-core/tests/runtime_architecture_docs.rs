@@ -89,16 +89,25 @@ fn doc_contains_docs_governance_and_rustdoc_navigation_parity_markers() {
 
 #[test]
 fn doc_contains_runtime_module_boundary_parity_drift_markers() {
-    assert!(DOC.contains("## Runtime Module Boundary Parity Drift Cases (Issue #4450)"));
+    assert!(DOC.contains("## Runtime Module Boundary Parity Drift Cases (Issue #4329)"));
+    assert!(DOC.contains("Task: `#4329`"));
+    assert!(DOC.contains("Subtasks: `#4336`, `#4337`"));
     assert!(DOC.contains(
         "runtime_module_boundary_parity_reason_taxonomy_version=kamn.runtime.module-boundary-parity-reason-taxonomy.v1"
     ));
     assert!(DOC.contains(
-        "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected"
+        "runtime_module_boundary_parity_reason_codes_csv=runtime_orchestration_dispatch_boundary_drift_detected,runtime_daemon_phase_boundary_drift_detected,runtime_kolme_live_boundary_drift_detected,ci_local_runtime_module_boundary_budget_boundary_exceeded"
+    ));
+    assert!(DOC.contains(
+        "runtime_module_boundary_reason_codes_value=<normalized runtime module-boundary reason key>"
+    ));
+    assert!(DOC.contains(
+        "runtime_module_boundary_evidence_outputs_csv=runtime_module_boundary_parity_status,runtime_module_boundary_evidence_status,ci_local_runtime_module_boundary_budget_boundary_status"
     ));
     assert!(DOC.contains("runtime_module_boundary_parity_status=verified"));
     assert!(DOC.contains("runtime_module_boundary_evidence_status=verified"));
     assert!(DOC.contains("ci_local_runtime_module_boundary_budget_boundary_status=verified"));
+    assert!(DOC.contains("ci_local_runtime_module_boundary_budget_boundary_exceeded"));
 }
 
 #[test]
