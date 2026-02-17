@@ -1,6 +1,6 @@
 # Spec — #4297 Task: Standardize API/Runtime/Kolme Correlation Fields and Enforce Structured Observability Schema Checks
 
-Status: Reviewed
+Status: Implemented
 Priority: P1
 Parent: #4294
 Milestone: R27.29 Observability, transport resilience, and TLS governance convergence
