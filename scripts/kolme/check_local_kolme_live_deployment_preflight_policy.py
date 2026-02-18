@@ -74,6 +74,41 @@ SIGNER_CONFIG_REASON_CODES = (
     "fallback_signer_secret_remediation_missing",
 )
 SIGNER_CONFIG_REASON_CODES_CSV = ",".join(SIGNER_CONFIG_REASON_CODES)
+DEPLOYMENT_PREFLIGHT_MARKER_CONTRACT_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-marker-contract.v1"
+)
+DEPLOYMENT_PREFLIGHT_REQUIRED_MARKERS = (
+    "rotation_preflight_reason_taxonomy_version",
+    "rotation_preflight_reason_codes_csv",
+    "rotation_preflight_reason_codes_value",
+    "custody_reason_taxonomy_version",
+    "custody_reason_codes_csv",
+    "custody_reason_codes_value",
+)
+DEPLOYMENT_PREFLIGHT_REQUIRED_MARKERS_CSV = ",".join(DEPLOYMENT_PREFLIGHT_REQUIRED_MARKERS)
+DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1"
+)
+DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES = (
+    "deployment_preflight_required_marker_missing",
+    "deployment_preflight_schema_parity_mismatch",
+    "deployment_preflight_reason_taxonomy_version_mismatch",
+    "deployment_preflight_reason_codes_csv_mismatch",
+    "deployment_preflight_reason_codes_value_mismatch",
+)
+DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES_CSV = ",".join(
+    DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES
+)
+DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1"
+)
+DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES = (
+    "deployment_preflight_taxonomy_mapping_drift_detected",
+    "runbook_marker_parity_mismatch",
+)
+DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES_CSV = ",".join(
+    DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES
+)
 
 
 def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> str:
@@ -105,6 +140,155 @@ def observed_signer_config_reason_codes_value(reason_codes: list[str]) -> str:
     if not observed:
         return "none"
     return ",".join(observed)
+
+
+def read_nested_value(payload: object, path: tuple[str, ...]) -> object | None:
+    current = payload
+    for segment in path:
+        if not isinstance(current, dict) or segment not in current:
+            return None
+        current = current[segment]
+    return current
+
+
+def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> list[str]:
+    reason_codes: list[str] = []
+    required_marker_paths = (
+        ("runtime_signer_attestation_schema_version",),
+        ("runtime_signer_drift_telemetry_schema_version",),
+        ("runtime_signer_drift_thresholds_schema_version",),
+        ("signer_key_source_contract_version",),
+        ("contracts", "runtime_signer_attestation_schema_version"),
+        ("contracts", "runtime_signer_drift_telemetry_schema_version"),
+        ("contracts", "runtime_signer_drift_thresholds_schema_version"),
+        ("contracts", "signer_key_source_contract_version"),
+        ("contracts", "required_signer_key_source_for_production"),
+    )
+
+    for marker_path in required_marker_paths:
+        marker_value = read_nested_value(report, marker_path)
+        if marker_value is None:
+            reason_codes.append("deployment_preflight_required_marker_missing")
+            break
+        if isinstance(marker_value, str) and not marker_value.strip():
+            reason_codes.append("deployment_preflight_required_marker_missing")
+            break
+
+    attestation_schema = read_nested_value(
+        report, ("runtime_signer_attestation_schema_version",)
+    )
+    attestation_schema_contract = read_nested_value(
+        report, ("contracts", "runtime_signer_attestation_schema_version")
+    )
+    drift_schema = read_nested_value(report, ("runtime_signer_drift_telemetry_schema_version",))
+    drift_schema_contract = read_nested_value(
+        report, ("contracts", "runtime_signer_drift_telemetry_schema_version")
+    )
+    thresholds_schema = read_nested_value(
+        report, ("runtime_signer_drift_thresholds_schema_version",)
+    )
+    thresholds_schema_contract = read_nested_value(
+        report, ("contracts", "runtime_signer_drift_thresholds_schema_version")
+    )
+    signer_key_source_contract_version = read_nested_value(
+        report, ("signer_key_source_contract_version",)
+    )
+    signer_key_source_contract_version_contract = read_nested_value(
+        report, ("contracts", "signer_key_source_contract_version")
+    )
+
+    parity_pairs = (
+        (attestation_schema, attestation_schema_contract),
+        (drift_schema, drift_schema_contract),
+        (thresholds_schema, thresholds_schema_contract),
+        (
+            signer_key_source_contract_version,
+            signer_key_source_contract_version_contract,
+        ),
+    )
+    for observed_value, contract_value in parity_pairs:
+        if (
+            isinstance(observed_value, str)
+            and observed_value.strip()
+            and isinstance(contract_value, str)
+            and contract_value.strip()
+            and observed_value != contract_value
+        ):
+            reason_codes.append("deployment_preflight_schema_parity_mismatch")
+            break
+
+    expected_versions = (
+        (attestation_schema, RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION),
+        (attestation_schema_contract, RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION),
+        (drift_schema, RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION),
+        (drift_schema_contract, RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION),
+        (thresholds_schema, RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION),
+        (thresholds_schema_contract, RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION),
+        (signer_key_source_contract_version, SIGNER_KEY_SOURCE_CONTRACT_VERSION),
+        (
+            signer_key_source_contract_version_contract,
+            SIGNER_KEY_SOURCE_CONTRACT_VERSION,
+        ),
+    )
+    for observed_value, expected_value in expected_versions:
+        if (
+            isinstance(observed_value, str)
+            and observed_value.strip()
+            and observed_value != expected_value
+        ):
+            reason_codes.append("deployment_preflight_reason_taxonomy_version_mismatch")
+            break
+
+    if (
+        ROTATION_PREFLIGHT_REASON_CODES_CSV
+        != ",".join(ROTATION_PREFLIGHT_REASON_CODES)
+        or CUSTODY_REASON_CODES_CSV != ",".join(CUSTODY_REASON_CODES)
+        or SIGNER_CONFIG_REASON_CODES_CSV != ",".join(SIGNER_CONFIG_REASON_CODES)
+    ):
+        reason_codes.append("deployment_preflight_reason_codes_csv_mismatch")
+
+    observed_status = report.get("status")
+    observed_reason_code = report.get("reason_code")
+    if observed_status == "ok" and observed_reason_code not in (
+        "dry_run_no_commands_executed",
+        "deployment_preflight_passed",
+    ):
+        reason_codes.append("deployment_preflight_reason_codes_value_mismatch")
+    if observed_status == "fail" and observed_reason_code in (
+        "dry_run_no_commands_executed",
+        "deployment_preflight_passed",
+    ):
+        reason_codes.append("deployment_preflight_reason_codes_value_mismatch")
+
+    normalized_reason_codes: list[str] = []
+    for reason_code in reason_codes:
+        if reason_code not in normalized_reason_codes:
+            normalized_reason_codes.append(reason_code)
+    return normalized_reason_codes
+
+
+def observed_deployment_preflight_schema_reason_code(reason_codes: list[str]) -> str:
+    for reason_code in DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES:
+        if reason_code in reason_codes:
+            return reason_code
+    return "none"
+
+
+def observed_deployment_preflight_runbook_reason_code(reason_codes: list[str]) -> str:
+    taxonomy_mapping_reasons = {
+        "deployment_preflight_reason_taxonomy_version_mismatch",
+        "deployment_preflight_reason_codes_csv_mismatch",
+    }
+    parity_reasons = {
+        "deployment_preflight_required_marker_missing",
+        "deployment_preflight_schema_parity_mismatch",
+        "deployment_preflight_reason_codes_value_mismatch",
+    }
+    if any(reason in reason_codes for reason in taxonomy_mapping_reasons):
+        return "deployment_preflight_taxonomy_mapping_drift_detected"
+    if any(reason in reason_codes for reason in parity_reasons):
+        return "runbook_marker_parity_mismatch"
+    return "none"
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -1032,6 +1216,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             ):
                 reason_codes.append(matrix_reason_code)
 
+    reason_codes.extend(evaluate_deployment_preflight_marker_contract(report))
+
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
             reason_codes.append(f"required_reason_code_missing:{required_reason_code}")
@@ -1072,6 +1258,27 @@ def main() -> int:
         "rotation_preflight_reason_codes_value": observed_rotation_preflight_reason_codes_value(
             reason_codes
         ),
+        "deployment_preflight_marker_contract_status": "verified"
+        if observed_deployment_preflight_schema_reason_code(reason_codes) == "none"
+        else "failed",
+        "deployment_preflight_marker_contract_version": DEPLOYMENT_PREFLIGHT_MARKER_CONTRACT_VERSION,
+        "deployment_preflight_required_markers_csv": DEPLOYMENT_PREFLIGHT_REQUIRED_MARKERS_CSV,
+        "deployment_preflight_schema_parity_status": "verified"
+        if observed_deployment_preflight_schema_reason_code(reason_codes) == "none"
+        else "failed",
+        "deployment_preflight_schema_reason_taxonomy_version": DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_TAXONOMY_VERSION,
+        "deployment_preflight_schema_reason_codes_csv": DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES_CSV,
+        "deployment_preflight_schema_reason_code": observed_deployment_preflight_schema_reason_code(
+            reason_codes
+        ),
+        "deployment_preflight_runbook_marker_parity_status": "verified"
+        if observed_deployment_preflight_runbook_reason_code(reason_codes) == "none"
+        else "failed",
+        "deployment_preflight_runbook_reason_taxonomy_version": DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_TAXONOMY_VERSION,
+        "deployment_preflight_runbook_reason_codes_csv": DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES_CSV,
+        "deployment_preflight_runbook_reason_code": observed_deployment_preflight_runbook_reason_code(
+            reason_codes
+        ),
         "custody_reason_taxonomy_version": CUSTODY_REASON_TAXONOMY_VERSION,
         "custody_reason_codes_csv": CUSTODY_REASON_CODES_CSV,
         "custody_reason_codes_value": observed_custody_reason_codes_value(reason_codes),
@@ -1103,6 +1310,50 @@ def main() -> int:
     print(
         "rotation_preflight_reason_codes_value="
         f"{observed_rotation_preflight_reason_codes_value(reason_codes)}"
+    )
+    print(
+        "deployment_preflight_marker_contract_status="
+        f"{output['deployment_preflight_marker_contract_status']}"
+    )
+    print(
+        "deployment_preflight_marker_contract_version="
+        f"{DEPLOYMENT_PREFLIGHT_MARKER_CONTRACT_VERSION}"
+    )
+    print(
+        "deployment_preflight_required_markers_csv="
+        f"{DEPLOYMENT_PREFLIGHT_REQUIRED_MARKERS_CSV}"
+    )
+    print(
+        "deployment_preflight_schema_parity_status="
+        f"{output['deployment_preflight_schema_parity_status']}"
+    )
+    print(
+        "deployment_preflight_schema_reason_taxonomy_version="
+        f"{DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "deployment_preflight_schema_reason_codes_csv="
+        f"{DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES_CSV}"
+    )
+    print(
+        "deployment_preflight_schema_reason_code="
+        f"{output['deployment_preflight_schema_reason_code']}"
+    )
+    print(
+        "deployment_preflight_runbook_marker_parity_status="
+        f"{output['deployment_preflight_runbook_marker_parity_status']}"
+    )
+    print(
+        "deployment_preflight_runbook_reason_taxonomy_version="
+        f"{DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "deployment_preflight_runbook_reason_codes_csv="
+        f"{DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES_CSV}"
+    )
+    print(
+        "deployment_preflight_runbook_reason_code="
+        f"{output['deployment_preflight_runbook_reason_code']}"
     )
     print(f"custody_reason_taxonomy_version={CUSTODY_REASON_TAXONOMY_VERSION}")
     print(f"custody_reason_codes_csv={CUSTODY_REASON_CODES_CSV}")

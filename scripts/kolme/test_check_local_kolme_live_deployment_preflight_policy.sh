@@ -38,6 +38,16 @@ if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$DOC_FILE"
   exit 1
 fi
 
+if ! grep -q "deployment_preflight_marker_contract_status=verified" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops docs to include deployment preflight marker contract status marker" >&2
+  exit 1
+fi
+
+if ! grep -q "deployment_preflight_runbook_marker_parity_status=verified" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops docs to include deployment preflight runbook marker parity status marker" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$CI_DOC_FILE"; then
   echo "expected CI strategy docs to reference deployment preflight policy checker command" >&2
   exit 1
@@ -331,6 +341,28 @@ if report.get("signer_config_reason_codes_csv") != "signer_secret_missing,signer
     raise SystemExit("expected deterministic signer_config_reason_codes_csv marker")
 if report.get("signer_config_reason_codes_value") != "none":
     raise SystemExit("expected signer_config_reason_codes_value=none for GO deployment preflight report")
+if report.get("deployment_preflight_marker_contract_status") != "verified":
+    raise SystemExit("expected deployment_preflight_marker_contract_status=verified for GO deployment preflight report")
+if report.get("deployment_preflight_marker_contract_version") != "kamn.kolme.local-live-deployment-preflight-marker-contract.v1":
+    raise SystemExit("expected deterministic deployment_preflight_marker_contract_version marker")
+if report.get("deployment_preflight_required_markers_csv") != "rotation_preflight_reason_taxonomy_version,rotation_preflight_reason_codes_csv,rotation_preflight_reason_codes_value,custody_reason_taxonomy_version,custody_reason_codes_csv,custody_reason_codes_value":
+    raise SystemExit("expected deterministic deployment_preflight_required_markers_csv marker")
+if report.get("deployment_preflight_schema_parity_status") != "verified":
+    raise SystemExit("expected deployment_preflight_schema_parity_status=verified for GO deployment preflight report")
+if report.get("deployment_preflight_schema_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic deployment_preflight_schema_reason_taxonomy_version marker")
+if report.get("deployment_preflight_schema_reason_codes_csv") != "deployment_preflight_required_marker_missing,deployment_preflight_schema_parity_mismatch,deployment_preflight_reason_taxonomy_version_mismatch,deployment_preflight_reason_codes_csv_mismatch,deployment_preflight_reason_codes_value_mismatch":
+    raise SystemExit("expected deterministic deployment_preflight_schema_reason_codes_csv marker")
+if report.get("deployment_preflight_schema_reason_code") != "none":
+    raise SystemExit("expected deployment_preflight_schema_reason_code=none for GO deployment preflight report")
+if report.get("deployment_preflight_runbook_marker_parity_status") != "verified":
+    raise SystemExit("expected deployment_preflight_runbook_marker_parity_status=verified for GO deployment preflight report")
+if report.get("deployment_preflight_runbook_reason_taxonomy_version") != "kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic deployment_preflight_runbook_reason_taxonomy_version marker")
+if report.get("deployment_preflight_runbook_reason_codes_csv") != "deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch":
+    raise SystemExit("expected deterministic deployment_preflight_runbook_reason_codes_csv marker")
+if report.get("deployment_preflight_runbook_reason_code") != "none":
+    raise SystemExit("expected deployment_preflight_runbook_reason_code=none for GO deployment preflight report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
@@ -1194,6 +1226,41 @@ if ! grep -q "runtime_signer_drift_telemetry_missing" "$TMP_ERR"; then
   echo "expected runtime signer drift telemetry missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
+
+if ! grep -q "deployment_preflight_required_marker_missing" "$TMP_ERR"; then
+  echo "expected deployment preflight required marker missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "deployment_preflight_schema_parity_mismatch" "$TMP_ERR"; then
+  echo "expected deployment preflight schema parity mismatch reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("deployment_preflight_marker_contract_status") != "failed":
+    raise SystemExit("expected deployment_preflight_marker_contract_status=failed for mismatched deployment preflight report")
+if report.get("deployment_preflight_schema_parity_status") != "failed":
+    raise SystemExit("expected deployment_preflight_schema_parity_status=failed for mismatched deployment preflight report")
+if report.get("deployment_preflight_schema_reason_code") not in (
+    "deployment_preflight_required_marker_missing",
+    "deployment_preflight_schema_parity_mismatch",
+    "deployment_preflight_reason_taxonomy_version_mismatch",
+    "deployment_preflight_reason_codes_csv_mismatch",
+    "deployment_preflight_reason_codes_value_mismatch",
+):
+    raise SystemExit("expected deterministic deployment preflight schema reason code for mismatch failure")
+if report.get("deployment_preflight_runbook_reason_code") not in (
+    "deployment_preflight_taxonomy_mapping_drift_detected",
+    "runbook_marker_parity_mismatch",
+):
+    raise SystemExit("expected deterministic deployment_preflight_runbook_reason_code for mismatch failure")
+PY
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2

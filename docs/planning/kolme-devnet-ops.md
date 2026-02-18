@@ -939,6 +939,18 @@ JSON`
     - `contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required`
     - `contracts.signer_rotation_freshness_max_delta=2`
     - `contracts.signer_rotation_stale_rejected=true`
+  - policy output includes deterministic marker/runbook parity outputs:
+    - `deployment_preflight_marker_contract_status=verified|failed`
+    - `deployment_preflight_marker_contract_version=kamn.kolme.local-live-deployment-preflight-marker-contract.v1`
+    - `deployment_preflight_required_markers_csv=rotation_preflight_reason_taxonomy_version,rotation_preflight_reason_codes_csv,rotation_preflight_reason_codes_value,custody_reason_taxonomy_version,custody_reason_codes_csv,custody_reason_codes_value`
+    - `deployment_preflight_schema_parity_status=verified|failed`
+    - `deployment_preflight_schema_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1`
+    - `deployment_preflight_schema_reason_codes_csv=deployment_preflight_required_marker_missing,deployment_preflight_schema_parity_mismatch,deployment_preflight_reason_taxonomy_version_mismatch,deployment_preflight_reason_codes_csv_mismatch,deployment_preflight_reason_codes_value_mismatch`
+    - `deployment_preflight_schema_reason_code=none|<reason>`
+    - `deployment_preflight_runbook_marker_parity_status=verified|failed`
+    - `deployment_preflight_runbook_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1`
+    - `deployment_preflight_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+    - `deployment_preflight_runbook_reason_code=none|<reason>`
 - Fail-closed reasons include:
   - `runtime_mode_mismatch`
   - `signer_profile_mismatch`
@@ -981,6 +993,12 @@ JSON`
   - `signer_provenance_missing`
   - `signer_provenance_sha256_invalid`
   - `signer_rotation_epoch_stale`
+  - `deployment_preflight_required_marker_missing`
+  - `deployment_preflight_schema_parity_mismatch`
+  - `deployment_preflight_reason_taxonomy_version_mismatch`
+  - `deployment_preflight_reason_codes_value_mismatch`
+  - `deployment_preflight_taxonomy_mapping_drift_detected`
+  - `runbook_marker_parity_mismatch`
 - Cost policy:
   - lane is lightweight and `ci_fast_gate_eligible=true`.
   - no local-heavy opt-in is required for deployment preflight checks.
@@ -991,6 +1009,7 @@ JSON`
   - signer quorum evidence schema + custody digest parity remains fail-closed (`Regression: #2301`).
   - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
   - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
+  - deployment preflight checker marker/runbook parity remains fail-closed (`Regression: #4151`).
 
 ## Managed Signer Backend SLO Telemetry Lane (Issue #2436)
 
