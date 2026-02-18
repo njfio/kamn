@@ -55,6 +55,16 @@ cat > "$MUTATED_ROOT/specs/9999/ARCHIVED.md" <<'EOF'
 - issue_id: 9999
 - archive_path: specs/archive/9999
 EOF
+cat > "$MUTATED_ROOT/specs/archive/index.md" <<'EOF'
+# Archived Spec Index
+
+- schema_version: kamn.specs.archive-index-report.v1
+- archived_issue_count: 1
+
+| issue_id | title | archived_on | archive_path | pointer_path |
+|---|---|---|---|---|
+| 9999 | Synthetic Archived Fixture | 2026-02-18 | `specs/archive/9999` | `specs/9999/ARCHIVED.md` |
+EOF
 
 fixture_output="$(
   bash "$CHECKER" \
@@ -63,6 +73,28 @@ fixture_output="$(
 )"
 if ! printf '%s\n' "$fixture_output" | grep -q '^status=ok$'; then
   echo "expected synthetic archive fixture to satisfy archive policy checker" >&2
+  exit 1
+fi
+
+MUTATED_NO_INDEX="$TMP_DIR/mutated-no-index"
+cp -R "$MUTATED_ROOT" "$MUTATED_NO_INDEX"
+rm -f "$MUTATED_NO_INDEX/specs/archive/index.md"
+
+set +e
+missing_index_output="$(
+  bash "$CHECKER" \
+    --repo-root "$MUTATED_NO_INDEX" \
+    --output-json "$TMP_DIR/missing-index-report.json" 2>&1
+)"
+missing_index_exit=$?
+set -e
+
+if [ "$missing_index_exit" -eq 0 ]; then
+  echo "expected checker to fail when archive index report is missing" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_index_output" | grep -q 'spec_archive_index_missing'; then
+  echo "expected deterministic spec_archive_index_missing reason marker when archive index report is removed" >&2
   exit 1
 fi
 
