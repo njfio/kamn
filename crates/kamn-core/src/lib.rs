@@ -66,6 +66,8 @@ pub mod data_layer_m8_compliance_lifecycle;
 pub mod data_layer_m9_realtime_delivery;
 /// PRD critical-scenario conformance contracts for shell-neutral validation (`62..71`).
 pub mod data_layer_prd_critical_scenario_conformance;
+/// Shell-neutral orchestration and shell/rust ratio-budget policy contracts.
+pub mod data_layer_shell_neutral_policy;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -369,6 +371,16 @@ pub use data_layer_prd_critical_scenario_conformance::{
     DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_MISSING_REASON_CODE,
     DATA_LAYER_PRD_CRITICAL_SCENARIO_SHELL_POLICY_REASON_CODE,
+};
+pub use data_layer_shell_neutral_policy::{
+    data_layer_evaluate_shell_neutral_policy, DataLayerShellNeutralPolicyDecision,
+    DataLayerShellNeutralPolicyError, DataLayerShellNeutralPolicyInput,
+    DataLayerShellNeutralPolicyReport,
+    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_ORCHESTRATION_REASON_CODE,
+    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_RATIO_FAIL_REASON_CODE,
+    DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE,
+    DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE,
+    DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
