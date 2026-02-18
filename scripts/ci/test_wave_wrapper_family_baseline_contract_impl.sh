@@ -50,6 +50,25 @@ if entry.get("args_prefix") != expected_args:
 PY
 }
 
+assert_dispatch_wrapper_contract() {
+  local wrapper_rel="$1"
+  local expected_target="$2"
+  local expected_wave_id="$3"
+  local wrapper_path="$KAMN_ROOT/$wrapper_rel"
+
+  if [ ! -L "$wrapper_path" ]; then
+    echo "expected wrapper family entrypoint to be symlink-backed: $wrapper_rel" >&2
+    exit 1
+  fi
+
+  if [ "$(readlink "$wrapper_path")" != "../lib/exec_dispatch.sh" ]; then
+    echo "expected $wrapper_rel to target ../lib/exec_dispatch.sh" >&2
+    exit 1
+  fi
+
+  assert_dispatch_registry_entry "$wrapper_rel" "$expected_target" "$expected_wave_id"
+}
+
 usage() {
   cat >&2 <<'USAGE'
 Usage: test_wave_wrapper_family_baseline_contract_impl.sh --family <kolme|non_kolme> --wave-id <id>
@@ -104,29 +123,23 @@ if [ "$FAMILY" = "kolme" ]; then
   MATRIX_FIXTURE="$KAMN_ROOT/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_matrix.json"
   BASELINE_FIXTURE="$KAMN_ROOT/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_baseline.json"
   MISSING_WRAPPER="scripts/ci/run_missing_kolme_wave${WAVE_ID}_wrapper.sh"
-  DISPATCH_WRAPPER_REL="scripts/ci/test_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
-  DISPATCH_TARGET="scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  BASELINE_DISPATCH_WRAPPER_REL="scripts/ci/test_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
+  BASELINE_DISPATCH_TARGET="scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  TREND_DISPATCH_WRAPPER_REL="scripts/ci/test_check_kolme_wave${WAVE_ID}_wrapper_family_budget_trend.sh"
+  TREND_DISPATCH_TARGET="scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh"
 else
   WAVE_LABEL="non-Kolme wave-${WAVE_ID}"
   MATRIX_FIXTURE="$KAMN_ROOT/fixtures/ci/non_kolme_wave${WAVE_ID}_wrapper_family_matrix.json"
   BASELINE_FIXTURE="$KAMN_ROOT/fixtures/ci/non_kolme_wave${WAVE_ID}_wrapper_family_baseline.json"
   MISSING_WRAPPER="scripts/ci/run_missing_non_kolme_wave${WAVE_ID}_wrapper.sh"
-  DISPATCH_WRAPPER_REL="scripts/ci/test_non_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
-  DISPATCH_TARGET="scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  BASELINE_DISPATCH_WRAPPER_REL="scripts/ci/test_non_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
+  BASELINE_DISPATCH_TARGET="scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  TREND_DISPATCH_WRAPPER_REL="scripts/ci/test_check_non_kolme_wave${WAVE_ID}_wrapper_family_budget_trend.sh"
+  TREND_DISPATCH_TARGET="scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh"
 fi
 
-DISPATCH_WRAPPER_PATH="$KAMN_ROOT/$DISPATCH_WRAPPER_REL"
-if [ ! -L "$DISPATCH_WRAPPER_PATH" ]; then
-  echo "expected wrapper family entrypoint to be symlink-backed: $DISPATCH_WRAPPER_REL" >&2
-  exit 1
-fi
-
-if [ "$(readlink "$DISPATCH_WRAPPER_PATH")" != "../lib/exec_dispatch.sh" ]; then
-  echo "expected $DISPATCH_WRAPPER_REL to target ../lib/exec_dispatch.sh" >&2
-  exit 1
-fi
-
-assert_dispatch_registry_entry "$DISPATCH_WRAPPER_REL" "$DISPATCH_TARGET" "$WAVE_ID"
+assert_dispatch_wrapper_contract "$BASELINE_DISPATCH_WRAPPER_REL" "$BASELINE_DISPATCH_TARGET" "$WAVE_ID"
+assert_dispatch_wrapper_contract "$TREND_DISPATCH_WRAPPER_REL" "$TREND_DISPATCH_TARGET" "$WAVE_ID"
 
 test_harness_setup
 TMP_DIR="$test_harness_tmp_dir"
