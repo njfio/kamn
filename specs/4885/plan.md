@@ -8,7 +8,14 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/ci/fast_gate_budget_delta.py`
+- `scripts/ci/test_check_fast_gate_budget_delta_threshold.sh`
+- `scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh`
+- `scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh`
+- `scripts/ci/test_ci_strategy_contract.sh`
+- `docs/ci/strategy.md`
+- `docs/ci/ci-cost-and-lane-framework.md`
+- `.ci/fast-gate-budget-delta-ratchet.env`
 
 ## Risks / Mitigations
 
