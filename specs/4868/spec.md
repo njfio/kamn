@@ -3,7 +3,7 @@
 - Title: Task: consolidate policy checkers into declarative framework (phase 6)
 - Parent: - Parent story: #4862
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
