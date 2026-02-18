@@ -313,6 +313,81 @@ fn functional_runtime_backpressure_classifies_queue_saturation() {
 }
 
 #[test]
+fn regression_runtime_backpressure_action_reason_matrix_remains_stable() {
+    // Regression: #3926
+    let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+    let controller = DeterministicBackpressureController::new(policy);
+
+    let accept = controller
+        .evaluate(
+            RuntimeBackpressureInput::new(
+                "kamn:did:agent:peer-matrix-accept",
+                2,
+                10,
+                PeerLifecycleState::Active,
+            )
+            .expect("valid accept input"),
+        )
+        .expect("accept decision should evaluate");
+    assert_eq!(accept.action, RuntimeBackpressureAction::Accept);
+    assert_eq!(accept.reason_code(), "runtime_backpressure_accept");
+
+    let suspend_alias_slow = controller
+        .evaluate(
+            RuntimeBackpressureInput::new(
+                "kamn:did:agent:peer-matrix-slow",
+                8,
+                10,
+                PeerLifecycleState::Active,
+            )
+            .expect("valid slow input"),
+        )
+        .expect("slow decision should evaluate");
+    assert_eq!(
+        suspend_alias_slow.action,
+        RuntimeBackpressureAction::SlowProducer
+    );
+    assert_eq!(
+        suspend_alias_slow.reason_code(),
+        "runtime_backpressure_slow_producer"
+    );
+
+    let reject = controller
+        .evaluate(
+            RuntimeBackpressureInput::new(
+                "kamn:did:agent:peer-matrix-reject",
+                9,
+                10,
+                PeerLifecycleState::Active,
+            )
+            .expect("valid reject input"),
+        )
+        .expect("reject decision should evaluate");
+    assert_eq!(reject.action, RuntimeBackpressureAction::RejectNewEnqueue);
+    assert_eq!(
+        reject.reason_code(),
+        "runtime_backpressure_reject_new_enqueue"
+    );
+
+    let purge = controller
+        .evaluate(
+            RuntimeBackpressureInput::new(
+                "kamn:did:agent:peer-matrix-purge",
+                2,
+                10,
+                PeerLifecycleState::Disconnected,
+            )
+            .expect("valid purge input"),
+        )
+        .expect("purge decision should evaluate");
+    assert_eq!(purge.action, RuntimeBackpressureAction::PurgeStalePeerQueue);
+    assert_eq!(
+        purge.reason_code(),
+        "runtime_backpressure_purge_stale_peer_queue"
+    );
+}
+
+#[test]
 fn integration_runtime_backpressure_purges_stale_disconnected_peer_queue() {
     let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
     let controller = DeterministicBackpressureController::new(policy);
