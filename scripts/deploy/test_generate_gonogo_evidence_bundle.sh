@@ -5,6 +5,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.s
 GENERATOR="$KAMN_ROOT/scripts/deploy/generate_gonogo_evidence_bundle.sh"
 POLICY_CHECKER="$KAMN_ROOT/scripts/deploy/check_gonogo_evidence_policy.sh"
 UPGRADE_LINEAGE_CHECKER="$KAMN_ROOT/scripts/deploy/check_upgrade_rehearsal_lineage_policy.py"
+NEXT_STEPS_DOC="$KAMN_ROOT/docs/plans/2026-02-14-production-service-next-steps.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -22,6 +23,35 @@ if [ ! -x "$UPGRADE_LINEAGE_CHECKER" ]; then
   echo "expected upgrade rehearsal lineage checker to be executable" >&2
   exit 1
 fi
+
+if [ ! -f "$NEXT_STEPS_DOC" ]; then
+  echo "expected production-service next-steps docs file for activation closure docs-contract checks" >&2
+  exit 1
+fi
+
+check_activation_closure_docs_contract() {
+  local docs_file="$1"
+  python3 - "$docs_file" <<'PY'
+import pathlib
+import sys
+
+doc_path = pathlib.Path(sys.argv[1])
+doc_text = doc_path.read_text(encoding="utf-8")
+
+required_markers = {
+    "live_gonogo_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1",
+    "live_gonogo_reason_codes_csv=none|<csv>",
+    "deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1",
+    "deployment_safety_gate_reason_codes_csv=none|<csv>",
+    "deployment_safety_gate_reason_codes_value=none|<csv>",
+    "activation_closure_summary_marker_keys=milestone_review_final_decision,live_gonogo_reason_taxonomy_version,live_gonogo_reason_codes_csv,deployment_safety_gate_reason_taxonomy_version,deployment_safety_gate_reason_codes_csv,deployment_safety_gate_reason_codes_value",
+}
+
+missing = sorted(marker for marker in required_markers if marker not in doc_text)
+if missing:
+    raise SystemExit(f"activation_closure_docs_missing_marker:{missing[0]}")
+PY
+}
 
 go_bundle="$TMP_DIR/gonogo-go.json"
 go_generate_output="$(
@@ -249,6 +279,38 @@ assert_eq "$(extract_value "$milestone_generate_output" "status")" "generated" "
 assert_eq "$(extract_value "$milestone_generate_output" "final_decision")" "GO" "expected milestone bundle decision to remain GO"
 assert_eq "$(extract_value "$milestone_generate_output" "live_gonogo_reason_taxonomy_version")" "kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1" "expected deterministic live-go/no-go reason taxonomy marker for milestone aggregate evidence"
 assert_eq "$(extract_value "$milestone_generate_output" "live_gonogo_reason_codes_csv")" "none" "expected deterministic live-go/no-go reason csv marker on pass path"
+check_activation_closure_docs_contract "$NEXT_STEPS_DOC"
+
+milestone_docs_drift_file="$TMP_DIR/production-service-next-steps.docs-drift.md"
+cp "$NEXT_STEPS_DOC" "$milestone_docs_drift_file"
+python3 - "$milestone_docs_drift_file" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+path.write_text(
+    text.replace(
+        "live_gonogo_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1",
+        "live_gonogo_reason_taxonomy_version=<drifted>",
+        1,
+    ),
+    encoding="utf-8",
+)
+PY
+
+set +e
+milestone_docs_drift_output="$(check_activation_closure_docs_contract "$milestone_docs_drift_file" 2>&1)"
+milestone_docs_drift_code=$?
+set -e
+if [ "$milestone_docs_drift_code" -eq 0 ]; then
+  echo "expected activation closure docs-contract checker to fail closed on docs marker drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_docs_drift_output" | grep -q 'activation_closure_docs_missing_marker:live_gonogo_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1'; then
+  echo "expected deterministic activation-closure docs marker drift reason" >&2
+  exit 1
+fi
 
 python3 - "$milestone_bundle" <<'PY'
 import json
