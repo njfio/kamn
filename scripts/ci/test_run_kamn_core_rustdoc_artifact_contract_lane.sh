@@ -72,6 +72,7 @@ fi
 bash "$POLICY_SCRIPT" --report-file "$REPORT_FILE" >"$TMP_DIR/policy.out"
 grep -q '^kamn_core_rustdoc_artifact_policy=ok$' "$TMP_DIR/policy.out"
 grep -q '^rustdoc_navigation_ratio_status=within$' "$TMP_DIR/policy.out"
+grep -q '^runtime_budget_status=within$' "$TMP_DIR/policy.out"
 
 if [ ! -L "$LANE_SCRIPT" ]; then
   echo "expected rustdoc artifact contract lane wrapper to be a dispatcher symlink" >&2
