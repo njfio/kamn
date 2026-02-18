@@ -573,6 +573,12 @@ This document captures the initial runtime-network foundation slice for peer lif
   - disconnected peers with pending queue entries can be forced to `PurgeStalePeerQueue` when policy enables stale-peer purge.
   - utilization above reject threshold yields `RejectNewEnqueue`.
   - utilization above slow threshold yields `SlowProducer`.
+- Decision/reason marker matrix:
+  - `runtime_backpressure_decision_marker_matrix_v1`
+  - `Accept -> runtime_backpressure_accept`
+  - `Suspend (SlowProducer) -> runtime_backpressure_slow_producer`
+  - `RejectNewEnqueue -> runtime_backpressure_reject_new_enqueue`
+  - `PurgeStalePeerQueue -> runtime_backpressure_purge_stale_peer_queue`
 - Regression contract:
   - queue depth above capacity is rejected (`Regression: #618`)
   - stale disconnected peer queue must purge deterministically (`Regression: #618`)
@@ -681,6 +687,7 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`
+  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
   - `bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=60` (default)
@@ -704,6 +711,7 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
+  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
   - `bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75` (default)

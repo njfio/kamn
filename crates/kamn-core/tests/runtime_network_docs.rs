@@ -91,6 +91,15 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
 }
 
 #[test]
+fn doc_contains_backpressure_decision_reason_marker_matrix() {
+    assert!(DOC.contains("runtime_backpressure_decision_marker_matrix_v1"));
+    assert!(DOC.contains("Accept -> runtime_backpressure_accept"));
+    assert!(DOC.contains("Suspend (SlowProducer) -> runtime_backpressure_slow_producer"));
+    assert!(DOC.contains("RejectNewEnqueue -> runtime_backpressure_reject_new_enqueue"));
+    assert!(DOC.contains("PurgeStalePeerQueue -> runtime_backpressure_purge_stale_peer_queue"));
+}
+
+#[test]
 fn doc_contains_network_fault_simulation_rules() {
     assert!(DOC.contains("queue_overflow_attempts"));
     assert!(DOC.contains("watchdog-compatible delivery/peer sample values"));
