@@ -76,6 +76,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+  bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"
   run_non_kolme_lightweight_wave_wrapper_matrix_contracts
   bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
   bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
@@ -230,6 +231,7 @@ bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_d
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"
 run_non_kolme_lightweight_wave_wrapper_matrix_contracts
 bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
 bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
