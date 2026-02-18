@@ -244,21 +244,21 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
         "check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json"
     ));
     assert!(DOC.contains(
-        "run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json"
     ));
     assert!(DOC.contains("run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run"));
     assert!(DOC.contains(
         "check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json"
     ));
     assert!(DOC.contains(
-        "run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json"
     ));
     assert!(DOC.contains("run_local_kamn_live_runtime_integration_lane.sh --mode run"));
     assert!(DOC.contains(
         "check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json"
     ));
     assert!(DOC.contains(
-        "run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json"
     ));
     assert!(DOC.contains(
         "composite_gate_reason_taxonomy_version=kamn.kolme.live-provider-native-signer-composite-gate-reason-taxonomy.v1"
@@ -275,7 +275,7 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
         "check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json"
     ));
     assert!(DOC.contains(
-        "run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json"
     ));
     assert!(DOC.contains("run_local_kolme_fork_profile_preflight_contract_lane.sh"));
     assert!(DOC.contains("test_run_local_kolme_fork_profile_preflight_contract_lane.sh"));
@@ -358,7 +358,7 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     ));
     assert!(DOC.contains("reason_codes=unexpected_current_scripts"));
     assert!(DOC.contains(
-        "run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract --output-json /tmp/fast-gate-budget-delta-contract-report.json"
     ));
     assert!(DOC.contains("test_run_fast_gate_budget_delta_contract_lane.sh"));
     assert!(DOC.contains("reason_codes=fast_gate_delta_threshold_file_stale"));
@@ -933,7 +933,7 @@ fn doc_contains_runtime_service_api_prometheus_metrics_contract_lane_ci_mode_mar
 #[test]
 fn doc_contains_ignored_test_and_script_budget_trend_composed_contract_markers() {
     assert!(DOC.contains(
-        "run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json"
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json --phase contract --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json"
     ));
     assert!(DOC.contains("test_run_ignored_test_and_script_budget_trend_contract_lane.sh"));
     assert!(DOC.contains("ignored_test_metadata_stale_entry"));
@@ -1110,7 +1110,9 @@ fn doc_contains_merge_gate_reliability_ci_smoke_local_heavy_boundary_markers() {
 #[test]
 fn doc_contains_incident_gonogo_boundary_governance_matrix() {
     assert!(DOC.contains("Incident go/no-go convergence and boundary governance"));
-    assert!(DOC.contains("run_gonogo_evidence_contract_lane.sh --max-seconds 120"));
+    assert!(DOC.contains(
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120"
+    ));
     assert!(DOC.contains(
         "KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900"
     ));
@@ -1138,7 +1140,9 @@ fn doc_contains_incident_gonogo_boundary_reason_taxonomy_markers() {
 #[test]
 fn doc_contains_live_gonogo_boundary_governance_matrix() {
     assert!(DOC.contains("Live go/no-go convergence and boundary governance"));
-    assert!(DOC.contains("run_gonogo_evidence_contract_lane.sh --max-seconds 120"));
+    assert!(DOC.contains(
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120"
+    ));
     assert!(DOC.contains(
         "KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900"
     ));

@@ -152,7 +152,7 @@ cat > "$TOOL_ROOT/specs/9000/spec.md" <<'EOF'
 # Spec — Issue #9000
 
 - Title: Synthetic Archive Tool Fixture
-- Status: Implemented
+- Status: `Implemented`
 EOF
 cat > "$TOOL_ROOT/specs/9000/plan.md" <<'EOF'
 # Plan — Issue #9000
