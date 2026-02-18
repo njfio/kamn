@@ -1,18 +1,22 @@
 # Issue #3883 Plan
 
 - Issue: #3883
-- Status: Planned
+- Status: Completed
 
 ## Approach
-- Implement issue #3883 using Red->Green->Refactor test-first flow.
-- Keep markers and reason taxonomy deterministic and fail closed where applicable.
-- Preserve CI-fast boundaries by keeping heavy validation lanes explicitly governed.
+- Add a dedicated cutover CI exclusion policy checker that validates:
+  - contract lane presence in `ci-fast-gate`
+  - deep-lane exclusion from `ci-fast-gate` and `scripts/ci/test_ci_tools.sh`
+  - strategy-doc marker and policy-command parity
+- Add a contract test harness that exercises baseline GO behavior plus fail-closed drift scenarios.
+- Wire the new contract test into aggregate CI tools execution.
+- Add docs contract assertions in `kamn-core` to keep policy markers synchronized.
 
 ## Affected Modules
-- scripts/runtime/
+- scripts/cutover/
 - scripts/ci/
-- scripts/deploy/
 - docs/ci/strategy.md
+- crates/kamn-core/tests/ci_strategy_docs.rs
 
 ## Risks and Mitigations
 - Risk level: low
@@ -21,6 +25,7 @@
 ## Interface Contract
 - No protocol or wire-format changes without explicit approval and ADR if needed.
 - Runtime evidence outputs must remain deterministic and machine-checkable.
+- Cutover policy checker emits deterministic marker taxonomy and fail-closed reason codes for CI-boundary drift.
 
 ## ADR
 - No ADR required at planning stage; open ADR if dependency/protocol architecture changes emerge.
