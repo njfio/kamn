@@ -52,6 +52,23 @@ if ! grep -Fq "ci-shell-loc-hard-ceiling.json" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if ! grep -Fq "name: Check shell-rust ratio guardrail" "$FAST_WORKFLOW"; then
+  echo "expected shell-rust ratio guardrail step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_shell_rust_ratio_guardrail.sh" "$FAST_WORKFLOW"; then
+  echo "expected shell-rust ratio guardrail checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq ".ci/shell-rust-ratio-guardrail.env" "$FAST_WORKFLOW"; then
+  echo "expected shell-rust ratio guardrail config wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-shell-rust-ratio-guardrail.json" "$FAST_WORKFLOW"; then
+  echo "expected shell-rust ratio guardrail report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+
 if ! grep -Fq "name: Collect shell-rust LOC telemetry" "$FAST_WORKFLOW"; then
   echo "expected shell-rust LOC telemetry collector step in ci-fast-gate workflow" >&2
   exit 1
@@ -74,7 +91,7 @@ if ! grep -Fq "ci-combined-shell-surface-trend-policy.json" "$FAST_WORKFLOW"; th
 fi
 
 scope_gate_count="$(grep -Fc "if: steps.scope.outputs.run_script_surface_budget_checks == 'true'" "$FAST_WORKFLOW")"
-if (( scope_gate_count < 5 )); then
+if (( scope_gate_count < 6 )); then
   echo "expected shell-surface ratio/budget checks to remain behind run_script_surface_budget_checks scope gate" >&2
   exit 1
 fi

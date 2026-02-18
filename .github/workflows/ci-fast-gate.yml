@@ -100,6 +100,21 @@ jobs:
           path: ci-script-surface-budget.json
           if-no-files-found: error
 
+      - name: Check shell-rust ratio guardrail
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_shell_rust_ratio_guardrail.sh \
+            --threshold-file .ci/shell-rust-ratio-guardrail.env \
+            --output-json ci-shell-rust-ratio-guardrail.json
+
+      - name: Upload shell-rust ratio guardrail telemetry
+        if: always() && hashFiles('ci-shell-rust-ratio-guardrail.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-shell-rust-ratio-guardrail-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-shell-rust-ratio-guardrail.json
+          if-no-files-found: error
+
       - name: Check shell LOC hard ceiling
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
