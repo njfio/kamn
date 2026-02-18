@@ -5,27 +5,29 @@ use kamn_core::{
 };
 use std::collections::BTreeMap;
 
-fn record(
-    message_id: &str,
-    owner_did: &str,
-    sender_did: &str,
-    recipient_did: &str,
-    session_id: Option<&str>,
-    escrow_id: Option<&str>,
-    message_type: &str,
+struct RecordSeed<'a> {
+    message_id: &'a str,
+    owner_did: &'a str,
+    sender_did: &'a str,
+    recipient_did: &'a str,
+    session_id: Option<&'a str>,
+    escrow_id: Option<&'a str>,
+    message_type: &'a str,
     created_at_epoch_seconds: u64,
     blind_indexes: BTreeMap<String, String>,
-) -> DataLayerM3MessageMetadataRecord {
+}
+
+fn record(seed: RecordSeed<'_>) -> DataLayerM3MessageMetadataRecord {
     DataLayerM3MessageMetadataRecord {
-        message_id: message_id.to_owned(),
-        owner_did: owner_did.to_owned(),
-        sender_did: sender_did.to_owned(),
-        recipient_did: recipient_did.to_owned(),
-        session_id: session_id.map(str::to_owned),
-        escrow_id: escrow_id.map(str::to_owned),
-        message_type: message_type.to_owned(),
-        created_at_epoch_seconds,
-        blind_indexes,
+        message_id: seed.message_id.to_owned(),
+        owner_did: seed.owner_did.to_owned(),
+        sender_did: seed.sender_did.to_owned(),
+        recipient_did: seed.recipient_did.to_owned(),
+        session_id: seed.session_id.map(str::to_owned),
+        escrow_id: seed.escrow_id.map(str::to_owned),
+        message_type: seed.message_type.to_owned(),
+        created_at_epoch_seconds: seed.created_at_epoch_seconds,
+        blind_indexes: seed.blind_indexes,
     }
 }
 
@@ -68,56 +70,56 @@ fn spec_c03_exact_match_blind_index_search_is_owner_scoped_and_deterministic() {
 
     let mut catalog = DataLayerM3SearchCatalog::new();
     catalog
-        .register_record(record(
-            "msg-a-1",
-            "kamn:did:owner:a",
-            "kamn:did:agent:a1",
-            "kamn:did:agent:b1",
-            Some("session-a"),
-            None,
-            "text",
-            1_708_160_010,
-            blind_index_map(&[("subject", owner_a_invoice.as_str())]),
-        ))
+        .register_record(record(RecordSeed {
+            message_id: "msg-a-1",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-a"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_010,
+            blind_indexes: blind_index_map(&[("subject", owner_a_invoice.as_str())]),
+        }))
         .expect("record registration should succeed");
     catalog
-        .register_record(record(
-            "msg-a-2",
-            "kamn:did:owner:a",
-            "kamn:did:agent:a1",
-            "kamn:did:agent:b1",
-            Some("session-a"),
-            None,
-            "text",
-            1_708_160_020,
-            blind_index_map(&[("subject", owner_a_invoice.as_str())]),
-        ))
+        .register_record(record(RecordSeed {
+            message_id: "msg-a-2",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-a"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_020,
+            blind_indexes: blind_index_map(&[("subject", owner_a_invoice.as_str())]),
+        }))
         .expect("record registration should succeed");
     catalog
-        .register_record(record(
-            "msg-a-3",
-            "kamn:did:owner:a",
-            "kamn:did:agent:a1",
-            "kamn:did:agent:b1",
-            Some("session-a"),
-            None,
-            "text",
-            1_708_160_030,
-            blind_index_map(&[("subject", owner_a_other.as_str())]),
-        ))
+        .register_record(record(RecordSeed {
+            message_id: "msg-a-3",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-a"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_030,
+            blind_indexes: blind_index_map(&[("subject", owner_a_other.as_str())]),
+        }))
         .expect("record registration should succeed");
     catalog
-        .register_record(record(
-            "msg-b-1",
-            "kamn:did:owner:b",
-            "kamn:did:agent:b1",
-            "kamn:did:agent:a1",
-            Some("session-b"),
-            None,
-            "text",
-            1_708_160_040,
-            blind_index_map(&[("subject", owner_b_invoice.as_str())]),
-        ))
+        .register_record(record(RecordSeed {
+            message_id: "msg-b-1",
+            owner_did: "kamn:did:owner:b",
+            sender_did: "kamn:did:agent:b1",
+            recipient_did: "kamn:did:agent:a1",
+            session_id: Some("session-b"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_040,
+            blind_indexes: blind_index_map(&[("subject", owner_b_invoice.as_str())]),
+        }))
         .expect("record registration should succeed");
 
     let exact = catalog
@@ -170,17 +172,17 @@ fn spec_c04_metadata_search_applies_filters_and_returns_stable_order() {
         ),
     ] {
         catalog
-            .register_record(record(
+            .register_record(record(RecordSeed {
                 message_id,
-                "kamn:did:owner:a",
+                owner_did: "kamn:did:owner:a",
                 sender_did,
-                "kamn:did:agent:recipient-1",
+                recipient_did: "kamn:did:agent:recipient-1",
                 session_id,
-                None,
+                escrow_id: None,
                 message_type,
                 created_at_epoch_seconds,
-                BTreeMap::new(),
-            ))
+                blind_indexes: BTreeMap::new(),
+            }))
             .expect("record registration should succeed");
     }
 
@@ -210,17 +212,17 @@ fn spec_c05_invalid_blind_index_modes_and_bounds_fail_closed() {
         .expect("token should derive");
     let mut catalog = DataLayerM3SearchCatalog::new();
     catalog
-        .register_record(record(
-            "msg-z-1",
-            "kamn:did:owner:a",
-            "kamn:did:agent:a1",
-            "kamn:did:agent:b1",
-            Some("session-z"),
-            None,
-            "text",
-            1_708_160_111,
-            blind_index_map(&[("subject", token.as_str())]),
-        ))
+        .register_record(record(RecordSeed {
+            message_id: "msg-z-1",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-z"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_111,
+            blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+        }))
         .expect("record registration should succeed");
 
     let contains = catalog.search_blind_index(DataLayerM3BlindIndexQuery {
