@@ -3,7 +3,7 @@
 - Title: Story: institutionalize permanent CI and process contracts for shell-surface sustainment
 - Parent: - Program epic: #3812
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
