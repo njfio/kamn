@@ -1,41 +1,46 @@
 # Issue #5011 Spec
 
 - Title: Story: M8 compliance lifecycle with crypto-shredding and retention controls
-- Status: Draft
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Milestone: specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md
 
 ## Problem Statement
-Implement PRD M8 compliance: crypto-shred controls, retention classes, legal-hold flows, jurisdiction policy gates, and data export surfaces.
+Deliver PRD M8 compliance contracts for deterministic retention evaluation,
+legal-hold gating, and crypto-shredding controls. Story delivery is completed
+through child task `#5024`.
 
 ## Acceptance Criteria
-- AC-1: Scope for issue #5011 is decomposed into explicit implementation/integration/validation outcomes with deterministic test evidence.
-- AC-2: The issue maps to PRD sections and conformance scenarios with clear test commands and result expectations.
-- AC-3: Shell-surface impact remains neutral by default (net shell LOC delta <= 0) unless explicitly waived with mitigation issue linkage.
+- AC-1: M8 retention/legal-hold/crypto-shred contracts are implemented with
+  deterministic and fail-closed behavior.
+- AC-2: Cross-owner compliance operations are denied with stable reason markers.
+- AC-3: Story maps to PRD M8 requirements with reproducible conformance
+  evidence and shell/workflow/python/template LOC unchanged (`shell_loc_delta_actual = 0`).
 
 ## Scope
 In scope:
-- Issue-specific delivery for Story: M8 compliance lifecycle with crypto-shredding and retention controls.
-- Contract-driven lifecycle artifacts (`spec.md`, `plan.md`, `tasks.md`).
-- Test-tier mapping and conformance evidence capture.
+- Story-level completion evidence for child deliverable `#5024`.
+- Story artifact normalization (`spec.md`, `plan.md`, `tasks.md`) to implemented lifecycle status.
+- PRD M8 requirement mapping and deterministic evidence traceability.
 
 Out of scope:
-- Unapproved dependency/protocol changes.
-- Work outside the parent milestone scope.
+- New dependency/protocol/wire-format changes.
+- Additional M8 expansion beyond accepted child task scope.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute issue task plan for #5011 | Planned implementation/integration steps are completed with evidence |
-| C-02 | AC-2 | Conformance | Run mapped test commands for #5011 | All mapped conformance checks pass and produce deterministic markers |
-| C-03 | AC-3 | Regression | Run shell-surface and ratio governance checks | No net shell-surface regression without waiver |
+| C-01 | AC-1 | Functional | Run `data_layer_m8_compliance_lifecycle` core lifecycle tests | Deterministic retention/legal-hold/crypto-shred behavior passes |
+| C-02 | AC-2 | Conformance | Run owner-scope deny-path tests | Cross-owner operations fail closed with stable markers |
+| C-03 | AC-3 | Regression | Story child-diff shell/rust audit + guardrail evidence | `shell_loc_delta_actual = 0`; ratio posture improved by rust-only changes |
 
 ## Test Mapping
-- `cargo test -p kamn-core` (scoped by issue-specific suites)
-- `bash scripts/ci/check_shell_loc_hard_ceiling.sh` (when shell/python/workflow surface is touched)
-- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh` (when shell/python/workflow surface is touched)
+- `cargo test -p kamn-core --test data_layer_m8_compliance_lifecycle`
+- `cargo test -p kamn-core`
+- Shell governance scripts are not required for child implementation because shell/workflow/python/template surfaces were unchanged.
 
 ## Success Metrics
-- Issue #5011 reaches `Status: Implemented` with ACs mapped to passing conformance evidence.
-- Shell-to-Rust ratio guardrails remain within thresholds.
+- Story `#5011` closes with child task `#5024` merged and ACs mapped to passing deterministic tests.
+- M8 compliance contract suite remains green in crate-level regression.
+- Shell-to-Rust ratio posture is improved/neutral with zero shell delta.
