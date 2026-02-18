@@ -1,18 +1,15 @@
 # Issue #3880 Plan
 
 - Issue: #3880
-- Status: Planned
+- Status: Completed
 
 ## Approach
-- Implement issue #3880 using Red->Green->Refactor test-first flow.
-- Keep markers and reason taxonomy deterministic and fail closed where applicable.
-- Preserve CI-fast boundaries by keeping heavy validation lanes explicitly governed.
+- Add regression tests that lock invalid-profile reason taxonomy for transport profile pair violations.
+- Ensure invalid marker-linkage and mixed profile-family paths fail closed with deterministic reason codes.
+- Preserve existing production fallback taxonomy coverage to prevent regressions.
 
 ## Affected Modules
-- scripts/runtime/
-- scripts/ci/
-- scripts/deploy/
-- docs/architecture/service-runtime.md
+- crates/kamn-node/src/main_tests/runtime_tests.rs
 
 ## Risks and Mitigations
 - Risk level: low
@@ -21,6 +18,9 @@
 ## Interface Contract
 - No protocol or wire-format changes without explicit approval and ADR if needed.
 - Runtime evidence outputs must remain deterministic and machine-checkable.
+- Invalid-profile reason taxonomy remains stable for:
+  - `runtime_transport_profile_pair_disallowed`
+  - `runtime_transport_profile_fallback_marker_without_in_memory_profile`
 
 ## ADR
 - No ADR required at planning stage; open ADR if dependency/protocol architecture changes emerge.
