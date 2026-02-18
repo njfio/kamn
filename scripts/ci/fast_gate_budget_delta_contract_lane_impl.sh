@@ -70,14 +70,19 @@ start_epoch="$(date +%s)"
 CURRENT_PASS_JSON="$tmp_dir/current-pass.json"
 CURRENT_FAIL_JSON="$tmp_dir/current-fail.json"
 FRESH_THRESHOLD_ENV="$tmp_dir/threshold-fresh.env"
+RATCHET_BASELINE_ENV="$tmp_dir/ratchet-baseline.env"
+RATCHET_REGRESSION_BASELINE_ENV="$tmp_dir/ratchet-regression-baseline.env"
 STALE_THRESHOLD_ENV="$tmp_dir/threshold-stale.env"
 CORRUPT_THRESHOLD_ENV="$tmp_dir/threshold-corrupt.env"
 WAIVER_JSON="$tmp_dir/waiver.json"
+RATCHET_EXCEPTION_JSON="$tmp_dir/ratchet-exception.json"
 PASS_REPORT="$tmp_dir/pass-report.json"
 FAIL_REPORT="$tmp_dir/fail-report.json"
 PASS_OUT="$tmp_dir/pass.out"
 UNWAIVED_OUT="$tmp_dir/unwaived.out"
 WAIVED_OUT="$tmp_dir/waived.out"
+RATCHET_UNWAIVED_OUT="$tmp_dir/ratchet-unwaived.out"
+RATCHET_WAIVED_OUT="$tmp_dir/ratchet-waived.out"
 STALE_OUT="$tmp_dir/stale.out"
 CORRUPT_OUT="$tmp_dir/corrupt.out"
 
@@ -106,6 +111,24 @@ FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
 FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
 FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
 FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
+ENV
+
+cat >"$RATCHET_BASELINE_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
+ENV
+
+cat >"$RATCHET_REGRESSION_BASELINE_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=10
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=10
 FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
 FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
 ENV
@@ -139,6 +162,18 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_JSON" <<'JSON'
 }
 JSON
 
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RATCHET_EXCEPTION_JSON" <<'JSON'
+{
+  "reason": "Temporary ratchet exception while governance updates settle",
+  "expires_on": "2099-12-31",
+  "mitigation_issue": "#4859",
+  "allow_threshold_keys": [
+    "FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT",
+    "FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT"
+  ]
+}
+JSON
+
 bash "$GENERATE_SCRIPT" \
   --current-json "$CURRENT_PASS_JSON" \
   --baseline-file "$FRESH_THRESHOLD_ENV" \
@@ -153,7 +188,9 @@ pass_status="fail"
 if bash "$CHECK_SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$FRESH_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$PASS_OUT"; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$PASS_OUT"; then
   if grep -q '^status=pass$' "$PASS_OUT" && grep -q '^reason_codes=none$' "$PASS_OUT"; then
     pass_status="pass"
   fi
@@ -163,7 +200,9 @@ unwaived_status="pass"
 if bash "$CHECK_SCRIPT" \
   --report-json "$FAIL_REPORT" \
   --threshold-file "$FRESH_THRESHOLD_ENV" \
-  --waiver-file "$tmp_dir/missing-waiver.json" >"$UNWAIVED_OUT" 2>&1; then
+  --waiver-file "$tmp_dir/missing-waiver.json" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$UNWAIVED_OUT" 2>&1; then
   unwaived_status="pass"
 elif grep -q '^status=fail$' "$UNWAIVED_OUT" \
   && grep -q '^reason_codes=delta_threshold_violation_unwaived$' "$UNWAIVED_OUT"; then
@@ -174,7 +213,9 @@ waived_status="fail"
 if bash "$CHECK_SCRIPT" \
   --report-json "$FAIL_REPORT" \
   --threshold-file "$FRESH_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$WAIVED_OUT"; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$WAIVED_OUT"; then
   if grep -q '^status=pass$' "$WAIVED_OUT" \
     && grep -q '^reason_codes=delta_threshold_waiver_applied$' "$WAIVED_OUT"; then
     waived_status="pass"
@@ -185,7 +226,9 @@ stale_threshold_status="pass"
 if bash "$CHECK_SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$STALE_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$STALE_OUT" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$STALE_OUT" 2>&1; then
   stale_threshold_status="pass"
 elif grep -q 'threshold file stale' "$STALE_OUT"; then
   stale_threshold_status="fail"
@@ -195,7 +238,9 @@ corrupt_threshold_status="pass"
 if bash "$CHECK_SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$CORRUPT_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$CORRUPT_OUT" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$CORRUPT_OUT" 2>&1; then
   corrupt_threshold_status="pass"
 elif grep -q 'FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT must be a numeric value' "$CORRUPT_OUT"; then
   corrupt_threshold_status="fail"
@@ -203,6 +248,34 @@ fi
 
 trend_contract_status="pass"
 if [ "$pass_status" != "pass" ] || [ "$unwaived_status" != "fail" ] || [ "$waived_status" != "pass" ]; then
+  trend_contract_status="fail"
+fi
+
+ratchet_unwaived_status="pass"
+if bash "$CHECK_SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$FRESH_THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_REGRESSION_BASELINE_ENV" \
+  --ratchet-exception-file "$tmp_dir/missing-ratchet-exception.json" >"$RATCHET_UNWAIVED_OUT" 2>&1; then
+  ratchet_unwaived_status="pass"
+elif grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived$' "$RATCHET_UNWAIVED_OUT"; then
+  ratchet_unwaived_status="fail"
+fi
+
+ratchet_waived_status="fail"
+if bash "$CHECK_SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$FRESH_THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_REGRESSION_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$RATCHET_WAIVED_OUT"; then
+  if grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_exception_applied$' "$RATCHET_WAIVED_OUT"; then
+    ratchet_waived_status="pass"
+  fi
+fi
+
+if [ "$ratchet_unwaived_status" != "fail" ] || [ "$ratchet_waived_status" != "pass" ]; then
   trend_contract_status="fail"
 fi
 
@@ -221,6 +294,12 @@ if ! grep -q '^reason_codes=delta_threshold_violation_unwaived$' "$UNWAIVED_OUT"
   reason_code_contract_status="fail"
 fi
 if ! grep -q '^reason_codes=delta_threshold_waiver_applied$' "$WAIVED_OUT"; then
+  reason_code_contract_status="fail"
+fi
+if ! grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived$' "$RATCHET_UNWAIVED_OUT"; then
+  reason_code_contract_status="fail"
+fi
+if ! grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_exception_applied$' "$RATCHET_WAIVED_OUT"; then
   reason_code_contract_status="fail"
 fi
 
@@ -260,6 +339,8 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$OUTPUT_JSON" <<JSON
   "pass_status": "$pass_status",
   "unwaived_status": "$unwaived_status",
   "waived_status": "$waived_status",
+  "ratchet_unwaived_status": "$ratchet_unwaived_status",
+  "ratchet_waived_status": "$ratchet_waived_status",
   "stale_threshold_status": "$stale_threshold_status",
   "corrupt_threshold_status": "$corrupt_threshold_status",
   "runtime_seconds": $elapsed_seconds,
@@ -272,6 +353,8 @@ echo "fast_gate_budget_delta_contract_status=$status"
 echo "fast_gate_budget_delta_contract_pass_status=$pass_status"
 echo "fast_gate_budget_delta_contract_unwaived_status=$unwaived_status"
 echo "fast_gate_budget_delta_contract_waived_status=$waived_status"
+echo "fast_gate_budget_delta_contract_ratchet_unwaived_status=$ratchet_unwaived_status"
+echo "fast_gate_budget_delta_contract_ratchet_waived_status=$ratchet_waived_status"
 echo "fast_gate_budget_delta_contract_stale_threshold_status=$stale_threshold_status"
 echo "fast_gate_budget_delta_contract_corrupt_threshold_status=$corrupt_threshold_status"
 echo "fast_gate_budget_delta_contract_report=$(realpath "$OUTPUT_JSON")"
