@@ -165,4 +165,113 @@ if ! printf '%s\n' "$invalid_threshold_output" | grep -q 'combined_shell_surface
   exit 1
 fi
 
+script_count_fail_report="$TMP_DIR/combined-shell-surface-trend-report.script-count-fail.json"
+cp "$report_file" "$script_count_fail_report"
+python3 - "$script_count_fail_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["deltas"]["script_count"] = 16
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+script_count_fail_output="$(bash "$CHECKER" --report-file "$script_count_fail_report" --threshold-file "$THRESHOLDS" --output-json "$TMP_DIR/script-count-fail-policy.json" 2>&1)"
+script_count_fail_code=$?
+set -e
+if [[ "$script_count_fail_code" -eq 0 ]]; then
+  echo "expected script-count fail threshold breach to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$script_count_fail_output" | grep -q 'combined_shell_surface_script_count_delta_fail_exceeded'; then
+  echo "expected deterministic script-count fail reason code for combined shell-surface policy output" >&2
+  exit 1
+fi
+
+ratio_delta_fail_report="$TMP_DIR/combined-shell-surface-trend-report.ratio-delta-fail.json"
+cp "$report_file" "$ratio_delta_fail_report"
+python3 - "$ratio_delta_fail_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["deltas"]["shell_to_rust_ratio"] = 0.03
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+ratio_delta_fail_output="$(bash "$CHECKER" --report-file "$ratio_delta_fail_report" --threshold-file "$THRESHOLDS" --output-json "$TMP_DIR/ratio-delta-fail-policy.json" 2>&1)"
+ratio_delta_fail_code=$?
+set -e
+if [[ "$ratio_delta_fail_code" -eq 0 ]]; then
+  echo "expected ratio-delta fail threshold breach to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$ratio_delta_fail_output" | grep -q 'combined_shell_surface_ratio_delta_fail_exceeded'; then
+  echo "expected deterministic ratio-delta fail reason code for combined shell-surface policy output" >&2
+  exit 1
+fi
+
+warn_report="$TMP_DIR/combined-shell-surface-trend-report.warn.json"
+cp "$report_file" "$warn_report"
+python3 - "$warn_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["deltas"]["script_count"] = 6
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+warn_output="$(bash "$CHECKER" --report-file "$warn_report" --threshold-file "$THRESHOLDS" --output-json "$TMP_DIR/warn-policy.json")"
+if ! printf '%s\n' "$warn_output" | grep -q '^status=ok$'; then
+  echo "expected warn-only combined shell-surface policy status=ok marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^policy_decision=WARN$'; then
+  echo "expected warn-only combined shell-surface policy decision marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^trend_status=warn$'; then
+  echo "expected warn-only combined shell-surface trend status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q 'combined_shell_surface_script_count_delta_warn_exceeded'; then
+  echo "expected deterministic script-count warn reason code in combined shell-surface policy output" >&2
+  exit 1
+fi
+
+tampered_threshold_values="$TMP_DIR/combined-shell-surface-trend-thresholds.invalid-value.json"
+cp "$THRESHOLDS" "$tampered_threshold_values"
+python3 - "$tampered_threshold_values" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["fail_shell_to_rust_ratio"] = "not-a-number"
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+invalid_threshold_value_output="$(bash "$CHECKER" --report-file "$report_file" --threshold-file "$tampered_threshold_values" --output-json "$TMP_DIR/invalid-threshold-value-policy.json" 2>&1)"
+invalid_threshold_value_code=$?
+set -e
+if [[ "$invalid_threshold_value_code" -eq 0 ]]; then
+  echo "expected invalid threshold value fixture to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_threshold_value_output" | grep -q 'combined_shell_surface_threshold_value_invalid'; then
+  echo "expected deterministic threshold-value reason code for invalid combined shell-surface threshold fixture" >&2
+  exit 1
+fi
+
 echo "combined shell-surface trend policy checker tests passed."
