@@ -189,6 +189,33 @@
       "args_prefix": [],
       "passthrough": true
     },
+    "scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "10"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "11"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "8"
+      ],
+      "passthrough": false
+    },
     "scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh": {
       "interpreter": "bash",
       "target": "scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh",
@@ -422,6 +449,33 @@
         "version_matrix"
       ],
       "passthrough": true
+    },
+    "scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "10"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "11"
+      ],
+      "passthrough": false
+    },
+    "scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh",
+      "args_prefix": [
+        "--wave-id",
+        "8"
+      ],
+      "passthrough": false
     },
     "scripts/ci/test_non_kolme_wave10_wrapper_family_baseline_contract.sh": {
       "interpreter": "bash",

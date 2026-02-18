@@ -8,6 +8,67 @@ GENERATE_SCRIPT="$KAMN_ROOT/scripts/ci/generate_kolme_wrapper_inventory_baseline
 CHECK_SCRIPT="$KAMN_ROOT/scripts/ci/check_kolme_wrapper_inventory_baseline.sh"
 PYTHON_SCRIPT="$KAMN_ROOT/scripts/ci/kolme_wrapper_inventory_baseline.py"
 
+assert_dispatch_registry_entry() {
+  local wrapper_rel="$1"
+  local expected_target="$2"
+  local expected_wave_id="$3"
+
+  python3 - "$KAMN_ROOT/scripts/lib/exec_registry.json" "$wrapper_rel" "$expected_target" "$expected_wave_id" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+registry_path = Path(sys.argv[1])
+wrapper_rel = sys.argv[2]
+expected_target = sys.argv[3]
+expected_wave_id = sys.argv[4]
+
+payload = json.loads(registry_path.read_text(encoding="utf-8"))
+entries = payload.get("entries")
+if not isinstance(entries, dict):
+    raise SystemExit("expected exec registry entries map")
+
+entry = entries.get(wrapper_rel)
+if not isinstance(entry, dict):
+    raise SystemExit(f"missing exec registry entry for {wrapper_rel}")
+
+if entry.get("interpreter") != "bash":
+    raise SystemExit(f"expected interpreter=bash for {wrapper_rel}")
+if entry.get("target") != expected_target:
+    raise SystemExit(
+        f"expected target={expected_target} for {wrapper_rel}; found {entry.get('target')!r}"
+    )
+if entry.get("passthrough") is not False:
+    raise SystemExit(f"expected passthrough=false for {wrapper_rel}")
+
+expected_args = ["--wave-id", expected_wave_id]
+if entry.get("args_prefix") != expected_args:
+    raise SystemExit(
+        f"expected args_prefix={expected_args!r} for {wrapper_rel}; "
+        f"found {entry.get('args_prefix')!r}"
+    )
+PY
+}
+
+assert_dispatch_wrapper_contract() {
+  local wrapper_rel="$1"
+  local expected_target="$2"
+  local expected_wave_id="$3"
+  local wrapper_path="$KAMN_ROOT/$wrapper_rel"
+
+  if [ ! -L "$wrapper_path" ]; then
+    echo "expected wrapper family entrypoint to be symlink-backed: $wrapper_rel" >&2
+    exit 1
+  fi
+
+  if [ "$(readlink "$wrapper_path")" != "../lib/exec_dispatch.sh" ]; then
+    echo "expected $wrapper_rel to target ../lib/exec_dispatch.sh" >&2
+    exit 1
+  fi
+
+  assert_dispatch_registry_entry "$wrapper_rel" "$expected_target" "$expected_wave_id"
+}
+
 usage() {
   cat >&2 <<'USAGE'
 Usage: test_wave_wrapper_family_baseline_contract_impl.sh --family <kolme|non_kolme> --wave-id <id>
@@ -62,12 +123,23 @@ if [ "$FAMILY" = "kolme" ]; then
   MATRIX_FIXTURE="$KAMN_ROOT/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_matrix.json"
   BASELINE_FIXTURE="$KAMN_ROOT/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_baseline.json"
   MISSING_WRAPPER="scripts/ci/run_missing_kolme_wave${WAVE_ID}_wrapper.sh"
+  BASELINE_DISPATCH_WRAPPER_REL="scripts/ci/test_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
+  BASELINE_DISPATCH_TARGET="scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  TREND_DISPATCH_WRAPPER_REL="scripts/ci/test_check_kolme_wave${WAVE_ID}_wrapper_family_budget_trend.sh"
+  TREND_DISPATCH_TARGET="scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh"
 else
   WAVE_LABEL="non-Kolme wave-${WAVE_ID}"
   MATRIX_FIXTURE="$KAMN_ROOT/fixtures/ci/non_kolme_wave${WAVE_ID}_wrapper_family_matrix.json"
   BASELINE_FIXTURE="$KAMN_ROOT/fixtures/ci/non_kolme_wave${WAVE_ID}_wrapper_family_baseline.json"
   MISSING_WRAPPER="scripts/ci/run_missing_non_kolme_wave${WAVE_ID}_wrapper.sh"
+  BASELINE_DISPATCH_WRAPPER_REL="scripts/ci/test_non_kolme_wave${WAVE_ID}_wrapper_family_baseline_contract.sh"
+  BASELINE_DISPATCH_TARGET="scripts/ci/test_non_kolme_wave_wrapper_family_baseline_contract_impl.sh"
+  TREND_DISPATCH_WRAPPER_REL="scripts/ci/test_check_non_kolme_wave${WAVE_ID}_wrapper_family_budget_trend.sh"
+  TREND_DISPATCH_TARGET="scripts/ci/test_check_non_kolme_wave_wrapper_family_budget_trend_impl.sh"
 fi
+
+assert_dispatch_wrapper_contract "$BASELINE_DISPATCH_WRAPPER_REL" "$BASELINE_DISPATCH_TARGET" "$WAVE_ID"
+assert_dispatch_wrapper_contract "$TREND_DISPATCH_WRAPPER_REL" "$TREND_DISPATCH_TARGET" "$WAVE_ID"
 
 test_harness_setup
 TMP_DIR="$test_harness_tmp_dir"

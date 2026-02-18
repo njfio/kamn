@@ -2162,6 +2162,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - deterministic generator/check commands:
       - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --output-json /tmp/kolme-wave11-wrapper-family-baseline.json`
       - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave11_wrapper_family_baseline.json --output-json /tmp/kolme-wave11-wrapper-family-delta.json`
+    - entrypoint wrapper contract (generated/symlink):
+      - `scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh`
+      - `scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh`
+      - `scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh`
+      - each wrapper is a symlink to `scripts/lib/exec_dispatch.sh` and is resolved by `scripts/lib/exec_registry.json` to `scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh` with deterministic `--wave-id` args.
     - covers runtime finality-evidence, live-node validation bundle, and live-provider runtime-integration contract wrappers.
     - Regression: #3120
   - Non-Kolme wave-1 wrapper-family baseline guard stays on PR fast gate:
@@ -2419,6 +2424,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=wrapper_count_reduction_target_unmet`
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - entrypoint wrapper contract (generated/symlink):
+      - `scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh`
+      - `scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh`
+      - `scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh`
+      - each wrapper is a symlink to `scripts/lib/exec_dispatch.sh` and is resolved by `scripts/lib/exec_registry.json` to `scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh` with deterministic `--wave-id` args.
     - Regression: #3120
   - Non-Kolme wave-1 wrapper-family trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_non_kolme_wave1_wrapper_family_budget_trend.sh`
