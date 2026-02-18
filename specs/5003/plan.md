@@ -1,26 +1,38 @@
 # Issue #5003 Plan
 
 - Issue: #5003
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Deliver M0 foundation contracts via `#5016`:
+   - deterministic record derivation,
+   - append-only ledger controls,
+   - compression and hash-chain validation.
+2. Deliver M0 conformance matrix via `#5029`:
+   - stable/drift matrix decision API,
+   - deterministic mismatch evidence,
+   - fail-closed invalid matrix input handling.
+3. Maintain additive exports in `kamn-core` and preserve shell-neutral delivery.
+4. Validate with scoped and crate-level tests plus shell guardrail evidence.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m0.rs`
+- `crates/kamn-core/src/lib.rs`
+- `crates/kamn-core/tests/data_layer_m0_contract.rs`
+- `specs/5003/spec.md`
+- `specs/5003/plan.md`
+- `specs/5003/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep implementation additive and deterministic.
+  - Preserve fail-closed error semantics for invariant violations.
+  - Keep shell/workflow surfaces unchanged to maintain ratio guardrails.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API/exports in `kamn-core`.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this bounded additive story closure.
