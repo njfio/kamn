@@ -1321,3 +1321,20 @@ fn doc_contains_persistence_adapter_integrity_ci_boundary_markers() {
     assert!(DOC.contains("persistence_ci_smoke_lane_cost_profile=low"));
     assert!(DOC.contains("persistence_local_heavy_execution_mode=opt_in"));
 }
+
+#[test]
+fn doc_contains_cutover_ci_exclusion_policy_contract_markers() {
+    assert!(DOC.contains("## Cutover Rollback CI Exclusion Policy Contract"));
+    assert!(DOC.contains("python3 scripts/cutover/check_cutover_ci_exclusion_policy.py"));
+    assert!(DOC.contains("bash scripts/cutover/test_check_cutover_ci_exclusion_policy.sh"));
+    assert!(DOC.contains(
+        "cutover_ci_exclusion_policy_reason_taxonomy_version=kamn.ci.cutover-ci-exclusion-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "cutover_ci_exclusion_policy_reason_codes_csv=cutover_contract_lane_missing_in_ci_fast_gate,cutover_rollback_deep_lane_leaked_into_ci_fast_gate,cutover_contract_test_missing_in_ci_tools,cutover_deep_lane_test_leaked_into_ci_tools,ci_strategy_cutover_exclusion_markers_missing,ci_strategy_cutover_policy_command_missing,runtime_budget_exceeded"
+    ));
+    assert!(DOC.contains("cutover_rollback_deep_lane_local_only=true"));
+    assert!(DOC.contains("cutover_rollback_deep_lane_excluded_from_ci_fast_gate=true"));
+    assert!(DOC.contains("bash scripts/cutover/run_cutover_rollback_contract_lane.sh"));
+    assert!(DOC.contains("bash scripts/cutover/run_cutover_rollback_deep_lane.sh"));
+}

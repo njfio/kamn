@@ -1158,7 +1158,7 @@ fn regression_production_transport_profile_in_memory_rejection_reason_code_is_st
     ];
     assert_eq!(
         classify_production_transport_profile_violation(RuntimeMode::daemon(), true, &components),
-        Some("runtime_transport_profile_in_memory_fallback_forbidden")
+        Some("runtime_transport_profile_fallback_marker_without_in_memory_profile")
     );
 }
 

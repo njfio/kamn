@@ -51,6 +51,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
   - `libp2p_process_isolated_convergence_policy_deep_fast_gate_exclusion_mismatch`
 
+## Cutover Rollback CI Exclusion Policy Contract
+- Cutover rollback CI-fast boundary checks stay fail-closed with deterministic markers.
+- Policy checker command:
+  - `python3 scripts/cutover/check_cutover_ci_exclusion_policy.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --max-seconds 120 --output-json /tmp/cutover-ci-exclusion-policy-report.json`
+- Contract test command:
+  - `bash scripts/cutover/test_check_cutover_ci_exclusion_policy.sh`
+- Marker taxonomy:
+  - `cutover_ci_exclusion_policy_reason_taxonomy_version=kamn.ci.cutover-ci-exclusion-policy-reason-taxonomy.v1`
+  - `cutover_ci_exclusion_policy_reason_codes_csv=cutover_contract_lane_missing_in_ci_fast_gate,cutover_rollback_deep_lane_leaked_into_ci_fast_gate,cutover_contract_test_missing_in_ci_tools,cutover_deep_lane_test_leaked_into_ci_tools,ci_strategy_cutover_exclusion_markers_missing,ci_strategy_cutover_policy_command_missing,runtime_budget_exceeded`
+- Contract lane declarations:
+  - `cutover_rollback_deep_lane_local_only=true`
+  - `cutover_rollback_deep_lane_excluded_from_ci_fast_gate=true`
+  - contract lane command (`bash scripts/cutover/run_cutover_rollback_contract_lane.sh`) stays in `ci-fast-gate`.
+  - deep lane command (`bash scripts/cutover/run_cutover_rollback_deep_lane.sh`) remains excluded from `ci-fast-gate` and `scripts/ci/test_ci_tools.sh`.
+
 ## Production Plan Truth Contract
 - Production-service roadmap truth refresh is tracked in `docs/plans/2026-02-14-production-service-next-steps.md`.
 - Deterministic docs-contract command:
