@@ -12,7 +12,7 @@ run_non_kolme_wave_wrapper_family_contracts() {
 
 run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
   for lightweight_wave in {10..19}; do
-    bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+    bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh" --wave "$lightweight_wave"
   done
 }
 
@@ -21,7 +21,9 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
   bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
@@ -171,7 +173,9 @@ bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
 bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"

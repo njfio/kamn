@@ -12,17 +12,15 @@ fi
 
 for wave in {10..19}; do
   wave_entrypoint="$ROOT_DIR/scripts/framework/test_non_kolme_wave${wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  expected_target="test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
   definitions_file="$DEFINITIONS_DIR/non_kolme_wave${wave}_lightweight_wrappers.txt"
 
-  if [ ! -L "$wave_entrypoint" ]; then
-    echo "expected wave entrypoint to be a symlink to shared runner: $wave_entrypoint" >&2
+  if [ -e "$wave_entrypoint" ]; then
+    echo "expected legacy wave-specific wrapper to be removed after shared-runner migration: $wave_entrypoint" >&2
     exit 1
   fi
 
-  target_path="$(readlink "$wave_entrypoint")"
-  if [ "$target_path" != "$expected_target" ]; then
-    echo "expected $wave_entrypoint to target $expected_target but found $target_path" >&2
+  if ! bash "$RUNNER_PATH" --wave "$wave" >/dev/null; then
+    echo "expected shared wave runner to execute successfully for wave $wave" >&2
     exit 1
   fi
 

@@ -35,6 +35,23 @@ if ! grep -Fq "fixtures/ci/combined_shell_surface_trend_thresholds.json" "$FAST_
   exit 1
 fi
 
+if ! grep -Fq "name: Check shell LOC hard ceiling" "$FAST_WORKFLOW"; then
+  echo "expected shell LOC hard ceiling step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_shell_loc_hard_ceiling.sh" "$FAST_WORKFLOW"; then
+  echo "expected shell LOC hard ceiling checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq ".ci/shell-loc-hard-ceiling.env" "$FAST_WORKFLOW"; then
+  echo "expected shell LOC hard ceiling config wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-shell-loc-hard-ceiling.json" "$FAST_WORKFLOW"; then
+  echo "expected shell LOC hard ceiling report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+
 if ! grep -Fq "name: Collect shell-rust LOC telemetry" "$FAST_WORKFLOW"; then
   echo "expected shell-rust LOC telemetry collector step in ci-fast-gate workflow" >&2
   exit 1
@@ -57,7 +74,7 @@ if ! grep -Fq "ci-combined-shell-surface-trend-policy.json" "$FAST_WORKFLOW"; th
 fi
 
 scope_gate_count="$(grep -Fc "if: steps.scope.outputs.run_script_surface_budget_checks == 'true'" "$FAST_WORKFLOW")"
-if (( scope_gate_count < 4 )); then
+if (( scope_gate_count < 5 )); then
   echo "expected shell-surface ratio/budget checks to remain behind run_script_surface_budget_checks scope gate" >&2
   exit 1
 fi
