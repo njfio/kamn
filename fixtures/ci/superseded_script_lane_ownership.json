@@ -1,0 +1,9 @@
+{
+  "schema_version": "kamn.ci.superseded-script-lane-ownership.v1",
+  "ownership_rules": [
+    {
+      "owner": "devops",
+      "path_prefix": "scripts/kolme/"
+    }
+  ]
+}

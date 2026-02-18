@@ -1,7 +1,7 @@
 # Issue #4967 Spec
 
 - Title: Subtask: add red tests for superseded-script inventory schema and replacement evidence completeness
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
@@ -31,7 +31,16 @@ Out of scope:
 | C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
 
 ## Test Mapping
-- To be completed during implementation for issue #4967.
+- AC-1:
+  - `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- AC-2:
+  - `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+    (invalid schema, unknown-script, and missing-replacement-evidence fail-closed cases)
+- AC-3:
+  - `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+  - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
+- AC-4:
+  - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
 
 ## Success Metrics
 - All ACs for #4967 are mapped to conformance cases and passing tests.
