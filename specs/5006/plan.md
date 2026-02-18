@@ -1,26 +1,35 @@
 # Issue #5006 Plan
 
 - Issue: #5006
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Deliver M3 search contracts through child task `#5019`:
+   - deterministic blind-index normalization and owner-scoped token derivation,
+   - exact-match blind-index search behavior with fail-closed invalid-mode handling,
+   - deterministic metadata filtering and ordering contracts.
+2. Preserve additive exports in `kamn-core` for downstream M4+ integration.
+3. Validate with scoped suite `data_layer_m3_blind_index_search` and crate-level regression.
+4. Keep delivery Rust-only for this story to preserve shell budget neutrality.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m3_blind_index_search.rs`
+- `crates/kamn-core/src/lib.rs`
+- `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs`
+- `specs/5006/spec.md`
+- `specs/5006/plan.md`
+- `specs/5006/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep normalization and owner-scope rules explicit in conformance tests.
+  - Preserve deterministic ordering to avoid flaky query behavior.
+  - Preserve rust-only implementation to avoid shell-surface growth.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API/exports in `kamn-core`.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this bounded additive story closure.
