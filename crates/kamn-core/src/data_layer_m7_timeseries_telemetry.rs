@@ -15,6 +15,14 @@ pub const DATA_LAYER_M7_HOURLY_BUCKET_SECONDS: u64 = 3_600;
 pub const DATA_LAYER_M7_DAILY_BUCKET_SECONDS: u64 = 86_400;
 /// Stable reason marker for successful aggregate results.
 pub const DATA_LAYER_M7_AGGREGATE_REASON_CODE: &str = "m7_timeseries_aggregate_computed";
+/// Stable reason marker for owner-scope authorization failures.
+pub const DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE: &str = "m7_timeseries_owner_scope_denied";
+/// Stable reason marker for successful billing reconciliation match.
+pub const DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE: &str =
+    "m7_billing_reconciliation_match";
+/// Stable reason marker for billing reconciliation mismatch.
+pub const DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE: &str =
+    "m7_billing_reconciliation_mismatch";
 
 /// Input payload for one telemetry point.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,6 +102,63 @@ pub struct DataLayerM7BillingQuery {
     pub requester_owner_did: String,
     /// Target owner DID.
     pub owner_did: String,
+}
+
+/// Owner daily billing statement input used for reconciliation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM7BillingReconciliationInput {
+    /// Requester owner DID.
+    pub requester_owner_did: String,
+    /// Target owner DID.
+    pub owner_did: String,
+    /// Billing day bucket start (epoch seconds, aligned to day boundary).
+    pub bucket_day_epoch_seconds: u64,
+    /// Statement metric: messages stored.
+    pub messages_stored_total: u64,
+    /// Statement metric: bytes stored.
+    pub bytes_stored_total: u64,
+    /// Statement metric: queries executed.
+    pub queries_executed_total: u64,
+    /// Statement metric: embeddings generated.
+    pub embeddings_generated_total: u64,
+}
+
+/// Billing reconciliation decision output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM7BillingReconciliationDecision {
+    /// Statement equals projected owner daily totals.
+    Match,
+    /// Statement differs from projected owner daily totals.
+    Mismatch,
+}
+
+/// Deterministic billing reconciliation report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM7BillingReconciliationReport {
+    /// Owner DID scope.
+    pub owner_did: String,
+    /// Billing day bucket start.
+    pub bucket_day_epoch_seconds: u64,
+    /// Reconciliation decision.
+    pub decision: DataLayerM7BillingReconciliationDecision,
+    /// Stable decision reason marker.
+    pub reason_code: &'static str,
+    /// Projected metric: messages stored.
+    pub projected_messages_stored_total: u64,
+    /// Projected metric: bytes stored.
+    pub projected_bytes_stored_total: u64,
+    /// Projected metric: queries executed.
+    pub projected_queries_executed_total: u64,
+    /// Projected metric: embeddings generated.
+    pub projected_embeddings_generated_total: u64,
+    /// Statement metric: messages stored.
+    pub statement_messages_stored_total: u64,
+    /// Statement metric: bytes stored.
+    pub statement_bytes_stored_total: u64,
+    /// Statement metric: queries executed.
+    pub statement_queries_executed_total: u64,
+    /// Statement metric: embeddings generated.
+    pub statement_embeddings_generated_total: u64,
 }
 
 /// Hourly aggregate row for one owner+agent.
@@ -244,7 +309,7 @@ impl DataLayerM7TelemetryRegistry {
         authorize_owner_scope(
             query.requester_owner_did.as_str(),
             query.owner_did.as_str(),
-            "m7_timeseries_owner_scope_denied",
+            DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
         )?;
         validate_kamn_did(query.agent_did.as_str())?;
         let owner_points = self.owner_points_or_error(query.owner_did.as_str())?;
@@ -299,7 +364,7 @@ impl DataLayerM7TelemetryRegistry {
         authorize_owner_scope(
             query.requester_owner_did.as_str(),
             query.owner_did.as_str(),
-            "m7_timeseries_owner_scope_denied",
+            DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
         )?;
         validate_kamn_did(query.agent_did.as_str())?;
         let owner_points = self.owner_points_or_error(query.owner_did.as_str())?;
@@ -405,7 +470,7 @@ impl DataLayerM7TelemetryRegistry {
         authorize_owner_scope(
             query.requester_owner_did.as_str(),
             query.owner_did.as_str(),
-            "m7_timeseries_owner_scope_denied",
+            DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
         )?;
         let owner_points = self.owner_points_or_error(query.owner_did.as_str())?;
 
@@ -444,6 +509,75 @@ impl DataLayerM7TelemetryRegistry {
             .collect())
     }
 
+    /// Reconciles one owner daily billing statement against projected totals.
+    pub fn reconcile_owner_billing_daily(
+        &self,
+        input: DataLayerM7BillingReconciliationInput,
+    ) -> Result<DataLayerM7BillingReconciliationReport, DataLayerM7TimeseriesError> {
+        authorize_owner_scope(
+            input.requester_owner_did.as_str(),
+            input.owner_did.as_str(),
+            DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
+        )?;
+        if input.bucket_day_epoch_seconds == 0
+            || !input
+                .bucket_day_epoch_seconds
+                .is_multiple_of(DATA_LAYER_M7_DAILY_BUCKET_SECONDS)
+        {
+            return Err(DataLayerM7TimeseriesError::InvalidBucketDayEpochSeconds(
+                input.bucket_day_epoch_seconds,
+            ));
+        }
+
+        let projections = self.project_owner_billing_daily(DataLayerM7BillingQuery {
+            requester_owner_did: input.requester_owner_did.clone(),
+            owner_did: input.owner_did.clone(),
+        })?;
+        let projection = projections
+            .iter()
+            .find(|entry| entry.bucket_day_epoch_seconds == input.bucket_day_epoch_seconds);
+
+        let projected_messages_stored_total =
+            projection.map_or(0, |entry| entry.messages_stored_total);
+        let projected_bytes_stored_total = projection.map_or(0, |entry| entry.bytes_stored_total);
+        let projected_queries_executed_total =
+            projection.map_or(0, |entry| entry.queries_executed_total);
+        let projected_embeddings_generated_total =
+            projection.map_or(0, |entry| entry.embeddings_generated_total);
+
+        let mismatch = projected_messages_stored_total != input.messages_stored_total
+            || projected_bytes_stored_total != input.bytes_stored_total
+            || projected_queries_executed_total != input.queries_executed_total
+            || projected_embeddings_generated_total != input.embeddings_generated_total;
+
+        let (decision, reason_code) = if mismatch {
+            (
+                DataLayerM7BillingReconciliationDecision::Mismatch,
+                DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE,
+            )
+        } else {
+            (
+                DataLayerM7BillingReconciliationDecision::Match,
+                DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
+            )
+        };
+
+        Ok(DataLayerM7BillingReconciliationReport {
+            owner_did: input.owner_did,
+            bucket_day_epoch_seconds: input.bucket_day_epoch_seconds,
+            decision,
+            reason_code,
+            projected_messages_stored_total,
+            projected_bytes_stored_total,
+            projected_queries_executed_total,
+            projected_embeddings_generated_total,
+            statement_messages_stored_total: input.messages_stored_total,
+            statement_bytes_stored_total: input.bytes_stored_total,
+            statement_queries_executed_total: input.queries_executed_total,
+            statement_embeddings_generated_total: input.embeddings_generated_total,
+        })
+    }
+
     fn owner_points_or_error(
         &self,
         owner_did: &str,
@@ -475,6 +609,8 @@ pub enum DataLayerM7TimeseriesError {
         /// Stable reason marker.
         reason_code: &'static str,
     },
+    /// Billing day bucket epoch is zero or not daily-aligned.
+    InvalidBucketDayEpochSeconds(u64),
 }
 
 impl fmt::Display for DataLayerM7TimeseriesError {
@@ -485,6 +621,9 @@ impl fmt::Display for DataLayerM7TimeseriesError {
             Self::OwnerNotFound { owner_did } => write!(f, "owner not found: {owner_did}"),
             Self::OwnerScopeViolation { reason_code } => {
                 write!(f, "owner scope violation: {reason_code}")
+            }
+            Self::InvalidBucketDayEpochSeconds(value) => {
+                write!(f, "invalid billing day bucket epoch: {value}")
             }
         }
     }
