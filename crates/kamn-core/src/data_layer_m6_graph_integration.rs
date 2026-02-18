@@ -13,6 +13,11 @@ pub const DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE: &str = "apache-age";
 pub const DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE: &str = "age-open-cypher-portable-v1";
 /// Stable reason marker used for successful trust propagation ranking outputs.
 pub const DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED: &str = "m6_graph_trust_score_ranked";
+/// Stable reason marker for owner-scope authorization denials.
+pub const DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE: &str = "m6_graph_owner_scope_denied";
+/// Stable reason marker for cross-owner edge registration denials.
+pub const DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE: &str =
+    "m6_graph_cross_owner_edge_denied";
 
 /// Supported node kinds for the M6 graph schema.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -265,7 +270,7 @@ impl DataLayerM6GraphRegistry {
             if self.node_exists_outside_owner(input.owner_did.as_str(), input.from_node_id.as_str())
             {
                 return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
-                    reason_code: "m6_graph_cross_owner_edge_denied",
+                    reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
                 });
             }
             return Err(DataLayerM6GraphIntegrationError::NodeNotFound {
@@ -279,7 +284,7 @@ impl DataLayerM6GraphRegistry {
         {
             if self.node_exists_outside_owner(input.owner_did.as_str(), input.to_node_id.as_str()) {
                 return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
-                    reason_code: "m6_graph_cross_owner_edge_denied",
+                    reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
                 });
             }
             return Err(DataLayerM6GraphIntegrationError::NodeNotFound {
@@ -327,7 +332,7 @@ impl DataLayerM6GraphRegistry {
         validate_non_empty(query.source_agent_node_id.as_str(), "source_agent_node_id")?;
         if query.requester_owner_did != query.owner_did {
             return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
-                reason_code: "m6_graph_owner_scope_denied",
+                reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
             });
         }
         if query.max_depth == 0 {
@@ -449,6 +454,22 @@ impl DataLayerM6GraphRegistry {
             .collect::<Vec<_>>();
         projection.sort_by(|left, right| left.edge_id.cmp(&right.edge_id));
         Ok(projection)
+    }
+
+    /// Exports owner-scoped portable edge projections with requester authorization.
+    pub fn export_portable_edge_projection_scoped(
+        &self,
+        requester_owner_did: &str,
+        owner_did: &str,
+    ) -> Result<Vec<DataLayerM6PortableEdgeProjection>, DataLayerM6GraphIntegrationError> {
+        validate_kamn_did(requester_owner_did)?;
+        validate_kamn_did(owner_did)?;
+        if requester_owner_did != owner_did {
+            return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
+                reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
+            });
+        }
+        self.export_portable_edge_projection(owner_did)
     }
 
     fn node_exists_outside_owner(&self, owner_did: &str, node_id: &str) -> bool {

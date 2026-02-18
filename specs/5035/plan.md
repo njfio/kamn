@@ -1,26 +1,34 @@
 # Issue #5035 Plan
 
 - Issue: #5035
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED conformance tests for scoped portability export authorization and
+   parity with existing owner projection output.
+2. Implement additive scoped portability export API and reason-marker constants
+   for owner-scope/cross-owner denial paths.
+3. Replace string-literal reason checks with exported constants in tests.
+4. Run scoped/full regression and shell guardrail evidence commands.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m6_graph_integration.rs`
+- `crates/kamn-core/tests/data_layer_m6_graph_integration.rs`
+- `crates/kamn-core/src/lib.rs`
+- `specs/5035/spec.md`
+- `specs/5035/plan.md`
+- `specs/5035/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep API additive and preserve existing projection behavior.
+  - Use existing owner-scope error type with stable reason constants.
+  - Keep implementation Rust-only; no shell/workflow changes.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API in `kamn_core::data_layer_m6_graph_integration`.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive contract.

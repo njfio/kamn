@@ -330,7 +330,8 @@ pub use data_layer_m6_graph_integration::{
     DataLayerM6GraphIntegrationError, DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind,
     DataLayerM6GraphNodeRecord, DataLayerM6GraphRegistry, DataLayerM6PortableEdgeProjection,
     DataLayerM6TrustPropagationQuery, DataLayerM6TrustPropagationResult,
-    DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE, DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE,
+    DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE, DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE,
+    DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE, DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED,
 };
 pub use data_layer_m7_timeseries_telemetry::{

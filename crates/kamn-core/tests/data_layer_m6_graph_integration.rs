@@ -1,7 +1,8 @@
 use kamn_core::{
     DataLayerM6GraphEdgeInput, DataLayerM6GraphEdgeRelation, DataLayerM6GraphIntegrationError,
     DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind, DataLayerM6GraphRegistry,
-    DataLayerM6TrustPropagationQuery,
+    DataLayerM6TrustPropagationQuery, DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
+    DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
 };
 
 fn node_input(
@@ -103,7 +104,7 @@ fn spec_c02_cross_owner_graph_edge_registration_is_denied_fail_closed() {
     assert!(matches!(
         cross_owner,
         Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
-            reason_code: "m6_graph_cross_owner_edge_denied",
+            reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
         })
     ));
 }
@@ -254,7 +255,93 @@ fn spec_c05_trust_propagation_denies_requester_outside_owner_scope() {
     assert!(matches!(
         denied,
         Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
-            reason_code: "m6_graph_owner_scope_denied",
+            reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
         })
     ));
+}
+
+#[test]
+fn spec_c06_scoped_portability_projection_denies_requester_outside_owner_scope() {
+    let mut registry = DataLayerM6GraphRegistry::new();
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-a",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent A should register");
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-b",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent B should register");
+    registry
+        .register_edge(edge_input(
+            "kamn:did:owner:alpha",
+            "edge-alpha-1",
+            DataLayerM6GraphEdgeRelation::Trusts,
+            "agent-a",
+            "agent-b",
+            0.8,
+        ))
+        .expect("edge should register");
+
+    let denied = registry
+        .export_portable_edge_projection_scoped("kamn:did:owner:intruder", "kamn:did:owner:alpha");
+    assert!(matches!(
+        denied,
+        Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
+            reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
+        })
+    ));
+}
+
+#[test]
+fn spec_c07_scoped_portability_projection_matches_authorized_owner_projection() {
+    let mut registry = DataLayerM6GraphRegistry::new();
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-a",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent A should register");
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-b",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent B should register");
+    registry
+        .register_edge(edge_input(
+            "kamn:did:owner:alpha",
+            "edge-alpha-1",
+            DataLayerM6GraphEdgeRelation::Trusts,
+            "agent-a",
+            "agent-b",
+            0.8,
+        ))
+        .expect("edge should register");
+    registry
+        .register_edge(edge_input(
+            "kamn:did:owner:alpha",
+            "edge-alpha-2",
+            DataLayerM6GraphEdgeRelation::Messaged,
+            "agent-b",
+            "agent-a",
+            1.0,
+        ))
+        .expect("edge should register");
+
+    let owner_projection = registry
+        .export_portable_edge_projection("kamn:did:owner:alpha")
+        .expect("owner projection should succeed");
+    let scoped_projection = registry
+        .export_portable_edge_projection_scoped("kamn:did:owner:alpha", "kamn:did:owner:alpha")
+        .expect("scoped projection should succeed");
+
+    assert_eq!(scoped_projection, owner_projection);
 }
