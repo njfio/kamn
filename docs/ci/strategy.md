@@ -2911,6 +2911,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - Wrapper dispatch parity + legacy entrypoint compatibility harness stays on PR fast gate:
     - `bash scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh`
     - executes governance/compliance/manifest-backed/bridge/sdk/lightweight wrapper-matrix suites to preserve legacy entrypoint compatibility against shared dispatcher resolution.
+    - shared non-Kolme matrix coverage explicitly includes first-family canary wrappers plus governance wrappers in `scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`.
     - deterministic compatibility markers:
       - `legacy_entrypoint_compatibility_status=pass`
       - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
