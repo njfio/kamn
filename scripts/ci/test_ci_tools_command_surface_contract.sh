@@ -177,7 +177,7 @@ required_wave_loop_snippets=(
   'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh"'
   'run_non_kolme_lightweight_wave_wrapper_matrix_contracts()'
-  'for lightweight_wave in {10..18}; do'
+  'for lightweight_wave in {10..19}; do'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
 )
 

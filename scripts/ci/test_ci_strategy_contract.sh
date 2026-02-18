@@ -600,7 +600,7 @@ for ((wave = wave_start; wave <= wave_end; wave++)); do
   )
 done
 
-for lightweight_wave in {10..18}; do
+for lightweight_wave in {10..19}; do
   required_snippets+=(
     "Non-Kolme wave-${lightweight_wave} lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
     "test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"

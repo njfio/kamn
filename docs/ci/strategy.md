@@ -2991,6 +2991,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - Regression: #2741
   - Non-Kolme wave-19 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_wave19_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+    - aggregate CI helper range includes wave-19:
+      - `scripts/ci/test_ci_tools.sh` helper `run_non_kolme_lightweight_wave_wrapper_matrix_contracts` iterates `{10..19}`.
     - shared dispatcher:
       - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
     - wave-19 lightweight wrappers are symlinked to shared dispatcher:
