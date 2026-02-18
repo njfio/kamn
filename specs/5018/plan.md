@@ -1,26 +1,46 @@
 # Issue #5018 Plan
 
 - Issue: #5018
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add red tests for C-01..C-06 in a dedicated `kamn-core` test suite:
+   - DID auth/session issuance success/failure,
+   - ABAC allow/deny matrix,
+   - RLS policy contract rendering checks,
+   - append-only audit hash-chain verification + tamper detection.
+2. Implement `data_layer_m2_gateway_access` module with:
+   - deterministic DID session token service,
+   - ABAC message-scope authorizer,
+   - static RLS policy template generator,
+   - append-only access audit ledger.
+3. Re-export M2 types/functions from `crates/kamn-core/src/lib.rs`.
+4. Execute format/lint/scoped/full regression and finalize spec lifecycle markers.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m2_gateway_access.rs` (new)
+- `crates/kamn-core/src/lib.rs` (module + re-exports)
+- `crates/kamn-core/tests/data_layer_m2_gateway_access.rs` (new)
+- `specs/5018/spec.md`
+- `specs/5018/plan.md`
+- `specs/5018/tasks.md`
 
 ## Risks and Mitigations
-- Risk level: medium
+- Risk level: high
+- Risks:
+  - Authorization drift between ABAC checks and generated RLS predicates.
+  - Audit-chain design permitting silent mutation.
+  - Session issuance accepting malformed identities.
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep ABAC reason taxonomy explicit and test deny paths first.
+  - Enforce append-only ledger semantics with hash-chain verification and tamper regression tests.
+  - Validate DID and session TTL boundaries in constructor/auth methods.
+  - Keep implementation Rust-only to preserve shell ratio constraints.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive-only public API under `kamn_core::data_layer_m2_gateway_access::*`.
+- No dependency additions.
+- No protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive implementation.
