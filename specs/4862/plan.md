@@ -8,7 +8,18 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker_contract.sh`
+- `scripts/lib/exec_dispatch.py`
+- `scripts/lib/test_exec_dispatch_registry.sh`
+- `scripts/framework/lane_registry.json`
+- `scripts/framework/generate_lane_artifacts.py`
+- `scripts/framework/check_lane_registry_drift.sh`
+- `scripts/framework/test_lane_registry_generation.sh`
+- `scripts/framework/test_check_lane_registry_drift.sh`
+- `docs/ci/strategy.md`
+- `docs/architecture/adr-lane-registry-source-of-truth.md`
 
 ## Risks / Mitigations
 
