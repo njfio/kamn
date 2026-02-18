@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/message_proof_anchoring_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_message_proof_anchoring_contract_lane.sh",
+  "phase": "contract"
 }

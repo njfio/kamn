@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_live_node_validation_bundle_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_live_node_validation_bundle_lane.sh",
+  "phase": "run"
 }

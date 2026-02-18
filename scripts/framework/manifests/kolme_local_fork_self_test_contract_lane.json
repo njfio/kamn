@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/local_fork_self_test_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kolme_fork_self_test_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_e2e_integration_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_e2e_integration_lane.sh",
+  "phase": "run"
 }

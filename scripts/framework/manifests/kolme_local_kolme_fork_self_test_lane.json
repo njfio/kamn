@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_kolme_fork_self_test_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kolme_fork_self_test_lane.sh",
+  "phase": "run"
 }

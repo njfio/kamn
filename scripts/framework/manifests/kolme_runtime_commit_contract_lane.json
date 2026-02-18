@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/runtime_commit_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_runtime_commit_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_heavy_validation_matrix_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_heavy_validation_matrix.sh",
+  "phase": "run"
 }

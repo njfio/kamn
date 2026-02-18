@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/managed_signer_backend_slo_policy_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_managed_signer_backend_slo_policy_contract_lane.sh",
+  "phase": "contract"
 }

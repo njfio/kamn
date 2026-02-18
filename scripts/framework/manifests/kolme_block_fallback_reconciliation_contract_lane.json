@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_block_fallback_reconciliation_contract_lane.sh",
+  "phase": "contract"
 }

@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/snapshot_drift_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_snapshot_drift_contract_lane.sh",
+  "phase": "contract"
 }

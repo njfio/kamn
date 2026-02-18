@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_nonce_broadcast_parity_contract_lane.sh",
+  "phase": "contract"
 }

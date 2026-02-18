@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_version_compatibility_replay_deep_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_version_compatibility_replay_deep_lane.sh",
+  "phase": "run"
 }

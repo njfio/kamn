@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_local_native_api_parity_live_proof_contract_lane.sh",
+  "phase": "contract"
 }

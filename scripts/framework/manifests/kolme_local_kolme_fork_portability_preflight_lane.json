@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_kolme_fork_portability_preflight_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kolme_fork_portability_preflight_lane.sh",
+  "phase": "run"
 }

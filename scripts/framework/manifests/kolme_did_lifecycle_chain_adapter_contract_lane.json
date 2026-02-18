@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/did_lifecycle_chain_adapter_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_did_lifecycle_chain_adapter_contract_lane.sh",
+  "phase": "contract"
 }
