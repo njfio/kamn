@@ -44,6 +44,8 @@ pub mod data_layer_m0;
 pub mod data_layer_m1;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
 pub mod data_layer_m2_gateway_access;
+/// M3 search contracts for owner-scoped blind-index and metadata query APIs.
+pub mod data_layer_m3_blind_index_search;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -249,6 +251,12 @@ pub use data_layer_m2_gateway_access::{
     DataLayerM2GatewayError, DataLayerM2MessageScope, DataLayerM2RlsPolicy,
     DataLayerM2SessionToken, DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS, DATA_LAYER_M2_HASH_ALGORITHM,
     DATA_LAYER_M2_REQUESTER_DID_SETTING,
+};
+pub use data_layer_m3_blind_index_search::{
+    data_layer_m3_compute_blind_index, data_layer_m3_normalize_blind_index_value,
+    DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord,
+    DataLayerM3MetadataQuery, DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
