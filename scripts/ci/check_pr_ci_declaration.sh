@@ -117,6 +117,16 @@ require_nonempty_field() {
   return 0
 }
 
+is_integer_value() {
+  local value="$1"
+  [[ "$value" =~ ^[+-]?[0-9]+$ ]]
+}
+
+is_decimal_value() {
+  local value="$1"
+  [[ "$value" =~ ^[+-]?([0-9]+([.][0-9]+)?|[.][0-9]+)$ ]]
+}
+
 status=0
 
 if [ "$ci_sensitive" = true ]; then
@@ -156,9 +166,37 @@ if [ "$shell_surface_sensitive" = true ]; then
     echo "Update .github/pull_request_template.md shell-surface declaration section in the PR description." >&2
     status=1
   else
-    require_nonempty_field "shell_loc_delta_actual:" || status=1
-    require_nonempty_field "rust_loc_delta_actual:" || status=1
-    require_nonempty_field "shell_to_rust_ratio_delta_actual:" || status=1
+    shell_ratio_target=""
+
+    if require_nonempty_field "shell_loc_delta_actual:"; then
+      shell_loc_delta_actual="$(extract_field_value "shell_loc_delta_actual:")"
+      if ! is_integer_value "$shell_loc_delta_actual"; then
+        echo "Invalid shell_loc_delta_actual: $shell_loc_delta_actual (expected signed integer)" >&2
+        status=1
+      fi
+    else
+      status=1
+    fi
+
+    if require_nonempty_field "rust_loc_delta_actual:"; then
+      rust_loc_delta_actual="$(extract_field_value "rust_loc_delta_actual:")"
+      if ! is_integer_value "$rust_loc_delta_actual"; then
+        echo "Invalid rust_loc_delta_actual: $rust_loc_delta_actual (expected signed integer)" >&2
+        status=1
+      fi
+    else
+      status=1
+    fi
+
+    if require_nonempty_field "shell_to_rust_ratio_delta_actual:"; then
+      shell_ratio_delta_actual="$(extract_field_value "shell_to_rust_ratio_delta_actual:")"
+      if ! is_decimal_value "$shell_ratio_delta_actual"; then
+        echo "Invalid shell_to_rust_ratio_delta_actual: $shell_ratio_delta_actual (expected signed decimal)" >&2
+        status=1
+      fi
+    else
+      status=1
+    fi
 
     if require_nonempty_field "shell_surface_ratio_target_status:"; then
       shell_ratio_target="$(extract_field_value "shell_surface_ratio_target_status:")"
@@ -173,7 +211,19 @@ if [ "$shell_surface_sensitive" = true ]; then
       status=1
     fi
 
-    require_nonempty_field "shell_surface_mitigation_issue:" || status=1
+    if require_nonempty_field "shell_surface_mitigation_issue:"; then
+      shell_surface_mitigation_issue="$(extract_field_value "shell_surface_mitigation_issue:")"
+      if [ "$shell_surface_mitigation_issue" != "None" ] && [[ ! "$shell_surface_mitigation_issue" =~ ^#[0-9]+$ ]]; then
+        echo "Invalid shell_surface_mitigation_issue: $shell_surface_mitigation_issue (expected None or #<issue-id>)" >&2
+        status=1
+      fi
+      if [ "$shell_ratio_target" = "regressed_with_waiver" ] && [[ ! "$shell_surface_mitigation_issue" =~ ^#[0-9]+$ ]]; then
+        echo "shell_surface_ratio_target_status=regressed_with_waiver requires shell_surface_mitigation_issue to link #<issue-id>" >&2
+        status=1
+      fi
+    else
+      status=1
+    fi
   fi
 fi
 
