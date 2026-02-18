@@ -62,6 +62,8 @@ pub mod data_layer_m7_timeseries_telemetry;
 pub mod data_layer_m8_compliance_lifecycle;
 /// M9 realtime contracts for dispatch acknowledgements, scoped presence, and backpressure markers.
 pub mod data_layer_m9_realtime_delivery;
+/// PRD critical-scenario conformance contracts for shell-neutral validation (`62..71`).
+pub mod data_layer_prd_critical_scenario_conformance;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -343,6 +345,17 @@ pub use data_layer_m9_realtime_delivery::{
     DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS, DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES,
     DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+};
+pub use data_layer_prd_critical_scenario_conformance::{
+    DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
+    DataLayerPrdCriticalScenarioConformanceMatrix, DataLayerPrdCriticalScenarioConformanceReport,
+    DataLayerPrdCriticalScenarioMode, DataLayerPrdCriticalScenarioResultInput,
+    DataLayerPrdCriticalScenarioResultRecord,
+    DATA_LAYER_PRD_CRITICAL_SCENARIO_CONFORMANT_REASON_CODE,
+    DATA_LAYER_PRD_CRITICAL_SCENARIO_FAILED_REASON_CODE,
+    DATA_LAYER_PRD_CRITICAL_SCENARIO_INVALID_MUTATION_REASON_CODE,
+    DATA_LAYER_PRD_CRITICAL_SCENARIO_MISSING_REASON_CODE,
+    DATA_LAYER_PRD_CRITICAL_SCENARIO_SHELL_POLICY_REASON_CODE,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
