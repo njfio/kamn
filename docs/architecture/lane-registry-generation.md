@@ -8,6 +8,8 @@ Issue chain: `#4816` -> `#4829` -> `#4830`.
 - framework manifest payloads under `scripts/framework/manifests/*.json`
 - wrapper symlink wiring for manifest-backed lanes
 
+Decision record: `docs/architecture/adr-lane-registry-source-of-truth.md`
+
 The generator `scripts/framework/generate_lane_artifacts.py` supports:
 - `--mode check`: validate repository artifacts against registry entries
 - `--mode render`: render manifests/symlinks into an output root
