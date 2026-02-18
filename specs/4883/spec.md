@@ -3,7 +3,7 @@
 - Title: Subtask: retire manual manifest maintenance path and enforce registry drift contracts
 - Parent: - Parent task: #4869
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

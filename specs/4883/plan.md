@@ -8,7 +8,12 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/lane_registry.json`
+- `scripts/framework/check_lane_registry_drift.sh`
+- `scripts/framework/test_check_lane_registry_drift.sh`
+- `scripts/framework/test_lane_registry_generation.sh`
+- `scripts/framework/test_contract_framework.sh`
+- `docs/architecture/lane-registry-generation.md`
 
 ## Risks / Mitigations
 
