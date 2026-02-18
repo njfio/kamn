@@ -266,10 +266,13 @@ pub use data_layer_m10_partition_archival::{
     data_layer_m10_format_partition_name, DataLayerM10ArchivalIndexEntry,
     DataLayerM10ArchiveDueRequest, DataLayerM10PartitionLifecycleError,
     DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecord,
-    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
-    DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD, DATA_LAYER_M10_ARCHIVE_REASON_CODE,
-    DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
-    DATA_LAYER_M10_REATTACH_REASON_CODE,
+    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus, DataLayerM10RecoveryDecision,
+    DataLayerM10RecoveryReadinessReport, DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+    DATA_LAYER_M10_ARCHIVE_REASON_CODE, DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE,
+    DATA_LAYER_M10_PARTITION_PREFIX, DATA_LAYER_M10_REATTACH_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
+    DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
 };
 pub use data_layer_m11_hardening_readiness::{
     DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,
