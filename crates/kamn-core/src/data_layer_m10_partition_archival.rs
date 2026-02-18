@@ -17,6 +17,14 @@ pub const DATA_LAYER_M10_ARCHIVE_REASON_CODE: &str = "m10_partition_archived";
 pub const DATA_LAYER_M10_REATTACH_REASON_CODE: &str = "m10_partition_reattached";
 /// Stable reason marker for invalid lifecycle transitions.
 pub const DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE: &str = "m10_partition_transition_invalid";
+/// Stable reason marker when partition recoverability is ready for historical replay.
+pub const DATA_LAYER_M10_RECOVERY_READY_REASON_CODE: &str = "m10_partition_recovery_ready";
+/// Stable reason marker when partition status is not eligible for historical recovery.
+pub const DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE: &str =
+    "m10_partition_recovery_status_ineligible";
+/// Stable reason marker when historical partition metadata is incomplete.
+pub const DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE: &str =
+    "m10_partition_recovery_metadata_incomplete";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +35,15 @@ pub enum DataLayerM10PartitionStatus {
     Archived,
     /// Archived partition reattached for historical query access.
     Reattached,
+}
+
+/// Recoverability decision for one partition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM10RecoveryDecision {
+    /// Partition has complete archival metadata and can be recovered.
+    Ready,
+    /// Partition cannot be recovered under current state/metadata.
+    Blocked,
 }
 
 /// Partition registration input.
@@ -85,6 +102,27 @@ pub struct DataLayerM10ArchivalIndexEntry {
     pub checksum_marker: String,
     /// Lifecycle status after archive transition.
     pub lifecycle_status: DataLayerM10PartitionStatus,
+}
+
+/// Recoverability readiness projection for one partition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10RecoveryReadinessReport {
+    /// Partition month identifier as `YYYYMM`.
+    pub partition_month_id: u32,
+    /// Canonical partition name `messages_YYYY_MM`.
+    pub partition_name: String,
+    /// Recoverability decision.
+    pub decision: DataLayerM10RecoveryDecision,
+    /// Stable reason marker for the decision.
+    pub reason_code: &'static str,
+    /// Current lifecycle status.
+    pub lifecycle_status: DataLayerM10PartitionStatus,
+    /// Archived object URI.
+    pub archived_object_uri: Option<String>,
+    /// Archive format marker.
+    pub archive_format_marker: Option<&'static str>,
+    /// Deterministic checksum marker.
+    pub checksum_marker: Option<String>,
 }
 
 /// M10 partition lifecycle registry.
@@ -234,6 +272,38 @@ impl DataLayerM10PartitionLifecycleRegistry {
         record.last_reason_code = Some(DATA_LAYER_M10_REATTACH_REASON_CODE);
         Ok(record.clone())
     }
+
+    /// Evaluates recoverability readiness for one partition.
+    pub fn evaluate_partition_recovery_readiness(
+        &self,
+        partition_name: &str,
+    ) -> Result<DataLayerM10RecoveryReadinessReport, DataLayerM10PartitionLifecycleError> {
+        validate_non_empty(partition_name, "partition_name")?;
+        let record = self
+            .partitions
+            .values()
+            .find(|entry| entry.partition_name == partition_name)
+            .ok_or_else(|| {
+                DataLayerM10PartitionLifecycleError::PartitionNotFound(partition_name.to_owned())
+            })?;
+        Ok(project_partition_recovery_readiness(record))
+    }
+
+    /// Lists recoverability readiness for historical partitions in deterministic order.
+    pub fn list_historical_recovery_readiness(&self) -> Vec<DataLayerM10RecoveryReadinessReport> {
+        let mut reports: Vec<DataLayerM10RecoveryReadinessReport> = self
+            .partitions
+            .values()
+            .filter(|record| record.lifecycle_status != DataLayerM10PartitionStatus::Active)
+            .map(project_partition_recovery_readiness)
+            .collect();
+        reports.sort_by(|left, right| {
+            left.partition_month_id
+                .cmp(&right.partition_month_id)
+                .then(left.partition_name.cmp(&right.partition_name))
+        });
+        reports
+    }
 }
 
 /// Formats partition month id (`YYYYMM`) as `messages_YYYY_MM`.
@@ -351,4 +421,49 @@ fn month_distance(
 
 fn deterministic_checksum_marker(partition_name: &str, partition_month_id: u32) -> String {
     format!("sha256:{partition_name}:{partition_month_id}")
+}
+
+fn project_partition_recovery_readiness(
+    record: &DataLayerM10PartitionRecord,
+) -> DataLayerM10RecoveryReadinessReport {
+    let metadata_complete = record
+        .archived_object_uri
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+        && record.archive_format_marker == Some(DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD)
+        && record
+            .checksum_marker
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty());
+
+    let (decision, reason_code) = match record.lifecycle_status {
+        DataLayerM10PartitionStatus::Active => (
+            DataLayerM10RecoveryDecision::Blocked,
+            DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
+        ),
+        DataLayerM10PartitionStatus::Archived | DataLayerM10PartitionStatus::Reattached => {
+            if metadata_complete {
+                (
+                    DataLayerM10RecoveryDecision::Ready,
+                    DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
+                )
+            } else {
+                (
+                    DataLayerM10RecoveryDecision::Blocked,
+                    DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
+                )
+            }
+        }
+    };
+
+    DataLayerM10RecoveryReadinessReport {
+        partition_month_id: record.partition_month_id,
+        partition_name: record.partition_name.clone(),
+        decision,
+        reason_code,
+        lifecycle_status: record.lifecycle_status,
+        archived_object_uri: record.archived_object_uri.clone(),
+        archive_format_marker: record.archive_format_marker,
+        checksum_marker: record.checksum_marker.clone(),
+    }
 }
