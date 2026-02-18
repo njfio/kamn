@@ -4,7 +4,7 @@
 //! owner-scoped message retention windows, legal-hold precedence, and
 //! irreversible CEK shredding markers while preserving append-only integrity.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// Ephemeral retention window (24 hours).
@@ -391,6 +391,11 @@ pub enum DataLayerM8ComplianceError {
     EmptyWrappedKeys,
     /// Wrapped key input failed validation.
     InvalidWrappedKey(&'static str),
+    /// Wrapped key set contains duplicate recipient identities.
+    DuplicateWrappedKeyRecipient {
+        /// Duplicate recipient DID.
+        recipient_did: String,
+    },
     /// Owner scope was not found.
     OwnerNotFound {
         /// Missing owner DID.
@@ -434,6 +439,9 @@ impl fmt::Display for DataLayerM8ComplianceError {
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
             Self::EmptyWrappedKeys => write!(f, "wrapped key set must not be empty"),
             Self::InvalidWrappedKey(field) => write!(f, "invalid wrapped key field: {field}"),
+            Self::DuplicateWrappedKeyRecipient { recipient_did } => {
+                write!(f, "duplicate wrapped key recipient: {recipient_did}")
+            }
             Self::OwnerNotFound { owner_did } => write!(f, "owner not found: {owner_did}"),
             Self::MessageNotFound {
                 owner_did,
@@ -486,8 +494,14 @@ fn validate_wrapped_keys(
     if wrapped_keys.is_empty() {
         return Err(DataLayerM8ComplianceError::EmptyWrappedKeys);
     }
+    let mut seen_recipients = BTreeSet::new();
     for key in wrapped_keys {
         validate_kamn_did(key.recipient_did.as_str())?;
+        if !seen_recipients.insert(key.recipient_did.as_str()) {
+            return Err(DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient {
+                recipient_did: key.recipient_did.clone(),
+            });
+        }
         if key.wrapped_cek.trim().is_empty() {
             return Err(DataLayerM8ComplianceError::InvalidWrappedKey("wrapped_cek"));
         }
