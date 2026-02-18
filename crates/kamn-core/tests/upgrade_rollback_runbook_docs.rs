@@ -123,7 +123,7 @@ fn runbook_contains_deployment_slo_rollback_contract_lane() {
     assert!(RUNBOOK.contains("deployment_slo_rollback_lane_contract.py"));
     assert!(RUNBOOK.contains("run_deployment_slo_rollback_lane.sh"));
     assert!(RUNBOOK.contains("check_deployment_slo_rollback_policy.sh"));
-    assert!(RUNBOOK.contains("run_deployment_slo_rollback_contract_lane.sh"));
+    assert!(RUNBOOK.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract"));
     assert!(RUNBOOK.contains("kamn.deploy.slo-rollback-report.v1"));
     assert!(RUNBOOK.contains("KAMN_DEPLOYMENT_SLO_ROLLBACK_MAX_SECONDS"));
     assert!(RUNBOOK.contains("KAMN_DEPLOYMENT_SLO_ROLLBACK_CONTRACT_MAX_SECONDS"));

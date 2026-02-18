@@ -225,7 +225,7 @@ fn deploy_compat_contains_kolme_upgrade_compatibility_taxonomy_runbook_parity_ma
     assert!(DEPLOY_COMPAT.contains(
         "python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json"
     ));
-    assert!(DEPLOY_COMPAT.contains("bash scripts/kolme/run_version_compatibility_contract_lane.sh"));
+    assert!(DEPLOY_COMPAT.contains("bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_version_compatibility_contract_lane.json --phase contract"));
     assert!(DEPLOY_COMPAT
         .contains("bash scripts/kolme/test_run_version_compatibility_contract_lane.sh"));
     assert!(DEPLOY_COMPAT.contains("Regression: #4182"));
@@ -603,7 +603,7 @@ fn plan_contains_local_live_api_conformance_harness() {
 #[test]
 fn plan_contains_staged_rehearsal_signoff_artifact_contract() {
     assert!(PLAN.contains("## Staged Rehearsal Signoff Artifact Contract (Issue #3241)"));
-    assert!(PLAN.contains("run_staging_rehearsal_contract_lane.sh"));
+    assert!(PLAN.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract"));
     assert!(PLAN.contains("check_staging_rehearsal_policy.sh"));
     assert!(PLAN.contains("kamn.release.staged-rehearsal-signoff.v1"));
     assert!(PLAN.contains("staged_rehearsal_signoff_status=verified|fail-closed"));

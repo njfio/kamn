@@ -62,7 +62,7 @@ fn rustdoc_publishing_doc_declares_bounded_command_surface() {
     assert!(RUSTDOC_PUBLISHING_DOC
         .contains("RUSTDOCFLAGS=\"-D warnings\" cargo doc -p kamn-core --no-deps"));
     assert!(RUSTDOC_PUBLISHING_DOC.contains("target/doc"));
-    assert!(RUSTDOC_PUBLISHING_DOC.contains("run_kamn_core_rustdoc_artifact_contract_lane.sh"));
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract"));
     assert!(RUSTDOC_PUBLISHING_DOC.contains("check_kamn_core_rustdoc_artifact_policy.sh"));
     assert!(RUSTDOC_PUBLISHING_DOC.contains("kamn.ci.kamn-core-rustdoc-artifact-report.v1"));
     assert!(RUSTDOC_PUBLISHING_DOC

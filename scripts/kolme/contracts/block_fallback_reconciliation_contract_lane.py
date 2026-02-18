@@ -59,7 +59,11 @@ def main() -> int:
     devnet_doc_text = DEVNET_DOC.read_text(encoding="utf-8")
     roadmap_doc_text = ROADMAP_DOC.read_text(encoding="utf-8")
 
-    if "run_block_fallback_reconciliation_contract_lane.sh" not in runtime_network_doc_text:
+    if (
+        "run_block_fallback_reconciliation_contract_lane.sh" not in runtime_network_doc_text
+        and "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract"
+        not in runtime_network_doc_text
+    ):
         print(
             "expected runtime network documentation to reference block fallback reconciliation lane command",
             file=sys.stderr,

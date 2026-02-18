@@ -3,9 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INVENTORY="$ROOT_DIR/fixtures/ci/superseded_script_inventory_baseline.json"
+DELETION_MANIFEST="$ROOT_DIR/fixtures/ci/superseded_script_deletion_manifest.json"
 
 if [ ! -f "$INVENTORY" ]; then
   echo "expected superseded script inventory baseline fixture: $INVENTORY" >&2
+  exit 1
+fi
+
+if [ ! -f "$DELETION_MANIFEST" ]; then
+  echo "expected superseded script deletion manifest fixture: $DELETION_MANIFEST" >&2
   exit 1
 fi
 
@@ -28,10 +34,33 @@ if [ "${#WRAPPERS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-for wrapper in "${WRAPPERS[@]}"; do
+mapfile -t ENFORCED_WRAPPERS < <(
+  python3 - "$DELETION_MANIFEST" "$ROOT_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+root = Path(sys.argv[2])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+for entry in payload.get("deletions", []):
+    path = entry.get("script_path", "")
+    if not (isinstance(path, str) and path.startswith("scripts/kolme/") and path.endswith(".sh")):
+        continue
+    if not (root / path).exists():
+        print(path)
+PY
+)
+
+if [ "${#ENFORCED_WRAPPERS[@]}" -eq 0 ]; then
+  echo "expected at least one enforced Kolme wrapper deletion entry in manifest" >&2
+  exit 1
+fi
+
+for wrapper in "${ENFORCED_WRAPPERS[@]}"; do
   wrapper_path="$ROOT_DIR/$wrapper"
   if [ -e "$wrapper_path" ]; then
-    echo "expected superseded wrapper script to be removed: $wrapper" >&2
+    echo "expected enforced superseded wrapper script to be removed: $wrapper" >&2
     exit 1
   fi
 done

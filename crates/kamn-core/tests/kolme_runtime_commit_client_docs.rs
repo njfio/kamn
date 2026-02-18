@@ -57,13 +57,13 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("runtime_commit_managed_external_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_invalid"));
-    assert!(DOC.contains("scripts/kolme/run_runtime_commit_contract_lane.sh"));
+    assert!(DOC.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_contract_lane.json --phase contract"));
     assert!(DOC.contains("run_local_kamn_live_runtime_integration_lane.sh --mode run"));
     assert!(DOC.contains("--runtime-commit-finality-command"));
     assert!(DOC.contains("--runtime-commit-live-policy-report"));
     assert!(DOC.contains("run_local_kolme_fork_process_lifecycle_lane.sh --mode run"));
     assert!(DOC.contains("--integration-runtime-commit-finality-command"));
-    assert!(DOC.contains("run_local_kolme_fork_real_process_contract_lane.sh --mode run"));
+    assert!(DOC.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract --mode run"));
     assert!(DOC.contains("--lifecycle-mode run"));
     assert!(DOC.contains("runtime_commit_decomposition_parity_matrix.json"));
     assert!(DOC.contains("check_runtime_commit_decomposition_parity_matrix.py"));

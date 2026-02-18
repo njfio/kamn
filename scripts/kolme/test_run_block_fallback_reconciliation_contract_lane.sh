@@ -2,21 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-LANE_SCRIPT="$ROOT_DIR/scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"
 RUNTIME_NETWORK_DOC="$ROOT_DIR/docs/foundation/runtime-network.md"
 DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
-
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected block fallback reconciliation contract lane script to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/run_manifest_lane.sh" "$LANE_SCRIPT"; then
-  echo "expected block fallback reconciliation contract lane to dispatch through manifest wrapper" >&2
-  exit 1
-fi
 
 if [ ! -f "$MANIFEST" ]; then
   echo "expected block fallback reconciliation contract lane manifest to exist" >&2
@@ -43,7 +32,8 @@ if [ ! -f "$RUNTIME_NETWORK_DOC" ] || [ ! -f "$DEVNET_DOC" ] || [ ! -f "$ROADMAP
   exit 1
 fi
 
-if ! grep -q "run_block_fallback_reconciliation_contract_lane.sh" "$RUNTIME_NETWORK_DOC"; then
+if ! grep -q "run_block_fallback_reconciliation_contract_lane.sh" "$RUNTIME_NETWORK_DOC" \
+  && ! grep -q "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract" "$RUNTIME_NETWORK_DOC"; then
   echo "expected runtime network documentation to reference block fallback reconciliation lane command" >&2
   exit 1
 fi
@@ -68,7 +58,11 @@ if ! grep -q 'Regression: #1464' "$ROADMAP_DOC"; then
   exit 1
 fi
 
-KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75 bash "$LANE_SCRIPT" >/tmp/kolme-block-fallback-contract-lane.log
+KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75 \
+  bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
+    --manifest "$MANIFEST" \
+    --phase contract \
+    >/tmp/kolme-block-fallback-contract-lane.log
 
 if ! grep -q "Kolme block fallback reconciliation contract lane tests passed." /tmp/kolme-block-fallback-contract-lane.log; then
   echo "expected block fallback reconciliation contract lane success output" >&2

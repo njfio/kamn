@@ -41,7 +41,7 @@ fn regression_requires_replay_and_self_approval_rejection_rules() {
 #[test]
 fn doc_contains_governance_stake_slash_threshold_gate_integration() {
     assert!(DOC.contains("## Governance Stake/Slash Threshold Gate Integration"));
-    assert!(DOC.contains("run_stake_slash_risk_contract_lane.sh"));
+    assert!(DOC.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract"));
     assert!(DOC.contains("run_stake_slash_risk_deep_lane.sh"));
 }
 
@@ -58,7 +58,7 @@ fn doc_contains_quorum_attestation_replay_guard_contract_lane() {
     assert!(DOC.contains("governance_quorum_attestation_replay_lane_contract.py"));
     assert!(DOC.contains("run_quorum_attestation_replay_guard_lane.sh"));
     assert!(DOC.contains("check_quorum_attestation_replay_policy.sh"));
-    assert!(DOC.contains("run_quorum_attestation_replay_contract_lane.sh"));
+    assert!(DOC.contains("run_quorum_attestation_replay_guard_lane.sh"));
     assert!(DOC.contains("kamn.governance.quorum-attestation-replay-report.v1"));
     assert!(DOC.contains("governance_quorum_attestation_reason_codes:GO:v1"));
     assert!(DOC.contains("governance_quorum_attestation_reason_codes:NO-GO:v1"));

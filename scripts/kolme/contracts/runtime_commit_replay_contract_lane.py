@@ -252,7 +252,16 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if "run_runtime_commit_replay_contract_lane.sh" not in roadmap_doc_text:
+        replay_contract_lane_markers = [
+            "run_runtime_commit_replay_contract_lane.sh",
+            "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json --phase contract",
+        ]
+        adapter_contract_lane_markers = [
+            "run_runtime_commit_adapter_contract_lane.sh",
+            "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract",
+        ]
+
+        if not any(marker in roadmap_doc_text for marker in replay_contract_lane_markers):
             print(
                 "expected Kolme integration roadmap to reference runtime commit replay contract lane command",
                 file=sys.stderr,
@@ -276,7 +285,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if "run_runtime_commit_adapter_contract_lane.sh" not in roadmap_doc_text:
+        if not any(marker in roadmap_doc_text for marker in adapter_contract_lane_markers):
             print(
                 "expected Kolme integration roadmap to reference runtime commit adapter contract lane command",
                 file=sys.stderr,
@@ -288,7 +297,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        if "run_runtime_commit_adapter_contract_lane.sh" not in gonogo_doc_text:
+        if not any(marker in gonogo_doc_text for marker in adapter_contract_lane_markers):
             print(
                 "expected release go/no-go doc to reference runtime commit adapter contract lane command",
                 file=sys.stderr,
