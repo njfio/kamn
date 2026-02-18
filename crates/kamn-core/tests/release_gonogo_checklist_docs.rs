@@ -113,6 +113,37 @@ fn checklist_contains_rotation_preflight_quorum_parity_and_custody_reason_mappin
 }
 
 #[test]
+fn checklist_contains_deployment_preflight_marker_completeness_schema_drift_gate() {
+    assert!(CHECKLIST.contains(
+        "## Deployment Preflight Marker Completeness and Schema Drift Rejection Gate (Issues #4146, #4150)"
+    ));
+    assert!(CHECKLIST.contains("test_check_local_kolme_live_deployment_preflight_policy.sh"));
+    assert!(CHECKLIST.contains(
+        "check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json"
+    ));
+    assert!(CHECKLIST.contains("deployment_preflight_marker_contract_status=verified"));
+    assert!(CHECKLIST.contains(
+        "deployment_preflight_marker_contract_version=kamn.kolme.local-live-deployment-preflight-marker-contract.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "deployment_preflight_required_markers_csv=rotation_preflight_reason_taxonomy_version,rotation_preflight_reason_codes_csv,rotation_preflight_reason_codes_value,custody_reason_taxonomy_version,custody_reason_codes_csv,custody_reason_codes_value"
+    ));
+    assert!(CHECKLIST.contains("deployment_preflight_schema_parity_status=verified"));
+    assert!(CHECKLIST.contains(
+        "deployment_preflight_schema_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "deployment_preflight_schema_reason_codes_csv=deployment_preflight_required_marker_missing,deployment_preflight_schema_parity_mismatch,deployment_preflight_reason_taxonomy_version_mismatch,deployment_preflight_reason_codes_csv_mismatch,deployment_preflight_reason_codes_value_mismatch"
+    ));
+    assert!(CHECKLIST.contains("deployment_preflight_schema_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains("deployment_preflight_required_marker_missing:<marker>"));
+    assert!(CHECKLIST.contains("deployment_preflight_schema_parity_mismatch:<field>"));
+    assert!(CHECKLIST.contains("deployment_preflight_reason_taxonomy_version_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #4146"));
+    assert!(CHECKLIST.contains("Regression: #4150"));
+}
+
+#[test]
 fn checklist_contains_dry_run_workflow() {
     assert!(CHECKLIST.contains("## Deterministic Dry-Run Workflow"));
     assert!(CHECKLIST.contains("1. Create release candidate tag"));

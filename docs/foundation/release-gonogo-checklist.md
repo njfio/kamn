@@ -614,6 +614,28 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Regression policy:
   - quorum marker parity drift or custody reason mapping drift forces `NO-GO` (`Regression: #4169`, `Regression: #4170`).
 
+## Deployment Preflight Marker Completeness and Schema Drift Rejection Gate (Issues #4146, #4150)
+- Validation command:
+  - `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Required deterministic marker-completeness fields:
+  - `deployment_preflight_marker_contract_status=verified`
+  - `deployment_preflight_marker_contract_version=kamn.kolme.local-live-deployment-preflight-marker-contract.v1`
+  - `deployment_preflight_required_markers_csv=rotation_preflight_reason_taxonomy_version,rotation_preflight_reason_codes_csv,rotation_preflight_reason_codes_value,custody_reason_taxonomy_version,custody_reason_codes_csv,custody_reason_codes_value`
+- Required deterministic schema-parity fields:
+  - `deployment_preflight_schema_parity_status=verified`
+  - `deployment_preflight_schema_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1`
+  - `deployment_preflight_schema_reason_codes_csv=deployment_preflight_required_marker_missing,deployment_preflight_schema_parity_mismatch,deployment_preflight_reason_taxonomy_version_mismatch,deployment_preflight_reason_codes_csv_mismatch,deployment_preflight_reason_codes_value_mismatch`
+  - `deployment_preflight_schema_reason_code=none|<reason>`
+- Required fail-closed drift reasons:
+  - `deployment_preflight_required_marker_missing:<marker>`
+  - `deployment_preflight_schema_parity_mismatch:<field>`
+  - `deployment_preflight_reason_taxonomy_version_mismatch`
+- Regression policy:
+  - missing required deployment-preflight markers force `NO-GO` (`Regression: #4150`).
+  - deployment-preflight schema parity drift forces `NO-GO` (`Regression: #4146`).
+
 ## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)
 Run-mode promotion requires deterministic local live-node rehearsal lineage evidence before GO decisions are accepted.
 
