@@ -3,7 +3,7 @@
 - Title: Subtask: update AGENTS and issue templates with mandatory shell-surface DoR/DoD fields
 - Parent: - Parent task: #4871
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
