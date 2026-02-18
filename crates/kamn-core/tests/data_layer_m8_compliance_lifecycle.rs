@@ -249,3 +249,32 @@ fn spec_c05_double_shred_is_rejected_with_stable_error() {
         if message_id == "m8-double-shred"
     ));
 }
+
+#[test]
+fn spec_c06_duplicate_wrapped_key_recipient_is_rejected_fail_closed() {
+    let mut registry = DataLayerM8ComplianceRegistry::new();
+    let mut input = message_input(
+        "kamn:did:owner:alpha",
+        "m8-duplicate-recipient",
+        1_708_560_100,
+        DataLayerM8RetentionClass::Standard,
+        0,
+    );
+    input.wrapped_keys = vec![
+        DataLayerM8WrappedCekInput {
+            recipient_did: "kamn:did:agent:recipient-a".to_owned(),
+            wrapped_cek: "wrapped:m8-duplicate-recipient:a".to_owned(),
+        },
+        DataLayerM8WrappedCekInput {
+            recipient_did: "kamn:did:agent:recipient-a".to_owned(),
+            wrapped_cek: "wrapped:m8-duplicate-recipient:b".to_owned(),
+        },
+    ];
+
+    let duplicate = registry.register_message(input);
+    assert!(matches!(
+        duplicate,
+        Err(DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { recipient_did })
+        if recipient_did == "kamn:did:agent:recipient-a"
+    ));
+}
