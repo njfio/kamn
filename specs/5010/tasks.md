@@ -1,12 +1,14 @@
 # Issue #5010 Tasks
 
 - Issue: #5010
-- Status: Draft
+- Status: Done
 
 ## Ordered Tasks
-- [ ] T1 (Red): add failing tests derived from spec conformance cases.
-- [ ] T2 (Green): implement minimum code path to satisfy ACs.
-- [ ] T3 (Refactor): improve structure/readability while preserving behavior.
-- [ ] T4 (Regression): run scoped functional/integration/regression checks.
-- [ ] T5 (Governance): if shell/python/workflow/template changed, run shell budget + ratio guardrails and report deltas.
-- [ ] T6 (Verify): finalize AC mapping and set lifecycle status markers.
+- [x] T1 (Red): define M7 red conformance tests for ingest indexing, aggregate rollups,
+      billing projections, and owner-scope deny paths in child task `#5023`.
+- [x] T2 (Green): implement M7 telemetry contracts and exports in child task `#5023`.
+- [x] T3 (Refactor): tighten deterministic aggregate/billing marker behavior in child task `#5023`.
+- [x] T4 (Regression): run `cargo fmt --check`, `cargo clippy -p kamn-core -- -D warnings`,
+      `cargo test -p kamn-core --test data_layer_m7_timeseries_telemetry`, and `cargo test -p kamn-core`.
+- [x] T5 (Governance): confirm shell/workflow/python/template delta is zero for child delivery (`shell_loc_delta_actual = 0`).
+- [x] T6 (Verify): set story lifecycle artifacts to `spec=Implemented`, `plan=Implemented`, `tasks=Done`, and close story issue with linked child evidence.
