@@ -1,5 +1,1 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-exec bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" --manifest "$ROOT_DIR/scripts/framework/manifests/governance_simulation_contract_lane.json" --phase contract "$@"
+../framework/run_non_kolme_contract_lane_dispatch.sh

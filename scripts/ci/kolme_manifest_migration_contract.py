@@ -59,7 +59,9 @@ def _load_deleted_scripts(root_dir: Path) -> set[str]:
         script_path = entry.get("script_path")
         if not isinstance(script_path, str) or not script_path:
             raise SystemExit(f"expected deletion manifest script_path string at index {index}")
-        deleted.add(script_path)
+        # Transitional waves keep some deletion-manifest entries scheduled but not yet removed.
+        if not (root_dir / script_path).exists():
+            deleted.add(script_path)
     return deleted
 
 

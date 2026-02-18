@@ -46,7 +46,11 @@ def main() -> int:
         return result.returncode
 
     doc_text = RUNTIME_NETWORK_DOC.read_text(encoding="utf-8")
-    if "run_notifications_consumer_contract_lane.sh" not in doc_text:
+    if (
+        "run_notifications_consumer_contract_lane.sh" not in doc_text
+        and "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract"
+        not in doc_text
+    ):
         print(
             "expected runtime network documentation to reference notifications consumer lane command",
             file=sys.stderr,

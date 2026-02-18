@@ -687,7 +687,6 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`
-  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
   - `bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=60` (default)
@@ -711,7 +710,6 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
-  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
   - `bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75` (default)

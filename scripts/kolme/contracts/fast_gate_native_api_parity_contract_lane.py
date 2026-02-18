@@ -11,12 +11,52 @@ import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
-NONCE_BROADCAST = ROOT_DIR / "scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh"
-NOTIFICATIONS = ROOT_DIR / "scripts/kolme/run_notifications_consumer_contract_lane.sh"
-BLOCK_FALLBACK = ROOT_DIR / "scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"
+MANIFEST_RUNNER = ROOT_DIR / "scripts/framework/run_manifest_lane.sh"
+NONCE_BROADCAST_MANIFEST = (
+    ROOT_DIR / "scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json"
+)
+NOTIFICATIONS_MANIFEST = (
+    ROOT_DIR / "scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json"
+)
+BLOCK_FALLBACK_MANIFEST = (
+    ROOT_DIR / "scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
+)
 CHECKER = ROOT_DIR / "scripts/kolme/check_fast_gate_native_api_parity_policy.py"
 DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
 CI_TOOLS_FILE = ROOT_DIR / "scripts/ci/test_ci_tools.sh"
+
+
+def nonce_broadcast_command() -> list[str]:
+    return [
+        "bash",
+        str(MANIFEST_RUNNER),
+        "--manifest",
+        str(NONCE_BROADCAST_MANIFEST),
+        "--phase",
+        "contract",
+    ]
+
+
+def notifications_command() -> list[str]:
+    return [
+        "bash",
+        str(MANIFEST_RUNNER),
+        "--manifest",
+        str(NOTIFICATIONS_MANIFEST),
+        "--phase",
+        "contract",
+    ]
+
+
+def block_fallback_command() -> list[str]:
+    return [
+        "bash",
+        str(MANIFEST_RUNNER),
+        "--manifest",
+        str(BLOCK_FALLBACK_MANIFEST),
+        "--phase",
+        "contract",
+    ]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,9 +118,17 @@ def main() -> int:
         return 1
     max_seconds = int(args.max_seconds)
 
-    for script in (NONCE_BROADCAST, NOTIFICATIONS, BLOCK_FALLBACK, CHECKER):
+    for script in (MANIFEST_RUNNER, CHECKER):
         if not script.is_file() or not script.stat().st_mode & 0o111:
             print(f"expected executable dependency: {script}", file=sys.stderr)
+            return 1
+    for manifest in (
+        NONCE_BROADCAST_MANIFEST,
+        NOTIFICATIONS_MANIFEST,
+        BLOCK_FALLBACK_MANIFEST,
+    ):
+        if not manifest.is_file():
+            print(f"expected manifest dependency: {manifest}", file=sys.stderr)
             return 1
 
     if not DOC_FILE.is_file():
@@ -119,32 +167,32 @@ def main() -> int:
         checks = [
             {
                 "id": "nonce_broadcast_contract",
-                "command": f"bash {NONCE_BROADCAST}",
+                "command": " ".join(nonce_broadcast_command()),
                 "status": "fail",
                 "reason_code": "ci_fast_gate_failed",
             },
             {
                 "id": "notifications_consumer_contract",
-                "command": f"bash {NOTIFICATIONS}",
+                "command": " ".join(notifications_command()),
                 "status": "fail",
                 "reason_code": "ci_fast_gate_failed",
             },
             {
                 "id": "block_fallback_contract",
-                "command": f"bash {BLOCK_FALLBACK}",
+                "command": " ".join(block_fallback_command()),
                 "status": "fail",
                 "reason_code": "ci_fast_gate_failed",
             },
         ]
     else:
-        checks.append(run_check(["bash", str(NONCE_BROADCAST)], "nonce_broadcast_contract"))
+        checks.append(run_check(nonce_broadcast_command(), "nonce_broadcast_contract"))
         if checks[-1]["status"] == "fail":
             status = "fail"
             reason_code = "nonce_broadcast_contract_failed"
             checks.append(
                 {
                     "id": "notifications_consumer_contract",
-                    "command": f"bash {NOTIFICATIONS}",
+                    "command": " ".join(notifications_command()),
                     "status": "fail",
                     "reason_code": "skipped_due_prior_failure",
                 }
@@ -152,26 +200,26 @@ def main() -> int:
             checks.append(
                 {
                     "id": "block_fallback_contract",
-                    "command": f"bash {BLOCK_FALLBACK}",
+                    "command": " ".join(block_fallback_command()),
                     "status": "fail",
                     "reason_code": "skipped_due_prior_failure",
                 }
             )
         else:
-            checks.append(run_check(["bash", str(NOTIFICATIONS)], "notifications_consumer_contract"))
+            checks.append(run_check(notifications_command(), "notifications_consumer_contract"))
             if checks[-1]["status"] == "fail":
                 status = "fail"
                 reason_code = "notifications_consumer_contract_failed"
                 checks.append(
                     {
                         "id": "block_fallback_contract",
-                        "command": f"bash {BLOCK_FALLBACK}",
+                        "command": " ".join(block_fallback_command()),
                         "status": "fail",
                         "reason_code": "skipped_due_prior_failure",
                     }
                 )
             else:
-                checks.append(run_check(["bash", str(BLOCK_FALLBACK)], "block_fallback_contract"))
+                checks.append(run_check(block_fallback_command(), "block_fallback_contract"))
                 if checks[-1]["status"] == "fail":
                     status = "fail"
                     reason_code = "block_fallback_contract_failed"

@@ -177,8 +177,12 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
         "cargo test -p kamn-node main_tests::runtime_tests::regression_production_transport_profile_in_memory_rejection_reason_code_is_stable -- --exact"
     ));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
-    assert!(DOC.contains("bash scripts/kolme/run_notifications_consumer_contract_lane.sh"));
-    assert!(DOC.contains("bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"));
+    assert!(DOC.contains(
+        "bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract"
+    ));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
     ));
