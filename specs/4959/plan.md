@@ -1,23 +1,34 @@
 # Issue #4959 Plan
 
 - Issue: #4959
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4959 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4959 boundaries.
+- Deliver first-wave scope through two merged subtasks:
+  - `#4970` runtime/kolme wave activation and wrapper compaction.
+  - `#4969` canary/ci/deploy/governance wave activation and parity proofs.
+- Keep deletion-manifest and superseded-inventory outputs deterministic with fail-closed reason taxonomy.
+- Verify post-merge parity with stale-reference and CI command-surface contract suites.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4959.
+- `fixtures/ci/superseded_script_deletion_manifest.json`
+- `fixtures/ci/superseded_script_inventory_baseline.json`
+- `fixtures/ci/kolme_manifest_migration_contract_groups.json`
+- `fixtures/ci/superseded_script_lane_ownership.json`
+- `scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- `scripts/ci/test_check_stale_script_references.sh`
+- `scripts/kolme/run_contract_lane_dispatch.sh`
+- `scripts/kolme/contract_lane_dispatch_impl.py`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: manifest drift from inventory baseline.
+  - Mitigation: deterministic generator parity test + fail-closed checker.
+- Risk: stale references to actually-deleted paths.
+  - Mitigation: stale-reference detector enforced in CI and validated in regression suite.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- No protocol/wire-format changes.
+- Preserve schema/reason-taxonomy compatibility for inventory/deletion/stale-reference outputs.
 
 ## ADR
-- Open ADR only if issue #4959 introduces architecture/dependency/protocol changes.
+- Not required (no architecture/dependency/protocol change).
