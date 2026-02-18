@@ -54,6 +54,8 @@ pub mod data_layer_m5_vector_integration;
 pub mod data_layer_m6_graph_integration;
 /// M7 time-series contracts for telemetry ingest, rollups, and owner billing projections.
 pub mod data_layer_m7_timeseries_telemetry;
+/// M8 compliance contracts for retention policy, legal hold, and crypto-shredding lifecycle.
+pub mod data_layer_m8_compliance_lifecycle;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -297,6 +299,15 @@ pub use data_layer_m7_timeseries_telemetry::{
     DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
     DATA_LAYER_M7_AGGREGATE_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
     DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+};
+pub use data_layer_m8_compliance_lifecycle::{
+    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
+    DataLayerM8LegalHoldRequest, DataLayerM8MessageRecord, DataLayerM8MessageRecordInput,
+    DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass, DataLayerM8RetentionDueCandidate,
+    DataLayerM8WrappedCekInput, DATA_LAYER_M8_CEK_TOMBSTONE_MARKER,
+    DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
+    DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS, DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M8_RETENTION_DUE_REASON_CODE, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
