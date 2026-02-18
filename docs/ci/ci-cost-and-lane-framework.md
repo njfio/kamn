@@ -21,11 +21,11 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Runtime budget gate: `scripts/ci/evaluate_budget.sh`
 - Fast-gate delta report generator: `scripts/ci/generate_fast_gate_budget_delta_report.sh`
 - Fast-gate delta threshold gate: `scripts/ci/check_fast_gate_budget_delta_threshold.sh`
-- Fast-gate delta contract lane: `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh`
+- Fast-gate delta contract lane: `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract`
 - Script surface gate: `scripts/ci/check_script_duplication_budget.sh`
-- Test-harness soft-budget contract lane: `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh`
+- Test-harness soft-budget contract lane: `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json --phase contract`
 - Kolme harness+command-surface trend report: `scripts/ci/generate_kolme_test_harness_loc_trend_report.sh`
-- Kolme harness+command-surface budget contract lane: `scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh`
+- Kolme harness+command-surface budget contract lane: `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json --phase contract`
 - CI helper regression suite: `scripts/ci/test_ci_tools.sh`
 
 ## Dispatcher Migration Log
@@ -127,7 +127,7 @@ Fast-gate threshold metadata contract:
 - `FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS` must be present in `.ci/fast-gate-budget-delta.env`.
 - stale threshold metadata is fail-closed via `reason_codes=fast_gate_delta_threshold_file_stale`.
 - corrupt threshold metadata is fail-closed via `reason_codes=fast_gate_delta_threshold_file_corrupt`.
-- contract lane command: `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
+- contract lane command: `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract --output-json /tmp/fast-gate-budget-delta-contract-report.json`
 - refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata
 
 ## Observability Churn Matrix Cost Boundary
@@ -156,7 +156,7 @@ Staging soak/rehearsal evidence for rollout readiness is generated and checked w
 
 - `scripts/deploy/generate_staging_rehearsal_bundle.sh`
 - `scripts/deploy/check_staging_rehearsal_policy.sh`
-- `scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
 - `scripts/deploy/run_staging_rehearsal_deep_lane.sh` (manual/deep validation path)
 
 Deterministic runtime telemetry threshold fields in `kamn.release.staging-rehearsal.v1`:
@@ -385,7 +385,7 @@ Kolme harness + command-surface trend validation:
 bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json
 bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json
 bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json
-bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json
 ```
 
 Generic test-harness soft-budget contract validation:
@@ -393,13 +393,13 @@ Generic test-harness soft-budget contract validation:
 ```bash
 bash scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json
 bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --trend-threshold-file .ci/test-harness-loc-trend-thresholds.env --output-json /tmp/test-harness-loc-soft-budget-report.json
-bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/test-harness-loc-soft-budget-contract-report.json
 ```
 
 Ignored-test + script-surface composed trend contract validation:
 
 ```bash
-bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json --phase contract --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json
 bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh
 ```
 

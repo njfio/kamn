@@ -236,9 +236,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `scripts/framework/run_manifest_lane.sh --manifest ... --phase contract`
   - stays in aggregate `scripts/ci/test_ci_tools.sh` (not PR fast gate) to preserve bounded fast-gate runtime cost.
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_snapshot_drift_contract_lane.sh`
-  - `scripts/kolme/run_notifications_consumer_contract_lane.sh`
-  - `scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json`
   - `scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json`
@@ -255,9 +255,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
-  - `scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
-  - `scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json`
   - `scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json`
@@ -274,9 +274,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_version_compatibility_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
-  - `scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_version_compatibility_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_version_compatibility_contract_lane.json`
   - `scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json`
@@ -293,9 +293,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json`
   - `scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json`
@@ -312,10 +312,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_runtime_commit_contract_lane.sh`
-  - `scripts/kolme/run_triadic_devnet_smoke_contract_lane.sh`
-  - `scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh`
-  - `scripts/kolme/run_local_e2e_integration_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_runtime_commit_contract_lane.json`
   - `scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json`
@@ -334,10 +334,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh`
-  - `scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json`
   - `scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json`
@@ -356,11 +356,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh`
 - Migrated manifest-backed wrappers:
-  - `scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh`
-  - `scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh`
-  - `scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract`
 - Manifest files:
   - `scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json`
   - `scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json`
@@ -383,7 +383,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Validate observed markers:
   - `python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json`
 - Run budgeted contract lane:
-  - `bash scripts/kolme/run_triadic_devnet_smoke_contract_lane.sh --output-json /tmp/triadic-devnet-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json --phase contract --output-json /tmp/triadic-devnet-report.json`
 
 ## Deterministic Marker Contract
 
@@ -408,7 +408,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 ## Runtime Commit Adapter Replay/Finality Fast Lane (Issue #980)
 
 - Adapter replay/finality contract lane:
-  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract`
 - Reason-code checks:
   - `receipt_provider_mismatch`
   - `receipt_not_final`
@@ -418,7 +418,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 ## Runtime Commit Block Fallback Reconciliation Fast Lane (Issue #1464)
 
 - Block fallback reconciliation contract lane:
-  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
 - Targeted rust fallback reconciliation test:
   - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
 - Cost policy:
@@ -474,7 +474,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-rust-test-matrix-summary.v1`
 - Deterministic checkpoints include:
@@ -534,7 +534,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
 - Matrix fixture:
   - `fixtures/kolme_commit/local_live_api_conformance_matrix.json`
 - Summary schema:
@@ -560,7 +560,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-bootstrap-readiness-summary.v1`
 - Deterministic checkpoints include:
@@ -662,7 +662,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Summary schema:
   - `kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
 - Deterministic checkpoints include:
@@ -1086,7 +1086,7 @@ JSON`
 ## Staging Soak Telemetry Lane (Issue #2422)
 
 - Fast lane command:
-  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
 - Deep/manual lane command:
   - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
 - Direct bundle generation command (explicit telemetry thresholds):
@@ -1302,7 +1302,7 @@ Operator checkpoints:
 ## Staged Rehearsal Signoff Artifact Contract (Issue #3241)
 
 - Rehearsal fast-lane contract command:
-  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
 - Rehearsal policy checker command:
   - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal-report.json`
 - Signoff schema marker:
@@ -1346,9 +1346,9 @@ Operator checkpoints:
 ## Unified Local Signed-to-Kolme Demo Contract Lane (Issue #1640)
 
 - Unified local signed-to-Kolme demo runner:
-  - `bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh --mode dry-run --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json --phase contract --mode dry-run --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
 - Explicit local-only unified demo execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh --mode run --max-seconds 420 --localhost-signed-demo-max-seconds 60 --localhost-signed-integration-max-seconds 120 --kolme-runtime-integration-max-seconds 300 --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json --phase contract --mode run --max-seconds 420 --localhost-signed-demo-max-seconds 60 --localhost-signed-integration-max-seconds 120 --kolme-runtime-integration-max-seconds 300 --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json`
 - Summary schema:
@@ -1382,7 +1382,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-process-lifecycle-summary.v1`
 - Deterministic checkpoints include:
@@ -1409,7 +1409,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-profile-preflight-summary.v1`
   - policy schema: `kamn.kolme.local-fork-profile-preflight-policy-report.v1`
@@ -1434,7 +1434,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-self-test-summary.v1`
   - policy schema: `kamn.kolme.local-fork-self-test-policy-report.v1`
@@ -1459,7 +1459,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-portability-preflight-summary.v1`
   - policy schema: `kamn.kolme.local-fork-portability-preflight-policy-report.v1`
@@ -1486,7 +1486,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-checkout-bootstrap-summary.v1`
 - Deterministic checkpoints include:
@@ -1509,11 +1509,11 @@ Operator checkpoints:
 ## Real Fork Local Process Wrapper Contract Lane (Issue #1644)
 
 - Real-fork local wrapper runner:
-  - `bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-real-process-summary.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Explicit local-only real-fork wrapper execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --bootstrap-max-seconds 120 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --bootstrap-max-seconds 120 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Optional lifecycle runtime finality pass-through:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --lifecycle-mode run --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" --lifecycle-runtime-commit-finality-max-seconds 15 --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --lifecycle-rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --lifecycle-recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-real-process-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json --phase contract --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --lifecycle-mode run --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" --lifecycle-runtime-commit-finality-max-seconds 15 --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --lifecycle-rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --lifecycle-recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Default serve profile contract:
   - `cd <checkout-path> && cargo run --bin example-six-sigma -- serve api-server`
 - Checkout bootstrap prerequisite commands:
@@ -1631,7 +1631,7 @@ Operator checkpoints:
 - Policy checker command:
   - `python3 scripts/kolme/check_local_native_api_parity_live_proof_policy.py --report-file /tmp/kolme-local-native-api-parity-live-proof-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
 - Contract lane command:
-  - `bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json --phase contract --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
 - Summary schema:
   - `kamn.kolme.local-native-api-parity-live-proof-summary.v1`
 - Deterministic checkpoints include:
@@ -1645,7 +1645,7 @@ Operator checkpoints:
 ## Fast-Gate Native API Parity Contract Lane (Issues #1466, #1468)
 
 - Fast-gate parity lane runner:
-  - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
 - Fast-gate parity policy checker:
   - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - Summary schema:
@@ -1682,7 +1682,7 @@ Operator checkpoints:
 - Policy checker contract:
   - `python3 scripts/kolme/check_local_bootstrap_health_policy.py --report-file /tmp/kolme-local-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-bootstrap-policy.json`
 - Bounded contract lane (dry-run + policy):
-  - `bash scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json --phase contract --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
 - Summary schema:
   - `kamn.kolme.local-bootstrap-summary.v1`
   - policy schema: `kamn.kolme.local-bootstrap-policy-report.v1`
@@ -1709,7 +1709,7 @@ Operator checkpoints:
 - Policy checker contract:
   - `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
 - Bounded contract lane (dry-run + policy):
-  - `bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
 - Summary schema:
   - `kamn.kolme.local-e2e-integration-summary.v1`
   - policy schema: `kamn.kolme.local-e2e-integration-policy-report.v1`
@@ -1739,7 +1739,7 @@ Operator checkpoints:
 - Run-mode policy checker contract (after explicit opt-in execution):
   - `python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code local_heavy_validation_passed --output-json /tmp/kolme-local-heavy-validation-policy.json`
 - Bounded contract lane (dry-run + policy):
-  - `bash scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
 - Summary schema:
   - `kamn.kolme.local-heavy-validation-summary.v1`
   - policy schema: `kamn.kolme.local-heavy-validation-policy-report.v1`
@@ -1749,8 +1749,8 @@ Operator checkpoints:
 - Heavy command set includes:
   - `scripts/kolme/run_local_bootstrap_health_checks.sh`
   - `scripts/kolme/run_version_compatibility_replay_deep_lane.sh`
-  - `scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
-  - `scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json --phase contract`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract`
   - shared JSON summary generation via `scripts/framework/generate_local_lane_summary.py`
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.

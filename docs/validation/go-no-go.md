@@ -17,9 +17,9 @@ The lane composes:
 1. Go/no-go evidence deep lane:
    - `scripts/deploy/run_gonogo_evidence_deep_lane.sh`
 2. Deployment rollback readiness lane:
-   - `scripts/deploy/run_deployment_slo_rollback_contract_lane.sh`
+   - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract`
 3. DR evidence readiness lane:
-   - `scripts/deploy/run_dr_evidence_contract_lane.sh`
+   - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_dr_evidence_contract_lane.json --phase contract`
 
 ## Commands
 

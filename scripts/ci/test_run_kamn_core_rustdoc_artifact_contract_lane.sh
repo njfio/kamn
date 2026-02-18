@@ -3,16 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
-LANE_SCRIPT="$ROOT_DIR/scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh"
+LEGACY_LANE_SCRIPT="$ROOT_DIR/scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh"
+MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 SHARED_IMPL="$ROOT_DIR/scripts/ci/kamn_core_rustdoc_artifact_contract_lane_impl.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json"
-DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 POLICY_SCRIPT="$ROOT_DIR/scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-test_harness_require_executable "$LANE_SCRIPT" "expected rustdoc artifact contract lane script to be executable"
+if [ -e "$LEGACY_LANE_SCRIPT" ]; then
+  echo "expected superseded rustdoc artifact wrapper to be deleted: $LEGACY_LANE_SCRIPT" >&2
+  exit 1
+fi
+
+test_harness_require_executable "$MANIFEST_RUNNER" "expected manifest lane runner to be executable"
 
 test_harness_require_executable "$SHARED_IMPL" "expected rustdoc artifact shared impl script to be executable"
 
@@ -22,7 +27,10 @@ REPORT_FILE="$TMP_DIR/rustdoc-report.json"
 ARTIFACT_DIR="$TMP_DIR/artifacts"
 
 lane_output="$(
-  bash "$LANE_SCRIPT" \
+  bash "$MANIFEST_RUNNER" \
+    --manifest "$MANIFEST_FILE" \
+    --phase contract \
+    -- \
     --output-json "$REPORT_FILE" \
     --artifact-dir "$ARTIFACT_DIR" \
     --max-runtime-seconds 600
@@ -73,22 +81,6 @@ bash "$POLICY_SCRIPT" --report-file "$REPORT_FILE" >"$TMP_DIR/policy.out"
 grep -q '^kamn_core_rustdoc_artifact_policy=ok$' "$TMP_DIR/policy.out"
 grep -q '^rustdoc_navigation_ratio_status=within$' "$TMP_DIR/policy.out"
 grep -q '^runtime_budget_status=within$' "$TMP_DIR/policy.out"
-
-if [ ! -L "$LANE_SCRIPT" ]; then
-  echo "expected rustdoc artifact contract lane wrapper to be a dispatcher symlink" >&2
-  exit 1
-fi
-
-if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
-  echo "expected rustdoc artifact wrapper to target shared non-Kolme dispatcher" >&2
-  exit 1
-fi
-
-resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
-if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
-  echo "expected rustdoc artifact wrapper to resolve CI manifest via dispatcher" >&2
-  exit 1
-fi
 
 if ! grep -Fq "kamn_core_rustdoc_artifact_contract_lane_impl.sh" "$MANIFEST_FILE"; then
   echo "expected rustdoc artifact manifest to dispatch shared impl script" >&2

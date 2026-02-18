@@ -201,8 +201,8 @@ if ! grep -Fq "bash scripts/ci/check_kamn_core_missing_docs_policy.sh" "$FAST_WO
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh" "$FAST_WORKFLOW"; then
-  echo "expected kamn-core rustdoc artifact contract lane command in ci-fast-gate.yml" >&2
+if ! grep -Fq "bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core rustdoc artifact manifest-runner contract lane command in ci-fast-gate.yml" >&2
   exit 1
 fi
 
@@ -746,13 +746,13 @@ if ! grep -Fq "if: steps.scope.outputs.run_launch_canary_contract_tests == 'true
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/canary/run_launch_canary_contract_lane.sh" "$FAST_WORKFLOW"; then
-  echo "expected launch canary contract lane command in ci-fast-gate.yml" >&2
+if ! grep -Fq "bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_launch_canary_contract_lane.json --phase contract" "$FAST_WORKFLOW"; then
+  echo "expected launch canary manifest-runner contract lane command in ci-fast-gate.yml" >&2
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/canary/run_post_cutover_slo_contract_lane.sh" "$FAST_WORKFLOW"; then
-  echo "expected post-cutover SLO contract lane command in ci-fast-gate.yml" >&2
+if ! grep -Fq "bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract" "$FAST_WORKFLOW"; then
+  echo "expected post-cutover SLO manifest-runner contract lane command in ci-fast-gate.yml" >&2
   exit 1
 fi
 

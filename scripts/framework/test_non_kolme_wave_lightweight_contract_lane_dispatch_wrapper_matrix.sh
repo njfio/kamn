@@ -40,6 +40,26 @@ fi
 
 DISPATCHER="$KAMN_ROOT/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 WRAPPERS_FILE="$KAMN_ROOT/scripts/framework/wave_definitions/non_kolme_wave${WAVE_NUMBER}_lightweight_wrappers.txt"
+DELETION_MANIFEST="$KAMN_ROOT/fixtures/ci/superseded_script_deletion_manifest.json"
+
+is_superseded_deleted_wrapper() {
+  local wrapper_rel="$1"
+  python3 - "$DELETION_MANIFEST" "$wrapper_rel" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+wrapper_rel = sys.argv[2]
+if not manifest_path.is_file():
+    raise SystemExit(1)
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+for entry in payload.get("deletions", []):
+    if isinstance(entry, dict) and entry.get("script_path") == wrapper_rel:
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
 
 if ! test_harness_require_executable "$DISPATCHER" \
   "expected non-Kolme contract-lane dispatcher to be executable: $DISPATCHER"; then
@@ -67,13 +87,18 @@ for wrapper_rel_path in "${lane_wrappers[@]}"; do
   wrapper_path="$KAMN_ROOT/$wrapper_rel_path"
   wrapper_name="$(basename "$wrapper_path")"
 
-  if ! test_harness_require_executable "$wrapper_path" \
-    "expected lightweight wrapper to be executable: $wrapper_path"; then
-    exit 1
-  fi
+  if [[ -e "$wrapper_path" ]]; then
+    if ! test_harness_require_executable "$wrapper_path" \
+      "expected lightweight wrapper to be executable: $wrapper_path"; then
+      exit 1
+    fi
 
-  if [[ ! -L "$wrapper_path" ]]; then
-    echo "expected lightweight wrapper to be a symlink to shared dispatcher: $wrapper_path" >&2
+    if [[ ! -L "$wrapper_path" ]]; then
+      echo "expected lightweight wrapper to be a symlink to shared dispatcher: $wrapper_path" >&2
+      exit 1
+    fi
+  elif ! is_superseded_deleted_wrapper "$wrapper_rel_path"; then
+    echo "expected lightweight wrapper to exist or be cataloged as superseded/deleted: $wrapper_path" >&2
     exit 1
   fi
 

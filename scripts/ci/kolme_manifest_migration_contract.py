@@ -10,6 +10,8 @@ from typing import Any
 
 CONFIG_SCHEMA = "kamn.kolme-manifest-migration-contract-groups.v1"
 MANIFEST_SCHEMA = "kamn.contract-lane.manifest.v1"
+DELETION_MANIFEST_SCHEMA = "kamn.ci.superseded-script-deletion-manifest.v1"
+DELETION_MANIFEST_FILE = "fixtures/ci/superseded_script_deletion_manifest.json"
 WRAPPER_MARKER = "scripts/framework/run_manifest_lane.sh"
 
 
@@ -42,6 +44,25 @@ def _expect_string(value: Any, *, label: str) -> str:
     return value
 
 
+def _load_deleted_scripts(root_dir: Path) -> set[str]:
+    payload = _read_json(root_dir / DELETION_MANIFEST_FILE, label="superseded script deletion manifest")
+    if payload.get("schema_version") != DELETION_MANIFEST_SCHEMA:
+        raise SystemExit("unexpected superseded script deletion manifest schema version")
+    deletions = payload.get("deletions")
+    if not isinstance(deletions, list):
+        raise SystemExit("expected superseded script deletion manifest deletions array")
+
+    deleted: set[str] = set()
+    for index, entry in enumerate(deletions):
+        if not isinstance(entry, dict):
+            raise SystemExit(f"expected deletion manifest entry object at index {index}")
+        script_path = entry.get("script_path")
+        if not isinstance(script_path, str) or not script_path:
+            raise SystemExit(f"expected deletion manifest script_path string at index {index}")
+        deleted.add(script_path)
+    return deleted
+
+
 def _validate_manifest_contract(
     manifest_path: Path,
     *,
@@ -63,7 +84,7 @@ def _validate_manifest_contract(
         raise SystemExit("manifest contract phase must invoke expected python contract lane script")
 
 
-def _validate_group(root_dir: Path, config_path: Path, group_key: str) -> str:
+def _validate_group(root_dir: Path, config_path: Path, group_key: str, deleted_scripts: set[str]) -> str:
     config = _read_json(config_path, label="Kolme migration config")
     if config.get("schema_version") != CONFIG_SCHEMA:
         raise SystemExit("unexpected Kolme migration config schema version")
@@ -102,22 +123,29 @@ def _validate_group(root_dir: Path, config_path: Path, group_key: str) -> str:
         lane_script_path = root_dir / lane_script
         manifest_path = root_dir / manifest_file
 
-        if not lane_script_path.exists():
-            raise SystemExit(f"expected migrated lane script to exist: {lane_script}")
-        if not lane_script_path.is_file():
-            raise SystemExit(f"expected migrated lane script to be a file: {lane_script}")
-        if not lane_script_path.stat().st_mode & 0o111:
-            raise SystemExit(f"expected migrated lane script to be executable: {lane_script}")
+        lane_marked_deleted = lane_script in deleted_scripts
+        if lane_marked_deleted:
+            if lane_script_path.exists():
+                raise SystemExit(f"expected superseded lane script to be deleted: {lane_script}")
+        else:
+            if not lane_script_path.exists():
+                raise SystemExit(f"expected migrated lane script to exist: {lane_script}")
+            if not lane_script_path.is_file():
+                raise SystemExit(f"expected migrated lane script to be a file: {lane_script}")
+            if not lane_script_path.stat().st_mode & 0o111:
+                raise SystemExit(f"expected migrated lane script to be executable: {lane_script}")
 
-        try:
-            lane_script_text = lane_script_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            raise SystemExit(f"failed to read lane script for routing assertion: {lane_script_path}: {exc}") from exc
+            try:
+                lane_script_text = lane_script_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                raise SystemExit(
+                    f"failed to read lane script for routing assertion: {lane_script_path}: {exc}"
+                ) from exc
 
-        if WRAPPER_MARKER not in lane_script_text:
-            raise SystemExit(
-                f"expected migrated lane script to dispatch through manifest wrapper: {lane_script}"
-            )
+            if WRAPPER_MARKER not in lane_script_text:
+                raise SystemExit(
+                    f"expected migrated lane script to dispatch through manifest wrapper: {lane_script}"
+                )
 
         if not manifest_path.is_file():
             raise SystemExit(f"expected manifest file for migrated lane: {manifest_file}")
@@ -128,7 +156,8 @@ def _validate_group(root_dir: Path, config_path: Path, group_key: str) -> str:
             expected_contract_script=expected_contract_script,
         )
 
-        total_shell_loc += _lane_wrapper_shell_loc(lane_script_path)
+        if not lane_marked_deleted:
+            total_shell_loc += _lane_wrapper_shell_loc(lane_script_path)
 
     if total_shell_loc > max_shell_loc:
         raise SystemExit(
@@ -157,7 +186,8 @@ def main() -> int:
     config_path = Path(args.config_file).resolve()
     group_key = args.group
 
-    success_message = _validate_group(root_dir, config_path, group_key)
+    deleted_scripts = _load_deleted_scripts(root_dir)
+    success_message = _validate_group(root_dir, config_path, group_key, deleted_scripts)
     print(success_message)
     return 0
 

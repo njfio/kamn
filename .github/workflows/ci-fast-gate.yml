@@ -252,7 +252,7 @@ jobs:
       - name: Run kamn-core rustdoc artifact contract lane
         if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         run: |
-          bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh \
+          bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract \
             --artifact-dir "${RUNNER_TEMP:-/tmp}" \
             --output-json kamn-core-rustdoc-artifact-report.json
           bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh \
@@ -450,11 +450,11 @@ jobs:
 
       - name: Run launch canary contract lane
         if: steps.scope.outputs.run_launch_canary_contract_tests == 'true'
-        run: bash scripts/canary/run_launch_canary_contract_lane.sh
+        run: bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_launch_canary_contract_lane.json --phase contract
 
       - name: Run post-cutover SLO contract lane
         if: steps.scope.outputs.run_launch_canary_contract_tests == 'true'
-        run: bash scripts/canary/run_post_cutover_slo_contract_lane.sh
+        run: bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract
 
       - name: Run bridge replay fixture harness
         if: steps.scope.outputs.run_bridge_replay_harness == 'true'

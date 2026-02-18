@@ -335,7 +335,7 @@ bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json
 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-portability-preflight-summary.json
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 300 --output-json /tmp/kolme-local-fork-portability-preflight-summary.json
 python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-portability-preflight-policy.json
-bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json
 # schema: kamn.kolme.local-fork-portability-preflight-summary.v1
 # schema: kamn.kolme.local-fork-portability-preflight-policy-report.v1
 ```

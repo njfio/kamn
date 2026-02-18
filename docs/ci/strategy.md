@@ -2880,10 +2880,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - shared dispatcher:
       - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
     - governance wrappers are symlinked to shared dispatcher:
-      - `scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh`
-      - `scripts/governance/run_governance_simulation_contract_lane.sh`
-      - `scripts/governance/run_quorum_attestation_replay_contract_lane.sh`
-      - `scripts/governance/run_stake_slash_risk_contract_lane.sh`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json --phase contract`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_simulation_contract_lane.json --phase contract`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2649
   - Non-Kolme compliance dispatcher wrapper-matrix guard stays on PR fast gate:
@@ -2901,8 +2901,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - shared dispatcher:
       - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
     - wrappers are symlinked to shared dispatcher:
-      - `scripts/canary/run_launch_canary_contract_lane.sh`
-      - `scripts/canary/run_post_cutover_slo_contract_lane.sh`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_launch_canary_contract_lane.json --phase contract`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract`
       - `scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh`
       - `scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh`
       - `scripts/guard/run_durable_guard_recovery_contract_lane.sh`
@@ -2979,7 +2979,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/signer/run_signer_policy_contract_lane.sh`
       - `scripts/signer/run_signer_emulator_contract_lane.sh`
       - `scripts/cutover/run_cutover_rollback_contract_lane.sh`
-      - `scripts/deploy/run_dr_evidence_contract_lane.sh`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_dr_evidence_contract_lane.json --phase contract`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2720
   - Non-Kolme wave-12 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
@@ -2989,8 +2989,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - wave-12 lightweight wrappers are symlinked to shared dispatcher:
       - `scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh`
       - `scripts/cutover/run_mainnet_cutover_contract_lane.sh`
-      - `scripts/deploy/run_gonogo_evidence_contract_lane.sh`
-      - `scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2723
   - Non-Kolme wave-13 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
@@ -3048,7 +3048,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - shared dispatcher:
       - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
     - wave-18 lightweight wrappers are symlinked to shared dispatcher:
-      - `scripts/deploy/run_deployment_slo_rollback_contract_lane.sh`
+      - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract`
       - `scripts/did/run_service_endpoint_canonicalization_contract_lane.sh`
       - `scripts/sdk/run_localhost_signed_demo_contract_lane.sh`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
@@ -3099,7 +3099,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - signature parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_SIGNATURE_PARITY_MAX_SECONDS=120`
   - fast-gate native API parity lane remains bounded:
-    - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
     - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
     - `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
@@ -3140,7 +3140,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_checkout_bootstrap_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
     - checkout bootstrap summary marker contract:
       - `fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1`
     - pinned commit drift reason marker:
@@ -3156,7 +3156,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_rust_test_matrix_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_rust_test_matrix_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
     - selector-gated local-heavy rust-matrix contract tests (workflow_dispatch opt-in only):
       - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
       - `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
@@ -3178,14 +3178,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - local live API conformance harness run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 180 --probe-max-seconds 30 --native-max-seconds 120 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
     - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
-    - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
   - local fork bootstrap/readiness run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 90 --probe-max-seconds 20 --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_bootstrap_readiness_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
   - local KAMN live runtime integration run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
@@ -3329,7 +3329,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - signer rotation/failover drill lane remains local-heavy and excluded from ci-fast-gate.
-    - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
     - forced failover scenario matrix contracts remain fail-closed (`Regression: #2337`).
     - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
@@ -3507,7 +3507,7 @@ JSON`
     - process lifecycle integration command composition must include `--runtime-commit-live-policy-report` for nested integration evidence lineage.
     - process lifecycle summary/policy contracts must include deterministic rollback/recovery linkage markers (`--rollback-evidence-file`, `--recovery-evidence-file`).
     - `python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
   - local live-node validation bundle run-mode commands remain excluded from ci-fast-gate.
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_live_node_validation_bundle_lane.sh --resolve-manifest-path`
@@ -3549,21 +3549,21 @@ JSON`
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_profile_preflight_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_profile_preflight_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
   - local fork self-test run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_self_test_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_self_test_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_self_test_passed --output-json /tmp/kolme-local-fork-self-test-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
   - local fork portability preflight run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 300 --output-json /tmp/kolme-local-fork-portability-preflight-summary.json`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_portability_preflight_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kolme_fork_portability_preflight_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code portability_preflight_passed --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
-    - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
     - selector routing for native parity command/policy/manifest changes:
       - default: `run_kolme_local_heavy_contract_tests=false`
@@ -3642,22 +3642,22 @@ Required demo lane command contract:
 - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
 - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
-- `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
 - `bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json /tmp/bridge-adapter-conformance-contract-report.json`
-- `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json --phase contract --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
 - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
 - `python3 scripts/kolme/check_local_bootstrap_health_policy.py --report-file /tmp/kolme-local-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-bootstrap-policy.json`
-- `bash scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json --phase contract --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
 - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
 - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_e2e_integration_lane.sh --resolve-manifest-path`
 - `scripts/framework/manifests/kolme_local_e2e_integration_lane.json`
 - `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
-- `bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
 - `bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json`
 - `python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-heavy-validation-policy.json`
-- `bash scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
 - local-heavy scenario matrix deterministic summary markers:
   - `scenario_matrix_schema_version=kamn.kolme.local-heavy-validation-scenario-matrix.v1`
   - `scenario_runtime_mode=dry-run|run`
@@ -3674,10 +3674,10 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json`
 - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
-- `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
-- `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
-- `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
-- `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract`
   - alert-governance taxonomy markers stay deterministic:
     - `alert_governance_reason_taxonomy_version=kamn.runtime.alert-governance-reason-taxonomy.v1`
     - `alert_governance_reason_codes_csv=alert_rule_promotion_stalled,burn_rate_marker_parity_mismatch,ci_local_promotion_budget_boundary_exceeded`
@@ -3688,7 +3688,7 @@ Required demo lane command contract:
   - ci-local budget boundary remains bounded by `KAMN_POST_CUTOVER_SLO_CI_LOCAL_PROMOTION_MAX_SECONDS`.
   - deep lane remains local-only via `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY=true`.
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
-- `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json --phase contract --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
   - rollback-governance taxonomy markers remain deterministic:
     - `reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
     - `reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded`
@@ -3698,7 +3698,7 @@ Required demo lane command contract:
   - ci-local promotion budget boundary remains bounded:
     - `ci_local_promotion_budget_boundary_status=verified`
     - `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS <= 240`
-- `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 
 Regression policy:
 
@@ -3780,7 +3780,7 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 
 - `scripts/ci/generate_fast_gate_budget_delta_report.sh` emits baseline/current/variance metrics.
 - `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
-- `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json` enforces pass/unwaived/waived plus stale/corrupt threshold guard contracts.
+- `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract --output-json /tmp/fast-gate-budget-delta-contract-report.json` enforces pass/unwaived/waived plus stale/corrupt threshold guard contracts.
 - `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
 - downward-only threshold ratchet baseline:
   - `.ci/fast-gate-budget-delta-ratchet.env`
@@ -3821,7 +3821,7 @@ Test-harness growth advisory (non-blocking):
 - trend thresholds file: `.ci/test-harness-loc-trend-thresholds.env`
 - `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`
 - `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --trend-threshold-file .ci/test-harness-loc-trend-thresholds.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
-- `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
+- `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
 - Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
 - deterministic structural-budget reason taxonomy markers:
   - `test_harness_loc_soft_budget_reason_taxonomy_version=kamn.ci.test-harness-loc-soft-budget-reason-taxonomy.v1`
@@ -3842,7 +3842,7 @@ Kolme harness trend policy (warning-to-fail escalation contract):
 - trend report generator:
   - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
 - contract lane wrapper:
-  - `bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
 - policy emits deterministic escalation markers:
   - `trend_status=within|warn|fail`
   - `policy_decision=GO|WARN|NO-GO`
@@ -3875,7 +3875,7 @@ Ignored-test inventory drift policy (fail-closed):
 
 Ignored-test + script-surface trend composed contract lane (fail-closed):
 - composed lane command:
-  - `bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json --phase contract --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
 - regression test command:
   - `bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh`
 - composed contract validates:
@@ -4094,7 +4094,7 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=ignored_test_promotion_criteria_missing`
 - Generic test-harness LOC soft-budget contract lane (`test_run_test_harness_loc_soft_budget_contract_lane.sh`)
   - contract lane command:
-    - `bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
   - deterministic decision surface:
     - `test_harness_loc_soft_budget_contract_within_decision=GO`
     - `test_harness_loc_soft_budget_contract_exceeded_decision=WARN`
@@ -4117,7 +4117,7 @@ Fast-mode CI tooling regression coverage includes:
   - trend report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
   - contract lane command:
-    - `bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json --phase contract --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
   - deterministic reason-code surface:
     - `reason_codes=none`
     - `reason_codes=harness_script_count_soft_max_exceeded`
@@ -4133,7 +4133,7 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=command_surface_budget_status_fail`
 - Ignored-test + script-surface trend composed contract lane (`test_run_ignored_test_and_script_budget_trend_contract_lane.sh`)
   - contract lane command:
-    - `bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json --phase contract --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
   - deterministic stale-metadata and threshold-fail reason-code surface:
     - `ignored_test_metadata_stale_entry`
     - `combined_shell_surface_shell_line_total_delta_fail_exceeded`
@@ -4144,7 +4144,7 @@ Fast-mode CI tooling regression coverage includes:
   - delta threshold checker test:
     - `bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh`
   - contract lane command:
-    - `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
+    - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract --output-json /tmp/fast-gate-budget-delta-contract-report.json`
   - deterministic threshold-guard reason-code surface:
     - `reason_codes=fast_gate_delta_threshold_file_stale`
     - `reason_codes=fast_gate_delta_threshold_file_corrupt`
@@ -4252,7 +4252,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 
 ### Incident go/no-go convergence and boundary governance
 - CI smoke contract-lane execution remains low-cost and bounded:
-  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh --max-seconds 120`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120`
 - Local-heavy incident drill execution remains explicit opt-in and excluded from ci-fast-gate:
   - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
 - Deterministic incident boundary marker surface:
@@ -4272,7 +4272,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 
 ### Live go/no-go convergence and boundary governance
 - CI smoke contract-lane execution remains low-cost and bounded:
-  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh --max-seconds 120`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120`
 - Local-heavy live drill execution remains explicit opt-in and excluded from ci-fast-gate:
   - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
 - Deterministic live boundary marker surface:

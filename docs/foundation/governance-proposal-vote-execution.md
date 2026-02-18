@@ -79,7 +79,7 @@ Governance activation must include deterministic simulation and veto/timelock ev
 - Policy checker:
   - `bash scripts/governance/check_governance_simulation_policy.sh --bundle-file /tmp/governance-simulation.json`
 - PR fast contract lane:
-  - `bash scripts/governance/run_governance_simulation_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_simulation_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json`
 - Replay matrix runner:
@@ -101,9 +101,9 @@ Governance activation also requires deterministic stake/slash risk thresholds to
 - Policy checker:
   - `bash scripts/governance/check_stake_slash_risk_policy.sh --bundle-file /tmp/stake-slash-risk.json`
 - PR fast contract lane:
-  - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract`
 - Stable shell wrapper:
-  - `scripts/governance/run_stake_slash_risk_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract`
 - Shared Python implementation:
   - `scripts/governance/stake_slash_risk_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
@@ -130,9 +130,9 @@ Governance execution paths now include deterministic lifecycle/rollback integrit
 - Shared Python implementation:
   - `scripts/governance/governance_lifecycle_rollback_policy_contract.py`
 - Lifecycle/rollback contract lane:
-  - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json --phase contract --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
 - Stable shell wrapper:
-  - `scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json --phase contract`
 - Shared Python implementation:
   - `scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py`
 
@@ -174,9 +174,9 @@ Governance quorum attestation and replay protections include deterministic reaso
 - Shared Python implementation:
   - `scripts/governance/governance_quorum_attestation_replay_policy_contract.py`
 - Quorum attestation replay contract lane:
-  - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 - Stable shell wrapper:
-  - `scripts/governance/run_quorum_attestation_replay_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract`
 - Shared Python implementation:
   - `scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py`
 

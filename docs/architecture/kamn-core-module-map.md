@@ -287,7 +287,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 | Find exported public API surface | `crates/kamn-core/src/lib.rs` | Canonical `pub mod` and `pub use` inventory for `kamn-core`. |
 | Find extracted Kolme scaffold contracts | `crates/kamn-kolme/src/lib.rs` | Canonical crate boundary for runtime-commit codec, transport, finality, and pipeline scaffolding. |
 | Run missing-doc drift policy | `scripts/ci/check_kamn_core_missing_docs_policy.sh` | Fail-closed lint allowlist checker for docs hardening. |
-| Generate bounded rustdoc artifact evidence | `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh` | Deterministic rustdoc report/artifact lane used in CI and local checks. |
+| Generate bounded rustdoc artifact evidence | `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract` | Deterministic rustdoc report/artifact lane used in CI and local checks. |
 | Enforce rustdoc artifact policy schema | `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh` | Validates report schema, digest, artifact path, and runtime budget. |
 | Review hardening command surface | `docs/planning/engineering-hardening-wave.md#commands` | Planning baseline for docs hardening and CI contract commands. |
 | Review rustdoc publication policy contract | `docs/developer/rustdoc-publishing.md#contract-enforcement` | Contributor-facing rustdoc publication + policy checker contract. |

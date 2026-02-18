@@ -16,6 +16,10 @@ DELTA_REPORT_SCHEMA_VERSION = "kamn.kolme.wrapper-inventory-delta-report.v1"
 MATRIX_SCHEMA_VERSION = "kamn.kolme.lane-migration-matrix.v1"
 TREND_THRESHOLD_SCHEMA_VERSION = "kamn.kolme.wrapper-budget-trend-thresholds.v1"
 REASON_TAXONOMY_VERSION = "kamn.ci.wrapper-budget-trend-reason-taxonomy.v1"
+SUPERSEDED_DELETION_MANIFEST_SCHEMA_VERSION = (
+    "kamn.ci.superseded-script-deletion-manifest.v1"
+)
+SUPERSEDED_DELETION_MANIFEST_PATH = "fixtures/ci/superseded_script_deletion_manifest.json"
 REASON_CODE_SET = (
     "baseline_file_not_found",
     "baseline_json_invalid",
@@ -202,6 +206,33 @@ def resolve_manifest_file_from_dispatchers(*, repo_root: Path, source_entry: str
     )
 
 
+def load_superseded_deleted_wrappers(*, repo_root: Path) -> set[str]:
+    manifest_path = repo_root / SUPERSEDED_DELETION_MANIFEST_PATH
+    if not manifest_path.is_file():
+        return set()
+
+    payload = load_json_object(manifest_path, label="superseded script deletion manifest")
+    if payload.get("schema_version") != SUPERSEDED_DELETION_MANIFEST_SCHEMA_VERSION:
+        fail(
+            "superseded script deletion manifest schema_version must be "
+            f"{SUPERSEDED_DELETION_MANIFEST_SCHEMA_VERSION}"
+        )
+
+    deletions = payload.get("deletions")
+    if not isinstance(deletions, list):
+        fail("superseded script deletion manifest deletions must be an array")
+
+    paths: set[str] = set()
+    for index, entry in enumerate(deletions):
+        if not isinstance(entry, dict):
+            fail(f"superseded deletion manifest entry[{index}] must be an object")
+        script_path = entry.get("script_path")
+        if not isinstance(script_path, str) or not script_path.strip():
+            fail(f"superseded deletion manifest entry[{index}] script_path must be a non-empty string")
+        paths.add(script_path.strip())
+    return paths
+
+
 def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
     payload = load_json_object(matrix_file, label="lane migration matrix")
     if payload.get("schema_version") != MATRIX_SCHEMA_VERSION:
@@ -219,6 +250,7 @@ def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
     symlink_wrapper_count = 0
     regular_file_wrapper_count = 0
     total_shell_loc = 0
+    superseded_deleted_wrappers = load_superseded_deleted_wrappers(repo_root=repo_root)
 
     for index, lane in enumerate(sorted(lanes, key=lambda item: str(item.get("lane_id", "")))):
         if not isinstance(lane, dict):
@@ -243,20 +275,29 @@ def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
         )
 
         wrapper_path = repo_root / source_entry
+        wrapper_kind = ""
+        shell_loc = 0
         if not wrapper_path.exists():
-            fail(f"lane wrapper path does not exist for {lane_id}: {source_entry}")
-        if not wrapper_path.is_file():
-            fail(f"lane wrapper path is not a file for {lane_id}: {source_entry}")
+            if source_entry in superseded_deleted_wrappers:
+                # Deleted superseded wrappers are still represented as compact symlink wrappers
+                # in wrapper-family budget baselines so trend contracts remain deterministic.
+                wrapper_kind = "symlink"
+                shell_loc = 1
+            else:
+                fail(f"lane wrapper path does not exist for {lane_id}: {source_entry}")
+        else:
+            if not wrapper_path.is_file():
+                fail(f"lane wrapper path is not a file for {lane_id}: {source_entry}")
+            wrapper_kind = "symlink" if wrapper_path.is_symlink() else "regular_file"
+            shell_loc = count_shell_loc(wrapper_path)
+            if shell_loc < 1:
+                fail(f"shell LOC must be >= 1 for lane {lane_id}")
 
-        wrapper_kind = "symlink" if wrapper_path.is_symlink() else "regular_file"
         if wrapper_kind == "symlink":
             symlink_wrapper_count += 1
         else:
             regular_file_wrapper_count += 1
 
-        shell_loc = count_shell_loc(wrapper_path)
-        if shell_loc < 1:
-            fail(f"shell LOC must be >= 1 for lane {lane_id}")
         total_shell_loc += shell_loc
 
         manifest_file_override = lane.get("manifest_file")

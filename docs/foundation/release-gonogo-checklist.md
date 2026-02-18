@@ -665,7 +665,7 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
 - Policy checker:
   - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo.json`
 - Fast contract lane:
-  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract`
 - Stable shell wrappers:
   - `scripts/deploy/generate_gonogo_evidence_bundle.sh`
   - `scripts/deploy/check_gonogo_evidence_policy.sh`
@@ -722,7 +722,7 @@ Live go/no-go promotion evidence must expose deterministic live-gate taxonomy ma
 CI smoke/local-heavy boundary governance.
 
 - CI smoke contract-lane command:
-  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh --max-seconds 120`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120`
 - Local-heavy deep-lane command:
   - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
 - Required live-go/no-go convergence markers:
@@ -790,7 +790,7 @@ Staging rehearsal automation must verify deploy and rollback outcomes before rel
 - Rehearsal policy checker:
   - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal.json`
 - Fast contract lane:
-  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
 - Stable shell wrappers:
   - `scripts/deploy/generate_staging_rehearsal_bundle.sh`
   - `scripts/deploy/check_staging_rehearsal_policy.sh`
@@ -994,7 +994,7 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
 - Runtime commit replay matrix runner:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit adapter replay/finality fast lane:
-  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract`
   - `cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts`
   - `cargo test -p kamn-core --test kolme_runtime_commit_import_boundary`
   - adapter reason-code checks include:
@@ -1028,8 +1028,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
     - `native_signer_reason_codes_csv=runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
     - `native_signer_reason_codes_value=none|runtime_commit_native_signing_profile_marker_missing,runtime_commit_simulated_signing_profile_detected,runtime_signing_profile_missing,runtime_signing_profile_mismatch`
 - PR fast contract lane:
-  - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
-  - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_version_compatibility_contract_lane.json --phase contract`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json`
 - Regression policy:
@@ -1217,7 +1217,7 @@ Governance activation requires deterministic simulation, veto, timelock, and app
 - Policy checker:
   - `bash scripts/governance/check_governance_simulation_policy.sh --bundle-file /tmp/governance-simulation.json`
 - PR fast contract lane:
-  - `bash scripts/governance/run_governance_simulation_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_simulation_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json`
 - Replay matrix runner:
@@ -1240,7 +1240,7 @@ Governance activation requires deterministic stake/slash risk thresholds to bloc
 - Policy checker:
   - `bash scripts/governance/check_stake_slash_risk_policy.sh --bundle-file /tmp/stake-slash-risk.json`
 - PR fast contract lane:
-  - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/governance/run_stake_slash_risk_deep_lane.sh --output-json governance-stake-slash-report.json`
 - Replay matrix runner:
@@ -1329,7 +1329,7 @@ Launch approval requires deterministic critical-path probe evidence covering mes
 - Matrix runner:
   - `python3 scripts/canary/run_launch_canary_matrix.py --fixture fixtures/launch_canary/critical_path_probe_cases.json --output-json /tmp/launch-canary-report.json`
 - PR fast contract lane:
-  - `bash scripts/canary/run_launch_canary_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_launch_canary_contract_lane.json --phase contract`
 - Shared Python implementation (contract lane):
   - `scripts/canary/launch_canary_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
@@ -1346,7 +1346,7 @@ Post-cutover launch gates require deterministic SLO evidence export with stale/p
 - Policy checker:
   - `bash scripts/canary/check_post_cutover_slo_policy.sh --bundle-file /tmp/post-cutover-slo.json`
 - PR fast contract lane:
-  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract`
 - Shared Python implementation (contract lane):
   - `scripts/canary/post_cutover_slo_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:

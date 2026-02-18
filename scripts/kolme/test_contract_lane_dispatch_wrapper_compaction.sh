@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INVENTORY="$ROOT_DIR/fixtures/ci/superseded_script_inventory_baseline.json"
-MAX_WRAPPER_LINES=20
 
 if [ ! -f "$INVENTORY" ]; then
   echo "expected superseded script inventory baseline fixture: $INVENTORY" >&2
@@ -31,19 +30,47 @@ fi
 
 for wrapper in "${WRAPPERS[@]}"; do
   wrapper_path="$ROOT_DIR/$wrapper"
-  if [ ! -x "$wrapper_path" ]; then
-    echo "expected wrapper script to be executable: $wrapper" >&2
-    exit 1
-  fi
-  if ! grep -Fq "scripts/kolme/run_contract_lane_dispatch.sh" "$wrapper_path"; then
-    echo "expected wrapper to dispatch via run_contract_lane_dispatch.sh: $wrapper" >&2
-    exit 1
-  fi
-  wrapper_lines="$(wc -l <"$wrapper_path")"
-  if [ "$wrapper_lines" -gt "$MAX_WRAPPER_LINES" ]; then
-    echo "expected compact wrapper (<= $MAX_WRAPPER_LINES lines): $wrapper has $wrapper_lines lines" >&2
+  if [ -e "$wrapper_path" ]; then
+    echo "expected superseded wrapper script to be removed: $wrapper" >&2
     exit 1
   fi
 done
 
-echo "Kolme contract-lane wrapper compaction tests passed."
+python3 - "$INVENTORY" "$ROOT_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+inventory_path = Path(sys.argv[1])
+root = Path(sys.argv[2])
+payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+expected_runner = "scripts/framework/run_manifest_lane.sh"
+
+errors = []
+for entry in payload.get("superseded_scripts", []):
+    path = entry.get("script_path")
+    if not (isinstance(path, str) and path.startswith("scripts/kolme/")):
+        continue
+    evidence = entry.get("replacement_evidence")
+    if not isinstance(evidence, dict):
+        errors.append(f"missing replacement evidence for {path}")
+        continue
+    runner = evidence.get("replacement_runner")
+    if runner != expected_runner:
+        errors.append(
+            f"unexpected replacement runner for {path}: {runner!r} (expected {expected_runner!r})"
+        )
+    for key in ("manifest_file", "contract_script"):
+        value = evidence.get(key)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"missing {key} replacement evidence for {path}")
+            continue
+        asset = (root / value).resolve()
+        if not asset.is_file():
+            errors.append(f"{key} replacement asset missing for {path}: {value}")
+
+if errors:
+    raise SystemExit("\n".join(errors))
+PY
+
+echo "Kolme contract-lane wrapper compaction tests passed (post-deletion invariant)."

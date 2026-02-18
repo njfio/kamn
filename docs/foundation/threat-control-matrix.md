@@ -32,7 +32,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 - Shared Python implementation:
   - `scripts/governance/governance_quorum_attestation_replay_policy_contract.py`
 - Contract lane:
-  - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 - Required schema and reason-key markers:
   - `kamn.governance.quorum-attestation-replay-report.v1`
   - `governance_quorum_attestation_reason_codes:GO:v1`

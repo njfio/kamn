@@ -79,7 +79,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Trend-policy interpretation guidance updated in `docs/ci/strategy.md` to require baseline refresh for any new script path.
 - Post-roadmap hardening wave 6 fast-gate runtime/cost trend contract lane delivered:
   - Added manifest-backed contract lane wrapper + shared implementation for deterministic fast-gate budget-delta path coverage (Task #3154, Subtask #3164):
-    - `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh`
+    - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json --phase contract`
     - `scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh`
     - `scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json`
     - `scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh`

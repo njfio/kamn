@@ -214,7 +214,7 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
 - Policy checker:
   - `bash scripts/canary/check_post_cutover_slo_policy.sh --bundle-file /tmp/post-cutover-slo.json`
 - Fast contract lane:
-  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
 - Regression policy:
@@ -225,7 +225,7 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
 Operational launch readiness now enforces deterministic alert-schema evidence and fail-closed drift detection for SLO bundles.
 
 - Contract lane command:
-  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json --phase contract`
 - Deep lane command:
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
 

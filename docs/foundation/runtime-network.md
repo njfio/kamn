@@ -680,7 +680,7 @@ This document captures the initial runtime-network foundation slice for peer lif
     - `notification reconnect attempts exhausted after <retries> retries`
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
-  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`
   - `bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=60` (default)
@@ -703,7 +703,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - unresolved txhash across bounded lookup window fails closed.
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
-  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
   - `bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh`
 - Runtime budget:
   - `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75` (default)
@@ -852,8 +852,8 @@ cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_uses
 cargo test -p kamn-node main_tests::runtime_tests::regression_production_transport_profile_in_memory_rejection_reason_code_is_stable -- --exact
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
-bash scripts/kolme/run_notifications_consumer_contract_lane.sh
-bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract
+bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract
 ```
 
 Scheduled deep-lane command:

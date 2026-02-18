@@ -39,7 +39,7 @@ across Kolme upgrades.
 - Replay matrix command:
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
 - Runtime commit contract lane:
-  - `bash scripts/kolme/run_runtime_commit_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_contract_lane.json --phase contract`
   - fixture: `fixtures/kolme_commit/runtime_commit_request_cases.txt`
 - Runtime commit adapter contract reference:
   - `docs/foundation/kolme-runtime-commit-client.md`
@@ -55,10 +55,10 @@ across Kolme upgrades.
 - Runtime commit replay matrix command:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit replay contract lane:
-  - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json --phase contract`
   - fixture: `fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json`
 - Runtime commit adapter replay/finality contract lane:
-  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract`
 - `kolme_fork` submit-profile transport regression checks:
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_kolme_fork_submit_profile_uses_put_broadcast_and_maps_txhash_response -- --exact`
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_kolme_fork_submit_profile_requires_non_empty_provider_hint -- --exact`
@@ -69,7 +69,7 @@ across Kolme upgrades.
     - `functional_fork_finality_resolver_uses_new_block_height_when_txhash_is_not_present`
     - `functional_block_fallback_accepts_real_kolme_fork_block_shape`
 - Local-only live conformance matrix lane:
-  - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
   - fixture: `fixtures/kolme_commit/local_live_api_conformance_matrix.json`
 - Signed translation and custody regression checks:
   - `cargo test -p kamn-core --test kolme_api_codec_contracts unit_runtime_commit_signed_translation_rejects_message_mismatch -- --exact`
@@ -85,16 +85,16 @@ across Kolme upgrades.
 - Nonce/broadcast parity matrix command:
   - `python3 scripts/kolme/run_nonce_broadcast_parity_matrix.py --fixture fixtures/kolme_commit/nonce_broadcast_parity_cases.json --output-json /tmp/kolme-nonce-broadcast-parity-report.json`
 - Nonce/broadcast parity contract lane:
-  - `bash scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json --phase contract`
   - fixture: `fixtures/kolme_commit/nonce_broadcast_parity_cases.json`
 - Notifications websocket consumer contract lane:
-  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`
   - rust integration target: `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
 - Block fallback reconciliation contract lane:
-  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json --phase contract`
   - rust integration target: `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
 - Fast contract lane:
-  - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_version_compatibility_contract_lane.json --phase contract`
 - Scheduled deep lane:
   - `bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json`
 

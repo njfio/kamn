@@ -83,7 +83,7 @@ Fail-closed drift reasons:
 Validation commands:
 
 - `python3 scripts/kolme/check_upgrade_compatibility_marker_matrix_policy.py --version-report-file /tmp/kolme-version-report.json --fork-policy-report-file /tmp/kolme-fork-compatibility-policy-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-upgrade-compatibility-marker-matrix-policy-report.json`
-- `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
+- `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_version_compatibility_contract_lane.json --phase contract`
 - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
 
 - `Regression: #4182`

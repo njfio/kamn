@@ -266,14 +266,11 @@ def build_inventory_payload(
 
     entries: list[dict[str, Any]] = []
     for lane in lanes:
-        lane_script_path = resolve_optional_path(repo_root=repo_root, value=lane["lane_script"])
         manifest_file_path = resolve_optional_path(repo_root=repo_root, value=lane["manifest_file"])
         contract_script_path = resolve_optional_path(
             repo_root=repo_root,
             value=lane["contract_script"],
         )
-        if not lane_script_path.is_file():
-            fail(f"lane script missing for superseded inventory generation: {lane_script_path}")
         if not manifest_file_path.is_file():
             fail(
                 "manifest file missing for superseded inventory generation: "
@@ -283,13 +280,6 @@ def build_inventory_payload(
             fail(
                 "contract script missing for superseded inventory generation: "
                 f"{contract_script_path}"
-            )
-
-        lane_script_text = lane_script_path.read_text(encoding="utf-8", errors="ignore")
-        if MANIFEST_RUNNER_MARKER not in lane_script_text:
-            fail(
-                "lane script does not include manifest-runner replacement evidence marker: "
-                f"{lane['lane_script']}"
             )
 
         owner, owner_rule_prefix = resolve_owner_for_lane(lane["lane_script"], ownership_rules)

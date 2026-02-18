@@ -9,7 +9,7 @@ This runbook defines local rehearsal command contracts and drift guards for stag
 - Policy check:
   - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal.json`
 - Contract lane:
-  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract`
 - Deep rehearsal lane:
   - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
 

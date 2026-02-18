@@ -32,7 +32,7 @@ default development loop green while tightening missing-doc policy controls for
 - Bounded rustdoc generation command (kamn-core only):
   - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
 - Rustdoc artifact contract lane and policy checker:
-  - `bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh --output-json /tmp/kamn-core-rustdoc-artifact-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract --output-json /tmp/kamn-core-rustdoc-artifact-report.json`
   - `bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh --report-file /tmp/kamn-core-rustdoc-artifact-report.json`
 - CI helper regression suite:
   - `bash scripts/ci/test_ci_tools.sh`
@@ -135,7 +135,7 @@ default development loop green while tightening missing-doc policy controls for
   - `scripts/ci/missing_docs_velocity_guard.py`
   - `scripts/ci/test_missing_docs_velocity_guard_contract.sh`
   - `scripts/ci/test_missing_docs_graduation_batch_report_contract.sh`
-  - `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh`
+  - `scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract`
   - `scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh`
   - `scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh`

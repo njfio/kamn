@@ -44,7 +44,7 @@ This document captures the first implementation slice for validator onboarding, 
 Validator lifecycle governance activation requires stake/slash risk evidence before applying quorum-impacting transitions.
 
 - PR fast contract lane:
-  - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract`
 - Scheduled deep lane entrypoint:
   - `bash scripts/governance/run_stake_slash_risk_deep_lane.sh --output-json governance-stake-slash-report.json`
 - Required policy evidence:
@@ -68,7 +68,7 @@ Sensitive governance approvals require deterministic quorum attestation evidence
 - Shared Python implementation:
   - `scripts/governance/governance_quorum_attestation_replay_policy_contract.py`
 - Contract lane:
-  - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 - Required schema and reason-key markers:
   - `kamn.governance.quorum-attestation-replay-report.v1`
   - `governance_quorum_attestation_reason_codes:GO:v1`

@@ -49,7 +49,7 @@ Release promotion requires machine-validated DR drill evidence and SLO gate chec
 - SLO gate policy checker:
   - `bash scripts/deploy/check_release_slo_gates.sh --bundle-file /tmp/dr-evidence.json`
 - Fast contract lane:
-  - `bash scripts/deploy/run_dr_evidence_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_dr_evidence_contract_lane.json --phase contract`
 - Stable shell wrappers:
   - `scripts/deploy/generate_dr_evidence_bundle.sh`
   - `scripts/deploy/check_release_slo_gates.sh`
@@ -219,7 +219,7 @@ Deterministic deployment SLO/rollback policy checks are enforced through a bound
 - Policy checker command:
   - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`
 - Contract lane command:
-  - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - Stable shell wrapper:
   - `scripts/deploy/run_deployment_slo_rollback_lane.sh`
 - Shared Python implementation:
@@ -258,7 +258,7 @@ Governance transition safety now includes deterministic lifecycle/rollback integ
 - Shared Python implementation:
   - `scripts/governance/governance_lifecycle_rollback_policy_contract.py`
 - Lifecycle/rollback contract lane:
-  - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json --phase contract --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
 
 Runtime budget controls:
 

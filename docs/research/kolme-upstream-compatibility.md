@@ -28,7 +28,7 @@ Deterministic comparison rules:
 - Checker:
   - `python3 scripts/kolme/check_snapshot_drift.py --baseline-file fixtures/kolme_compatibility/snapshot_baseline.json --candidate-file fixtures/kolme_compatibility/snapshot_candidate_match.json --output-json /tmp/kolme-drift-report.json`
 - PR contract lane:
-  - `bash scripts/kolme/run_snapshot_drift_contract_lane.sh`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json --phase contract`
 
 ## CI Scope and Cost Controls
 

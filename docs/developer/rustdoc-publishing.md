@@ -48,7 +48,7 @@ without adding hosted-doc platform dependencies.
 - Regression tests for checker behavior:
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - Rustdoc artifact contract lane (bounded):
-  - `bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh --output-json /tmp/kamn-core-rustdoc-artifact-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json --phase contract --output-json /tmp/kamn-core-rustdoc-artifact-report.json`
 - Rustdoc artifact metadata/path policy checker:
   - `bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh --report-file /tmp/kamn-core-rustdoc-artifact-report.json`
 

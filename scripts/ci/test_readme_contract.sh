@@ -139,7 +139,7 @@ required_snippets=(
   "kamn.kolme.local-fork-self-test-policy-report.v1"
   "run_local_kolme_fork_portability_preflight_lane.sh --mode dry-run"
   "check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json"
-  "run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json"
+  "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json --phase contract --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json"
   "kamn.kolme.local-fork-portability-preflight-summary.v1"
   "kamn.kolme.local-fork-portability-preflight-policy-report.v1"
   "run_local_bootstrap_health_checks.sh --mode dry-run"
