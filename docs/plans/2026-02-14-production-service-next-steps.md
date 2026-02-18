@@ -77,6 +77,14 @@ This refreshed version separates:
   - `kolme_runtime_commit_failure_taxonomy_version=v1`
   - `kolme_fixture_profile=real-node-non-synthetic-v1` and `kolme_fixture_profile_version=v1`
   - `combined_lane_marker_contract_status=verified`
+- Activation closure milestone-summary marker parity contract (generator + policy outputs):
+  - `activation_closure_summary_marker_keys=milestone_review_final_decision,live_gonogo_reason_taxonomy_version,live_gonogo_reason_codes_csv,deployment_safety_gate_reason_taxonomy_version,deployment_safety_gate_reason_codes_csv,deployment_safety_gate_reason_codes_value`
+  - `milestone_review_final_decision=GO|NO-GO`
+  - `live_gonogo_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `live_gonogo_reason_codes_csv=none|<csv>`
+  - `deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
+  - `deployment_safety_gate_reason_codes_csv=none|<csv>`
+  - `deployment_safety_gate_reason_codes_value=none|<csv>`
 - Milestone bundle reason-code surface fails closed for marker/taxonomy drift via:
   - `milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch`
   - `milestone_review_go_no_go_gate_combined_transport_reason_codes_mismatch`

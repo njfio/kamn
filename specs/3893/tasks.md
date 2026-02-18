@@ -1,15 +1,17 @@
 # Issue #3893 Tasks
 
 - Issue: #3893
-- Status: Planned
+- Status: Completed
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from acceptance criteria and conformance cases.
-- T2 (Green): implement minimal code and lane wiring to satisfy ACs deterministically.
-- T3 (Refactor): keep module and lane boundaries clear and reduce drift risk.
-- T4 (Regression): add drift, marker-taxonomy, and docs-parity checks as required.
-- T5 (Docs): update required docs surfaces declared by issue #3893.
-- T6 (Verify): run scoped cargo tests plus relevant runtime/ci/deploy lane scripts for this issue surface.
+- T1 (Red): added failing activation-closure docs-contract assertions in `scripts/deploy/test_generate_gonogo_evidence_bundle.sh`.
+- T2 (Green): updated `docs/plans/2026-02-14-production-service-next-steps.md` with deterministic activation-closure summary marker declarations.
+- T3 (Refactor): extracted docs-contract validation into reusable shell helper `check_activation_closure_docs_contract` within the harness.
+- T4 (Regression): added explicit docs-drift tamper path and deterministic failure reason assertion (`activation_closure_docs_missing_marker:<marker>`).
+- T5 (Docs): documented activation closure summary marker key tuple and summary marker semantics in next-steps plan doc.
+- T6 (Verify): ran:
+  - `bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh`
+  - `cargo test -p kamn-core --test kolme_devnet_ops_docs`
 
 ## Completion Evidence
-- To be filled when implementation lands; include passing commands and AC->test mapping.
+- Milestone activation closure docs and summary marker parity checks now fail closed on drift and remain deterministic across go/no-go evidence generation and docs contracts.
