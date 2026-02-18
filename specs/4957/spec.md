@@ -1,38 +1,42 @@
 # Issue #4957 Spec
 
 - Title: Story: enforce hard shell LOC ceiling and downward-only shell-to-Rust ratio ratchet in CI
-- Status: Reviewed
+- Status: Implemented
 - Type: story
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
 
 ## Problem Statement
-Issue #4957 is part of the R27.44 shell maintainability tranche and closes one portion of the deletion-wave, spec-archival, and hard-ceiling governance gap.
+Sustaining shell-surface improvements required hard merge-blocking gates for shell LOC ceiling, ratio guardrails, and ratchet/waiver governance.
 
 ## Acceptance Criteria
-- AC-1: Scope defined in GitHub issue #4957 is implemented and verified.
-- AC-2: Deterministic fail-closed behavior is preserved for drift/regression scenarios.
-- AC-3: Required Unit/Functional/Integration/Regression tests are present and passing.
-- AC-4: Documentation/process markers remain synchronized where issue scope requires docs updates.
+- AC-1: CI fails when shell LOC exceeds configured hard ceiling.
+- AC-2: CI fails when shell-rust ratio trajectory regresses beyond ratchet policy.
+- AC-3: Ratchet waivers require deterministic mitigation metadata linkage.
+- AC-4: Policy outputs and CI wiring remain deterministic and tested.
 
 ## Scope
 In scope:
-- Work explicitly described in issue #4957.
+- Hard-ceiling checker lifecycle closure.
+- Fast-gate integration for ceiling + ratio checks.
+- Ratchet/waiver governance checker and workflow enforcement.
 
 Out of scope:
-- Unrelated feature expansion outside the issue boundary.
+- Non-shell budget governance.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute scoped workflow for #4957 | Behavior matches issue acceptance criteria |
-| C-02 | AC-2 | Regression | Inject marker/schema/taxonomy drift scenario | Policy/output fails closed with deterministic reasons |
-| C-03 | AC-3 | Unit/Integration | Run scoped tests and lane checks | Required suites pass |
-| C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
+| C-01 | AC-1 | Regression | `bash scripts/ci/test_check_shell_loc_hard_ceiling.sh` | ceiling violations fail deterministically |
+| C-02 | AC-2 | Regression | `bash scripts/ci/test_check_shell_rust_ratio_guardrail.sh` | ratio regression gate works |
+| C-03 | AC-3 | Functional/Regression | `bash scripts/ci/test_check_shell_surface_threshold_ratchet.sh` | waiver linkage and ratchet rules enforced |
+| C-04 | AC-4 | Integration | `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh` | CI required-check wiring remains valid |
 
 ## Test Mapping
-- To be completed during implementation for issue #4957.
+- AC-1: `bash scripts/ci/test_check_shell_loc_hard_ceiling.sh`
+- AC-2: `bash scripts/ci/test_check_shell_rust_ratio_guardrail.sh`
+- AC-3: `bash scripts/ci/test_check_shell_surface_threshold_ratchet.sh`
+- AC-4: `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
 
 ## Success Metrics
-- All ACs for #4957 are mapped to conformance cases and passing tests.
-- No shell-surface governance regressions introduced by #4957.
+- CI merge-blocking shell governance story fully enforced with deterministic output contracts.

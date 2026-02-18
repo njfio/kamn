@@ -1,23 +1,28 @@
 # Issue #4956 Plan
 
 - Issue: #4956
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4956 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4956 boundaries.
+- Deliver story through tasks:
+  - `#4961` policy + governance markers.
+  - `#4962` archive tooling + placement checks.
+  - `#4963` initial archive-wave execution + parity checks.
+- Finalize story lifecycle docs after task closures.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4956.
+- `docs/planning/spec-archive-policy.md`
+- `scripts/ci/archive_completed_specs.py`
+- `scripts/ci/check_spec_archive_policy.sh`
+- `scripts/ci/test_check_spec_archive_policy.sh`
+- `specs/archive/index.md`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: policy/tooling/index drift.
+- Mitigation: deterministic parity checks and fail-closed reason taxonomy.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve archive policy marker names and report schema fields used by checker/tests.
 
 ## ADR
-- Open ADR only if issue #4956 introduces architecture/dependency/protocol changes.
+- Not required.

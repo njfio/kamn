@@ -1,23 +1,23 @@
 # Issue #4954 Plan
 
 - Issue: #4954
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4954 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4954 boundaries.
+- Execute three child stories and all descendant tasks/subtasks under milestone R27.44.
+- Use deterministic CI policy checkers and contract suites as merge gates.
+- Synchronize epic/story/task lifecycle docs to implemented state after child closure.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4954.
+- Story and task lifecycle specs under `specs/4955/*`, `specs/4956/*`, `specs/4957/*`, `specs/4958/*`..`specs/4978/*`
+- Governance policy/tooling paths delivered by child work (`scripts/ci/*`, `.ci/*`, `docs/planning/*`, `specs/archive/*`)
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: governance controls exist but docs/status hierarchy remains stale.
+- Mitigation: explicit epic/story/task lifecycle closure PRs and issue-state reconciliation.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve deterministic reason-taxonomy and report schema surfaces across governance checkers.
 
 ## ADR
-- Open ADR only if issue #4954 introduces architecture/dependency/protocol changes.
+- Not required at epic closure stage.

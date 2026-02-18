@@ -1,15 +1,17 @@
 # Issue #4957 Tasks
 
 - Issue: #4957
-- Status: Planned
+- Status: Implemented
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from issue ACs and conformance cases.
-- T2 (Green): implement minimum change to satisfy tests deterministically.
-- T3 (Refactor): simplify and harden without changing behavior.
-- T4 (Regression): add drift/tamper/marker parity regression checks.
-- T5 (Docs): update required docs/process markers for issue #4957.
-- T6 (Verify): run scoped unit/functional/integration/regression checks and record evidence.
+- [x] T1: finalize hard-ceiling checker task (`#4964`).
+- [x] T2: finalize fast-gate ceiling+ratio wiring task (`#4965`).
+- [x] T3: finalize ratchet/waiver governance task (`#4966`).
+- [x] T4: synchronize story lifecycle artifacts to Implemented.
 
 ## Completion Evidence
-- To be populated when issue #4957 implementation lands.
+- Tasks delivered: `#4964` (closed), `#4965` (closed), `#4966` (closed)
+- `bash scripts/ci/test_check_shell_loc_hard_ceiling.sh`
+- `bash scripts/ci/test_check_shell_rust_ratio_guardrail.sh`
+- `bash scripts/ci/test_check_shell_surface_threshold_ratchet.sh`
+- `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
