@@ -161,6 +161,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )
@@ -179,7 +181,7 @@ required_wave_loop_snippets=(
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh"'
   'run_non_kolme_lightweight_wave_wrapper_matrix_contracts()'
   'for lightweight_wave in {10..19}; do'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
+  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh" --wave "$lightweight_wave"'
 )
 
 for snippet in "${required_wave_loop_snippets[@]}"; do

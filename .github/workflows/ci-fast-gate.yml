@@ -100,6 +100,21 @@ jobs:
           path: ci-script-surface-budget.json
           if-no-files-found: error
 
+      - name: Check shell LOC hard ceiling
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_shell_loc_hard_ceiling.sh \
+            --ceiling-file .ci/shell-loc-hard-ceiling.env \
+            --output-json ci-shell-loc-hard-ceiling.json
+
+      - name: Upload shell LOC hard-ceiling telemetry
+        if: always() && hashFiles('ci-shell-loc-hard-ceiling.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-shell-loc-hard-ceiling-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-shell-loc-hard-ceiling.json
+          if-no-files-found: error
+
       - name: Generate combined shell-surface trend report
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
