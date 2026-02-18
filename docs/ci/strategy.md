@@ -2908,6 +2908,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/signer/run_signer_incident_recovery_contract_lane.sh`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2714
+  - Wrapper dispatch parity + legacy entrypoint compatibility harness stays on PR fast gate:
+    - `bash scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh`
+    - executes governance/compliance/manifest-backed/bridge/sdk/lightweight wrapper-matrix suites to preserve legacy entrypoint compatibility against shared dispatcher resolution.
+    - deterministic compatibility markers:
+      - `legacy_entrypoint_compatibility_status=pass`
+      - `fallback_reason_taxonomy_version=kamn.framework.non-kolme-dispatch-fallback-reason-taxonomy.v1`
+      - `fallback_reason_codes_csv=dispatcher_unknown_wrapper,dispatcher_manifest_missing,dispatcher_phase_unmapped`
+      - `fallback_reason_code=dispatcher_unknown_wrapper`
   - Non-Kolme wave-10 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_wave10_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
     - shared dispatcher:
