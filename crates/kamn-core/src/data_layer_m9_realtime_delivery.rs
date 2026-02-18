@@ -71,6 +71,23 @@ pub struct DataLayerM9DispatchOutcome {
     pub escrow_timeout_extension_recommended: bool,
 }
 
+/// Queue snapshot projection for deterministic ordering validation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM9RecipientQueueSnapshot {
+    /// Recipient agent DID.
+    pub recipient_agent_did: String,
+    /// Pending queue depth.
+    pub pending_queue_depth: usize,
+    /// Deferred queue depth.
+    pub deferred_count: usize,
+    /// Pending message identifiers in insertion order.
+    pub pending_message_ids: Vec<String>,
+    /// Deferred message identifiers in insertion order.
+    pub deferred_message_ids: Vec<String>,
+    /// Timestamp when queue first reached full capacity.
+    pub first_full_at_epoch_seconds: Option<u64>,
+}
+
 /// Presence-connect request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM9PresenceConnectRequest {
@@ -271,6 +288,36 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         }
 
         Ok(self.presence_by_agent.get(&query.target_agent_did).cloned())
+    }
+
+    /// Snapshots one recipient queue preserving insertion ordering for pending/deferred IDs.
+    pub fn snapshot_recipient_queue(
+        &self,
+        requester_owner_did: &str,
+        owner_did: &str,
+        recipient_agent_did: &str,
+    ) -> Result<DataLayerM9RecipientQueueSnapshot, DataLayerM9RealtimeDeliveryError> {
+        authorize_owner_scope(requester_owner_did, owner_did)?;
+        validate_kamn_did(recipient_agent_did)?;
+
+        let queue_state = self.queue_by_recipient.get(recipient_agent_did);
+        let pending_message_ids = queue_state
+            .map(|state| state.pending_message_ids.clone())
+            .unwrap_or_default();
+        let deferred_message_ids = queue_state
+            .map(|state| state.deferred_message_ids.clone())
+            .unwrap_or_default();
+        let first_full_at_epoch_seconds =
+            queue_state.and_then(|state| state.first_full_at_epoch_seconds);
+
+        Ok(DataLayerM9RecipientQueueSnapshot {
+            recipient_agent_did: recipient_agent_did.to_owned(),
+            pending_queue_depth: pending_message_ids.len(),
+            deferred_count: deferred_message_ids.len(),
+            pending_message_ids,
+            deferred_message_ids,
+            first_full_at_epoch_seconds,
+        })
     }
 
     /// Dispatches one message and computes deterministic ACK outcome.
