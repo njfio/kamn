@@ -3,11 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COLLECTOR="$ROOT_DIR/scripts/ci/collect_shell_rust_loc_telemetry.sh"
+GENERATOR="$ROOT_DIR/scripts/ci/generate_combined_shell_surface_trend_report.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [[ ! -x "$COLLECTOR" ]]; then
   echo "expected shell-rust LOC telemetry collector to be executable: $COLLECTOR" >&2
+  exit 1
+fi
+if [[ ! -x "$GENERATOR" ]]; then
+  echo "expected combined shell-surface trend generator to be executable: $GENERATOR" >&2
   exit 1
 fi
 
@@ -75,6 +80,63 @@ if not isinstance(metrics.get("shell_to_rust_ratio"), float):
 if metrics.get("script_budget_status") != "pass":
     raise SystemExit("expected script_budget_status=pass for passing telemetry report")
 PY
+
+tampered_report="$TMP_DIR/combined-shell-surface-trend-report.tampered.json"
+bash "$GENERATOR" --output-json "$tampered_report" >/dev/null
+python3 - "$tampered_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["current"]["shell_to_rust_ratio"] = "invalid"
+payload["script_budget"]["status"] = "fail"
+payload["script_budget"]["checker_exit_code"] = 7
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_output="$(bash "$COLLECTOR" --report-file "$tampered_report" --output-json "$TMP_DIR/tampered-output.json" 2>&1)"
+tampered_code=$?
+set -e
+
+if [[ "$tampered_code" -eq 0 ]]; then
+  echo "expected shell-rust LOC telemetry collector to fail when report metrics/script-budget contract is invalid" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^status=fail$'; then
+  echo "expected tampered shell-rust LOC telemetry collector output to include status=fail marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^final_decision=NO-GO$'; then
+  echo "expected tampered shell-rust LOC telemetry collector output to include final_decision=NO-GO marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q 'shell_rust_loc_telemetry_metric_type_invalid'; then
+  echo "expected deterministic metric-type reason code in tampered telemetry collector output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q 'shell_rust_loc_telemetry_script_budget_status_fail'; then
+  echo "expected deterministic script-budget status reason code in tampered telemetry collector output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q 'shell_rust_loc_telemetry_script_budget_exit_nonzero'; then
+  echo "expected deterministic script-budget exit-code reason code in tampered telemetry collector output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=.*shell_rust_loc_telemetry_metric_type_invalid'; then
+  echo "expected reason_codes_value marker to include metric-type reason for tampered telemetry collector output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=.*shell_rust_loc_telemetry_script_budget_status_fail'; then
+  echo "expected reason_codes_value marker to include script-budget status reason for tampered telemetry collector output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_output" | grep -q '^reason_codes_value=.*shell_rust_loc_telemetry_script_budget_exit_nonzero'; then
+  echo "expected reason_codes_value marker to include script-budget exit reason for tampered telemetry collector output" >&2
+  exit 1
+fi
 
 fake_generator="$TMP_DIR/fake-generator.sh"
 cat > "$fake_generator" <<'EOF'
