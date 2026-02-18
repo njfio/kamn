@@ -130,6 +130,23 @@ jobs:
           path: ci-shell-loc-hard-ceiling.json
           if-no-files-found: error
 
+      - name: Check shell-surface threshold ratchet
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_shell_surface_threshold_ratchet.sh \
+            --hard-ceiling-file .ci/shell-loc-hard-ceiling.env \
+            --ratio-threshold-file .ci/shell-rust-ratio-guardrail.env \
+            --ratchet-exception-file .ci/shell-surface-threshold-ratchet-exception.json \
+            --output-json ci-shell-surface-threshold-ratchet.json
+
+      - name: Upload shell-surface threshold ratchet telemetry
+        if: always() && hashFiles('ci-shell-surface-threshold-ratchet.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-shell-surface-threshold-ratchet-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-shell-surface-threshold-ratchet.json
+          if-no-files-found: error
+
       - name: Check stale script references
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |
