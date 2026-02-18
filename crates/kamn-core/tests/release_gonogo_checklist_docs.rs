@@ -11,8 +11,9 @@ fn checklist_contains_preflight_gates() {
 
 #[test]
 fn checklist_contains_stale_script_reference_deletion_wave_gate() {
-    assert!(CHECKLIST
-        .contains("## Stale Script Reference Deletion-Wave Gate (Issues #4960, #4972)"));
+    assert!(
+        CHECKLIST.contains("## Stale Script Reference Deletion-Wave Gate (Issues #4960, #4972)")
+    );
     assert!(CHECKLIST.contains("bash scripts/ci/test_check_stale_script_references.sh"));
     assert!(CHECKLIST.contains(
         "bash scripts/ci/check_stale_script_references.sh --output-json /tmp/stale-script-reference-report.json"
