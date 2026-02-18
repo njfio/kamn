@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PR_TEMPLATE="$ROOT_DIR/.github/pull_request_template.md"
 DECLARATION_CHECKER="$ROOT_DIR/scripts/ci/check_pr_ci_declaration.sh"
+STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 
 require_marker() {
   local file="$1"
@@ -23,6 +24,10 @@ if [[ ! -f "$DECLARATION_CHECKER" ]]; then
   echo "expected PR declaration checker script at $DECLARATION_CHECKER" >&2
   exit 1
 fi
+if [[ ! -f "$STRATEGY_DOC" ]]; then
+  echo "expected CI strategy docs file at $STRATEGY_DOC" >&2
+  exit 1
+fi
 
 require_marker "$PR_TEMPLATE" "## Shell-Surface Impact Declaration" "PR template shell-surface declaration section"
 require_marker "$PR_TEMPLATE" "- [ ] No shell-surface impact." "PR template shell-surface declaration checklist"
@@ -31,12 +36,19 @@ require_marker "$PR_TEMPLATE" "shell_loc_delta_actual:" "PR template shell LOC d
 require_marker "$PR_TEMPLATE" "rust_loc_delta_actual:" "PR template rust LOC delta marker"
 require_marker "$PR_TEMPLATE" "shell_to_rust_ratio_delta_actual:" "PR template ratio delta marker"
 require_marker "$PR_TEMPLATE" "shell_surface_ratio_target_status:" "PR template ratio target status marker"
-require_marker "$PR_TEMPLATE" "shell_surface_mitigation_issue:" "PR template mitigation issue marker"
+require_marker "$PR_TEMPLATE" "shell_surface_mitigation_issue: #<issue-id>|None" "PR template mitigation issue marker"
+require_marker "$PR_TEMPLATE" "regressed_with_waiver requires shell_surface_mitigation_issue to link #<issue-id>" "PR template regression mitigation guidance marker"
 
 require_marker "$DECLARATION_CHECKER" "shell_loc_delta_actual:" "PR declaration checker shell LOC delta enforcement"
 require_marker "$DECLARATION_CHECKER" "rust_loc_delta_actual:" "PR declaration checker rust LOC delta enforcement"
 require_marker "$DECLARATION_CHECKER" "shell_to_rust_ratio_delta_actual:" "PR declaration checker ratio delta enforcement"
 require_marker "$DECLARATION_CHECKER" "shell_surface_ratio_target_status:" "PR declaration checker ratio status enforcement"
 require_marker "$DECLARATION_CHECKER" "shell_surface_mitigation_issue:" "PR declaration checker mitigation enforcement"
+require_marker "$DECLARATION_CHECKER" "expected None or #<issue-id>" "PR declaration checker mitigation issue format enforcement"
+require_marker "$DECLARATION_CHECKER" "regressed_with_waiver requires shell_surface_mitigation_issue to link #<issue-id>" "PR declaration checker regression mitigation linkage enforcement"
+
+require_marker "$STRATEGY_DOC" "## PR Shell-Surface Impact Declaration" "CI strategy shell-surface declaration section"
+require_marker "$STRATEGY_DOC" '`shell_surface_mitigation_issue:` (`#<issue-id>|None`)' "CI strategy mitigation issue marker contract"
+require_marker "$STRATEGY_DOC" '`regressed_with_waiver` requires `shell_surface_mitigation_issue` to link `#<issue-id>`' "CI strategy regression mitigation guidance marker"
 
 echo "PR template shell-surface marker contract tests passed."

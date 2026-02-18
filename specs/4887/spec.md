@@ -3,7 +3,7 @@
 - Title: Subtask: add docs-contract and PR-template checks for shell governance markers
 - Parent: - Parent task: #4871
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

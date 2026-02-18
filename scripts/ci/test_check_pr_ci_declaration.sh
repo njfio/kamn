@@ -108,4 +108,53 @@ if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_invalid
   exit 1
 fi
 
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_invalid_shell_loc_delta.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +12x\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: -0.03\nshell_surface_ratio_target_status: improved\nshell_surface_mitigation_issue: None"
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_invalid_shell_loc_delta.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when shell_loc_delta_actual is non-numeric" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_invalid_mitigation_issue.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: -0.03\nshell_surface_ratio_target_status: improved\nshell_surface_mitigation_issue: mitigation-123"
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_invalid_mitigation_issue.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when shell_surface_mitigation_issue is not None or #<id>" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_fail_regressed_without_issue.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: +0.03\nshell_surface_ratio_target_status: regressed_with_waiver\nshell_surface_mitigation_issue: None"
+  }
+}
+JSON
+
+if GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_fail_regressed_without_issue.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null 2>&1; then
+  echo "Expected failure when regressed_with_waiver does not link mitigation issue" >&2
+  exit 1
+fi
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_DIR/shell_pass_regressed_with_issue.json" <<'JSON'
+{
+  "pull_request": {
+    "body": "## Shell-Surface Impact Declaration\n- [ ] No shell-surface impact.\n- [x] Shell-surface impact present (explain below).\n\nshell_loc_delta_actual: +120\nrust_loc_delta_actual: -40\nshell_to_rust_ratio_delta_actual: +0.03\nshell_surface_ratio_target_status: regressed_with_waiver\nshell_surface_mitigation_issue: #4859"
+  }
+}
+JSON
+
+GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$TMP_DIR/shell_pass_regressed_with_issue.json" CI_DECLARATION_FORCE_SENSITIVE=false SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE=true "$SCRIPT" >/dev/null
+
 echo "check_pr_ci_declaration tests passed."

@@ -3892,7 +3892,8 @@ Required markers when `Shell-surface impact present` is checked:
 - `rust_loc_delta_actual:`
 - `shell_to_rust_ratio_delta_actual:`
 - `shell_surface_ratio_target_status:` (`improved|neutral|regressed_with_waiver`)
-- `shell_surface_mitigation_issue:`
+- `shell_surface_mitigation_issue:` (`#<issue-id>|None`)
+- `regressed_with_waiver` requires `shell_surface_mitigation_issue` to link `#<issue-id>`
 
 Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
