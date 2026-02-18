@@ -42,6 +42,8 @@ pub mod data_classification;
 pub mod data_layer_m0;
 /// M1 trust-anchor contracts for merkle batching, proof APIs, and Kolme anchoring worker flows.
 pub mod data_layer_m1;
+/// M10 partition contracts for scaling controls, archival index, and re-attachment lifecycle.
+pub mod data_layer_m10_partition_archival;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
 pub mod data_layer_m2_gateway_access;
 /// M3 search contracts for owner-scoped blind-index and metadata query APIs.
@@ -255,6 +257,15 @@ pub use data_layer_m1::{
     DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch, DataLayerM1MerkleInclusionProof,
     DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep, DataLayerM1ProofSiblingSide,
     DATA_LAYER_M1_HASH_ALGORITHM,
+};
+pub use data_layer_m10_partition_archival::{
+    data_layer_m10_format_partition_name, DataLayerM10ArchivalIndexEntry,
+    DataLayerM10ArchiveDueRequest, DataLayerM10PartitionLifecycleError,
+    DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecord,
+    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
+    DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD, DATA_LAYER_M10_ARCHIVE_REASON_CODE,
+    DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
+    DATA_LAYER_M10_REATTACH_REASON_CODE,
 };
 pub use data_layer_m2_gateway_access::{
     data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
