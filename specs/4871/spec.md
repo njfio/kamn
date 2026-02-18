@@ -3,7 +3,7 @@
 - Title: Task: enforce shell-surface DoR/DoD contracts across AGENTS, templates, and PR docs
 - Parent: - Parent story: #4863
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
