@@ -305,8 +305,12 @@ pub use data_layer_m2_gateway_access::{
 };
 pub use data_layer_m3_blind_index_search::{
     data_layer_m3_compute_blind_index, data_layer_m3_normalize_blind_index_value,
-    DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord,
-    DataLayerM3MetadataQuery, DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    DataLayerM3BlindIndexDeterminismDecision, DataLayerM3BlindIndexDeterminismInput,
+    DataLayerM3BlindIndexDeterminismReport, DataLayerM3BlindIndexQuery,
+    DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery,
+    DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
     DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
 };
 pub use data_layer_m4_escrow_integration::{

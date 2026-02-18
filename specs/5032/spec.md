@@ -1,41 +1,58 @@
 # Issue #5032 Spec
 
 - Title: Subtask: M3 blind-index correctness and search determinism regression corpus
-- Status: Draft
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md
 
 ## Problem Statement
-Deliver the highest-risk validation/conformance sub-scope for parent task
+Parent task `#5019` delivered baseline M3 blind-index and metadata search
+contracts. The remaining high-risk gap is an explicit deterministic regression
+corpus contract that compares expected baseline message ordering to current
+owner-scoped blind-index query output.
 
 ## Acceptance Criteria
-- AC-1: Scope for issue #5032 is decomposed into explicit implementation/integration/validation outcomes with deterministic test evidence.
-- AC-2: The issue maps to PRD sections and conformance scenarios with clear test commands and result expectations.
-- AC-3: Shell-surface impact remains neutral by default (net shell LOC delta <= 0) unless explicitly waived with mitigation issue linkage.
+- AC-1: M3 exposes deterministic blind-index determinism-evaluation API for
+  owner-scoped exact-match queries against baseline ordered message IDs.
+- AC-2: Determinism evaluation returns deterministic `Stable`/`Drifted`
+  decisions with stable reason markers and mismatch evidence (missing,
+  unexpected, out-of-order IDs).
+- AC-3: Determinism evaluation fails closed for invalid baseline contracts
+  (empty baseline IDs or invalid query limit).
+- AC-4: Existing blind-index/metadata search behavior remains deterministic and
+  passing.
+- AC-5: Shell/workflow/python/template LOC remains unchanged
+  (`shell_loc_delta_actual = 0`).
 
 ## Scope
 In scope:
-- Issue-specific delivery for Subtask: M3 blind-index correctness and search determinism regression corpus.
-- Contract-driven lifecycle artifacts (`spec.md`, `plan.md`, `tasks.md`).
-- Test-tier mapping and conformance evidence capture.
+- Add determinism evaluation contract types/API in
+  `data_layer_m3_blind_index_search`.
+- Add conformance tests for stable/drifted and fail-closed baseline validation.
+- Export stable determinism reason-marker constants and assert them in tests.
 
 Out of scope:
-- Unapproved dependency/protocol changes.
-- Work outside the parent milestone scope.
+- New dependencies/protocol/wire-format changes.
+- CI/workflow/shell-surface modifications.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute issue task plan for #5032 | Planned implementation/integration steps are completed with evidence |
-| C-02 | AC-2 | Conformance | Run mapped test commands for #5032 | All mapped conformance checks pass and produce deterministic markers |
-| C-03 | AC-3 | Regression | Run shell-surface and ratio governance checks | No net shell-surface regression without waiver |
+| C-01 | AC-1 | Functional | Baseline order exactly matches current query output | Determinism decision is `Stable` |
+| C-02 | AC-2 | Conformance | Baseline has missing/unexpected/out-of-order IDs vs current query | Determinism decision is `Drifted` with evidence fields populated |
+| C-03 | AC-3 | Regression | Empty baseline IDs or zero limit | Fail-closed typed errors |
+| C-04 | AC-4 | Regression | Existing M3 blind-index/metadata conformance cases | Existing deterministic behavior remains green |
+| C-05 | AC-5 | Regression | Shell/rust guardrail checks + diff audit | No shell surface growth; guardrails GO |
 
 ## Test Mapping
-- `cargo test -p kamn-core` (scoped by issue-specific suites)
-- `bash scripts/ci/check_shell_loc_hard_ceiling.sh` (when shell/python/workflow surface is touched)
-- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh` (when shell/python/workflow surface is touched)
+- `cargo test -p kamn-core --test data_layer_m3_blind_index_search`
+- `cargo test -p kamn-core`
+- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --repo-root . --output-json /tmp/shell-rust-ratio-guardrail-5032.json`
+- `bash scripts/ci/check_shell_loc_hard_ceiling.sh --repo-root . --output-json /tmp/shell-loc-hard-ceiling-5032.json`
 
 ## Success Metrics
-- Issue #5032 reaches `Status: Implemented` with ACs mapped to passing conformance evidence.
-- Shell-to-Rust ratio guardrails remain within thresholds.
+- Determinism evaluation report provides deterministic regression evidence for
+  blind-index query output drift.
+- All M3 conformance cases pass in `data_layer_m3_blind_index_search` suite.
+- Shell-to-Rust ratio remains in-go and shell LOC remains below hard ceiling.

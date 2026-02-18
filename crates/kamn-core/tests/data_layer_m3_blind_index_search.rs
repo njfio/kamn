@@ -1,7 +1,10 @@
 use kamn_core::{
-    data_layer_m3_compute_blind_index, DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexSearchMode,
-    DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery, DataLayerM3SearchCatalog,
-    DataLayerM3SearchError,
+    data_layer_m3_compute_blind_index, DataLayerM3BlindIndexDeterminismDecision,
+    DataLayerM3BlindIndexDeterminismInput, DataLayerM3BlindIndexQuery,
+    DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery,
+    DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
+    DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
 };
 use std::collections::BTreeMap;
 
@@ -257,4 +260,132 @@ fn spec_c05_invalid_blind_index_modes_and_bounds_fail_closed() {
             created_before_inclusive: 10,
         })
     );
+}
+
+#[test]
+fn spec_c06_blind_index_determinism_reports_stable_when_baseline_matches_query_order() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let mut catalog = DataLayerM3SearchCatalog::new();
+    for (message_id, created_at_epoch_seconds) in
+        [("msg-d-1", 1_708_160_010), ("msg-d-2", 1_708_160_020)]
+    {
+        catalog
+            .register_record(record(RecordSeed {
+                message_id,
+                owner_did: "kamn:did:owner:a",
+                sender_did: "kamn:did:agent:a1",
+                recipient_did: "kamn:did:agent:b1",
+                session_id: Some("session-d"),
+                escrow_id: None,
+                message_type: "text",
+                created_at_epoch_seconds,
+                blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+            }))
+            .expect("record registration should succeed");
+    }
+
+    let report = catalog
+        .evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+            owner_did: "kamn:did:owner:a".to_owned(),
+            field_name: "subject".to_owned(),
+            token: token.clone(),
+            baseline_ordered_message_ids: vec!["msg-d-2".to_owned(), "msg-d-1".to_owned()],
+            limit: Some(10),
+        })
+        .expect("determinism evaluation should succeed");
+    assert_eq!(
+        report.decision,
+        DataLayerM3BlindIndexDeterminismDecision::Stable
+    );
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE
+    );
+    assert!(report.missing_message_ids.is_empty());
+    assert!(report.unexpected_message_ids.is_empty());
+    assert!(report.out_of_order_message_ids.is_empty());
+}
+
+#[test]
+fn spec_c07_blind_index_determinism_reports_drift_with_missing_and_out_of_order_evidence() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let mut catalog = DataLayerM3SearchCatalog::new();
+    for (message_id, created_at_epoch_seconds) in
+        [("msg-e-1", 1_708_160_010), ("msg-e-2", 1_708_160_020)]
+    {
+        catalog
+            .register_record(record(RecordSeed {
+                message_id,
+                owner_did: "kamn:did:owner:a",
+                sender_did: "kamn:did:agent:a1",
+                recipient_did: "kamn:did:agent:b1",
+                session_id: Some("session-e"),
+                escrow_id: None,
+                message_type: "text",
+                created_at_epoch_seconds,
+                blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+            }))
+            .expect("record registration should succeed");
+    }
+
+    let report = catalog
+        .evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+            owner_did: "kamn:did:owner:a".to_owned(),
+            field_name: "subject".to_owned(),
+            token: token.clone(),
+            baseline_ordered_message_ids: vec![
+                "msg-e-1".to_owned(),
+                "msg-e-2".to_owned(),
+                "msg-e-missing".to_owned(),
+            ],
+            limit: Some(10),
+        })
+        .expect("determinism evaluation should succeed");
+    assert_eq!(
+        report.decision,
+        DataLayerM3BlindIndexDeterminismDecision::Drifted
+    );
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE
+    );
+    assert_eq!(report.missing_message_ids, vec!["msg-e-missing".to_owned()]);
+    assert_eq!(
+        report.out_of_order_message_ids,
+        vec!["msg-e-1".to_owned(), "msg-e-2".to_owned()]
+    );
+}
+
+#[test]
+fn spec_c08_blind_index_determinism_rejects_empty_baseline_and_invalid_limit() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let catalog = DataLayerM3SearchCatalog::new();
+
+    let empty_baseline =
+        catalog.evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+            owner_did: "kamn:did:owner:a".to_owned(),
+            field_name: "subject".to_owned(),
+            token: token.clone(),
+            baseline_ordered_message_ids: Vec::new(),
+            limit: Some(10),
+        });
+    assert_eq!(
+        empty_baseline,
+        Err(DataLayerM3SearchError::EmptyField(
+            "baseline_ordered_message_ids"
+        ))
+    );
+
+    let invalid_limit =
+        catalog.evaluate_blind_index_determinism(DataLayerM3BlindIndexDeterminismInput {
+            owner_did: "kamn:did:owner:a".to_owned(),
+            field_name: "subject".to_owned(),
+            token,
+            baseline_ordered_message_ids: vec!["msg-any".to_owned()],
+            limit: Some(0),
+        });
+    assert_eq!(invalid_limit, Err(DataLayerM3SearchError::InvalidLimit(0)));
 }
