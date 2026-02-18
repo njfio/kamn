@@ -1,26 +1,39 @@
 # Issue #5002 Plan
 
 - Issue: #5002
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Decompose PRD scope into child stories for M0..M11 plus cross-cutting conformance harness and execute each under spec-driven/TDD gates.
+2. Complete integration-gap closure task `#5076` for M4 escrow and M8 compliance core-type interoperability.
+3. Validate milestone behavior through crate-level regression and critical-scenario conformance suite.
+4. Close epic with explicit child-state evidence and shell-surface neutrality markers.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- Child implementation modules across `crates/kamn-core/src/data_layer_*` and matching test suites (delivered in child issues).
+- Integration interop modules:
+  - `crates/kamn-core/src/data_layer_m4_escrow_integration.rs`
+  - `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs`
+- Epic closure artifacts:
+  - `specs/5002/spec.md`
+  - `specs/5002/plan.md`
+  - `specs/5002/tasks.md`
 
 ## Risks and Mitigations
-- Risk level: medium
+- Risk level: high
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep milestone decomposition bounded by PRD M0..M11 contracts.
+  - Use deterministic conformance suites per story and for PRD critical scenarios.
+  - Preserve Rust-first orchestration to prevent shell-surface growth.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive data-layer contracts and exports in `kamn-core` across child stories.
+- No unapproved dependency/protocol/wire-format changes at epic closure.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this closure-only epic normalization.
+
+## Verification Summary
+- Child completion: all epic-linked stories/tasks are closed (`#5003..#5015`, `#5076`).
+- Conformance evidence: `cargo test -p kamn-core --test data_layer_prd_critical_scenario_conformance` passes.
+- Regression evidence: `cargo test -p kamn-core` passes.
