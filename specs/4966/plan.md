@@ -1,23 +1,27 @@
 # Issue #4966 Plan
 
 - Issue: #4966
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4966 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4966 boundaries.
+- Implement shell-surface threshold-ratchet checker with deterministic waiver validation.
+- Wire checker into fast-gate CI and contract suites.
+- Validate reason taxonomy + report schema via regression tests.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4966.
+- `.ci/shell-surface-threshold-ratchet-exception.json`
+- `.github/workflows/ci-fast-gate.yml`
+- `scripts/ci/check_shell_surface_threshold_ratchet.py`
+- `scripts/ci/check_shell_surface_threshold_ratchet.sh`
+- `scripts/ci/test_check_shell_surface_threshold_ratchet.sh`
+- `scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: waiver metadata bypass could allow ratio regression without mitigation linkage.
+- Mitigation: deterministic checker validation and CI merge-blocking wiring.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve reason taxonomy/report schema consumed by fast-gate telemetry and policy checks.
 
 ## ADR
-- Open ADR only if issue #4966 introduces architecture/dependency/protocol changes.
+- Not required.

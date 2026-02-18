@@ -1,23 +1,24 @@
 # Issue #4964 Plan
 
 - Issue: #4964
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4964 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4964 boundaries.
+- Finalize hard-ceiling checker lifecycle evidence through subtask closure.
+- Keep deterministic reason taxonomy/report contracts validated by ceiling tests.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4964.
+- `specs/4976/spec.md`
+- `specs/4976/plan.md`
+- `specs/4976/tasks.md`
+- `scripts/ci/test_check_shell_loc_hard_ceiling.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: ceiling checker taxonomy/report drift.
+- Mitigation: deterministic contract tests and lifecycle evidence.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve reason taxonomy and report schema consumed by CI policy lanes.
 
 ## ADR
-- Open ADR only if issue #4964 introduces architecture/dependency/protocol changes.
+- Not required.

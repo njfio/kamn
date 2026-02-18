@@ -1,23 +1,24 @@
 # Issue #4961 Plan
 
 - Issue: #4961
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4961 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4961 boundaries.
+- Land archive-policy governance doc with deterministic markers.
+- Extend archive-policy checker tests to require marker presence and fail closed when absent.
+- Wire marker into milestone index contract path.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4961.
+- `docs/planning/spec-archive-policy.md`
+- `scripts/ci/test_check_spec_archive_policy.sh`
+- `specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: documentation-only policy drifts from enforcement checks.
+- Mitigation: marker contract tests enforce parity.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve deterministic policy marker keys consumed by archive-policy checks.
 
 ## ADR
-- Open ADR only if issue #4961 introduces architecture/dependency/protocol changes.
+- Not required (governance-policy doc/check scope).

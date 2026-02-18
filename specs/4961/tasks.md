@@ -1,15 +1,15 @@
 # Issue #4961 Tasks
 
 - Issue: #4961
-- Status: Planned
+- Status: Implemented
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from issue ACs and conformance cases.
-- T2 (Green): implement minimum change to satisfy tests deterministically.
-- T3 (Refactor): simplify and harden without changing behavior.
-- T4 (Regression): add drift/tamper/marker parity regression checks.
-- T5 (Docs): update required docs/process markers for issue #4961.
-- T6 (Verify): run scoped unit/functional/integration/regression checks and record evidence.
+- [x] T1 (Red): add/verify policy-marker contract tests fail closed when marker is missing.
+- [x] T2 (Green): add archive lifecycle policy markers and retention rules.
+- [x] T3 (Regression): validate marker parity in archive-policy contract lane.
+- [x] T4 (Docs): sync milestone marker to policy doc path.
+- [x] T5 (Verify): run archive-policy contract tests.
 
 ## Completion Evidence
-- To be populated when issue #4961 implementation lands.
+- Subtask delivery: `#4973` (PR `#4991`, merged)
+- `bash scripts/ci/test_check_spec_archive_policy.sh`

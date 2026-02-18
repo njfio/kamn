@@ -1,23 +1,23 @@
 # Issue #4962 Plan
 
 - Issue: #4962
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4962 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4962 boundaries.
+- Implement deterministic archive migration utility with explicit dry-run/apply semantics.
+- Extend archive-policy contract tests to validate tool-generated archive/pointer/index fixtures.
+- Keep checker outputs deterministic with fail-closed reasoning.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4962.
+- `scripts/ci/archive_completed_specs.py`
+- `scripts/ci/test_check_spec_archive_policy.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: tool-generated output shape drifts from checker expectations.
+- Mitigation: tool-generated fixtures are explicitly validated in contract tests.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve deterministic archive output markers consumed by archive-policy checks.
 
 ## ADR
-- Open ADR only if issue #4962 introduces architecture/dependency/protocol changes.
+- Not required (tooling implementation within existing governance architecture).
