@@ -61,6 +61,10 @@ for template in "${ISSUE_TEMPLATES[@]}"; do
   require_marker "$template" "rust_loc_delta_estimate" "issue template shell-surface DoR"
   require_marker "$template" "shell_to_rust_ratio_delta_estimate" "issue template shell-surface DoR"
   require_marker "$template" "shell_surface_mitigation_issue" "issue template shell-surface DoR"
+  require_marker "$template" "shell_loc_delta_actual" "issue template shell-surface DoD"
+  require_marker "$template" "rust_loc_delta_actual" "issue template shell-surface DoD"
+  require_marker "$template" "shell_to_rust_ratio_delta_actual" "issue template shell-surface DoD"
+  require_marker "$template" "shell_surface_ratio_target_status" "issue template shell-surface DoD"
 done
 
 echo "shell-surface issue intake contract tests passed."
