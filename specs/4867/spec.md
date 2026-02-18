@@ -3,7 +3,7 @@
 - Title: Task: deploy shared shell test harness and JSON helper migration waves (phases 4-5)
 - Parent: - Parent story: #4861
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

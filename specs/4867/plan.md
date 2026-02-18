@@ -8,7 +8,13 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/lib/test_harness.sh`
+- `scripts/lib/test_test_harness_migration_contract.sh`
+- `scripts/lib/write_json_file.sh`
+- `scripts/lib/test_json_write_helper_migration_contract.sh`
+- `scripts/ci/evaluate_budget.sh`
+- `scripts/ci/generate_performance_smoke_report.sh`
+- `docs/ops/configuration.md`
 
 ## Risks / Mitigations
 

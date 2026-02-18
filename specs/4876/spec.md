@@ -3,7 +3,7 @@
 - Title: Subtask: consolidate framework wave wrapper matrix scripts into parameterized runner
 - Parent: - Parent task: #4866
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

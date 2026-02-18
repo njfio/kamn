@@ -8,7 +8,11 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+- `scripts/framework/test_non_kolme_wave_lightweight_wrapper_runner_contract.sh`
+- `scripts/framework/wave_definitions/non_kolme_wave19_lightweight_wrappers.txt`
+- `scripts/ci/test_ci_tools.sh`
+- `docs/ci/strategy.md`
 
 ## Risks / Mitigations
 

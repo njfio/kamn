@@ -8,7 +8,17 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `docs/plans/2026-02-17-shell-loc-reduction-plan.md`
+- `specs/milestones/r27-43-shell-loc-maintainability-and-shell-to-rust-ratio-sustainment-governance/index.md`
+- `scripts/lib/exec_dispatch.py`
+- `scripts/lib/test_exec_dispatch_registry.sh`
+- `scripts/lib/test_harness.sh`
+- `scripts/lib/write_json_file.sh`
+- `scripts/framework/declarative_policy_checker.py`
+- `scripts/framework/generate_lane_artifacts.py`
+- `scripts/framework/check_lane_registry_drift.sh`
+- `scripts/ci/test_ci_tools.sh`
+- `docs/ci/strategy.md`
 
 ## Risks / Mitigations
 

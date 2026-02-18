@@ -8,7 +8,11 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/ci/check_kolme_wave_wrapper_family_budget_trend_impl.sh`
+- `scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh`
+- `scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
+- `scripts/ci/test_ci_tools.sh`
+- `docs/ci/strategy.md`
 
 ## Risks / Mitigations
 
