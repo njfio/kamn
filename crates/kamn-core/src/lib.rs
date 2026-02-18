@@ -44,6 +44,8 @@ pub mod data_layer_m0;
 pub mod data_layer_m1;
 /// M10 partition contracts for scaling controls, archival index, and re-attachment lifecycle.
 pub mod data_layer_m10_partition_archival;
+/// M11 hardening contracts for security/chaos/performance matrix and operator readiness synthesis.
+pub mod data_layer_m11_hardening_readiness;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
 pub mod data_layer_m2_gateway_access;
 /// M3 search contracts for owner-scoped blind-index and metadata query APIs.
@@ -266,6 +268,15 @@ pub use data_layer_m10_partition_archival::{
     DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD, DATA_LAYER_M10_ARCHIVE_REASON_CODE,
     DATA_LAYER_M10_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
     DATA_LAYER_M10_REATTACH_REASON_CODE,
+};
+pub use data_layer_m11_hardening_readiness::{
+    DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,
+    DataLayerM11OperatorReadinessDecision, DataLayerM11OperatorReadinessReport,
+    DataLayerM11ScenarioDefinition, DataLayerM11ScenarioDomain, DataLayerM11ScenarioOutcomeInput,
+    DataLayerM11ScenarioOutcomeRecord, DataLayerM11ScenarioSeverity, DataLayerM11ScenarioStatus,
+    DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
+    DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
+    DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
 };
 pub use data_layer_m2_gateway_access::{
     data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
