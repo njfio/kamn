@@ -10,6 +10,32 @@ fn checklist_contains_preflight_gates() {
 }
 
 #[test]
+fn checklist_contains_stale_script_reference_deletion_wave_gate() {
+    assert!(
+        CHECKLIST.contains("## Stale Script Reference Deletion-Wave Gate (Issues #4960, #4972)")
+    );
+    assert!(CHECKLIST.contains("bash scripts/ci/test_check_stale_script_references.sh"));
+    assert!(CHECKLIST.contains(
+        "bash scripts/ci/check_stale_script_references.sh --output-json /tmp/stale-script-reference-report.json"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_taxonomy_version=kamn.ci.stale-script-reference-detector-reason-taxonomy.v1"
+    ));
+    assert!(CHECKLIST.contains(
+        "reason_codes_csv=stale_script_reference_argument_invalid,stale_script_reference_deletion_manifest_missing,stale_script_reference_deletion_manifest_schema_invalid,stale_script_reference_detected,stale_script_reference_manifest_entry_invalid,stale_script_reference_output_json_required,stale_script_reference_output_write_failed,stale_script_reference_scan_root_missing"
+    ));
+    assert!(CHECKLIST.contains("reason_codes=none|<csv>"));
+    assert!(CHECKLIST.contains("status=ok|fail"));
+    assert!(CHECKLIST.contains("final_decision=GO|NO-GO"));
+    assert!(CHECKLIST.contains("stale_reference_count=<n>"));
+    assert!(CHECKLIST.contains("stale_script_reference_detected"));
+    assert!(CHECKLIST.contains("stale_script_reference_manifest_entry_invalid"));
+    assert!(CHECKLIST.contains("stale_script_reference_deletion_manifest_schema_invalid"));
+    assert!(CHECKLIST.contains("Regression: #4960"));
+    assert!(CHECKLIST.contains("Regression: #4972"));
+}
+
+#[test]
 fn checklist_contains_production_mode_live_provider_enforcement_gate() {
     assert!(CHECKLIST.contains("## Production-Mode Live Provider Enforcement Gate (Issue #4371)"));
     assert!(CHECKLIST.contains("test_run_local_kamn_live_runtime_integration_contract_lane.sh"));

@@ -130,6 +130,20 @@ jobs:
           path: ci-shell-loc-hard-ceiling.json
           if-no-files-found: error
 
+      - name: Check stale script references
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_stale_script_references.sh \
+            --output-json ci-stale-script-reference-report.json
+
+      - name: Upload stale script reference telemetry
+        if: always() && hashFiles('ci-stale-script-reference-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-stale-script-reference-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-stale-script-reference-report.json
+          if-no-files-found: error
+
       - name: Generate combined shell-surface trend report
         if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
         run: |

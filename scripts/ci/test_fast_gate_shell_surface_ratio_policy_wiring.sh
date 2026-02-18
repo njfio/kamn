@@ -81,6 +81,18 @@ if ! grep -Fq "ci-shell-rust-loc-telemetry.json" "$FAST_WORKFLOW"; then
   echo "expected shell-rust LOC telemetry artifact/report path wiring in ci-fast-gate workflow" >&2
   exit 1
 fi
+if ! grep -Fq "name: Check stale script references" "$FAST_WORKFLOW"; then
+  echo "expected stale script reference checker step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_stale_script_references.sh" "$FAST_WORKFLOW"; then
+  echo "expected stale script reference checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-stale-script-reference-report.json" "$FAST_WORKFLOW"; then
+  echo "expected stale script reference checker report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
 if ! grep -Fq "ci-combined-shell-surface-trend-report.json" "$FAST_WORKFLOW"; then
   echo "expected combined shell-surface trend report output wiring in ci-fast-gate workflow" >&2
   exit 1

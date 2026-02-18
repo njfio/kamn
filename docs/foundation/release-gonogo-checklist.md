@@ -12,6 +12,25 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Release candidate artifact digest verified.
 - Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
+## Stale Script Reference Deletion-Wave Gate (Issues #4960, #4972)
+- Validation commands:
+  - `bash scripts/ci/test_check_stale_script_references.sh`
+  - `bash scripts/ci/check_stale_script_references.sh --output-json /tmp/stale-script-reference-report.json`
+- Required deterministic checker markers:
+  - `status=ok|fail`
+  - `final_decision=GO|NO-GO`
+  - `reason_taxonomy_version=kamn.ci.stale-script-reference-detector-reason-taxonomy.v1`
+  - `reason_codes_csv=stale_script_reference_argument_invalid,stale_script_reference_deletion_manifest_missing,stale_script_reference_deletion_manifest_schema_invalid,stale_script_reference_detected,stale_script_reference_manifest_entry_invalid,stale_script_reference_output_json_required,stale_script_reference_output_write_failed,stale_script_reference_scan_root_missing`
+  - `reason_codes=none|<csv>`
+  - `stale_reference_count=<n>`
+- Required fail-closed drift reasons:
+  - `stale_script_reference_detected`
+  - `stale_script_reference_manifest_entry_invalid`
+  - `stale_script_reference_deletion_manifest_schema_invalid`
+- Regression policy:
+  - stale/superseded script references in docs/workflows/manifests force `NO-GO` (`Regression: #4960`).
+  - missing ci-fast-gate stale-reference checker wiring or telemetry contract drift forces `NO-GO` (`Regression: #4972`).
+
 ## Full-Stack Harness Marker Checker Reason Mapping Gate (Issue #4196)
 - Validation commands:
   - `bash scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh`
