@@ -205,6 +205,23 @@ This refreshed version separates:
     - `docs/ci/strategy.md`
     - `docs/planning/kolme-devnet-ops.md`
 
+### R27.19 Rehearsal/Rollback CI Smoke Governance Closure
+- Active chain: `#4145 -> #4149 -> (#4156, #4157)`.
+- Convergence closure markers:
+  - `rehearsal_promotion_ci_smoke_convergence_status=verified`
+  - `rehearsal_promotion_ci_smoke_reason_taxonomy_version=kamn.ci.rehearsal-promotion-ci-smoke-convergence-reason-taxonomy.v1`
+  - `rehearsal_promotion_ci_smoke_max_seconds=120`
+  - `rehearsal_promotion_local_heavy_max_seconds=900`
+- Deterministic fail-closed rehearsal boundary taxonomy remains explicit:
+  - `rehearsal_boundary_ci_smoke_seconds_exceeded`
+  - `rehearsal_boundary_local_heavy_opt_in_missing`
+  - `rehearsal_runbook_contract_parity_mismatch`
+- Composite governance checker + docs drift coverage:
+  - `python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO`
+  - `bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh`
+- Local-heavy rehearsal execution remains explicit opt-in and outside ci-fast-gate:
+  - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900`
+
 ### R27.20 Secret Material Zeroization and Signer-Rotation Governance Closure
 - Active chain: `#4158 -> #4160 -> #4164 -> (#4171, #4172)`.
 - Convergence closure markers:
