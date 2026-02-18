@@ -2150,7 +2150,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh`
     - enforces manifest-backed wrappers for:
       - `run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
-      - `run_local_kolme_live_api_conformance_contract_lane.sh`
+      - `scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json`
       - `run_local_kamn_live_runtime_integration_contract_lane.sh`
       - `run_local_kolme_fork_process_lifecycle_contract_lane.sh`
     - enforces tranche shell-wrapper budget:
