@@ -1,7 +1,7 @@
 # Issue #4971 Plan
 
 - Issue: #4971
-- Status: Planned
+- Status: Implemented
 
 ## Approach
 - Implement issue #4971 using Red -> Green -> Refactor -> Regression loop.
