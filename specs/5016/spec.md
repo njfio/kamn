@@ -1,41 +1,53 @@
 # Issue #5016 Spec
 
 - Title: Task: M0 deliver core schema, append-only controls, and envelope crypto primitives
-- Status: Draft
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md
 
 ## Problem Statement
-Implement, integrate, test, and validate the parent-story delivery scope with strict spec-driven + TDD gates.
+PRD M0 requires a foundation data path that can deterministically persist encrypted message envelopes,
+compute stable content hashes, and enforce append-only tamper checks before Merkle anchoring. This issue
+delivers a Rust-native in-memory foundation slice in `kamn-core` so higher milestones can integrate on a
+tested contract without increasing shell LOC.
 
 ## Acceptance Criteria
-- AC-1: Scope for issue #5016 is decomposed into explicit implementation/integration/validation outcomes with deterministic test evidence.
-- AC-2: The issue maps to PRD sections and conformance scenarios with clear test commands and result expectations.
-- AC-3: Shell-surface impact remains neutral by default (net shell LOC delta <= 0) unless explicitly waived with mitigation issue linkage.
+- AC-1: A deterministic envelope storage record can be derived from canonical envelope + ciphertext metadata with
+  stable content hash and AAD hash outputs independent of map/list ordering.
+- AC-2: Append-only controls reject duplicate message identifiers and expose no mutation API for existing entries.
+- AC-3: Hash-chain verification detects tampering in stored records and succeeds for untampered append order.
+- AC-4: Compression metadata constraints are enforced for M0 records (`compression_codec == \"zstd\"`,
+  `compressed_size_bytes > 0`, `compressed_size_bytes <= content_size_bytes`).
+- AC-5: Shell-surface impact remains neutral (`shell_loc_delta_actual = 0`) for this issue.
 
 ## Scope
 In scope:
-- Issue-specific delivery for Task: M0 deliver core schema, append-only controls, and envelope crypto primitives.
-- Contract-driven lifecycle artifacts (`spec.md`, `plan.md`, `tasks.md`).
-- Test-tier mapping and conformance evidence capture.
+- New `kamn-core` module for M0 envelope record derivation and append-only ledger verification.
+- Public API exports for integration by follow-on M1+ tasks.
+- Deterministic unit/conformance tests mapped to C-01..C-05.
 
 Out of scope:
-- Unapproved dependency/protocol changes.
-- Work outside the parent milestone scope.
+- PostgreSQL migrations/triggers (tracked by follow-on tasks).
+- Real cryptographic primitive swap-in requiring new dependency introduction.
+- Merkle anchoring worker implementation.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute issue task plan for #5016 | Planned implementation/integration steps are completed with evidence |
-| C-02 | AC-2 | Conformance | Run mapped test commands for #5016 | All mapped conformance checks pass and produce deterministic markers |
-| C-03 | AC-3 | Regression | Run shell-surface and ratio governance checks | No net shell-surface regression without waiver |
+| C-01 | AC-1 | Conformance | Same envelope/ciphertext with reordered recipients and wrapped-key map | `content_hash` and `envelope_aad_hash` remain identical |
+| C-02 | AC-2 | Functional | Append two records with duplicate `message_id` | Second append fails with duplicate-id error |
+| C-03 | AC-3 | Regression | Verify untampered chain then tamper one record hash | First verify passes, second verify returns chain mismatch |
+| C-04 | AC-4 | Unit | Construct record with invalid compression metadata | Constructor returns compression metadata error |
+| C-05 | AC-5 | Regression | Compare issue diff shell/python/workflow LOC | Net shell delta remains zero |
 
 ## Test Mapping
-- `cargo test -p kamn-core` (scoped by issue-specific suites)
-- `bash scripts/ci/check_shell_loc_hard_ceiling.sh` (when shell/python/workflow surface is touched)
-- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh` (when shell/python/workflow surface is touched)
+- `cargo test -p kamn-core data_layer_m0` (unit + conformance for module)
+- `cargo test -p kamn-core spec_c0` (conformance case selectors)
+- `cargo test -p kamn-core` (regression sanity for crate before PR)
+- Shell guard scripts are not required for this issue because shell surface is unchanged.
 
 ## Success Metrics
-- Issue #5016 reaches `Status: Implemented` with ACs mapped to passing conformance evidence.
-- Shell-to-Rust ratio guardrails remain within thresholds.
+- All ACs map to passing `spec_c0x_*` tests.
+- `kamn-core` remains green with no new clippy warnings for touched code.
+- Shell LOC delta for this issue remains zero.

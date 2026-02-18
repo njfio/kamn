@@ -38,6 +38,8 @@ pub mod cross_chain_bridge;
 pub mod cross_chain_receipt;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
+/// M0 data-layer foundation records, append-only ledger, and hash-chain contracts.
+pub mod data_layer_m0;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -223,6 +225,11 @@ pub use cross_chain_receipt::{
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
     DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
+};
+pub use data_layer_m0::{
+    DataLayerM0AppendOnlyLedger, DataLayerM0EnvelopeRecord, DataLayerM0Error,
+    DataLayerM0RecordInput, DataLayerM0WrappedKey, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
+    DATA_LAYER_M0_HASH_ALGORITHM, DATA_LAYER_M0_HASH_CHAIN_GENESIS,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
