@@ -3726,6 +3726,13 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 - `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
 - `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json` enforces pass/unwaived/waived plus stale/corrupt threshold guard contracts.
 - `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
+- downward-only threshold ratchet baseline:
+  - `.ci/fast-gate-budget-delta-ratchet.env`
+  - checker fails closed when `.ci/fast-gate-budget-delta.env` exceeds ratchet limits unless a valid tracked exception is present.
+- ratchet exception workflow:
+  - optional exception file: `.ci/fast-gate-budget-delta-ratchet-exception.json`
+  - required fields when used: `reason`, `expires_on`, `mitigation_issue`, `allow_threshold_keys`
+  - `mitigation_issue` must link `#<issue-id>`
 - local-heavy-sensitive drift markers are emitted in the delta report:
   - `test_scope`
   - `local_heavy_sensitive`
@@ -3738,9 +3745,15 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 - threshold/waiver reason code contract:
   - `delta_threshold_violation_unwaived` (hard fail, merge-blocking)
   - `delta_threshold_waiver_applied` (pass with mandatory review visibility)
+  - `fast_gate_delta_threshold_ratchet_regression_unwaived` (hard fail, merge-blocking ratchet regression)
+  - `fast_gate_delta_threshold_ratchet_exception_applied` (pass with mandatory review + linked mitigation issue)
   - `local_heavy_sensitive_drift_detected` (soft-overrun review marker for local-heavy-sensitive scope drift)
   - `fast_gate_delta_threshold_file_stale` (contract lane stale-threshold guard)
   - `fast_gate_delta_threshold_file_corrupt` (contract lane corrupt-threshold guard)
+- ratchet decision markers:
+  - `threshold_ratchet_status=within|exception-applied|regressed`
+  - `threshold_ratchet_violations=none|...`
+  - `threshold_ratchet_mitigation_issue=#<issue-id>`
 - reviewer action when `soft_overrun_status=exceeded`:
   - verify expected local-heavy drift scope and waiver rationale, and require linked follow-up before merge.
 - fast-gate threshold remediation path:
@@ -4040,6 +4053,8 @@ Fast-mode CI tooling regression coverage includes:
   - deterministic threshold-guard reason-code surface:
     - `reason_codes=fast_gate_delta_threshold_file_stale`
     - `reason_codes=fast_gate_delta_threshold_file_corrupt`
+    - `reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived`
+    - `reason_codes=fast_gate_delta_threshold_ratchet_exception_applied`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)

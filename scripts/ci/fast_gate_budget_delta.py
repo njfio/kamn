@@ -8,10 +8,16 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 import json
 from pathlib import Path
+import re
 import sys
 
 
 SCHEMA_VERSION = "kamn.ci.fast-gate-budget-delta-report.v1"
+ISSUE_REF_PATTERN = re.compile(r"^#[0-9]+$")
+RATCHET_THRESHOLD_KEYS = {
+    "FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT",
+    "FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT",
+}
 
 
 @dataclass(frozen=True)
@@ -267,6 +273,57 @@ def parse_waiver(waiver_path: Path, violations: list[str]) -> tuple[bool, str]:
     return True, reason.strip()
 
 
+def parse_ratchet_exception(
+    ratchet_exception_path: Path,
+    ratchet_violations: list[str],
+) -> tuple[bool, str, str]:
+    if not ratchet_exception_path.is_file():
+        return False, "ratchet exception file not found", ""
+
+    payload = load_json(ratchet_exception_path)
+    reason = payload.get("reason")
+    expires_on = payload.get("expires_on")
+    mitigation_issue = payload.get("mitigation_issue")
+    allow_threshold_keys = payload.get("allow_threshold_keys")
+
+    if not isinstance(reason, str) or not reason.strip():
+        fail("ratchet exception reason must be a non-empty string")
+    if not isinstance(expires_on, str) or not expires_on:
+        fail("ratchet exception expires_on must be a non-empty YYYY-MM-DD value")
+    try:
+        expires_date = date.fromisoformat(expires_on)
+    except ValueError:
+        fail("ratchet exception expires_on must be in YYYY-MM-DD format")
+    if expires_date < date.today():
+        fail(f"ratchet exception expired on {expires_on}")
+
+    if not isinstance(mitigation_issue, str) or not ISSUE_REF_PATTERN.fullmatch(mitigation_issue):
+        fail("ratchet mitigation_issue must be #<issue-id>")
+
+    if not isinstance(allow_threshold_keys, list) or not all(
+        isinstance(key, str) for key in allow_threshold_keys
+    ):
+        fail("ratchet allow_threshold_keys must be a string list")
+    if not allow_threshold_keys:
+        fail("ratchet allow_threshold_keys must not be empty")
+    unknown_keys = sorted(set(allow_threshold_keys).difference(RATCHET_THRESHOLD_KEYS))
+    if unknown_keys:
+        fail(
+            "ratchet allow_threshold_keys contains unsupported keys: "
+            + ",".join(unknown_keys)
+        )
+
+    missing_keys = sorted(set(ratchet_violations).difference(allow_threshold_keys))
+    if missing_keys:
+        return (
+            False,
+            "ratchet exception does not allow thresholds: " + ",".join(missing_keys),
+            mitigation_issue,
+        )
+
+    return True, reason.strip(), mitigation_issue
+
+
 def extract_section(payload: dict, key: str) -> dict:
     section = payload.get(key)
     if not isinstance(section, dict):
@@ -305,8 +362,12 @@ def emit_check_markers(
     reason_codes: list[str],
     local_heavy_sensitive: bool,
     local_heavy_sensitive_drift_detected: bool,
+    threshold_ratchet_status: str,
+    threshold_ratchet_violations: list[str],
     failure_reason: str = "",
     waiver_reason: str = "",
+    ratchet_exception_reason: str = "",
+    ratchet_mitigation_issue: str = "",
 ) -> None:
     print(f"status={status}")
     print(f"waived={bool_marker(waived)}")
@@ -319,8 +380,17 @@ def emit_check_markers(
         "local_heavy_sensitive_drift_detected="
         f"{bool_marker(local_heavy_sensitive_drift_detected)}"
     )
+    print(f"threshold_ratchet_status={threshold_ratchet_status}")
+    print(
+        "threshold_ratchet_violations="
+        f"{'none' if not threshold_ratchet_violations else ','.join(threshold_ratchet_violations)}"
+    )
+    if ratchet_mitigation_issue:
+        print(f"threshold_ratchet_mitigation_issue={ratchet_mitigation_issue}")
     if waiver_reason:
         print(f"waiver_reason={waiver_reason}")
+    if ratchet_exception_reason:
+        print(f"ratchet_exception_reason={ratchet_exception_reason}")
     if failure_reason:
         print(f"failure_reason={failure_reason}")
 
@@ -329,6 +399,8 @@ def command_check(args: argparse.Namespace) -> int:
     report_path = Path(args.report_json)
     threshold_path = Path(args.threshold_file)
     waiver_path = Path(args.waiver_file)
+    ratchet_baseline_path = Path(args.ratchet_baseline_file)
+    ratchet_exception_path = Path(args.ratchet_exception_file)
 
     report = load_json(report_path)
     if report.get("schema_version") != SCHEMA_VERSION:
@@ -357,13 +429,51 @@ def command_check(args: argparse.Namespace) -> int:
     runner_delta_pct = extract_float(variance, "runner_minutes_delta_pct")
 
     config = load_delta_config(threshold_path)
+    ratchet_baseline = load_delta_config(ratchet_baseline_path)
+    ratchet_violations: list[str] = []
+    if config.max_elapsed_delta_pct > ratchet_baseline.max_elapsed_delta_pct:
+        ratchet_violations.append("FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT")
+    if config.max_runner_delta_pct > ratchet_baseline.max_runner_delta_pct:
+        ratchet_violations.append("FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT")
+
+    ratchet_review_reason_codes: list[str] = []
+    ratchet_mitigation_issue = ""
+    ratchet_exception_reason = ""
+    threshold_ratchet_status = "within"
+    if ratchet_violations:
+        threshold_ratchet_status = "regressed"
+        ratchet_exception_applied, ratchet_exception_reason, ratchet_mitigation_issue = (
+            parse_ratchet_exception(
+                ratchet_exception_path=ratchet_exception_path,
+                ratchet_violations=ratchet_violations,
+            )
+        )
+        if not ratchet_exception_applied:
+            emit_check_markers(
+                status="fail",
+                waived=False,
+                violations=[],
+                review_required=False,
+                soft_overrun_status="within",
+                reason_codes=["fast_gate_delta_threshold_ratchet_regression_unwaived"],
+                local_heavy_sensitive=local_heavy_sensitive,
+                local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+                threshold_ratchet_status=threshold_ratchet_status,
+                threshold_ratchet_violations=ratchet_violations,
+                ratchet_mitigation_issue=ratchet_mitigation_issue,
+                failure_reason=ratchet_exception_reason,
+            )
+            return 1
+
+        threshold_ratchet_status = "exception-applied"
+        ratchet_review_reason_codes.append("fast_gate_delta_threshold_ratchet_exception_applied")
     violations: list[str] = []
     if elapsed_delta > 0 and elapsed_delta_pct > config.max_elapsed_delta_pct:
         violations.append("elapsed_seconds_delta_pct")
     if runner_delta > 0 and runner_delta_pct > config.max_runner_delta_pct:
         violations.append("runner_minutes_delta_pct")
 
-    review_reason_codes: list[str] = []
+    review_reason_codes: list[str] = ratchet_review_reason_codes.copy()
     if local_heavy_sensitive_drift_detected:
         review_reason_codes.append("local_heavy_sensitive_drift_detected")
 
@@ -377,6 +487,10 @@ def command_check(args: argparse.Namespace) -> int:
             reason_codes=review_reason_codes,
             local_heavy_sensitive=local_heavy_sensitive,
             local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+            threshold_ratchet_status=threshold_ratchet_status,
+            threshold_ratchet_violations=ratchet_violations,
+            ratchet_mitigation_issue=ratchet_mitigation_issue,
+            ratchet_exception_reason=ratchet_exception_reason,
         )
         return 0
 
@@ -391,7 +505,11 @@ def command_check(args: argparse.Namespace) -> int:
             reason_codes=["delta_threshold_waiver_applied"] + review_reason_codes,
             local_heavy_sensitive=local_heavy_sensitive,
             local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+            threshold_ratchet_status=threshold_ratchet_status,
+            threshold_ratchet_violations=ratchet_violations,
             waiver_reason=waiver_reason,
+            ratchet_mitigation_issue=ratchet_mitigation_issue,
+            ratchet_exception_reason=ratchet_exception_reason,
         )
         return 0
 
@@ -404,6 +522,10 @@ def command_check(args: argparse.Namespace) -> int:
         reason_codes=["delta_threshold_violation_unwaived"],
         local_heavy_sensitive=local_heavy_sensitive,
         local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+        threshold_ratchet_status=threshold_ratchet_status,
+        threshold_ratchet_violations=ratchet_violations,
+        ratchet_mitigation_issue=ratchet_mitigation_issue,
+        ratchet_exception_reason=ratchet_exception_reason,
         failure_reason=waiver_reason,
     )
     return 1
@@ -424,6 +546,14 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--report-json", required=True)
     check.add_argument("--threshold-file", default=".ci/fast-gate-budget-delta.env")
     check.add_argument("--waiver-file", default=".ci/fast-gate-budget-delta-waiver.json")
+    check.add_argument(
+        "--ratchet-baseline-file",
+        default=".ci/fast-gate-budget-delta-ratchet.env",
+    )
+    check.add_argument(
+        "--ratchet-exception-file",
+        default=".ci/fast-gate-budget-delta-ratchet-exception.json",
+    )
     check.set_defaults(handler=command_check)
 
     return parser

@@ -60,6 +60,16 @@ if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_budget_delta_contract_wa
   exit 1
 fi
 
+if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_budget_delta_contract_ratchet_unwaived_status=fail$'; then
+  echo "expected ratchet-regression unwaived fail marker from contract lane" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_budget_delta_contract_ratchet_waived_status=pass$'; then
+  echo "expected ratchet-regression exception pass marker from contract lane" >&2
+  exit 1
+fi
+
 if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_budget_delta_contract_stale_threshold_status=fail$'; then
   echo "expected stale-threshold fail marker from contract lane" >&2
   exit 1
@@ -95,6 +105,16 @@ if ! grep -q '"corrupt_threshold_guard_status": "pass"' "$REPORT_FILE"; then
   exit 1
 fi
 
+if ! grep -q '"ratchet_unwaived_status": "fail"' "$REPORT_FILE"; then
+  echo "expected ratchet unwaived status marker in contract report" >&2
+  exit 1
+fi
+
+if ! grep -q '"ratchet_waived_status": "pass"' "$REPORT_FILE"; then
+  echo "expected ratchet exception-applied status marker in contract report" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json' "$STRATEGY_DOC"; then
   echo "expected CI strategy doc to include fast-gate budget-delta contract lane command marker" >&2
   exit 1
@@ -110,6 +130,16 @@ if ! grep -Fq 'reason_codes=fast_gate_delta_threshold_file_corrupt' "$STRATEGY_D
   exit 1
 fi
 
+if ! grep -Fq 'reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived' "$STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include ratchet-regression fail reason-code marker" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'reason_codes=fast_gate_delta_threshold_ratchet_exception_applied' "$STRATEGY_DOC"; then
+  echo "expected CI strategy doc to include ratchet-exception reason-code marker" >&2
+  exit 1
+fi
+
 if ! grep -Fq 'run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json' "$COST_DOC"; then
   echo "expected CI cost/lane framework doc to include fast-gate budget-delta contract lane command marker" >&2
   exit 1
@@ -117,6 +147,11 @@ fi
 
 if ! grep -Fq 'refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata' "$COST_DOC"; then
   echo "expected CI cost/lane framework doc to include fast-gate threshold remediation guidance" >&2
+  exit 1
+fi
+
+if ! grep -Fq '.ci/fast-gate-budget-delta-ratchet.env' "$COST_DOC"; then
+  echo "expected CI cost/lane framework doc to include ratchet baseline fixture marker" >&2
   exit 1
 fi
 
