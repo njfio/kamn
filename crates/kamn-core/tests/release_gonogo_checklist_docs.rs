@@ -574,7 +574,7 @@ fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));
     assert!(CHECKLIST.contains("generate_gonogo_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_gonogo_evidence_policy.sh"));
-    assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract"));
     assert!(CHECKLIST.contains("run_gonogo_evidence_deep_lane.sh"));
 }
 
@@ -766,7 +766,7 @@ fn checklist_contains_live_gonogo_convergence_boundary_governance_gate() {
     assert!(CHECKLIST.contains(
         "## Live Go/No-Go Evidence Convergence and Boundary Governance Gate (Issue #4434)"
     ));
-    assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh --max-seconds 120"));
+    assert!(CHECKLIST.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120"));
     assert!(CHECKLIST.contains(
         "KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/deploy/run_gonogo_evidence_deep_lane.sh --max-seconds 900"
     ));
@@ -975,7 +975,7 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("run_version_compatibility_replay.py"));
     assert!(CHECKLIST.contains("check_runtime_commit_replay_policy.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_tamper_matrix.py"));
-    assert!(CHECKLIST.contains("run_runtime_commit_adapter_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract"));
     assert!(CHECKLIST
         .contains("cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts"));
     assert!(
@@ -984,7 +984,7 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("receipt_provider_mismatch"));
     assert!(CHECKLIST.contains("receipt_not_final"));
     assert!(CHECKLIST.contains("run_version_compatibility_contract_lane.sh"));
-    assert!(CHECKLIST.contains("run_runtime_commit_replay_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json --phase contract"));
     assert!(CHECKLIST.contains("run_version_compatibility_replay_deep_lane.sh"));
     assert!(CHECKLIST.contains("fixtures/kolme_compatibility/version_compatibility_cases.json"));
     assert!(CHECKLIST.contains("fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"));
