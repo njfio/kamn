@@ -77,6 +77,36 @@ class ManifestWrapperDispatchTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("status=fail", completed.stdout + completed.stderr)
 
+    def test_wrapper_forwards_phase_args_without_separator(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+            self._write_manifest(manifest_path)
+
+            completed = subprocess.run(
+                [
+                    "bash",
+                    str(WRAPPER_SCRIPT),
+                    "--manifest",
+                    str(manifest_path),
+                    "--phase",
+                    "generate",
+                    "--artifact-dir",
+                    "/tmp/kamn-artifacts",
+                    "--output-json",
+                    "/tmp/kamn-report.json",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assertIn("status=ok", completed.stdout)
+        self.assertIn(
+            "args=--artifact-dir /tmp/kamn-artifacts --output-json /tmp/kamn-report.json",
+            completed.stdout,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

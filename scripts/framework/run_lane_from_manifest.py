@@ -10,7 +10,7 @@ import sys
 from lane_manifest import load_manifest_file, run_lane_phase
 
 
-def parse_args(argv: list[str]) -> argparse.Namespace:
+def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     """Parse CLI arguments for manifest lane runner."""
     parser = argparse.ArgumentParser(
         description="Run a configured lane phase from a manifest file."
@@ -22,25 +22,20 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default="",
         help="Optional working directory for the phase command.",
     )
-    parser.add_argument(
-        "phase_args",
-        nargs=argparse.REMAINDER,
-        help="Optional arguments forwarded to the phase command after '--'.",
-    )
-    return parser.parse_args(argv)
+    args, phase_args = parser.parse_known_args(argv)
+    if phase_args and phase_args[0] == "--":
+        phase_args = phase_args[1:]
+    return args, phase_args
 
 
 def main(argv: list[str]) -> int:
     """Execute selected manifest phase and emit stable status markers."""
-    args = parse_args(argv)
+    args, phase_args = parse_args(argv)
     manifest_path = Path(args.manifest)
 
     try:
         manifest = load_manifest_file(manifest_path)
         cwd = Path(args.cwd) if args.cwd else None
-        phase_args = list(args.phase_args)
-        if phase_args and phase_args[0] == "--":
-            phase_args = phase_args[1:]
         code, output = run_lane_phase(manifest, args.phase, phase_args=phase_args, cwd=cwd)
     except Exception as exc:  # noqa: BLE001
         print("status=fail")
