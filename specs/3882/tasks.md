@@ -1,15 +1,17 @@
 # Issue #3882 Tasks
 
 - Issue: #3882
-- Status: Planned
+- Status: Completed
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from acceptance criteria and conformance cases.
-- T2 (Green): implement minimal code and lane wiring to satisfy ACs deterministically.
-- T3 (Refactor): keep module and lane boundaries clear and reduce drift risk.
-- T4 (Regression): add drift, marker-taxonomy, and docs-parity checks as required.
-- T5 (Docs): update required docs surfaces declared by issue #3882.
-- T6 (Verify): run scoped cargo tests plus relevant runtime/ci/deploy lane scripts for this issue surface.
+- T1 (Red): added failing cutover docs-contract assertions for missing marker surface in `scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh`.
+- T2 (Green): updated next-steps plan docs with cutover rollback marker surface contract lines.
+- T3 (Refactor): added helper-based docs parity check path with deterministic drift reason output (`cutover_rollback_docs_missing_marker:<marker>`).
+- T4 (Regression): expanded bundle payload assertions for schema marker stability and checkpoint/reason determinism across GO/NO-GO paths.
+- T5 (Docs): documented cutover rollback schema/summary/checkpoint marker surface in `docs/plans/2026-02-14-production-service-next-steps.md`.
+- T6 (Verify): ran:
+  - `bash scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh`
+  - `cargo test -p kamn-core --test kolme_devnet_ops_docs`
 
 ## Completion Evidence
-- To be filled when implementation lands; include passing commands and AC->test mapping.
+- Native cutover rollback evidence lane marker surface is now explicitly documented and protected by deterministic docs-contract + regression checks.
