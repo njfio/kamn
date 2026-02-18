@@ -13,9 +13,13 @@ if [ ! -x "$SCRIPT" ]; then
 fi
 
 THRESHOLD_ENV="$TMP_DIR/threshold.env"
+RATCHET_BASELINE_ENV="$TMP_DIR/ratchet-baseline.env"
+RATCHET_REGRESSION_BASELINE_ENV="$TMP_DIR/ratchet-regression-baseline.env"
 PASS_REPORT="$TMP_DIR/pass.json"
 FAIL_REPORT="$TMP_DIR/fail.json"
 WAIVER_JSON="$TMP_DIR/waiver.json"
+RATCHET_EXCEPTION_JSON="$TMP_DIR/ratchet-exception.json"
+INVALID_RATCHET_EXCEPTION_JSON="$TMP_DIR/invalid-ratchet-exception.json"
 EXPIRED_WAIVER_JSON="$TMP_DIR/expired-waiver.json"
 TAMPERED_REPORT="$TMP_DIR/tampered.json"
 LOCAL_HEAVY_SOFT_REPORT="$TMP_DIR/local-heavy-soft.json"
@@ -28,6 +32,24 @@ FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
 FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
 FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
 FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
+ENV
+
+cat >"$RATCHET_BASELINE_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
+ENV
+
+cat >"$RATCHET_REGRESSION_BASELINE_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=10
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=10
 FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
 FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
 ENV
@@ -73,6 +95,29 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$WAIVER_JSON" <<'JSON'
   "allow_metrics": [
     "elapsed_seconds_delta_pct",
     "runner_minutes_delta_pct"
+  ]
+}
+JSON
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RATCHET_EXCEPTION_JSON" <<'JSON'
+{
+  "reason": "Temporary ratchet exception while downstream governance updates land",
+  "expires_on": "2099-12-31",
+  "mitigation_issue": "#4859",
+  "allow_threshold_keys": [
+    "FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT",
+    "FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT"
+  ]
+}
+JSON
+
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$INVALID_RATCHET_EXCEPTION_JSON" <<'JSON'
+{
+  "reason": "Invalid mitigation link",
+  "expires_on": "2099-12-31",
+  "mitigation_issue": "4859",
+  "allow_threshold_keys": [
+    "FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT"
   ]
 }
 JSON
@@ -149,7 +194,9 @@ start_epoch="$(date +%s)"
 bash "$SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/pass.out"
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/pass.out"
 elapsed_seconds=$(( $(date +%s) - start_epoch ))
 if [ "$elapsed_seconds" -gt 2 ]; then
   echo "expected threshold checker overhead <= 2s for pass path" >&2
@@ -166,7 +213,9 @@ grep -q '^local_heavy_sensitive_drift_detected=false$' "$TMP_DIR/pass.out"
 if bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$TMP_DIR/missing-waiver.json" >"$TMP_DIR/fail.out" 2>&1; then
+  --waiver-file "$TMP_DIR/missing-waiver.json" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/fail.out" 2>&1; then
   echo "expected threshold checker to fail when violations have no waiver" >&2
   exit 1
 fi
@@ -181,7 +230,9 @@ grep -q '^local_heavy_sensitive_drift_detected=true$' "$TMP_DIR/fail.out"
 bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/waived.out"
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/waived.out"
 grep -q '^status=pass$' "$TMP_DIR/waived.out"
 grep -q '^waived=true$' "$TMP_DIR/waived.out"
 grep -q '^review_required=true$' "$TMP_DIR/waived.out"
@@ -194,7 +245,9 @@ grep -q '^local_heavy_sensitive_drift_detected=true$' "$TMP_DIR/waived.out"
 bash "$SCRIPT" \
   --report-json "$LOCAL_HEAVY_SOFT_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/local-heavy-soft.out"
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/local-heavy-soft.out"
 grep -q '^status=pass$' "$TMP_DIR/local-heavy-soft.out"
 grep -q '^waived=false$' "$TMP_DIR/local-heavy-soft.out"
 grep -q '^review_required=true$' "$TMP_DIR/local-heavy-soft.out"
@@ -204,7 +257,9 @@ grep -q '^reason_codes=local_heavy_sensitive_drift_detected$' "$TMP_DIR/local-he
 if bash "$SCRIPT" \
   --report-json "$LOCAL_HEAVY_MARKER_MISSING_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/local-heavy-marker-missing.out" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/local-heavy-marker-missing.out" 2>&1; then
   echo "expected threshold checker to fail when local-heavy marker contract fields are missing" >&2
   exit 1
 fi
@@ -213,7 +268,9 @@ grep -q 'local_heavy_sensitive must be boolean' "$TMP_DIR/local-heavy-marker-mis
 if bash "$SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$STALE_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/stale-threshold.out" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/stale-threshold.out" 2>&1; then
   echo "expected threshold checker to fail for stale threshold metadata" >&2
   exit 1
 fi
@@ -222,7 +279,9 @@ grep -q 'threshold file stale' "$TMP_DIR/stale-threshold.out"
 if bash "$SCRIPT" \
   --report-json "$PASS_REPORT" \
   --threshold-file "$CORRUPT_THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/corrupt-threshold.out" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/corrupt-threshold.out" 2>&1; then
   echo "expected threshold checker to fail for corrupt threshold config" >&2
   exit 1
 fi
@@ -231,7 +290,9 @@ grep -q 'FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT must be a numeric value' "$TMP_DI
 if bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$EXPIRED_WAIVER_JSON" >"$TMP_DIR/expired.out" 2>&1; then
+  --waiver-file "$EXPIRED_WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/expired.out" 2>&1; then
   echo "expected threshold checker to fail for expired waiver" >&2
   exit 1
 fi
@@ -240,10 +301,49 @@ grep -q 'waiver expired' "$TMP_DIR/expired.out"
 if bash "$SCRIPT" \
   --report-json "$TAMPERED_REPORT" \
   --threshold-file "$THRESHOLD_ENV" \
-  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/tampered.out" 2>&1; then
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/tampered.out" 2>&1; then
   echo "expected threshold checker to fail for tampered report schema" >&2
   exit 1
 fi
 grep -q 'unexpected schema_version' "$TMP_DIR/tampered.out"
+
+if bash "$SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_REGRESSION_BASELINE_ENV" \
+  --ratchet-exception-file "$TMP_DIR/missing-ratchet-exception.json" >"$TMP_DIR/ratchet-fail.out" 2>&1; then
+  echo "expected threshold checker to fail for downward-ratchet regression without exception" >&2
+  exit 1
+fi
+grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived$' "$TMP_DIR/ratchet-fail.out"
+grep -q '^threshold_ratchet_status=regressed$' "$TMP_DIR/ratchet-fail.out"
+grep -q '^threshold_ratchet_violations=FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT,FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT$' "$TMP_DIR/ratchet-fail.out"
+
+bash "$SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_REGRESSION_BASELINE_ENV" \
+  --ratchet-exception-file "$RATCHET_EXCEPTION_JSON" >"$TMP_DIR/ratchet-waived.out"
+grep -q '^status=pass$' "$TMP_DIR/ratchet-waived.out"
+grep -q '^review_required=true$' "$TMP_DIR/ratchet-waived.out"
+grep -q '^soft_overrun_status=exceeded$' "$TMP_DIR/ratchet-waived.out"
+grep -q '^reason_codes=fast_gate_delta_threshold_ratchet_exception_applied$' "$TMP_DIR/ratchet-waived.out"
+grep -q '^threshold_ratchet_status=exception-applied$' "$TMP_DIR/ratchet-waived.out"
+grep -q '^threshold_ratchet_mitigation_issue=#4859$' "$TMP_DIR/ratchet-waived.out"
+
+if bash "$SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" \
+  --ratchet-baseline-file "$RATCHET_REGRESSION_BASELINE_ENV" \
+  --ratchet-exception-file "$INVALID_RATCHET_EXCEPTION_JSON" >"$TMP_DIR/ratchet-invalid.out" 2>&1; then
+  echo "expected threshold checker to fail when ratchet exception mitigation issue is invalid" >&2
+  exit 1
+fi
+grep -q 'ratchet mitigation_issue must be #<issue-id>' "$TMP_DIR/ratchet-invalid.out"
 
 echo "fast-gate budget delta threshold checker tests passed."
