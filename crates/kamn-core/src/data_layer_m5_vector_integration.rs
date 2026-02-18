@@ -1,4 +1,4 @@
-//! M5 vector-layer contracts for embedding storage, semantic query, and anomaly scoring.
+//! M5 vector-layer contracts for embedding storage, semantic query, recall drift, and anomaly scoring.
 //!
 //! This module models PRD M5 behavior as deterministic Rust contracts:
 //! owner-scoped embedding registration with append-only hash chaining,
@@ -14,6 +14,31 @@ pub const DATA_LAYER_M5_HASH_ALGORITHM: &str = "sha256";
 pub const DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS: &str = "GENESIS";
 /// Distance metric label used by semantic and anomaly contracts.
 pub const DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE: &str = "cosine";
+/// Owner-side privacy mode rejects plaintext vector storage.
+pub const DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE: &str =
+    "m5_vector_owner_side_plaintext_storage_not_allowed";
+/// Server-side plaintext mode requires plaintext vector storage.
+pub const DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE: &str =
+    "m5_vector_server_side_plaintext_required";
+/// Owner-side encrypted mode requires local semantic query execution.
+pub const DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE: &str =
+    "m5_vector_owner_side_query_requires_local_index";
+/// Semantic query requires a plaintext index for owner scope.
+pub const DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE: &str =
+    "m5_vector_plaintext_index_missing_for_owner_scope";
+/// Owner-side encrypted mode requires local anomaly pipeline execution.
+pub const DATA_LAYER_M5_OWNER_SIDE_ANOMALY_REQUIRES_LOCAL_PIPELINE_REASON_CODE: &str =
+    "m5_vector_owner_side_anomaly_requires_local_pipeline";
+/// Candidate exceeded anomaly threshold.
+pub const DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE: &str =
+    "m5_vector_anomaly_threshold_exceeded";
+/// Candidate remained within anomaly threshold.
+pub const DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE: &str =
+    "m5_vector_anomaly_within_threshold";
+/// Recall drift remained within configured guardrails.
+pub const DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE: &str = "m5_vector_recall_drift_stable";
+/// Recall drift degraded beyond configured guardrails.
+pub const DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE: &str = "m5_vector_recall_drift_degraded";
 
 /// Embedding storage/privacy mode contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,6 +149,51 @@ pub struct DataLayerM5AnomalyEvaluationInput {
     pub anomaly_distance_threshold: f32,
 }
 
+/// Recall-drift evaluation input for owner-scoped semantic top-k outputs.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataLayerM5RecallDriftEvaluationInput {
+    /// Owner DID scope.
+    pub owner_did: String,
+    /// Query vector used for current semantic ranking.
+    pub query_vector: Vec<f32>,
+    /// Baseline top-k embedding-id order expected for the same query.
+    pub baseline_top_k_embedding_ids: Vec<String>,
+    /// Minimum required recall ratio in `[0.0, 1.0]`.
+    pub min_recall_at_k: f32,
+    /// Maximum allowed absolute rank shift per matched embedding-id.
+    pub max_allowed_rank_shift: usize,
+}
+
+/// Recall-drift decision marker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM5RecallDriftDecision {
+    /// Current ranking stayed within configured drift thresholds.
+    Stable,
+    /// Current ranking degraded beyond configured drift thresholds.
+    Degraded,
+}
+
+/// Recall-drift evaluation report with deterministic evidence fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataLayerM5RecallDriftReport {
+    /// Drift decision.
+    pub decision: DataLayerM5RecallDriftDecision,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
+    /// Evaluated top-k size from baseline.
+    pub evaluated_k: usize,
+    /// Recall-at-k ratio for baseline IDs present in current top-k.
+    pub recall_at_k: f32,
+    /// Maximum absolute rank shift observed in matched IDs.
+    pub max_observed_rank_shift: usize,
+    /// Baseline IDs found in current top-k, preserving baseline order.
+    pub matched_embedding_ids: Vec<String>,
+    /// Baseline IDs missing from current top-k, preserving baseline order.
+    pub missing_embedding_ids: Vec<String>,
+    /// Current top-k embedding-id order returned by semantic query.
+    pub current_top_k_embedding_ids: Vec<String>,
+}
+
 /// Anomaly decision result.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataLayerM5AnomalyDecision {
@@ -198,13 +268,13 @@ impl DataLayerM5EmbeddingRegistry {
         let vector_plaintext = match (self.privacy_mode, input.vector_plaintext) {
             (DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted, Some(_)) => {
                 return Err(DataLayerM5VectorIntegrationError::PrivacyModeViolation {
-                    reason_code: "m5_vector_owner_side_plaintext_storage_not_allowed",
+                    reason_code: DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE,
                 });
             }
             (DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted, None) => None,
             (DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn, None) => {
                 return Err(DataLayerM5VectorIntegrationError::PrivacyModeViolation {
-                    reason_code: "m5_vector_server_side_plaintext_required",
+                    reason_code: DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE,
                 });
             }
             (DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn, Some(vector)) => {
@@ -286,7 +356,7 @@ impl DataLayerM5EmbeddingRegistry {
         if self.privacy_mode == DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted {
             return Err(
                 DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
-                    reason_code: "m5_vector_owner_side_query_requires_local_index",
+                    reason_code: DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
                 },
             );
         }
@@ -299,7 +369,7 @@ impl DataLayerM5EmbeddingRegistry {
             })?;
         let expected_dimensions = owner_vector_dimensions(owner_records).ok_or(
             DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
-                reason_code: "m5_vector_plaintext_index_missing_for_owner_scope",
+                reason_code: DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE,
             },
         )?;
         if query_vector.len() != expected_dimensions {
@@ -337,6 +407,93 @@ impl DataLayerM5EmbeddingRegistry {
         Ok(rows)
     }
 
+    /// Evaluates semantic top-k recall drift against a deterministic baseline ranking.
+    pub fn evaluate_recall_drift(
+        &self,
+        input: DataLayerM5RecallDriftEvaluationInput,
+    ) -> Result<DataLayerM5RecallDriftReport, DataLayerM5VectorIntegrationError> {
+        validate_kamn_did(input.owner_did.as_str())?;
+        let query_vector = validate_vector(input.query_vector, "query_vector")?;
+        if input.baseline_top_k_embedding_ids.is_empty() {
+            return Err(DataLayerM5VectorIntegrationError::EmptyField(
+                "baseline_top_k_embedding_ids",
+            ));
+        }
+        if !input.min_recall_at_k.is_finite() || !(0.0..=1.0).contains(&input.min_recall_at_k) {
+            return Err(DataLayerM5VectorIntegrationError::InvalidVectorValue(
+                "min_recall_at_k",
+            ));
+        }
+
+        let mut baseline_seen = BTreeSet::new();
+        for embedding_id in &input.baseline_top_k_embedding_ids {
+            validate_non_empty(embedding_id.as_str(), "baseline_top_k_embedding_id")?;
+            if !baseline_seen.insert(embedding_id.clone()) {
+                return Err(DataLayerM5VectorIntegrationError::DuplicateEmbeddingId(
+                    embedding_id.clone(),
+                ));
+            }
+        }
+
+        let evaluated_k = input.baseline_top_k_embedding_ids.len();
+        let current_top_k_embedding_ids = self
+            .semantic_query(DataLayerM5SemanticQuery {
+                owner_did: input.owner_did,
+                query_vector,
+                limit: Some(evaluated_k),
+            })?
+            .into_iter()
+            .map(|row| row.embedding_id)
+            .collect::<Vec<_>>();
+
+        let current_rank_by_embedding_id = current_top_k_embedding_ids
+            .iter()
+            .enumerate()
+            .map(|(rank, embedding_id)| (embedding_id.clone(), rank))
+            .collect::<BTreeMap<_, _>>();
+
+        let mut matched_embedding_ids = Vec::new();
+        let mut missing_embedding_ids = Vec::new();
+        let mut max_observed_rank_shift = 0usize;
+        for (baseline_rank, baseline_embedding_id) in
+            input.baseline_top_k_embedding_ids.iter().enumerate()
+        {
+            if let Some(current_rank) = current_rank_by_embedding_id.get(baseline_embedding_id) {
+                matched_embedding_ids.push(baseline_embedding_id.clone());
+                max_observed_rank_shift =
+                    max_observed_rank_shift.max(baseline_rank.abs_diff(*current_rank));
+            } else {
+                missing_embedding_ids.push(baseline_embedding_id.clone());
+            }
+        }
+        let recall_at_k = matched_embedding_ids.len() as f32 / evaluated_k as f32;
+        let degraded = !missing_embedding_ids.is_empty()
+            || recall_at_k < input.min_recall_at_k
+            || max_observed_rank_shift > input.max_allowed_rank_shift;
+        let (decision, reason_code) = if degraded {
+            (
+                DataLayerM5RecallDriftDecision::Degraded,
+                DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE,
+            )
+        } else {
+            (
+                DataLayerM5RecallDriftDecision::Stable,
+                DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
+            )
+        };
+
+        Ok(DataLayerM5RecallDriftReport {
+            decision,
+            reason_code,
+            evaluated_k,
+            recall_at_k,
+            max_observed_rank_shift,
+            matched_embedding_ids,
+            missing_embedding_ids,
+            current_top_k_embedding_ids,
+        })
+    }
+
     /// Evaluates anomaly decision for one candidate vector relative to agent centroid history.
     pub fn evaluate_agent_anomaly(
         &self,
@@ -356,7 +513,8 @@ impl DataLayerM5EmbeddingRegistry {
         if self.privacy_mode == DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted {
             return Err(
                 DataLayerM5VectorIntegrationError::AnomalyEvaluationUnavailable {
-                    reason_code: "m5_vector_owner_side_anomaly_requires_local_pipeline",
+                    reason_code:
+                        DATA_LAYER_M5_OWNER_SIDE_ANOMALY_REQUIRES_LOCAL_PIPELINE_REASON_CODE,
                 },
             );
         }
@@ -408,12 +566,12 @@ impl DataLayerM5EmbeddingRegistry {
             1.0 - cosine_similarity(candidate_vector.as_slice(), centroid.as_slice())?;
         if centroid_distance > input.anomaly_distance_threshold {
             return Ok(DataLayerM5AnomalyDecision::Anomalous {
-                reason_code: "m5_vector_anomaly_threshold_exceeded",
+                reason_code: DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
                 centroid_distance,
             });
         }
         Ok(DataLayerM5AnomalyDecision::Normal {
-            reason_code: "m5_vector_anomaly_within_threshold",
+            reason_code: DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE,
             centroid_distance,
         })
     }

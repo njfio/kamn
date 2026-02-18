@@ -321,8 +321,17 @@ pub use data_layer_m4_escrow_integration::{
 pub use data_layer_m5_vector_integration::{
     DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode,
     DataLayerM5EmbeddingRecord, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
-    DataLayerM5SemanticQuery, DataLayerM5SemanticQueryResult, DataLayerM5VectorIntegrationError,
-    DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS, DATA_LAYER_M5_HASH_ALGORITHM,
+    DataLayerM5RecallDriftDecision, DataLayerM5RecallDriftEvaluationInput,
+    DataLayerM5RecallDriftReport, DataLayerM5SemanticQuery, DataLayerM5SemanticQueryResult,
+    DataLayerM5VectorIntegrationError, DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE, DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M5_HASH_ALGORITHM,
+    DATA_LAYER_M5_OWNER_SIDE_ANOMALY_REQUIRES_LOCAL_PIPELINE_REASON_CODE,
+    DATA_LAYER_M5_OWNER_SIDE_PLAINTEXT_STORAGE_NOT_ALLOWED_REASON_CODE,
+    DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
+    DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE,
+    DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
+    DATA_LAYER_M5_SERVER_SIDE_PLAINTEXT_REQUIRED_REASON_CODE,
     DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE,
 };
 pub use data_layer_m6_graph_integration::{
