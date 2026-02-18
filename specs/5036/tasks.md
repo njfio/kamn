@@ -1,12 +1,12 @@
 # Issue #5036 Tasks
 
 - Issue: #5036
-- Status: Draft
+- Status: Done
 
 ## Ordered Tasks
-- [ ] T1 (Red): add failing tests derived from spec conformance cases.
-- [ ] T2 (Green): implement minimum code path to satisfy ACs.
-- [ ] T3 (Refactor): improve structure/readability while preserving behavior.
-- [ ] T4 (Regression): run scoped functional/integration/regression checks.
-- [ ] T5 (Governance): if shell/python/workflow/template changed, run shell budget + ratio guardrails and report deltas.
-- [ ] T6 (Verify): finalize AC mapping and set lifecycle status markers.
+- [x] T1 (Red): add failing reconciliation conformance tests for match/mismatch, owner-scope denial, and invalid bucket alignment.
+- [x] T2 (Green): implement additive M7 daily billing reconciliation API and typed invalid-bucket failure.
+- [x] T3 (Refactor): preserve deterministic aggregate/projection outputs and stable reason markers.
+- [x] T4 (Regression): run `cargo fmt --check`, `cargo clippy -p kamn-core -- -D warnings`, `cargo test -p kamn-core --test data_layer_m7_timeseries_telemetry`, and `cargo test -p kamn-core`.
+- [x] T5 (Governance): run shell guardrail evidence commands and confirm `shell_loc_delta_actual = 0`.
+- [x] T6 (Verify): set spec/plan/tasks status to `Implemented`/`Done`, map ACs to tests, and post closure evidence.
