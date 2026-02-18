@@ -1,26 +1,38 @@
 # Issue #5032 Plan
 
 - Issue: #5032
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED tests for determinism stable/drifted/error paths and reason-constant
+   assertions.
+2. Implement additive M3 determinism contracts:
+   `DataLayerM3BlindIndexDeterminismInput`,
+   `DataLayerM3BlindIndexDeterminismDecision`,
+   `DataLayerM3BlindIndexDeterminismReport`, and
+   `DataLayerM3SearchCatalog::evaluate_blind_index_determinism(...)`.
+3. Export determinism reason-marker constants and keep existing search behavior
+   unchanged.
+4. Run scoped/full regression gates and shell guardrail evidence commands.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m3_blind_index_search.rs`
+- `crates/kamn-core/src/lib.rs`
+- `crates/kamn-core/tests/data_layer_m3_blind_index_search.rs`
+- `specs/5032/spec.md`
+- `specs/5032/plan.md`
+- `specs/5032/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep API additive and preserve existing M3 query behavior and ordering.
+  - Keep determinism evidence fields deterministic and baseline-ordered.
+  - Keep work Rust-only to guarantee `shell_loc_delta_actual = 0`.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API and exports in `kamn-core`.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive contract.
