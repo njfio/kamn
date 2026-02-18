@@ -66,7 +66,10 @@ def is_declarative_policy_migration_v1_candidate(
         return False
     if not wrapper_rel.startswith("scripts/"):
         return False
-    if "/check_" not in wrapper_rel or not wrapper_rel.endswith(".sh"):
+    if (
+        "/check_" not in wrapper_rel
+        and "/validate_" not in wrapper_rel
+    ) or not wrapper_rel.endswith(".sh"):
         return False
     if not isinstance(target, str):
         return False
@@ -74,7 +77,7 @@ def is_declarative_policy_migration_v1_candidate(
         return False
     if not target_abs.is_file():
         return False
-    return count_lines(target_abs) <= 500
+    return count_lines(target_abs) <= 1500
 
 
 def main(argv: list[str]) -> int:

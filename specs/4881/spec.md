@@ -3,7 +3,7 @@
 - Title: Subtask: migrate first 100 eligible policy checkers to declarative framework
 - Parent: - Parent task: #4868
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

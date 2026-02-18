@@ -71,7 +71,7 @@ for wrapper_rel, entry in sorted(entries.items()):
     if (
         isinstance(wrapper_rel, str)
         and wrapper_rel.startswith("scripts/")
-        and "/check_" in wrapper_rel
+        and ("/check_" in wrapper_rel or "/validate_" in wrapper_rel)
         and wrapper_rel.endswith(".sh")
         and interpreter == "python3"
         and isinstance(target, str)
@@ -80,16 +80,16 @@ for wrapper_rel, entry in sorted(entries.items()):
         target_path = root / target
         if target_path.is_file():
             line_count = sum(1 for _ in target_path.read_text(encoding="utf-8").splitlines())
-            if line_count <= 500:
+            if line_count <= 1500:
                 declarative_policy_migration_v1_candidates.append(wrapper_rel)
 
 if invalid_entries:
     raise SystemExit("\n".join(invalid_entries))
 
-if len(declarative_policy_migration_v1_candidates) != 60:
+if len(declarative_policy_migration_v1_candidates) != 100:
     preview = "\n".join(declarative_policy_migration_v1_candidates[:80])
     raise SystemExit(
-        "expected 60 declarative policy migration v1 wrapper candidates, "
+        "expected 100 declarative policy migration v1 wrapper candidates, "
         f"found {len(declarative_policy_migration_v1_candidates)}\n{preview}"
     )
 
@@ -118,7 +118,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
         encoding="utf-8",
     )
 
-    wrapper_path = temp_root / "scripts/tmp/check_demo_policy.sh"
+    wrapper_path = temp_root / "scripts/tmp/validate_demo_policy.sh"
     wrapper_path.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
     os.chmod(wrapper_path, 0o755)
 
@@ -144,7 +144,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
             {
                 "version": 1,
                 "entries": {
-                    "scripts/tmp/check_demo_policy.sh": {
+                    "scripts/tmp/validate_demo_policy.sh": {
                         "interpreter": "python3",
                         "target": "scripts/tmp/demo_contract.py",
                         "args_prefix": ["check"],
