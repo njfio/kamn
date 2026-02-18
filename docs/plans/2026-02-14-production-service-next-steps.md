@@ -85,6 +85,11 @@ This refreshed version separates:
   - `deployment_safety_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
   - `deployment_safety_gate_reason_codes_csv=none|<csv>`
   - `deployment_safety_gate_reason_codes_value=none|<csv>`
+- Native cutover rollback evidence bundle marker surface:
+  - `cutover_rollback_schema_version=kamn.cutover.rollback-evidence.v1`
+  - `cutover_rollback_summary_markers=final_decision,rollback_hash_match,evidence_complete`
+  - `cutover_rollback_checkpoint_markers=rollback.trigger_status,rollback.checkpoint_state,rollback.failed_checkpoint_id`
+  - `cutover_rollback_reason_codes_csv=ci-fast-gate-failed,incomplete-evidence,rollback target hash mismatch,missing failed checkpoint evidence,trigger-state-checkpoint-mismatch,clear-trigger-requires-ready-checkpoint`
 - Milestone bundle reason-code surface fails closed for marker/taxonomy drift via:
   - `milestone_review_go_no_go_gate_combined_reason_taxonomy_version_mismatch`
   - `milestone_review_go_no_go_gate_combined_transport_reason_codes_mismatch`
