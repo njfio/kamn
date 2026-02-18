@@ -18,6 +18,11 @@ pub const DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD: &str = "zstd";
 pub const DATA_LAYER_M0_HASH_ALGORITHM: &str = "sha256";
 /// Genesis marker used by the first append-only ledger record.
 pub const DATA_LAYER_M0_HASH_CHAIN_GENESIS: &str = "GENESIS";
+/// Conformance-matrix decision reason when all invariants match expectations.
+pub const DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE: &str = "m0_conformance_stable";
+/// Conformance-matrix decision reason when at least one invariant drifts.
+pub const DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE: &str =
+    "m0_conformance_drift_detected";
 
 /// Wrapped CEK entry bound to one authorized DID.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -245,6 +250,104 @@ impl DataLayerM0AppendOnlyLedger {
     }
 }
 
+/// M0 invariant categories tracked by conformance matrix contracts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM0ConformanceInvariant {
+    /// Content/AAD hash determinism for envelope-crypto projection.
+    EnvelopeCryptoDeterministic,
+    /// Duplicate-message rejection in append-only ledger operations.
+    AppendOnlyDuplicateRejected,
+    /// Hash-chain tamper detection in append-order verification.
+    HashChainTamperDetected,
+}
+
+/// One conformance case input for M0 invariant matrix evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM0ConformanceMatrixCase {
+    /// Stable case identifier.
+    pub case_id: String,
+    /// Invariant category under evaluation.
+    pub invariant: DataLayerM0ConformanceInvariant,
+    /// Observed pass/fail result.
+    pub observed_passed: bool,
+    /// Expected pass/fail result.
+    pub expected_passed: bool,
+}
+
+/// Per-case conformance matrix evidence entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM0ConformanceMatrixEvidence {
+    /// Stable case identifier.
+    pub case_id: String,
+    /// Invariant category.
+    pub invariant: DataLayerM0ConformanceInvariant,
+    /// Observed pass/fail result.
+    pub observed_passed: bool,
+    /// Expected pass/fail result.
+    pub expected_passed: bool,
+    /// Whether the case drifted from expectation.
+    pub mismatch: bool,
+}
+
+/// Aggregate decision for M0 conformance matrix evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM0ConformanceMatrixDecision {
+    /// All matrix cases matched expected outcomes.
+    Stable {
+        /// Stable decision reason marker.
+        reason_code: &'static str,
+    },
+    /// At least one matrix case drifted from expected outcomes.
+    DriftDetected {
+        /// Stable decision reason marker.
+        reason_code: &'static str,
+    },
+}
+
+/// Aggregate conformance-matrix report for M0 invariants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM0ConformanceMatrixReport {
+    /// Aggregate decision.
+    pub decision: DataLayerM0ConformanceMatrixDecision,
+    /// Per-case evidence entries in input order.
+    pub evidence: Vec<DataLayerM0ConformanceMatrixEvidence>,
+}
+
+/// Evaluates deterministic conformance matrix outcomes for M0 invariants.
+pub fn evaluate_data_layer_m0_conformance_matrix(
+    cases: &[DataLayerM0ConformanceMatrixCase],
+) -> Result<DataLayerM0ConformanceMatrixReport, DataLayerM0Error> {
+    if cases.is_empty() {
+        return Err(DataLayerM0Error::InvalidConformanceMatrixInput("cases"));
+    }
+
+    let mut evidence = Vec::with_capacity(cases.len());
+    for case in cases {
+        if case.case_id.trim().is_empty() {
+            return Err(DataLayerM0Error::InvalidConformanceMatrixInput("case_id"));
+        }
+        evidence.push(DataLayerM0ConformanceMatrixEvidence {
+            case_id: case.case_id.clone(),
+            invariant: case.invariant,
+            observed_passed: case.observed_passed,
+            expected_passed: case.expected_passed,
+            mismatch: case.observed_passed != case.expected_passed,
+        });
+    }
+
+    let decision = if evidence.iter().all(|entry| !entry.mismatch) {
+        DataLayerM0ConformanceMatrixDecision::Stable {
+            reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE,
+        }
+    } else {
+        DataLayerM0ConformanceMatrixDecision::DriftDetected {
+            reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+        }
+    };
+
+    Ok(DataLayerM0ConformanceMatrixReport { decision, evidence })
+}
+
 /// Error taxonomy for M0 record derivation and append-only verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM0Error {
@@ -278,6 +381,8 @@ pub enum DataLayerM0Error {
         /// Found previous hash.
         found_prev: String,
     },
+    /// Conformance-matrix input failed fail-closed validation.
+    InvalidConformanceMatrixInput(&'static str),
     /// Message id not present in ledger.
     NotFound(String),
 }
@@ -313,6 +418,9 @@ impl fmt::Display for DataLayerM0Error {
                 f,
                 "hash-chain link mismatch at position {position}: expected {expected_prev}, found {found_prev}"
             ),
+            Self::InvalidConformanceMatrixInput(field) => {
+                write!(f, "invalid conformance matrix input: {field}")
+            }
             Self::NotFound(message_id) => write!(f, "message id not found: {message_id}"),
         }
     }

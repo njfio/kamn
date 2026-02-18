@@ -255,9 +255,14 @@ pub use data_classification::{
     DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
 };
 pub use data_layer_m0::{
-    DataLayerM0AppendOnlyLedger, DataLayerM0EnvelopeRecord, DataLayerM0Error,
+    evaluate_data_layer_m0_conformance_matrix, DataLayerM0AppendOnlyLedger,
+    DataLayerM0ConformanceInvariant, DataLayerM0ConformanceMatrixCase,
+    DataLayerM0ConformanceMatrixDecision, DataLayerM0ConformanceMatrixEvidence,
+    DataLayerM0ConformanceMatrixReport, DataLayerM0EnvelopeRecord, DataLayerM0Error,
     DataLayerM0RecordInput, DataLayerM0WrappedKey, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
-    DATA_LAYER_M0_HASH_ALGORITHM, DATA_LAYER_M0_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+    DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M0_HASH_ALGORITHM,
+    DATA_LAYER_M0_HASH_CHAIN_GENESIS,
 };
 pub use data_layer_m1::{
     evaluate_data_layer_m1_anchor_failure_matrix, evaluate_data_layer_m1_inclusion_proof,

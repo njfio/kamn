@@ -1,8 +1,12 @@
 use kamn_core::{
-    CanonicalMessageEnvelope, DataLayerM0AppendOnlyLedger, DataLayerM0Error,
-    DataLayerM0RecordInput, DataLayerM0WrappedKey, DirectMessageCryptoEngine, EnvelopeEncryption,
-    EnvelopeHeader, EnvelopeMetadata, EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM,
+    evaluate_data_layer_m0_conformance_matrix, CanonicalMessageEnvelope,
+    DataLayerM0AppendOnlyLedger, DataLayerM0ConformanceInvariant, DataLayerM0ConformanceMatrixCase,
+    DataLayerM0ConformanceMatrixDecision, DataLayerM0Error, DataLayerM0RecordInput,
+    DataLayerM0WrappedKey, DirectMessageCryptoEngine, EnvelopeEncryption, EnvelopeHeader,
+    EnvelopeMetadata, EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM,
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
+    DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+    DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE,
 };
 use std::collections::BTreeMap;
 
@@ -177,5 +181,149 @@ fn spec_c04_invalid_compression_metadata_is_rejected() {
     assert_eq!(
         error,
         Err(DataLayerM0Error::InvalidCompressionCodec("lz4".to_owned()))
+    );
+}
+
+#[test]
+fn spec_c05_m0_conformance_matrix_reports_stable_for_foundation_invariants() {
+    let mut determinism_ledger_a = DataLayerM0AppendOnlyLedger::new();
+    let determinism_a = determinism_ledger_a
+        .append(valid_input(
+            "msg-c05-det",
+            vec!["kamn:did:agent:recipient-b", "kamn:did:agent:recipient-a"],
+            vec![
+                ("kamn:did:owner:recipient-b", "wrap-b"),
+                ("kamn:did:owner:recipient-a", "wrap-a"),
+            ],
+        ))
+        .expect("determinism append a should succeed");
+    let mut determinism_ledger_b = DataLayerM0AppendOnlyLedger::new();
+    let determinism_b = determinism_ledger_b
+        .append(valid_input(
+            "msg-c05-det",
+            vec!["kamn:did:agent:recipient-a", "kamn:did:agent:recipient-b"],
+            vec![
+                ("kamn:did:owner:recipient-a", "wrap-a"),
+                ("kamn:did:owner:recipient-b", "wrap-b"),
+            ],
+        ))
+        .expect("determinism append b should succeed");
+    let envelope_crypto_passed = determinism_a.content_hash == determinism_b.content_hash
+        && determinism_a.envelope_aad_hash == determinism_b.envelope_aad_hash;
+
+    let mut append_only_ledger = DataLayerM0AppendOnlyLedger::new();
+    append_only_ledger
+        .append(valid_input(
+            "msg-c05-append",
+            vec!["kamn:did:agent:recipient-a"],
+            vec![("kamn:did:owner:recipient-a", "wrap-a")],
+        ))
+        .expect("append-only seed should succeed");
+    let duplicate_append = append_only_ledger.append(valid_input(
+        "msg-c05-append",
+        vec!["kamn:did:agent:recipient-a"],
+        vec![("kamn:did:owner:recipient-a", "wrap-a")],
+    ));
+    let append_only_passed = matches!(
+        duplicate_append,
+        Err(DataLayerM0Error::DuplicateMessageId(_))
+    );
+
+    let mut hash_chain_ledger = DataLayerM0AppendOnlyLedger::new();
+    hash_chain_ledger
+        .append(valid_input(
+            "msg-c05-chain-a",
+            vec!["kamn:did:agent:recipient-a"],
+            vec![("kamn:did:owner:recipient-a", "wrap-a")],
+        ))
+        .expect("hash-chain seed append should succeed");
+    hash_chain_ledger
+        .append(valid_input(
+            "msg-c05-chain-b",
+            vec!["kamn:did:agent:recipient-b"],
+            vec![("kamn:did:owner:recipient-b", "wrap-b")],
+        ))
+        .expect("hash-chain second append should succeed");
+    hash_chain_ledger
+        .verify_hash_chain()
+        .expect("untampered chain should verify");
+    hash_chain_ledger
+        .replace_content_hash_unchecked("msg-c05-chain-a", "sha256:tampered")
+        .expect("tamper helper should succeed");
+    let hash_chain_passed = matches!(
+        hash_chain_ledger.verify_hash_chain(),
+        Err(DataLayerM0Error::InvalidHashChainLink { .. })
+    );
+
+    let report = evaluate_data_layer_m0_conformance_matrix(&[
+        DataLayerM0ConformanceMatrixCase {
+            case_id: "envelope-crypto".to_owned(),
+            invariant: DataLayerM0ConformanceInvariant::EnvelopeCryptoDeterministic,
+            observed_passed: envelope_crypto_passed,
+            expected_passed: true,
+        },
+        DataLayerM0ConformanceMatrixCase {
+            case_id: "append-only".to_owned(),
+            invariant: DataLayerM0ConformanceInvariant::AppendOnlyDuplicateRejected,
+            observed_passed: append_only_passed,
+            expected_passed: true,
+        },
+        DataLayerM0ConformanceMatrixCase {
+            case_id: "hash-chain".to_owned(),
+            invariant: DataLayerM0ConformanceInvariant::HashChainTamperDetected,
+            observed_passed: hash_chain_passed,
+            expected_passed: true,
+        },
+    ])
+    .expect("conformance matrix should evaluate");
+
+    assert_eq!(
+        report.decision,
+        DataLayerM0ConformanceMatrixDecision::Stable {
+            reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE,
+        }
+    );
+    assert_eq!(report.evidence.len(), 3);
+    assert!(report.evidence.iter().all(|entry| !entry.mismatch));
+}
+
+#[test]
+fn spec_c06_m0_conformance_matrix_detects_invariant_drift() {
+    let report = evaluate_data_layer_m0_conformance_matrix(&[DataLayerM0ConformanceMatrixCase {
+        case_id: "envelope-crypto-drift".to_owned(),
+        invariant: DataLayerM0ConformanceInvariant::EnvelopeCryptoDeterministic,
+        observed_passed: false,
+        expected_passed: true,
+    }])
+    .expect("conformance matrix should evaluate");
+
+    assert_eq!(
+        report.decision,
+        DataLayerM0ConformanceMatrixDecision::DriftDetected {
+            reason_code: DATA_LAYER_M0_CONFORMANCE_MATRIX_DRIFT_REASON_CODE,
+        }
+    );
+    assert_eq!(report.evidence.len(), 1);
+    assert!(report.evidence[0].mismatch);
+}
+
+#[test]
+fn spec_c07_m0_conformance_matrix_fails_closed_for_invalid_inputs() {
+    let empty = evaluate_data_layer_m0_conformance_matrix(&[]);
+    assert_eq!(
+        empty,
+        Err(DataLayerM0Error::InvalidConformanceMatrixInput("cases"))
+    );
+
+    let invalid_case_id =
+        evaluate_data_layer_m0_conformance_matrix(&[DataLayerM0ConformanceMatrixCase {
+            case_id: " ".to_owned(),
+            invariant: DataLayerM0ConformanceInvariant::HashChainTamperDetected,
+            observed_passed: true,
+            expected_passed: true,
+        }]);
+    assert_eq!(
+        invalid_case_id,
+        Err(DataLayerM0Error::InvalidConformanceMatrixInput("case_id"))
     );
 }
