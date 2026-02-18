@@ -8,6 +8,7 @@ DEFAULT_REPORT_GENERATOR="$ROOT_DIR/scripts/ci/generate_combined_shell_surface_t
 report_file=""
 threshold_file="$DEFAULT_THRESHOLD_FILE"
 output_json=""
+today_override=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -21,6 +22,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --output-json)
       output_json="${2:-}"
+      shift 2
+      ;;
+    --today)
+      today_override="${2:-}"
       shift 2
       ;;
     *)
@@ -53,17 +58,18 @@ if [[ -z "$output_json" ]]; then
 fi
 mkdir -p "$(dirname "$output_json")"
 
-python3 - "$report_file" "$threshold_file" "$output_json" <<'PY'
+python3 - "$report_file" "$threshold_file" "$output_json" "$today_override" <<'PY'
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
-REASON_TAXONOMY_VERSION = (
-    "kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1"
-)
+REASON_TAXONOMY_VERSION = "kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1"
 REASON_CODES_CSV = ",".join(
     [
         "combined_shell_surface_budget_status_fail",
+        "combined_shell_surface_decline_window_fail_exceeded",
+        "combined_shell_surface_decline_window_warn_exceeded",
         "combined_shell_surface_delta_ratio_invalid",
         "combined_shell_surface_delta_script_count_invalid",
         "combined_shell_surface_delta_shell_line_total_invalid",
@@ -80,25 +86,35 @@ REASON_CODES_CSV = ",".join(
         "combined_shell_surface_shell_line_total_delta_fail_exceeded",
         "combined_shell_surface_shell_line_total_delta_warn_exceeded",
         "combined_shell_surface_shell_line_total_invalid",
+        "combined_shell_surface_threshold_date_invalid",
+        "combined_shell_surface_threshold_file_stale",
         "combined_shell_surface_threshold_order_invalid",
         "combined_shell_surface_threshold_schema_mismatch",
         "combined_shell_surface_threshold_value_invalid",
+        "combined_shell_surface_today_override_invalid",
     ]
 )
 
 report_path = Path(sys.argv[1])
 threshold_path = Path(sys.argv[2])
 output_path = Path(sys.argv[3])
+today_override = sys.argv[4].strip()
 
 report = json.loads(report_path.read_text(encoding="utf-8"))
 thresholds = json.loads(threshold_path.read_text(encoding="utf-8"))
 
 reason_codes: list[str] = []
 
+
+def add_reason(code: str) -> None:
+    if code not in reason_codes:
+        reason_codes.append(code)
+
+
 if report.get("schema_version") != "kamn.ci.combined-shell-surface-trend-report.v1":
-    reason_codes.append("combined_shell_surface_report_schema_mismatch")
+    add_reason("combined_shell_surface_report_schema_mismatch")
 if thresholds.get("schema_version") != "kamn.ci.combined-shell-surface-trend-thresholds.v1":
-    reason_codes.append("combined_shell_surface_threshold_schema_mismatch")
+    add_reason("combined_shell_surface_threshold_schema_mismatch")
 
 current = report.get("current", {})
 deltas = report.get("deltas", {})
@@ -114,10 +130,23 @@ delta_shell_to_rust_ratio = deltas.get("shell_to_rust_ratio")
 script_budget_status = script_budget.get("status")
 
 if script_budget_status != "pass":
-    reason_codes.append("combined_shell_surface_budget_status_fail")
+    add_reason("combined_shell_surface_budget_status_fail")
 
 warn_codes: list[str] = []
 fail_codes: list[str] = []
+
+warn_script_count_increase = 0
+fail_script_count_increase = 0
+warn_shell_line_total_increase = 0
+fail_shell_line_total_increase = 0
+warn_shell_to_rust_ratio = 0.0
+fail_shell_to_rust_ratio = 0.0
+warn_shell_to_rust_ratio_increase = 0.0
+fail_shell_to_rust_ratio_increase = 0.0
+warn_non_declining_window_days = 0
+fail_non_declining_window_days = 0
+threshold_max_age_days = 0
+threshold_refreshed_on = ""
 
 try:
     warn_script_count_increase = int(thresholds["warn_script_count_increase"])
@@ -128,36 +157,64 @@ try:
     fail_shell_to_rust_ratio = float(thresholds["fail_shell_to_rust_ratio"])
     warn_shell_to_rust_ratio_increase = float(thresholds["warn_shell_to_rust_ratio_increase"])
     fail_shell_to_rust_ratio_increase = float(thresholds["fail_shell_to_rust_ratio_increase"])
+
+    warn_non_declining_window_days = int(thresholds["warn_non_declining_window_days"])
+    fail_non_declining_window_days = int(thresholds["fail_non_declining_window_days"])
+    threshold_max_age_days = int(thresholds["threshold_max_age_days"])
+    threshold_refreshed_on = str(thresholds["threshold_refreshed_on"])
 except Exception:
-    reason_codes.append("combined_shell_surface_threshold_value_invalid")
-    warn_script_count_increase = fail_script_count_increase = 0
-    warn_shell_line_total_increase = fail_shell_line_total_increase = 0
-    warn_shell_to_rust_ratio = fail_shell_to_rust_ratio = 0.0
-    warn_shell_to_rust_ratio_increase = fail_shell_to_rust_ratio_increase = 0.0
+    add_reason("combined_shell_surface_threshold_value_invalid")
 
 if warn_script_count_increase >= fail_script_count_increase:
-    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+    add_reason("combined_shell_surface_threshold_order_invalid")
 if warn_shell_line_total_increase >= fail_shell_line_total_increase:
-    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+    add_reason("combined_shell_surface_threshold_order_invalid")
 if warn_shell_to_rust_ratio >= fail_shell_to_rust_ratio:
-    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+    add_reason("combined_shell_surface_threshold_order_invalid")
 if warn_shell_to_rust_ratio_increase >= fail_shell_to_rust_ratio_increase:
-    reason_codes.append("combined_shell_surface_threshold_order_invalid")
+    add_reason("combined_shell_surface_threshold_order_invalid")
+if warn_non_declining_window_days >= fail_non_declining_window_days:
+    add_reason("combined_shell_surface_threshold_order_invalid")
 
 if not isinstance(script_count, int):
-    reason_codes.append("combined_shell_surface_script_count_invalid")
+    add_reason("combined_shell_surface_script_count_invalid")
 if not isinstance(shell_line_total, int):
-    reason_codes.append("combined_shell_surface_shell_line_total_invalid")
+    add_reason("combined_shell_surface_shell_line_total_invalid")
 if not isinstance(rust_line_total, int) or rust_line_total <= 0:
-    reason_codes.append("combined_shell_surface_rust_line_total_invalid")
+    add_reason("combined_shell_surface_rust_line_total_invalid")
 if not isinstance(shell_to_rust_ratio, (int, float)):
-    reason_codes.append("combined_shell_surface_ratio_invalid")
+    add_reason("combined_shell_surface_ratio_invalid")
 if not isinstance(delta_script_count, int):
-    reason_codes.append("combined_shell_surface_delta_script_count_invalid")
+    add_reason("combined_shell_surface_delta_script_count_invalid")
 if not isinstance(delta_shell_line_total, int):
-    reason_codes.append("combined_shell_surface_delta_shell_line_total_invalid")
+    add_reason("combined_shell_surface_delta_shell_line_total_invalid")
 if not isinstance(delta_shell_to_rust_ratio, (int, float)):
-    reason_codes.append("combined_shell_surface_delta_ratio_invalid")
+    add_reason("combined_shell_surface_delta_ratio_invalid")
+
+if today_override:
+    try:
+        today = date.fromisoformat(today_override)
+    except ValueError:
+        add_reason("combined_shell_surface_today_override_invalid")
+        today = None
+else:
+    today = date.today()
+
+threshold_date = None
+if threshold_refreshed_on:
+    try:
+        threshold_date = date.fromisoformat(threshold_refreshed_on)
+    except ValueError:
+        add_reason("combined_shell_surface_threshold_date_invalid")
+
+threshold_age_days = None
+if threshold_date is not None and today is not None:
+    threshold_age_days = (today - threshold_date).days
+    if threshold_age_days < 0:
+        add_reason("combined_shell_surface_threshold_date_invalid")
+
+if threshold_age_days is not None and threshold_age_days > threshold_max_age_days:
+    add_reason("combined_shell_surface_threshold_file_stale")
 
 if not reason_codes:
     if delta_script_count > fail_script_count_increase:
@@ -179,6 +236,17 @@ if not reason_codes:
         fail_codes.append("combined_shell_surface_ratio_delta_fail_exceeded")
     elif delta_shell_to_rust_ratio > warn_shell_to_rust_ratio_increase:
         warn_codes.append("combined_shell_surface_ratio_delta_warn_exceeded")
+
+    non_declining = (
+        delta_script_count > 0
+        or delta_shell_line_total > 0
+        or delta_shell_to_rust_ratio > 0
+    )
+    if non_declining and threshold_age_days is not None:
+        if threshold_age_days > fail_non_declining_window_days:
+            fail_codes.append("combined_shell_surface_decline_window_fail_exceeded")
+        elif threshold_age_days > warn_non_declining_window_days:
+            warn_codes.append("combined_shell_surface_decline_window_warn_exceeded")
 
 all_reason_codes = reason_codes + fail_codes + warn_codes
 
@@ -232,6 +300,11 @@ policy_report = {
         "fail_shell_to_rust_ratio": fail_shell_to_rust_ratio,
         "warn_shell_to_rust_ratio_increase": warn_shell_to_rust_ratio_increase,
         "fail_shell_to_rust_ratio_increase": fail_shell_to_rust_ratio_increase,
+        "threshold_refreshed_on": threshold_refreshed_on,
+        "threshold_max_age_days": threshold_max_age_days,
+        "warn_non_declining_window_days": warn_non_declining_window_days,
+        "fail_non_declining_window_days": fail_non_declining_window_days,
+        "threshold_age_days": threshold_age_days,
     },
 }
 
