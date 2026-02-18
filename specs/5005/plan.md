@@ -1,26 +1,36 @@
 # Issue #5005 Plan
 
 - Issue: #5005
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Deliver M2 gateway contracts through child task `#5018`:
+   - DID auth/session issuance with deterministic identifiers and bounded TTL.
+   - Fail-closed ABAC message visibility engine with stable reason taxonomy.
+   - Deterministic negative-authorization matrix drift detection.
+   - Static RLS policy template contracts and append-only audit hash-chain checks.
+2. Preserve additive exports in `kamn-core` for downstream integration.
+3. Validate with scoped suite `data_layer_m2_gateway_access` plus crate-level regression.
+4. Keep delivery Rust-only for this story to preserve shell budget neutrality.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m2_gateway_access.rs`
+- `crates/kamn-core/src/lib.rs`
+- `crates/kamn-core/tests/data_layer_m2_gateway_access.rs`
+- `specs/5005/spec.md`
+- `specs/5005/plan.md`
+- `specs/5005/tasks.md`
 
 ## Risks and Mitigations
-- Risk level: medium
+- Risk level: high
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep fail-closed semantics explicit across authn/authz negative paths.
+  - Validate deterministic reason markers via conformance tests.
+  - Preserve rust-only implementation to avoid shell-surface growth.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API/exports in `kamn-core`.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this bounded additive story closure.
