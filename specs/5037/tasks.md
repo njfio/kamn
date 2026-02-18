@@ -1,12 +1,12 @@
 # Issue #5037 Tasks
 
 - Issue: #5037
-- Status: Draft
+- Status: Done
 
 ## Ordered Tasks
-- [ ] T1 (Red): add failing tests derived from spec conformance cases.
-- [ ] T2 (Green): implement minimum code path to satisfy ACs.
-- [ ] T3 (Refactor): improve structure/readability while preserving behavior.
-- [ ] T4 (Regression): run scoped functional/integration/regression checks.
-- [ ] T5 (Governance): if shell/python/workflow/template changed, run shell budget + ratio guardrails and report deltas.
-- [ ] T6 (Verify): finalize AC mapping and set lifecycle status markers.
+- [x] T1 (Red): add failing conformance test for duplicate wrapped-key recipient rejection.
+- [x] T2 (Green): implement fail-closed wrapped-key recipient uniqueness validation and typed error.
+- [x] T3 (Refactor): preserve deterministic reason markers for crypto-shred/retention/legal-hold paths.
+- [x] T4 (Regression): run `cargo fmt --check`, `cargo clippy -p kamn-core -- -D warnings`, `cargo test -p kamn-core --test data_layer_m8_compliance_lifecycle`, and `cargo test -p kamn-core`.
+- [x] T5 (Governance): run shell guardrail evidence commands and confirm `shell_loc_delta_actual = 0`.
+- [x] T6 (Verify): set spec/plan/tasks status to `Implemented`/`Done`, map ACs to tests, and post closure evidence.

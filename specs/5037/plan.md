@@ -1,26 +1,33 @@
 # Issue #5037 Plan
 
 - Issue: #5037
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED conformance test for duplicate wrapped-key recipient rejection in M8
+   registration flow.
+2. Implement fail-closed wrapped-key recipient uniqueness validation with typed
+   error output.
+3. Keep existing crypto-shred/retention/legal-hold conformance paths stable.
+4. Run scoped/full regression and shell guardrail evidence commands.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m8_compliance_lifecycle.rs`
+- `crates/kamn-core/tests/data_layer_m8_compliance_lifecycle.rs`
+- `specs/5037/spec.md`
+- `specs/5037/plan.md`
+- `specs/5037/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep validation additive and fail-closed.
+  - Preserve existing reason-marker and legal-hold behavior.
+  - Keep implementation Rust-only; no shell/workflow changes.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive error taxonomy entry for duplicate wrapped-key recipient validation.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive validation contract.
