@@ -993,6 +993,48 @@ fn functional_production_transport_profile_classifier_rejects_in_memory_fallback
 }
 
 #[test]
+fn functional_transport_profile_classifier_rejects_live_and_fallback_profile_pair_conflict() {
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-transport-profile:libp2p-live".to_owned(),
+        "p2p-transport-profile:in-memory-deterministic".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::full(), true, &components),
+        Some("runtime_transport_profile_pair_disallowed")
+    );
+}
+
+#[test]
+fn functional_transport_profile_classifier_rejects_fallback_marker_without_profile_pair() {
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::planning(), true, &components),
+        Some("runtime_transport_profile_fallback_marker_without_in_memory_profile")
+    );
+}
+
+#[test]
+fn functional_transport_profile_classifier_accepts_planning_in_memory_profile_pair() {
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-transport-profile:in-memory-deterministic".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::planning(), true, &components),
+        None
+    );
+}
+
+#[test]
 fn functional_production_transport_profile_classifier_rejects_contract_only_compile_mode() {
     let components = vec![
         "p2p-discovery".to_owned(),
