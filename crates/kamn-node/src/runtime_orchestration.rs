@@ -21,6 +21,10 @@ const RUNTIME_TRANSPORT_PROFILE_GOSSIP_DISABLED_FOR_PRODUCTION_REASON: &str =
     "runtime_transport_profile_gossip_disabled_for_production";
 const RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON: &str =
     "runtime_transport_profile_in_memory_fallback_forbidden";
+const RUNTIME_TRANSPORT_PROFILE_PAIR_DISALLOWED_REASON: &str =
+    "runtime_transport_profile_pair_disallowed";
+const RUNTIME_TRANSPORT_PROFILE_FALLBACK_MARKER_WITHOUT_IN_MEMORY_PROFILE_REASON: &str =
+    "runtime_transport_profile_fallback_marker_without_in_memory_profile";
 const RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON: &str =
     "runtime_transport_profile_live_marker_missing";
 const RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON: &str =
@@ -49,6 +53,12 @@ fn production_transport_profile_remediation(reason_code: &'static str) -> &'stat
         }
         RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON => {
             "ensure runtime wiring emits p2p-transport-profile:libp2p-live and remove in-memory fallback markers"
+        }
+        RUNTIME_TRANSPORT_PROFILE_PAIR_DISALLOWED_REASON => {
+            "ensure runtime wiring emits exactly one transport profile family (libp2p-live OR in-memory-deterministic), not both"
+        }
+        RUNTIME_TRANSPORT_PROFILE_FALLBACK_MARKER_WITHOUT_IN_MEMORY_PROFILE_REASON => {
+            "ensure p2p-in-memory-transport-fallback is only emitted with p2p-transport-profile:in-memory-deterministic"
         }
         RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON => {
             "ensure bootstrap uses RuntimeTransportProfile::Libp2pLive for production runtime modes"
@@ -122,6 +132,22 @@ pub(crate) fn classify_production_transport_profile_violation(
     enable_gossip: bool,
     components: &[String],
 ) -> Option<&'static str> {
+    let has_component = |expected: &str| components.iter().any(|component| component == expected);
+    let has_live_profile = has_component("p2p-transport-profile:libp2p-live");
+    let has_in_memory_profile = has_component("p2p-transport-profile:in-memory-deterministic");
+    let has_in_memory_fallback = has_component("p2p-in-memory-transport-fallback");
+    let has_live_provider = has_component("p2p-live-libp2p-provider");
+
+    if has_live_profile && (has_in_memory_profile || has_in_memory_fallback) {
+        return Some(RUNTIME_TRANSPORT_PROFILE_PAIR_DISALLOWED_REASON);
+    }
+    if has_in_memory_profile && has_live_provider {
+        return Some(RUNTIME_TRANSPORT_PROFILE_PAIR_DISALLOWED_REASON);
+    }
+    if has_in_memory_fallback && !has_in_memory_profile {
+        return Some(RUNTIME_TRANSPORT_PROFILE_FALLBACK_MARKER_WITHOUT_IN_MEMORY_PROFILE_REASON);
+    }
+
     if !runtime_mode_requires_live_transport_profile(runtime_mode) {
         return None;
     }
@@ -129,16 +155,13 @@ pub(crate) fn classify_production_transport_profile_violation(
         return Some(RUNTIME_TRANSPORT_PROFILE_GOSSIP_DISABLED_FOR_PRODUCTION_REASON);
     }
 
-    let has_component = |expected: &str| components.iter().any(|component| component == expected);
-    if has_component("p2p-transport-profile:in-memory-deterministic")
-        || has_component("p2p-in-memory-transport-fallback")
-    {
+    if has_in_memory_profile || has_in_memory_fallback {
         return Some(RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON);
     }
-    if !has_component("p2p-transport-profile:libp2p-live") {
+    if !has_live_profile {
         return Some(RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON);
     }
-    if !has_component("p2p-live-libp2p-provider") {
+    if !has_live_provider {
         return Some(RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON);
     }
     if has_component("p2p-live-libp2p-provider:contract-only")

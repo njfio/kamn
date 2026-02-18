@@ -262,6 +262,10 @@ Deterministic reason-code markers:
     - remediation: remove `--disable-gossip` or switch to non-production runtime mode
   - `runtime_transport_profile_in_memory_fallback_forbidden`
     - remediation: remove in-memory fallback markers and enforce live profile markers
+  - `runtime_transport_profile_pair_disallowed`
+    - remediation: enforce exactly one transport-profile family (`libp2p-live` or `in-memory-deterministic`)
+  - `runtime_transport_profile_fallback_marker_without_in_memory_profile`
+    - remediation: emit `p2p-in-memory-transport-fallback` only with `p2p-transport-profile:in-memory-deterministic`
   - `gate_policy_native_libp2p_provider_marker_mismatch`
     - remediation: restore `p2p-live-libp2p-provider:native` marker in runtime report path
   - `gate_policy_libp2p_fallback_marker_blocklist_mismatch`

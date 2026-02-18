@@ -224,6 +224,8 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Fail-closed production policy reason codes:
   - `runtime_transport_profile_gossip_disabled_for_production`
   - `runtime_transport_profile_in_memory_fallback_forbidden`
+  - `runtime_transport_profile_pair_disallowed`
+  - `runtime_transport_profile_fallback_marker_without_in_memory_profile`
   - `runtime_transport_profile_live_marker_missing`
   - `runtime_transport_profile_live_provider_missing`
   - `runtime_transport_profile_compile_mode_not_native`
@@ -234,6 +236,14 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `runtime_transport_profile_in_memory_fallback_forbidden`
     - remove in-memory fallback profile markers
     - ensure runtime wiring emits `p2p-transport-profile:libp2p-live`
+  - `runtime_transport_profile_pair_disallowed`
+    - ensure runtime wiring emits only one transport profile family
+      (`p2p-transport-profile:libp2p-live` OR
+      `p2p-transport-profile:in-memory-deterministic`)
+    - remove mixed live+fallback marker combinations
+  - `runtime_transport_profile_fallback_marker_without_in_memory_profile`
+    - ensure `p2p-in-memory-transport-fallback` is emitted only with
+      `p2p-transport-profile:in-memory-deterministic`
   - `runtime_transport_profile_live_marker_missing`
     - ensure bootstrap path selects `RuntimeTransportProfile::Libp2pLive`
   - `runtime_transport_profile_live_provider_missing`
