@@ -47,6 +47,10 @@ Out of scope:
 - `rust_loc_delta_estimate`: <integer|0>
 - `shell_to_rust_ratio_delta_estimate`: <float|0.0>
 - `shell_surface_mitigation_issue`: <issue-id|None>
+- `shell_loc_delta_actual`: <integer|0>
+- `rust_loc_delta_actual`: <integer|0>
+- `shell_to_rust_ratio_delta_actual`: <float|0.0>
+- `shell_surface_ratio_target_status`: improved|neutral|regressed_with_waiver
 
 ## Dependencies
 - <issue links>
