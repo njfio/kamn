@@ -217,6 +217,8 @@ This refreshed version separates:
   - `rehearsal_boundary_local_heavy_opt_in_missing`
   - `rehearsal_runbook_contract_parity_mismatch`
 - Composite governance checker + docs drift coverage:
+  - `python3 scripts/ci/check_rehearsal_promotion_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/rehearsal-promotion-ci-smoke-convergence-report.json`
+  - `bash scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh`
   - `python3 scripts/deploy/check_upgrade_rehearsal_lineage_policy.py --bundle-file /tmp/gonogo-milestone.json --expected-final-decision GO`
   - `bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh`
 - Local-heavy rehearsal execution remains explicit opt-in and outside ci-fast-gate:

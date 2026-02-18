@@ -436,6 +436,34 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_full_stack_ci_smoke_seconds_exceeded`
   - `Regression: #4201`
 
+### Rehearsal/Promotion CI smoke convergence governance
+- Composite smoke checker command:
+  - `python3 scripts/ci/check_rehearsal_promotion_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/rehearsal-promotion-ci-smoke-convergence-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh`
+- Deterministic checker markers:
+  - `rehearsal_promotion_ci_smoke_reason_taxonomy_version=kamn.ci.rehearsal-promotion-ci-smoke-convergence-reason-taxonomy.v1`
+  - `rehearsal_promotion_ci_smoke_reason_codes_csv=rehearsal_bundle_ci_smoke_composition_missing,rehearsal_contract_lane_ci_smoke_composition_missing,rehearsal_deep_lane_command_leaked_in_fast_mode,ci_fast_gate_rehearsal_deep_lane_not_excluded,ci_strategy_rehearsal_promotion_convergence_markers_missing,production_plan_rehearsal_promotion_convergence_markers_missing,rehearsal_promotion_ci_smoke_seconds_exceeded`
+  - `rehearsal_promotion_ci_smoke_max_seconds=120`
+  - `rehearsal_promotion_local_heavy_max_seconds=900`
+  - `rehearsal_promotion_ci_smoke_lane_cost_profile=low`
+  - `rehearsal_promotion_local_heavy_execution_mode=opt_in`
+- Fast-mode composition contract:
+  - `bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh`
+  - `bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh`
+- Local-heavy boundary policy:
+  - staging rehearsal deep-lane command remains excluded from ci-fast-gate and ci-tools fast mode.
+  - deep-lane command (`run_staging_rehearsal_deep_lane.sh`) must not appear in ci-fast-gate workflow or ci-tools fast mode.
+- Fail-closed reasons:
+  - `rehearsal_bundle_ci_smoke_composition_missing`
+  - `rehearsal_contract_lane_ci_smoke_composition_missing`
+  - `rehearsal_deep_lane_command_leaked_in_fast_mode`
+  - `ci_fast_gate_rehearsal_deep_lane_not_excluded`
+  - `ci_strategy_rehearsal_promotion_convergence_markers_missing`
+  - `production_plan_rehearsal_promotion_convergence_markers_missing`
+  - `rehearsal_promotion_ci_smoke_seconds_exceeded`
+  - `Regression: #4156`
+
 ### Upgrade Compatibility CI smoke convergence governance
 - Composite smoke checker command:
   - `python3 scripts/ci/check_upgrade_compatibility_ci_smoke_convergence.py --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --strategy-doc docs/ci/strategy.md --plan-doc docs/plans/2026-02-14-production-service-next-steps.md --max-seconds 120 --output-json /tmp/upgrade-compatibility-ci-smoke-convergence-report.json`
