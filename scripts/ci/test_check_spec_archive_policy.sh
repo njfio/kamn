@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/ci/check_spec_archive_policy.sh"
 ARCHIVE_TOOL="$ROOT_DIR/scripts/ci/archive_completed_specs.py"
+POLICY_DOC="$ROOT_DIR/docs/planning/spec-archive-policy.md"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected spec archive policy checker to be executable: $CHECKER" >&2
@@ -13,6 +14,28 @@ if [ ! -x "$ARCHIVE_TOOL" ]; then
   echo "expected spec archive migration tool to be executable: $ARCHIVE_TOOL" >&2
   exit 1
 fi
+if [ ! -f "$POLICY_DOC" ]; then
+  echo "expected spec archive policy documentation file: $POLICY_DOC" >&2
+  exit 1
+fi
+
+required_policy_markers=(
+  'spec_archive_layout_version=kamn.spec-archive-layout.v1'
+  'spec_archive_root=specs/archive'
+  'spec_archive_index_path=specs/archive/index.md'
+  'spec_archive_pointer_template=specs/<issue-id>/ARCHIVED.md'
+  'spec_archive_required_artifacts=spec.md,plan.md,tasks.md'
+  'spec_archive_retention_status_gate=Implemented'
+  'spec_archive_retention_exceptions=audit|required-by-compliance'
+  'spec_archive_policy_status=verified|fail-closed'
+)
+
+for marker in "${required_policy_markers[@]}"; do
+  if ! grep -Fq "$marker" "$POLICY_DOC"; then
+    echo "expected spec archive policy marker in docs: $marker" >&2
+    exit 1
+  fi
+done
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
