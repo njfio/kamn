@@ -8,7 +8,10 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker_contract.sh`
+- `docs/ci/strategy.md`
 
 ## Risks / Mitigations
 

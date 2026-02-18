@@ -3971,6 +3971,21 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=combined_shell_surface_ratio_delta_fail_exceeded`
     - `reason_codes=combined_shell_surface_budget_status_fail`
     - `reason_codes=combined_shell_surface_threshold_order_invalid`
+- Declarative policy checker schema/taxonomy contract (`test_declarative_policy_checker_contract.sh`)
+  - checker command:
+    - `python3 scripts/framework/declarative_policy_checker.py --policy-file <policy.json> --report-file <report.json> --output-json <output.json>`
+  - deterministic policy schema markers:
+    - `policy.schema_version=kamn.framework.declarative-policy.v1`
+    - `output.schema_version=kamn.framework.declarative-policy-report.v1`
+  - deterministic taxonomy marker contract:
+    - `policy.reason_taxonomy_version` must match `<namespace>.v<integer>` (fail closed otherwise)
+    - invalid marker failure string: `policy field 'reason_taxonomy_version' must end with .v<integer>`
+  - deterministic mismatch/failure surface:
+    - `policy schema_version mismatch`
+    - `expected-final-decision mismatch: expected GO|NO-GO, found GO|NO-GO`
+  - coverage commands:
+    - `python3 scripts/framework/test_declarative_policy_checker.py`
+    - `bash scripts/framework/test_declarative_policy_checker_contract.sh`
 - Fast-gate workflow governance wiring:
   - `.github/workflows/ci-fast-gate.yml` runs, under `run_script_surface_budget_checks` scope:
     - `bash scripts/ci/check_script_duplication_budget.sh --budget-file .ci/script-surface-budget.env --baseline-file .ci/script-surface-baseline.env --waiver-file .ci/script-surface-budget-waiver.json --output-json ci-script-surface-budget.json`

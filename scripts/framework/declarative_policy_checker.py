@@ -124,6 +124,10 @@ def _validate_policy(policy: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(value, str) or not value.strip():
             fail(f"policy field '{field_name}' must be a non-empty string")
 
+    reason_taxonomy_version = policy["reason_taxonomy_version"]
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+\.v[0-9]+", reason_taxonomy_version):
+        fail("policy field 'reason_taxonomy_version' must end with .v<integer>")
+
     checks = policy.get("checks")
     if not isinstance(checks, list) or not checks:
         fail("policy field 'checks' must be a non-empty list")

@@ -127,4 +127,37 @@ fi
 
 printf '%s\n' "$invalid_output" | grep -q 'policy schema_version mismatch'
 
+INVALID_TAXONOMY_POLICY="$TMP_DIR/invalid-taxonomy-policy.json"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$INVALID_TAXONOMY_POLICY" <<'JSON'
+{
+  "schema_version": "kamn.framework.declarative-policy.v1",
+  "policy_name": "invalid.taxonomy.policy",
+  "reason_taxonomy_version": "kamn.example.reason-taxonomy",
+  "reason_key_prefix": "example_reason_codes",
+  "success_reason_code": "none",
+  "checks": [
+    {
+      "field": "status",
+      "op": "equals",
+      "expected": "pass",
+      "reason_code": "status_not_pass"
+    }
+  ]
+}
+JSON
+
+set +e
+invalid_taxonomy_output="$(python3 "$CHECKER" \
+  --policy-file "$INVALID_TAXONOMY_POLICY" \
+  --report-file "$PASS_REPORT" 2>&1)"
+invalid_taxonomy_status=$?
+set -e
+
+if [ "$invalid_taxonomy_status" -eq 0 ]; then
+  echo "expected checker to fail on invalid reason_taxonomy_version marker format" >&2
+  exit 1
+fi
+
+printf '%s\n' "$invalid_taxonomy_output" | grep -q "policy field 'reason_taxonomy_version' must end with .v<integer>"
+
 echo "declarative policy checker contract tests passed."
