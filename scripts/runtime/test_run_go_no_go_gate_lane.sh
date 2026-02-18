@@ -13,6 +13,7 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
 TMP_FALLBACK_MARKER_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fallback-marker-fault-report.json"
+TMP_READINESS_MARKER_FAULT_REPORT="$TMP_DIR/go-no-go-gate-readiness-marker-fault-report.json"
 TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
 TMP_RUN_REPORT="$TMP_DIR/go-no-go-gate-run-mode-report.json"
 TMP_WAIVER_REPORT="$TMP_DIR/go-no-go-gate-waiver-report.json"
@@ -91,6 +92,55 @@ if [ ! -f "$RELEASE_MANIFEST_FILE" ]; then
   echo "expected release evidence manifest file for go/no-go gate lane" >&2
   exit 1
 fi
+
+python3 - "$ROOT_DIR" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+module_path = root / "scripts/runtime/go_no_go_gate_lane_contract.py"
+spec = importlib.util.spec_from_file_location("go_no_go_gate_lane_contract", module_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+
+artifact_inventory = [
+    {"artifact_id": "go_no_go_evidence", "status": "dry_run_pending"},
+]
+
+# Unit: missing readiness marker fails closed.
+policy_outcome, final_decision, status, reason_codes = module._evaluate_go_no_go_policy(
+    artifact_inventory,
+    {"go_no_go_evidence_status": ""},
+    [],
+    "dry-run",
+    module.NATIVE_LIBP2P_PROVIDER_MARKER,
+    list(module.LIBP2P_FALLBACK_MARKER_BLOCKLIST),
+    [],
+    "verified",
+)
+if (policy_outcome, final_decision, status) != ("FAIL", "NO-GO", "fail"):
+    raise SystemExit("expected missing readiness marker unit check to fail closed")
+if "gate_required_artifact_status_mismatch:go_no_go_evidence" not in reason_codes:
+    raise SystemExit("expected deterministic readiness marker mismatch reason in unit check")
+
+# Unit: runtime budget overflow fails closed.
+policy_outcome, final_decision, status, reason_codes = module._evaluate_go_no_go_policy(
+    artifact_inventory,
+    {"go_no_go_evidence_status": "dry_run_pending"},
+    [module.RUNTIME_BUDGET_EXCEEDED_REASON],
+    "dry-run",
+    module.NATIVE_LIBP2P_PROVIDER_MARKER,
+    list(module.LIBP2P_FALLBACK_MARKER_BLOCKLIST),
+    [],
+    "verified",
+)
+if (policy_outcome, final_decision, status) != ("FAIL", "NO-GO", "fail"):
+    raise SystemExit("expected runtime budget unit check to fail closed")
+if reason_codes != [module.RUNTIME_BUDGET_EXCEEDED_REASON]:
+    raise SystemExit("expected deterministic runtime budget reason code in unit check")
+PY
 
 lane_output="$(
   bash "$LANE_SCRIPT" \
@@ -657,6 +707,24 @@ if ! printf '%s\n' "$fallback_marker_fault_output" | grep -q 'gate_policy_libp2p
   exit 1
 fi
 
+set +e
+readiness_marker_fault_output="$(
+  bash "$LANE_SCRIPT" \
+    --fault-profile readiness_marker_missing \
+    --max-seconds 120 \
+    --output-json "$TMP_READINESS_MARKER_FAULT_REPORT" 2>&1
+)"
+readiness_marker_fault_code=$?
+set -e
+if [ "$readiness_marker_fault_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane readiness marker fault profile to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$readiness_marker_fault_output" | grep -q 'gate_required_artifact_status_mismatch:go_no_go_evidence'; then
+  echo "expected go/no-go gate lane readiness marker fault to report deterministic mismatch reason" >&2
+  exit 1
+fi
+
 tampered_manifest="$TMP_DIR/release-evidence-manifest.missing-dr.json"
 python3 - "$RELEASE_MANIFEST_FILE" "$tampered_manifest" <<'PY'
 import json
@@ -931,26 +999,54 @@ if payload.get("observed_reason_codes") != []:
     raise SystemExit("expected fallback marker fault observed_reason_codes to remain empty")
 PY
 
+python3 - "$TMP_READINESS_MARKER_FAULT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("status") != "fail":
+    raise SystemExit("expected readiness marker fault report status=fail")
+if payload.get("policy_outcome") != "FAIL":
+    raise SystemExit("expected readiness marker fault report policy_outcome=FAIL")
+if payload.get("final_decision") != "NO-GO":
+    raise SystemExit("expected readiness marker fault report final_decision=NO-GO")
+if payload.get("fault_profile") != "readiness_marker_missing":
+    raise SystemExit("expected readiness marker fault report fault_profile=readiness_marker_missing")
+reason_codes = payload.get("reason_codes", [])
+if "gate_required_artifact_status_mismatch:go_no_go_evidence" not in reason_codes:
+    raise SystemExit("expected readiness marker mismatch reason code in readiness fault report")
+if payload.get("observed_reason_codes") != []:
+    raise SystemExit("expected readiness marker fault observed_reason_codes to remain empty")
+PY
+
+set +e
 warn_output="$(
   bash "$LANE_SCRIPT" \
     --fault-profile runtime_budget_warn \
     --max-seconds 120 \
-    --output-json "$TMP_WARN_REPORT"
+    --output-json "$TMP_WARN_REPORT" 2>&1
 )"
-if ! printf '%s\n' "$warn_output" | grep -q '^status=warn$'; then
-  echo "expected go/no-go gate runtime_budget_warn profile to emit status=warn" >&2
+warn_code=$?
+set -e
+if [ "$warn_code" -eq 0 ]; then
+  echo "expected go/no-go gate runtime_budget_warn profile to fail closed" >&2
   exit 1
 fi
-if ! printf '%s\n' "$warn_output" | grep -q '^policy_outcome=WARN$'; then
-  echo "expected go/no-go gate runtime_budget_warn profile to emit policy_outcome=WARN" >&2
+if ! printf '%s\n' "$warn_output" | grep -q '^status=fail$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit status=fail" >&2
   exit 1
 fi
-if ! printf '%s\n' "$warn_output" | grep -q '^final_decision=GO$'; then
-  echo "expected go/no-go gate runtime_budget_warn profile to keep final_decision=GO" >&2
+if ! printf '%s\n' "$warn_output" | grep -q '^policy_outcome=FAIL$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit policy_outcome=FAIL" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^final_decision=NO-GO$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit final_decision=NO-GO" >&2
   exit 1
 fi
 if ! printf '%s\n' "$warn_output" | grep -q '^reason_codes=runtime_budget_exceeded$'; then
-  echo "expected go/no-go gate runtime_budget_warn profile to emit warning reason code" >&2
+  echo "expected go/no-go gate runtime_budget_warn profile to emit deterministic budget reason code" >&2
   exit 1
 fi
 
@@ -960,12 +1056,12 @@ import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-if payload.get("status") != "warn":
-    raise SystemExit("expected runtime_budget_warn report status=warn")
-if payload.get("policy_outcome") != "WARN":
-    raise SystemExit("expected runtime_budget_warn report policy_outcome=WARN")
-if payload.get("final_decision") != "GO":
-    raise SystemExit("expected runtime_budget_warn report final_decision=GO")
+if payload.get("status") != "fail":
+    raise SystemExit("expected runtime_budget_warn report status=fail")
+if payload.get("policy_outcome") != "FAIL":
+    raise SystemExit("expected runtime_budget_warn report policy_outcome=FAIL")
+if payload.get("final_decision") != "NO-GO":
+    raise SystemExit("expected runtime_budget_warn report final_decision=NO-GO")
 if payload.get("policy_evaluator_status") != "verified":
     raise SystemExit("expected runtime_budget_warn report policy_evaluator_status=verified")
 if payload.get("reason_codes") != ["runtime_budget_exceeded"]:

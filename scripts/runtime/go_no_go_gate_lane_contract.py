@@ -372,6 +372,7 @@ def _validate_release_manifest(
 
 def _evaluate_go_no_go_policy(
     artifact_inventory: list[dict[str, str]],
+    readiness_markers: dict[str, str],
     observed_reason_codes: list[str],
     lane_mode: str,
     native_libp2p_provider_marker: str,
@@ -384,8 +385,16 @@ def _evaluate_go_no_go_policy(
     expected_artifact_status = "verified" if lane_mode == "run" else "dry_run_pending"
 
     for artifact in artifact_inventory:
+        artifact_id = artifact.get("artifact_id", "unknown")
         if artifact.get("status") != expected_artifact_status:
-            artifact_id = artifact.get("artifact_id", "unknown")
+            fail_reasons.append(f"gate_required_artifact_status_mismatch:{artifact_id}")
+            continue
+        readiness_marker_key = f"{artifact_id}_status"
+        readiness_marker_value = readiness_markers.get(readiness_marker_key)
+        if not isinstance(readiness_marker_value, str) or not readiness_marker_value:
+            fail_reasons.append(f"gate_required_artifact_status_mismatch:{artifact_id}")
+            continue
+        if readiness_marker_value != expected_artifact_status:
             fail_reasons.append(f"gate_required_artifact_status_mismatch:{artifact_id}")
 
     for reason_code in observed_reason_codes:
@@ -393,7 +402,7 @@ def _evaluate_go_no_go_policy(
             fail_reasons.append(reason_code)
             continue
         if reason_code == RUNTIME_BUDGET_EXCEEDED_REASON:
-            warn_reasons.append(reason_code)
+            fail_reasons.append(reason_code)
             continue
         if reason_code == WAIVER_APPLIED_REASON:
             warn_reasons.append(reason_code)
@@ -429,10 +438,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "gate_decision",
         "runtime_budget_warn",
         "libp2p_fallback_marker",
+        "readiness_marker_missing",
     }:
         fail(
             "--fault-profile must be one of: "
-            "none, gate_decision, runtime_budget_warn, libp2p_fallback_marker"
+            "none, gate_decision, runtime_budget_warn, libp2p_fallback_marker, "
+            "readiness_marker_missing"
         )
     if lane_mode == "run" and args.local_opt_in.strip() != "1":
         fail(f"run mode requires {RUN_MODE_OPT_IN_ENV}=1")
@@ -696,8 +707,25 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     ci_fast_gate_scope = "ci-fast-gate" if ci_fast_gate_eligible else "local-only"
     run_mode_command_status = "executed" if lane_mode == "run" else "dry_run_no_commands_executed"
     mode_reason_code = RUN_REASON if lane_mode == "run" else DRY_RUN_REASON
+    go_no_go_evidence_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    rollback_readiness_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    dr_readiness_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    local_full_stack_integration_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    local_full_runtime_convergence_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    transport_fault_matrix_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    if fault_profile == "readiness_marker_missing":
+        go_no_go_evidence_status = ""
+    readiness_markers = {
+        "go_no_go_evidence_status": go_no_go_evidence_status,
+        "rollback_readiness_status": rollback_readiness_status,
+        "dr_readiness_status": dr_readiness_status,
+        "local_full_stack_integration_status": local_full_stack_integration_status,
+        "local_full_runtime_convergence_status": local_full_runtime_convergence_status,
+        "transport_fault_matrix_status": transport_fault_matrix_status,
+    }
     policy_outcome, final_decision, status, evaluator_reason_codes = _evaluate_go_no_go_policy(
         artifact_inventory,
+        readiness_markers,
         reason_codes,
         lane_mode,
         native_libp2p_provider_marker,
@@ -753,18 +781,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "run_mode_command_count": run_mode_command_count,
         "mode_reason_code": mode_reason_code,
         "fault_profile": fault_profile,
-        "go_no_go_evidence_status": "verified" if lane_mode == "run" else "dry_run_pending",
-        "rollback_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
-        "dr_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
-        "local_full_stack_integration_status": "verified"
-        if lane_mode == "run"
-        else "dry_run_pending",
-        "local_full_runtime_convergence_status": "verified"
-        if lane_mode == "run"
-        else "dry_run_pending",
-        "transport_fault_matrix_status": "verified"
-        if lane_mode == "run"
-        else "dry_run_pending",
+        "go_no_go_evidence_status": go_no_go_evidence_status,
+        "rollback_readiness_status": rollback_readiness_status,
+        "dr_readiness_status": dr_readiness_status,
+        "local_full_stack_integration_status": local_full_stack_integration_status,
+        "local_full_runtime_convergence_status": local_full_runtime_convergence_status,
+        "transport_fault_matrix_status": transport_fault_matrix_status,
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
@@ -812,20 +834,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"run_mode_command_count={run_mode_command_count}")
     print(f"mode_reason_code={mode_reason_code}")
     print(f"fault_profile={fault_profile}")
-    if lane_mode == "run":
-        print("go_no_go_evidence_status=verified")
-        print("rollback_readiness_status=verified")
-        print("dr_readiness_status=verified")
-        print("local_full_stack_integration_status=verified")
-        print("local_full_runtime_convergence_status=verified")
-        print("transport_fault_matrix_status=verified")
-    else:
-        print("go_no_go_evidence_status=dry_run_pending")
-        print("rollback_readiness_status=dry_run_pending")
-        print("dr_readiness_status=dry_run_pending")
-        print("local_full_stack_integration_status=dry_run_pending")
-        print("local_full_runtime_convergence_status=dry_run_pending")
-        print("transport_fault_matrix_status=dry_run_pending")
+    print(f"go_no_go_evidence_status={go_no_go_evidence_status}")
+    print(f"rollback_readiness_status={rollback_readiness_status}")
+    print(f"dr_readiness_status={dr_readiness_status}")
+    print(f"local_full_stack_integration_status={local_full_stack_integration_status}")
+    print(f"local_full_runtime_convergence_status={local_full_runtime_convergence_status}")
+    print(f"transport_fault_matrix_status={transport_fault_matrix_status}")
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")

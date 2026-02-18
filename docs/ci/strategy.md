@@ -4150,6 +4150,13 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `PASS` => `status=pass`, `final_decision=GO`
   - `WARN` => `status=warn`, `final_decision=GO`
   - `FAIL` => `status=fail`, `final_decision=NO-GO`
+- activation readiness marker contract (must be present and mode-aligned):
+  - `go_no_go_evidence_status`
+  - `rollback_readiness_status`
+  - `dr_readiness_status`
+  - `local_full_stack_integration_status`
+  - `local_full_runtime_convergence_status`
+  - `transport_fault_matrix_status`
 - native libp2p provider marker contracts (consumed by go/no-go policy evaluation):
   - `native_libp2p_provider_marker=p2p-live-libp2p-provider:native`
   - `libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only`
@@ -4192,7 +4199,8 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `waiver_expiry_invalid`
   - `waiver_expired`
   - `waiver_allowed_reason_codes_invalid`
-  - `runtime_budget_exceeded` (warning reason)
+  - `runtime_budget_exceeded` (fail-closed reason)
+  - `gate_required_artifact_status_mismatch:<artifact_id>` (readiness marker missing or status mismatch)
   - `gate_decision_fault_injection_triggered` (fail reason)
   - `gate_policy_native_libp2p_provider_marker_mismatch`
   - `gate_policy_libp2p_fallback_marker_blocklist_mismatch`
