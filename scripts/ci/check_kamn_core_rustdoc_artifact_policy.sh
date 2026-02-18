@@ -50,6 +50,7 @@ report_path = pathlib.Path(sys.argv[1])
 REASON_TAXONOMY_VERSION = "kamn.ci.kamn-core-rustdoc-navigation-governance-reason-taxonomy.v1"
 REASON_CODES_CSV = (
     "docs_behavioral_ratio_threshold_exceeded,"
+    "rustdoc_artifact_runtime_budget_exceeded,"
     "rustdoc_artifact_policy_validation_failed"
 )
 
@@ -80,6 +81,7 @@ if reason_key != "kamn.ci.kamn-core-rustdoc-artifact.ok":
 
 runtime_seconds = payload.get("runtime_seconds")
 max_runtime_seconds = payload.get("max_runtime_seconds")
+runtime_budget_status = "exceeded"
 if not isinstance(runtime_seconds, int) or runtime_seconds < 0:
     errors.append("runtime_seconds must be a non-negative integer")
 if not isinstance(max_runtime_seconds, int) or max_runtime_seconds < 0:
@@ -87,9 +89,12 @@ if not isinstance(max_runtime_seconds, int) or max_runtime_seconds < 0:
 if (
     isinstance(runtime_seconds, int)
     and isinstance(max_runtime_seconds, int)
-    and runtime_seconds > max_runtime_seconds
 ):
-    errors.append("runtime_seconds exceeds max_runtime_seconds")
+    if runtime_seconds > max_runtime_seconds:
+        runtime_budget_status = "exceeded"
+        errors.append("rustdoc_artifact_runtime_budget_exceeded")
+    else:
+        runtime_budget_status = "within"
 
 docs_contract_test_count = payload.get("docs_contract_test_count")
 behavioral_test_count = payload.get("behavioral_test_count")
@@ -165,17 +170,21 @@ if errors:
     reason_code = (
         "docs_behavioral_ratio_threshold_exceeded"
         if "docs_behavioral_ratio_threshold_exceeded" in errors
+        else "rustdoc_artifact_runtime_budget_exceeded"
+        if "rustdoc_artifact_runtime_budget_exceeded" in errors
         else "rustdoc_artifact_policy_validation_failed"
     )
     print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}", file=sys.stderr)
     print(f"reason_codes_csv={REASON_CODES_CSV}", file=sys.stderr)
     print(f"reason_code={reason_code}", file=sys.stderr)
+    print(f"runtime_budget_status={runtime_budget_status}", file=sys.stderr)
     for error in errors:
         print(f"kamn-core rustdoc artifact policy failed: {error}", file=sys.stderr)
     raise SystemExit(1)
 
 print("kamn_core_rustdoc_artifact_policy=ok")
 print(f"rustdoc_navigation_ratio_status={ratio_status}")
+print(f"runtime_budget_status={runtime_budget_status}")
 print(f"docs_contract_test_count={docs_contract_test_count}")
 print(f"behavioral_test_count={behavioral_test_count}")
 print(f"docs_contract_to_behavioral_ratio={round(float(docs_to_behavioral_ratio), 4)}")

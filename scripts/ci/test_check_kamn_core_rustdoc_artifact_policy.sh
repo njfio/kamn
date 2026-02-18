@@ -41,6 +41,7 @@ JSON
 bash "$POLICY_SCRIPT" --report-file "$REPORT_FILE" >"$TMP_DIR/pass.out"
 grep -q '^kamn_core_rustdoc_artifact_policy=ok$' "$TMP_DIR/pass.out"
 grep -q '^rustdoc_navigation_ratio_status=within$' "$TMP_DIR/pass.out"
+grep -q '^runtime_budget_status=within$' "$TMP_DIR/pass.out"
 grep -Eq '^docs_contract_test_count=[0-9]+$' "$TMP_DIR/pass.out"
 grep -Eq '^behavioral_test_count=[1-9][0-9]*$' "$TMP_DIR/pass.out"
 grep -Eq '^docs_contract_to_behavioral_ratio=[0-9]+(\.[0-9]+)?$' "$TMP_DIR/pass.out"
@@ -99,5 +100,32 @@ if bash "$POLICY_SCRIPT" --report-file "$RATIO_FAIL_REPORT" >"$TMP_DIR/ratio-fai
   exit 1
 fi
 grep -q '^reason_code=docs_behavioral_ratio_threshold_exceeded$' "$TMP_DIR/ratio-fail.out"
+
+RUNTIME_FAIL_REPORT="$TMP_DIR/runtime-fail-report.json"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RUNTIME_FAIL_REPORT" <<JSON
+{
+  "schema_version": "kamn.ci.kamn-core-rustdoc-artifact-report.v1",
+  "status": "pass",
+  "crate": "kamn-core",
+  "command": "RUSTDOCFLAGS=-D warnings cargo doc -p kamn-core --no-deps",
+  "artifact_path": "$ARTIFACT_FILE",
+  "artifact_bytes": $ARTIFACT_BYTES,
+  "artifact_sha256": "$ARTIFACT_SHA256",
+  "runtime_seconds": 121,
+  "max_runtime_seconds": 120,
+  "reason_key": "kamn.ci.kamn-core-rustdoc-artifact.ok",
+  "docs_contract_test_count": 2,
+  "behavioral_test_count": 2,
+  "docs_contract_to_behavioral_ratio": 1.0,
+  "max_docs_contract_to_behavioral_ratio": 1.0,
+  "rustdoc_navigation_ratio_status": "within"
+}
+JSON
+
+if bash "$POLICY_SCRIPT" --report-file "$RUNTIME_FAIL_REPORT" >"$TMP_DIR/runtime-fail.out" 2>&1; then
+  echo "expected policy checker to fail on runtime budget exceedance" >&2
+  exit 1
+fi
+grep -q '^reason_code=rustdoc_artifact_runtime_budget_exceeded$' "$TMP_DIR/runtime-fail.out"
 
 echo "kamn-core rustdoc artifact policy checker tests passed."

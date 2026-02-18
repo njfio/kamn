@@ -1684,13 +1684,14 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Rustdoc navigation docs-vs-behavioral ratio governance:
   - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh` emits deterministic ratio markers:
     - `rustdoc_navigation_ratio_status=within|exceeded`
+    - `runtime_budget_status=within|exceeded`
     - `docs_contract_test_count=<int>`
     - `behavioral_test_count=<int>`
     - `docs_contract_to_behavioral_ratio=<float>`
     - `max_docs_contract_to_behavioral_ratio=<float>`
   - deterministic ratio-fail reason markers:
     - `reason_taxonomy_version=kamn.ci.kamn-core-rustdoc-navigation-governance-reason-taxonomy.v1`
-    - `reason_codes_csv=docs_behavioral_ratio_threshold_exceeded,rustdoc_artifact_policy_validation_failed`
+    - `reason_codes_csv=docs_behavioral_ratio_threshold_exceeded,rustdoc_artifact_runtime_budget_exceeded,rustdoc_artifact_policy_validation_failed`
     - `reason_code=docs_behavioral_ratio_threshold_exceeded`
 - Missing-docs allowlist/graduation delta evidence markers:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh` emits deterministic `missing_docs_*` markers for reviewer/CI audit:
