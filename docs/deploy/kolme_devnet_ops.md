@@ -62,6 +62,44 @@ Validation commands:
 - `Regression: #4169`
 - `Regression: #4170`
 
+## Deployment Preflight Fail-Closed Checker Output and Runbook Marker Synchronization (Issue #4151)
+
+Deployment preflight policy output and runbook marker declarations must stay synchronized so
+marker/schema drift is surfaced as deterministic `NO-GO`.
+
+Required checker output markers:
+
+- `deployment_preflight_marker_contract_status=verified|failed`
+- `deployment_preflight_marker_contract_version=kamn.kolme.local-live-deployment-preflight-marker-contract.v1`
+- `deployment_preflight_required_markers_csv=rotation_preflight_reason_taxonomy_version,rotation_preflight_reason_codes_csv,rotation_preflight_reason_codes_value,custody_reason_taxonomy_version,custody_reason_codes_csv,custody_reason_codes_value`
+- `deployment_preflight_schema_parity_status=verified|failed`
+- `deployment_preflight_schema_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-schema-parity-reason-taxonomy.v1`
+- `deployment_preflight_schema_reason_codes_csv=deployment_preflight_required_marker_missing,deployment_preflight_schema_parity_mismatch,deployment_preflight_reason_taxonomy_version_mismatch,deployment_preflight_reason_codes_csv_mismatch,deployment_preflight_reason_codes_value_mismatch`
+- `deployment_preflight_schema_reason_code=none|<reason>`
+
+Required checker/runbook parity markers:
+
+- `deployment_preflight_runbook_marker_parity_status=verified|failed`
+- `deployment_preflight_runbook_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1`
+- `deployment_preflight_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `deployment_preflight_runbook_reason_code=none|<reason>`
+
+Fail-closed drift reasons:
+
+- `deployment_preflight_required_marker_missing`
+- `deployment_preflight_schema_parity_mismatch`
+- `deployment_preflight_reason_taxonomy_version_mismatch`
+- `deployment_preflight_reason_codes_value_mismatch`
+- `deployment_preflight_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation commands:
+
+- `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+
+- `Regression: #4151`
+
 ## Kolme Upgrade Compatibility Taxonomy and Runbook Marker Parity Contracts (Issues #4182, #4183)
 
 Kolme upgrade compatibility governance remains deterministic only when compatibility checker
