@@ -1,26 +1,37 @@
 # Issue #5033 Plan
 
 - Issue: #5033
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED tests for reconciliation match/mismatch/non-terminal error paths and
+   replace transition/visibility reason-string assertions with constants.
+2. Implement additive reconciliation contracts in M4:
+   `DataLayerM4SettlementEvidenceReconciliationDecision`,
+   `DataLayerM4SettlementEvidenceReconciliationReport`, and
+   `DataLayerM4SettlementEvidenceRegistry::reconcile_against_escrow(...)`.
+3. Export and use stable reason-marker constants for transition and visibility
+   outcomes in module and tests.
+4. Run scoped/full regression gates plus shell guardrail evidence commands.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m4_escrow_integration.rs`
+- `crates/kamn-core/src/lib.rs`
+- `crates/kamn-core/tests/data_layer_m4_escrow_integration.rs`
+- `specs/5033/spec.md`
+- `specs/5033/plan.md`
+- `specs/5033/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep API additive and preserve existing M4 transition/visibility behavior.
+  - Make reconciliation deterministic on latest evidence record only.
+  - Keep work Rust-only to guarantee `shell_loc_delta_actual = 0`.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive exports in `kamn-core` only.
+- No dependency/protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive contract.
