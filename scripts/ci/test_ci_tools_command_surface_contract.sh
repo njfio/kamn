@@ -165,6 +165,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )
