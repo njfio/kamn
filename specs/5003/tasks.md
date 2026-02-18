@@ -1,12 +1,19 @@
 # Issue #5003 Tasks
 
 - Issue: #5003
-- Status: Draft
+- Status: Done
 
 ## Ordered Tasks
-- [ ] T1 (Red): add failing tests derived from spec conformance cases.
-- [ ] T2 (Green): implement minimum code path to satisfy ACs.
-- [ ] T3 (Refactor): improve structure/readability while preserving behavior.
-- [ ] T4 (Regression): run scoped functional/integration/regression checks.
-- [ ] T5 (Governance): if shell/python/workflow/template changed, run shell budget + ratio guardrails and report deltas.
-- [ ] T6 (Verify): finalize AC mapping and set lifecycle status markers.
+- [x] T1 (Red): complete M0 red tests and conformance scaffolding in child issue
+      `#5016`.
+- [x] T2 (Green): deliver core M0 foundation contracts in child issue `#5016`.
+- [x] T3 (Refactor): add deterministic M0 conformance-matrix contracts and
+      preserve existing behavior in child issue `#5029`.
+- [x] T4 (Regression): validate story behavior through
+      `cargo test -p kamn-core --test data_layer_m0_contract` and
+      `cargo test -p kamn-core`.
+- [x] T5 (Governance): confirm shell guardrails in-go with aggregate
+      `shell_loc_delta_actual = 0` across `#5016` and `#5029`.
+- [x] T6 (Verify): set story lifecycle artifacts to
+      `spec=Implemented`, `plan=Implemented`, `tasks=Done`, and close story
+      issue with linked child evidence.
