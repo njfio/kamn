@@ -571,6 +571,10 @@ milestone_missing_rollback_lineage_checker_output="$(
 )"
 assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing rollback lineage bundle"
 assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing rollback lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "upgrade_lineage_reason_codes_csv")" "milestone_review_live_node_validation_rollback_lineage_missing" "expected rollback-lineage failure to map to deterministic upgrade-lineage reason csv marker"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "upgrade_lineage_reason_codes_value")" "milestone_review_live_node_validation_rollback_lineage_missing" "expected rollback-lineage failure to map to deterministic upgrade-lineage reason value marker"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "promotion_gate_reason_codes_csv")" "milestone_review_live_node_validation_rollback_lineage_missing" "expected rollback-lineage failure to map to deterministic promotion-gate reason csv marker"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "promotion_gate_reason_codes_value")" "milestone_review_live_node_validation_rollback_lineage_missing" "expected rollback-lineage failure to map to deterministic promotion-gate reason value marker"
 
 milestone_live_bundle_summary_missing_recovery_lineage="$TMP_DIR/milestone-live-bundle-summary.missing-recovery-lineage.json"
 cp "$milestone_live_bundle_summary" "$milestone_live_bundle_summary_missing_recovery_lineage"
@@ -636,6 +640,10 @@ milestone_missing_recovery_lineage_checker_output="$(
 )"
 assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing recovery lineage bundle"
 assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing recovery lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "upgrade_lineage_reason_codes_csv")" "milestone_review_live_node_validation_recovery_lineage_missing" "expected recovery-lineage failure to map to deterministic upgrade-lineage reason csv marker"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "upgrade_lineage_reason_codes_value")" "milestone_review_live_node_validation_recovery_lineage_missing" "expected recovery-lineage failure to map to deterministic upgrade-lineage reason value marker"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "promotion_gate_reason_codes_csv")" "milestone_review_live_node_validation_recovery_lineage_missing" "expected recovery-lineage failure to map to deterministic promotion-gate reason csv marker"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "promotion_gate_reason_codes_value")" "milestone_review_live_node_validation_recovery_lineage_missing" "expected recovery-lineage failure to map to deterministic promotion-gate reason value marker"
 
 milestone_missing_runbook_marker_doc="$TMP_DIR/milestone-runbook-marker-missing.md"
 cat >"$milestone_missing_runbook_marker_doc" <<'TXT'
