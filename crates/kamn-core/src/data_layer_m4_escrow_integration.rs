@@ -7,6 +7,8 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use crate::EscrowStatus;
+
 /// Hash algorithm label used by M4 deterministic digests.
 pub const DATA_LAYER_M4_HASH_ALGORITHM: &str = "sha256";
 /// Genesis marker used by per-escrow settlement evidence hash chains.
@@ -79,6 +81,59 @@ impl DataLayerM4EscrowState {
         }
     }
 }
+
+/// Interoperability errors for bridging M4 escrow contracts with legacy `escrow.rs` types.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM4EscrowInteropError {
+    /// Legacy status cannot be represented without semantic loss in M4 state model.
+    UnsupportedLegacyStatus(EscrowStatus),
+}
+
+impl TryFrom<EscrowStatus> for DataLayerM4EscrowState {
+    type Error = DataLayerM4EscrowInteropError;
+
+    fn try_from(value: EscrowStatus) -> Result<Self, Self::Error> {
+        match value {
+            EscrowStatus::Funded => Ok(Self::Funded),
+            EscrowStatus::PartiallyReleased { .. } => Ok(Self::Active),
+            EscrowStatus::Released => Ok(Self::Released),
+            EscrowStatus::Refunded => Ok(Self::Refunded),
+            EscrowStatus::Disputed => Ok(Self::Disputed),
+            EscrowStatus::Resolved {
+                released_total,
+                refunded_total,
+            } if released_total > 0 && refunded_total == 0 => Ok(Self::Released),
+            EscrowStatus::Resolved {
+                released_total,
+                refunded_total,
+            } if refunded_total > 0 && released_total == 0 => Ok(Self::Refunded),
+            EscrowStatus::Resolved {
+                released_total,
+                refunded_total,
+            } => Err(DataLayerM4EscrowInteropError::UnsupportedLegacyStatus(
+                EscrowStatus::Resolved {
+                    released_total,
+                    refunded_total,
+                },
+            )),
+        }
+    }
+}
+
+impl fmt::Display for DataLayerM4EscrowInteropError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedLegacyStatus(status) => {
+                write!(
+                    f,
+                    "legacy escrow status cannot be represented in M4: {status:?}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for DataLayerM4EscrowInteropError {}
 
 /// Input for creating one escrow draft record.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,8 +1,12 @@
 use kamn_core::{
-    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
-    DataLayerM8LegalHoldRequest, DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery,
-    DataLayerM8RetentionClass, DataLayerM8WrappedCekInput, DATA_LAYER_M8_CEK_TOMBSTONE_MARKER,
-    DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
+    data_layer_m8_retention_window_aligned_with_content_lifecycle,
+    data_layer_m8_retention_window_seconds, ContentRetentionClass, DataLayerM8ComplianceError,
+    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
+    DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass,
+    DataLayerM8RetentionInteropError, DataLayerM8WrappedCekInput,
+    DATA_LAYER_M8_CEK_TOMBSTONE_MARKER, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
+    DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS, DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
 };
 
 fn message_input(
@@ -277,4 +281,128 @@ fn spec_c06_duplicate_wrapped_key_recipient_is_rejected_fail_closed() {
         Err(DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { recipient_did })
         if recipient_did == "kamn:did:agent:recipient-a"
     ));
+}
+
+#[test]
+fn spec_c07_m8_bridge_maps_representable_retention_classes() {
+    assert_eq!(
+        ContentRetentionClass::try_from(DataLayerM8RetentionClass::Extended)
+            .expect("extended should map"),
+        ContentRetentionClass::Compliance
+    );
+    assert_eq!(
+        DataLayerM8RetentionClass::try_from(ContentRetentionClass::Compliance)
+            .expect("compliance should map"),
+        DataLayerM8RetentionClass::Extended
+    );
+}
+
+#[test]
+fn spec_c08_m8_bridge_rejects_non_representable_legacy_retention_mapping() {
+    let ephemeral = ContentRetentionClass::try_from(DataLayerM8RetentionClass::Ephemeral);
+    assert!(matches!(
+        ephemeral,
+        Err(
+            DataLayerM8RetentionInteropError::LegacyRetentionClassUnavailable(
+                DataLayerM8RetentionClass::Ephemeral
+            )
+        )
+    ));
+
+    let standard = ContentRetentionClass::try_from(DataLayerM8RetentionClass::Standard);
+    assert!(matches!(
+        standard,
+        Err(
+            DataLayerM8RetentionInteropError::LegacyRetentionClassUnavailable(
+                DataLayerM8RetentionClass::Standard
+            )
+        )
+    ));
+
+    let legal_hold = ContentRetentionClass::try_from(DataLayerM8RetentionClass::LegalHold);
+    assert!(matches!(
+        legal_hold,
+        Err(
+            DataLayerM8RetentionInteropError::LegacyRetentionClassUnavailable(
+                DataLayerM8RetentionClass::LegalHold
+            )
+        )
+    ));
+
+    let permanent = ContentRetentionClass::try_from(DataLayerM8RetentionClass::Permanent);
+    assert!(matches!(
+        permanent,
+        Err(
+            DataLayerM8RetentionInteropError::LegacyRetentionClassUnavailable(
+                DataLayerM8RetentionClass::Permanent
+            )
+        )
+    ));
+
+    let short_lived = DataLayerM8RetentionClass::try_from(ContentRetentionClass::ShortLived);
+    assert!(matches!(
+        short_lived,
+        Err(
+            DataLayerM8RetentionInteropError::M8RetentionClassUnavailable(
+                ContentRetentionClass::ShortLived
+            )
+        )
+    ));
+
+    let standard_legacy = DataLayerM8RetentionClass::try_from(ContentRetentionClass::Standard);
+    assert!(matches!(
+        standard_legacy,
+        Err(
+            DataLayerM8RetentionInteropError::M8RetentionClassUnavailable(
+                ContentRetentionClass::Standard
+            )
+        )
+    ));
+}
+
+#[test]
+fn spec_c09_m8_retention_windows_align_with_content_lifecycle_profiles() {
+    assert_eq!(
+        data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::Ephemeral),
+        Some(DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS)
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::Standard),
+        Some(DATA_LAYER_M8_STANDARD_RETENTION_SECONDS)
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_seconds(DataLayerM8RetentionClass::Extended),
+        Some(DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS)
+    );
+
+    assert_eq!(
+        data_layer_m8_retention_window_aligned_with_content_lifecycle(
+            DataLayerM8RetentionClass::Ephemeral
+        ),
+        Some(false)
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_aligned_with_content_lifecycle(
+            DataLayerM8RetentionClass::Standard
+        ),
+        Some(false)
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_aligned_with_content_lifecycle(
+            DataLayerM8RetentionClass::Extended
+        ),
+        Some(true)
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_aligned_with_content_lifecycle(
+            DataLayerM8RetentionClass::LegalHold
+        ),
+        None
+    );
+    assert_eq!(
+        data_layer_m8_retention_window_aligned_with_content_lifecycle(
+            DataLayerM8RetentionClass::Permanent
+        ),
+        None
+    );
 }

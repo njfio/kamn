@@ -332,8 +332,8 @@ pub use data_layer_m3_blind_index_search::{
     DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
 };
 pub use data_layer_m4_escrow_integration::{
-    DataLayerM4EscrowDraftInput, DataLayerM4EscrowRecord, DataLayerM4EscrowState,
-    DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
+    DataLayerM4EscrowDraftInput, DataLayerM4EscrowInteropError, DataLayerM4EscrowRecord,
+    DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
     DataLayerM4EscrowTransitionEvidence, DataLayerM4EscrowVisibilityDecision,
     DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
     DataLayerM4SettlementEvidenceReconciliationDecision,
@@ -390,9 +390,11 @@ pub use data_layer_m7_timeseries_telemetry::{
     DATA_LAYER_M7_HOURLY_BUCKET_SECONDS, DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
 };
 pub use data_layer_m8_compliance_lifecycle::{
-    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
-    DataLayerM8LegalHoldRequest, DataLayerM8MessageRecord, DataLayerM8MessageRecordInput,
-    DataLayerM8OwnerScopeQuery, DataLayerM8RetentionClass, DataLayerM8RetentionDueCandidate,
+    data_layer_m8_retention_window_aligned_with_content_lifecycle,
+    data_layer_m8_retention_window_seconds, DataLayerM8ComplianceError,
+    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
+    DataLayerM8MessageRecord, DataLayerM8MessageRecordInput, DataLayerM8OwnerScopeQuery,
+    DataLayerM8RetentionClass, DataLayerM8RetentionDueCandidate, DataLayerM8RetentionInteropError,
     DataLayerM8WrappedCekInput, DATA_LAYER_M8_CEK_TOMBSTONE_MARKER,
     DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
     DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS, DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
