@@ -3,9 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/ci/check_spec_archive_policy.sh"
+ARCHIVE_TOOL="$ROOT_DIR/scripts/ci/archive_completed_specs.py"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected spec archive policy checker to be executable: $CHECKER" >&2
+  exit 1
+fi
+if [ ! -x "$ARCHIVE_TOOL" ]; then
+  echo "expected spec archive migration tool to be executable: $ARCHIVE_TOOL" >&2
   exit 1
 fi
 
@@ -115,6 +120,103 @@ if [ "$missing_pointer_exit" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$missing_pointer_output" | grep -q 'spec_archive_pointer_missing'; then
   echo "expected deterministic spec_archive_pointer_missing reason marker when pointer is removed" >&2
+  exit 1
+fi
+
+TOOL_ROOT="$TMP_DIR/tool-root"
+mkdir -p "$TOOL_ROOT/specs/9000"
+cat > "$TOOL_ROOT/specs/9000/spec.md" <<'EOF'
+# Spec — Issue #9000
+
+- Title: Synthetic Archive Tool Fixture
+- Status: Implemented
+EOF
+cat > "$TOOL_ROOT/specs/9000/plan.md" <<'EOF'
+# Plan — Issue #9000
+EOF
+cat > "$TOOL_ROOT/specs/9000/tasks.md" <<'EOF'
+# Tasks — Issue #9000
+EOF
+
+tool_dry_run_output="$(
+  python3 "$ARCHIVE_TOOL" \
+    --repo-root "$TOOL_ROOT" \
+    --issue-id 9000 \
+    --output-json "$TMP_DIR/tool-dry-run-report.json"
+)"
+if ! printf '%s\n' "$tool_dry_run_output" | grep -q '^status=ok$'; then
+  echo "expected archive tool dry-run status=ok marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tool_dry_run_output" | grep -q '^mode=dry-run$'; then
+  echo "expected archive tool dry-run mode marker" >&2
+  exit 1
+fi
+if [ ! -f "$TOOL_ROOT/specs/9000/spec.md" ]; then
+  echo "dry-run should not move source spec files" >&2
+  exit 1
+fi
+if [ -d "$TOOL_ROOT/specs/archive/9000" ]; then
+  echo "dry-run should not create archive target directory" >&2
+  exit 1
+fi
+
+tool_apply_output="$(
+  python3 "$ARCHIVE_TOOL" \
+    --repo-root "$TOOL_ROOT" \
+    --issue-id 9000 \
+    --apply \
+    --archived-on 2026-02-18 \
+    --output-json "$TMP_DIR/tool-apply-report.json"
+)"
+if ! printf '%s\n' "$tool_apply_output" | grep -q '^status=ok$'; then
+  echo "expected archive tool apply status=ok marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tool_apply_output" | grep -q '^mode=apply$'; then
+  echo "expected archive tool apply mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tool_apply_output" | grep -q '^archived_issue_count=1$'; then
+  echo "expected archive tool to archive exactly one issue in apply mode" >&2
+  exit 1
+fi
+if [ ! -f "$TOOL_ROOT/specs/archive/9000/spec.md" ]; then
+  echo "expected archive tool to move spec.md into archive target directory" >&2
+  exit 1
+fi
+if [ ! -f "$TOOL_ROOT/specs/9000/ARCHIVED.md" ]; then
+  echo "expected archive tool to write active-tree ARCHIVED.md pointer" >&2
+  exit 1
+fi
+if ! grep -q 'archive_path: specs/archive/9000' "$TOOL_ROOT/specs/9000/ARCHIVED.md"; then
+  echo "expected archive tool pointer to include archive path marker" >&2
+  exit 1
+fi
+if [ ! -f "$TOOL_ROOT/specs/archive/index.md" ]; then
+  echo "expected archive tool to generate archive index report" >&2
+  exit 1
+fi
+if ! grep -q '| 9000 | Synthetic Archive Tool Fixture |' "$TOOL_ROOT/specs/archive/index.md"; then
+  echo "expected archive index report to include archived issue mapping row" >&2
+  exit 1
+fi
+
+tool_checker_output="$(
+  bash "$CHECKER" \
+    --repo-root "$TOOL_ROOT" \
+    --output-json "$TMP_DIR/tool-checker-report.json"
+)"
+if ! printf '%s\n' "$tool_checker_output" | grep -q '^status=ok$'; then
+  echo "expected checker to accept archive output produced by archive tool" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tool_checker_output" | grep -q '^archived_issue_count=1$'; then
+  echo "expected checker archived_issue_count marker to match tool output fixture" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tool_checker_output" | grep -q '^index_entry_count=1$'; then
+  echo "expected checker index_entry_count marker to match tool output fixture" >&2
   exit 1
 fi
 
