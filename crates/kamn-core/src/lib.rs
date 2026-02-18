@@ -42,6 +42,8 @@ pub mod data_classification;
 pub mod data_layer_m0;
 /// M1 trust-anchor contracts for merkle batching, proof APIs, and Kolme anchoring worker flows.
 pub mod data_layer_m1;
+/// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
+pub mod data_layer_m2_gateway_access;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -239,6 +241,14 @@ pub use data_layer_m1::{
     DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch, DataLayerM1MerkleInclusionProof,
     DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep, DataLayerM1ProofSiblingSide,
     DATA_LAYER_M1_HASH_ALGORITHM,
+};
+pub use data_layer_m2_gateway_access::{
+    data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
+    DataLayerM2AccessAuditLedger, DataLayerM2AccessAuditRecord, DataLayerM2ActorRole,
+    DataLayerM2AuthorizationDecision, DataLayerM2DidAuthRequest, DataLayerM2DidSessionService,
+    DataLayerM2GatewayError, DataLayerM2MessageScope, DataLayerM2RlsPolicy,
+    DataLayerM2SessionToken, DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS, DATA_LAYER_M2_HASH_ALGORITHM,
+    DATA_LAYER_M2_REQUESTER_DID_SETTING,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
