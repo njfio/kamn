@@ -52,6 +52,23 @@ if ! grep -Fq "ci-shell-loc-hard-ceiling.json" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if ! grep -Fq "name: Check shell-surface threshold ratchet" "$FAST_WORKFLOW"; then
+  echo "expected shell-surface threshold ratchet step in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "bash scripts/ci/check_shell_surface_threshold_ratchet.sh" "$FAST_WORKFLOW"; then
+  echo "expected shell-surface threshold ratchet checker command in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq ".ci/shell-surface-threshold-ratchet-exception.json" "$FAST_WORKFLOW"; then
+  echo "expected shell-surface threshold ratchet exception metadata wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+if ! grep -Fq "ci-shell-surface-threshold-ratchet.json" "$FAST_WORKFLOW"; then
+  echo "expected shell-surface threshold ratchet report output wiring in ci-fast-gate workflow" >&2
+  exit 1
+fi
+
 if ! grep -Fq "name: Check shell-rust ratio guardrail" "$FAST_WORKFLOW"; then
   echo "expected shell-rust ratio guardrail step in ci-fast-gate workflow" >&2
   exit 1

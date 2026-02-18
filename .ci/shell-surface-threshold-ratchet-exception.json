@@ -1,0 +1,11 @@
+{
+  "schema_version": "kamn.ci.shell-surface-threshold-ratchet-exception.v1",
+  "reason": "Template exception file. Use only with explicit governance approval and remove after mitigation lands.",
+  "expires_on": "2000-01-01",
+  "mitigation_issue": "#0",
+  "allow_threshold_keys": [
+    "HARD_SHELL_LOC_MAX",
+    "WARN_SHELL_RUST_RATIO_MAX",
+    "FAIL_SHELL_RUST_RATIO_MAX"
+  ]
+}
