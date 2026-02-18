@@ -46,6 +46,7 @@ Primary objectives:
 
 ## Governance Markers
 
+- `spec_archive_policy_doc=docs/planning/spec-archive-policy.md`
 - `shell_deletion_manifest_status=verified|fail-closed`
 - `spec_archive_policy_status=verified|fail-closed`
 - `shell_loc_hard_ceiling_status=within|exceeded`
