@@ -260,11 +260,18 @@ pub use data_layer_m0::{
     DATA_LAYER_M0_HASH_ALGORITHM, DATA_LAYER_M0_HASH_CHAIN_GENESIS,
 };
 pub use data_layer_m1::{
-    verify_data_layer_m1_inclusion_proof, DataLayerM1AnchorOutcome, DataLayerM1AnchorReceipt,
-    DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass, DataLayerM1Error,
-    DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch, DataLayerM1MerkleInclusionProof,
-    DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep, DataLayerM1ProofSiblingSide,
-    DATA_LAYER_M1_HASH_ALGORITHM,
+    evaluate_data_layer_m1_anchor_failure_matrix, evaluate_data_layer_m1_inclusion_proof,
+    verify_data_layer_m1_inclusion_proof, DataLayerM1AnchorFailureMatrixCase,
+    DataLayerM1AnchorFailureMatrixDecision, DataLayerM1AnchorFailureMatrixEvidence,
+    DataLayerM1AnchorFailureMatrixReport, DataLayerM1AnchorOutcome, DataLayerM1AnchorOutcomeKind,
+    DataLayerM1AnchorReceipt, DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass,
+    DataLayerM1Error, DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch,
+    DataLayerM1MerkleInclusionProof, DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep,
+    DataLayerM1ProofSiblingSide, DataLayerM1ProofVerificationDecision,
+    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
+    DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE, DATA_LAYER_M1_HASH_ALGORITHM,
+    DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
+    DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,
 };
 pub use data_layer_m10_partition_archival::{
     data_layer_m10_format_partition_name, DataLayerM10ArchivalIndexEntry,

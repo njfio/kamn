@@ -14,6 +14,18 @@ use std::fmt;
 
 /// Hash label used by M1 merkle contracts.
 pub const DATA_LAYER_M1_HASH_ALGORITHM: &str = "sha256";
+/// Reason marker for successful merkle proof verification decision wrappers.
+pub const DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE: &str =
+    "m1_merkle_proof_verification_valid";
+/// Reason marker for failed merkle proof verification decision wrappers.
+pub const DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE: &str =
+    "m1_merkle_proof_verification_invalid";
+/// Reason marker for anchoring failure-matrix evaluation with no drift.
+pub const DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE: &str =
+    "m1_anchor_failure_matrix_stable";
+/// Reason marker for anchoring failure-matrix evaluation with detected drift.
+pub const DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE: &str =
+    "m1_anchor_failure_matrix_drift_detected";
 
 /// One message hash leaf that participates in a deterministic merkle batch.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -237,6 +249,75 @@ pub struct DataLayerM1AnchorResult {
     pub outcome: DataLayerM1AnchorOutcome,
 }
 
+/// Outcome-kind projection used by anchoring failure-matrix contracts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM1AnchorOutcomeKind {
+    /// Submitted provider outcome.
+    Submitted,
+    /// Duplicate provider outcome.
+    Duplicate,
+    /// Rejected provider outcome.
+    Rejected,
+}
+
+/// One expected anchoring result in deterministic failure-matrix evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchorFailureMatrixCase {
+    /// Stable case identifier.
+    pub case_id: String,
+    /// Observed anchoring result to classify.
+    pub result: DataLayerM1AnchorResult,
+    /// Expected retry class for this case.
+    pub expected_retry_class: DataLayerM1AnchorRetryClass,
+    /// Expected outcome kind for this case.
+    pub expected_outcome_kind: DataLayerM1AnchorOutcomeKind,
+}
+
+/// Per-case failure-matrix evidence entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchorFailureMatrixEvidence {
+    /// Stable case identifier.
+    pub case_id: String,
+    /// Observed batch id.
+    pub batch_id: String,
+    /// Observed idempotency key.
+    pub idempotency_key: String,
+    /// Expected retry class.
+    pub expected_retry_class: DataLayerM1AnchorRetryClass,
+    /// Observed retry class.
+    pub observed_retry_class: DataLayerM1AnchorRetryClass,
+    /// Expected outcome kind.
+    pub expected_outcome_kind: DataLayerM1AnchorOutcomeKind,
+    /// Observed outcome kind.
+    pub observed_outcome_kind: DataLayerM1AnchorOutcomeKind,
+    /// Whether observed values drifted from expectations.
+    pub mismatch: bool,
+}
+
+/// Aggregate decision marker for anchoring failure-matrix evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM1AnchorFailureMatrixDecision {
+    /// No mismatch across evaluated cases.
+    Stable {
+        /// Stable reason code.
+        reason_code: &'static str,
+    },
+    /// At least one case mismatch detected.
+    DriftDetected {
+        /// Stable reason code.
+        reason_code: &'static str,
+    },
+}
+
+/// Aggregate anchoring failure-matrix report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchorFailureMatrixReport {
+    /// Aggregate decision.
+    pub decision: DataLayerM1AnchorFailureMatrixDecision,
+    /// Per-case mismatch evidence in input order.
+    pub evidence: Vec<DataLayerM1AnchorFailureMatrixEvidence>,
+}
+
 /// Kolme anchoring worker for deterministic M1 merkle-root submissions.
 #[derive(Debug, Clone)]
 pub struct DataLayerM1KolmeAnchoringWorker<C> {
@@ -452,6 +533,80 @@ pub fn verify_data_layer_m1_inclusion_proof(
     Ok(())
 }
 
+/// Deterministic proof-verification decision wrapper with stable reason markers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM1ProofVerificationDecision {
+    /// Proof verified successfully.
+    Valid {
+        /// Stable reason code.
+        reason_code: &'static str,
+    },
+    /// Proof verification failed.
+    Invalid {
+        /// Stable reason code.
+        reason_code: &'static str,
+        /// Original fail-closed verification error.
+        error: DataLayerM1Error,
+    },
+}
+
+/// Evaluates proof verification and projects a deterministic reason-coded decision.
+pub fn evaluate_data_layer_m1_inclusion_proof(
+    proof: &DataLayerM1MerkleInclusionProof,
+) -> DataLayerM1ProofVerificationDecision {
+    match verify_data_layer_m1_inclusion_proof(proof) {
+        Ok(()) => DataLayerM1ProofVerificationDecision::Valid {
+            reason_code: DATA_LAYER_M1_PROOF_VERIFICATION_VALID_REASON_CODE,
+        },
+        Err(error) => DataLayerM1ProofVerificationDecision::Invalid {
+            reason_code: DATA_LAYER_M1_PROOF_VERIFICATION_INVALID_REASON_CODE,
+            error,
+        },
+    }
+}
+
+/// Evaluates deterministic anchoring failure-matrix expectations.
+pub fn evaluate_data_layer_m1_anchor_failure_matrix(
+    cases: &[DataLayerM1AnchorFailureMatrixCase],
+) -> Result<DataLayerM1AnchorFailureMatrixReport, DataLayerM1Error> {
+    if cases.is_empty() {
+        return Err(DataLayerM1Error::InvalidFailureMatrixInput("cases"));
+    }
+
+    let mut evidence = Vec::with_capacity(cases.len());
+    for case in cases {
+        if case.case_id.trim().is_empty() {
+            return Err(DataLayerM1Error::InvalidFailureMatrixInput("case_id"));
+        }
+        let observed_outcome_kind = anchor_outcome_kind(&case.result.outcome);
+        let observed_retry_class = case.result.retry_class;
+        let mismatch = observed_retry_class != case.expected_retry_class
+            || observed_outcome_kind != case.expected_outcome_kind;
+        evidence.push(DataLayerM1AnchorFailureMatrixEvidence {
+            case_id: case.case_id.clone(),
+            batch_id: case.result.batch_id.clone(),
+            idempotency_key: case.result.idempotency_key.clone(),
+            expected_retry_class: case.expected_retry_class,
+            observed_retry_class,
+            expected_outcome_kind: case.expected_outcome_kind,
+            observed_outcome_kind,
+            mismatch,
+        });
+    }
+
+    let decision = if evidence.iter().all(|entry| !entry.mismatch) {
+        DataLayerM1AnchorFailureMatrixDecision::Stable {
+            reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_STABLE_REASON_CODE,
+        }
+    } else {
+        DataLayerM1AnchorFailureMatrixDecision::DriftDetected {
+            reason_code: DATA_LAYER_M1_ANCHOR_FAILURE_MATRIX_DRIFT_REASON_CODE,
+        }
+    };
+
+    Ok(DataLayerM1AnchorFailureMatrixReport { decision, evidence })
+}
+
 /// Error taxonomy for M1 merkle and anchoring contracts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerM1Error {
@@ -492,6 +647,8 @@ pub enum DataLayerM1Error {
         /// Newly provided idempotency key.
         provided_key: String,
     },
+    /// Invalid anchoring failure-matrix input.
+    InvalidFailureMatrixInput(&'static str),
     /// Wrapped Kolme runtime commit error.
     KolmeRuntimeCommit(KolmeRuntimeCommitError),
 }
@@ -524,6 +681,9 @@ impl fmt::Display for DataLayerM1Error {
                 f,
                 "conflicting anchoring idempotency key for batch {batch_id}; existing {existing_key}, provided {provided_key}"
             ),
+            Self::InvalidFailureMatrixInput(field) => {
+                write!(f, "invalid anchor failure matrix input: {field}")
+            }
             Self::KolmeRuntimeCommit(error) => write!(f, "{error}"),
         }
     }
@@ -631,5 +791,13 @@ fn map_receipt(receipt: KolmeRuntimeCommitReceipt) -> DataLayerM1AnchorReceipt {
         provider: receipt.provider,
         transaction_id: receipt.commit_id,
         finality: receipt.finality,
+    }
+}
+
+fn anchor_outcome_kind(outcome: &DataLayerM1AnchorOutcome) -> DataLayerM1AnchorOutcomeKind {
+    match outcome {
+        DataLayerM1AnchorOutcome::Submitted(_) => DataLayerM1AnchorOutcomeKind::Submitted,
+        DataLayerM1AnchorOutcome::Duplicate(_) => DataLayerM1AnchorOutcomeKind::Duplicate,
+        DataLayerM1AnchorOutcome::Rejected { .. } => DataLayerM1AnchorOutcomeKind::Rejected,
     }
 }
