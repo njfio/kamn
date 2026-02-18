@@ -8,7 +8,8 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/ci/test_collect_shell_rust_loc_telemetry.sh`
+- `scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
 
 ## Risks / Mitigations
 

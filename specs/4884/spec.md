@@ -3,7 +3,7 @@
 - Title: Subtask: implement shell-rust telemetry collector with deterministic reason taxonomy outputs
 - Parent: - Parent task: #4870
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
