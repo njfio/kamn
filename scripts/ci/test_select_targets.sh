@@ -256,7 +256,7 @@ assert_ci_doc_contract_trend_scope_compact "$non_kolme_sdk_dispatch_matrix_test_
 non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')"
 assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme lightweight dispatcher matrix test changes"
 
-for lightweight_wave in {10..18}; do
+for lightweight_wave in {10..19}; do
   non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")"
   assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
 done
