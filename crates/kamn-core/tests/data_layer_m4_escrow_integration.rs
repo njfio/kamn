@@ -2,7 +2,14 @@ use kamn_core::{
     DataLayerM4EscrowDraftInput, DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction,
     DataLayerM4EscrowTransitionEngine, DataLayerM4EscrowVisibilityDecision,
     DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
-    DataLayerM4SettlementEvidenceRegistry, DataLayerM4SettlementEvidenceRegistryError,
+    DataLayerM4SettlementEvidenceReconciliationDecision, DataLayerM4SettlementEvidenceRegistry,
+    DataLayerM4SettlementEvidenceRegistryError, DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE, DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE,
+    DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE, DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE,
+    DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE,
 };
 
 fn draft_input(escrow_id: &str) -> DataLayerM4EscrowDraftInput {
@@ -36,7 +43,7 @@ fn spec_c01_escrow_state_machine_accepts_valid_transition_sequence() {
             },
         )
         .expect("fund transition should succeed");
-    assert_eq!(funded.reason_code, "m4_escrow_funded");
+    assert_eq!(funded.reason_code, DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE);
 
     let activated = engine
         .apply_transition(
@@ -46,7 +53,10 @@ fn spec_c01_escrow_state_machine_accepts_valid_transition_sequence() {
             },
         )
         .expect("activate transition should succeed");
-    assert_eq!(activated.reason_code, "m4_escrow_active");
+    assert_eq!(
+        activated.reason_code,
+        DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE
+    );
 
     let disputed = engine
         .apply_transition(
@@ -56,7 +66,10 @@ fn spec_c01_escrow_state_machine_accepts_valid_transition_sequence() {
             },
         )
         .expect("dispute transition should succeed");
-    assert_eq!(disputed.reason_code, "m4_escrow_disputed");
+    assert_eq!(
+        disputed.reason_code,
+        DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE
+    );
 
     let released = engine
         .apply_transition(
@@ -67,7 +80,10 @@ fn spec_c01_escrow_state_machine_accepts_valid_transition_sequence() {
             },
         )
         .expect("release resolution should succeed");
-    assert_eq!(released.reason_code, "m4_escrow_released");
+    assert_eq!(
+        released.reason_code,
+        DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE
+    );
 
     let escrow = engine
         .escrow("escrow-m4-1")
@@ -147,7 +163,7 @@ fn spec_c03_scoped_message_visibility_enforces_participant_and_threshold_rules()
     assert_eq!(
         auditor_denied,
         DataLayerM4EscrowVisibilityDecision::Deny {
-            reason_code: "m4_escrow_auditor_threshold_not_met"
+            reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE
         }
     );
 
@@ -161,7 +177,7 @@ fn spec_c03_scoped_message_visibility_enforces_participant_and_threshold_rules()
     assert_eq!(
         auditor_allowed,
         DataLayerM4EscrowVisibilityDecision::Allow {
-            reason_code: "m4_escrow_auditor_scope_allowed"
+            reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE
         }
     );
 
@@ -175,7 +191,7 @@ fn spec_c03_scoped_message_visibility_enforces_participant_and_threshold_rules()
     assert_eq!(
         intruder,
         DataLayerM4EscrowVisibilityDecision::Deny {
-            reason_code: "m4_escrow_scope_denied"
+            reason_code: DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE
         }
     );
 }
@@ -236,5 +252,156 @@ fn spec_c05_settlement_evidence_hash_chain_detects_tamper() {
     assert!(matches!(
         verify,
         Err(DataLayerM4SettlementEvidenceRegistryError::InvalidEvidenceHashChain { .. })
+    ));
+}
+
+#[test]
+fn spec_c06_settlement_evidence_reconciliation_matches_terminal_escrow_projection() {
+    let mut engine = DataLayerM4EscrowTransitionEngine::new();
+    let mut registry = DataLayerM4SettlementEvidenceRegistry::new();
+    engine
+        .create_escrow(draft_input("escrow-m4-6"))
+        .expect("escrow draft should initialize");
+    engine
+        .apply_transition(
+            "escrow-m4-6",
+            DataLayerM4EscrowTransitionAction::Fund {
+                funded_at_epoch_seconds: 1_708_160_000,
+            },
+        )
+        .expect("fund transition should succeed");
+    engine
+        .apply_transition(
+            "escrow-m4-6",
+            DataLayerM4EscrowTransitionAction::Activate {
+                activated_at_epoch_seconds: 1_708_160_010,
+            },
+        )
+        .expect("activate transition should succeed");
+    engine
+        .apply_transition(
+            "escrow-m4-6",
+            DataLayerM4EscrowTransitionAction::ResolveRelease {
+                settled_at_epoch_seconds: 1_708_160_020,
+                settlement_receipt_hash: "sha256:receipt-6".to_owned(),
+            },
+        )
+        .expect("release transition should succeed");
+
+    registry
+        .append(DataLayerM4SettlementEvidenceInput {
+            escrow_id: "escrow-m4-6".to_owned(),
+            escrow_state: DataLayerM4EscrowState::Released,
+            settlement_receipt_hash: "sha256:receipt-6".to_owned(),
+            settlement_payload_hash: "sha256:payload-6".to_owned(),
+            recorded_at_epoch_seconds: 1_708_160_030,
+        })
+        .expect("evidence append should succeed");
+    let escrow = engine
+        .escrow("escrow-m4-6")
+        .expect("escrow should exist")
+        .clone();
+
+    let report = registry
+        .reconcile_against_escrow(&escrow)
+        .expect("reconciliation should succeed");
+    assert_eq!(
+        report.decision,
+        DataLayerM4SettlementEvidenceReconciliationDecision::Match
+    );
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c07_settlement_evidence_reconciliation_reports_mismatch_when_receipt_differs() {
+    let mut engine = DataLayerM4EscrowTransitionEngine::new();
+    let mut registry = DataLayerM4SettlementEvidenceRegistry::new();
+    engine
+        .create_escrow(draft_input("escrow-m4-7"))
+        .expect("escrow draft should initialize");
+    engine
+        .apply_transition(
+            "escrow-m4-7",
+            DataLayerM4EscrowTransitionAction::Fund {
+                funded_at_epoch_seconds: 1_708_160_000,
+            },
+        )
+        .expect("fund transition should succeed");
+    engine
+        .apply_transition(
+            "escrow-m4-7",
+            DataLayerM4EscrowTransitionAction::Activate {
+                activated_at_epoch_seconds: 1_708_160_010,
+            },
+        )
+        .expect("activate transition should succeed");
+    engine
+        .apply_transition(
+            "escrow-m4-7",
+            DataLayerM4EscrowTransitionAction::ResolveRelease {
+                settled_at_epoch_seconds: 1_708_160_020,
+                settlement_receipt_hash: "sha256:receipt-7-expected".to_owned(),
+            },
+        )
+        .expect("release transition should succeed");
+
+    registry
+        .append(DataLayerM4SettlementEvidenceInput {
+            escrow_id: "escrow-m4-7".to_owned(),
+            escrow_state: DataLayerM4EscrowState::Released,
+            settlement_receipt_hash: "sha256:receipt-7-actual".to_owned(),
+            settlement_payload_hash: "sha256:payload-7".to_owned(),
+            recorded_at_epoch_seconds: 1_708_160_030,
+        })
+        .expect("evidence append should succeed");
+    let escrow = engine
+        .escrow("escrow-m4-7")
+        .expect("escrow should exist")
+        .clone();
+
+    let report = registry
+        .reconcile_against_escrow(&escrow)
+        .expect("reconciliation should succeed");
+    assert_eq!(
+        report.decision,
+        DataLayerM4SettlementEvidenceReconciliationDecision::Mismatch
+    );
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c08_settlement_evidence_reconciliation_rejects_non_terminal_escrow_state() {
+    let mut engine = DataLayerM4EscrowTransitionEngine::new();
+    let registry = DataLayerM4SettlementEvidenceRegistry::new();
+    engine
+        .create_escrow(draft_input("escrow-m4-8"))
+        .expect("escrow draft should initialize");
+    engine
+        .apply_transition(
+            "escrow-m4-8",
+            DataLayerM4EscrowTransitionAction::Fund {
+                funded_at_epoch_seconds: 1_708_160_000,
+            },
+        )
+        .expect("fund transition should succeed");
+    let escrow = engine
+        .escrow("escrow-m4-8")
+        .expect("escrow should exist")
+        .clone();
+
+    let invalid = registry.reconcile_against_escrow(&escrow);
+    assert!(matches!(
+        invalid,
+        Err(
+            DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(
+                DataLayerM4EscrowState::Funded
+            )
+        )
     ));
 }
