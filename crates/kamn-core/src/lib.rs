@@ -40,6 +40,8 @@ pub mod cross_chain_receipt;
 pub mod data_classification;
 /// M0 data-layer foundation records, append-only ledger, and hash-chain contracts.
 pub mod data_layer_m0;
+/// M1 trust-anchor contracts for merkle batching, proof APIs, and Kolme anchoring worker flows.
+pub mod data_layer_m1;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -230,6 +232,13 @@ pub use data_layer_m0::{
     DataLayerM0AppendOnlyLedger, DataLayerM0EnvelopeRecord, DataLayerM0Error,
     DataLayerM0RecordInput, DataLayerM0WrappedKey, DATA_LAYER_M0_COMPRESSION_CODEC_ZSTD,
     DATA_LAYER_M0_HASH_ALGORITHM, DATA_LAYER_M0_HASH_CHAIN_GENESIS,
+};
+pub use data_layer_m1::{
+    verify_data_layer_m1_inclusion_proof, DataLayerM1AnchorOutcome, DataLayerM1AnchorReceipt,
+    DataLayerM1AnchorResult, DataLayerM1AnchorRetryClass, DataLayerM1Error,
+    DataLayerM1KolmeAnchoringWorker, DataLayerM1MerkleBatch, DataLayerM1MerkleInclusionProof,
+    DataLayerM1MerkleLeaf, DataLayerM1MerkleProofStep, DataLayerM1ProofSiblingSide,
+    DATA_LAYER_M1_HASH_ALGORITHM,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
