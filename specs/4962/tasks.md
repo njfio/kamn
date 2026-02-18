@@ -1,15 +1,15 @@
 # Issue #4962 Tasks
 
 - Issue: #4962
-- Status: Planned
+- Status: Implemented
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from issue ACs and conformance cases.
-- T2 (Green): implement minimum change to satisfy tests deterministically.
-- T3 (Refactor): simplify and harden without changing behavior.
-- T4 (Regression): add drift/tamper/marker parity regression checks.
-- T5 (Docs): update required docs/process markers for issue #4962.
-- T6 (Verify): run scoped unit/functional/integration/regression checks and record evidence.
+- [x] T1 (Red): add failing archive-placement/tool-output contract tests.
+- [x] T2 (Green): implement deterministic archive migration tool.
+- [x] T3 (Refactor): harden output semantics for index/pointer generation.
+- [x] T4 (Regression): validate tool-generated fixtures against archive-policy checker.
+- [x] T5 (Verify): run archive-policy contract suite.
 
 ## Completion Evidence
-- To be populated when issue #4962 implementation lands.
+- Subtask delivery: `#4974` (PR `#4990`, merged)
+- `bash scripts/ci/test_check_spec_archive_policy.sh`

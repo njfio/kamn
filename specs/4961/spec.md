@@ -1,38 +1,42 @@
 # Issue #4961 Spec
 
 - Title: Task: define spec archival policy and archive directory governance contracts
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
 
 ## Problem Statement
-Issue #4961 is part of the R27.44 shell maintainability tranche and closes one portion of the deletion-wave, spec-archival, and hard-ceiling governance gap.
+The milestone required explicit governance rules for when completed specs leave the active tree, including deterministic policy markers that contract tests can enforce.
 
 ## Acceptance Criteria
-- AC-1: Scope defined in GitHub issue #4961 is implemented and verified.
-- AC-2: Deterministic fail-closed behavior is preserved for drift/regression scenarios.
-- AC-3: Required Unit/Functional/Integration/Regression tests are present and passing.
-- AC-4: Documentation/process markers remain synchronized where issue scope requires docs updates.
+- AC-1: Archive lifecycle policy defines deterministic move/retention rules for completed issue specs.
+- AC-2: Archive location/index conventions are documented and machine-checkable.
+- AC-3: Policy exceptions for audit/compliance artifacts are explicit and fail closed when missing markers.
+- AC-4: Policy marker contract tests pass.
 
 ## Scope
 In scope:
-- Work explicitly described in issue #4961.
+- Policy document and required marker taxonomy.
+- Policy marker parity checks in archive-policy contract tests.
 
 Out of scope:
-- Unrelated feature expansion outside the issue boundary.
+- Archive migration tooling implementation details (covered by #4962).
+- Initial archive migration wave execution (covered by #4963).
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute scoped workflow for #4961 | Behavior matches issue acceptance criteria |
-| C-02 | AC-2 | Regression | Inject marker/schema/taxonomy drift scenario | Policy/output fails closed with deterministic reasons |
-| C-03 | AC-3 | Unit/Integration | Run scoped tests and lane checks | Required suites pass |
-| C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
+| C-01 | AC-1 | Functional | `docs/planning/spec-archive-policy.md` | deterministic lifecycle rules documented |
+| C-02 | AC-2 | Functional | milestone/index marker checks | archive policy marker discovered and validated |
+| C-03 | AC-3 | Regression | missing-marker mutation in test fixture | fail-closed reason codes emitted |
+| C-04 | AC-4 | Unit/Regression | `bash scripts/ci/test_check_spec_archive_policy.sh` | marker contract suite passes |
 
 ## Test Mapping
-- To be completed during implementation for issue #4961.
+- AC-1/AC-2: `bash scripts/ci/test_check_spec_archive_policy.sh`
+- AC-3: `bash scripts/ci/test_check_spec_archive_policy.sh` fail-closed mutation cases
+- AC-4: `bash scripts/ci/test_check_spec_archive_policy.sh`
 
 ## Success Metrics
-- All ACs for #4961 are mapped to conformance cases and passing tests.
-- No shell-surface governance regressions introduced by #4961.
+- Archive policy markers are documented and contract-enforced.
+- No policy-marker regressions in fast CI contract lanes.

@@ -1,38 +1,38 @@
 # Issue #4965 Spec
 
 - Title: Task: wire shell ceiling and ratio-ratchet checks into CI fast gate as merge blockers
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
 
 ## Problem Statement
-Issue #4965 is part of the R27.44 shell maintainability tranche and closes one portion of the deletion-wave, spec-archival, and hard-ceiling governance gap.
+The milestone required fast-gate CI wiring so shell hard-ceiling and shell-rust ratio checks execute as merge-blocking gates.
 
 ## Acceptance Criteria
-- AC-1: Scope defined in GitHub issue #4965 is implemented and verified.
-- AC-2: Deterministic fail-closed behavior is preserved for drift/regression scenarios.
-- AC-3: Required Unit/Functional/Integration/Regression tests are present and passing.
-- AC-4: Documentation/process markers remain synchronized where issue scope requires docs updates.
+- AC-1: Fast-gate workflow runs shell ceiling and ratio checks on PRs.
+- AC-2: Violations produce failing required check status.
+- AC-3: Wiring remains compatible with CI runtime/cost constraints.
+- AC-4: Fast-gate policy wiring contracts pass.
 
 ## Scope
 In scope:
-- Work explicitly described in issue #4965.
+- CI fast-gate integration evidence and lifecycle finalization for required checks.
 
 Out of scope:
-- Unrelated feature expansion outside the issue boundary.
+- Ratchet waiver governance rules themselves (covered by #4966).
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute scoped workflow for #4965 | Behavior matches issue acceptance criteria |
-| C-02 | AC-2 | Regression | Inject marker/schema/taxonomy drift scenario | Policy/output fails closed with deterministic reasons |
-| C-03 | AC-3 | Unit/Integration | Run scoped tests and lane checks | Required suites pass |
-| C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
+| C-01 | AC-1 | Integration | fast-gate run on PR | ceiling/ratio checks execute |
+| C-02 | AC-2 | Regression | induced policy violation fixtures | required check fails |
+| C-03 | AC-3 | Performance | fast-mode CI contract run | bounded runtime/cost behavior |
+| C-04 | AC-4 | Regression | `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh` | wiring suite passes |
 
 ## Test Mapping
-- To be completed during implementation for issue #4965.
+- AC-1/AC-2/AC-4: `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
+- AC-3: `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
 
 ## Success Metrics
-- All ACs for #4965 are mapped to conformance cases and passing tests.
-- No shell-surface governance regressions introduced by #4965.
+- Fast-gate required status checks include shell ceiling + ratio gates and remain deterministic.

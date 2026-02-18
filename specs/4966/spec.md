@@ -1,38 +1,38 @@
 # Issue #4966 Spec
 
 - Title: Task: enforce downward-only shell-budget ratchet updates and waiver governance workflow
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
 
 ## Problem Statement
-Issue #4966 is part of the R27.44 shell maintainability tranche and closes one portion of the deletion-wave, spec-archival, and hard-ceiling governance gap.
+The milestone required explicit ratchet-only governance and waiver linkage rules so threshold regressions cannot be merged without deterministic mitigation metadata.
 
 ## Acceptance Criteria
-- AC-1: Scope defined in GitHub issue #4966 is implemented and verified.
-- AC-2: Deterministic fail-closed behavior is preserved for drift/regression scenarios.
-- AC-3: Required Unit/Functional/Integration/Regression tests are present and passing.
-- AC-4: Documentation/process markers remain synchronized where issue scope requires docs updates.
+- AC-1: Threshold updates are ratchet-only by default.
+- AC-2: Regression waivers require linked mitigation issue metadata.
+- AC-3: Checker emits deterministic reason taxonomy and JSON telemetry.
+- AC-4: Ratchet checker and CI wiring contract tests pass.
 
 ## Scope
 In scope:
-- Work explicitly described in issue #4966.
+- Shell-surface threshold-ratchet checker, workflow wiring, and waiver metadata enforcement.
 
 Out of scope:
-- Unrelated feature expansion outside the issue boundary.
+- Non-shell budget governance domains.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute scoped workflow for #4966 | Behavior matches issue acceptance criteria |
-| C-02 | AC-2 | Regression | Inject marker/schema/taxonomy drift scenario | Policy/output fails closed with deterministic reasons |
-| C-03 | AC-3 | Unit/Integration | Run scoped tests and lane checks | Required suites pass |
-| C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
+| C-01 | AC-1 | Functional | ratchet threshold update validation | non-ratchet changes fail |
+| C-02 | AC-2 | Regression | waiver without mitigation issue | deterministic NO-GO |
+| C-03 | AC-3 | Unit | checker JSON/reason output parsing | deterministic schema/taxonomy fields |
+| C-04 | AC-4 | Integration | fast-gate + checker contract suites | ratchet governance lane passes |
 
 ## Test Mapping
-- To be completed during implementation for issue #4966.
+- AC-1/AC-2/AC-3: `bash scripts/ci/test_check_shell_surface_threshold_ratchet.sh`
+- AC-4: `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`, `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
 
 ## Success Metrics
-- All ACs for #4966 are mapped to conformance cases and passing tests.
-- No shell-surface governance regressions introduced by #4966.
+- Ratchet/waiver governance is fail-closed and merge-blocking in CI.

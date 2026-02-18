@@ -1,23 +1,24 @@
 # Issue #4963 Plan
 
 - Issue: #4963
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4963 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4963 boundaries.
+- Run first archive migration wave and publish archive index report.
+- Extend archive-policy checker with index/report parity requirements.
+- Add regression tests for parity drift scenarios.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4963.
+- `specs/archive/index.md`
+- `scripts/ci/check_spec_archive_policy.sh`
+- `scripts/ci/test_check_spec_archive_policy.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: index/report mismatch allows silent archive drift.
+- Mitigation: fail-closed parity checks and regression tests.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve archive index/report marker keys and reason-taxonomy output.
 
 ## ADR
-- Open ADR only if issue #4963 introduces architecture/dependency/protocol changes.
+- Not required.

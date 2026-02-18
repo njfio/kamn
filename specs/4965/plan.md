@@ -1,23 +1,24 @@
 # Issue #4965 Plan
 
 - Issue: #4965
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4965 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4965 boundaries.
+- Finalize CI fast-gate required-check integration evidence through subtask closure.
+- Validate wiring contracts and fast-mode suite compatibility.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4965.
+- `specs/4977/spec.md`
+- `specs/4977/plan.md`
+- `specs/4977/tasks.md`
+- `scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: check wiring drift removes merge-blocking coverage.
+- Mitigation: wiring contract tests enforced in CI suite.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve fast-gate check names/markers consumed by CI declaration and governance checks.
 
 ## ADR
-- Open ADR only if issue #4965 introduces architecture/dependency/protocol changes.
+- Not required.
