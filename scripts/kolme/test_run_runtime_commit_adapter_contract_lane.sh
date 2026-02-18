@@ -40,6 +40,12 @@ if ! grep -q "Regression: #980" "$ROOT_DIR/docs/foundation/release-gonogo-checkl
   exit 1
 fi
 
+if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$ROOT_DIR/docs/foundation/release-gonogo-checklist.md" \
+  && ! grep -q "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract" "$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"; then
+  echo "expected release go/no-go doc to reference adapter runtime commit contract lane command" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "Kolme runtime commit adapter contract lane tests passed."; then
   echo "expected runtime commit adapter contract lane success marker" >&2

@@ -167,13 +167,17 @@ def main() -> int:
 
         gonogo_doc_text = GONOGO_DOC.read_text(encoding="utf-8")
         devnet_doc_text = DEVNET_PLAN_DOC.read_text(encoding="utf-8")
-        if "run_runtime_commit_adapter_contract_lane.sh" not in gonogo_doc_text:
+        adapter_contract_lane_markers = [
+            "run_runtime_commit_adapter_contract_lane.sh",
+            "run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract",
+        ]
+        if not any(marker in gonogo_doc_text for marker in adapter_contract_lane_markers):
             print(
                 "expected release go/no-go doc to reference adapter runtime commit contract lane command",
                 file=sys.stderr,
             )
             return 1
-        if "run_runtime_commit_adapter_contract_lane.sh" not in devnet_doc_text:
+        if not any(marker in devnet_doc_text for marker in adapter_contract_lane_markers):
             print(
                 "expected Kolme devnet plan doc to reference adapter runtime commit contract lane command",
                 file=sys.stderr,
