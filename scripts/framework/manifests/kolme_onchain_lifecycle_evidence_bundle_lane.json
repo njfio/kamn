@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_onchain_lifecycle_evidence_bundle_lane.sh",
+  "phase": "run"
 }

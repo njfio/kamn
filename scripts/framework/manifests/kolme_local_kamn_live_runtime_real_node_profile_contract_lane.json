@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/local_kamn_live_runtime_real_node_profile_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
+  "phase": "contract"
 }

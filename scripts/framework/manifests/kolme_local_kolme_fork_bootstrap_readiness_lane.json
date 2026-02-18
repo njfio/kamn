@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kolme_fork_bootstrap_readiness_lane.sh",
+  "phase": "run"
 }

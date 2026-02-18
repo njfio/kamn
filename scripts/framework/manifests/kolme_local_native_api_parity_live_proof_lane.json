@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_native_api_parity_live_proof_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_native_api_parity_live_proof_lane.sh",
+  "phase": "run"
 }

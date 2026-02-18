@@ -8,5 +8,7 @@
       "bash",
       "scripts/kolme/run_local_kolme_fork_process_lifecycle_lane_impl.sh"
     ]
-  }
+  },
+  "wrapper_name": "run_local_kolme_fork_process_lifecycle_lane.sh",
+  "phase": "run"
 }

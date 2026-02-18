@@ -8,5 +8,7 @@
       "python3",
       "scripts/kolme/contracts/signature_parity_contract_lane.py"
     ]
-  }
+  },
+  "wrapper_name": "run_signature_parity_contract_lane.sh",
+  "phase": "contract"
 }
