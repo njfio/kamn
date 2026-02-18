@@ -31,12 +31,13 @@ if [ ! -x "$HELPER_SCRIPT" ]; then
 fi
 
 migrated_script_count="$(rg -l 'scripts/lib/write_json_file.sh' "$ROOT_DIR/scripts" -g '*.sh' | wc -l | tr -d ' ')"
-if [ "$migrated_script_count" -lt 80 ]; then
-  echo "expected at least 80 migrated scripts using write_json_file helper, found: $migrated_script_count" >&2
+minimum_migrated_scripts=100
+if [ "$migrated_script_count" -lt "$minimum_migrated_scripts" ]; then
+  echo "expected at least $minimum_migrated_scripts migrated scripts using write_json_file helper, found: $migrated_script_count" >&2
   exit 1
 fi
 
-legacy_rootdir_json_count="$(python3 - "$ROOT_DIR/scripts" <<'PY'
+legacy_manual_json_count="$(python3 - "$ROOT_DIR/scripts" <<'PY'
 import re
 import sys
 from pathlib import Path
@@ -46,7 +47,7 @@ legacy_count = 0
 
 for script_path in scripts_root.rglob("*.sh"):
     text = script_path.read_text(encoding="utf-8", errors="replace")
-    if "ROOT_DIR=" not in text:
+    if "scripts/lib/write_json_file.sh" in text:
         continue
     lines = text.splitlines()
     i = 0
@@ -74,8 +75,8 @@ print(legacy_count)
 PY
 )"
 
-if [ "$legacy_rootdir_json_count" -ne 0 ]; then
-  echo "expected zero remaining ROOT_DIR-based cat-heredoc JSON writers, found: $legacy_rootdir_json_count" >&2
+if [ "$legacy_manual_json_count" -ne 0 ]; then
+  echo "expected zero remaining manual cat-heredoc JSON writers outside shared helper usage, found: $legacy_manual_json_count" >&2
   exit 1
 fi
 

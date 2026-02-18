@@ -157,7 +157,7 @@ milestone_live_bundle_policy="$TMP_DIR/milestone-live-bundle-policy.json"
 milestone_gate_report="$TMP_DIR/milestone-go-no-go-gate-report.json"
 milestone_bundle="$TMP_DIR/gonogo-milestone.json"
 
-cat >"$milestone_preflight_summary" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$milestone_preflight_summary" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
   "status": "ok",
@@ -167,7 +167,7 @@ cat >"$milestone_preflight_summary" <<'JSON'
 }
 JSON
 
-cat >"$milestone_preflight_policy" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$milestone_preflight_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
   "final_decision": "GO",
@@ -177,7 +177,7 @@ cat >"$milestone_preflight_policy" <<'JSON'
 }
 JSON
 
-cat >"$milestone_live_bundle_summary" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$milestone_live_bundle_summary" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-node-validation-bundle-summary.v1",
   "status": "ok",
@@ -195,14 +195,14 @@ cat >"$milestone_live_bundle_summary" <<'JSON'
 }
 JSON
 
-cat >"$milestone_live_bundle_policy" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$milestone_live_bundle_policy" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-node-validation-bundle-policy-report.v1",
   "final_decision": "GO"
 }
 JSON
 
-cat >"$milestone_gate_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$milestone_gate_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
@@ -762,7 +762,7 @@ if ! printf '%s\n' "$milestone_promotion_mapping_drift_output" | grep -q "promot
 fi
 
 tls_evidence_report="$TMP_DIR/tls-evidence-report.json"
-cat >"$tls_evidence_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$tls_evidence_report" <<'JSON'
 {
   "schema_version": "kamn.ci.kamn-core-live-https-dependency-posture-report.v1",
   "reason_taxonomy_version": "kamn.ci.kamn-core-live-https-dependency-posture-reason-taxonomy.v1",
@@ -884,7 +884,7 @@ assert_eq "$(extract_value "$tls_missing_policy_output" "tls_evidence_reason_cod
 assert_eq "$(extract_value "$tls_missing_policy_output" "final_decision")" "NO-GO" "expected missing tls bundle policy decision to remain NO-GO"
 
 tls_invalid_json_report="$TMP_DIR/tls-evidence-invalid-json-report.json"
-cat >"$tls_invalid_json_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$tls_invalid_json_report" <<'JSON'
 { invalid json payload
 JSON
 
@@ -946,7 +946,7 @@ if ! printf '%s\n' "$tls_tampered_output" | grep -q "tls evidence gate convergen
 fi
 
 audit_integrity_report="$TMP_DIR/audit-integrity-policy-report.json"
-cat >"$audit_integrity_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$audit_integrity_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.sqlite-crash-recovery-live-policy-report.v1",
   "status": "ok",
@@ -1067,7 +1067,7 @@ if ! printf '%s\n' "$audit_tampered_output" | grep -q "audit integrity gate conv
 fi
 
 slo_policy_report="$TMP_DIR/slo-policy-report.json"
-cat >"$slo_policy_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$slo_policy_report" <<'JSON'
 {
   "schema_version": "kamn.deploy.slo-rollback-report.v1",
   "status": "pass",

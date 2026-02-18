@@ -10,6 +10,18 @@ Phase 6.2 implementation adds:
 - Environment-variable overrides for selected node settings.
 - Strict validation with fail-closed behavior on malformed config or invalid override values.
 
+## Shell JSON Helper Contract (Issue #4879)
+
+Shell scripts that emit JSON artifacts must route writes through the shared helper:
+
+- `scripts/lib/write_json_file.sh`
+- `write_json_file()` / `write_json_object()` from `scripts/lib/common.sh` when already sourced.
+
+Operator-facing and CI contract scripts should not construct JSON files with direct `cat <<JSON` redirection.
+The migration contract is validated by:
+
+- `bash scripts/lib/test_json_write_helper_migration_contract.sh`
+
 ## Precedence
 
 `kamn-node` resolves settings in this order (low to high):

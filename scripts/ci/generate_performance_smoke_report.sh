@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 usage() {
   cat <<USAGE
 Usage: $0 --output-json <path> [--lane <smoke|deep>]
@@ -56,7 +58,7 @@ case "$LANE" in
     ;;
 esac
 
-cat >"$OUTPUT_JSON" <<JSON
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$OUTPUT_JSON" <<JSON
 {
   "profile": "prd-13.2-ci-${LANE}",
   "lane": "$LANE",

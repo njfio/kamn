@@ -18,7 +18,7 @@ if [ ! -x "$POLICY_CHECKER" ]; then
 fi
 
 go_replay_report="$TMP_DIR/replay-go.json"
-cat >"$go_replay_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$go_replay_report" <<'JSON'
 {
   "status": "pass",
   "case_count": 3,
@@ -29,7 +29,7 @@ cat >"$go_replay_report" <<'JSON'
 JSON
 
 go_redaction_report="$TMP_DIR/redaction-go.json"
-cat >"$go_redaction_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$go_redaction_report" <<'JSON'
 {
   "status": "pass",
   "mode": "contract",
@@ -59,7 +59,7 @@ assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO brid
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO bridge replay/redaction policy decision"
 
 no_go_replay_report="$TMP_DIR/replay-no-go.json"
-cat >"$no_go_replay_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$no_go_replay_report" <<'JSON'
 {
   "status": "fail",
   "case_count": 3,
@@ -70,7 +70,7 @@ cat >"$no_go_replay_report" <<'JSON'
 JSON
 
 no_go_redaction_report="$TMP_DIR/redaction-no-go.json"
-cat >"$no_go_redaction_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$no_go_redaction_report" <<'JSON'
 {
   "status": "pass",
   "mode": "contract",

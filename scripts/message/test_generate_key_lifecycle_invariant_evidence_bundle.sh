@@ -18,7 +18,7 @@ if [ ! -x "$POLICY_CHECKER" ]; then
 fi
 
 go_report="$TMP_DIR/key-lifecycle-go.json"
-cat >"$go_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$go_report" <<'JSON'
 {
   "status": "pass",
   "rotation_replay_detected": false,
@@ -44,7 +44,7 @@ assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO key 
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO key lifecycle policy decision"
 
 no_go_report="$TMP_DIR/key-lifecycle-no-go.json"
-cat >"$no_go_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$no_go_report" <<'JSON'
 {
   "status": "fail",
   "rotation_replay_detected": true,
