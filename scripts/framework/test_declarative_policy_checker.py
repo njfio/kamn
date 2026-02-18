@@ -63,6 +63,16 @@ class DeclarativePolicyCheckerTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "missing required 'expected' value"):
             _validate_policy(policy)
 
+    def test_validate_policy_rejects_invalid_reason_taxonomy_version_marker(self) -> None:
+        policy = self._base_policy()
+        policy["reason_taxonomy_version"] = "kamn.example.reason-taxonomy"
+
+        with self.assertRaisesRegex(
+            ContractError,
+            "reason_taxonomy_version.*must end with .v<integer>",
+        ):
+            _validate_policy(policy)
+
     def test_resolve_field_supports_nested_dict_and_list_lookup(self) -> None:
         payload = {"outer": {"items": [{"value": "ok"}]}}
         self.assertEqual(_resolve_field(payload, "outer.items.0.value"), "ok")
