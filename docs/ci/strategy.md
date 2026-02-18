@@ -4055,6 +4055,16 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=fast_gate_delta_threshold_file_corrupt`
     - `reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived`
     - `reason_codes=fast_gate_delta_threshold_ratchet_exception_applied`
+- Lane-registry drift enforcement (`test_lane_registry_generation.sh`, `test_check_lane_registry_drift.sh`)
+  - generation check command:
+    - `python3 scripts/framework/generate_lane_artifacts.py --registry-file scripts/framework/lane_registry.json --repo-root . --mode check`
+  - drift checker command:
+    - `bash scripts/framework/check_lane_registry_drift.sh --repo-root . --registry-file scripts/framework/lane_registry.json`
+  - deterministic drift reason-code surface:
+    - `reason_codes=lane_registry_manifest_drift_detected`
+    - `reason_codes=lane_registry_wrapper_drift_detected`
+    - `reason_codes=lane_registry_schema_mismatch`
+    - `reason_codes=lane_registry_artifact_missing`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
