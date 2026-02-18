@@ -1,15 +1,20 @@
 # Issue #4959 Tasks
 
 - Issue: #4959
-- Status: Planned
+- Status: Implemented
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from issue ACs and conformance cases.
-- T2 (Green): implement minimum change to satisfy tests deterministically.
-- T3 (Refactor): simplify and harden without changing behavior.
-- T4 (Regression): add drift/tamper/marker parity regression checks.
-- T5 (Docs): update required docs/process markers for issue #4959.
-- T6 (Verify): run scoped unit/functional/integration/regression checks and record evidence.
+- [x] T1 (Red): prove deletion-manifest drift fails deterministically.
+  - Evidence: legacy inventory vs expanded manifest -> `superseded_deletion_manifest_references_unknown_script`.
+- [x] T2 (Green): execute runtime/kolme wave activation and wrapper compaction (`#4970` / PR `#4985`).
+- [x] T3 (Green): execute canary/ci/deploy/governance wave activation (`#4969` / PR `#4992`).
+- [x] T4 (Regression): keep stale-reference and command-surface checks green after wave expansion.
+- [x] T5 (Docs/Process): synchronize parent-task lifecycle docs + closure markers.
+- [x] T6 (Verify): run scoped suites and keep CI fast gate green before merge.
 
 ## Completion Evidence
-- To be populated when issue #4959 implementation lands.
+- `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- `bash scripts/ci/test_check_stale_script_references.sh`
+- `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
+- Subtask merges: PR `#4985` and PR `#4992`
