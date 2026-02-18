@@ -57,6 +57,21 @@ expect_failure() {
   fi
 }
 
+assert_exemption_regression_markers() {
+  if ! grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1$' "$TMP_DIR/checker.err"; then
+    echo "graduated module allowlist bypass should emit deterministic reason taxonomy marker" >&2
+    exit 1
+  fi
+  if ! grep -q '^reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift$' "$TMP_DIR/checker.err"; then
+    echo "graduated module allowlist bypass should emit deterministic reason code set marker" >&2
+    exit 1
+  fi
+  if ! grep -q '^reason_code=graduated_module_exemption_regression$' "$TMP_DIR/checker.err"; then
+    echo "graduated module allowlist bypass should emit deterministic exemption-regression reason code marker" >&2
+    exit 1
+  fi
+}
+
 reset_fixtures
 run_checker >"$TMP_DIR/pass.out"
 if ! grep -Eq '^missing_docs_allowlisted_module_count=[0-9]+$' "$TMP_DIR/pass.out"; then
@@ -148,10 +163,20 @@ reset_fixtures
 sed -i '/batch_id: first-three-modules-v1/d' "$GRADUATION_BATCH_REPORT_FIXTURE"
 expect_failure "graduation batch report marker drift should fail"
 
+for first_batch_module in bootstrap key_recovery kolme_runtime_commit; do
+  reset_fixtures
+  sed -i "/^${first_batch_module}\$/d" "$GRADUATED_MODULES_FIXTURE"
+  expect_failure "first-batch graduated-module fixture drift (${first_batch_module}) should fail"
+  if ! grep -q "first graduation batch module '${first_batch_module}'" "$TMP_DIR/checker.err"; then
+    echo "first-batch graduated-module fixture drift should mention missing module '${first_batch_module}'" >&2
+    exit 1
+  fi
+done
+
 reset_fixtures
-printf '\nbootstrap\n' >>"$ALLOWLIST_FIXTURE"
-sed -i 's/^pub mod bootstrap;/#[allow(missing_docs)]\npub mod bootstrap;/' "$CORE_LIB_FIXTURE"
-sed -i '/^bootstrap$/d' "$GRADUATED_MODULES_FIXTURE"
+printf '\nagent_key_hierarchy\n' >>"$ALLOWLIST_FIXTURE"
+sed -i 's/^pub mod agent_key_hierarchy;/#[allow(missing_docs)]\npub mod agent_key_hierarchy;/' "$CORE_LIB_FIXTURE"
+sed -i '/^agent_key_hierarchy$/d' "$GRADUATED_MODULES_FIXTURE"
 python3 - "$VELOCITY_BASELINE_FIXTURE" <<'PY'
 import json
 import sys
@@ -179,21 +204,12 @@ if ! grep -Eq '^missing_docs_allowlisted_module_delta=-?[0-9]+$' "$TMP_DIR/check
 fi
 
 # Regression: #1723
-reset_fixtures
-printf '\nkolme_runtime_commit\n' >>"$ALLOWLIST_FIXTURE"
-sed -i 's/^pub mod kolme_runtime_commit;/#[allow(missing_docs)]\npub mod kolme_runtime_commit;/' "$CORE_LIB_FIXTURE"
-expect_failure "graduated module allowlist bypass should fail"
-if ! grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1$' "$TMP_DIR/checker.err"; then
-  echo "graduated module allowlist bypass should emit deterministic reason taxonomy marker" >&2
-  exit 1
-fi
-if ! grep -q '^reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift$' "$TMP_DIR/checker.err"; then
-  echo "graduated module allowlist bypass should emit deterministic reason code set marker" >&2
-  exit 1
-fi
-if ! grep -q '^reason_code=graduated_module_exemption_regression$' "$TMP_DIR/checker.err"; then
-  echo "graduated module allowlist bypass should emit deterministic exemption-regression reason code marker" >&2
-  exit 1
-fi
+for first_batch_module in bootstrap key_recovery kolme_runtime_commit; do
+  reset_fixtures
+  printf '\n%s\n' "$first_batch_module" >>"$ALLOWLIST_FIXTURE"
+  sed -i "s/^pub mod ${first_batch_module};/#[allow(missing_docs)]\\npub mod ${first_batch_module};/" "$CORE_LIB_FIXTURE"
+  expect_failure "graduated module allowlist bypass (${first_batch_module}) should fail"
+  assert_exemption_regression_markers
+done
 
 echo "kamn-core missing-docs policy checker tests passed."

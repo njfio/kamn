@@ -1676,6 +1676,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - First-batch graduation report drift guard:
   - report contract enforces deterministic markers for `bootstrap`,
     `key_recovery`, and `kolme_runtime_commit` evidence lineage.
+  - first-batch fixture contract remains fail-closed in policy checker:
+    - `first_graduation_batch_modules=bootstrap,key_recovery,kolme_runtime_commit`
+    - `first_graduation_batch_fixture=fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
 - Rustdoc navigation parity drift guard:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh` emits deterministic markers on README rustdoc-link drift:
     - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
