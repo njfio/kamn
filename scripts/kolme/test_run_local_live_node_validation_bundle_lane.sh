@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+ROOT_DIR="$KAMN_ROOT"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_live_node_validation_bundle_lane.json"
@@ -18,22 +19,6 @@ TMP_PROCESS_POLICY="$(mktemp)"
 TMP_ROLLBACK_EVIDENCE="$(mktemp)"
 TMP_RECOVERY_EVIDENCE="$(mktemp)"
 trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_INTEGRATION_REPORT" "$TMP_INTEGRATION_POLICY" "$TMP_INTEGRATION_RUNTIME_POLICY" "$TMP_INTEGRATION_RUNTIME_LIVE_SUMMARY" "$TMP_PROCESS_REPORT" "$TMP_PROCESS_POLICY" "$TMP_ROLLBACK_EVIDENCE" "$TMP_RECOVERY_EVIDENCE"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local live-node validation bundle runner to be executable" >&2

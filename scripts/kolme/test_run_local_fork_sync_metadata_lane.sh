@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+ROOT_DIR="$KAMN_ROOT"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_fork_sync_metadata_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_fork_sync_metadata_lane.json"
@@ -10,22 +11,6 @@ TMP_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 TMP_REPO="$(mktemp -d)"
 trap 'rm -f "$TMP_REPORT" "$TMP_ERR"; rm -rf "$TMP_REPO"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local fork sync metadata runner to be executable" >&2

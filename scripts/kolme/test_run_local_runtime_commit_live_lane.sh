@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+ROOT_DIR="$KAMN_ROOT"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
@@ -17,22 +18,6 @@ TMP_ERR="$(mktemp)"
 TMP_IN_MEMORY_REPORT="$(mktemp)"
 TMP_SIMULATED_PROFILE_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR" "$TMP_IN_MEMORY_REPORT" "$TMP_SIMULATED_PROFILE_REPORT"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local runtime commit live lane runner to be executable" >&2
