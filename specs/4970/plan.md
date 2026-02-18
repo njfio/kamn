@@ -1,7 +1,7 @@
 # Issue #4970 Plan
 
 - Issue: #4970
-- Status: Planned
+- Status: Implemented
 
 ## Approach
 - Implement issue #4970 using Red -> Green -> Refactor -> Regression loop.
@@ -9,7 +9,15 @@
 - Limit scope strictly to issue #4970 boundaries.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4970.
+- `fixtures/ci/superseded_script_deletion_manifest.json`
+- `scripts/ci/stale_script_reference_detector.py`
+- `scripts/ci/test_check_stale_script_references.sh`
+- `scripts/ci/test_ci_tools.sh`
+- `scripts/ci/test_ci_tools_command_surface_contract.sh`
+- `.ci/kolme-command-surface-asymmetry-policy.json`
+- `scripts/kolme/run_contract_lane_dispatch.sh`
+- `scripts/kolme/contract_lane_dispatch_impl.sh`
+- `scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh`
 
 ## Risks and Mitigations
 - Risk level: high
