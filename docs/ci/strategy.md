@@ -3916,6 +3916,16 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
+- Shell-rust ratio guardrail checker (`test_check_shell_rust_ratio_guardrail.sh`)
+  - checker command:
+    - `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json /tmp/shell-rust-ratio-guardrail-report.json`
+  - deterministic taxonomy markers:
+    - `reason_taxonomy_version=kamn.ci.shell-rust-ratio-guardrail-reason-taxonomy.v1`
+    - `reason_codes_csv=shell_rust_ratio_argument_invalid,shell_rust_ratio_fail_threshold_exceeded,shell_rust_ratio_git_ls_failed,shell_rust_ratio_metric_invalid,shell_rust_ratio_output_json_required,shell_rust_ratio_output_write_failed,shell_rust_ratio_rust_line_total_invalid,shell_rust_ratio_threshold_file_missing,shell_rust_ratio_threshold_key_missing,shell_rust_ratio_threshold_order_invalid,shell_rust_ratio_threshold_value_invalid,shell_rust_ratio_warn_threshold_exceeded`
+  - normalized decision markers:
+    - `status=ok|fail`
+    - `final_decision=GO|WARN|NO-GO`
+    - `reason_codes=none|<csv>`
 - Legacy synchronous ingress parser drift checker (`test_check_legacy_ingress_parser_drift.sh`)
   - baseline fixture:
     - `fixtures/ci/legacy_ingress_parser_baseline.json`
@@ -3989,11 +3999,13 @@ Fast-mode CI tooling regression coverage includes:
 - Fast-gate workflow governance wiring:
   - `.github/workflows/ci-fast-gate.yml` runs, under `run_script_surface_budget_checks` scope:
     - `bash scripts/ci/check_script_duplication_budget.sh --budget-file .ci/script-surface-budget.env --baseline-file .ci/script-surface-baseline.env --waiver-file .ci/script-surface-budget-waiver.json --output-json ci-script-surface-budget.json`
+    - `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json ci-shell-rust-ratio-guardrail.json`
     - `bash scripts/ci/generate_combined_shell_surface_trend_report.sh --budget-file .ci/script-surface-budget.env --script-baseline-file .ci/script-surface-baseline.env --combined-baseline-file fixtures/ci/combined_shell_surface_trend_baseline.json --output-json ci-combined-shell-surface-trend-report.json`
     - `bash scripts/ci/check_combined_shell_surface_trend_policy.sh --report-file ci-combined-shell-surface-trend-report.json --threshold-file fixtures/ci/combined_shell_surface_trend_thresholds.json --output-json ci-combined-shell-surface-trend-policy.json`
     - `bash scripts/ci/collect_shell_rust_loc_telemetry.sh --report-file ci-combined-shell-surface-trend-report.json --output-json ci-shell-rust-loc-telemetry.json`
   - workflow uploads:
     - `ci-script-surface-budget-<run_id>-<run_attempt>`
+    - `ci-shell-rust-ratio-guardrail-<run_id>-<run_attempt>`
     - `ci-combined-shell-surface-trend-<run_id>-<run_attempt>`
     - `ci-shell-rust-loc-telemetry-<run_id>-<run_attempt>`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)

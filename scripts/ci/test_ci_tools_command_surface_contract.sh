@@ -161,6 +161,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
