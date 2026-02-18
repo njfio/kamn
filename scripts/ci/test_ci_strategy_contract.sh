@@ -117,6 +117,8 @@ required_snippets=(
   "missing_docs_velocity_reason_codes_csv=allowlist_fully_graduated,baseline_window_not_elapsed,ci_local_docs_velocity_window_boundary_exceeded,multiple_policy_violations,stagnation_window_exceeded,velocity_target_met,velocity_threshold_config_invalid,velocity_window_under_threshold,window_not_elapsed"
   "missing_docs_velocity_reason_codes_value=<deterministic reason key>"
   "Regression: #4343"
+  "first_graduation_batch_modules=bootstrap,key_recovery,kolme_runtime_commit"
+  "first_graduation_batch_fixture=fixtures/ci/kamn_core_missing_docs_graduated_modules.txt"
   "rustdoc_navigation_ratio_status=within|exceeded"
   "docs_contract_test_count=<int>"
   "behavioral_test_count=<int>"

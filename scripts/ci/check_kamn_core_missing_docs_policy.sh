@@ -17,6 +17,7 @@ VELOCITY_CADENCE_DOC_PATH="${KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH:-$ROOT_
 GRADUATION_BATCH_REPORT_PATH="${KAMN_MISSING_DOCS_GRADUATION_BATCH_REPORT_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md}"
 POLICY_REASON_TAXONOMY_VERSION="kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1"
 POLICY_REASON_CODES_CSV="graduated_module_exemption_regression,rustdoc_navigation_parity_drift"
+FIRST_GRADUATION_BATCH_MODULES=(bootstrap key_recovery kolme_runtime_commit)
 
 require_file() {
   local file="$1"
@@ -172,6 +173,13 @@ expected_graduated_modules="$(
     { print $1 }
   ' "$GRADUATED_MODULES_PATH" | sort
 )"
+
+for first_batch_module in "${FIRST_GRADUATION_BATCH_MODULES[@]}"; do
+  if ! printf '%s\n' "$expected_graduated_modules" | grep -Fxq "$first_batch_module"; then
+    echo "missing-docs policy contract failed: graduated modules fixture must include first graduation batch module '${first_batch_module}'." >&2
+    exit 1
+  fi
+done
 
 if ! diff -u \
   <(printf '%s\n' "$expected_allowlisted_modules") \
