@@ -1,7 +1,7 @@
 # Issue #4968 Spec
 
 - Title: Subtask: implement inventory generator and deletion-manifest validator with reason-taxonomy outputs
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
@@ -31,7 +31,16 @@ Out of scope:
 | C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
 
 ## Test Mapping
-- To be completed during implementation for issue #4968.
+- AC-1:
+  - `bash scripts/ci/generate_superseded_script_inventory.sh --output-json fixtures/ci/superseded_script_inventory_baseline.json`
+  - `bash scripts/ci/check_superseded_script_deletion_manifest.sh --output-json /tmp/superseded-script-report.json`
+- AC-2:
+  - `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+    (schema drift and unknown manifest-entry fail-closed checks)
+- AC-3:
+  - `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- AC-4:
+  - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
 
 ## Success Metrics
 - All ACs for #4968 are mapped to conformance cases and passing tests.
