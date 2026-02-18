@@ -44,6 +44,8 @@ pub mod data_layer_m0;
 pub mod data_layer_m1;
 /// M10 partition contracts for scaling controls, archival index, and re-attachment lifecycle.
 pub mod data_layer_m10_partition_archival;
+/// M11 closure evidence contracts for release acceptance decision synthesis.
+pub mod data_layer_m11_closure_evidence;
 /// M11 hardening contracts for security/chaos/performance matrix and operator readiness synthesis.
 pub mod data_layer_m11_hardening_readiness;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
@@ -273,6 +275,14 @@ pub use data_layer_m10_partition_archival::{
     DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE,
     DATA_LAYER_M10_RECOVERY_READY_REASON_CODE,
     DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE,
+};
+pub use data_layer_m11_closure_evidence::{
+    data_layer_m11_evaluate_closure_evidence, DataLayerM11ClosureAcceptanceDecision,
+    DataLayerM11ClosureEvidenceError, DataLayerM11ClosureEvidenceInput,
+    DataLayerM11ClosureEvidenceReport, DATA_LAYER_M11_CLOSURE_ACCEPTED_REASON_CODE,
+    DATA_LAYER_M11_CLOSURE_BLOCK_CRITICAL_SCENARIO_REASON_CODE,
+    DATA_LAYER_M11_CLOSURE_BLOCK_EVIDENCE_GAP_REASON_CODE,
+    DATA_LAYER_M11_CLOSURE_BLOCK_HARDENING_REASON_CODE,
 };
 pub use data_layer_m11_hardening_readiness::{
     DataLayerM11HardeningMatrix, DataLayerM11HardeningMatrixError,

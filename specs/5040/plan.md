@@ -1,26 +1,45 @@
 # Issue #5040 Plan
 
 - Issue: #5040
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED conformance tests (`spec_c01`..`spec_c05`) for:
+   - accepted closure when all gates are satisfied,
+   - rejection when hardening/critical scenario evidence blocks,
+   - rejection when performance/signoff gates are incomplete,
+   - fail-closed error for empty release marker.
+2. Implement `data_layer_m11_closure_evidence` module with:
+   - closure input/report models,
+   - deterministic reason-marker taxonomy,
+   - acceptance decision evaluator over M11 + PRD critical evidence.
+3. Re-export closure report APIs in `crates/kamn-core/src/lib.rs`.
+4. Run format/lint/targeted/full regression and shell guardrail evidence.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m11_closure_evidence.rs` (new)
+- `crates/kamn-core/src/lib.rs` (module + exports)
+- `crates/kamn-core/tests/data_layer_m11_closure_evidence.rs` (new)
+- `specs/5040/spec.md`
+- `specs/5040/plan.md`
+- `specs/5040/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Reuse existing M11/PRD report types to avoid duplicative logic.
+  - Keep reason-code ordering deterministic and stable.
+  - Keep implementation Rust-only to avoid shell-surface growth.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive public API under `kamn_core::data_layer_m11_closure_evidence::*`.
+- No new dependencies.
+- No protocol/wire-format changes.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive implementation.
+
+## Verification Summary
+- RED: `cargo test -p kamn-core --test data_layer_m11_closure_evidence` (failed before implementation with unresolved closure evidence symbols).
+- GREEN: `cargo test -p kamn-core --test data_layer_m11_closure_evidence` (5 passed, 0 failed).
+- Regression: `cargo test -p kamn-core` (pass), `cargo clippy -p kamn-core -- -D warnings` (pass), `cargo fmt --check` (pass).
