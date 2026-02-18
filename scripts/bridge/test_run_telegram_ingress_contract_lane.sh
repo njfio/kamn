@@ -2,31 +2,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_SCRIPT="$ROOT_DIR/scripts/bridge/run_telegram_ingress_contract_lane.sh"
 FAST_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_telegram_ingress_contract_lane_impl.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_telegram_ingress_deep_lane.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_telegram_ingress_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected telegram ingress fast-lane runner to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_SCRIPT" "expected telegram ingress fast-lane runner to be executable"
 
-if [ ! -x "$DEEP_SCRIPT" ]; then
-  echo "expected telegram ingress deep-lane runner to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_SCRIPT" "expected telegram ingress deep-lane runner to be executable"
 
-if [ ! -x "$FAST_IMPL_SCRIPT" ]; then
-  echo "expected telegram ingress contract lane implementation script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_IMPL_SCRIPT" "expected telegram ingress contract lane implementation script to be executable"
 
-if [ ! -f "$MANIFEST_FILE" ]; then
-  echo "expected telegram ingress contract lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MANIFEST_FILE" "expected telegram ingress contract lane manifest to exist"
 
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT

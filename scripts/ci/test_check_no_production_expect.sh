@@ -2,18 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_no_production_expect.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_no_production_expect.py"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected production expect checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected production expect checker wrapper to be executable"
 
-if [ ! -x "$PY_CHECKER" ]; then
-  echo "expected production expect checker module to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PY_CHECKER" "expected production expect checker module to be executable"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

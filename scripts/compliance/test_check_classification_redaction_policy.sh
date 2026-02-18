@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/compliance/check_classification_redaction_policy.sh"
 SHARED_POLICY="$ROOT_DIR/scripts/compliance/classification_redaction_policy_contract.py"
@@ -16,24 +17,12 @@ extract_value() {
   printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
 }
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected classification/redaction lane script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$POLICY_CHECKER" ]; then
-  echo "expected classification/redaction policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected classification/redaction lane script to be executable"
+test_harness_require_executable "$POLICY_CHECKER" "expected classification/redaction policy checker script to be executable"
 
-if [ ! -x "$EXEC_DISPATCHER" ]; then
-  echo "expected shared exec dispatcher script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$EXEC_DISPATCHER" "expected shared exec dispatcher script to be executable"
 
-if [ ! -f "$EXEC_REGISTRY" ]; then
-  echo "expected exec wrapper registry to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$EXEC_REGISTRY" "expected exec wrapper registry to exist"
 
 if [ ! -L "$POLICY_CHECKER" ]; then
   echo "expected classification/redaction policy checker wrapper to be a symlink" >&2
@@ -45,10 +34,7 @@ if [ "$(readlink -f "$POLICY_CHECKER")" != "$(readlink -f "$EXEC_DISPATCHER")" ]
   exit 1
 fi
 
-if [ ! -x "$SHARED_POLICY" ]; then
-  echo "expected shared classification/redaction policy checker implementation to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SHARED_POLICY" "expected shared classification/redaction policy checker implementation to be executable"
 
 python3 - "$EXEC_REGISTRY" <<'PY'
 import json

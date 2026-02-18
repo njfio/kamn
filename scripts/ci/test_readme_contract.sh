@@ -2,12 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 README_FILE="$ROOT_DIR/README.md"
 
-if [ ! -f "$README_FILE" ]; then
-  echo "README contract failed: README.md is missing at repository root." >&2
-  exit 1
-fi
+test_harness_require_file "$README_FILE" "README contract failed: README.md is missing at repository root."
 
 required_headers=(
   "# KAMN"

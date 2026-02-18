@@ -2,12 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
-  exit 1
-fi
+test_harness_require_executable "$DISPATCHER" "expected non-Kolme dispatcher to be executable: $DISPATCHER"
 
 wrapper_names=(
   "run_bridge_credentialed_deep_lane.sh"

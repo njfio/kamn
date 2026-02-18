@@ -2,19 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_SCRIPT="$ROOT_DIR/scripts/cutover/run_mainnet_cutover_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/cutover/mainnet_cutover_contract_lane_contract.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/cutover_mainnet_cutover_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected mainnet cutover contract lane runner to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$SHARED_CONTRACT" ]; then
-  echo "expected mainnet cutover shared contract-lane module to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_SCRIPT" "expected mainnet cutover contract lane runner to be executable"
+test_harness_require_executable "$SHARED_CONTRACT" "expected mainnet cutover shared contract-lane module to be executable"
 
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT

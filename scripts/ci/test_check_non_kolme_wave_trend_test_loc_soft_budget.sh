@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh"
 PYTHON_CHECKER="$ROOT_DIR/scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py"
 BASELINE_FILE="$ROOT_DIR/fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json"
@@ -10,25 +11,13 @@ THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected non-Kolme wave trend-test LOC soft-budget checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected non-Kolme wave trend-test LOC soft-budget checker wrapper to be executable"
 
-if [ ! -x "$PYTHON_CHECKER" ]; then
-  echo "expected non-Kolme wave trend-test LOC soft-budget python checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PYTHON_CHECKER" "expected non-Kolme wave trend-test LOC soft-budget python checker to be executable"
 
-if [ ! -f "$BASELINE_FILE" ]; then
-  echo "expected non-Kolme wave trend-test LOC baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FILE" "expected non-Kolme wave trend-test LOC baseline fixture to exist"
 
-if [ ! -f "$THRESHOLD_FILE" ]; then
-  echo "expected non-Kolme wave trend-test LOC threshold fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$THRESHOLD_FILE" "expected non-Kolme wave trend-test LOC threshold fixture to exist"
 
 PASS_REPORT="$TMP_DIR/pass-report.json"
 bash "$CHECKER" \

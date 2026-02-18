@@ -2,21 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CONFIG_FILE="$ROOT_DIR/fixtures/ci/kolme_manifest_migration_contract_groups.json"
 MANIFEST_RUNNER="$ROOT_DIR/scripts/framework/run_manifest_lane.sh"
 GROUP_KEY="tranche1"
 MAX_SECONDS_ENV="KAMN_KOLME_TRANCHE1_DISPATCH_PARITY_MAX_SECONDS"
 DEFAULT_MAX_SECONDS=240
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "expected migration group config file to exist: $CONFIG_FILE" >&2
-  exit 1
-fi
+test_harness_require_file "$CONFIG_FILE" "expected migration group config file to exist: $CONFIG_FILE"
 
-if [ ! -f "$MANIFEST_RUNNER" ]; then
-  echo "expected manifest runner script to exist: $MANIFEST_RUNNER" >&2
-  exit 1
-fi
+test_harness_require_file "$MANIFEST_RUNNER" "expected manifest runner script to exist: $MANIFEST_RUNNER"
 
 max_seconds="${!MAX_SECONDS_ENV:-$DEFAULT_MAX_SECONDS}"
 if ! [[ "$max_seconds" =~ ^[0-9]+$ ]] || [ "$max_seconds" -le 0 ]; then

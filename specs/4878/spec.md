@@ -3,7 +3,7 @@
 - Title: Subtask: build scripts/lib/test_harness.sh and migrate first 75 high-duplication tests
 - Parent: - Parent task: #4867
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

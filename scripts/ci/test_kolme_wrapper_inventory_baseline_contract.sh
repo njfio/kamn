@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 GENERATE_SCRIPT="$ROOT_DIR/scripts/ci/generate_kolme_wrapper_inventory_baseline.sh"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_kolme_wrapper_inventory_baseline.sh"
 PYTHON_SCRIPT="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
@@ -13,40 +14,19 @@ WAVE10_BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_basel
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$GENERATE_SCRIPT" ]; then
-  echo "expected baseline generator wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$GENERATE_SCRIPT" "expected baseline generator wrapper to be executable"
 
-if [ ! -x "$CHECK_SCRIPT" ]; then
-  echo "expected baseline checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECK_SCRIPT" "expected baseline checker wrapper to be executable"
 
-if [ ! -x "$PYTHON_SCRIPT" ]; then
-  echo "expected baseline policy python script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PYTHON_SCRIPT" "expected baseline policy python script to be executable"
 
-if [ ! -f "$MATRIX_FIXTURE" ]; then
-  echo "expected lane migration matrix fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MATRIX_FIXTURE" "expected lane migration matrix fixture to exist"
 
-if [ ! -f "$BASELINE_FIXTURE" ]; then
-  echo "expected wrapper inventory baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FIXTURE" "expected wrapper inventory baseline fixture to exist"
 
-if [ ! -f "$WAVE10_MATRIX_FIXTURE" ]; then
-  echo "expected wave-10 wrapper-family matrix fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$WAVE10_MATRIX_FIXTURE" "expected wave-10 wrapper-family matrix fixture to exist"
 
-if [ ! -f "$WAVE10_BASELINE_FIXTURE" ]; then
-  echo "expected wave-10 wrapper-family baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$WAVE10_BASELINE_FIXTURE" "expected wave-10 wrapper-family baseline fixture to exist"
 
 GENERATED_BASELINE="$TMP_DIR/generated-baseline.json"
 bash "$GENERATE_SCRIPT" \

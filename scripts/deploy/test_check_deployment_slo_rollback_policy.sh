@@ -2,20 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/deploy/run_deployment_slo_rollback_lane.sh"
 CHECKER="$ROOT_DIR/scripts/deploy/check_deployment_slo_rollback_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected deployment slo/rollback lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected deployment slo/rollback lane script to be executable"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected deployment slo/rollback policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected deployment slo/rollback policy checker script to be executable"
 
 go_report="$TMP_DIR/deployment-slo-rollback-go.json"
 KAMN_DEPLOYMENT_SLO_ROLLBACK_SKIP_COMMANDS=true \

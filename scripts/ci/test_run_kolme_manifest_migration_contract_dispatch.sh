@@ -2,18 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 DISPATCHER="$ROOT_DIR/scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh"
 CONFIG_FILE="$ROOT_DIR/fixtures/ci/kolme_manifest_migration_contract_groups.json"
 
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected dispatcher to be executable: $DISPATCHER" >&2
-  exit 1
-fi
+test_harness_require_executable "$DISPATCHER" "expected dispatcher to be executable: $DISPATCHER"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "expected migration config file to exist: $CONFIG_FILE" >&2
-  exit 1
-fi
+test_harness_require_file "$CONFIG_FILE" "expected migration config file to exist: $CONFIG_FILE"
 
 if ! output="$(bash "$DISPATCHER" --group tranche1)"; then
   echo "expected dispatcher tranche1 execution to pass" >&2

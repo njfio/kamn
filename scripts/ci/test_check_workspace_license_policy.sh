@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_workspace_license_policy.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected workspace license policy checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected workspace license policy checker to be executable"
 
 pass_output="$(python3 "$CHECKER" --workspace-root "$ROOT_DIR" --expected-license "Apache-2.0")"
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1$'; then

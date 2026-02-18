@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/deploy/validate_local_compose_multinode_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_local_compose_multinode_live_policy.sh"
 TMP_REPORT="$(mktemp)"
@@ -9,14 +10,8 @@ TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"' EXIT
 
-if [ ! -x "$VALIDATION_SCRIPT" ]; then
-  echo "expected local compose multinode validation script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$POLICY_CHECKER" ]; then
-  echo "expected local compose multinode policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$VALIDATION_SCRIPT" "expected local compose multinode validation script to be executable"
+test_harness_require_executable "$POLICY_CHECKER" "expected local compose multinode policy checker script to be executable"
 
 bash "$VALIDATION_SCRIPT" --mode dry-run --ci-fast-gate PASS --output-json "$TMP_REPORT" >/dev/null
 

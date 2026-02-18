@@ -2,15 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/generate_fast_gate_budget_delta_report.sh"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected fast-gate budget delta generator to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected fast-gate budget delta generator to be executable"
 
 CURRENT_JSON="$TMP_DIR/current.json"
 BASELINE_ENV="$TMP_DIR/baseline.env"

@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/check_script_duplication_budget.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected script duplication budget checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected script duplication budget checker to be executable"
 
 SCRIPTS_ROOT="$TMP_DIR/scripts"
 mkdir -p "$SCRIPTS_ROOT/a" "$SCRIPTS_ROOT/b" "$SCRIPTS_ROOT/c" "$SCRIPTS_ROOT/d"

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_kamn_core_live_https_dependency_posture.py"
 TLS_HARDENING_DOC="$ROOT_DIR/docs/security/tls-hardening.md"
@@ -9,15 +10,9 @@ CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 RELEASE_CHECKLIST_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
 KOLME_DEVNET_OPS_DOC="$ROOT_DIR/docs/deploy/kolme_devnet_ops.md"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected live-https dependency posture checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected live-https dependency posture checker wrapper to be executable"
 
-if [ ! -x "$PY_CHECKER" ]; then
-  echo "expected live-https dependency posture checker module to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PY_CHECKER" "expected live-https dependency posture checker module to be executable"
 
 REPORT_FILE="$(mktemp)"
 TMP_DIR="$(mktemp -d)"
@@ -211,10 +206,7 @@ if ! printf '%s\n' "$ci_strategy_drift_output" | grep -q '^reason_codes_csv=ci_s
   exit 1
 fi
 
-if [ ! -f "$TLS_HARDENING_DOC" ]; then
-  echo "expected tls hardening doc to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$TLS_HARDENING_DOC" "expected tls hardening doc to exist"
 if ! grep -q "check_kamn_core_live_https_dependency_posture.sh" "$TLS_HARDENING_DOC"; then
   echo "expected tls hardening doc to reference live-https posture checker command" >&2
   exit 1
@@ -259,10 +251,7 @@ if ! grep -q "webpki_roots_feature_mapping_missing" "$RELEASE_CHECKLIST_DOC"; th
   echo "expected release go/no-go checklist to include webpki-root feature-mapping drift reason marker" >&2
   exit 1
 fi
-if [ ! -f "$KOLME_DEVNET_OPS_DOC" ]; then
-  echo "expected kolme devnet ops compatibility doc to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$KOLME_DEVNET_OPS_DOC" "expected kolme devnet ops compatibility doc to exist"
 if ! grep -q "check_kamn_core_live_https_dependency_posture.sh" "$KOLME_DEVNET_OPS_DOC"; then
   echo "expected kolme devnet ops compatibility doc to reference live-https posture checker command" >&2
   exit 1

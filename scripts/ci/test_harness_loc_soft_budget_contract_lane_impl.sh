@@ -10,6 +10,7 @@ USAGE
 }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_test_harness_loc_soft_budget.sh"
 TREND_THRESHOLD_FILE="$ROOT_DIR/.ci/test-harness-loc-trend-thresholds.env"
 
@@ -50,15 +51,9 @@ case "$MAX_RUNTIME_SECONDS" in
     ;;
 esac
 
-if [ ! -x "$CHECK_SCRIPT" ]; then
-  echo "expected test-harness soft-budget checker to be executable: $CHECK_SCRIPT" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECK_SCRIPT" "expected test-harness soft-budget checker to be executable: $CHECK_SCRIPT"
 
-if [ ! -f "$TREND_THRESHOLD_FILE" ]; then
-  echo "expected trend threshold file to exist: $TREND_THRESHOLD_FILE" >&2
-  exit 1
-fi
+test_harness_require_file "$TREND_THRESHOLD_FILE" "expected trend threshold file to exist: $TREND_THRESHOLD_FILE"
 
 mkdir -p "$(dirname "$OUTPUT_JSON")"
 

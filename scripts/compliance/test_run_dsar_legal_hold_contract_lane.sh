@@ -2,26 +2,21 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_contract_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_deep_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json"
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected DSAR legal-hold contract lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CONTRACT_LANE" "expected DSAR legal-hold contract lane script to be executable"
 
 if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_LANE"; then
   echo "expected DSAR legal-hold contract lane wrapper to delegate via manifest runner" >&2
   exit 1
 fi
 
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected shared non-Kolme dispatcher to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DISPATCHER" "expected shared non-Kolme dispatcher to be executable"
 
 resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST" ]; then
@@ -37,20 +32,11 @@ if ! grep -q '"phase": "contract"' "$MANIFEST"; then
   exit 1
 fi
 
-if [ ! -x "$SHARED_CONTRACT" ]; then
-  echo "expected shared DSAR legal-hold contract lane implementation to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SHARED_CONTRACT" "expected shared DSAR legal-hold contract lane implementation to be executable"
 
-if [ ! -f "$MANIFEST" ]; then
-  echo "expected DSAR legal-hold contract lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MANIFEST" "expected DSAR legal-hold contract lane manifest to exist"
 
-if [ ! -x "$DEEP_LANE" ]; then
-  echo "expected DSAR legal-hold deep lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_LANE" "expected DSAR legal-hold deep lane script to be executable"
 
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "dsar legal-hold contract lane tests passed."; then

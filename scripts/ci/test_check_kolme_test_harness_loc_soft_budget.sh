@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 REPORT_SCRIPT="$ROOT_DIR/scripts/ci/generate_kolme_test_harness_loc_report.sh"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_kolme_test_harness_loc_soft_budget.sh"
 BUDGET_FILE="$ROOT_DIR/.ci/kolme-test-harness-loc-soft-budget.env"
@@ -10,30 +11,15 @@ TREND_THRESHOLD_FILE="$ROOT_DIR/.ci/kolme-test-harness-loc-trend-thresholds.env"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$REPORT_SCRIPT" ]; then
-  echo "expected Kolme test harness LOC report script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$REPORT_SCRIPT" "expected Kolme test harness LOC report script to be executable"
 
-if [ ! -x "$CHECK_SCRIPT" ]; then
-  echo "expected Kolme test harness LOC soft budget checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECK_SCRIPT" "expected Kolme test harness LOC soft budget checker to be executable"
 
-if [ ! -f "$BUDGET_FILE" ]; then
-  echo "expected Kolme test harness soft budget file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BUDGET_FILE" "expected Kolme test harness soft budget file to exist"
 
-if [ ! -f "$BASELINE_FILE" ]; then
-  echo "expected Kolme test harness baseline file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FILE" "expected Kolme test harness baseline file to exist"
 
-if [ ! -f "$TREND_THRESHOLD_FILE" ]; then
-  echo "expected Kolme test harness trend threshold file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$TREND_THRESHOLD_FILE" "expected Kolme test harness trend threshold file to exist"
 
 REPORT_FILE="$TMP_DIR/kolme-test-harness-report.json"
 report_output="$(bash "$REPORT_SCRIPT" --output-json "$REPORT_FILE")"

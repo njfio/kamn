@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 PARSER_SCRIPT="$ROOT_DIR/scripts/ci/ignored_test_inventory.py"
 BASELINE_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_baseline.json"
 METADATA_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_metadata.json"
@@ -9,25 +10,13 @@ PROMOTION_CRITERIA_FILE="$ROOT_DIR/fixtures/ci/ignored_test_promotion_criteria.j
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$PARSER_SCRIPT" ]; then
-  echo "expected ignored-test inventory parser script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PARSER_SCRIPT" "expected ignored-test inventory parser script to be executable"
 
-if [ ! -f "$BASELINE_FILE" ]; then
-  echo "expected ignored-test baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FILE" "expected ignored-test baseline fixture to exist"
 
-if [ ! -f "$METADATA_FILE" ]; then
-  echo "expected ignored-test metadata fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$METADATA_FILE" "expected ignored-test metadata fixture to exist"
 
-if [ ! -f "$PROMOTION_CRITERIA_FILE" ]; then
-  echo "expected ignored-test promotion criteria fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$PROMOTION_CRITERIA_FILE" "expected ignored-test promotion criteria fixture to exist"
 
 SAMPLE_REPO="$TMP_DIR/sample-repo"
 mkdir -p "$SAMPLE_REPO/crates/sample/src"

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_observability_endpoint_drift_contract.sh"
 OBSERVABILITY_DOC="$ROOT_DIR/docs/foundation/observability-slo-dashboards.md"
 CONTRACT_DOC="$ROOT_DIR/docs/observability/contracts.md"
@@ -9,10 +10,7 @@ STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$CHECK_SCRIPT" ]; then
-  echo "expected observability endpoint drift checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECK_SCRIPT" "expected observability endpoint drift checker wrapper to be executable"
 
 report_file="$TMP_DIR/observability-endpoint-drift-report.json"
 check_output="$(

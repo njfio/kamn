@@ -2,25 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_deep_lane.sh"
 DEEP_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_deep_lane_impl.sh"
 DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_replay_redaction_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$DEEP_SCRIPT" ]; then
-  echo "expected bridge replay/redaction deep lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_SCRIPT" "expected bridge replay/redaction deep lane script to be executable"
 
-if [ ! -x "$DEEP_IMPL_SCRIPT" ]; then
-  echo "expected bridge replay/redaction deep lane implementation script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_IMPL_SCRIPT" "expected bridge replay/redaction deep lane implementation script to be executable"
 
-if [ ! -f "$DEEP_MANIFEST_FILE" ]; then
-  echo "expected bridge replay/redaction deep lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$DEEP_MANIFEST_FILE" "expected bridge replay/redaction deep lane manifest to exist"
 
 if [ ! -L "$DEEP_SCRIPT" ]; then
   echo "expected bridge replay/redaction deep lane wrapper to be a dispatcher symlink" >&2

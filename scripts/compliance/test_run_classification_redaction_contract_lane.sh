@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CONTRACT_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_contract_lane.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/classification_redaction_contract_lane_contract.py"
@@ -9,18 +10,12 @@ MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_classification_redact
 LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/compliance/check_classification_redaction_policy.sh"
 
-if [ ! -x "$CONTRACT_SCRIPT" ]; then
-  echo "expected classification/redaction contract lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CONTRACT_SCRIPT" "expected classification/redaction contract lane script to be executable"
 if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_SCRIPT"; then
   echo "expected classification/redaction contract lane wrapper to delegate via manifest runner" >&2
   exit 1
 fi
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected shared non-Kolme dispatcher to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DISPATCHER" "expected shared non-Kolme dispatcher to be executable"
 resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_SCRIPT")" --resolve-manifest-path)"
 if [ "$resolved_manifest" != "$MANIFEST" ]; then
   echo "expected classification/redaction contract lane wrapper to resolve classification manifest via dispatcher" >&2
@@ -34,22 +29,10 @@ if ! grep -q '"phase": "contract"' "$MANIFEST"; then
   echo "expected classification/redaction manifest phase metadata marker" >&2
   exit 1
 fi
-if [ ! -x "$SHARED_CONTRACT" ]; then
-  echo "expected shared classification/redaction contract lane implementation to be executable" >&2
-  exit 1
-fi
-if [ ! -f "$MANIFEST" ]; then
-  echo "expected classification/redaction contract lane manifest to exist" >&2
-  exit 1
-fi
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected classification/redaction lane script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$POLICY_CHECKER" ]; then
-  echo "expected classification/redaction policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SHARED_CONTRACT" "expected shared classification/redaction contract lane implementation to be executable"
+test_harness_require_file "$MANIFEST" "expected classification/redaction contract lane manifest to exist"
+test_harness_require_executable "$LANE_SCRIPT" "expected classification/redaction lane script to be executable"
+test_harness_require_executable "$POLICY_CHECKER" "expected classification/redaction policy checker script to be executable"
 
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT

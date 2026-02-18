@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
 LANE_IMPL="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane_impl.sh"
 SHARED_LANE="$ROOT_DIR/scripts/compliance/classification_redaction_lane_contract.py"
@@ -16,18 +17,9 @@ extract_value() {
   printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
 }
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected classification/redaction lane script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$LANE_IMPL" ]; then
-  echo "expected classification/redaction lane implementation to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected shared non-Kolme dispatcher to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected classification/redaction lane script to be executable"
+test_harness_require_executable "$LANE_IMPL" "expected classification/redaction lane implementation to be executable"
+test_harness_require_executable "$DISPATCHER" "expected shared non-Kolme dispatcher to be executable"
 
 if [ ! -L "$LANE_SCRIPT" ]; then
   echo "expected classification/redaction lane wrapper to be a dispatcher symlink" >&2
@@ -47,10 +39,7 @@ if ! grep -q 'run_classification_redaction_lane_impl.sh' "$MANIFEST_FILE"; then
   exit 1
 fi
 
-if [ ! -x "$SHARED_LANE" ]; then
-  echo "expected shared classification/redaction lane implementation to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SHARED_LANE" "expected shared classification/redaction lane implementation to be executable"
 
 go_report="$TMP_DIR/classification-redaction-go.json"
 go_output="$(

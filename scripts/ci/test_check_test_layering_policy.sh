@@ -2,16 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_test_layering_policy.py"
 POLICY_DOC="$ROOT_DIR/docs/planning/test_layering_policy.md"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected test-layering policy checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected test-layering policy checker to be executable"
 
 python3 "$CHECKER" \
   --policy-doc "$POLICY_DOC" \

@@ -2,20 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 MATRIX_SCRIPT="$ROOT_DIR/scripts/canary/run_launch_canary_matrix.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/launch_canary/critical_path_probe_cases.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
-if [ ! -x "$MATRIX_SCRIPT" ]; then
-  echo "expected launch canary matrix runner to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$MATRIX_SCRIPT" "expected launch canary matrix runner to be executable"
 
-if [ ! -f "$FIXTURE_FILE" ]; then
-  echo "expected launch canary fixture file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$FIXTURE_FILE" "expected launch canary fixture file to exist"
 
 python3 "$MATRIX_SCRIPT" \
   --fixture "$FIXTURE_FILE" \

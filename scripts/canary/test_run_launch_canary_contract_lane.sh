@@ -2,29 +2,18 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_SCRIPT="$ROOT_DIR/scripts/canary/run_launch_canary_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/canary/run_launch_canary_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/canary/launch_canary_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/canary_launch_canary_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected launch canary fast-lane runner to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_SCRIPT" "expected launch canary fast-lane runner to be executable"
 
-if [ ! -x "$DEEP_SCRIPT" ]; then
-  echo "expected launch canary deep-lane runner to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$SHARED_CONTRACT" ]; then
-  echo "expected launch canary shared contract-lane module to be executable" >&2
-  exit 1
-fi
-if [ ! -f "$MANIFEST" ]; then
-  echo "expected launch canary contract-lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_SCRIPT" "expected launch canary deep-lane runner to be executable"
+test_harness_require_executable "$SHARED_CONTRACT" "expected launch canary shared contract-lane module to be executable"
+test_harness_require_file "$MANIFEST" "expected launch canary contract-lane manifest to exist"
 
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT

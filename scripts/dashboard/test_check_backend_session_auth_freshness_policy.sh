@@ -2,20 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/dashboard/run_backend_session_auth_freshness_lane.sh"
 CHECKER="$ROOT_DIR/scripts/dashboard/check_backend_session_auth_freshness_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected dashboard backend session/auth freshness lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected dashboard backend session/auth freshness lane script to be executable"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected dashboard backend session/auth freshness policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected dashboard backend session/auth freshness policy checker script to be executable"
 
 go_report="$TMP_DIR/dashboard-backend-session-auth-freshness-go.json"
 KAMN_DASHBOARD_BACKEND_SESSION_SKIP_COMMANDS=true \

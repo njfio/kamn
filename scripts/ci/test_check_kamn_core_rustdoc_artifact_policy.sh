@@ -2,15 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 POLICY_SCRIPT="$ROOT_DIR/scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$POLICY_SCRIPT" ]; then
-  echo "expected rustdoc artifact policy checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$POLICY_SCRIPT" "expected rustdoc artifact policy checker to be executable"
 
 ARTIFACT_FILE="$TMP_DIR/kamn-core-rustdoc.tar.gz"
 printf 'rustdoc-artifact-contract\n' >"$TMP_DIR/content.txt"
