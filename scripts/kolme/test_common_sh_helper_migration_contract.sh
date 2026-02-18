@@ -35,6 +35,16 @@ TARGET_FILES=(
 
 reason_codes=()
 
+matches_pattern() {
+  local pattern="$1"
+  local target="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --no-heading "$pattern" "$target"
+    return $?
+  fi
+  grep -Eq "$pattern" "$target"
+}
+
 add_reason() {
   local reason="$1"
   for existing in "${reason_codes[@]:-}"; do
@@ -52,15 +62,15 @@ for rel_path in "${TARGET_FILES[@]}"; do
     continue
   fi
 
-  if ! rg -q "source .*scripts/lib/common\\.sh" "$target"; then
+  if ! matches_pattern "source .*scripts/lib/common\\.sh" "$target"; then
     add_reason "missing_common_sh_source"
   fi
 
-  if rg -q "^extract_value\\(\\)" "$target"; then
+  if matches_pattern "^extract_value\\(\\)" "$target"; then
     add_reason "local_extract_value_definition_present"
   fi
 
-  if rg -q "^assert_eq\\(\\)" "$target"; then
+  if matches_pattern "^assert_eq\\(\\)" "$target"; then
     add_reason "local_assert_eq_definition_present"
   fi
 done
