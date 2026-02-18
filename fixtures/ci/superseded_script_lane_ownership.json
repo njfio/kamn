@@ -3,6 +3,22 @@
   "ownership_rules": [
     {
       "owner": "devops",
+      "path_prefix": "scripts/canary/"
+    },
+    {
+      "owner": "devops",
+      "path_prefix": "scripts/ci/"
+    },
+    {
+      "owner": "devops",
+      "path_prefix": "scripts/deploy/"
+    },
+    {
+      "owner": "governance",
+      "path_prefix": "scripts/governance/"
+    },
+    {
+      "owner": "devops",
       "path_prefix": "scripts/kolme/"
     }
   ]

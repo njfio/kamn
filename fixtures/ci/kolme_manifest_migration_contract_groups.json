@@ -199,6 +199,124 @@
           "contract_script": "scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py"
         }
       ]
+    },
+    "canary_cutover_contracts": {
+      "description": "canary+cutover",
+      "max_shell_loc": 80,
+      "success_message": "Canary manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/canary/run_launch_canary_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/canary_launch_canary_contract_lane.json",
+          "lane_id": "canary.launch_canary.contract",
+          "contract_script": "scripts/canary/launch_canary_contract_lane_contract.py"
+        },
+        {
+          "lane_script": "scripts/canary/run_post_cutover_slo_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json",
+          "lane_id": "canary.post_cutover_slo.contract",
+          "contract_script": "scripts/canary/post_cutover_slo_contract_lane_contract.py"
+        }
+      ]
+    },
+    "ci_budget_contracts": {
+      "description": "ci+budget+contracts",
+      "max_shell_loc": 140,
+      "success_message": "CI manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/ci/run_fast_gate_budget_delta_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json",
+          "lane_id": "ci.fast_gate_budget_delta.contract",
+          "contract_script": "scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh"
+        },
+        {
+          "lane_script": "scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json",
+          "lane_id": "ci.ignored_test_and_script_budget_trend.contract",
+          "contract_script": "scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh"
+        },
+        {
+          "lane_script": "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json",
+          "lane_id": "ci.kamn_core_rustdoc_artifact.contract",
+          "contract_script": "scripts/ci/kamn_core_rustdoc_artifact_contract_lane_impl.sh"
+        },
+        {
+          "lane_script": "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json",
+          "lane_id": "ci.kolme_test_harness_loc_soft_budget.contract",
+          "contract_script": "scripts/ci/kolme_test_harness_loc_soft_budget_contract_lane_impl.sh"
+        },
+        {
+          "lane_script": "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json",
+          "lane_id": "ci.test_harness_loc_soft_budget.contract",
+          "contract_script": "scripts/ci/test_harness_loc_soft_budget_contract_lane_impl.sh"
+        }
+      ]
+    },
+    "deploy_recovery_contracts": {
+      "description": "deploy+recovery+contracts",
+      "max_shell_loc": 140,
+      "success_message": "Deploy manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json",
+          "lane_id": "deploy.deployment_slo_rollback.contract",
+          "contract_script": "scripts/deploy/deployment_slo_rollback_contract_lane_contract.sh"
+        },
+        {
+          "lane_script": "scripts/deploy/run_dr_evidence_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/deploy_dr_evidence_contract_lane.json",
+          "lane_id": "deploy.dr_evidence.contract",
+          "contract_script": "scripts/deploy/dr_evidence_contract_lane_contract.sh"
+        },
+        {
+          "lane_script": "scripts/deploy/run_gonogo_evidence_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json",
+          "lane_id": "deploy.gonogo_evidence.contract",
+          "contract_script": "scripts/deploy/gonogo_evidence_contract_lane_contract.sh"
+        },
+        {
+          "lane_script": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json",
+          "lane_id": "deploy.staging_rehearsal.contract",
+          "contract_script": "scripts/deploy/staging_rehearsal_contract_lane_contract.sh"
+        }
+      ]
+    },
+    "governance_replay_risk_contracts": {
+      "description": "governance+replay+risk+contracts",
+      "max_shell_loc": 140,
+      "success_message": "Governance manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json",
+          "lane_id": "governance.lifecycle_rollback.contract",
+          "contract_script": "scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py"
+        },
+        {
+          "lane_script": "scripts/governance/run_governance_simulation_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/governance_simulation_contract_lane.json",
+          "lane_id": "governance.simulation.contract",
+          "contract_script": "scripts/governance/governance_simulation_contract_lane_contract.py"
+        },
+        {
+          "lane_script": "scripts/governance/run_quorum_attestation_replay_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json",
+          "lane_id": "governance.quorum_attestation_replay.contract",
+          "contract_script": "scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py"
+        },
+        {
+          "lane_script": "scripts/governance/run_stake_slash_risk_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json",
+          "lane_id": "governance.stake_slash_risk.contract",
+          "contract_script": "scripts/governance/stake_slash_risk_contract_lane_contract.py"
+        }
+      ]
     }
   }
 }
