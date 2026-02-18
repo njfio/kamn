@@ -54,4 +54,64 @@ if [ ! -L "$render_wrapper" ]; then
   exit 1
 fi
 
+invalid_schema_registry="$TMP_DIR/invalid-schema-registry.json"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$invalid_schema_registry" <<'JSON'
+{
+  "schema_version": "kamn.framework.lane-registry.invalid.v1",
+  "manifests": [],
+  "wrappers": []
+}
+JSON
+
+set +e
+invalid_schema_output="$(
+  python3 "$GENERATOR" \
+    --registry-file "$invalid_schema_registry" \
+    --repo-root "$ROOT_DIR" \
+    --mode check 2>&1
+)"
+invalid_schema_code=$?
+set -e
+
+if [ "$invalid_schema_code" -eq 0 ]; then
+  echo "expected lane artifact generator to fail on registry schema mismatch" >&2
+  exit 1
+fi
+
+printf '%s\n' "$invalid_schema_output" | grep -q '^status=fail$'
+printf '%s\n' "$invalid_schema_output" | grep -q '^error=registry schema_version mismatch$'
+
+invalid_wrapper_registry="$TMP_DIR/invalid-wrapper-registry.json"
+bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$invalid_wrapper_registry" <<'JSON'
+{
+  "schema_version": "kamn.framework.lane-registry.v1",
+  "manifests": [],
+  "wrappers": [
+    {
+      "wrapper_relpath": "scripts/demo/run_demo_contract_lane.sh",
+      "wrapper_name": "run_other_contract_lane.sh",
+      "link_target": "../framework/run_non_kolme_contract_lane_dispatch.sh"
+    }
+  ]
+}
+JSON
+
+set +e
+invalid_wrapper_output="$(
+  python3 "$GENERATOR" \
+    --registry-file "$invalid_wrapper_registry" \
+    --repo-root "$ROOT_DIR" \
+    --mode check 2>&1
+)"
+invalid_wrapper_code=$?
+set -e
+
+if [ "$invalid_wrapper_code" -eq 0 ]; then
+  echo "expected lane artifact generator to fail on wrapper shape mismatch" >&2
+  exit 1
+fi
+
+printf '%s\n' "$invalid_wrapper_output" | grep -q '^status=fail$'
+printf '%s\n' "$invalid_wrapper_output" | grep -q 'wrapper_relpath basename mismatch'
+
 echo "lane registry generation tests passed."
