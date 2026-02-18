@@ -133,6 +133,21 @@ def parse_deleted_script_paths(manifest_payload: dict[str, Any]) -> tuple[list[s
     return sorted(deleted_script_paths), sorted(set(reasons))
 
 
+def filter_enforced_deleted_script_paths(
+    *,
+    repo_root: Path,
+    deleted_script_paths: list[str],
+) -> list[str]:
+    enforced_paths: list[str] = []
+    for deleted_script_path in deleted_script_paths:
+        candidate_path = resolve_path(repo_root=repo_root, value=deleted_script_path)
+        if candidate_path.exists():
+            # Transitional state: entry is scheduled for a deletion wave but not yet removed.
+            continue
+        enforced_paths.append(deleted_script_path)
+    return sorted(enforced_paths)
+
+
 def collect_scan_files(*, repo_root: Path, scan_roots: list[str]) -> tuple[list[Path], list[str]]:
     files: list[Path] = []
     reasons: list[str] = []
@@ -187,6 +202,7 @@ def main(argv: list[str]) -> int:
         print("reason_codes=stale_script_reference_argument_invalid")
         print(f"reason_codes_csv={REASON_CODES_CSV}")
         print("deletion_entry_count=0")
+        print("enforced_deletion_entry_count=0")
         print("scan_root_count=0")
         print("scanned_file_count=0")
         print("stale_reference_count=0")
@@ -200,6 +216,7 @@ def main(argv: list[str]) -> int:
         print("reason_codes=stale_script_reference_output_json_required")
         print(f"reason_codes_csv={REASON_CODES_CSV}")
         print("deletion_entry_count=0")
+        print("enforced_deletion_entry_count=0")
         print("scan_root_count=0")
         print("scanned_file_count=0")
         print("stale_reference_count=0")
@@ -213,6 +230,7 @@ def main(argv: list[str]) -> int:
         print("reason_codes=stale_script_reference_argument_invalid")
         print(f"reason_codes_csv={REASON_CODES_CSV}")
         print("deletion_entry_count=0")
+        print("enforced_deletion_entry_count=0")
         print("scan_root_count=0")
         print("scanned_file_count=0")
         print("stale_reference_count=0")
@@ -229,6 +247,7 @@ def main(argv: list[str]) -> int:
     reason_codes: list[str] = []
     findings: list[dict[str, str]] = []
     deleted_script_paths: list[str] = []
+    enforced_deleted_script_paths: list[str] = []
     scan_files: list[Path] = []
     try:
         manifest_payload = load_json_object(
@@ -237,14 +256,18 @@ def main(argv: list[str]) -> int:
         )
         deleted_script_paths, manifest_reasons = parse_deleted_script_paths(manifest_payload)
         reason_codes.extend(manifest_reasons)
+        enforced_deleted_script_paths = filter_enforced_deleted_script_paths(
+            repo_root=repo_root,
+            deleted_script_paths=deleted_script_paths,
+        )
 
         scan_files, scan_reasons = collect_scan_files(repo_root=repo_root, scan_roots=scan_roots)
         reason_codes.extend(scan_reasons)
 
-        if not reason_codes and deleted_script_paths:
+        if not reason_codes and enforced_deleted_script_paths:
             findings = find_stale_references(
                 repo_root=repo_root,
-                deleted_script_paths=deleted_script_paths,
+                deleted_script_paths=enforced_deleted_script_paths,
                 files=scan_files,
             )
             if findings:
@@ -257,6 +280,7 @@ def main(argv: list[str]) -> int:
             reason_codes.append("stale_script_reference_argument_invalid")
         findings = []
         deleted_script_paths = []
+        enforced_deleted_script_paths = []
         scan_files = []
 
     reason_codes = sorted(set(reason_codes))
@@ -271,6 +295,7 @@ def main(argv: list[str]) -> int:
         "reason_codes": reason_codes_value,
         "metrics": {
             "deletion_entry_count": len(deleted_script_paths),
+            "enforced_deletion_entry_count": len(enforced_deleted_script_paths),
             "scan_root_count": len(scan_roots),
             "scanned_file_count": len(scan_files),
             "stale_reference_count": len(findings),
@@ -286,6 +311,7 @@ def main(argv: list[str]) -> int:
         print("reason_codes=stale_script_reference_output_write_failed")
         print(f"reason_codes_csv={REASON_CODES_CSV}")
         print(f"deletion_entry_count={len(deleted_script_paths)}")
+        print(f"enforced_deletion_entry_count={len(enforced_deleted_script_paths)}")
         print(f"scan_root_count={len(scan_roots)}")
         print(f"scanned_file_count={len(scan_files)}")
         print(f"stale_reference_count={len(findings)}")
@@ -297,6 +323,7 @@ def main(argv: list[str]) -> int:
     print(f"reason_codes={reason_codes_value}")
     print(f"reason_codes_csv={REASON_CODES_CSV}")
     print(f"deletion_entry_count={len(deleted_script_paths)}")
+    print(f"enforced_deletion_entry_count={len(enforced_deleted_script_paths)}")
     print(f"scan_root_count={len(scan_roots)}")
     print(f"scanned_file_count={len(scan_files)}")
     print(f"stale_reference_count={len(findings)}")

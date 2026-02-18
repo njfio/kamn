@@ -67,6 +67,62 @@ if bash "$CHECK_SCRIPT" \
 fi
 grep -q 'stale_script_reference_manifest_entry_invalid' "$TMP_DIR/invalid-entry.out"
 
+TRANSITIONAL_ROOT="$TMP_DIR/transitional-root"
+mkdir -p "$TRANSITIONAL_ROOT/docs/foundation" "$TRANSITIONAL_ROOT/.github/workflows" "$TRANSITIONAL_ROOT/scripts/framework/manifests" "$TRANSITIONAL_ROOT/scripts/runtime"
+cat >"$TRANSITIONAL_ROOT/docs/foundation/release-gonogo-checklist.md" <<'EOF'
+Still transitional:
+bash scripts/runtime/deprecated_entrypoint.sh
+EOF
+cat >"$TRANSITIONAL_ROOT/.github/workflows/ci-fast-gate.yml" <<'EOF'
+name: ci-fast-gate
+jobs:
+  stale:
+    steps:
+      - run: bash scripts/runtime/deprecated_entrypoint.sh
+EOF
+cat >"$TRANSITIONAL_ROOT/scripts/framework/manifests/runtime_legacy_lane.json" <<'EOF'
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.legacy.contract",
+  "phase": "contract",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/runtime/deprecated_entrypoint.sh"
+    ]
+  },
+  "wrapper_name": "run_legacy_contract_lane.sh"
+}
+EOF
+cat >"$TRANSITIONAL_ROOT/scripts/runtime/deprecated_entrypoint.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "legacy path still exists"
+EOF
+chmod +x "$TRANSITIONAL_ROOT/scripts/runtime/deprecated_entrypoint.sh"
+cat >"$TRANSITIONAL_ROOT/superseded_script_deletion_manifest.json" <<'EOF'
+{
+  "schema_version": "kamn.ci.superseded-script-deletion-manifest.v1",
+  "deletion_wave_id": "test-wave",
+  "deletions": [
+    {
+      "script_path": "scripts/runtime/deprecated_entrypoint.sh",
+      "reason_code": "superseded_by_manifest_lane_runner"
+    }
+  ]
+}
+EOF
+
+bash "$CHECK_SCRIPT" \
+  --repo-root "$TRANSITIONAL_ROOT" \
+  --deletion-manifest-file "$TRANSITIONAL_ROOT/superseded_script_deletion_manifest.json" \
+  --output-json "$TMP_DIR/transitional-reference-report.json" >"$TMP_DIR/transitional-reference.out"
+grep -q '^status=ok$' "$TMP_DIR/transitional-reference.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/transitional-reference.out"
+grep -q '^deletion_entry_count=1$' "$TMP_DIR/transitional-reference.out"
+grep -q '^enforced_deletion_entry_count=0$' "$TMP_DIR/transitional-reference.out"
+grep -q '^stale_reference_count=0$' "$TMP_DIR/transitional-reference.out"
+
 MUTATED_ROOT="$TMP_DIR/mutated-root"
 mkdir -p "$MUTATED_ROOT/docs/foundation" "$MUTATED_ROOT/.github/workflows" "$MUTATED_ROOT/scripts/framework/manifests"
 cat >"$MUTATED_ROOT/docs/foundation/release-gonogo-checklist.md" <<'EOF'
@@ -115,6 +171,7 @@ if bash "$CHECK_SCRIPT" \
   exit 1
 fi
 grep -q '^reason_codes=.*stale_script_reference_detected' "$TMP_DIR/stale-reference.out"
+grep -q '^enforced_deletion_entry_count=1$' "$TMP_DIR/stale-reference.out"
 grep -q '^stale_reference_count=3$' "$TMP_DIR/stale-reference.out"
 
 echo "stale-script reference checker tests passed."
