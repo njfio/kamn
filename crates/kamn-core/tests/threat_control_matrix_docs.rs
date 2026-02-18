@@ -33,7 +33,7 @@ fn matrix_maps_controls_to_tests() {
     assert!(CONTROL_MATRIX.contains("quorum_attestation_replay_guard_policy_contract"));
     assert!(CONTROL_MATRIX.contains("governance_quorum_attestation_replay_policy_contract.py"));
     assert!(CONTROL_MATRIX.contains("governance_quorum_attestation_replay_lane_contract.py"));
-    assert!(CONTROL_MATRIX.contains("run_quorum_attestation_replay_contract_lane.sh"));
+    assert!(CONTROL_MATRIX.contains("run_quorum_attestation_replay_guard_lane.sh"));
     assert!(CONTROL_MATRIX.contains("run_signer_policy_contract_lane.sh"));
     assert!(CONTROL_MATRIX
         .contains("functional_privileged_roles_deny_fallback_when_provider_unavailable"));

@@ -77,7 +77,7 @@ fn doc_contains_stake_slash_risk_threshold_evidence_contract() {
     assert!(DOC.contains("generate_stake_slash_risk_evidence_bundle.sh"));
     assert!(DOC.contains("check_stake_slash_risk_policy.sh"));
     assert!(DOC.contains("stake_slash_risk_contract_lane_contract.py"));
-    assert!(DOC.contains("run_stake_slash_risk_contract_lane.sh"));
+    assert!(DOC.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json --phase contract"));
     assert!(DOC.contains("run_stake_slash_risk_deep_lane.sh"));
     assert!(DOC.contains("run_stake_slash_risk_matrix.py"));
     assert!(DOC.contains("fixtures/governance_stake_slash/risk_threshold_cases.json"));
