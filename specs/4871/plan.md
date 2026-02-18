@@ -8,7 +8,17 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `AGENTS.md`
+- `.github/ISSUE_TEMPLATE/epic.md`
+- `.github/ISSUE_TEMPLATE/story.md`
+- `.github/ISSUE_TEMPLATE/task.md`
+- `.github/ISSUE_TEMPLATE/subtask.md`
+- `.github/pull_request_template.md`
+- `.github/CONTRIBUTING.md`
+- `scripts/ci/check_pr_ci_declaration.sh`
+- `scripts/ci/test_check_pr_ci_declaration.sh`
+- `scripts/ci/test_pr_template_shell_surface_markers_contract.sh`
+- `scripts/ci/test_shell_surface_issue_intake_contract.sh`
 
 ## Risks / Mitigations
 
