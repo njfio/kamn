@@ -1,6 +1,21 @@
 # Tasks — Issue #4879
 
-- [ ] T1 (Red): add or update failing tests mapped to conformance cases before implementation.
-- [ ] T2 (Green): implement minimal changes to satisfy all acceptance criteria.
-- [ ] T3 (Refactor): reduce duplication and improve maintainability while preserving deterministic outputs.
-- [ ] T4 (Verify): run required test tiers, capture evidence, and update process log/issue status.
+- [x] T1 (Red): add or update failing tests mapped to conformance cases before implementation.
+  - Evidence: ratchet probe on JSON-helper migration contract failed under raised threshold (`expected at least 100 migrated scripts using write_json_file helper, found: 102` with threshold temporarily set above current count), confirming fail-closed enforcement behavior before landing final threshold.
+- [x] T2 (Green): implement minimal changes to satisfy all acceptance criteria.
+  - Evidence: migrated remaining manual JSON heredoc writers in targeted script families to `scripts/lib/write_json_file.sh` and added CI-script root wiring for helper invocation.
+- [x] T3 (Refactor): reduce duplication and improve maintainability while preserving deterministic outputs.
+  - Evidence: tightened `scripts/lib/test_json_write_helper_migration_contract.sh` to require `>=100` helper adopters and zero manual cat-heredoc JSON writers outside helper usage.
+- [x] T4 (Verify): run required test tiers, capture evidence, and update process log/issue status.
+  - Evidence:
+    - `bash scripts/lib/test_json_write_helper_migration_contract.sh` -> passed
+    - `bash scripts/ci/test_generate_performance_smoke_report.sh` -> passed
+    - `bash scripts/ci/test_evaluate_budget.sh` -> passed
+    - `bash scripts/bridge/test_generate_bridge_replay_redaction_evidence_bundle.sh` -> passed
+    - `bash scripts/bridge/test_generate_localhost_bridge_demo_evidence_bundle.sh` -> passed
+    - `bash scripts/channel/test_generate_channel_retention_redaction_evidence_bundle.sh` -> passed
+    - `bash scripts/message/test_generate_group_sender_replay_ratchet_evidence_bundle.sh` -> passed
+    - `bash scripts/message/test_generate_key_lifecycle_invariant_evidence_bundle.sh` -> passed
+    - `bash scripts/reputation/test_generate_weighted_decay_property_evidence_bundle.sh` -> passed
+    - `bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh` -> passed
+    - `KAMN_CI_TOOLS_FAST_MODE=true timeout 900 bash scripts/ci/test_ci_tools.sh` -> passed

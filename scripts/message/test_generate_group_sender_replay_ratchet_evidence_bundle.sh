@@ -18,7 +18,7 @@ if [ ! -x "$POLICY_CHECKER" ]; then
 fi
 
 go_report="$TMP_DIR/group-replay-ratchet-go.json"
-cat >"$go_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$go_report" <<'JSON'
 {
   "status": "pass",
   "nonce_replay_detected": false,
@@ -44,7 +44,7 @@ assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO grou
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO group replay/ratchet policy decision"
 
 no_go_report="$TMP_DIR/group-replay-ratchet-no-go.json"
-cat >"$no_go_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$no_go_report" <<'JSON'
 {
   "status": "fail",
   "nonce_replay_detected": true,

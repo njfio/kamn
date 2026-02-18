@@ -3,7 +3,7 @@
 - Title: Subtask: add JSON emit/write helpers and migrate top manual JSON-construction scripts
 - Parent: - Parent task: #4867
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

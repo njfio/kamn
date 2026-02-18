@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 usage() {
   cat <<USAGE
 Usage: $0 --lane <fast-gate|deep-validate> --elapsed-seconds <seconds> [options]
@@ -249,7 +251,7 @@ if [ -n "$OUTPUT_JSON" ]; then
   retry_json="$(json_escape "$RETRY_USED")"
   message_json="$(json_escape "$MESSAGE")"
 
-  cat > "$OUTPUT_JSON" <<JSON
+  bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$OUTPUT_JSON" <<JSON
 {
   "timestamp_utc": "$ts",
   "lane": "$LANE",

@@ -18,7 +18,7 @@ if [ ! -x "$POLICY_CHECKER" ]; then
 fi
 
 compact_report="$TMP_DIR/weighted-decay-compact-go.json"
-cat >"$compact_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$compact_report" <<'JSON'
 {
   "schema_version": "kamn.reputation.weighted-decay.matrix.v1",
   "status": "pass",
@@ -49,7 +49,7 @@ cat >"$compact_report" <<'JSON'
 JSON
 
 adversarial_report="$TMP_DIR/weighted-decay-adversarial-go.json"
-cat >"$adversarial_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$adversarial_report" <<'JSON'
 {
   "schema_version": "kamn.reputation.weighted-decay.matrix.v1",
   "status": "pass",
@@ -93,7 +93,7 @@ assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO weig
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO weighted decay property policy decision"
 
 adversarial_fail_report="$TMP_DIR/weighted-decay-adversarial-fail.json"
-cat >"$adversarial_fail_report" <<'JSON'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$adversarial_fail_report" <<'JSON'
 {
   "schema_version": "kamn.reputation.weighted-decay.matrix.v1",
   "status": "fail",

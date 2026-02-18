@@ -25,7 +25,7 @@ localhost bridge relay demo contract lane tests passed.
 EOF_RELAY_GO
 
 go_replay_report="$TMP_DIR/replay-go.json"
-cat >"$go_replay_report" <<'EOF_REPLAY_GO'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$go_replay_report" <<'EOF_REPLAY_GO'
 {
   "status": "pass",
   "case_count": 2,
@@ -60,7 +60,7 @@ localhost bridge relay demo contract lane tests passed.
 EOF_RELAY_NOGO
 
 no_go_replay_report="$TMP_DIR/replay-no-go.json"
-cat >"$no_go_replay_report" <<'EOF_REPLAY_NOGO'
+bash "$KAMN_ROOT/scripts/lib/write_json_file.sh" "$no_go_replay_report" <<'EOF_REPLAY_NOGO'
 {
   "status": "pass",
   "case_count": 2,
