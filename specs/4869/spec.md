@@ -3,7 +3,7 @@
 - Title: Task: generate manifests and wrappers from lane registry source of truth (phase 7)
 - Parent: - Parent story: #4862
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
