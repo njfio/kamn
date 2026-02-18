@@ -507,6 +507,136 @@ milestone_missing_artifact_lineage_output="$(
 assert_eq "$(extract_value "$milestone_missing_artifact_lineage_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing artifact bundle"
 assert_eq "$(extract_value "$milestone_missing_artifact_lineage_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing linked artifact bundle"
 
+milestone_live_bundle_summary_missing_rollback_lineage="$TMP_DIR/milestone-live-bundle-summary.missing-rollback-lineage.json"
+cp "$milestone_live_bundle_summary" "$milestone_live_bundle_summary_missing_rollback_lineage"
+python3 - "$milestone_live_bundle_summary_missing_rollback_lineage" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+artifact_paths = payload.get("artifact_paths")
+if not isinstance(artifact_paths, list):
+    raise SystemExit("expected artifact_paths list in live bundle summary fixture")
+payload["artifact_paths"] = [
+    entry for entry in artifact_paths if isinstance(entry, str) and "rollback.json" not in entry
+]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+milestone_missing_rollback_lineage_bundle="$TMP_DIR/gonogo-milestone-missing-rollback-lineage.json"
+milestone_missing_rollback_lineage_output="$(
+  bash "$GENERATOR" \
+    --output-file "$milestone_missing_rollback_lineage_bundle" \
+    --release-candidate "v1.0.0-rc.4a" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:milestone-missing-rollback-lineage" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --deployment-preflight-summary-file "$milestone_preflight_summary" \
+    --deployment-preflight-policy-file "$milestone_preflight_policy" \
+    --live-node-validation-summary-file "$milestone_live_bundle_summary_missing_rollback_lineage" \
+    --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+    --go-no-go-gate-report-file "$milestone_gate_report"
+)"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed when rollback lineage link is missing"
+
+python3 - "$milestone_missing_rollback_lineage_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for missing rollback lineage case")
+if "milestone_review_live_node_validation_rollback_lineage_missing" not in reason_codes:
+    raise SystemExit("expected rollback lineage missing reason code in milestone review bundle")
+PY
+
+milestone_missing_rollback_lineage_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_missing_rollback_lineage_bundle")"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_policy_output" "status")" "ok" "expected policy checker deterministic NO-GO for missing rollback lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing rollback lineage bundle"
+milestone_missing_rollback_lineage_checker_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_missing_rollback_lineage_bundle" \
+    --expected-final-decision NO-GO \
+    --require-reason-code milestone_review_live_node_validation_rollback_lineage_missing
+)"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing rollback lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_rollback_lineage_checker_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing rollback lineage bundle"
+
+milestone_live_bundle_summary_missing_recovery_lineage="$TMP_DIR/milestone-live-bundle-summary.missing-recovery-lineage.json"
+cp "$milestone_live_bundle_summary" "$milestone_live_bundle_summary_missing_recovery_lineage"
+python3 - "$milestone_live_bundle_summary_missing_recovery_lineage" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+artifact_paths = payload.get("artifact_paths")
+if not isinstance(artifact_paths, list):
+    raise SystemExit("expected artifact_paths list in live bundle summary fixture")
+payload["artifact_paths"] = [
+    entry for entry in artifact_paths if isinstance(entry, str) and "recovery.json" not in entry
+]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+milestone_missing_recovery_lineage_bundle="$TMP_DIR/gonogo-milestone-missing-recovery-lineage.json"
+milestone_missing_recovery_lineage_output="$(
+  bash "$GENERATOR" \
+    --output-file "$milestone_missing_recovery_lineage_bundle" \
+    --release-candidate "v1.0.0-rc.4b" \
+    --schema-target-version "1.0.0" \
+    --runtime-image-digest "sha256:milestone-missing-recovery-lineage" \
+    --ci-fast-gate PASS \
+    --ci-deep-lane PASS \
+    --rollback-precheck PASS \
+    --rollback-trigger-status CLEAR \
+    --required-approvals 2 \
+    --received-approvals 2 \
+    --deployment-preflight-summary-file "$milestone_preflight_summary" \
+    --deployment-preflight-policy-file "$milestone_preflight_policy" \
+    --live-node-validation-summary-file "$milestone_live_bundle_summary_missing_recovery_lineage" \
+    --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+    --go-no-go-gate-report-file "$milestone_gate_report"
+)"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed when recovery lineage link is missing"
+
+python3 - "$milestone_missing_recovery_lineage_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for missing recovery lineage case")
+if "milestone_review_live_node_validation_recovery_lineage_missing" not in reason_codes:
+    raise SystemExit("expected recovery lineage missing reason code in milestone review bundle")
+PY
+
+milestone_missing_recovery_lineage_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$milestone_missing_recovery_lineage_bundle")"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_policy_output" "status")" "ok" "expected policy checker deterministic NO-GO for missing recovery lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing recovery lineage bundle"
+milestone_missing_recovery_lineage_checker_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_missing_recovery_lineage_bundle" \
+    --expected-final-decision NO-GO \
+    --require-reason-code milestone_review_live_node_validation_recovery_lineage_missing
+)"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "status")" "ok" "expected upgrade lineage checker deterministic NO-GO for missing recovery lineage bundle"
+assert_eq "$(extract_value "$milestone_missing_recovery_lineage_checker_output" "upgrade_lineage_final_decision")" "NO-GO" "expected upgrade lineage checker NO-GO decision for missing recovery lineage bundle"
+
 milestone_missing_runbook_marker_doc="$TMP_DIR/milestone-runbook-marker-missing.md"
 cat >"$milestone_missing_runbook_marker_doc" <<'TXT'
 # Upgrade Rollback Runbook
@@ -788,6 +918,51 @@ fi
 
 if ! printf '%s\n' "$milestone_lineage_tampered_checker_output" | grep -q "milestone review bundle lineage mismatch"; then
   echo "expected deterministic milestone lineage mismatch error from upgrade lineage checker" >&2
+  exit 1
+fi
+
+milestone_linked_artifact_contract_tampered_bundle="$TMP_DIR/gonogo-milestone-linked-artifact-contract-tampered.json"
+cp "$milestone_bundle" "$milestone_linked_artifact_contract_tampered_bundle"
+python3 - "$milestone_linked_artifact_contract_tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["milestone_review_bundle"]["contracts"]["linked_artifact_lineage_required"] = False
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+milestone_linked_artifact_contract_tampered_output="$(
+  bash "$POLICY_CHECKER" --bundle-file "$milestone_linked_artifact_contract_tampered_bundle" 2>&1
+)"
+milestone_linked_artifact_contract_tampered_code=$?
+set -e
+if [ "$milestone_linked_artifact_contract_tampered_code" -eq 0 ]; then
+  echo "expected policy checker to fail for tampered linked-artifact lineage contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_linked_artifact_contract_tampered_output" | grep -q "milestone review bundle lineage mismatch"; then
+  echo "expected deterministic milestone linked-artifact lineage contract mismatch error from policy checker" >&2
+  exit 1
+fi
+
+set +e
+milestone_linked_artifact_contract_tampered_checker_output="$(
+  python3 "$UPGRADE_LINEAGE_CHECKER" \
+    --bundle-file "$milestone_linked_artifact_contract_tampered_bundle" \
+    --expected-final-decision GO 2>&1
+)"
+milestone_linked_artifact_contract_tampered_checker_code=$?
+set -e
+if [ "$milestone_linked_artifact_contract_tampered_checker_code" -eq 0 ]; then
+  echo "expected upgrade lineage checker to fail for tampered linked-artifact lineage contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$milestone_linked_artifact_contract_tampered_checker_output" | grep -q "milestone review bundle lineage mismatch"; then
+  echo "expected deterministic milestone linked-artifact lineage contract mismatch error from upgrade lineage checker" >&2
   exit 1
 fi
 
