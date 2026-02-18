@@ -6,8 +6,203 @@
   "lane_ownership_schema_version": "kamn.ci.superseded-script-lane-ownership.v1",
   "migration_groups_schema_version": "kamn.kolme-manifest-migration-contract-groups.v1",
   "schema_version": "kamn.ci.superseded-script-inventory.v1",
-  "superseded_script_count": 25,
+  "superseded_script_count": 40,
   "superseded_scripts": [
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/canary/launch_canary_contract_lane_contract.py",
+        "lane_id": "canary.launch_canary.contract",
+        "manifest_file": "scripts/framework/manifests/canary_launch_canary_contract_lane.json",
+        "migration_group": "canary_cutover_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/canary/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/canary/run_launch_canary_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/canary/post_cutover_slo_contract_lane_contract.py",
+        "lane_id": "canary.post_cutover_slo.contract",
+        "manifest_file": "scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json",
+        "migration_group": "canary_cutover_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/canary/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/canary/run_post_cutover_slo_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh",
+        "lane_id": "ci.fast_gate_budget_delta.contract",
+        "manifest_file": "scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json",
+        "migration_group": "ci_budget_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/ci/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/ci/run_fast_gate_budget_delta_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh",
+        "lane_id": "ci.ignored_test_and_script_budget_trend.contract",
+        "manifest_file": "scripts/framework/manifests/ci_ignored_test_and_script_budget_trend_contract_lane.json",
+        "migration_group": "ci_budget_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/ci/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/ci/kamn_core_rustdoc_artifact_contract_lane_impl.sh",
+        "lane_id": "ci.kamn_core_rustdoc_artifact.contract",
+        "manifest_file": "scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json",
+        "migration_group": "ci_budget_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/ci/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/ci/kolme_test_harness_loc_soft_budget_contract_lane_impl.sh",
+        "lane_id": "ci.kolme_test_harness_loc_soft_budget.contract",
+        "manifest_file": "scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json",
+        "migration_group": "ci_budget_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/ci/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/ci/test_harness_loc_soft_budget_contract_lane_impl.sh",
+        "lane_id": "ci.test_harness_loc_soft_budget.contract",
+        "manifest_file": "scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json",
+        "migration_group": "ci_budget_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/ci/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/deploy/deployment_slo_rollback_contract_lane_contract.sh",
+        "lane_id": "deploy.deployment_slo_rollback.contract",
+        "manifest_file": "scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json",
+        "migration_group": "deploy_recovery_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/deploy/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/deploy/dr_evidence_contract_lane_contract.sh",
+        "lane_id": "deploy.dr_evidence.contract",
+        "manifest_file": "scripts/framework/manifests/deploy_dr_evidence_contract_lane.json",
+        "migration_group": "deploy_recovery_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/deploy/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/deploy/run_dr_evidence_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/deploy/gonogo_evidence_contract_lane_contract.sh",
+        "lane_id": "deploy.gonogo_evidence.contract",
+        "manifest_file": "scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json",
+        "migration_group": "deploy_recovery_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/deploy/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/deploy/run_gonogo_evidence_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/deploy/staging_rehearsal_contract_lane_contract.sh",
+        "lane_id": "deploy.staging_rehearsal.contract",
+        "manifest_file": "scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json",
+        "migration_group": "deploy_recovery_contracts",
+        "owner": "devops",
+        "ownership_rule_prefix": "scripts/deploy/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py",
+        "lane_id": "governance.lifecycle_rollback.contract",
+        "manifest_file": "scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json",
+        "migration_group": "governance_replay_risk_contracts",
+        "owner": "governance",
+        "ownership_rule_prefix": "scripts/governance/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/governance/governance_simulation_contract_lane_contract.py",
+        "lane_id": "governance.simulation.contract",
+        "manifest_file": "scripts/framework/manifests/governance_simulation_contract_lane.json",
+        "migration_group": "governance_replay_risk_contracts",
+        "owner": "governance",
+        "ownership_rule_prefix": "scripts/governance/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/governance/run_governance_simulation_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py",
+        "lane_id": "governance.quorum_attestation_replay.contract",
+        "manifest_file": "scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json",
+        "migration_group": "governance_replay_risk_contracts",
+        "owner": "governance",
+        "ownership_rule_prefix": "scripts/governance/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/governance/run_quorum_attestation_replay_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
+    {
+      "replacement_evidence": {
+        "contract_script": "scripts/governance/stake_slash_risk_contract_lane_contract.py",
+        "lane_id": "governance.stake_slash_risk.contract",
+        "manifest_file": "scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json",
+        "migration_group": "governance_replay_risk_contracts",
+        "owner": "governance",
+        "ownership_rule_prefix": "scripts/governance/",
+        "replacement_runner": "scripts/framework/run_manifest_lane.sh"
+      },
+      "script_path": "scripts/governance/run_stake_slash_risk_contract_lane.sh",
+      "supersession_reason_code": "superseded_by_manifest_lane_runner"
+    },
     {
       "replacement_evidence": {
         "contract_script": "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py",

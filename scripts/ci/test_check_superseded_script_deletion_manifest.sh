@@ -52,6 +52,46 @@ grep -q '^final_decision=GO$' "$TMP_DIR/check-pass.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/check-pass.out"
 grep -q '^reason_taxonomy_version=kamn.ci.superseded-script-deletion-manifest-reason-taxonomy.v1$' "$TMP_DIR/check-pass.out"
 
+python3 - "$DELETION_MANIFEST" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+deletions = manifest.get("deletions")
+if not isinstance(deletions, list):
+    raise SystemExit("deletion manifest must include deletions list")
+
+actual_paths = {
+    entry.get("script_path")
+    for entry in deletions
+    if isinstance(entry, dict) and isinstance(entry.get("script_path"), str)
+}
+expected_non_kolme_paths = {
+    "scripts/canary/run_launch_canary_contract_lane.sh",
+    "scripts/canary/run_post_cutover_slo_contract_lane.sh",
+    "scripts/ci/run_fast_gate_budget_delta_contract_lane.sh",
+    "scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh",
+    "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh",
+    "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
+    "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh",
+    "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh",
+    "scripts/deploy/run_dr_evidence_contract_lane.sh",
+    "scripts/deploy/run_gonogo_evidence_contract_lane.sh",
+    "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+    "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh",
+    "scripts/governance/run_governance_simulation_contract_lane.sh",
+    "scripts/governance/run_quorum_attestation_replay_contract_lane.sh",
+    "scripts/governance/run_stake_slash_risk_contract_lane.sh",
+}
+missing = sorted(expected_non_kolme_paths - actual_paths)
+if missing:
+    raise SystemExit(
+        "deletion manifest missing canary/ci/deploy/governance wave entries: "
+        + ", ".join(missing)
+    )
+PY
+
 INVALID_SCHEMA_MANIFEST="$TMP_DIR/invalid-schema-deletion-manifest.json"
 cp "$DELETION_MANIFEST" "$INVALID_SCHEMA_MANIFEST"
 python3 - "$INVALID_SCHEMA_MANIFEST" <<'PY'
