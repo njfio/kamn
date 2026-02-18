@@ -46,6 +46,8 @@ pub mod data_layer_m1;
 pub mod data_layer_m2_gateway_access;
 /// M3 search contracts for owner-scoped blind-index and metadata query APIs.
 pub mod data_layer_m3_blind_index_search;
+/// M4 escrow integration contracts for state transitions, scoped messaging, and settlement evidence.
+pub mod data_layer_m4_escrow_integration;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -257,6 +259,15 @@ pub use data_layer_m3_blind_index_search::{
     DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord,
     DataLayerM3MetadataQuery, DataLayerM3SearchCatalog, DataLayerM3SearchError,
     DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE, DATA_LAYER_M3_HASH_ALGORITHM,
+};
+pub use data_layer_m4_escrow_integration::{
+    DataLayerM4EscrowDraftInput, DataLayerM4EscrowRecord, DataLayerM4EscrowState,
+    DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
+    DataLayerM4EscrowTransitionEvidence, DataLayerM4EscrowVisibilityDecision,
+    DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
+    DataLayerM4SettlementEvidenceRecord, DataLayerM4SettlementEvidenceRegistry,
+    DataLayerM4SettlementEvidenceRegistryError, DATA_LAYER_M4_EVIDENCE_HASH_CHAIN_GENESIS,
+    DATA_LAYER_M4_HASH_ALGORITHM,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
