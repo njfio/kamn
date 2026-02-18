@@ -1,7 +1,7 @@
 # Issue #4960 Spec
 
 - Title: Task: add stale-script reference detector and fail-closed CI guard for deleted entrypoints
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
@@ -31,7 +31,18 @@ Out of scope:
 | C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
 
 ## Test Mapping
-- To be completed during implementation for issue #4960.
+- AC-1:
+  - `bash scripts/ci/test_check_stale_script_references.sh`
+  - `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
+- AC-2:
+  - `bash scripts/ci/test_check_stale_script_references.sh`
+  - `bash scripts/ci/check_stale_script_references.sh --output-json /tmp/stale-script-reference-report.json`
+- AC-3:
+  - `bash scripts/ci/test_check_stale_script_references.sh`
+  - `bash scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
+  - `bash scripts/ci/test_ci_tools_command_surface_contract.sh`
+- AC-4:
+  - `cargo test -p kamn-core checklist_contains_stale_script_reference_deletion_wave_gate -- --exact`
 
 ## Success Metrics
 - All ACs for #4960 are mapped to conformance cases and passing tests.
