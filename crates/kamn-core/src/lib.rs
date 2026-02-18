@@ -48,6 +48,8 @@ pub mod data_layer_m2_gateway_access;
 pub mod data_layer_m3_blind_index_search;
 /// M4 escrow integration contracts for state transitions, scoped messaging, and settlement evidence.
 pub mod data_layer_m4_escrow_integration;
+/// M5 vector-layer contracts for embedding ingestion, semantic retrieval, and anomaly scoring.
+pub mod data_layer_m5_vector_integration;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -268,6 +270,13 @@ pub use data_layer_m4_escrow_integration::{
     DataLayerM4SettlementEvidenceRecord, DataLayerM4SettlementEvidenceRegistry,
     DataLayerM4SettlementEvidenceRegistryError, DATA_LAYER_M4_EVIDENCE_HASH_CHAIN_GENESIS,
     DATA_LAYER_M4_HASH_ALGORITHM,
+};
+pub use data_layer_m5_vector_integration::{
+    DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode,
+    DataLayerM5EmbeddingRecord, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
+    DataLayerM5SemanticQuery, DataLayerM5SemanticQueryResult, DataLayerM5VectorIntegrationError,
+    DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS, DATA_LAYER_M5_HASH_ALGORITHM,
+    DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
