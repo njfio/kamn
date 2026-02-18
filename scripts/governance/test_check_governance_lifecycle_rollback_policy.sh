@@ -74,6 +74,66 @@ if ! grep -q '"rollback_gate_progress_stalled"' "$rollback_gate_drift_report"; t
   exit 1
 fi
 
+rollback_trigger_mismatch_report="$TMP_DIR/governance-lifecycle-rollback-trigger-mismatch.json"
+cp "$rollback_gate_drift_report" "$rollback_trigger_mismatch_report"
+python3 - "$rollback_trigger_mismatch_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["decision_reasons"] = ["governance_lifecycle_lane_failed"]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+rollback_trigger_mismatch_output_first="$(bash "$POLICY_CHECKER" --report-file "$rollback_trigger_mismatch_report" 2>&1)"
+rollback_trigger_mismatch_code_first=$?
+rollback_trigger_mismatch_output_second="$(bash "$POLICY_CHECKER" --report-file "$rollback_trigger_mismatch_report" 2>&1)"
+rollback_trigger_mismatch_code_second=$?
+set -e
+
+if [ "$rollback_trigger_mismatch_code_first" -eq 0 ] || [ "$rollback_trigger_mismatch_code_second" -eq 0 ]; then
+  echo "expected rollback trigger mismatch fixture to fail policy validation deterministically" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$rollback_trigger_mismatch_output_first" | grep -q "decision_reasons mismatch"; then
+  echo "expected rollback trigger mismatch fixture to emit decision_reasons mismatch marker" >&2
+  exit 1
+fi
+if [ "$rollback_trigger_mismatch_output_first" != "$rollback_trigger_mismatch_output_second" ]; then
+  echo "expected deterministic rollback trigger mismatch policy failure output across repeated checks" >&2
+  exit 1
+fi
+
+taxonomy_drift_report="$TMP_DIR/governance-lifecycle-rollback-taxonomy-drift.json"
+cp "$go_report" "$taxonomy_drift_report"
+python3 - "$taxonomy_drift_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["reason_taxonomy_codes_csv"] = "rollback_gate_progress_stalled,docs_contract_missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+taxonomy_drift_output="$(bash "$POLICY_CHECKER" --report-file "$taxonomy_drift_report" 2>&1)"
+taxonomy_drift_code=$?
+set -e
+
+if [ "$taxonomy_drift_code" -eq 0 ]; then
+  echo "expected rollback reason taxonomy drift fixture to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$taxonomy_drift_output" | grep -q "reason_taxonomy_codes_csv mismatch"; then
+  echo "expected rollback reason taxonomy drift fixture to emit taxonomy mismatch marker" >&2
+  exit 1
+fi
+
 tampered_report="$TMP_DIR/governance-lifecycle-rollback-tampered.json"
 cp "$no_go_report" "$tampered_report"
 python3 - "$tampered_report" <<'PY'
