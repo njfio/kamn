@@ -56,6 +56,8 @@ pub mod data_layer_m6_graph_integration;
 pub mod data_layer_m7_timeseries_telemetry;
 /// M8 compliance contracts for retention policy, legal hold, and crypto-shredding lifecycle.
 pub mod data_layer_m8_compliance_lifecycle;
+/// M9 realtime contracts for dispatch acknowledgements, scoped presence, and backpressure markers.
+pub mod data_layer_m9_realtime_delivery;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -308,6 +310,17 @@ pub use data_layer_m8_compliance_lifecycle::{
     DATA_LAYER_M8_CRYPTO_SHRED_REASON_CODE, DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS,
     DATA_LAYER_M8_EXTENDED_RETENTION_SECONDS, DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M8_RETENTION_DUE_REASON_CODE, DATA_LAYER_M8_STANDARD_RETENTION_SECONDS,
+};
+pub use data_layer_m9_realtime_delivery::{
+    DataLayerM9DispatchAckStatus, DataLayerM9DispatchOutcome, DataLayerM9DispatchRequest,
+    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9PresenceRecord,
+    DataLayerM9PresenceRelationshipRequest, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE,
+    DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE,
+    DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS,
+    DATA_LAYER_M9_BACKPRESSURE_WARNING_AFTER_SECONDS, DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES,
+    DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
