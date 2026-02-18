@@ -1,4 +1,4 @@
-use crate::runtime::{PeerLifecycleState, RuntimeLifecycleError};
+use crate::runtime::{PeerLifecycleState, RuntimeBackpressureError, RuntimeLifecycleError};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -92,11 +92,33 @@ pub enum P2pTransportError {
     InactivePeerLifecycleState(PeerLifecycleState),
     /// Lifecycle transition error.
     Lifecycle(RuntimeLifecycleError),
+    /// Runtime backpressure input/policy validation error.
+    RuntimeBackpressure(RuntimeBackpressureError),
+    /// Runtime backpressure rejected enqueue for queue saturation.
+    RuntimeBackpressureRejected {
+        /// Deterministic reason code for queue saturation rejection.
+        reason_code: &'static str,
+        /// Queue utilization per mille when rejection occurred.
+        queue_utilization_per_mille: u16,
+    },
+    /// Runtime backpressure purged stale queue while peer was disconnected.
+    RuntimeBackpressurePurgedStalePeerQueue {
+        /// Deterministic reason code for stale queue purge.
+        reason_code: &'static str,
+        /// Number of purged queue entries.
+        purged_entries: usize,
+    },
 }
 
 impl From<RuntimeLifecycleError> for P2pTransportError {
     fn from(value: RuntimeLifecycleError) -> Self {
         Self::Lifecycle(value)
+    }
+}
+
+impl From<RuntimeBackpressureError> for P2pTransportError {
+    fn from(value: RuntimeBackpressureError) -> Self {
+        Self::RuntimeBackpressure(value)
     }
 }
 
@@ -135,6 +157,9 @@ impl P2pTransportError {
             Self::StateUnavailable => "p2p_transport_state_unavailable",
             Self::InactivePeerLifecycleState(_) => "p2p_transport_inactive_lifecycle_state",
             Self::Lifecycle(error) => error.reason_code(),
+            Self::RuntimeBackpressure(error) => error.reason_code(),
+            Self::RuntimeBackpressureRejected { reason_code, .. } => reason_code,
+            Self::RuntimeBackpressurePurgedStalePeerQueue { reason_code, .. } => reason_code,
         }
     }
 }
@@ -206,6 +231,18 @@ impl Display for P2pTransportError {
                 )
             }
             Self::Lifecycle(error) => write!(f, "{error}"),
+            Self::RuntimeBackpressure(error) => write!(f, "{error}"),
+            Self::RuntimeBackpressureRejected {
+                queue_utilization_per_mille,
+                ..
+            } => write!(
+                f,
+                "p2p runtime inbox enqueue rejected by backpressure at {queue_utilization_per_mille} per mille utilization"
+            ),
+            Self::RuntimeBackpressurePurgedStalePeerQueue { purged_entries, .. } => write!(
+                f,
+                "p2p runtime inbox stale queue purged by backpressure; purged {purged_entries} entries"
+            ),
         }
     }
 }

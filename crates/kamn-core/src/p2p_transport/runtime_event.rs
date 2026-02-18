@@ -25,6 +25,10 @@ pub enum Libp2pBehaviorFailureClass {
     UnknownSenderPeer,
     /// Runtime frame send failed because recipient peer was unknown.
     UnknownRecipientPeer,
+    /// Runtime dispatch enqueue rejected by deterministic backpressure.
+    RuntimeBackpressureRejectNewEnqueue,
+    /// Runtime dispatch purged stale disconnected queue by deterministic backpressure.
+    RuntimeBackpressurePurgeStalePeerQueue,
 }
 
 impl Libp2pBehaviorFailureClass {
@@ -41,6 +45,10 @@ impl Libp2pBehaviorFailureClass {
             Self::RuntimeEventDrainChannelClosed => "p2p_libp2p_runtime_event_drain_channel_closed",
             Self::UnknownSenderPeer => "p2p_transport_unknown_sender_peer",
             Self::UnknownRecipientPeer => "p2p_transport_unknown_recipient_peer",
+            Self::RuntimeBackpressureRejectNewEnqueue => "runtime_backpressure_reject_new_enqueue",
+            Self::RuntimeBackpressurePurgeStalePeerQueue => {
+                "runtime_backpressure_purge_stale_peer_queue"
+            }
         }
     }
 }

@@ -1,4 +1,8 @@
 use super::*;
+use crate::runtime::{
+    DeterministicBackpressureController, RuntimeBackpressureAction, RuntimeBackpressureInput,
+    RuntimeBackpressurePolicy,
+};
 
 #[cfg(feature = "libp2p-live-transport")]
 use libp2p::{
@@ -13,6 +17,94 @@ pub enum Libp2pLiveRuntimeBackend {
     ContractDataPlane,
     /// Native socket-backed path used by feature-enabled runtime builds.
     NativeSocket,
+}
+
+const LIVE_RUNTIME_INBOX_QUEUE_CAPACITY: usize = 128;
+const LIVE_RUNTIME_INBOX_SLOW_THRESHOLD_PER_MILLE: u16 = 700;
+const LIVE_RUNTIME_INBOX_REJECT_THRESHOLD_PER_MILLE: u16 = 900;
+const LIVE_RUNTIME_INBOX_PURGE_DISCONNECTED_WITH_PENDING_QUEUE: bool = true;
+
+fn build_live_runtime_inbox_backpressure_controller(
+) -> Result<DeterministicBackpressureController, P2pTransportError> {
+    let policy = RuntimeBackpressurePolicy::new(
+        LIVE_RUNTIME_INBOX_SLOW_THRESHOLD_PER_MILLE,
+        LIVE_RUNTIME_INBOX_REJECT_THRESHOLD_PER_MILLE,
+        LIVE_RUNTIME_INBOX_PURGE_DISCONNECTED_WITH_PENDING_QUEUE,
+    )?;
+    Ok(DeterministicBackpressureController::new(policy))
+}
+
+fn enqueue_live_runtime_inbox_frame(
+    state: &mut Libp2pLiveDataPlaneState,
+    recipient_peer_id: &str,
+    lifecycle_state: PeerLifecycleState,
+    frame: PeerGossipFrame,
+) -> Result<(), P2pTransportError> {
+    let queue = state
+        .inbox_by_peer
+        .entry(recipient_peer_id.to_owned())
+        .or_default();
+    let controller = build_live_runtime_inbox_backpressure_controller()?;
+    let backpressure_peer_id = if recipient_peer_id.starts_with("kamn:did:") {
+        recipient_peer_id.to_owned()
+    } else {
+        format!("kamn:did:peer:{}", recipient_peer_id.replace(':', "-"))
+    };
+    let input = RuntimeBackpressureInput::new(
+        backpressure_peer_id.as_str(),
+        queue.len(),
+        LIVE_RUNTIME_INBOX_QUEUE_CAPACITY,
+        lifecycle_state,
+    )?;
+    let decision = controller.evaluate(input)?;
+    match decision.action {
+        RuntimeBackpressureAction::Accept | RuntimeBackpressureAction::SlowProducer => {
+            queue.push_back(frame);
+            Ok(())
+        }
+        RuntimeBackpressureAction::RejectNewEnqueue => {
+            Err(P2pTransportError::RuntimeBackpressureRejected {
+                reason_code: decision.reason_code(),
+                queue_utilization_per_mille: decision.queue_utilization_per_mille,
+            })
+        }
+        RuntimeBackpressureAction::PurgeStalePeerQueue => {
+            let purged_entries = queue.len();
+            queue.clear();
+            Err(P2pTransportError::RuntimeBackpressurePurgedStalePeerQueue {
+                reason_code: decision.reason_code(),
+                purged_entries,
+            })
+        }
+    }
+}
+
+fn runtime_backpressure_behavior_failure_class(
+    error: &P2pTransportError,
+) -> Option<Libp2pBehaviorFailureClass> {
+    match error {
+        P2pTransportError::RuntimeBackpressureRejected { .. } => {
+            Some(Libp2pBehaviorFailureClass::RuntimeBackpressureRejectNewEnqueue)
+        }
+        P2pTransportError::RuntimeBackpressurePurgedStalePeerQueue { .. } => {
+            Some(Libp2pBehaviorFailureClass::RuntimeBackpressurePurgeStalePeerQueue)
+        }
+        _ => None,
+    }
+}
+
+fn emit_backpressure_runtime_event(
+    state: &mut Libp2pLiveDataPlaneState,
+    peer_id: &str,
+    topic: &str,
+    error: &P2pTransportError,
+) {
+    let Some(class) = runtime_backpressure_behavior_failure_class(error) else {
+        return;
+    };
+    if let Ok(event) = Libp2pRuntimeEvent::behavior_failure(class, Some(peer_id), Some(topic)) {
+        state.runtime_events.push_back(event);
+    }
 }
 
 impl Libp2pLiveRuntimeBackend {
@@ -223,21 +315,34 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         {
+            let sender_peer_id = frame.sender_peer_id.clone();
+            let recipient_peer_id = frame.recipient_peer_id.clone();
+            let topic = frame.topic.clone();
+            let payload = frame.payload.clone();
+            if let Err(error) = enqueue_live_runtime_inbox_frame(
+                &mut state,
+                recipient_peer_id.as_str(),
+                PeerLifecycleState::Active,
+                frame,
+            ) {
+                emit_backpressure_runtime_event(
+                    &mut state,
+                    recipient_peer_id.as_str(),
+                    topic.as_str(),
+                    &error,
+                );
+                return Err(error);
+            }
             let published = Libp2pRuntimeEvent::gossip_published(
-                frame.sender_peer_id.as_str(),
-                frame.topic.as_str(),
-                frame.payload.as_str(),
+                sender_peer_id.as_str(),
+                topic.as_str(),
+                payload.as_str(),
             )?;
             let received = Libp2pRuntimeEvent::gossip_received(
-                frame.recipient_peer_id.as_str(),
-                frame.topic.as_str(),
-                frame.payload.as_str(),
+                recipient_peer_id.as_str(),
+                topic.as_str(),
+                payload.as_str(),
             )?;
-            state
-                .inbox_by_peer
-                .entry(frame.recipient_peer_id.clone())
-                .or_insert_with(VecDeque::new)
-                .push_back(frame);
             state.runtime_events.push_back(published);
             state.runtime_events.push_back(received);
             Ok(())
@@ -734,17 +839,37 @@ fn apply_libp2p_swarm_event_to_live_state(
     let payload = frame.payload.clone();
     let recipient_peer_id = frame.recipient_peer_id.clone();
     if let Ok(mut locked_state) = state.lock() {
-        locked_state
-            .inbox_by_peer
-            .entry(recipient_peer_id.clone())
-            .or_insert_with(VecDeque::new)
-            .push_back(frame);
-        if let Ok(event) = Libp2pRuntimeEvent::gossip_received(
+        let lifecycle_state = if locked_state
+            .peers_by_id
+            .contains_key(recipient_peer_id.as_str())
+        {
+            PeerLifecycleState::Active
+        } else {
+            PeerLifecycleState::Disconnected
+        };
+        match enqueue_live_runtime_inbox_frame(
+            &mut locked_state,
             recipient_peer_id.as_str(),
-            topic.as_str(),
-            payload.as_str(),
+            lifecycle_state,
+            frame,
         ) {
-            locked_state.runtime_events.push_back(event);
+            Ok(()) => {
+                if let Ok(event) = Libp2pRuntimeEvent::gossip_received(
+                    recipient_peer_id.as_str(),
+                    topic.as_str(),
+                    payload.as_str(),
+                ) {
+                    locked_state.runtime_events.push_back(event);
+                }
+            }
+            Err(error) => {
+                emit_backpressure_runtime_event(
+                    &mut locked_state,
+                    recipient_peer_id.as_str(),
+                    topic.as_str(),
+                    &error,
+                );
+            }
         }
     }
 }
