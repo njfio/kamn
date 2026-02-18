@@ -8,7 +8,13 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker.py`
+- `scripts/framework/test_declarative_policy_checker_contract.sh`
+- `scripts/lib/exec_dispatch.py`
+- `scripts/lib/test_exec_dispatch_registry.sh`
+- `docs/ci/strategy.md`
+- `docs/research/2026-02-18-declarative-policy-migration-telemetry.md`
 
 ## Risks / Mitigations
 
