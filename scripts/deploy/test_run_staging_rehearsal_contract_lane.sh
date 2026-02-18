@@ -187,8 +187,8 @@ if ! grep -Fq "check_staging_rehearsal_policy.sh" "$INCIDENT_READINESS_DOC"; the
   exit 1
 fi
 
-if ! grep -Fq "run_staging_rehearsal_contract_lane.sh" "$INCIDENT_READINESS_DOC"; then
-  echo "expected incident readiness ops doc to include rehearsal contract lane command" >&2
+if ! grep -Fq "run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json --phase contract" "$INCIDENT_READINESS_DOC"; then
+  echo "expected incident readiness ops doc to include manifest-backed rehearsal contract lane command" >&2
   exit 1
 fi
 

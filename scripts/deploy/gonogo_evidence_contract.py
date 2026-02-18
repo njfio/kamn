@@ -38,7 +38,7 @@ REQUIRED_OPERATOR_RUNBOOK_MARKERS = (
     "## Deployment SLO Evidence and Rollback Automation Contract",
     "run_deployment_slo_rollback_lane.sh",
     "check_deployment_slo_rollback_policy.sh",
-    "run_deployment_slo_rollback_contract_lane.sh",
+    "run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract",
     "kamn.deploy.slo-rollback-report.v1",
     "Regression: #944",
 )

@@ -85,7 +85,7 @@ def _read_required_doc_snippets() -> list[str]:
         "## Deployment SLO Evidence and Rollback Automation Contract",
         "run_deployment_slo_rollback_lane.sh",
         "check_deployment_slo_rollback_policy.sh",
-        "run_deployment_slo_rollback_contract_lane.sh",
+        "run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract",
         "kamn.deploy.slo-rollback-report.v1",
         "KAMN_DEPLOYMENT_SLO_ROLLBACK_MAX_SECONDS",
         "KAMN_DEPLOYMENT_SLO_ROLLBACK_CONTRACT_MAX_SECONDS",

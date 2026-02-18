@@ -121,8 +121,8 @@ fi
 if ! grep -q 'check_deployment_slo_rollback_policy.sh' "$RUNBOOK_DOC"; then
   fail "expected upgrade rollback runbook to reference deployment slo/rollback policy checker command"
 fi
-if ! grep -q 'run_deployment_slo_rollback_contract_lane.sh' "$RUNBOOK_DOC"; then
-  fail "expected upgrade rollback runbook to reference deployment slo/rollback contract lane command"
+if ! grep -q 'run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json --phase contract' "$RUNBOOK_DOC"; then
+  fail "expected upgrade rollback runbook to reference manifest-backed deployment slo/rollback contract lane command"
 fi
 if ! grep -q 'kamn.deploy.slo-rollback-report.v1' "$RUNBOOK_DOC"; then
   fail "expected upgrade rollback runbook to reference deployment slo/rollback schema marker"
