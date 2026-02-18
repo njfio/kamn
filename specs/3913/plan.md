@@ -1,7 +1,7 @@
 # Issue #3913 Plan
 
 - Issue: `#3913`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Reuse existing decode-path tests and extend coverage where redaction/marker drift is unguarded.

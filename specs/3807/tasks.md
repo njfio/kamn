@@ -1,7 +1,7 @@
 # Issue #3807 Tasks
 
 - Issue: `#3807`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Unit/Conformance): add signer-policy reason-taxonomy contract tests and capture initial fail against missing runtime-network taxonomy markers.

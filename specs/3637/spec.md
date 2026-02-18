@@ -1,7 +1,7 @@
 # Issue #3637 Spec
 
 - Title: `Task: extract signer policy module for profile normalization and quorum checks`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

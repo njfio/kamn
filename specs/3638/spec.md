@@ -1,7 +1,7 @@
 # Issue #3638 Spec
 
 - Title: `Task: deliver signer parity harness and migration completion`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

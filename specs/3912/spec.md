@@ -1,7 +1,7 @@
 # Issue #3912 Spec
 
 - Title: `Task: zeroize signer key decode/loading intermediates across runtime profiles`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P0`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

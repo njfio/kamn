@@ -1,7 +1,7 @@
 # Issue #3807 Plan
 
 - Issue: `#3807`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Introduce a dedicated signer-policy taxonomy contract test target under `crates/kamn-node/tests`.

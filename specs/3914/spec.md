@@ -1,7 +1,7 @@
 # Issue #3914 Spec
 
 - Title: `Subtask: add regression checks for signer secret redaction and decode-failure hygiene`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P0`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

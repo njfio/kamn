@@ -1,7 +1,7 @@
 # Issue #3808 Spec
 
 - Title: `Subtask: add signer extraction threshold and ownership budget guards`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

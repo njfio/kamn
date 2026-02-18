@@ -1,7 +1,7 @@
 # Issue #3638 Plan
 
 - Issue: `#3638`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Complete migration parity via focused child slices:

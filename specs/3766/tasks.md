@@ -1,7 +1,7 @@
 # Issue #3766 Tasks
 
 - Issue: `#3766`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Functional/Conformance): add failing signer migration docs parity contract test for missing matrix markers.

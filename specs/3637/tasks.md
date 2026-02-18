@@ -1,7 +1,7 @@
 # Issue #3637 Tasks
 
 - Issue: `#3637`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Unit/Functional): keep or add failing coverage for nonce retry determinism and managed backend provenance/reason-code behavior before extraction edits.

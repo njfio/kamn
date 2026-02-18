@@ -1,7 +1,7 @@
 # Issue #3766 Spec
 
 - Title: `Subtask: add signer migration parity matrix and legacy-behavior diff guard`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P1`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

@@ -1,7 +1,7 @@
 # Issue #3808 Plan
 
 - Issue: `#3808`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add dedicated contract test target for signer extraction budget/ownership/docs policy.

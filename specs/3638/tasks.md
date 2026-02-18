@@ -1,7 +1,7 @@
 # Issue #3638 Tasks
 
 - Issue: `#3638`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Conformance): add failing parity matrix/drift-guard tests for signer migration contracts.

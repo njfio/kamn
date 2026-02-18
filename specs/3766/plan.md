@@ -1,7 +1,7 @@
 # Issue #3766 Plan
 
 - Issue: `#3766`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add a signer migration parity matrix functional test in signer test ownership.

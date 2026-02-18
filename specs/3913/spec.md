@@ -1,7 +1,7 @@
 # Issue #3913 Spec
 
 - Title: `Subtask: add explicit zeroization to signer key decode and transient buffers`
-- Status: `Reviewed`
+- Status: `Implemented`
 - Priority: `P0`
 - Milestone: `specs/milestones/r26-2-service-edge-hardening/index.md`
 

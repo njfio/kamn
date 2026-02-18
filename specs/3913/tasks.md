@@ -1,7 +1,7 @@
 # Issue #3913 Tasks
 
 - Issue: `#3913`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Regression): verify success/failure zeroization unit tests remain active.

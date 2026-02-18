@@ -1,7 +1,7 @@
 # Issue #3808 Tasks
 
 - Issue: `#3808`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Functional/Conformance): add failing signer extraction budget/docs policy contract checks.
