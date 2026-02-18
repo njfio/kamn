@@ -205,6 +205,8 @@ required_snippets=(
   "check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave11_wrapper_family_baseline.json --output-json /tmp/kolme-wave11-wrapper-family-delta.json"
   "check_kolme_wave10_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-trend-report.json"
   "check_kolme_wave11_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave11_wrapper_family_baseline.json --output-json /tmp/kolme-wave11-wrapper-family-trend-report.json"
+  "check_kolme_wave_wrapper_family_budget_trend_impl.sh"
+  "test_kolme_wave_budget_trend_runner_contract.sh"
   "test_kolme_wave10_wrapper_family_baseline_contract.sh"
   "test_check_kolme_wave10_wrapper_family_budget_trend.sh"
   "test_kolme_wave11_wrapper_family_baseline_contract.sh"
