@@ -335,11 +335,14 @@ pub use data_layer_m6_graph_integration::{
 };
 pub use data_layer_m7_timeseries_telemetry::{
     DataLayerM7AgentDailyAggregate, DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
-    DataLayerM7NetworkHourlyAggregate, DataLayerM7OwnerBillingDailyProjection,
-    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry,
-    DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
-    DATA_LAYER_M7_AGGREGATE_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
-    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+    DataLayerM7BillingReconciliationDecision, DataLayerM7BillingReconciliationInput,
+    DataLayerM7BillingReconciliationReport, DataLayerM7NetworkHourlyAggregate,
+    DataLayerM7OwnerBillingDailyProjection, DataLayerM7TelemetryPointInput,
+    DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry, DataLayerM7TelemetryScopeQuery,
+    DataLayerM7TimeseriesError, DATA_LAYER_M7_AGGREGATE_REASON_CODE,
+    DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
+    DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS, DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
 };
 pub use data_layer_m8_compliance_lifecycle::{
     DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
