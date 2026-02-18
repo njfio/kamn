@@ -50,6 +50,8 @@ pub mod data_layer_m3_blind_index_search;
 pub mod data_layer_m4_escrow_integration;
 /// M5 vector-layer contracts for embedding ingestion, semantic retrieval, and anomaly scoring.
 pub mod data_layer_m5_vector_integration;
+/// M6 graph-layer contracts for owner-scoped schema, trust propagation, and portability.
+pub mod data_layer_m6_graph_integration;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -277,6 +279,14 @@ pub use data_layer_m5_vector_integration::{
     DataLayerM5SemanticQuery, DataLayerM5SemanticQueryResult, DataLayerM5VectorIntegrationError,
     DATA_LAYER_M5_EMBEDDING_HASH_CHAIN_GENESIS, DATA_LAYER_M5_HASH_ALGORITHM,
     DATA_LAYER_M5_VECTOR_DISTANCE_METRIC_COSINE,
+};
+pub use data_layer_m6_graph_integration::{
+    DataLayerM6GraphEdgeInput, DataLayerM6GraphEdgeRecord, DataLayerM6GraphEdgeRelation,
+    DataLayerM6GraphIntegrationError, DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind,
+    DataLayerM6GraphNodeRecord, DataLayerM6GraphRegistry, DataLayerM6PortableEdgeProjection,
+    DataLayerM6TrustPropagationQuery, DataLayerM6TrustPropagationResult,
+    DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE, DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE,
+    DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
