@@ -1,4 +1,4 @@
-//! M4 escrow integration contracts for state transitions, scoped visibility, and settlement evidence.
+//! M4 escrow integration contracts for transitions, scoped visibility, and settlement evidence reconciliation.
 //!
 //! This module models the PRD M4 escrow surface as deterministic Rust contracts:
 //! escrow lifecycle transitions, dispute-aware participant/auditor message visibility,
@@ -11,6 +11,41 @@ use std::fmt;
 pub const DATA_LAYER_M4_HASH_ALGORITHM: &str = "sha256";
 /// Genesis marker used by per-escrow settlement evidence hash chains.
 pub const DATA_LAYER_M4_EVIDENCE_HASH_CHAIN_GENESIS: &str = "GENESIS";
+/// Transition reason marker for `Created -> Funded`.
+pub const DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE: &str = "m4_escrow_funded";
+/// Transition reason marker for `Funded -> Active`.
+pub const DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE: &str = "m4_escrow_active";
+/// Transition reason marker for `Active -> Disputed`.
+pub const DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE: &str = "m4_escrow_disputed";
+/// Transition reason marker for release settlement.
+pub const DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE: &str = "m4_escrow_released";
+/// Transition reason marker for refund settlement.
+pub const DATA_LAYER_M4_ESCROW_REFUNDED_REASON_CODE: &str = "m4_escrow_refunded";
+/// Transition reason marker for expiry settlement.
+pub const DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE: &str = "m4_escrow_expired";
+/// Visibility reason marker for participant scope allow.
+pub const DATA_LAYER_M4_ESCROW_PARTICIPANT_SCOPE_ALLOWED_REASON_CODE: &str =
+    "m4_escrow_participant_scope_allowed";
+/// Visibility reason marker when auditor tries access outside disputed state.
+pub const DATA_LAYER_M4_ESCROW_AUDITOR_DISPUTE_REQUIRED_REASON_CODE: &str =
+    "m4_escrow_auditor_dispute_required";
+/// Visibility reason marker when auditor threshold is missing.
+pub const DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_CONFIGURED_REASON_CODE: &str =
+    "m4_escrow_auditor_threshold_not_configured";
+/// Visibility reason marker when auditor threshold is satisfied.
+pub const DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE: &str =
+    "m4_escrow_auditor_scope_allowed";
+/// Visibility reason marker when auditor threshold is not met.
+pub const DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE: &str =
+    "m4_escrow_auditor_threshold_not_met";
+/// Visibility reason marker for denied non-participant scope.
+pub const DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE: &str = "m4_escrow_scope_denied";
+/// Reconciliation reason marker for escrow/evidence match.
+pub const DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE: &str =
+    "m4_settlement_evidence_reconciliation_match";
+/// Reconciliation reason marker for escrow/evidence mismatch.
+pub const DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE: &str =
+    "m4_settlement_evidence_reconciliation_mismatch";
 
 /// Escrow state projection aligned to PRD M4 lifecycle markers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -404,35 +439,35 @@ impl DataLayerM4EscrowTransitionEngine {
             || request.requester_did == escrow.counterparty_did
         {
             return Ok(DataLayerM4EscrowVisibilityDecision::Allow {
-                reason_code: "m4_escrow_participant_scope_allowed",
+                reason_code: DATA_LAYER_M4_ESCROW_PARTICIPANT_SCOPE_ALLOWED_REASON_CODE,
             });
         }
 
         if escrow.auditor_did.as_deref() == Some(request.requester_did.as_str()) {
             if escrow.state != DataLayerM4EscrowState::Disputed {
                 return Ok(DataLayerM4EscrowVisibilityDecision::Deny {
-                    reason_code: "m4_escrow_auditor_dispute_required",
+                    reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_DISPUTE_REQUIRED_REASON_CODE,
                 });
             }
             let threshold = escrow.auditor_threshold.unwrap_or(0);
             if threshold == 0 {
                 return Ok(DataLayerM4EscrowVisibilityDecision::Deny {
-                    reason_code: "m4_escrow_auditor_threshold_not_configured",
+                    reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_CONFIGURED_REASON_CODE,
                 });
             }
             let shares = request.reconstructed_auditor_shares.unwrap_or(0);
             if shares >= threshold {
                 return Ok(DataLayerM4EscrowVisibilityDecision::Allow {
-                    reason_code: "m4_escrow_auditor_scope_allowed",
+                    reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
                 });
             }
             return Ok(DataLayerM4EscrowVisibilityDecision::Deny {
-                reason_code: "m4_escrow_auditor_threshold_not_met",
+                reason_code: DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE,
             });
         }
 
         Ok(DataLayerM4EscrowVisibilityDecision::Deny {
-            reason_code: "m4_escrow_scope_denied",
+            reason_code: DATA_LAYER_M4_ESCROW_SCOPE_DENIED_REASON_CODE,
         })
     }
 }
@@ -471,6 +506,38 @@ pub struct DataLayerM4SettlementEvidenceRecord {
     pub hash_chain_prev: String,
     /// Hash for this evidence record.
     pub record_hash: String,
+}
+
+/// Settlement evidence reconciliation decision for one terminal escrow projection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM4SettlementEvidenceReconciliationDecision {
+    /// Latest evidence row is consistent with terminal escrow projection.
+    Match,
+    /// Latest evidence row is missing or inconsistent with escrow projection.
+    Mismatch,
+}
+
+/// Reconciliation report linking terminal escrow projection to latest evidence row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM4SettlementEvidenceReconciliationReport {
+    /// Escrow identifier.
+    pub escrow_id: String,
+    /// Reconciliation decision.
+    pub decision: DataLayerM4SettlementEvidenceReconciliationDecision,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
+    /// Terminal escrow state used for reconciliation.
+    pub escrow_state: DataLayerM4EscrowState,
+    /// Receipt hash carried on terminal escrow projection.
+    pub escrow_settlement_receipt_hash: String,
+    /// Latest evidence sequence, if present.
+    pub evidence_sequence: Option<u64>,
+    /// Latest evidence settlement state, if present.
+    pub evidence_state: Option<DataLayerM4EscrowState>,
+    /// Latest evidence settlement receipt hash, if present.
+    pub evidence_settlement_receipt_hash: Option<String>,
+    /// Latest evidence settlement payload hash, if present.
+    pub evidence_settlement_payload_hash: Option<String>,
 }
 
 /// Append-only settlement evidence registry keyed by escrow identifier.
@@ -535,6 +602,83 @@ impl DataLayerM4SettlementEvidenceRegistry {
         };
         escrow_records.push(record.clone());
         Ok(record)
+    }
+
+    /// Reconciles terminal escrow projection with the latest settlement evidence row.
+    pub fn reconcile_against_escrow(
+        &self,
+        escrow: &DataLayerM4EscrowRecord,
+    ) -> Result<
+        DataLayerM4SettlementEvidenceReconciliationReport,
+        DataLayerM4SettlementEvidenceRegistryError,
+    > {
+        validate_non_empty(escrow.escrow_id.as_str(), "escrow_id")?;
+        if escrow.state != DataLayerM4EscrowState::Released
+            && escrow.state != DataLayerM4EscrowState::Refunded
+        {
+            return Err(
+                DataLayerM4SettlementEvidenceRegistryError::UnsupportedSettlementState(
+                    escrow.state,
+                ),
+            );
+        }
+        let escrow_settlement_receipt_hash =
+            escrow.settlement_receipt_hash.as_ref().cloned().ok_or(
+                DataLayerM4SettlementEvidenceRegistryError::EmptyField(
+                    "escrow_settlement_receipt_hash",
+                ),
+            )?;
+
+        if self
+            .records_by_escrow
+            .contains_key(escrow.escrow_id.as_str())
+        {
+            self.verify_escrow_integrity(escrow.escrow_id.as_str())?;
+            if let Some(records) = self.records_by_escrow.get(escrow.escrow_id.as_str()) {
+                if let Some(latest) = records.last() {
+                    let mismatch = latest.escrow_state != escrow.state
+                        || latest.settlement_receipt_hash != escrow_settlement_receipt_hash;
+                    let (decision, reason_code) = if mismatch {
+                        (
+                            DataLayerM4SettlementEvidenceReconciliationDecision::Mismatch,
+                            DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE,
+                        )
+                    } else {
+                        (
+                            DataLayerM4SettlementEvidenceReconciliationDecision::Match,
+                            DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MATCH_REASON_CODE,
+                        )
+                    };
+                    return Ok(DataLayerM4SettlementEvidenceReconciliationReport {
+                        escrow_id: escrow.escrow_id.clone(),
+                        decision,
+                        reason_code,
+                        escrow_state: escrow.state,
+                        escrow_settlement_receipt_hash,
+                        evidence_sequence: Some(latest.sequence),
+                        evidence_state: Some(latest.escrow_state),
+                        evidence_settlement_receipt_hash: Some(
+                            latest.settlement_receipt_hash.clone(),
+                        ),
+                        evidence_settlement_payload_hash: Some(
+                            latest.settlement_payload_hash.clone(),
+                        ),
+                    });
+                }
+            }
+        }
+
+        Ok(DataLayerM4SettlementEvidenceReconciliationReport {
+            escrow_id: escrow.escrow_id.clone(),
+            decision: DataLayerM4SettlementEvidenceReconciliationDecision::Mismatch,
+            reason_code: DATA_LAYER_M4_SETTLEMENT_EVIDENCE_RECONCILIATION_MISMATCH_REASON_CODE,
+            escrow_state: escrow.state,
+            escrow_settlement_receipt_hash,
+            evidence_sequence: None,
+            evidence_state: None,
+            evidence_settlement_receipt_hash: None,
+            evidence_settlement_payload_hash: None,
+        })
     }
 
     /// Verifies evidence hash-chain integrity for one escrow.
@@ -812,12 +956,22 @@ fn ensure_transition_allowed(
 
 fn reason_code_for_transition(action: &DataLayerM4EscrowTransitionAction) -> &'static str {
     match action {
-        DataLayerM4EscrowTransitionAction::Fund { .. } => "m4_escrow_funded",
-        DataLayerM4EscrowTransitionAction::Activate { .. } => "m4_escrow_active",
-        DataLayerM4EscrowTransitionAction::OpenDispute { .. } => "m4_escrow_disputed",
-        DataLayerM4EscrowTransitionAction::ResolveRelease { .. } => "m4_escrow_released",
-        DataLayerM4EscrowTransitionAction::ResolveRefund { .. } => "m4_escrow_refunded",
-        DataLayerM4EscrowTransitionAction::Expire { .. } => "m4_escrow_expired",
+        DataLayerM4EscrowTransitionAction::Fund { .. } => DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE,
+        DataLayerM4EscrowTransitionAction::Activate { .. } => {
+            DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE
+        }
+        DataLayerM4EscrowTransitionAction::OpenDispute { .. } => {
+            DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE
+        }
+        DataLayerM4EscrowTransitionAction::ResolveRelease { .. } => {
+            DATA_LAYER_M4_ESCROW_RELEASED_REASON_CODE
+        }
+        DataLayerM4EscrowTransitionAction::ResolveRefund { .. } => {
+            DATA_LAYER_M4_ESCROW_REFUNDED_REASON_CODE
+        }
+        DataLayerM4EscrowTransitionAction::Expire { .. } => {
+            DATA_LAYER_M4_ESCROW_EXPIRED_REASON_CODE
+        }
     }
 }
 
