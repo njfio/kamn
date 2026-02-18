@@ -26,6 +26,7 @@
     "scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh",
     "scripts/kolme/test_check_runtime_commit_replay_policy.sh",
     "scripts/kolme/test_check_signature_parity_policy.sh",
+    "scripts/kolme/test_common_sh_helper_migration_contract.sh",
     "scripts/kolme/test_generate_managed_signer_backend_slo_telemetry_bundle.sh",
     "scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh",
     "scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh",

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/lib/common.sh"
+ROOT_DIR="$KAMN_ROOT"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
 TMP_REPORT="$(mktemp)"
@@ -19,22 +20,6 @@ TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_FINALITY_REASON_MISMATCH_REPORT" "$TMP_SUBMIT_ONLY_REASON_MISMATCH_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_LINEAGE_CROSS_LINK_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
-
-extract_value() {
-  local output="$1"
-  local key="$2"
-  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
-}
-
-assert_eq() {
-  local actual="$1"
-  local expected="$2"
-  local message="$3"
-  if [ "$actual" != "$expected" ]; then
-    echo "$message: expected '$expected', got '$actual'" >&2
-    exit 1
-  fi
-}
 
 EXPECTED_SUBMIT_FINALITY_REASON_TAXONOMY_VERSION="kamn.kolme.local-runtime-commit-submit-finality-reason-taxonomy.v1"
 EXPECTED_SUBMIT_FINALITY_REASON_CODES_CSV="submit_finality_reason_mismatch_for_finality_enabled_run,submit_finality_reason_mismatch_for_submit_only_run"
