@@ -1,41 +1,44 @@
 # Issue #5015 Spec
 
 - Title: Story: cross-cutting conformance harness and shell-surface budget neutrality
-- Status: Draft
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Milestone: specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md
 
 ## Problem Statement
-Enforce PRD critical scenario conformance and ensure test orchestration remains Rust-first with net-zero shell LOC growth against active CI ratio thresholds.
+Enforce PRD critical scenario conformance and ensure test orchestration remains
+Rust-first with net-zero shell LOC growth against active CI ratio thresholds.
+Story delivery is completed through child task `#5028`.
 
 ## Acceptance Criteria
-- AC-1: Scope for issue #5015 is decomposed into explicit implementation/integration/validation outcomes with deterministic test evidence.
-- AC-2: The issue maps to PRD sections and conformance scenarios with clear test commands and result expectations.
-- AC-3: Shell-surface impact remains neutral by default (net shell LOC delta <= 0) unless explicitly waived with mitigation issue linkage.
+- AC-1: PRD critical scenario conformance (`62..71`) is implemented with deterministic and fail-closed evaluation behavior.
+- AC-2: Conformance gate reports only `Conformant` when all required scenarios pass under Rust-only orchestration policy.
+- AC-3: Shell-surface impact remains neutral for story delivery (`shell_loc_delta_actual = 0`).
 
 ## Scope
 In scope:
-- Issue-specific delivery for Story: cross-cutting conformance harness and shell-surface budget neutrality.
-- Contract-driven lifecycle artifacts (`spec.md`, `plan.md`, `tasks.md`).
-- Test-tier mapping and conformance evidence capture.
+- Story-level closure evidence for child deliverable `#5028`.
+- Story artifact normalization (`spec.md`, `plan.md`, `tasks.md`) to implemented lifecycle status.
+- PRD section 18.2 critical-scenario traceability and shell-neutral policy evidence.
 
 Out of scope:
-- Unapproved dependency/protocol changes.
-- Work outside the parent milestone scope.
+- Additional scenario classes outside PRD critical set `62..71`.
+- Dependency/protocol/wire-format changes.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute issue task plan for #5015 | Planned implementation/integration steps are completed with evidence |
-| C-02 | AC-2 | Conformance | Run mapped test commands for #5015 | All mapped conformance checks pass and produce deterministic markers |
-| C-03 | AC-3 | Regression | Run shell-surface and ratio governance checks | No net shell-surface regression without waiver |
+| C-01 | AC-1 | Functional | Run `data_layer_prd_critical_scenario_conformance` catalog + mutation guard tests | Required scenario set is deterministic and invalid/mutating inputs fail closed |
+| C-02 | AC-2 | Conformance | Run all-pass and failure-policy tests for conformance evaluator | Only fully passing Rust-only execution reaches `Conformant`; failures/policy violations are blocked |
+| C-03 | AC-3 | Regression | Inspect child task diff and shell guardrail evidence | `shell_loc_delta_actual = 0` and ratio posture improves/holds |
 
 ## Test Mapping
-- `cargo test -p kamn-core` (scoped by issue-specific suites)
-- `bash scripts/ci/check_shell_loc_hard_ceiling.sh` (when shell/python/workflow surface is touched)
-- `bash scripts/ci/check_shell_rust_ratio_guardrail.sh` (when shell/python/workflow surface is touched)
+- `cargo test -p kamn-core --test data_layer_prd_critical_scenario_conformance`
+- `cargo test -p kamn-core`
+- Shell governance scripts are not required for the story child implementation because shell/workflow/python/template surfaces were unchanged.
 
 ## Success Metrics
-- Issue #5015 reaches `Status: Implemented` with ACs mapped to passing conformance evidence.
-- Shell-to-Rust ratio guardrails remain within thresholds.
+- Story `#5015` closes with child task `#5028` merged and ACs mapped to deterministic passing tests.
+- PRD critical-scenario conformance remains reproducible and fail-closed.
+- Shell-to-Rust guardrail posture improves/holds with zero shell delta.
