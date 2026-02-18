@@ -1,23 +1,29 @@
 # Issue #4955 Plan
 
 - Issue: #4955
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4955 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4955 boundaries.
+- Deliver story through three tasks:
+  - `#4958` inventory + deletion-manifest contracts.
+  - `#4959` first deletion-wave execution.
+  - `#4960` stale-reference fail-closed detector and CI guard.
+- Synchronize story lifecycle docs after task closures.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4955.
+- `fixtures/ci/superseded_script_inventory_baseline.json`
+- `fixtures/ci/superseded_script_deletion_manifest.json`
+- `scripts/ci/superseded_script_inventory.py`
+- `scripts/ci/stale_script_reference_detector.py`
+- `scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- `scripts/ci/test_check_stale_script_references.sh`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: deletion manifest and references drift apart.
+- Mitigation: fail-closed stale-reference and manifest parity checks in CI.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve deletion-manifest schema and deterministic reason taxonomy outputs.
 
 ## ADR
-- Open ADR only if issue #4955 introduces architecture/dependency/protocol changes.
+- Not required.

@@ -1,38 +1,40 @@
 # Issue #4956 Spec
 
 - Title: Story: implement spec archival lifecycle and completed-issue archive policy enforcement
-- Status: Reviewed
+- Status: Implemented
 - Type: story
 - Priority: P0
 - Milestone: specs/milestones/r27-44-shell-loc-deletion-wave-and-hard-ceiling-governance/index.md
 
 ## Problem Statement
-Issue #4956 is part of the R27.44 shell maintainability tranche and closes one portion of the deletion-wave, spec-archival, and hard-ceiling governance gap.
+Completed issue specs were accumulating in active trees. The story required policy, tooling, and first-wave execution to establish a sustainable archival lifecycle.
 
 ## Acceptance Criteria
-- AC-1: Scope defined in GitHub issue #4956 is implemented and verified.
-- AC-2: Deterministic fail-closed behavior is preserved for drift/regression scenarios.
-- AC-3: Required Unit/Functional/Integration/Regression tests are present and passing.
-- AC-4: Documentation/process markers remain synchronized where issue scope requires docs updates.
+- AC-1: Archival policy and deterministic placement rules are documented and marker-enforced.
+- AC-2: Archival tooling moves completed specs safely with deterministic outputs.
+- AC-3: Initial archive migration wave publishes traceable archive index/report artifacts.
+- AC-4: Active-vs-archived placement parity contracts remain green.
 
 ## Scope
 In scope:
-- Work explicitly described in issue #4956.
+- Archive policy marker definition.
+- Archive migration tooling and contract tests.
+- First archive migration wave and parity hardening.
 
 Out of scope:
-- Unrelated feature expansion outside the issue boundary.
+- Non-spec archival domains.
 
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | Execute scoped workflow for #4956 | Behavior matches issue acceptance criteria |
-| C-02 | AC-2 | Regression | Inject marker/schema/taxonomy drift scenario | Policy/output fails closed with deterministic reasons |
-| C-03 | AC-3 | Unit/Integration | Run scoped tests and lane checks | Required suites pass |
-| C-04 | AC-4 | Functional/Regression | Validate docs/process marker contract checks | Marker parity remains verified |
+| C-01 | AC-1 | Functional | archive policy docs + marker checks | deterministic policy marker coverage |
+| C-02 | AC-2 | Functional | archive tool execution/tests | deterministic archive outputs |
+| C-03 | AC-3 | Integration | archive index/report publication | first-wave archive map published |
+| C-04 | AC-4 | Regression | `bash scripts/ci/test_check_spec_archive_policy.sh` | placement/index parity fail-closed behavior |
 
 ## Test Mapping
-- To be completed during implementation for issue #4956.
+- AC-1..AC-4: `bash scripts/ci/test_check_spec_archive_policy.sh`
+- Child task evidence: `#4961`, `#4962`, `#4963`
 
 ## Success Metrics
-- All ACs for #4956 are mapped to conformance cases and passing tests.
-- No shell-surface governance regressions introduced by #4956.
+- Archive lifecycle story completed with policy/tooling/wave evidence and contract enforcement.

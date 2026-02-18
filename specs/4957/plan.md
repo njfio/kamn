@@ -1,23 +1,31 @@
 # Issue #4957 Plan
 
 - Issue: #4957
-- Status: Planned
+- Status: Implemented
 
 ## Approach
-- Implement issue #4957 using Red -> Green -> Refactor -> Regression loop.
-- Keep shell-surface and process-contract outputs deterministic and fail closed.
-- Limit scope strictly to issue #4957 boundaries.
+- Deliver story through tasks:
+  - `#4964` hard ceiling checker lifecycle completion.
+  - `#4965` fast-gate wiring for ceiling+ratio required checks.
+  - `#4966` ratchet/waiver governance enforcement.
+- Synchronize story lifecycle docs post task-closure.
 
 ## Affected Modules
-- To be finalized in implementation branch for #4957.
+- `scripts/ci/check_shell_loc_hard_ceiling.sh`
+- `scripts/ci/check_shell_rust_ratio_guardrail.sh`
+- `scripts/ci/check_shell_surface_threshold_ratchet.py`
+- `scripts/ci/test_check_shell_loc_hard_ceiling.sh`
+- `scripts/ci/test_check_shell_rust_ratio_guardrail.sh`
+- `scripts/ci/test_check_shell_surface_threshold_ratchet.sh`
+- `scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh`
+- `.github/workflows/ci-fast-gate.yml`
 
 ## Risks and Mitigations
-- Risk level: high
-- Mitigation: phase work in small verifiable commits, keep contract-lane checks green, and gate merges on deterministic test evidence.
+- Risk: CI wiring or waiver policy drift reduces merge protection.
+- Mitigation: deterministic contract tests and required fast-gate checks.
 
 ## Interface Contract
-- No protocol/wire-format changes without explicit approval.
-- Reason taxonomy and marker outputs remain stable unless explicitly versioned.
+- Preserve checker reason-taxonomy/report schemas used by CI telemetry/policy lanes.
 
 ## ADR
-- Open ADR only if issue #4957 introduces architecture/dependency/protocol changes.
+- Not required.

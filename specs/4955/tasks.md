@@ -1,15 +1,16 @@
 # Issue #4955 Tasks
 
 - Issue: #4955
-- Status: Planned
+- Status: Implemented
 
 ## Ordered Tasks
-- T1 (Red): add failing tests derived from issue ACs and conformance cases.
-- T2 (Green): implement minimum change to satisfy tests deterministically.
-- T3 (Refactor): simplify and harden without changing behavior.
-- T4 (Regression): add drift/tamper/marker parity regression checks.
-- T5 (Docs): update required docs/process markers for issue #4955.
-- T6 (Verify): run scoped unit/functional/integration/regression checks and record evidence.
+- [x] T1: build superseded inventory + deletion-manifest contracts (`#4958`).
+- [x] T2: execute first deletion wave with parity validation (`#4959`).
+- [x] T3: enforce stale-reference fail-closed checks (`#4960`).
+- [x] T4: synchronize story lifecycle artifacts to Implemented.
 
 ## Completion Evidence
-- To be populated when issue #4955 implementation lands.
+- Tasks delivered: `#4958` (closed), `#4959` (closed), `#4960` (closed)
+- `bash scripts/ci/test_check_superseded_script_deletion_manifest.sh`
+- `bash scripts/ci/test_check_stale_script_references.sh`
+- `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
