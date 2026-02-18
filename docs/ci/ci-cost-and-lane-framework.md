@@ -6,6 +6,8 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 ## Budget Sources
 - Runtime/runner budgets: `.ci/ci-budget.env`
 - Fast-gate delta baseline/thresholds: `.ci/fast-gate-budget-delta.env`
+- Fast-gate downward ratchet baseline: `.ci/fast-gate-budget-delta-ratchet.env`
+- Fast-gate ratchet exception (optional): `.ci/fast-gate-budget-delta-ratchet-exception.json`
 - Script-surface budgets: `.ci/script-surface-budget.env`
 - Script-surface delta baseline: `.ci/script-surface-baseline.env`
 - Test-harness soft budget: `.ci/test-harness-loc-soft-budget.env`
@@ -112,6 +114,12 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - absolute and percentage variance
 
 `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed when positive variance exceeds configured limits without a valid waiver.
+
+Downward-only ratchet contract:
+
+- `.ci/fast-gate-budget-delta.env` must not exceed `.ci/fast-gate-budget-delta-ratchet.env`.
+- ratchet regressions fail closed with `reason_codes=fast_gate_delta_threshold_ratchet_regression_unwaived` unless a valid exception is present.
+- ratchet exceptions must link `mitigation_issue=#<issue-id>` and emit `reason_codes=fast_gate_delta_threshold_ratchet_exception_applied`.
 
 Fast-gate threshold metadata contract:
 
