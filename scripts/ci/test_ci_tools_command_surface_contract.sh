@@ -19,6 +19,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh"'

@@ -2424,6 +2424,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=wrapper_count_reduction_target_unmet`
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - shared checker runner and symlink entrypoint contract:
+      - runner: `scripts/ci/check_kolme_wave_wrapper_family_budget_trend_impl.sh`
+      - wrappers:
+        - `scripts/ci/check_kolme_wave8_wrapper_family_budget_trend.sh`
+        - `scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh`
+        - `scripts/ci/check_kolme_wave11_wrapper_family_budget_trend.sh`
+      - deterministic contract test:
+        - `bash scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh`
     - entrypoint wrapper contract (generated/symlink):
       - `scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh`
       - `scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh`
