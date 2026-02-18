@@ -13,6 +13,22 @@ pub const DATA_LAYER_M2_REQUESTER_DID_SETTING: &str = "kamn.requester_did";
 pub const DATA_LAYER_M2_HASH_ALGORITHM: &str = "sha256";
 /// Genesis marker for access-audit hash chains.
 pub const DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS: &str = "GENESIS";
+/// Reason marker for agent sender/recipient scope access.
+pub const DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED: &str =
+    "m2_agent_counterparty_scope_allowed";
+/// Reason marker for owner supervisory scope access.
+pub const DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED: &str = "m2_owner_scope_allowed";
+/// Reason marker for dispute-scoped escrow auditor access.
+pub const DATA_LAYER_M2_REASON_ESCROW_AUDITOR_SCOPE_ALLOWED: &str =
+    "m2_escrow_auditor_scope_allowed";
+/// Reason marker for fail-closed ABAC denials.
+pub const DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED: &str = "m2_abac_scope_denied";
+/// Negative authorization matrix result marker when all cases deny as expected.
+pub const DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE: &str =
+    "m2_negative_matrix_all_denied";
+/// Negative authorization matrix result marker when any case drifts.
+pub const DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE: &str =
+    "m2_negative_matrix_drift_detected";
 
 /// Input for DID-authenticated session issuance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -158,6 +174,64 @@ pub enum DataLayerM2AuthorizationDecision {
     },
 }
 
+/// One expected-deny authorization case in the M2 negative matrix.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM2NegativeAuthorizationCase {
+    /// Stable case identifier for evidence fixtures.
+    pub case_id: String,
+    /// Requester DID to evaluate.
+    pub requester_did: String,
+    /// Requester role to evaluate.
+    pub requester_role: DataLayerM2ActorRole,
+    /// Message scope under evaluation.
+    pub scope: DataLayerM2MessageScope,
+    /// Expected deny decision marker.
+    pub expected_denied: bool,
+    /// Deterministic event timestamp for emitted audit evidence.
+    pub event_epoch_seconds: u64,
+}
+
+/// Per-case audit fixture emitted by negative authorization matrix evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM2NegativeAuthorizationAuditFixture {
+    /// Stable case identifier.
+    pub case_id: String,
+    /// Whether the evaluated decision denied access.
+    pub denied: bool,
+    /// Expected deny marker from matrix input.
+    pub expected_denied: bool,
+    /// Whether actual decision drifted from expected deny marker.
+    pub mismatch: bool,
+    /// Deterministic decision reason code from authorization result.
+    pub decision_reason_code: &'static str,
+    /// Deterministic append-only audit record for this case.
+    pub audit_record: DataLayerM2AccessAuditRecord,
+}
+
+/// Aggregate matrix decision marker for negative authorization evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM2NegativeAuthorizationMatrixDecision {
+    /// All cases denied and matched expected deny markers.
+    AllDenied {
+        /// Stable result reason code.
+        reason_code: &'static str,
+    },
+    /// At least one case diverged from expected deny behavior.
+    DriftDetected {
+        /// Stable result reason code.
+        reason_code: &'static str,
+    },
+}
+
+/// Aggregate negative authorization matrix evaluation report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM2NegativeAuthorizationMatrixReport {
+    /// Aggregate decision.
+    pub decision: DataLayerM2NegativeAuthorizationMatrixDecision,
+    /// Per-case deterministic audit fixtures in input order.
+    pub fixtures: Vec<DataLayerM2NegativeAuthorizationAuditFixture>,
+}
+
 /// ABAC engine for M2 message visibility decisions.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DataLayerM2AbacEngine {
@@ -211,11 +285,11 @@ impl DataLayerM2AbacEngine {
             DataLayerM2ActorRole::Agent => {
                 if requester_did == scope.sender_did || requester_did == scope.recipient_did {
                     DataLayerM2AuthorizationDecision::Allow {
-                        reason_code: "m2_agent_counterparty_scope_allowed",
+                        reason_code: DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
                     }
                 } else {
                     DataLayerM2AuthorizationDecision::Deny {
-                        reason_code: "m2_abac_scope_denied",
+                        reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
                     }
                 }
             }
@@ -224,11 +298,11 @@ impl DataLayerM2AbacEngine {
                     || requester_did == scope.owner_recipient_did
                 {
                     DataLayerM2AuthorizationDecision::Allow {
-                        reason_code: "m2_owner_scope_allowed",
+                        reason_code: DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
                     }
                 } else {
                     DataLayerM2AuthorizationDecision::Deny {
-                        reason_code: "m2_abac_scope_denied",
+                        reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
                     }
                 }
             }
@@ -241,20 +315,87 @@ impl DataLayerM2AbacEngine {
                 let dispute_active = self.disputed_escrows.contains(escrow_id);
                 if !escrow_id.is_empty() && auditor_allowed && dispute_active {
                     DataLayerM2AuthorizationDecision::Allow {
-                        reason_code: "m2_escrow_auditor_scope_allowed",
+                        reason_code: DATA_LAYER_M2_REASON_ESCROW_AUDITOR_SCOPE_ALLOWED,
                     }
                 } else {
                     DataLayerM2AuthorizationDecision::Deny {
-                        reason_code: "m2_abac_scope_denied",
+                        reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
                     }
                 }
             }
             DataLayerM2ActorRole::PlatformOperator => DataLayerM2AuthorizationDecision::Deny {
-                reason_code: "m2_abac_scope_denied",
+                reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
             },
         };
 
         Ok(decision)
+    }
+
+    /// Evaluates an expected-deny authorization matrix and emits deterministic drift evidence.
+    pub fn evaluate_negative_authorization_matrix(
+        &self,
+        cases: &[DataLayerM2NegativeAuthorizationCase],
+    ) -> Result<DataLayerM2NegativeAuthorizationMatrixReport, DataLayerM2GatewayError> {
+        if cases.is_empty() {
+            return Err(DataLayerM2GatewayError::InvalidNegativeAuthorizationMatrix(
+                "cases",
+            ));
+        }
+
+        let mut fixtures = Vec::with_capacity(cases.len());
+        let mut audit_ledger = DataLayerM2AccessAuditLedger::new();
+        for case in cases {
+            if case.case_id.trim().is_empty() {
+                return Err(DataLayerM2GatewayError::InvalidNegativeAuthorizationMatrix(
+                    "case_id",
+                ));
+            }
+            if case.event_epoch_seconds == 0 {
+                return Err(DataLayerM2GatewayError::InvalidNegativeAuthorizationMatrix(
+                    "event_epoch_seconds",
+                ));
+            }
+
+            let decision = self.authorize_message_visibility(
+                case.requester_did.as_str(),
+                case.requester_role,
+                &case.scope,
+            )?;
+            let (denied, decision_reason_code) = match decision {
+                DataLayerM2AuthorizationDecision::Allow { reason_code } => (false, reason_code),
+                DataLayerM2AuthorizationDecision::Deny { reason_code } => (true, reason_code),
+            };
+            let mismatch = case.expected_denied != denied;
+            let audit_record = audit_ledger.append(DataLayerM2AccessAuditInput {
+                requester_did: case.requester_did.clone(),
+                action: format!("m2_negative_matrix:{}", case.case_id),
+                resource_id: case.scope.message_id.clone(),
+                reason_code: decision_reason_code.to_owned(),
+                event_epoch_seconds: case.event_epoch_seconds,
+            })?;
+            fixtures.push(DataLayerM2NegativeAuthorizationAuditFixture {
+                case_id: case.case_id.clone(),
+                denied,
+                expected_denied: case.expected_denied,
+                mismatch,
+                decision_reason_code,
+                audit_record,
+            });
+        }
+
+        let decision = if fixtures.iter().all(|fixture| fixture.denied)
+            && fixtures.iter().all(|fixture| !fixture.mismatch)
+        {
+            DataLayerM2NegativeAuthorizationMatrixDecision::AllDenied {
+                reason_code: DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
+            }
+        } else {
+            DataLayerM2NegativeAuthorizationMatrixDecision::DriftDetected {
+                reason_code: DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
+            }
+        };
+
+        Ok(DataLayerM2NegativeAuthorizationMatrixReport { decision, fixtures })
     }
 }
 
@@ -455,6 +596,8 @@ pub enum DataLayerM2GatewayError {
     },
     /// Access-audit sequence number not found.
     AuditSequenceNotFound(u64),
+    /// Negative authorization matrix input failed fail-closed validation.
+    InvalidNegativeAuthorizationMatrix(&'static str),
 }
 
 impl fmt::Display for DataLayerM2GatewayError {
@@ -479,6 +622,9 @@ impl fmt::Display for DataLayerM2GatewayError {
             }
             Self::AuditSequenceNotFound(sequence) => {
                 write!(f, "audit sequence not found: {sequence}")
+            }
+            Self::InvalidNegativeAuthorizationMatrix(field) => {
+                write!(f, "invalid negative authorization matrix input: {field}")
             }
         }
     }
