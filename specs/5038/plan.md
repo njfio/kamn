@@ -1,26 +1,34 @@
 # Issue #5038 Plan
 
 - Issue: #5038
-- Status: Draft
+- Status: Implemented
 
 ## Approach
-1. Create red tests and conformance assertions for issue scope.
-2. Implement minimal behavior to satisfy ACs.
-3. Refactor for maintainability while preserving deterministic outputs.
-4. Run scoped regression + governance gates before PR.
+1. Add RED conformance tests for queue-ordering visibility and duplicate-id
+   rejection markers in `data_layer_m9_realtime_delivery`.
+2. Implement additive queue snapshot API exposing deterministic
+   pending/deferred order under owner-scope authorization.
+3. Re-run/adjust presence and backpressure tests to keep deterministic reason
+   marker guarantees.
+4. Run scoped/full regression and shell guardrail evidence commands.
 
 ## Affected Modules
-- To be refined during implementation based on issue scope.
+- `crates/kamn-core/src/data_layer_m9_realtime_delivery.rs`
+- `crates/kamn-core/tests/data_layer_m9_realtime_delivery.rs`
+- `specs/5038/spec.md`
+- `specs/5038/plan.md`
+- `specs/5038/tasks.md`
 
 ## Risks and Mitigations
 - Risk level: medium
 - Mitigations:
-  - Keep diffs scoped to issue boundaries.
-  - Prefer Rust-native tests/harnesses to avoid shell-surface growth.
-  - Enforce shell budget and ratio checks when shell surfaces are touched.
+  - Keep additive API surface minimal and deterministic.
+  - Preserve fail-closed owner-scope checks on new queue snapshot API.
+  - Keep implementation Rust-only; avoid shell/workflow changes.
 
 ## Interface Contract
-- No dependency/protocol/wire-format change without explicit approval and ADR.
+- Additive API in `kamn_core::data_layer_m9_realtime_delivery` only.
+- No dependency/protocol/wire-format change.
 
 ## ADR
-- TBD per implementation decisions.
+- Not required for this scoped additive contract update.
