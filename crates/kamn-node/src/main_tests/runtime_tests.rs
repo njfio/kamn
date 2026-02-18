@@ -1035,6 +1035,30 @@ fn functional_transport_profile_classifier_accepts_planning_in_memory_profile_pa
 }
 
 #[test]
+fn regression_transport_profile_pair_disallowed_reason_code_is_stable() {
+    // Regression: #3880
+    let components = vec![
+        "p2p-transport-profile:libp2p-live".to_owned(),
+        "p2p-transport-profile:in-memory-deterministic".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::daemon(), true, &components),
+        Some("runtime_transport_profile_pair_disallowed")
+    );
+}
+
+#[test]
+fn regression_transport_profile_fallback_marker_linkage_reason_code_is_stable() {
+    // Regression: #3880
+    let components = vec!["p2p-in-memory-transport-fallback".to_owned()];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::planning(), true, &components),
+        Some("runtime_transport_profile_fallback_marker_without_in_memory_profile")
+    );
+}
+
+#[test]
 fn functional_production_transport_profile_classifier_rejects_contract_only_compile_mode() {
     let components = vec![
         "p2p-discovery".to_owned(),
