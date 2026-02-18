@@ -1,7 +1,7 @@
 # Issue #3914 Tasks
 
 - Issue: `#3914`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red): add failing regression test for decode-failure redaction.

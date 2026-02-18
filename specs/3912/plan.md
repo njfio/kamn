@@ -1,7 +1,7 @@
 # Issue #3912 Plan
 
 - Issue: `#3912`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Keep existing signer behavior intact.

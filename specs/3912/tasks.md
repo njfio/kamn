@@ -1,7 +1,7 @@
 # Issue #3912 Tasks
 
 - Issue: `#3912`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Ordered Tasks
 - T1 (Red, Regression): add failing decode-failure redaction test for signer private-key parse path.

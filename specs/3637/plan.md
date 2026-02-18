@@ -1,7 +1,7 @@
 # Issue #3637 Plan
 
 - Issue: `#3637`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Keep `signer_policy` as the policy boundary already extracted.

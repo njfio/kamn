@@ -1,7 +1,7 @@
 # Issue #3914 Plan
 
 - Issue: `#3914`
-- Status: `InProgress`
+- Status: `Completed`
 
 ## Approach
 - Add unit/regression assertion in signer decode path to ensure raw key input is not echoed in errors.
