@@ -13,6 +13,12 @@ pub const DATA_LAYER_M3_HASH_ALGORITHM: &str = "sha256";
 /// Normalization profile label used for blind-index value canonicalization.
 pub const DATA_LAYER_M3_BLIND_INDEX_NORMALIZATION_PROFILE: &str =
     "ascii-lowercase-whitespace-collapse";
+/// Blind-index determinism reason marker for baseline/observed match.
+pub const DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE: &str =
+    "m3_blind_index_determinism_stable";
+/// Blind-index determinism reason marker for baseline/observed drift.
+pub const DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE: &str =
+    "m3_blind_index_determinism_drifted";
 
 /// One stored message metadata projection with optional blind-index tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,6 +90,49 @@ pub struct DataLayerM3MetadataQuery {
     pub created_before_inclusive: Option<u64>,
     /// Optional maximum number of rows to return.
     pub limit: Option<usize>,
+}
+
+/// Input contract for blind-index search determinism evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM3BlindIndexDeterminismInput {
+    /// Owner DID scope for this query.
+    pub owner_did: String,
+    /// Blind-index field name.
+    pub field_name: String,
+    /// Blind-index token value.
+    pub token: String,
+    /// Baseline ordered message IDs expected from deterministic search output.
+    pub baseline_ordered_message_ids: Vec<String>,
+    /// Optional maximum number of rows to evaluate.
+    pub limit: Option<usize>,
+}
+
+/// Determinism decision for blind-index output comparison.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM3BlindIndexDeterminismDecision {
+    /// Baseline and observed outputs match.
+    Stable,
+    /// Baseline and observed outputs diverge.
+    Drifted,
+}
+
+/// Determinism report for blind-index output comparison.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM3BlindIndexDeterminismReport {
+    /// Determinism decision.
+    pub decision: DataLayerM3BlindIndexDeterminismDecision,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
+    /// Baseline ordered message IDs.
+    pub expected_message_ids: Vec<String>,
+    /// Observed ordered message IDs from live query.
+    pub observed_message_ids: Vec<String>,
+    /// Baseline IDs missing from observed output.
+    pub missing_message_ids: Vec<String>,
+    /// Observed IDs not present in baseline.
+    pub unexpected_message_ids: Vec<String>,
+    /// IDs present in both sets but in different rank positions.
+    pub out_of_order_message_ids: Vec<String>,
 }
 
 /// M3 search catalog for owner-scoped blind-index and metadata queries.
@@ -177,6 +226,103 @@ impl DataLayerM3SearchCatalog {
             results.truncate(limit);
         }
         Ok(results)
+    }
+
+    /// Evaluates blind-index exact-match output determinism against a baseline ordering.
+    pub fn evaluate_blind_index_determinism(
+        &self,
+        input: DataLayerM3BlindIndexDeterminismInput,
+    ) -> Result<DataLayerM3BlindIndexDeterminismReport, DataLayerM3SearchError> {
+        validate_kamn_did(input.owner_did.as_str())?;
+        let canonical_field_name = canonical_field_name(input.field_name.as_str())?;
+        validate_blind_index_token(canonical_field_name.as_str(), input.token.as_str())?;
+        let limit = resolve_limit(input.limit)?;
+        if input.baseline_ordered_message_ids.is_empty() {
+            return Err(DataLayerM3SearchError::EmptyField(
+                "baseline_ordered_message_ids",
+            ));
+        }
+
+        let mut baseline_seen = BTreeSet::new();
+        for message_id in &input.baseline_ordered_message_ids {
+            validate_non_empty(message_id.as_str(), "baseline_ordered_message_id")?;
+            if !baseline_seen.insert(message_id.clone()) {
+                return Err(DataLayerM3SearchError::DuplicateMessageId(
+                    message_id.clone(),
+                ));
+            }
+        }
+
+        let expected_message_ids = input.baseline_ordered_message_ids.clone();
+        let observed_message_ids = self
+            .search_blind_index(DataLayerM3BlindIndexQuery {
+                owner_did: input.owner_did,
+                field_name: canonical_field_name,
+                token: input.token,
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: Some(limit),
+            })?
+            .into_iter()
+            .map(|record| record.message_id)
+            .collect::<Vec<_>>();
+        let observed_ids_set = observed_message_ids
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let expected_ids_set = expected_message_ids
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let missing_message_ids = expected_message_ids
+            .iter()
+            .filter(|message_id| !observed_ids_set.contains(*message_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        let unexpected_message_ids = observed_message_ids
+            .iter()
+            .filter(|message_id| !expected_ids_set.contains(*message_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        let observed_rank = observed_message_ids
+            .iter()
+            .enumerate()
+            .map(|(rank, message_id)| (message_id.clone(), rank))
+            .collect::<BTreeMap<_, _>>();
+        let out_of_order_message_ids = expected_message_ids
+            .iter()
+            .enumerate()
+            .filter_map(|(rank, message_id)| {
+                observed_rank
+                    .get(message_id)
+                    .filter(|observed_rank| **observed_rank != rank)
+                    .map(|_| message_id.clone())
+            })
+            .collect::<Vec<_>>();
+
+        let drifted = !missing_message_ids.is_empty()
+            || !unexpected_message_ids.is_empty()
+            || !out_of_order_message_ids.is_empty();
+        let (decision, reason_code) = if drifted {
+            (
+                DataLayerM3BlindIndexDeterminismDecision::Drifted,
+                DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
+            )
+        } else {
+            (
+                DataLayerM3BlindIndexDeterminismDecision::Stable,
+                DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
+            )
+        };
+
+        Ok(DataLayerM3BlindIndexDeterminismReport {
+            decision,
+            reason_code,
+            expected_message_ids,
+            observed_message_ids,
+            missing_message_ids,
+            unexpected_message_ids,
+            out_of_order_message_ids,
+        })
     }
 
     /// Executes one owner-scoped metadata query.
