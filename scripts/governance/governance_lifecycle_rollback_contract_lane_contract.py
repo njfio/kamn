@@ -21,6 +21,15 @@ EXPECTED_REASON_TAXONOMY_CODES_CSV = (
     "rollback_contract_missing,rollback_gate_progress_stalled,"
     "runbook_marker_parity_bypass_detected,runtime_budget_exceeded"
 )
+ROLLBACK_TRIGGER_PARITY_REASON_CODES = [
+    "governance_lifecycle_lane_failed",
+    "rollback_gate_progress_stalled",
+    "docs_contract_missing",
+    "runbook_marker_parity_bypass_detected",
+]
+ROLLBACK_TRIGGER_PARITY_REASON_CODES_CSV = ",".join(
+    ROLLBACK_TRIGGER_PARITY_REASON_CODES
+)
 
 
 def usage() -> None:
@@ -158,6 +167,139 @@ def main(argv: list[str]) -> int:
         if no_go_policy_code != 0 or "final_decision=NO-GO" not in no_go_policy_output:
             return fail("expected governance lifecycle/rollback policy checker NO-GO decision")
 
+        rollback_trigger_parity_report = (
+            temp_path / "governance-lifecycle-rollback-trigger-parity.json"
+        )
+        rollback_trigger_parity_env = os.environ.copy()
+        rollback_trigger_parity_env["KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS"] = "true"
+        rollback_trigger_parity_env["KAMN_GOVERNANCE_LIFECYCLE_FORCE_LANE_FAILURE"] = "true"
+        rollback_trigger_parity_env[
+            "KAMN_GOVERNANCE_LIFECYCLE_FORCE_DOCS_CONTRACT_MISSING"
+        ] = "true"
+        rollback_trigger_parity_code, rollback_trigger_parity_output = run_capture(
+            ["bash", str(lane_script), "--output-file", str(rollback_trigger_parity_report)],
+            env=rollback_trigger_parity_env,
+            root_dir=root_dir,
+        )
+        if (
+            rollback_trigger_parity_code != 0
+            or "final_decision=NO-GO" not in rollback_trigger_parity_output
+        ):
+            return fail(
+                "expected governance lifecycle/rollback trigger parity fixture to produce NO-GO"
+            )
+
+        rollback_trigger_parity_payload = json.loads(
+            rollback_trigger_parity_report.read_text()
+        )
+        if (
+            rollback_trigger_parity_payload.get("decision_reasons")
+            != ROLLBACK_TRIGGER_PARITY_REASON_CODES
+        ):
+            return fail(
+                "expected governance lifecycle/rollback trigger parity fixture "
+                "to emit deterministic decision_reasons ordering"
+            )
+
+        rollback_trigger_parity_policy_code, rollback_trigger_parity_policy_output = (
+            run_capture(
+                [
+                    "bash",
+                    str(policy_checker),
+                    "--report-file",
+                    str(rollback_trigger_parity_report),
+                ],
+                root_dir=root_dir,
+            )
+        )
+        if (
+            rollback_trigger_parity_policy_code != 0
+            or "final_decision=NO-GO" not in rollback_trigger_parity_policy_output
+        ):
+            return fail(
+                "expected governance lifecycle/rollback trigger parity policy check NO-GO decision"
+            )
+
+        rollback_trigger_mismatch_report = (
+            temp_path / "governance-lifecycle-rollback-trigger-mismatch.json"
+        )
+        shutil.copyfile(rollback_trigger_parity_report, rollback_trigger_mismatch_report)
+        rollback_trigger_mismatch_payload = json.loads(
+            rollback_trigger_mismatch_report.read_text()
+        )
+        rollback_trigger_mismatch_payload["decision_reasons"] = [
+            "governance_lifecycle_lane_failed"
+        ]
+        rollback_trigger_mismatch_report.write_text(
+            json.dumps(rollback_trigger_mismatch_payload, sort_keys=True, indent=2) + "\n"
+        )
+
+        (
+            rollback_trigger_mismatch_code_first,
+            rollback_trigger_mismatch_output_first,
+        ) = run_capture(
+            [
+                "bash",
+                str(policy_checker),
+                "--report-file",
+                str(rollback_trigger_mismatch_report),
+            ],
+            root_dir=root_dir,
+        )
+        (
+            rollback_trigger_mismatch_code_second,
+            rollback_trigger_mismatch_output_second,
+        ) = run_capture(
+            [
+                "bash",
+                str(policy_checker),
+                "--report-file",
+                str(rollback_trigger_mismatch_report),
+            ],
+            root_dir=root_dir,
+        )
+        if (
+            rollback_trigger_mismatch_code_first == 0
+            or rollback_trigger_mismatch_code_second == 0
+        ):
+            return fail(
+                "expected governance lifecycle/rollback trigger mismatch fixture to fail policy checker"
+            )
+        if "decision_reasons mismatch" not in rollback_trigger_mismatch_output_first:
+            return fail(
+                "expected deterministic decision_reasons mismatch marker from "
+                "governance lifecycle/rollback trigger mismatch fixture"
+            )
+        if rollback_trigger_mismatch_output_first != rollback_trigger_mismatch_output_second:
+            return fail(
+                "expected deterministic rollback trigger mismatch policy output ordering "
+                "across repeated checks"
+            )
+
+        taxonomy_drift_report = temp_path / "governance-lifecycle-rollback-taxonomy-drift.json"
+        shutil.copyfile(go_report, taxonomy_drift_report)
+        taxonomy_drift_payload = json.loads(taxonomy_drift_report.read_text())
+        taxonomy_drift_payload["reason_taxonomy_codes_csv"] = (
+            "rollback_gate_progress_stalled,docs_contract_missing"
+        )
+        taxonomy_drift_report.write_text(
+            json.dumps(taxonomy_drift_payload, sort_keys=True, indent=2) + "\n"
+        )
+        taxonomy_drift_code, taxonomy_drift_output = run_capture(
+            ["bash", str(policy_checker), "--report-file", str(taxonomy_drift_report)],
+            root_dir=root_dir,
+        )
+        if taxonomy_drift_code == 0:
+            return fail(
+                "expected governance lifecycle/rollback reason taxonomy drift fixture "
+                "to fail policy checker"
+            )
+        if "reason_taxonomy_codes_csv mismatch" not in taxonomy_drift_output:
+            return fail(
+                "expected deterministic reason_taxonomy_codes_csv mismatch marker from "
+                "governance lifecycle/rollback taxonomy drift fixture"
+            )
+
         tampered_report = temp_path / "governance-lifecycle-rollback-tampered.json"
         shutil.copyfile(no_go_report, tampered_report)
         payload = json.loads(tampered_report.read_text())
@@ -190,6 +332,15 @@ def main(argv: list[str]) -> int:
         print("ci_local_promotion_budget_boundary_status=verified")
         print(f"reason_taxonomy_version={EXPECTED_REASON_TAXONOMY_VERSION}")
         print(f"reason_taxonomy_codes_csv={EXPECTED_REASON_TAXONOMY_CODES_CSV}")
+        print("rollback_trigger_policy_parity_status=verified")
+        print(
+            "rollback_trigger_policy_reason_taxonomy_version="
+            + EXPECTED_REASON_TAXONOMY_VERSION
+        )
+        print(
+            "rollback_trigger_policy_reason_codes_csv="
+            + ROLLBACK_TRIGGER_PARITY_REASON_CODES_CSV
+        )
         print("governance lifecycle/rollback contract lane tests passed.")
         return 0
 

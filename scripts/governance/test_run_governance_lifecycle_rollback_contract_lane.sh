@@ -8,6 +8,7 @@ LANE_SCRIPT="$ROOT_DIR/scripts/governance/run_governance_lifecycle_rollback_lane
 POLICY_CHECKER="$ROOT_DIR/scripts/governance/check_governance_lifecycle_rollback_policy.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json"
+CI_STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 
 if [ ! -x "$CONTRACT_SCRIPT" ]; then
   echo "expected governance lifecycle/rollback contract lane script to be executable" >&2
@@ -27,6 +28,10 @@ if [ ! -x "$SHARED_CONTRACT" ]; then
 fi
 if [ ! -f "$MANIFEST" ]; then
   echo "expected governance lifecycle/rollback manifest to exist" >&2
+  exit 1
+fi
+if [ ! -f "$CI_STRATEGY_DOC" ]; then
+  echo "expected ci strategy document to exist" >&2
   exit 1
 fi
 
@@ -77,6 +82,14 @@ if ! grep -q "reason_key mismatch" "$SHARED_CONTRACT"; then
   echo "expected governance lifecycle/rollback contract lane to enforce reason_key drift failures" >&2
   exit 1
 fi
+if ! grep -q "decision_reasons mismatch" "$SHARED_CONTRACT"; then
+  echo "expected governance lifecycle/rollback contract lane to enforce rollback trigger mismatch failures" >&2
+  exit 1
+fi
+if ! grep -q "reason_taxonomy_codes_csv mismatch" "$SHARED_CONTRACT"; then
+  echo "expected governance lifecycle/rollback contract lane to enforce rollback taxonomy drift failures" >&2
+  exit 1
+fi
 if ! grep -q "ci-local promotion budget boundary exceeded" "$SHARED_CONTRACT"; then
   echo "expected governance lifecycle/rollback contract lane to enforce ci-local promotion budget boundary failures" >&2
   exit 1
@@ -114,6 +127,30 @@ if ! grep -q "reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-
 fi
 if ! grep -q "reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded" "$tmp_out"; then
   echo "expected governance lifecycle/rollback contract lane reason taxonomy codes marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_parity_status=verified" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane rollback trigger policy parity status marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane rollback trigger policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_reason_codes_csv=governance_lifecycle_lane_failed,rollback_gate_progress_stalled,docs_contract_missing,runbook_marker_parity_bypass_detected" "$tmp_out"; then
+  echo "expected governance lifecycle/rollback contract lane rollback trigger policy reason codes marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_parity_status=verified" "$CI_STRATEGY_DOC"; then
+  echo "expected ci strategy rollback section to document rollback trigger policy parity status marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1" "$CI_STRATEGY_DOC"; then
+  echo "expected ci strategy rollback section to document rollback trigger policy reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q "rollback_trigger_policy_reason_codes_csv=governance_lifecycle_lane_failed,rollback_gate_progress_stalled,docs_contract_missing,runbook_marker_parity_bypass_detected" "$CI_STRATEGY_DOC"; then
+  echo "expected ci strategy rollback section to document rollback trigger policy reason codes marker" >&2
   exit 1
 fi
 

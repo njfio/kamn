@@ -3692,12 +3692,17 @@ Required demo lane command contract:
   - rollback-governance taxonomy markers remain deterministic:
     - `reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
     - `reason_taxonomy_codes_csv=docs_contract_missing,governance_lifecycle_lane_failed,lifecycle_contract_missing,rollback_contract_missing,rollback_gate_progress_stalled,runbook_marker_parity_bypass_detected,runtime_budget_exceeded`
+  - rollback trigger simulation lane/policy parity markers remain deterministic:
+    - `rollback_trigger_policy_parity_status=verified`
+    - `rollback_trigger_policy_reason_taxonomy_version=kamn.governance.lifecycle-rollback-reason-taxonomy.v1`
+    - `rollback_trigger_policy_reason_codes_csv=governance_lifecycle_lane_failed,rollback_gate_progress_stalled,docs_contract_missing,runbook_marker_parity_bypass_detected`
   - rollback gate and runbook-marker parity bypass guards remain fail-closed:
     - `rollback_gate_progress_stalled`
     - `runbook_marker_parity_bypass_detected`
   - ci-local promotion budget boundary remains bounded:
     - `ci_local_promotion_budget_boundary_status=verified`
     - `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS <= 240`
+  - rollback trigger mismatch and taxonomy drift fixtures remain contract-lane scoped and excluded from `ci-fast-gate` local-heavy execution paths.
 - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json --phase contract --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 
 Regression policy:
