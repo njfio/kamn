@@ -102,7 +102,7 @@ CI-local docs velocity boundary:
 
 Rustdoc navigation parity drift markers:
 - `reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1`
-- `reason_codes_csv=rustdoc_navigation_parity_drift`
+- `reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift`
 - `reason_code=rustdoc_navigation_parity_drift`
 
 Docs governance entrypoints:

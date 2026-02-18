@@ -81,7 +81,9 @@ fn doc_contains_docs_governance_and_rustdoc_navigation_parity_markers() {
     assert!(DOC.contains(
         "reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1"
     ));
-    assert!(DOC.contains("reason_codes_csv=rustdoc_navigation_parity_drift"));
+    assert!(DOC.contains(
+        "reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift"
+    ));
     assert!(DOC.contains("reason_code=rustdoc_navigation_parity_drift"));
     assert!(DOC.contains("test_missing_docs_velocity_guard_contract.sh"));
     assert!(DOC.contains("test_check_kamn_core_missing_docs_policy.sh"));

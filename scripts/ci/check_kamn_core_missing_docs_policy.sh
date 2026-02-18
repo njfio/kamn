@@ -16,7 +16,7 @@ VELOCITY_THRESHOLD_PATH="${KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH:-$ROOT_DIR/
 VELOCITY_CADENCE_DOC_PATH="${KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md}"
 GRADUATION_BATCH_REPORT_PATH="${KAMN_MISSING_DOCS_GRADUATION_BATCH_REPORT_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md}"
 POLICY_REASON_TAXONOMY_VERSION="kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1"
-POLICY_REASON_CODES_CSV="rustdoc_navigation_parity_drift"
+POLICY_REASON_CODES_CSV="graduated_module_exemption_regression,rustdoc_navigation_parity_drift"
 
 require_file() {
   local file="$1"
@@ -189,9 +189,10 @@ graduated_allowlist_overlap="$(
     <(printf '%s\n' "$actual_allowlisted_modules")
 )"
 if [ -n "$graduated_allowlist_overlap" ]; then
-  echo "missing-docs policy contract failed: graduated modules cannot be re-added to #[allow(missing_docs)] allowlist." >&2
-  echo "$graduated_allowlist_overlap" >&2
-  exit 1
+  fail_with_reason \
+    "graduated_module_exemption_regression" \
+    "missing-docs policy contract failed: graduated modules cannot be re-added to #[allow(missing_docs)] allowlist.
+$graduated_allowlist_overlap"
 fi
 
 if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$README_PATH"; then

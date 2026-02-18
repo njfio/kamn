@@ -131,7 +131,7 @@ if ! grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-rea
   echo "README rustdoc link drift should emit deterministic reason taxonomy marker" >&2
   exit 1
 fi
-if ! grep -q '^reason_codes_csv=rustdoc_navigation_parity_drift$' "$TMP_DIR/rustdoc-link-drift.err"; then
+if ! grep -q '^reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift$' "$TMP_DIR/rustdoc-link-drift.err"; then
   echo "README rustdoc link drift should emit deterministic reason code set marker" >&2
   exit 1
 fi
@@ -183,5 +183,17 @@ reset_fixtures
 printf '\nkolme_runtime_commit\n' >>"$ALLOWLIST_FIXTURE"
 sed -i 's/^pub mod kolme_runtime_commit;/#[allow(missing_docs)]\npub mod kolme_runtime_commit;/' "$CORE_LIB_FIXTURE"
 expect_failure "graduated module allowlist bypass should fail"
+if ! grep -q '^reason_taxonomy_version=kamn.ci.kamn-core-missing-docs-policy-reason-taxonomy.v1$' "$TMP_DIR/checker.err"; then
+  echo "graduated module allowlist bypass should emit deterministic reason taxonomy marker" >&2
+  exit 1
+fi
+if ! grep -q '^reason_codes_csv=graduated_module_exemption_regression,rustdoc_navigation_parity_drift$' "$TMP_DIR/checker.err"; then
+  echo "graduated module allowlist bypass should emit deterministic reason code set marker" >&2
+  exit 1
+fi
+if ! grep -q '^reason_code=graduated_module_exemption_regression$' "$TMP_DIR/checker.err"; then
+  echo "graduated module allowlist bypass should emit deterministic exemption-regression reason code marker" >&2
+  exit 1
+fi
 
 echo "kamn-core missing-docs policy checker tests passed."
