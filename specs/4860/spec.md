@@ -3,7 +3,7 @@
 - Title: Story: deliver shared shell substrate and dispatch/wrapper reduction phases (0-2)
 - Parent: - Program epic: #3812
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective
