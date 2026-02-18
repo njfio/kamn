@@ -52,6 +52,8 @@ pub mod data_layer_m4_escrow_integration;
 pub mod data_layer_m5_vector_integration;
 /// M6 graph-layer contracts for owner-scoped schema, trust propagation, and portability.
 pub mod data_layer_m6_graph_integration;
+/// M7 time-series contracts for telemetry ingest, rollups, and owner billing projections.
+pub mod data_layer_m7_timeseries_telemetry;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -287,6 +289,14 @@ pub use data_layer_m6_graph_integration::{
     DataLayerM6TrustPropagationQuery, DataLayerM6TrustPropagationResult,
     DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE, DATA_LAYER_M6_GRAPH_PORTABILITY_PROFILE,
     DATA_LAYER_M6_TRUST_PROPAGATION_REASON_RANKED,
+};
+pub use data_layer_m7_timeseries_telemetry::{
+    DataLayerM7AgentDailyAggregate, DataLayerM7AgentHourlyAggregate, DataLayerM7BillingQuery,
+    DataLayerM7NetworkHourlyAggregate, DataLayerM7OwnerBillingDailyProjection,
+    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry,
+    DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
+    DATA_LAYER_M7_AGGREGATE_REASON_CODE, DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+    DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,
