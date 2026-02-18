@@ -3,7 +3,7 @@
 - Title: Task: parameterize wave and matrix shell script families into definition-driven runners (phase 3)
 - Parent: - Parent story: #4861
 - Milestone: R27.43 Shell LOC maintainability and shell-to-Rust ratio sustainment governance
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Objective

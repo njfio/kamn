@@ -8,7 +8,16 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/framework/test_non_kolme_wave_lightweight_wrapper_runner_contract.sh`
+- `scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+- `scripts/ci/check_kolme_wave_wrapper_family_budget_trend_impl.sh`
+- `scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh`
+- `scripts/lib/test_harness.sh`
+- `scripts/lib/test_test_harness_migration_contract.sh`
+- `scripts/lib/write_json_file.sh`
+- `scripts/lib/test_json_write_helper_migration_contract.sh`
+- `docs/ci/strategy.md`
+- `docs/ops/configuration.md`
 
 ## Risks / Mitigations
 
