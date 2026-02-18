@@ -3,20 +3,40 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 186
+- archived_issue_count: 231
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
+| 3628 | `Story: decompose signer monolith into modular signing adapter and policy layers` | 2026-02-18 | `specs/archive/3628` | `specs/3628/ARCHIVED.md` |
+| 3630 | `Story: add TLS termination for service and observability endpoints` | 2026-02-18 | `specs/archive/3630` | `specs/3630/ARCHIVED.md` |
 | 3631 | Story: eliminate flaky main tests and harden merge gate reliability | 2026-02-18 | `specs/archive/3631` | `specs/3631/ARCHIVED.md` |
+| 3632 | `Story: harden unified API-observability stack contracts and local-heavy governance` | 2026-02-18 | `specs/archive/3632` | `specs/3632/ARCHIVED.md` |
+| 3636 | `Task: extract signer adapter module for crypto and key-source operations` | 2026-02-18 | `specs/archive/3636` | `specs/3636/ARCHIVED.md` |
+| 3637 | `Task: extract signer policy module for profile normalization and quorum checks` | 2026-02-18 | `specs/archive/3637` | `specs/3637/ARCHIVED.md` |
+| 3638 | `Task: deliver signer parity harness and migration completion` | 2026-02-18 | `specs/archive/3638` | `specs/3638/ARCHIVED.md` |
+| 3643 | `Task: enable TLS on observability routes with endpoint compatibility coverage` | 2026-02-18 | `specs/archive/3643` | `specs/3643/ARCHIVED.md` |
+| 3644 | `Task: ship TLS go-no-go validation lanes and operational runbooks` | 2026-02-18 | `specs/archive/3644` | `specs/3644/ARCHIVED.md` |
 | 3645 | Task: build deterministic flaky-test reproducer and artifact capture pipeline | 2026-02-18 | `specs/archive/3645` | `specs/3645/ARCHIVED.md` |
 | 3646 | Task: fix flaky root cause and remove quarantine from main test path | 2026-02-18 | `specs/archive/3646` | `specs/3646/ARCHIVED.md` |
 | 3647 | Task: enforce anti-flake merge gate policy with deterministic evidence | 2026-02-18 | `specs/archive/3647` | `specs/3647/ARCHIVED.md` |
+| 3650 | `Task: validate unified API-observability stack compatibility and performance` | 2026-02-18 | `specs/archive/3650` | `specs/3650/ARCHIVED.md` |
+| 3653 | `Subtask: extract signer_adapter for key-source and crypto paths` | 2026-02-18 | `specs/archive/3653` | `specs/3653/ARCHIVED.md` |
+| 3654 | `Subtask: extract signer_policy with deterministic quorum and profile checks` | 2026-02-18 | `specs/archive/3654` | `specs/3654/ARCHIVED.md` |
+| 3658 | `Subtask: add observability-over-TLS integration checks and local-heavy lane` | 2026-02-18 | `specs/archive/3658` | `specs/3658/ARCHIVED.md` |
+| 3765 | `Subtask: wire TLS go-no-go lane into release gate with deterministic reason taxonomy` | 2026-02-18 | `specs/archive/3765` | `specs/3765/ARCHIVED.md` |
+| 3766 | `Subtask: add signer migration parity matrix and legacy-behavior diff guard` | 2026-02-18 | `specs/archive/3766` | `specs/3766/ARCHIVED.md` |
 | 3797 | Subtask: land deterministic flaky root-cause fix with stress regression coverage | 2026-02-18 | `specs/archive/3797` | `specs/3797/ARCHIVED.md` |
 | 3798 | Subtask: add CI-compatible flaky capture lane with deterministic summary markers | 2026-02-18 | `specs/archive/3798` | `specs/3798/ARCHIVED.md` |
 | 3800 | Subtask: implement deterministic flaky reproducer matrix and artifact schema | 2026-02-18 | `specs/archive/3800` | `specs/3800/ARCHIVED.md` |
 | 3801 | Subtask: implement anti-flake merge-gate evaluator and reason taxonomy | 2026-02-18 | `specs/archive/3801` | `specs/3801/ARCHIVED.md` |
 | 3802 | Subtask: remove stale flaky quarantine entries and enforce metadata policy | 2026-02-18 | `specs/archive/3802` | `specs/3802/ARCHIVED.md` |
 | 3804 | Subtask: add anti-flake merge evidence report and docs-contract guards | 2026-02-18 | `specs/archive/3804` | `specs/3804/ARCHIVED.md` |
+| 3805 | `Subtask: add observability TLS negative-matrix fail-closed coverage` | 2026-02-18 | `specs/archive/3805` | `specs/3805/ARCHIVED.md` |
+| 3806 | `Subtask: extend TLS rollout/rollback runbook checkpoint contracts` | 2026-02-18 | `specs/archive/3806` | `specs/3806/ARCHIVED.md` |
+| 3807 | `Subtask: add signer_policy reason-taxonomy drift and docs parity contracts` | 2026-02-18 | `specs/archive/3807` | `specs/3807/ARCHIVED.md` |
+| 3808 | `Subtask: add signer extraction threshold and ownership budget guards` | 2026-02-18 | `specs/archive/3808` | `specs/3808/ARCHIVED.md` |
+| 3809 | `Subtask: expand unified API-observability compatibility matrix and parity markers` | 2026-02-18 | `specs/archive/3809` | `specs/3809/ARCHIVED.md` |
+| 3811 | `Subtask: enforce signer_adapter API boundary and re-export drift contracts` | 2026-02-18 | `specs/archive/3811` | `specs/3811/ARCHIVED.md` |
 | 3813 | Epic: R27.1 harden runtime operations with real signal handling and lifecycle drain guarantees | 2026-02-18 | `specs/archive/3813` | `specs/3813/ARCHIVED.md` |
 | 3814 | Epic: R27.2 modularize runtime.rs and enforce extraction budget guardrails | 2026-02-18 | `specs/archive/3814` | `specs/3814/ARCHIVED.md` |
 | 3815 | Epic: R27.3 deliver live libp2p+Kolme proof and governance budget closure | 2026-02-18 | `specs/archive/3815` | `specs/3815/ARCHIVED.md` |
@@ -85,6 +105,15 @@
 | 3891 | Subtask: add activation readiness and budget marker checks to go-no-go policy | 2026-02-18 | `specs/archive/3891` | `specs/3891/ARCHIVED.md` |
 | 3893 | Subtask: add docs-contract and milestone-summary parity checks for activation closure | 2026-02-18 | `specs/archive/3893` | `specs/3893/ARCHIVED.md` |
 | 3910 | Subtask: stabilize websocket missing-upgrade-header regression test across CI | 2026-02-18 | `specs/archive/3910` | `specs/3910/ARCHIVED.md` |
+| 3912 | `Task: zeroize signer key decode/loading intermediates across runtime profiles` | 2026-02-18 | `specs/archive/3912` | `specs/3912/ARCHIVED.md` |
+| 3913 | `Subtask: add explicit zeroization to signer key decode and transient buffers` | 2026-02-18 | `specs/archive/3913` | `specs/3913/ARCHIVED.md` |
+| 3914 | `Subtask: add regression checks for signer secret redaction and decode-failure hygiene` | 2026-02-18 | `specs/archive/3914` | `specs/3914/ARCHIVED.md` |
+| 3915 | `Task: enforce signer secret-lifecycle policy and docs parity contracts` | 2026-02-18 | `specs/archive/3915` | `specs/3915/ARCHIVED.md` |
+| 3916 | `Subtask: add fail-closed policy checks for fallback signer keys and lifecycle markers` | 2026-02-18 | `specs/archive/3916` | `specs/3916/ARCHIVED.md` |
+| 3917 | `Subtask: add docs-contract parity checks for signer secret-lifecycle markers` | 2026-02-18 | `specs/archive/3917` | `specs/3917/ARCHIVED.md` |
+| 3921 | Task: implement runtime backpressure enforcement path from policy decisions to queue actions | 2026-02-18 | `specs/archive/3921` | `specs/3921/ARCHIVED.md` |
+| 3925 | `Subtask: wire runtime backpressure and queue-shedding into live transport dispatch` | 2026-02-18 | `specs/archive/3925` | `specs/3925/ARCHIVED.md` |
+| 3926 | `Subtask: add regression tests for Accept/Reject/Suspend backpressure decisions and reason codes` | 2026-02-18 | `specs/archive/3926` | `specs/3926/ARCHIVED.md` |
 | 3963 | Epic: R27.7 reduce script-surface sprawl and accelerate docs graduation closure | 2026-02-18 | `specs/archive/3963` | `specs/3963/ARCHIVED.md` |
 | 3964 | Story: migrate remaining wrapper families to manifest dispatcher with parity guarantees | 2026-02-18 | `specs/archive/3964` | `specs/3964/ARCHIVED.md` |
 | 3965 | Story: graduate missing-docs allow-list modules and improve architecture navigability contracts | 2026-02-18 | `specs/archive/3965` | `specs/3965/ARCHIVED.md` |
@@ -129,6 +158,22 @@
 | 4200 | Implement convergence verifier and deterministic promotion decision reason mapping | 2026-02-18 | `specs/archive/4200` | `specs/4200/ARCHIVED.md` |
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
+| 4312 | `Task: enforce http-websocket protocol checker contracts and deterministic session violation reason mapping` | 2026-02-18 | `specs/archive/4312` | `specs/4312/ARCHIVED.md` |
+| 4313 | `Task: implement networked peer transport adapter integrity checks with deterministic retry-timeout governance` | 2026-02-18 | `specs/archive/4313` | `specs/4313/ARCHIVED.md` |
+| 4314 | `Task: implement durable block commit persistence with digest-finality fail-closed validation governance` | 2026-02-18 | `specs/archive/4314` | `specs/4314/ARCHIVED.md` |
+| 4315 | `Subtask: add red tests for async api concurrency limit breaches and fail-closed backpressure behavior` | 2026-02-18 | `specs/archive/4315` | `specs/4315/ARCHIVED.md` |
+| 4316 | `Subtask: implement async lifecycle limiter and deterministic api rejection reason projection` | 2026-02-18 | `specs/archive/4316` | `specs/4316/ARCHIVED.md` |
+| 4317 | `Subtask: add red tests for websocket protocol drift and invalid session-frame rejection` | 2026-02-18 | `specs/archive/4317` | `specs/4317/ARCHIVED.md` |
+| 4318 | `Subtask: implement protocol-session checker reason mapping and docs-contract parity validation` | 2026-02-18 | `specs/archive/4318` | `specs/4318/ARCHIVED.md` |
+| 4319 | `Subtask: add red tests for networked peer integrity drift and retry-timeout misclassification` | 2026-02-18 | `specs/archive/4319` | `specs/4319/ARCHIVED.md` |
+| 4320 | `Subtask: implement peer adapter reason projection and deterministic multi-process validation hooks` | 2026-02-18 | `specs/archive/4320` | `specs/4320/ARCHIVED.md` |
+| 4321 | `Subtask: add red tests for persisted block digest-finality mismatch rejection and tamper detection` | 2026-02-18 | `specs/archive/4321` | `specs/4321/ARCHIVED.md` |
+| 4322 | `Subtask: implement durable commit checker reason mapping with ci smoke and local-heavy boundary enforcement` | 2026-02-18 | `specs/archive/4322` | `specs/4322/ARCHIVED.md` |
+| 4476 | `Task: implement TLS certificate-policy checker updates with deterministic failure taxonomy` | 2026-02-18 | `specs/archive/4476` | `specs/4476/ARCHIVED.md` |
+| 4477 | `Task: enforce tls evidence bundle completeness-freshness convergence in release gate checks` | 2026-02-18 | `specs/archive/4477` | `specs/4477/ARCHIVED.md` |
+| 4478 | `Task: implement anti-flake classifier and deterministic rerun-policy checker contracts` | 2026-02-18 | `specs/archive/4478` | `specs/4478/ARCHIVED.md` |
+| 4479 | `Task: enforce merge-gate reliability evidence convergence and CI smoke/local-heavy boundary governance` | 2026-02-18 | `specs/archive/4479` | `specs/4479/ARCHIVED.md` |
+| 4693 | `Task: decompose p2p transport and block pipeline monoliths with deterministic module contracts` | 2026-02-18 | `specs/archive/4693` | `specs/4693/ARCHIVED.md` |
 | 4808 | Story: collapse test/matrix/json shell boilerplate into reusable harnesses | 2026-02-18 | `specs/archive/4808` | `specs/4808/ARCHIVED.md` |
 | 4814 | Task: deploy shared test harness and JSON helper utilities across shell contracts | 2026-02-18 | `specs/archive/4814` | `specs/4814/ARCHIVED.md` |
 | 4819 | Subtask: implement scripts/lib/common.sh primitives and complete pilot migration wave | 2026-02-18 | `specs/archive/4819` | `specs/4819/ARCHIVED.md` |
