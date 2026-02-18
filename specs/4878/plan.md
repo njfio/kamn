@@ -8,7 +8,16 @@
 
 ## Affected Modules
 
-- To be finalized during implementation from concrete file-level impact in script framework, CI policy, docs-contract, and template surfaces.
+- `scripts/lib/test_test_harness_migration_contract.sh`
+- Migrated test families across:
+  - `scripts/bridge/test_*.sh`
+  - `scripts/canary/test_*.sh`
+  - `scripts/channel/test_*.sh`
+  - `scripts/ci/test_*.sh`
+  - `scripts/compliance/test_*.sh`
+  - `scripts/cutover/test_*.sh`
+  - `scripts/dashboard/test_*.sh`
+  - `scripts/deploy/test_*.sh`
 
 ## Risks / Mitigations
 

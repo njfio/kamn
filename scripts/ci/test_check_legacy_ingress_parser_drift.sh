@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/check_legacy_ingress_parser_drift.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected legacy ingress parser drift checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected legacy ingress parser drift checker to be executable"
 
 SOURCE_ROOT="$TMP_DIR/src"
 mkdir -p "$SOURCE_ROOT"

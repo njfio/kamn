@@ -2,16 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/missing_docs_throughput_report_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 REPORT_PATH="$TMP_DIR/missing-docs-throughput-report.json"
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected throughput report contract script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected throughput report contract script to be executable"
 
 python3 "$SCRIPT" generate \
   --output-json "$REPORT_PATH"

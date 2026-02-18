@@ -2,13 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 STRATEGY_DOC="${KAMN_CI_STRATEGY_DOC_FILE:-$ROOT_DIR/docs/ci/strategy.md}"
 WAVE_RANGE_MARKER_PATTERN='non_kolme_wrapper_family_wave_range=[0-9]+-[0-9]+'
 
-if [ ! -f "$STRATEGY_DOC" ]; then
-  echo "CI strategy contract failed: docs/ci/strategy.md is missing." >&2
-  exit 1
-fi
+test_harness_require_file "$STRATEGY_DOC" "CI strategy contract failed: docs/ci/strategy.md is missing."
 
 mapfile -t wave_range_markers < <(grep -Eo "$WAVE_RANGE_MARKER_PATTERN" "$STRATEGY_DOC" | sort -u)
 if [ "${#wave_range_markers[@]}" -ne 1 ]; then

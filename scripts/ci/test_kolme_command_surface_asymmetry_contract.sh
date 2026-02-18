@@ -2,26 +2,18 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 POLICY_FILE="$ROOT_DIR/.ci/kolme-command-surface-asymmetry-policy.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -f "$FAST_WORKFLOW" ]; then
-  echo "expected fast-gate workflow to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$FAST_WORKFLOW" "expected fast-gate workflow to exist"
 
-if [ ! -f "$CI_TOOLS_SCRIPT" ]; then
-  echo "expected aggregate CI tools script to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$CI_TOOLS_SCRIPT" "expected aggregate CI tools script to exist"
 
-if [ ! -f "$POLICY_FILE" ]; then
-  echo "expected Kolme asymmetry policy file to exist at .ci/kolme-command-surface-asymmetry-policy.json" >&2
-  exit 1
-fi
+test_harness_require_file "$POLICY_FILE" "expected Kolme asymmetry policy file to exist at .ci/kolme-command-surface-asymmetry-policy.json"
 
 mapfile -t kolme_tests < <(find "$ROOT_DIR/scripts/kolme" -maxdepth 1 -type f -name 'test_*.sh' | sort)
 if [ "${#kolme_tests[@]}" -eq 0 ]; then

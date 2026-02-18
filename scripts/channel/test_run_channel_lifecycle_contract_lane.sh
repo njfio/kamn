@@ -2,25 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_SCRIPT="$ROOT_DIR/scripts/channel/run_channel_lifecycle_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/channel/run_channel_lifecycle_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/channel/channel_lifecycle_contract_lane_contract.py"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/channel_channel_lifecycle_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected channel lifecycle fast-lane runner to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_SCRIPT" "expected channel lifecycle fast-lane runner to be executable"
 
-if [ ! -x "$DEEP_SCRIPT" ]; then
-  echo "expected channel lifecycle deep-lane runner to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$SHARED_CONTRACT" ]; then
-  echo "expected channel lifecycle shared contract-lane module to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_SCRIPT" "expected channel lifecycle deep-lane runner to be executable"
+test_harness_require_executable "$SHARED_CONTRACT" "expected channel lifecycle shared contract-lane module to be executable"
 
 TMP_OUT="$(mktemp)"
 trap 'rm -f "$TMP_OUT"' EXIT

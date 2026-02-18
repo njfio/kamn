@@ -26,4 +26,16 @@ for script_path in "${required_scripts[@]}"; do
   fi
 done
 
-echo "shared test harness migration contract tests passed."
+migrated_script_count="$(rg -l '/scripts/lib/test_harness.sh' "$ROOT_DIR/scripts" -g 'test_*.sh' | wc -l | tr -d ' ')"
+if [ "$migrated_script_count" -lt 75 ]; then
+  echo "expected at least 75 migrated shell test scripts to source test_harness.sh, found: $migrated_script_count" >&2
+  exit 1
+fi
+
+helper_usage_count="$(rg -l 'test_harness_(setup|require_|assert_)' "$ROOT_DIR/scripts" -g 'test_*.sh' | wc -l | tr -d ' ')"
+if [ "$helper_usage_count" -lt 75 ]; then
+  echo "expected at least 75 migrated shell test scripts to call shared harness helpers, found: $helper_usage_count" >&2
+  exit 1
+fi
+
+echo "shared test harness migration contract tests passed (migrated_script_count=$migrated_script_count helper_usage_count=$helper_usage_count)."

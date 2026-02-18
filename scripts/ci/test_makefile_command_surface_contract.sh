@@ -2,12 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 MAKEFILE="$ROOT_DIR/Makefile"
 
-if [ ! -f "$MAKEFILE" ]; then
-  echo "Makefile command-surface contract failed: Makefile is missing." >&2
-  exit 1
-fi
+test_harness_require_file "$MAKEFILE" "Makefile command-surface contract failed: Makefile is missing."
 
 required_targets=(
   "check"

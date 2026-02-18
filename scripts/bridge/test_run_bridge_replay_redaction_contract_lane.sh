@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 FAST_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_contract_lane.sh"
 FAST_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_contract_lane_impl.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_deep_lane.sh"
@@ -12,35 +13,17 @@ MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_replay_redact
 DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_replay_redaction_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
-  echo "expected bridge replay/redaction contract lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_SCRIPT" "expected bridge replay/redaction contract lane script to be executable"
 
-if [ ! -x "$DEEP_SCRIPT" ]; then
-  echo "expected bridge replay/redaction deep lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_SCRIPT" "expected bridge replay/redaction deep lane script to be executable"
 
-if [ ! -x "$DEEP_IMPL_SCRIPT" ]; then
-  echo "expected bridge replay/redaction deep lane implementation script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$DEEP_IMPL_SCRIPT" "expected bridge replay/redaction deep lane implementation script to be executable"
 
-if [ ! -x "$FAST_IMPL_SCRIPT" ]; then
-  echo "expected bridge replay/redaction contract lane implementation script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$FAST_IMPL_SCRIPT" "expected bridge replay/redaction contract lane implementation script to be executable"
 
-if [ ! -f "$MANIFEST_FILE" ]; then
-  echo "expected bridge replay/redaction contract lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MANIFEST_FILE" "expected bridge replay/redaction contract lane manifest to exist"
 
-if [ ! -f "$DEEP_MANIFEST_FILE" ]; then
-  echo "expected bridge replay/redaction deep lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$DEEP_MANIFEST_FILE" "expected bridge replay/redaction deep lane manifest to exist"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

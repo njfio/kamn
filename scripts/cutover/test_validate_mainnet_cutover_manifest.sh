@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 VALIDATOR="$ROOT_DIR/scripts/cutover/validate_mainnet_cutover_manifest.py"
 SCHEMA_FILE="$ROOT_DIR/fixtures/mainnet_cutover/mainnet_cutover_manifest.schema.json"
 VALID_FIXTURE="$ROOT_DIR/fixtures/mainnet_cutover/mainnet_cutover_manifest.valid.json"
@@ -26,10 +27,7 @@ assert_eq() {
   fi
 }
 
-if [ ! -x "$VALIDATOR" ]; then
-  echo "expected mainnet cutover validator to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$VALIDATOR" "expected mainnet cutover validator to be executable"
 
 for fixture in "$SCHEMA_FILE" "$VALID_FIXTURE" "$INVALID_DEP_FIXTURE" "$INVALID_APPROVAL_FIXTURE"; do
   if [ ! -f "$fixture" ]; then

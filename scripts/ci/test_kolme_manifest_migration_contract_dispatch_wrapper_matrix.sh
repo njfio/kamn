@@ -2,22 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 DISPATCHER="$ROOT_DIR/scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh"
 EXEC_DISPATCHER="$ROOT_DIR/scripts/lib/exec_dispatch.sh"
 EXEC_REGISTRY="$ROOT_DIR/scripts/lib/exec_registry.json"
 
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected Kolme manifest-migration dispatcher to be executable: $DISPATCHER" >&2
-  exit 1
-fi
-if [ ! -x "$EXEC_DISPATCHER" ]; then
-  echo "expected exec wrapper dispatcher to be executable: $EXEC_DISPATCHER" >&2
-  exit 1
-fi
-if [ ! -f "$EXEC_REGISTRY" ]; then
-  echo "expected exec wrapper registry to exist: $EXEC_REGISTRY" >&2
-  exit 1
-fi
+test_harness_require_executable "$DISPATCHER" "expected Kolme manifest-migration dispatcher to be executable: $DISPATCHER"
+test_harness_require_executable "$EXEC_DISPATCHER" "expected exec wrapper dispatcher to be executable: $EXEC_DISPATCHER"
+test_harness_require_file "$EXEC_REGISTRY" "expected exec wrapper registry to exist: $EXEC_REGISTRY"
 
 wrapper_scripts=(
   "test_kolme_tranche1_manifest_migration_contract.sh"

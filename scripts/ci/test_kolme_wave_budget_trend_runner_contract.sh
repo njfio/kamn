@@ -2,12 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 RUNNER_PATH="$ROOT_DIR/scripts/ci/check_kolme_wave_wrapper_family_budget_trend_impl.sh"
 
-if [ ! -x "$RUNNER_PATH" ]; then
-  echo "expected shared Kolme wave budget trend checker runner: $RUNNER_PATH" >&2
-  exit 1
-fi
+test_harness_require_executable "$RUNNER_PATH" "expected shared Kolme wave budget trend checker runner: $RUNNER_PATH"
 
 for wave in 8 10 11; do
   checker_path="$ROOT_DIR/scripts/ci/check_kolme_wave${wave}_wrapper_family_budget_trend.sh"

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CONTRACT_LANE="$ROOT_DIR/scripts/deploy/validate_compose_topology_contract_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/deploy/check_compose_topology_contract_policy.sh"
 TMP_REPORT="$(mktemp)"
@@ -10,14 +11,8 @@ TMP_TAMPERED="$(mktemp)"
 TMP_TAXONOMY_TAMPERED="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAXONOMY_TAMPERED"' EXIT
 
-if [ ! -x "$CONTRACT_LANE" ]; then
-  echo "expected compose topology contract lane script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$POLICY_CHECKER" ]; then
-  echo "expected compose topology policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CONTRACT_LANE" "expected compose topology contract lane script to be executable"
+test_harness_require_executable "$POLICY_CHECKER" "expected compose topology policy checker script to be executable"
 
 bash "$CONTRACT_LANE" --output-json "$TMP_REPORT" --ci-fast-gate PASS >/dev/null
 

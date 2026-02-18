@@ -2,12 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/check_anti_flake_policy.sh"
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected anti-flake policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected anti-flake policy checker script to be executable"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

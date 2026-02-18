@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/generate_kolme_test_harness_loc_trend_report.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected Kolme test harness trend report generator to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected Kolme test harness trend report generator to be executable"
 
 default_report="$TMP_DIR/kolme-trend-default.json"
 default_output="$(bash "$SCRIPT" --output-json "$default_report")"

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 TREND_CHECKER="$ROOT_DIR/scripts/ci/check_kolme_wrapper_budget_trend.sh"
 WAVE10_TREND_CHECKER="$ROOT_DIR/scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh"
 PYTHON_CHECKER="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
@@ -15,50 +16,23 @@ WAVE10_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_matrix.
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$TREND_CHECKER" ]; then
-  echo "expected trend checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$TREND_CHECKER" "expected trend checker wrapper to be executable"
 
-if [ ! -x "$PYTHON_CHECKER" ]; then
-  echo "expected python baseline checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$PYTHON_CHECKER" "expected python baseline checker script to be executable"
 
-if [ ! -x "$WAVE10_TREND_CHECKER" ]; then
-  echo "expected wave-10 trend checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$WAVE10_TREND_CHECKER" "expected wave-10 trend checker wrapper to be executable"
 
-if [ ! -f "$THRESHOLD_FILE" ]; then
-  echo "expected trend threshold file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$THRESHOLD_FILE" "expected trend threshold file to exist"
 
-if [ ! -f "$BASELINE_FIXTURE" ]; then
-  echo "expected baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FIXTURE" "expected baseline fixture to exist"
 
-if [ ! -f "$MATRIX_FIXTURE" ]; then
-  echo "expected matrix fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MATRIX_FIXTURE" "expected matrix fixture to exist"
 
-if [ ! -f "$WAVE10_THRESHOLD_FILE" ]; then
-  echo "expected wave-10 trend threshold fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$WAVE10_THRESHOLD_FILE" "expected wave-10 trend threshold fixture to exist"
 
-if [ ! -f "$WAVE10_BASELINE_FIXTURE" ]; then
-  echo "expected wave-10 baseline fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$WAVE10_BASELINE_FIXTURE" "expected wave-10 baseline fixture to exist"
 
-if [ ! -f "$WAVE10_MATRIX_FIXTURE" ]; then
-  echo "expected wave-10 matrix fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$WAVE10_MATRIX_FIXTURE" "expected wave-10 matrix fixture to exist"
 
 PASS_REPORT="$TMP_DIR/pass-report.json"
 bash "$TREND_CHECKER" \

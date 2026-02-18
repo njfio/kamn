@@ -2,16 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_websocket_session_ci_smoke_convergence.py"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 PLAN_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected websocket session ci smoke convergence checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected websocket session ci smoke convergence checker to be executable"
 
 safe_report="$(mktemp)"
 safe_log="$(mktemp)"

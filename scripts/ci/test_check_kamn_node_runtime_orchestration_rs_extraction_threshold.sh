@@ -2,21 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh"
 THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/kamn_node_runtime_orchestration_rs_extraction_thresholds.json"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected kamn-node runtime_orchestration.rs extraction-threshold checker wrapper to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected kamn-node runtime_orchestration.rs extraction-threshold checker wrapper to be executable"
 
-if [ ! -f "$THRESHOLD_FILE" ]; then
-  echo "expected kamn-node runtime_orchestration.rs extraction-threshold fixture to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$THRESHOLD_FILE" "expected kamn-node runtime_orchestration.rs extraction-threshold fixture to exist"
 
 PASS_REPORT="$TMP_DIR/pass-report.json"
 bash "$CHECKER" \

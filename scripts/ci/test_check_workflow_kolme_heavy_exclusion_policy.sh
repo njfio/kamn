@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_workflow_kolme_heavy_exclusion_policy.py"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 SELECTOR_FILE="$ROOT_DIR/scripts/ci/select_targets.sh"
@@ -14,10 +15,7 @@ UNSAFE_VERSION_LANE_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_p
 UNSAFE_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_local_heavy_command.yml"
 UNSAFE_SELECTOR_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_selector_unsafe_missing_local_heavy_command.sh"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected workflow policy checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected workflow policy checker to be executable"
 
 safe_report="$(mktemp)"
 safe_log="$(mktemp)"

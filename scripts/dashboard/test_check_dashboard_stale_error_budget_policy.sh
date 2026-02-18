@@ -2,20 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/dashboard/run_dashboard_stale_error_budget_lane.sh"
 CHECKER="$ROOT_DIR/scripts/dashboard/check_dashboard_stale_error_budget_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected dashboard stale/error budget lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected dashboard stale/error budget lane script to be executable"
 
-if [ ! -x "$CHECKER" ]; then
-  echo "expected dashboard stale/error budget policy checker script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$CHECKER" "expected dashboard stale/error budget policy checker script to be executable"
 
 go_report="$TMP_DIR/dashboard-stale-error-go.json"
 KAMN_DASHBOARD_STALE_ERROR_SKIP_COMMANDS=true \

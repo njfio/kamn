@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 PLAN_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
 TMP_TAMPERED="$(mktemp)"
 trap 'rm -f "$TMP_TAMPERED"' EXIT
 
-if [ ! -f "$PLAN_DOC" ]; then
-  echo "expected production-service next-steps plan document to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$PLAN_DOC" "expected production-service next-steps plan document to exist"
 
 python3 - "$PLAN_DOC" <<'PY'
 from __future__ import annotations

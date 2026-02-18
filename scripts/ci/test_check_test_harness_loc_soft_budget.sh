@@ -2,14 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/ci/check_test_harness_loc_soft_budget.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected test harness LOC soft budget checker to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected test harness LOC soft budget checker to be executable"
 
 REPORT_FILE="$TMP_DIR/test-harness-loc-report.json"
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_FILE" <<'EOF_REPORT'

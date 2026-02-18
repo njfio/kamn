@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh"
 LANE_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_adapter_conformance_contract_lane_impl.sh"
 MATRIX_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_adapter_conformance_matrix.py"
@@ -11,30 +12,15 @@ DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected bridge adapter conformance contract lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected bridge adapter conformance contract lane script to be executable"
 
-if [ ! -x "$MATRIX_SCRIPT" ]; then
-  echo "expected bridge adapter conformance matrix script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$MATRIX_SCRIPT" "expected bridge adapter conformance matrix script to be executable"
 
-if [ ! -x "$LANE_IMPL_SCRIPT" ]; then
-  echo "expected bridge adapter conformance contract lane implementation script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_IMPL_SCRIPT" "expected bridge adapter conformance contract lane implementation script to be executable"
 
-if [ ! -f "$MANIFEST_FILE" ]; then
-  echo "expected bridge adapter conformance contract lane manifest to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$MANIFEST_FILE" "expected bridge adapter conformance contract lane manifest to exist"
 
-if [ ! -f "$FIXTURE_FILE" ]; then
-  echo "expected bridge adapter conformance fixture file to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$FIXTURE_FILE" "expected bridge adapter conformance fixture file to exist"
 
 report_file="$TMP_DIR/bridge-adapter-conformance-contract-report.json"
 lane_output="$(bash "$LANE_SCRIPT" --output-json "$report_file")"

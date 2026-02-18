@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 LANE_SCRIPT="$ROOT_DIR/scripts/ci/run_fast_gate_budget_delta_contract_lane.sh"
 SHARED_IMPL="$ROOT_DIR/scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json"
@@ -12,25 +13,13 @@ COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$LANE_SCRIPT" ]; then
-  echo "expected fast-gate budget-delta contract lane script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$LANE_SCRIPT" "expected fast-gate budget-delta contract lane script to be executable"
 
-if [ ! -x "$SHARED_IMPL" ]; then
-  echo "expected fast-gate budget-delta shared impl script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SHARED_IMPL" "expected fast-gate budget-delta shared impl script to be executable"
 
-if [ ! -f "$STRATEGY_DOC" ]; then
-  echo "expected CI strategy doc to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$STRATEGY_DOC" "expected CI strategy doc to exist"
 
-if [ ! -f "$COST_DOC" ]; then
-  echo "expected CI cost/lane framework doc to exist" >&2
-  exit 1
-fi
+test_harness_require_file "$COST_DOC" "expected CI cost/lane framework doc to exist"
 
 REPORT_FILE="$TMP_DIR/fast-gate-budget-delta-contract-report.json"
 
@@ -80,10 +69,7 @@ if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_budget_delta_contract_co
   exit 1
 fi
 
-if [ ! -f "$REPORT_FILE" ]; then
-  echo "expected fast-gate budget-delta contract report to be emitted" >&2
-  exit 1
-fi
+test_harness_require_file "$REPORT_FILE" "expected fast-gate budget-delta contract report to be emitted"
 
 if ! grep -q '"schema_version": "kamn.ci.fast-gate-budget-delta-contract-report.v1"' "$REPORT_FILE"; then
   echo "expected contract report schema marker" >&2

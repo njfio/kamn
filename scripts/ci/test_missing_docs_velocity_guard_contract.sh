@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 THROUGHPUT_SCRIPT="$ROOT_DIR/scripts/ci/missing_docs_throughput_report_contract.py"
 VELOCITY_GUARD_SCRIPT="$ROOT_DIR/scripts/ci/missing_docs_velocity_guard.py"
 BASELINE_FILE="$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_velocity_baseline.json"
@@ -13,25 +14,13 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 REPORT_PATH="$TMP_DIR/missing-docs-throughput-report.json"
 POLICY_PATH="$TMP_DIR/missing-docs-velocity-policy.json"
 
-if [ ! -x "$THROUGHPUT_SCRIPT" ]; then
-  echo "expected throughput report script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$THROUGHPUT_SCRIPT" "expected throughput report script to be executable"
 
-if [ ! -x "$VELOCITY_GUARD_SCRIPT" ]; then
-  echo "expected missing docs velocity guard script to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$VELOCITY_GUARD_SCRIPT" "expected missing docs velocity guard script to be executable"
 
-if [ ! -f "$BASELINE_FILE" ]; then
-  echo "expected missing docs velocity baseline file" >&2
-  exit 1
-fi
+test_harness_require_file "$BASELINE_FILE" "expected missing docs velocity baseline file"
 
-if [ ! -f "$THRESHOLD_FILE" ]; then
-  echo "expected missing docs velocity threshold file" >&2
-  exit 1
-fi
+test_harness_require_file "$THRESHOLD_FILE" "expected missing docs velocity threshold file"
 
 python3 "$THROUGHPUT_SCRIPT" generate \
   --output-json "$REPORT_PATH" >/dev/null

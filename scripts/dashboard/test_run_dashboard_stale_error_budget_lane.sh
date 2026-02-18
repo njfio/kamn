@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/scripts/lib/test_harness.sh"
 SCRIPT="$ROOT_DIR/scripts/dashboard/run_dashboard_stale_error_budget_lane.sh"
 SCRIPT_IMPL="$ROOT_DIR/scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
@@ -9,18 +10,9 @@ MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/dashboard_stale_error_budge
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if [ ! -x "$SCRIPT" ]; then
-  echo "expected dashboard stale/error budget lane script to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$SCRIPT_IMPL" ]; then
-  echo "expected dashboard stale/error budget lane implementation to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$DISPATCHER" ]; then
-  echo "expected shared non-Kolme dispatcher to be executable" >&2
-  exit 1
-fi
+test_harness_require_executable "$SCRIPT" "expected dashboard stale/error budget lane script to be executable"
+test_harness_require_executable "$SCRIPT_IMPL" "expected dashboard stale/error budget lane implementation to be executable"
+test_harness_require_executable "$DISPATCHER" "expected shared non-Kolme dispatcher to be executable"
 if [ ! -L "$SCRIPT" ]; then
   echo "expected dashboard stale/error budget lane wrapper to be a dispatcher symlink" >&2
   exit 1
