@@ -65,7 +65,7 @@ if ! printf '%s\n' "$policy_output" | grep -q '^reason_taxonomy_version=kamn.ci.
   echo "expected combined shell-surface policy checker reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=combined_shell_surface_budget_status_fail,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid$'; then
+if ! printf '%s\n' "$policy_output" | grep -q '^reason_codes_csv=combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid$'; then
   echo "expected combined shell-surface policy checker reason code taxonomy marker" >&2
   exit 1
 fi
@@ -88,7 +88,7 @@ if payload.get("reason_codes") not in ([], None):
     raise SystemExit("expected empty reason_codes for passing policy")
 if payload.get("reason_taxonomy_version") != "kamn.ci.combined-shell-surface-trend-policy-reason-taxonomy.v1":
     raise SystemExit("expected reason taxonomy version in passing combined shell-surface policy report")
-if payload.get("reason_codes_csv") != "combined_shell_surface_budget_status_fail,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid":
+if payload.get("reason_codes_csv") != "combined_shell_surface_budget_status_fail,combined_shell_surface_decline_window_fail_exceeded,combined_shell_surface_decline_window_warn_exceeded,combined_shell_surface_delta_ratio_invalid,combined_shell_surface_delta_script_count_invalid,combined_shell_surface_delta_shell_line_total_invalid,combined_shell_surface_ratio_delta_fail_exceeded,combined_shell_surface_ratio_delta_warn_exceeded,combined_shell_surface_ratio_fail_ceiling_exceeded,combined_shell_surface_ratio_invalid,combined_shell_surface_ratio_warn_ceiling_exceeded,combined_shell_surface_report_schema_mismatch,combined_shell_surface_rust_line_total_invalid,combined_shell_surface_script_count_delta_fail_exceeded,combined_shell_surface_script_count_delta_warn_exceeded,combined_shell_surface_script_count_invalid,combined_shell_surface_shell_line_total_delta_fail_exceeded,combined_shell_surface_shell_line_total_delta_warn_exceeded,combined_shell_surface_shell_line_total_invalid,combined_shell_surface_threshold_date_invalid,combined_shell_surface_threshold_file_stale,combined_shell_surface_threshold_order_invalid,combined_shell_surface_threshold_schema_mismatch,combined_shell_surface_threshold_value_invalid,combined_shell_surface_today_override_invalid":
     raise SystemExit("expected deterministic reason_codes_csv marker in passing combined shell-surface policy report")
 if payload.get("reason_codes_value") != "none":
     raise SystemExit("expected reason_codes_value=none in passing combined shell-surface policy report")
@@ -271,6 +271,100 @@ if [[ "$invalid_threshold_value_code" -eq 0 ]]; then
 fi
 if ! printf '%s\n' "$invalid_threshold_value_output" | grep -q 'combined_shell_surface_threshold_value_invalid'; then
   echo "expected deterministic threshold-value reason code for invalid combined shell-surface threshold fixture" >&2
+  exit 1
+fi
+
+stale_thresholds="$TMP_DIR/combined-shell-surface-trend-thresholds.stale.json"
+cp "$THRESHOLDS" "$stale_thresholds"
+python3 - "$stale_thresholds" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["threshold_refreshed_on"] = "2025-01-01"
+payload["threshold_max_age_days"] = 30
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+stale_threshold_output="$(bash "$CHECKER" --report-file "$report_file" --threshold-file "$stale_thresholds" --today 2026-02-18 --output-json "$TMP_DIR/stale-threshold-policy.json" 2>&1)"
+stale_threshold_code=$?
+set -e
+if [[ "$stale_threshold_code" -eq 0 ]]; then
+  echo "expected stale threshold metadata to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$stale_threshold_output" | grep -q 'combined_shell_surface_threshold_file_stale'; then
+  echo "expected deterministic threshold-stale reason code for stale threshold metadata" >&2
+  exit 1
+fi
+
+decline_thresholds="$TMP_DIR/combined-shell-surface-trend-thresholds.decline-window.json"
+cp "$THRESHOLDS" "$decline_thresholds"
+python3 - "$decline_thresholds" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["threshold_refreshed_on"] = "2026-01-01"
+payload["threshold_max_age_days"] = 365
+payload["warn_non_declining_window_days"] = 14
+payload["fail_non_declining_window_days"] = 30
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+decline_warn_report="$TMP_DIR/combined-shell-surface-trend-report.decline-warn.json"
+cp "$report_file" "$decline_warn_report"
+python3 - "$decline_warn_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["deltas"]["script_count"] = 1
+payload["deltas"]["shell_line_total"] = 1
+payload["deltas"]["shell_to_rust_ratio"] = 0.001
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+decline_warn_output="$(bash "$CHECKER" --report-file "$decline_warn_report" --threshold-file "$decline_thresholds" --today 2026-01-20 --output-json "$TMP_DIR/decline-warn-policy.json")"
+if ! printf '%s\n' "$decline_warn_output" | grep -q '^policy_decision=WARN$'; then
+  echo "expected WARN decision when non-declining window exceeds warn threshold" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$decline_warn_output" | grep -q 'combined_shell_surface_decline_window_warn_exceeded'; then
+  echo "expected deterministic decline-window warn reason code for non-declining trajectory" >&2
+  exit 1
+fi
+
+set +e
+decline_fail_output="$(bash "$CHECKER" --report-file "$decline_warn_report" --threshold-file "$decline_thresholds" --today 2026-02-20 --output-json "$TMP_DIR/decline-fail-policy.json" 2>&1)"
+decline_fail_code=$?
+set -e
+if [[ "$decline_fail_code" -eq 0 ]]; then
+  echo "expected NO-GO decision when non-declining window exceeds fail threshold" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$decline_fail_output" | grep -q 'combined_shell_surface_decline_window_fail_exceeded'; then
+  echo "expected deterministic decline-window fail reason code for prolonged non-declining trajectory" >&2
+  exit 1
+fi
+
+set +e
+invalid_today_output="$(bash "$CHECKER" --report-file "$report_file" --threshold-file "$decline_thresholds" --today not-a-date --output-json "$TMP_DIR/invalid-today-policy.json" 2>&1)"
+invalid_today_code=$?
+set -e
+if [[ "$invalid_today_code" -eq 0 ]]; then
+  echo "expected invalid --today value to fail combined shell-surface policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_today_output" | grep -q 'combined_shell_surface_today_override_invalid'; then
+  echo "expected deterministic today-override-invalid reason code for malformed --today input" >&2
   exit 1
 fi
 
