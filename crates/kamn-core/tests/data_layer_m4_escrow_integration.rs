@@ -1,9 +1,10 @@
 use kamn_core::{
-    DataLayerM4EscrowDraftInput, DataLayerM4EscrowState, DataLayerM4EscrowTransitionAction,
-    DataLayerM4EscrowTransitionEngine, DataLayerM4EscrowVisibilityDecision,
-    DataLayerM4EscrowVisibilityRequest, DataLayerM4SettlementEvidenceInput,
-    DataLayerM4SettlementEvidenceReconciliationDecision, DataLayerM4SettlementEvidenceRegistry,
-    DataLayerM4SettlementEvidenceRegistryError, DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE,
+    DataLayerM4EscrowDraftInput, DataLayerM4EscrowInteropError, DataLayerM4EscrowState,
+    DataLayerM4EscrowTransitionAction, DataLayerM4EscrowTransitionEngine,
+    DataLayerM4EscrowVisibilityDecision, DataLayerM4EscrowVisibilityRequest,
+    DataLayerM4SettlementEvidenceInput, DataLayerM4SettlementEvidenceReconciliationDecision,
+    DataLayerM4SettlementEvidenceRegistry, DataLayerM4SettlementEvidenceRegistryError,
+    EscrowStatus, DATA_LAYER_M4_ESCROW_ACTIVE_REASON_CODE,
     DATA_LAYER_M4_ESCROW_AUDITOR_SCOPE_ALLOWED_REASON_CODE,
     DATA_LAYER_M4_ESCROW_AUDITOR_THRESHOLD_NOT_MET_REASON_CODE,
     DATA_LAYER_M4_ESCROW_DISPUTED_REASON_CODE, DATA_LAYER_M4_ESCROW_FUNDED_REASON_CODE,
@@ -403,5 +404,45 @@ fn spec_c08_settlement_evidence_reconciliation_rejects_non_terminal_escrow_state
                 DataLayerM4EscrowState::Funded
             )
         )
+    ));
+}
+
+#[test]
+fn spec_c09_m4_bridge_maps_representable_legacy_escrow_states() {
+    assert_eq!(
+        DataLayerM4EscrowState::try_from(EscrowStatus::Funded).expect("funded should map"),
+        DataLayerM4EscrowState::Funded
+    );
+    assert_eq!(
+        DataLayerM4EscrowState::try_from(EscrowStatus::PartiallyReleased {
+            released: 3,
+            remaining: 7,
+        })
+        .expect("partially-released should map"),
+        DataLayerM4EscrowState::Active
+    );
+    assert_eq!(
+        DataLayerM4EscrowState::try_from(EscrowStatus::Disputed).expect("disputed should map"),
+        DataLayerM4EscrowState::Disputed
+    );
+    assert_eq!(
+        DataLayerM4EscrowState::try_from(EscrowStatus::Released).expect("released should map"),
+        DataLayerM4EscrowState::Released
+    );
+    assert_eq!(
+        DataLayerM4EscrowState::try_from(EscrowStatus::Refunded).expect("refunded should map"),
+        DataLayerM4EscrowState::Refunded
+    );
+}
+
+#[test]
+fn spec_c10_m4_bridge_rejects_ambiguous_legacy_resolved_split() {
+    let ambiguous = DataLayerM4EscrowState::try_from(EscrowStatus::Resolved {
+        released_total: 5,
+        refunded_total: 5,
+    });
+    assert!(matches!(
+        ambiguous,
+        Err(DataLayerM4EscrowInteropError::UnsupportedLegacyStatus(_))
     ));
 }
