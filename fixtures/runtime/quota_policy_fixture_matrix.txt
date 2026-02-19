@@ -1,0 +1,10 @@
+# Deterministic quota policy fixture matrix for issue #4090.
+quota_policy_fixture_matrix_schema_version=kamn.runtime.quota-policy-fixture-matrix.v1
+quota_policy_reason_taxonomy_version=kamn.runtime.quota-policy-reason-taxonomy.v1
+quota_policy_reason_codes_csv=quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive
+columns=case_id|scope|window_seconds|limit|expected_status|expected_reason_code
+valid_processor_ingress|processor_ingress|60|100|pass|none
+valid_peer_sync|peer_sync|120|50|pass|none
+invalid_scope|unknown_scope|60|100|fail|quota_scope_unknown
+invalid_window|processor_ingress|0|100|fail|quota_window_non_positive
+invalid_limit|processor_ingress|60|0|fail|quota_limit_non_positive
