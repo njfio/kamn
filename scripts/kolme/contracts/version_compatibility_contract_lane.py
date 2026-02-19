@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -461,6 +462,12 @@ def main() -> int:
             NONCE_BROADCAST_PARITY_LANE,
             BLOCK_FALLBACK_LANE,
         ):
+            lane_env = None
+            if lane == RUNTIME_COMMIT_REPLAY_LANE:
+                # Adapter contract coverage runs earlier in the same CI step;
+                # skip the nested rerun here to keep the compatibility lane bounded.
+                lane_env = dict(os.environ)
+                lane_env["KAMN_RUNTIME_COMMIT_REPLAY_SKIP_ADAPTER_CONTRACT_LANE"] = "true"
             lane_result = subprocess.run(
                 ["bash", str(lane)],
                 cwd=ROOT_DIR,
@@ -468,6 +475,7 @@ def main() -> int:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=lane_env,
             )
             if lane_result.returncode != 0:
                 print(lane_result.stderr or f"lane failed: {lane}", file=sys.stderr)

@@ -733,6 +733,12 @@ Milestone go/no-go review must aggregate linked preflight/live/gate artifacts in
   - `promotion_gate_reason_taxonomy_version=kamn.release.gonogo-live-evidence-convergence-reason-taxonomy.v1`
   - `promotion_gate_reason_codes_csv=none|<csv>`
   - `promotion_gate_reason_codes_value=none|<csv>`
+  - rollback-lineage fail-closed mapping:
+    - `upgrade_lineage_reason_codes_csv=milestone_review_live_node_validation_rollback_lineage_missing`
+    - `promotion_gate_reason_codes_csv=milestone_review_live_node_validation_rollback_lineage_missing`
+  - recovery-lineage fail-closed mapping:
+    - `upgrade_lineage_reason_codes_csv=milestone_review_live_node_validation_recovery_lineage_missing`
+    - `promotion_gate_reason_codes_csv=milestone_review_live_node_validation_recovery_lineage_missing`
 - Decision contract:
   - aggregate lineage drift or missing linked artifacts force `NO-GO` through deterministic milestone reason codes.
   - missing operator runbook file/markers force `NO-GO` through milestone-review reason taxonomy.
