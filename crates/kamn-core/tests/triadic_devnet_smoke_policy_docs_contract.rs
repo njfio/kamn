@@ -64,3 +64,12 @@ fn integration_triadic_devnet_policy_docs_contract_contract_lane_emits_policy_ou
         "expected triadic contract lane implementation to emit policy output artifact option"
     );
 }
+
+#[test]
+fn regression_triadic_devnet_policy_docs_contract_ci_strategy_keeps_policy_reason_marker() {
+    let ci_doc = repo_file("docs/ci/strategy.md");
+    assert!(
+        ci_doc.contains("triadic_devnet_smoke_policy_passed"),
+        "expected CI strategy docs to keep triadic policy reason marker command surface"
+    );
+}
