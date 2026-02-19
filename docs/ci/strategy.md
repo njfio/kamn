@@ -4119,7 +4119,33 @@ Fast-mode CI tooling regression coverage includes:
     - `status=ok|fail`
     - `final_decision=GO|WARN|NO-GO`
     - `reason_codes=none|<csv>`
-- Legacy synchronous ingress parser drift checker (`test_check_legacy_ingress_parser_drift.sh`)
+- Shell test-surface ratio non-regression gate (`cargo test -p kamn-core --test shell_test_surface_ratio_policy`)
+  - baseline fixture:
+    - `fixtures/ci/shell_test_surface_ratio_baseline.env`
+  - threshold fixture:
+    - `.ci/shell_test_surface_ratio_thresholds.env`
+  - optional report output env:
+    - `KAMN_SHELL_TEST_SURFACE_RATIO_REPORT=<path>`
+  - deterministic taxonomy markers:
+    - `reason_taxonomy_version=kamn.ci.shell-test-surface-ratio-reason-taxonomy.v1`
+    - `reason_codes_csv=baseline_file_missing,baseline_file_invalid,baseline_schema_invalid,baseline_value_invalid,threshold_file_missing,threshold_file_invalid,threshold_schema_invalid,threshold_value_invalid,waiver_file_invalid,waiver_schema_invalid,waiver_missing_mitigation_issue,waiver_invalid_mitigation_issue,waiver_cap_exceeded,shell_test_file_delta_exceeded,ratio_delta_exceeded,ratio_fail_threshold_exceeded_unwaived,ratio_fail_threshold_waiver_applied`
+  - normalized decision markers:
+    - `policy_status=within|waiver-applied|fail`
+    - `final_decision=GO|NO-GO`
+    - `reason_codes=none|<csv>`
+    - `reason_codes=ratio_fail_threshold_exceeded_unwaived`
+    - `reason_codes=ratio_fail_threshold_waiver_applied`
+- Shell test-surface migration wave-1 Rust suite (`cargo test -p kamn-core --test shell_test_surface_migration_wave1`)
+  - migration coverage includes:
+    - legacy ingress parser drift checker contract
+    - workflow Kolme local-heavy exclusion policy contract
+    - fallback retirement docs parity contract
+    - test-harness LOC report contract
+    - Kolme test-harness LOC soft-budget manifest lane contract
+    - retry helper contract
+    - CI exclusion policy contracts (local retry diagnostics, block reconciliation, local metrics, service API serde/reason-code/negative-matrix)
+    - workflow cache + workflow performance policy contracts
+    - runtime wrapper contracts (`run_input_mutation_coverage_guided_*`, `run_live_network_smoke_contract_lane`, `validate_async_runtime_live`, `validate_libp2p_process_isolated_harness`)
   - baseline fixture:
     - `fixtures/ci/legacy_ingress_parser_baseline.json`
   - checker command:
@@ -4130,7 +4156,6 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=legacy_ingress_parser_marker_new_file`
     - `reason_codes=legacy_ingress_parser_baseline_missing`
     - `reason_codes=legacy_ingress_parser_baseline_invalid`
-- Test-harness LOC report generator (`test_generate_test_harness_loc_report.sh`)
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
@@ -4246,7 +4271,7 @@ Fast-mode CI tooling regression coverage includes:
     - `test_harness_loc_soft_budget_contract_ci_smoke_lane_cost_profile=low`
     - `test_harness_loc_soft_budget_contract_ci_smoke_runtime_budget_status=within|exceeded`
     - `test_harness_loc_soft_budget_contract_reason_key=test_harness_loc_soft_budget_contract_ok|test_harness_loc_soft_budget_contract_runtime_budget_exceeded`
-- Kolme test-harness LOC soft-budget contract lane (`test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh`)
+- Kolme test-harness LOC soft-budget contract lane (covered by `shell_test_surface_migration_wave1`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
   - policy command:
@@ -4297,24 +4322,24 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=lane_registry_wrapper_drift_detected`
     - `reason_codes=lane_registry_schema_mismatch`
     - `reason_codes=lane_registry_artifact_missing`
-- Retry helper (`test_run_with_retry.sh`)
+- Retry helper contract (covered by `shell_test_surface_migration_wave1`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
 - Flaky registry validator (`test_check_flaky_registry.sh`)
 - Budget summarizer (`test_summarize_budget_artifacts.sh`)
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
-- Service API serde payload parity CI exclusion policy checker (`test_service_api_serde_payload_parity_ci_exclusion_policy.sh`)
-- Service API reason-code compatibility CI exclusion policy checker (`test_service_api_reason_code_compatibility_ci_exclusion_policy.sh`)
-- Service API validation negative-matrix CI exclusion policy checker (`test_service_api_validation_negative_matrix_ci_exclusion_policy.sh`)
+- Service API serde payload parity CI exclusion policy contract (covered by `shell_test_surface_migration_wave1`)
+- Service API reason-code compatibility CI exclusion policy contract (covered by `shell_test_surface_migration_wave1`)
+- Service API validation negative-matrix CI exclusion policy contract (covered by `shell_test_surface_migration_wave1`)
 - Service API graceful-shutdown drain CI exclusion policy checker (`test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh`)
 - Service API shutdown abrupt-close regression CI exclusion policy checker (`test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh`)
 - Service API Prometheus metrics CI exclusion policy checker (`test_service_api_prometheus_metrics_ci_exclusion_policy.sh`)
-- Local metrics scrape CI exclusion policy checker (`test_local_metrics_scrape_ci_exclusion_policy.sh`)
+- Local metrics scrape CI exclusion policy contract (covered by `shell_test_surface_migration_wave1`)
 - Local observability scrape CI exclusion policy checker (`test_local_observability_scrape_ci_exclusion_policy.sh`)
 - Observability endpoint drift contract checker (`test_check_observability_endpoint_drift_contract.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
-- Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
+- Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_scope_policy.sh`) plus Rust migration-wave coverage (`shell_test_surface_migration_wave1`) for cache/performance policy parity
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
 - Live-HTTPS dependency posture checker (`test_check_kamn_core_live_https_dependency_posture.sh`)

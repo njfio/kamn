@@ -60,10 +60,17 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains(
         "`validate_unified_api_observability_local_heavy_live.sh --mode run --ci-fast-gate FAIL` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block."
     ));
-    assert!(DOC.contains("test_check_legacy_ingress_parser_drift.sh"));
+    assert!(DOC.contains("cargo test -p kamn-core --test shell_test_surface_migration_wave1"));
+    assert!(DOC.contains("cargo test -p kamn-core --test shell_test_surface_ratio_policy"));
+    assert!(DOC.contains("legacy ingress parser drift checker contract"));
     assert!(DOC.contains(
         "check_legacy_ingress_parser_drift.sh --source-root crates/kamn-node/src --baseline-file fixtures/ci/legacy_ingress_parser_baseline.json --output-json /tmp/legacy-ingress-parser-drift-report.json"
     ));
+    assert!(DOC.contains("fixtures/ci/shell_test_surface_ratio_baseline.env"));
+    assert!(DOC.contains(".ci/shell_test_surface_ratio_thresholds.env"));
+    assert!(DOC.contains("policy_status=within|waiver-applied|fail"));
+    assert!(DOC.contains("reason_codes=ratio_fail_threshold_exceeded_unwaived"));
+    assert!(DOC.contains("reason_codes=ratio_fail_threshold_waiver_applied"));
     assert!(DOC.contains("reason_codes=legacy_ingress_parser_marker_count_increased"));
     assert!(DOC.contains("reason_codes=legacy_ingress_parser_marker_new_file"));
     assert!(DOC.contains("reason_codes=legacy_ingress_parser_baseline_missing"));
