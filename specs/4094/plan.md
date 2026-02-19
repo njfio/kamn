@@ -8,17 +8,16 @@
 2. Add explicit overload profile marker documentation in `docs/ops/configuration.md` linking:
    - baseline profile (`stable_success`) and
    - injected-overload profile (`matrix_failure_threshold_exceeded`).
-3. Extend existing `service_api_ops_configuration_docs.rs` docs-contract suite with issue-scoped assertions for these markers and guard commands.
-4. Execute targeted shell + Rust tests and mark spec status `Implemented`.
+3. Use deterministic docs marker lookups (`rg`) and existing shell contract tests as verification evidence.
+4. Execute targeted validation commands and mark spec status `Implemented`.
 
 ## Affected Files
 - `docs/ops/configuration.md`
-- `crates/kamn-core/tests/service_api_ops_configuration_docs.rs`
 - `specs/4094/{spec.md,plan.md,tasks.md}`
 
 ## Risks and Mitigations
 - Risk: docs drift from stress runner reason taxonomy.
-  - Mitigation: Rust docs-contract test asserts exact marker strings and command references.
+  - Mitigation: deterministic marker lookups are part of conformance mapping.
 - Risk: local-heavy semantics accidentally pulled into CI smoke path.
   - Mitigation: retain existing dry-run/opt-in wording and bounded runtime markers from current strategy contracts.
 - Risk: shell-surface expansion.
