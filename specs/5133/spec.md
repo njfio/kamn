@@ -1,7 +1,7 @@
 # Issue #5133 Spec
 
 - Title: Task: fix strict clippy assertions_on_constants regressions in proptest budgets
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r26-5-observability-and-transport-resilience-hardening/index.md

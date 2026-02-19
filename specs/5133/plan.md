@@ -1,7 +1,7 @@
 # Issue #5133 Plan
 
 - Issue: #5133
-- Status: In Progress
+- Status: Implemented
 
 ## Approach
 1. Replace constant-expression assertions with equivalent runtime checks using `std::hint::black_box` in both failing tests.
