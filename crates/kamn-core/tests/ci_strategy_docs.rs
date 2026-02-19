@@ -3,13 +3,22 @@ const OPS_DOC: &str = include_str!("../../../docs/ops/configuration.md");
 const FAIRNESS_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/starvation_fairness_fixture_matrix.txt");
 const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
+const OVERLOAD_RUNNER_SOURCE: &str =
+    include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
 
 const FAIRNESS_REASON_TAXONOMY_VERSION: &str = "kamn.runtime.fairness-policy-reason-taxonomy.v1";
 const FAIRNESS_REASON_CODES_CSV: &str =
     "fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap";
+const OVERLOAD_REASON_TAXONOMY_VERSION: &str =
+    "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1";
+const OVERLOAD_REASON_CODES_CSV: &str = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
+}
+
+fn overload_reason_codes() -> Vec<&'static str> {
+    OVERLOAD_REASON_CODES_CSV.split(',').collect()
 }
 
 #[test]
@@ -1600,6 +1609,92 @@ fn doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason
         assert!(
             DOC.contains(&format!("fairness_docs_parity_remediation.{reason_code}=")),
             "missing fairness remediation marker for {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_overload_docs_parity_and_go_no_go_markers() {
+    assert!(DOC.contains("### Overload Docs/Runbook and Go-No-Go Marker Parity Contract"));
+    assert!(DOC.contains(
+        "overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_runner_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_runner_script_path=scripts/ci/run_daemon_os_signal_stress_matrix.sh"
+    ));
+    assert!(DOC.contains("overload_docs_parity_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("overload_docs_parity_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("overload_docs_parity_go_no_go_status=verified"));
+    assert!(DOC.contains("overload_docs_parity_go_no_go_decision_contract=GO|NO-GO"));
+    assert!(DOC.contains("overload_docs_parity_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_overload_docs_parity_and_go_no_go_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_overload_docs_parity_matches_ops_docs_and_runner_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_overload_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4097"));
+}
+
+#[test]
+fn doc_enforces_overload_docs_parity_matches_ops_docs_and_runner_markers() {
+    assert!(DOC.contains(&format!(
+        "overload_docs_parity_reason_taxonomy_version={OVERLOAD_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(
+        "overload_docs_parity_runner_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"
+    ));
+
+    assert!(OPS_DOC.contains(
+        "daemon_os_signal_stress_matrix_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"
+    ));
+    assert!(OPS_DOC.contains(
+        "daemon_os_signal_stress_profile_injected_overload_reason_code=matrix_failure_threshold_exceeded"
+    ));
+    assert!(OPS_DOC.contains(
+        "daemon_os_signal_stress_profile_runtime_budget_reason_code=runtime_budget_exceeded"
+    ));
+    assert!(OPS_DOC.contains(
+        "daemon_os_signal_stress_profile_quarantine_reason_code=quarantine_reference_present_without_followup"
+    ));
+    assert!(OPS_DOC.contains(
+        "overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1"
+    ));
+    assert!(OPS_DOC.contains(&format!(
+        "overload_docs_parity_reason_codes_csv={OVERLOAD_REASON_CODES_CSV}"
+    )));
+
+    assert!(OVERLOAD_RUNNER_SOURCE.contains("kamn.ci.daemon-os-signal-stress-matrix-report.v1"));
+    for reason_code in overload_reason_codes() {
+        assert!(
+            OVERLOAD_RUNNER_SOURCE.contains(&format!("reason_code=\"{reason_code}\"")),
+            "runner source missing overload reason marker {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_enforces_overload_docs_parity_requires_remediation_marker_for_each_reason_code() {
+    for reason_code in overload_reason_codes() {
+        assert!(
+            DOC.contains(&format!("overload_docs_parity_remediation.{reason_code}=")),
+            "missing overload remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&format!("overload_docs_parity_remediation.{reason_code}=")),
+            "ops docs missing overload remediation marker for {reason_code}"
         );
     }
 }

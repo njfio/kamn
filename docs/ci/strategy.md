@@ -4665,6 +4665,34 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - each fairness reason code must have a deterministic remediation marker in this document.
 - Regression: #4093
 
+### Overload Docs/Runbook and Go-No-Go Marker Parity Contract
+- `overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1`
+- `overload_docs_parity_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success`
+- `overload_docs_parity_runner_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1`
+- `overload_docs_parity_runner_script_path=scripts/ci/run_daemon_os_signal_stress_matrix.sh`
+- `overload_docs_parity_ops_doc_path=docs/ops/configuration.md`
+- `overload_docs_parity_strategy_doc_path=docs/ci/strategy.md`
+- `overload_docs_parity_go_no_go_status=verified`
+- `overload_docs_parity_go_no_go_decision_contract=GO|NO-GO`
+- `overload_docs_parity_remediation_map_version=v1`
+- `overload_docs_parity_remediation.runtime_budget_exceeded=reduce iterations or increase max-seconds budget after validating reproducer runtime`
+- `overload_docs_parity_remediation.matrix_failure_threshold_exceeded=triage failing iteration artifacts and rerun reproducer before promotion`
+- `overload_docs_parity_remediation.quarantine_registry_missing=restore .ci/flaky-tests.txt or pass an explicit --registry-file`
+- `overload_docs_parity_remediation.quarantine_reference_present_without_followup=add --quarantine-followup-issue #<id> or retire stale quarantine entries`
+- `overload_docs_parity_remediation.matrix_failures_within_threshold=track flaky rows and keep threshold + waiver evidence attached to release review`
+- `overload_docs_parity_remediation.stable_success_with_quarantine_followup=keep follow-up issue open until quarantine references are retired`
+- `overload_docs_parity_remediation.stable_success=no action required; retain report artifact link in release checklist`
+- Guard commands:
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_overload_docs_parity_and_go_no_go_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_overload_docs_parity_matches_ops_docs_and_runner_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_overload_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact`
+  - `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_overload_docs_parity_remediation_controls -- --exact`
+- Fail-closed policy:
+  - runner schema and reason markers must remain synchronized across strategy docs, ops docs, and runner source.
+  - each overload reason code must have deterministic remediation guidance markers.
+  - go/no-go markers remain deterministic and must not drift from runner decision outputs.
+- Regression: #4097
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
