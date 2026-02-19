@@ -15,6 +15,7 @@
 - Story (Phase 6): `#5253` — automate retention crypto-shredding and partition archival execution
 - Story (Cross-cutting): `#5254` — enforce contract-infrastructure convergence validation
 - Task (current wave): `#5255` — bootstrap PostgreSQL migration scaffolding and schema contract markers
+- Task (current wave): `#5257` — implement PostgreSQL repository bridge contracts and RLS session projection
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -27,6 +28,7 @@
 
 ## Current Status
 - `#5255`: implemented in this wave (migration artifacts + marker tests), pending merge.
+- `#5257`: implemented in this wave (deterministic SQL descriptor projection + M2 RLS statement projection), pending merge.
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail

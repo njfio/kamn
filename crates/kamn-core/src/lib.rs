@@ -64,6 +64,8 @@ pub mod data_layer_m7_timeseries_telemetry;
 pub mod data_layer_m8_compliance_lifecycle;
 /// M9 realtime contracts for dispatch acknowledgements, scoped presence, and backpressure markers.
 pub mod data_layer_m9_realtime_delivery;
+/// PostgreSQL repository bridge contracts for deterministic data-layer SQL descriptor projection.
+pub mod data_layer_postgres_repository_bridge;
 /// PRD critical-scenario conformance contracts for shell-neutral validation (`62..71`).
 pub mod data_layer_prd_critical_scenario_conformance;
 /// Shell-neutral orchestration and shell/rust ratio-budget policy contracts.
@@ -447,6 +449,14 @@ pub use data_layer_m9_realtime_delivery::{
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
+};
+pub use data_layer_postgres_repository_bridge::{
+    data_layer_pg_project_blind_index_search_operation,
+    data_layer_pg_project_default_rls_statements, data_layer_pg_project_insert_message_operation,
+    data_layer_pg_project_select_message_by_id_operation, DataLayerPgBlindIndexSearchRequest,
+    DataLayerPgOperationKind, DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession,
+    DataLayerPgRlsStatement, DataLayerPgSqlOperation, DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE,
+    DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE,
 };
 pub use data_layer_prd_critical_scenario_conformance::{
     DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
