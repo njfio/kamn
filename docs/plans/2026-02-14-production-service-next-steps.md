@@ -192,6 +192,18 @@ This refreshed version separates:
   - ci-local promotion budget boundary enforced by managed-signer contract lane:
     - `ci_local_promotion_budget_boundary_status=verified`
 
+### R27.6 Deployment Hardening Local-Heavy Lane Closure (`#3950 -> #3954 -> #3961`)
+- Deterministic closure markers:
+  - `deployment_hardening_local_heavy_contract_chain=#3950->#3954->(#3961,#3962)`
+  - `deployment_hardening_local_heavy_contract_guard_command=cargo test -p kamn-core --test deployment_hardening_lane_contract -- --nocapture`
+  - `deployment_hardening_local_heavy_required_reason_codes_csv=dry_run_no_commands_executed,deployment_preflight_passed,preflight_budget_exceeded,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled`
+- Guard command matrix:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Local-heavy boundary:
+  - run-mode drill execution remains local-heavy/explicit opt-in; ci-fast-gate only enforces dry-run/governance parity.
+
 ### R27.16 Retry/TLS CI Smoke Closure
 - Delivered chain: `#4100 -> #4104 -> (#4111, #4112)`.
 - Closure highlights:
