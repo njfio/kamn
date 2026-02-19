@@ -1,7 +1,7 @@
 # Issue #4096 Spec
 
 - Title: Subtask: implement ci dry-run overload governance checker and baseline threshold fixtures
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-15-resource-quota-fairness-and-overload-resilience-governance/index.md
