@@ -159,6 +159,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deep coverage-guided lane must remain excluded from `ci-fast-gate` while policy checks stay enforced.
 - Regression: #2693
 
+## Invariant/Fuzz/Concurrency CI Smoke Boundary Contract
+- Bounded CI-smoke contract lane command:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+- CI-smoke policy command:
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json --output-json /tmp/invariant-fuzz-concurrency-policy-report.json`
+- Local-heavy deep lane commands (explicit opt-in/local use):
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh`
+  - `bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh`
+- Boundary markers:
+  - `invariant_fuzz_concurrency_ci_smoke_max_seconds=120`
+  - `invariant_fuzz_concurrency_local_heavy_max_seconds=900`
+  - `invariant_fuzz_concurrency_ci_smoke_lane_cost_profile=low`
+  - `invariant_fuzz_concurrency_local_heavy_execution_mode=opt_in`
+  - `invariant_fuzz_concurrency_local_heavy_excluded_from_ci_fast_gate=true`
+
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`

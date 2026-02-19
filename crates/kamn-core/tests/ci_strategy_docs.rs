@@ -1342,3 +1342,21 @@ fn doc_contains_cutover_ci_exclusion_policy_contract_markers() {
     assert!(DOC.contains("bash scripts/cutover/run_cutover_rollback_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/cutover/run_cutover_rollback_deep_lane.sh"));
 }
+
+#[test]
+fn doc_contains_invariant_fuzz_concurrency_ci_smoke_boundary_contract_markers() {
+    assert!(DOC.contains("## Invariant/Fuzz/Concurrency CI Smoke Boundary Contract"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json --output-json /tmp/invariant-fuzz-concurrency-policy-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh"));
+    assert!(DOC.contains("bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh"));
+    assert!(DOC.contains("invariant_fuzz_concurrency_ci_smoke_max_seconds=120"));
+    assert!(DOC.contains("invariant_fuzz_concurrency_local_heavy_max_seconds=900"));
+    assert!(DOC.contains("invariant_fuzz_concurrency_ci_smoke_lane_cost_profile=low"));
+    assert!(DOC.contains("invariant_fuzz_concurrency_local_heavy_execution_mode=opt_in"));
+    assert!(DOC.contains("invariant_fuzz_concurrency_local_heavy_excluded_from_ci_fast_gate=true"));
+}
