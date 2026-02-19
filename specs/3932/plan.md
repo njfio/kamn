@@ -1,7 +1,7 @@
 # Issue #3932 Plan
 
 - Issue: #3932
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Add a red docs-contract assertion in `ci_strategy_docs.rs` for invariant-fuzz-concurrency CI-smoke/local-heavy governance markers.
