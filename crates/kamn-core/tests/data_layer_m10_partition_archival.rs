@@ -1,8 +1,14 @@
 use kamn_core::{
     data_layer_m10_format_partition_name, DataLayerM10ArchiveDueRequest,
+    DataLayerM10ComplianceShredProjectionReport, DataLayerM10ComplianceShredProjectionRequest,
     DataLayerM10PartitionLifecycleError, DataLayerM10PartitionLifecycleRegistry,
-    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
-    DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD, DATA_LAYER_M10_PARTITION_PREFIX,
+    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus, DataLayerM8ComplianceRegistry,
+    DataLayerM8CryptoShredRequest, DataLayerM8MessageRecordInput, DataLayerM8RetentionClass,
+    DataLayerM8WrappedCekInput, DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+    DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE,
+    DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
+    DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE,
+    DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
     DATA_LAYER_M10_REATTACH_REASON_CODE,
 };
 
@@ -13,6 +19,42 @@ fn partition_input(
     DataLayerM10PartitionRecordInput {
         partition_month_id,
         all_messages_shredded,
+    }
+}
+
+fn m8_message_input(
+    owner_did: &str,
+    message_id: &str,
+    created_at_epoch_seconds: u64,
+) -> DataLayerM8MessageRecordInput {
+    DataLayerM8MessageRecordInput {
+        owner_did: owner_did.to_owned(),
+        message_id: message_id.to_owned(),
+        created_at_epoch_seconds,
+        content_hash: format!("hash:{message_id}"),
+        hash_chain_prev: format!("prev:{message_id}"),
+        retention_class: DataLayerM8RetentionClass::Standard,
+        retention_extension_seconds: 0,
+        wrapped_keys: vec![DataLayerM8WrappedCekInput {
+            recipient_did: "kamn:did:agent:alpha-recipient".to_owned(),
+            wrapped_cek: format!("cek:{message_id}"),
+        }],
+    }
+}
+
+fn project_request(
+    owner_did: &str,
+    partition_month_id: u32,
+    partition_message_ids: Vec<&str>,
+) -> DataLayerM10ComplianceShredProjectionRequest {
+    DataLayerM10ComplianceShredProjectionRequest {
+        requester_owner_did: owner_did.to_owned(),
+        owner_did: owner_did.to_owned(),
+        partition_month_id,
+        partition_message_ids: partition_message_ids
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
     }
 }
 
@@ -139,4 +181,125 @@ fn spec_c05_duplicate_registration_and_partition_prefix_contract_are_enforced() 
         .expect("future planning should succeed");
     assert_eq!(planned.len(), 1);
     assert!(planned[0].starts_with(DATA_LAYER_M10_PARTITION_PREFIX));
+}
+
+#[test]
+fn spec_c06_partition_shred_completeness_can_be_projected_from_m8_lifecycle_records() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .expect("message one should register");
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .expect("message two should register");
+
+    let initial_projection: DataLayerM10ComplianceShredProjectionReport = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("initial projection should succeed");
+    assert_eq!(
+        initial_projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE
+    );
+    assert!(!initial_projection.all_messages_shredded);
+    assert_eq!(initial_projection.shredded_partition_messages, 0);
+    assert_eq!(
+        initial_projection.projection_reason_code,
+        DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE
+    );
+
+    m8_registry
+        .crypto_shred(DataLayerM8CryptoShredRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-1".to_owned(),
+            shredded_at_epoch_seconds: 1_708_560_200,
+        })
+        .expect("first message should shred");
+    let mid_projection = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("mid projection should succeed");
+    assert_eq!(
+        mid_projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE
+    );
+    assert_eq!(mid_projection.shredded_partition_messages, 1);
+
+    m8_registry
+        .crypto_shred(DataLayerM8CryptoShredRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-2".to_owned(),
+            shredded_at_epoch_seconds: 1_708_560_210,
+        })
+        .expect("second message should shred");
+    let final_projection = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("final projection should succeed");
+    assert_eq!(
+        final_projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE
+    );
+    assert!(final_projection.all_messages_shredded);
+    assert_eq!(final_projection.shredded_partition_messages, 2);
+
+    let archived = m10_registry
+        .archive_due_partitions(DataLayerM10ArchiveDueRequest {
+            now_month_id: 202602,
+            active_retention_months: 1,
+            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        })
+        .expect("archive due should succeed");
+    assert_eq!(archived.len(), 1);
+    assert_eq!(archived[0].partition_name, "messages_2024_01");
+}
+
+#[test]
+fn spec_c07_partition_shred_projection_fails_closed_when_m8_message_lookup_is_missing() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(
+            owner_did,
+            "m10-m8-msg-present",
+            1_708_560_100,
+        ))
+        .expect("message should register");
+
+    let missing = m10_registry.project_partition_shred_completeness_from_m8(
+        &m8_registry,
+        project_request(
+            owner_did,
+            202401,
+            vec!["m10-m8-msg-present", "m10-m8-msg-missing"],
+        ),
+    );
+    assert!(matches!(
+        missing,
+        Err(
+            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+                reason_code: DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE,
+                ..
+            }
+        )
+    ));
 }

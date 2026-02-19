@@ -4,8 +4,10 @@
 //! monthly partition naming/planning, retention-window archival eligibility,
 //! archival index metadata projection, and archived-partition re-attachment.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+
+use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry};
 
 /// Partition prefix for monthly message partitions.
 pub const DATA_LAYER_M10_PARTITION_PREFIX: &str = "messages_";
@@ -25,6 +27,24 @@ pub const DATA_LAYER_M10_RECOVERY_STATUS_INELIGIBLE_REASON_CODE: &str =
 /// Stable reason marker when historical partition metadata is incomplete.
 pub const DATA_LAYER_M10_RECOVERY_METADATA_INCOMPLETE_REASON_CODE: &str =
     "m10_partition_recovery_metadata_incomplete";
+/// Stable reason marker when M10 partition shred-completeness projection from M8 is applied.
+pub const DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE: &str =
+    "m10_partition_compliance_projection_applied";
+/// Stable reason marker when M8 projection resolves that partition is not fully shredded.
+pub const DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE: &str =
+    "m10_partition_compliance_shred_incomplete";
+/// Stable reason marker when M8 projection resolves that partition is fully shredded.
+pub const DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE: &str =
+    "m10_partition_compliance_shred_complete";
+/// Stable reason marker for owner-scope projection denials.
+pub const DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE: &str =
+    "m10_partition_compliance_owner_scope_denied";
+/// Stable reason marker when M8 lookup fails during projection.
+pub const DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE: &str =
+    "m10_partition_compliance_lookup_failed";
+/// Stable reason marker when M8 projection input is invalid.
+pub const DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE: &str =
+    "m10_partition_compliance_input_invalid";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,6 +107,19 @@ pub struct DataLayerM10ArchiveDueRequest {
     pub object_storage_prefix: String,
 }
 
+/// Compliance projection request to derive partition shred completeness from M8.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10ComplianceShredProjectionRequest {
+    /// Requester owner DID.
+    pub requester_owner_did: String,
+    /// Target owner DID.
+    pub owner_did: String,
+    /// Partition month identifier as `YYYYMM`.
+    pub partition_month_id: u32,
+    /// Message identifiers that belong to the partition scope.
+    pub partition_message_ids: Vec<String>,
+}
+
 /// Archival index projection row.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM10ArchivalIndexEntry {
@@ -102,6 +135,25 @@ pub struct DataLayerM10ArchivalIndexEntry {
     pub checksum_marker: String,
     /// Lifecycle status after archive transition.
     pub lifecycle_status: DataLayerM10PartitionStatus,
+}
+
+/// Projection report for M8-derived partition shred completeness.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10ComplianceShredProjectionReport {
+    /// Partition month identifier as `YYYYMM`.
+    pub partition_month_id: u32,
+    /// Canonical partition name `messages_YYYY_MM`.
+    pub partition_name: String,
+    /// Total message identifiers evaluated from projection input.
+    pub total_partition_messages: usize,
+    /// Number of messages currently shredded in M8.
+    pub shredded_partition_messages: usize,
+    /// Derived partition completeness marker.
+    pub all_messages_shredded: bool,
+    /// Completeness reason marker (`complete` or `incomplete`).
+    pub reason_code: &'static str,
+    /// Stable projection-applied marker.
+    pub projection_reason_code: &'static str,
 }
 
 /// Recoverability readiness projection for one partition.
@@ -164,6 +216,68 @@ impl DataLayerM10PartitionLifecycleRegistry {
         self.partitions
             .insert(input.partition_month_id, record.clone());
         Ok(record)
+    }
+
+    /// Derives partition shred completeness from M8 lifecycle records and updates partition state.
+    pub fn project_partition_shred_completeness_from_m8(
+        &mut self,
+        compliance_registry: &DataLayerM8ComplianceRegistry,
+        request: DataLayerM10ComplianceShredProjectionRequest,
+    ) -> Result<DataLayerM10ComplianceShredProjectionReport, DataLayerM10PartitionLifecycleError>
+    {
+        authorize_owner_scope(
+            request.requester_owner_did.as_str(),
+            request.owner_did.as_str(),
+        )?;
+        validate_partition_month_id(request.partition_month_id)?;
+        if request.partition_message_ids.is_empty() {
+            return Err(DataLayerM10PartitionLifecycleError::EmptyField(
+                "partition_message_ids",
+            ));
+        }
+
+        let mut message_ids = BTreeSet::new();
+        for message_id in request.partition_message_ids {
+            validate_non_empty(message_id.as_str(), "partition_message_ids")?;
+            message_ids.insert(message_id);
+        }
+
+        let total_partition_messages = message_ids.len();
+        let mut shredded_partition_messages = 0usize;
+        for message_id in &message_ids {
+            let message = compliance_registry
+                .message_for_owner(request.owner_did.as_str(), message_id.as_str())
+                .map_err(map_m8_projection_error_to_m10)?;
+            if message.shredded_at_epoch_seconds.is_some() {
+                shredded_partition_messages += 1;
+            }
+        }
+        let all_messages_shredded = shredded_partition_messages == total_partition_messages;
+        let reason_code = if all_messages_shredded {
+            DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE
+        } else {
+            DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE
+        };
+
+        let partition_name = data_layer_m10_format_partition_name(request.partition_month_id)?;
+        let record = self
+            .partitions
+            .get_mut(&request.partition_month_id)
+            .ok_or_else(|| {
+                DataLayerM10PartitionLifecycleError::PartitionNotFound(partition_name.clone())
+            })?;
+        record.all_messages_shredded = all_messages_shredded;
+        record.last_reason_code = Some(DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE);
+
+        Ok(DataLayerM10ComplianceShredProjectionReport {
+            partition_month_id: record.partition_month_id,
+            partition_name: record.partition_name.clone(),
+            total_partition_messages,
+            shredded_partition_messages,
+            all_messages_shredded,
+            reason_code,
+            projection_reason_code: DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
+        })
     }
 
     /// Plans future partition names for `months_ahead` months after `reference_month_id`.
@@ -327,6 +441,18 @@ pub enum DataLayerM10PartitionLifecycleError {
     DuplicatePartitionMonthId(u32),
     /// Named partition does not exist in registry.
     PartitionNotFound(String),
+    /// Owner-scope projection request was denied.
+    OwnerScopeViolation {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// Compliance projection failed before partition update could be applied.
+    ComplianceProjectionFailed {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail from compliance lookup/projection step.
+        detail: String,
+    },
     /// Lifecycle transition was not allowed from current state.
     InvalidLifecycleTransition {
         /// Partition name.
@@ -351,6 +477,15 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
                 write!(f, "duplicate partition month id: {value}")
             }
             Self::PartitionNotFound(value) => write!(f, "partition not found: {value}"),
+            Self::OwnerScopeViolation { reason_code } => {
+                write!(f, "owner scope violation: {reason_code}")
+            }
+            Self::ComplianceProjectionFailed {
+                reason_code,
+                detail,
+            } => {
+                write!(f, "compliance projection failed: {reason_code} ({detail})")
+            }
             Self::InvalidLifecycleTransition {
                 partition_name,
                 from_status,
@@ -365,6 +500,71 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
 }
 
 impl std::error::Error for DataLayerM10PartitionLifecycleError {}
+
+fn map_m8_projection_error_to_m10(
+    error: DataLayerM8ComplianceError,
+) -> DataLayerM10PartitionLifecycleError {
+    let reason_code = match error {
+        DataLayerM8ComplianceError::OwnerScopeViolation { .. } => {
+            DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE
+        }
+        DataLayerM8ComplianceError::OwnerNotFound { .. }
+        | DataLayerM8ComplianceError::MessageNotFound { .. } => {
+            DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE
+        }
+        DataLayerM8ComplianceError::InvalidDid(_)
+        | DataLayerM8ComplianceError::EmptyField(_)
+        | DataLayerM8ComplianceError::EmptyWrappedKeys
+        | DataLayerM8ComplianceError::InvalidWrappedKey(_)
+        | DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { .. }
+        | DataLayerM8ComplianceError::DuplicateMessageId { .. }
+        | DataLayerM8ComplianceError::LegalHoldActive { .. }
+        | DataLayerM8ComplianceError::AlreadyShredded { .. } => {
+            DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE
+        }
+    };
+
+    DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+        reason_code,
+        detail: error.to_string(),
+    }
+}
+
+fn validate_kamn_did(value: &str) -> Result<(), DataLayerM10PartitionLifecycleError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
+        return Err(
+            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+                reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
+                detail: format!("invalid did: {value}"),
+            },
+        );
+    }
+    let segments = trimmed.split(':').collect::<Vec<_>>();
+    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
+        return Err(
+            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+                reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
+                detail: format!("invalid did: {value}"),
+            },
+        );
+    }
+    Ok(())
+}
+
+fn authorize_owner_scope(
+    requester_owner_did: &str,
+    owner_did: &str,
+) -> Result<(), DataLayerM10PartitionLifecycleError> {
+    validate_kamn_did(requester_owner_did)?;
+    validate_kamn_did(owner_did)?;
+    if requester_owner_did != owner_did {
+        return Err(DataLayerM10PartitionLifecycleError::OwnerScopeViolation {
+            reason_code: DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
+        });
+    }
+    Ok(())
+}
 
 fn validate_non_empty(
     value: &str,
