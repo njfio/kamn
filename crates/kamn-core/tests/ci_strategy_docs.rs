@@ -681,6 +681,12 @@ fn doc_contains_runtime_local_observability_scrape_contract_lane_ci_mode_markers
     assert!(DOC.contains(
         "local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
+    assert!(DOC.contains("schema_version=kamn.runtime.local-observability-scrape-live-report.v1"));
+    assert!(DOC
+        .contains("schema_version=kamn.runtime.local-observability-scrape-live-policy-report.v1"));
+    assert!(DOC.contains(
+        "schema_version=kamn.runtime.local-observability-scrape-live-contract-lane-report.v1"
+    ));
     assert!(DOC.contains("local_observability_scrape_policy_marker_missing:scrape_probe_status"));
 }
 

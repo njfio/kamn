@@ -1264,6 +1264,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - async handler parity checks remain in the bounded test scope, including concurrent metrics/stream request handling against the async observability adapter path.
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic artifact schema markers:
+  - `schema_version=kamn.runtime.local-observability-scrape-live-report.v1`
+  - `schema_version=kamn.runtime.local-observability-scrape-live-policy-report.v1`
+  - `schema_version=kamn.runtime.local-observability-scrape-live-contract-lane-report.v1`
 - Readiness/failure-drill contracts:
   - streaming contract reference: `docs/observability/streaming.md`
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
