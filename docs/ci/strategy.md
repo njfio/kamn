@@ -50,6 +50,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+  - `live_transport_fault_matrix_policy_marker_missing:retry_reconnect_marker_contract_status`
   - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
   - `libp2p_process_isolated_convergence_policy_deep_fast_gate_exclusion_mismatch`
 
@@ -827,6 +828,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic replay recovery marker (`replay_recovery_status=verified`).
   - lane emits deterministic peer-churn recovery marker (`peer_churn_recovery_status=verified`).
   - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_live_fault_matrix`).
+  - lane emits deterministic retry/reconnect marker contract status (`retry_reconnect_marker_contract_status=verified`).
   - lane emits deterministic taxonomy markers:
     `reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1`,
     `reason_taxonomy_status=verified`.
@@ -836,7 +838,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `resilience_gate_reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-resilience-gate-reason-taxonomy.v1`,
     `resilience_gate_reason_codes_csv=live_transport_fault_matrix_contract_ci_fast_gate_scope_mismatch,live_transport_fault_matrix_contract_ci_smoke_boundary_exceeded,live_transport_fault_matrix_contract_evidence_convergence_mismatch`.
   - policy checker emits deterministic reason-code taxonomy marker:
-    `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`.
+    `reason_codes_csv=ci_fast_gate_failed,live_transport_fault_matrix_policy_command_count_invalid,live_transport_fault_matrix_policy_command_count_mismatch,live_transport_fault_matrix_policy_elapsed_seconds_invalid,live_transport_fault_matrix_policy_execution_reason_code_mismatch,live_transport_fault_matrix_policy_final_decision_invalid,live_transport_fault_matrix_policy_final_decision_mismatch,live_transport_fault_matrix_policy_lane_mode_invalid,live_transport_fault_matrix_policy_marker_missing,live_transport_fault_matrix_policy_peer_adapter_multi_process_validation_local_heavy_status_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_budget_exhausted_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch,live_transport_fault_matrix_policy_peer_adapter_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_peer_integrity_fail_closed_reason_code_mismatch,live_transport_fault_matrix_policy_reason_codes_classification_mismatch,live_transport_fault_matrix_policy_reason_codes_invalid,live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch,live_transport_fault_matrix_policy_runtime_transport_mode_mismatch,live_transport_fault_matrix_policy_schema_mismatch,live_transport_fault_matrix_policy_status_invalid`.
   - policy checker and contract lane emit normalized marker `reason_codes_value=none|<csv>` for deterministic machine parsing.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
@@ -848,6 +850,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - live transport fault matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+  - `live_transport_fault_matrix_policy_marker_missing:retry_reconnect_marker_contract_status`
   - `live_transport_fault_matrix_policy_reason_taxonomy_version_mismatch`
   - `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`
   - `live_transport_fault_matrix_contract_evidence_convergence_mismatch`
