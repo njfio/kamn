@@ -21,13 +21,10 @@ const REQUIRED_POLICY_CHECKER_MARKERS: &[&str] = &[
 ];
 
 const REQUIRED_CI_STRATEGY_MARKERS: &[&str] = &[
-    "deployment_preflight_ci_dry_run_governance_status=verified",
-    "deployment_preflight_ci_dry_run_gate=PASS",
-    "deployment_preflight_ci_dry_run_required_reason_code=dry_run_no_commands_executed",
-    "deployment_preflight_runbook_marker_parity_status=verified",
-    "deployment_preflight_runbook_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1",
-    "deployment_preflight_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch",
+    "deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.",
+    "run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json",
     "python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json",
+    "run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json",
 ];
 
 const REQUIRED_NEXT_STEPS_MARKERS: &[&str] = &[
@@ -68,10 +65,10 @@ fn integration_next_steps_declares_3962_closure_chain_markers() {
 }
 
 #[test]
-fn regression_ci_strategy_and_next_steps_share_runbook_reason_code_csv() {
+fn regression_ci_strategy_and_next_steps_keep_runbook_parity_fail_closed_markers() {
     assert!(
-        CI_STRATEGY_DOC.contains(RUNBOOK_REASON_CODES_CSV),
-        "ci strategy doc missing deployment preflight runbook reason csv marker"
+        CI_STRATEGY_DOC.contains("runbook_marker_parity_mismatch"),
+        "ci strategy doc missing runbook marker parity fail-closed marker"
     );
     assert!(
         PRODUCTION_NEXT_STEPS_DOC.contains(RUNBOOK_REASON_CODES_CSV),

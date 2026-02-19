@@ -22,8 +22,11 @@
   - Mitigation: enforce explicit chain/guard markers and reason-code CSV parity in one Rust suite.
 
 ## Contracts and Interfaces
-- Required runbook-parity markers:
-  - `deployment_preflight_runbook_marker_parity_status=verified`
+- Required CI strategy governance markers:
+  - `deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.`
+  - `run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Required runbook-parity policy markers:
   - `deployment_preflight_runbook_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1`
   - `deployment_preflight_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
 - Required closure markers:
