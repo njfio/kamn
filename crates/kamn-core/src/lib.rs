@@ -409,7 +409,8 @@ pub use data_layer_m9_realtime_delivery::{
     DataLayerM9DispatchOutcome, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
     DataLayerM9PresenceQuery, DataLayerM9PresenceRecord, DataLayerM9PresenceRelationshipRequest,
     DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
-    DataLayerM9RecipientQueueSnapshot, DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE,
+    DataLayerM9RecipientQueueSnapshot, DataLayerM9RuntimeBackpressureProjection,
+    DataLayerM9RuntimeBackpressureProjectionRequest, DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE,
     DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE,
     DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
     DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
@@ -421,6 +422,9 @@ pub use data_layer_m9_realtime_delivery::{
     DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
     DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
 };
 pub use data_layer_prd_critical_scenario_conformance::{
     DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,

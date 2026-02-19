@@ -4,7 +4,11 @@
 //! owner-scoped dispatch acknowledgements, scoped presence visibility, and
 //! queue-cap backpressure escalation markers.
 
-use crate::{AntiSpamDecision, AntiSpamEngine, AntiSpamRejection, ChannelStore};
+use crate::{
+    AntiSpamDecision, AntiSpamEngine, AntiSpamRejection, ChannelStore,
+    DeterministicBackpressureController, PeerLifecycleState, RuntimeBackpressureDecision,
+    RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -44,6 +48,15 @@ pub const DATA_LAYER_M9_ANTI_SPAM_SUSPENDED_REASON_CODE: &str =
 /// Stable reason marker for anti-spam duplicate-message denials.
 pub const DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE: &str =
     "m9_realtime_anti_spam_duplicate_message_id";
+/// Stable reason marker for runtime backpressure policy projection failures.
+pub const DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE: &str =
+    "m9_realtime_runtime_backpressure_policy_invalid";
+/// Stable reason marker for runtime backpressure input projection failures.
+pub const DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE: &str =
+    "m9_realtime_runtime_backpressure_input_invalid";
+/// Stable reason marker for runtime backpressure evaluation failures.
+pub const DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE: &str =
+    "m9_realtime_runtime_backpressure_evaluation_failed";
 
 /// Dispatch acknowledgement status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +82,27 @@ pub struct DataLayerM9DispatchRequest {
     pub message_id: String,
     /// Dispatch timestamp in epoch seconds.
     pub dispatched_at_epoch_seconds: u64,
+}
+
+/// Runtime backpressure projection request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM9RuntimeBackpressureProjectionRequest {
+    /// Requester owner DID.
+    pub requester_owner_did: String,
+    /// Target owner DID.
+    pub owner_did: String,
+    /// Recipient agent DID.
+    pub recipient_agent_did: String,
+    /// Queue capacity used to evaluate runtime backpressure thresholds.
+    pub queue_capacity: usize,
+    /// Recipient peer lifecycle state used by runtime backpressure policy.
+    pub lifecycle_state: PeerLifecycleState,
+    /// Slow-producer threshold per mille.
+    pub slow_threshold_per_mille: u16,
+    /// Reject-new-enqueue threshold per mille.
+    pub reject_threshold_per_mille: u16,
+    /// Whether disconnected peers with pending queue entries should be purged.
+    pub purge_disconnected_with_pending_queue: bool,
 }
 
 /// Channel dispatch authorization request.
@@ -103,6 +137,21 @@ pub struct DataLayerM9DispatchOutcome {
     pub backpressure_warning_event: bool,
     /// True when sustained backpressure threshold is crossed and escrow extension is recommended.
     pub escrow_timeout_extension_recommended: bool,
+}
+
+/// Runtime backpressure projection output for one recipient queue.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM9RuntimeBackpressureProjection {
+    /// Recipient agent DID.
+    pub recipient_agent_did: String,
+    /// Pending queue depth used for runtime backpressure input.
+    pub pending_queue_depth: usize,
+    /// Deferred queue depth retained in M9 for audit/diagnostic context.
+    pub deferred_count: usize,
+    /// Runtime backpressure decision.
+    pub runtime_decision: RuntimeBackpressureDecision,
+    /// Stable reason code from runtime backpressure decision.
+    pub reason_code: &'static str,
 }
 
 /// Queue snapshot projection for deterministic ordering validation.
@@ -354,6 +403,54 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         })
     }
 
+    /// Projects one recipient queue through runtime backpressure contracts.
+    pub fn project_runtime_backpressure_for_recipient(
+        &self,
+        request: DataLayerM9RuntimeBackpressureProjectionRequest,
+    ) -> Result<DataLayerM9RuntimeBackpressureProjection, DataLayerM9RealtimeDeliveryError> {
+        authorize_owner_scope(
+            request.requester_owner_did.as_str(),
+            request.owner_did.as_str(),
+        )?;
+        validate_kamn_did(request.recipient_agent_did.as_str())?;
+
+        let queue_state = self.queue_by_recipient.get(&request.recipient_agent_did);
+        let pending_queue_depth = queue_state
+            .map(|state| state.pending_message_ids.len())
+            .unwrap_or_default();
+        let deferred_count = queue_state
+            .map(|state| state.deferred_message_ids.len())
+            .unwrap_or_default();
+
+        let policy = RuntimeBackpressurePolicy::new(
+            request.slow_threshold_per_mille,
+            request.reject_threshold_per_mille,
+            request.purge_disconnected_with_pending_queue,
+        )
+        .map_err(map_runtime_backpressure_policy_error_to_m9_projection_error)?;
+
+        let input = RuntimeBackpressureInput::new(
+            request.recipient_agent_did.as_str(),
+            pending_queue_depth,
+            request.queue_capacity,
+            request.lifecycle_state,
+        )
+        .map_err(map_runtime_backpressure_input_error_to_m9_projection_error)?;
+
+        let runtime_decision = DeterministicBackpressureController::new(policy)
+            .evaluate(input)
+            .map_err(map_runtime_backpressure_evaluation_error_to_m9_projection_error)?;
+        let reason_code = runtime_decision.reason_code();
+
+        Ok(DataLayerM9RuntimeBackpressureProjection {
+            recipient_agent_did: request.recipient_agent_did,
+            pending_queue_depth,
+            deferred_count,
+            runtime_decision,
+            reason_code,
+        })
+    }
+
     /// Authorizes channel-scoped dispatch by enforcing sender/recipient membership.
     pub fn authorize_channel_dispatch(
         &self,
@@ -574,6 +671,27 @@ pub enum DataLayerM9RealtimeDeliveryError {
         /// Stable string detail from anti-spam module.
         detail: String,
     },
+    /// Runtime backpressure policy projection failed validation.
+    RuntimeBackpressurePolicyInvalid {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail from runtime policy validation.
+        detail: String,
+    },
+    /// Runtime backpressure input projection failed validation.
+    RuntimeBackpressureInputInvalid {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail from runtime input validation.
+        detail: String,
+    },
+    /// Runtime backpressure evaluation failed.
+    RuntimeBackpressureEvaluationFailed {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail from runtime evaluation.
+        detail: String,
+    },
     /// Connected-since and heartbeat timestamps were ordered incorrectly.
     InvalidTimestampOrder {
         /// Connection start timestamp.
@@ -612,6 +730,33 @@ impl fmt::Display for DataLayerM9RealtimeDeliveryError {
             }
             Self::AntiSpamEngineError { detail } => {
                 write!(f, "anti-spam engine evaluation failed: {detail}")
+            }
+            Self::RuntimeBackpressurePolicyInvalid {
+                reason_code,
+                detail,
+            } => {
+                write!(
+                    f,
+                    "runtime backpressure policy projection failed: {reason_code} ({detail})"
+                )
+            }
+            Self::RuntimeBackpressureInputInvalid {
+                reason_code,
+                detail,
+            } => {
+                write!(
+                    f,
+                    "runtime backpressure input projection failed: {reason_code} ({detail})"
+                )
+            }
+            Self::RuntimeBackpressureEvaluationFailed {
+                reason_code,
+                detail,
+            } => {
+                write!(
+                    f,
+                    "runtime backpressure evaluation failed: {reason_code} ({detail})"
+                )
             }
             Self::InvalidTimestampOrder {
                 connected_since_epoch_seconds,
@@ -653,6 +798,33 @@ fn anti_spam_rejection_reason_code(rejection: &AntiSpamRejection) -> &'static st
         AntiSpamRejection::DuplicateMessageId(_) => {
             DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE
         }
+    }
+}
+
+fn map_runtime_backpressure_policy_error_to_m9_projection_error(
+    error: RuntimeBackpressureError,
+) -> DataLayerM9RealtimeDeliveryError {
+    DataLayerM9RealtimeDeliveryError::RuntimeBackpressurePolicyInvalid {
+        reason_code: DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
+        detail: error.reason_code().to_owned(),
+    }
+}
+
+fn map_runtime_backpressure_input_error_to_m9_projection_error(
+    error: RuntimeBackpressureError,
+) -> DataLayerM9RealtimeDeliveryError {
+    DataLayerM9RealtimeDeliveryError::RuntimeBackpressureInputInvalid {
+        reason_code: DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
+        detail: error.reason_code().to_owned(),
+    }
+}
+
+fn map_runtime_backpressure_evaluation_error_to_m9_projection_error(
+    error: RuntimeBackpressureError,
+) -> DataLayerM9RealtimeDeliveryError {
+    DataLayerM9RealtimeDeliveryError::RuntimeBackpressureEvaluationFailed {
+        reason_code: DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
+        detail: error.reason_code().to_owned(),
     }
 }
 
