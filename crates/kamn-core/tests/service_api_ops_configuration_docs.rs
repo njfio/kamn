@@ -60,6 +60,33 @@ fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
+    assert!(
+        DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
+    );
+    assert!(DOC.contains(
+        "quota_policy_fixture_matrix_path=fixtures/runtime/quota_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_fixture_matrix_schema_version=kamn.runtime.quota-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_reason_taxonomy_version=kamn.runtime.quota-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_reason_codes_csv=quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_fixture_columns=case_id|scope|window_seconds|limit|expected_status|expected_reason_code"
+    ));
+    assert!(DOC.contains("quota_scope_unknown"));
+    assert!(DOC.contains("quota_window_non_positive"));
+    assert!(DOC.contains("quota_limit_non_positive"));
+    assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_fixture_parser_contract"));
+    assert!(DOC.contains("Regression: #4090"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls() {
     assert!(DOC.contains(
         "## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)"

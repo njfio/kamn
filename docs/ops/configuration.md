@@ -280,6 +280,33 @@ Regression marker:
 
 - `Regression: #4315`
 
+## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
+
+Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
+contracts stay fail closed before runtime checker wiring is expanded in follow-up work.
+
+Deterministic fixture markers:
+
+- `quota_policy_fixture_matrix_path=fixtures/runtime/quota_policy_fixture_matrix.txt`
+- `quota_policy_fixture_matrix_schema_version=kamn.runtime.quota-policy-fixture-matrix.v1`
+- `quota_policy_reason_taxonomy_version=kamn.runtime.quota-policy-reason-taxonomy.v1`
+- `quota_policy_reason_codes_csv=quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive`
+- `quota_policy_fixture_columns=case_id|scope|window_seconds|limit|expected_status|expected_reason_code`
+
+Deterministic fail-closed fixture reasons:
+
+- `quota_scope_unknown`
+- `quota_window_non_positive`
+- `quota_limit_non_positive`
+
+Validation command:
+
+- `cargo test -p kamn-core --test quota_policy_fixture_parser_contract`
+
+Regression marker:
+
+- `Regression: #4090`
+
 ## Upgrade Compatibility Marker Matrix Controls (Issue #4181)
 
 Compatibility promotion checks require deterministic matrix validation across version-report and
