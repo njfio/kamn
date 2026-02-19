@@ -18,4 +18,5 @@ fn functional_r42_audit_declares_ratchet_recommendation_markers() {
 fn integration_r42_audit_links_follow_up_implementation_tasks() {
     assert!(AUDIT_DOC.contains("follow_up_issue_api_surface_ratchet=#5188"));
     assert!(AUDIT_DOC.contains("follow_up_issue_test_surface_migration=#5189"));
+    assert!(AUDIT_DOC.contains("audit_follow_up_issue_count=2"));
 }

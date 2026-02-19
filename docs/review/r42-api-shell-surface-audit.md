@@ -10,6 +10,7 @@ api_surface_ratchet_recommendation_status=proposed
 test_surface_ratchet_recommendation_status=proposed
 follow_up_issue_api_surface_ratchet=#5188
 follow_up_issue_test_surface_migration=#5189
+audit_follow_up_issue_count=2
 
 ## Method
 
