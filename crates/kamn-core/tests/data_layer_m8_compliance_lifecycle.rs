@@ -406,3 +406,50 @@ fn spec_c09_m8_retention_windows_align_with_content_lifecycle_profiles() {
         None
     );
 }
+
+#[test]
+fn spec_c11_message_lookup_accepts_canonical_equivalent_owner_did() {
+    let mut registry = DataLayerM8ComplianceRegistry::new();
+    registry
+        .register_message(message_input(
+            "kamn:did:owner:alpha",
+            "m8-canonical-lookup",
+            1_708_560_100,
+            DataLayerM8RetentionClass::Standard,
+            0,
+        ))
+        .expect("message registration should succeed");
+
+    let lookup = registry.message_for_owner("  kamn:did:owner:alpha  ", "m8-canonical-lookup");
+    assert!(
+        lookup.is_ok(),
+        "canonical-equivalent owner DID should resolve owner-scoped message lookup"
+    );
+}
+
+#[test]
+fn spec_c12_owner_scope_accepts_canonical_equivalent_requester_owner_did() {
+    let mut registry = DataLayerM8ComplianceRegistry::new();
+    let created_at = 1_708_560_100;
+    registry
+        .register_message(message_input(
+            "kamn:did:owner:alpha",
+            "m8-canonical-owner-scope",
+            created_at,
+            DataLayerM8RetentionClass::Standard,
+            0,
+        ))
+        .expect("message registration should succeed");
+
+    let due = registry.retention_due_for_owner(
+        DataLayerM8OwnerScopeQuery {
+            requester_owner_did: "  kamn:did:owner:alpha  ".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+        },
+        created_at + DATA_LAYER_M8_STANDARD_RETENTION_SECONDS + 1,
+    );
+    assert!(
+        due.is_ok(),
+        "canonical-equivalent requester owner DID should authorize owner scope"
+    );
+}

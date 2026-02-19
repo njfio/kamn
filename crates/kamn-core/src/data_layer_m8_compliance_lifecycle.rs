@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::{ContentLifecycleManager, ContentRetentionClass};
+use crate::{ContentLifecycleManager, ContentRetentionClass, KamnDid};
 
 /// Ephemeral retention window (24 hours).
 pub const DATA_LAYER_M8_EPHEMERAL_RETENTION_SECONDS: u64 = 86_400;
@@ -261,7 +261,7 @@ impl DataLayerM8ComplianceRegistry {
         &mut self,
         input: DataLayerM8MessageRecordInput,
     ) -> Result<DataLayerM8MessageRecord, DataLayerM8ComplianceError> {
-        validate_kamn_did(input.owner_did.as_str())?;
+        let owner_did = parse_kamn_did(input.owner_did.as_str())?;
         validate_non_empty(input.message_id.as_str(), "message_id")?;
         validate_non_empty(input.content_hash.as_str(), "content_hash")?;
         validate_non_empty(input.hash_chain_prev.as_str(), "hash_chain_prev")?;
@@ -272,16 +272,17 @@ impl DataLayerM8ComplianceRegistry {
         }
         validate_wrapped_keys(&input.wrapped_keys)?;
 
+        let owner_did_key = owner_did.as_str().to_owned();
         let owner_records = self
             .messages_by_owner
-            .entry(input.owner_did.clone())
+            .entry(owner_did_key.clone())
             .or_default();
         if owner_records
             .iter()
             .any(|record| record.message_id == input.message_id)
         {
             return Err(DataLayerM8ComplianceError::DuplicateMessageId {
-                owner_did: input.owner_did,
+                owner_did: owner_did_key,
                 message_id: input.message_id,
             });
         }
@@ -294,7 +295,7 @@ impl DataLayerM8ComplianceRegistry {
         });
 
         let record = DataLayerM8MessageRecord {
-            owner_did: input.owner_did,
+            owner_did: owner_did.as_str().to_owned(),
             message_id: input.message_id,
             created_at_epoch_seconds: input.created_at_epoch_seconds,
             content_hash: input.content_hash,
@@ -320,11 +321,12 @@ impl DataLayerM8ComplianceRegistry {
         query: DataLayerM8OwnerScopeQuery,
         now_epoch_seconds: u64,
     ) -> Result<Vec<DataLayerM8RetentionDueCandidate>, DataLayerM8ComplianceError> {
-        authorize_owner_scope(query.requester_owner_did.as_str(), query.owner_did.as_str())?;
+        let owner_did =
+            authorize_owner_scope(query.requester_owner_did.as_str(), query.owner_did.as_str())?;
         if now_epoch_seconds == 0 {
             return Err(DataLayerM8ComplianceError::EmptyField("now_epoch_seconds"));
         }
-        let owner_records = self.owner_records_or_error(query.owner_did.as_str())?;
+        let owner_records = self.owner_records_or_error(owner_did.as_str())?;
 
         let mut candidates = owner_records
             .iter()
@@ -364,12 +366,11 @@ impl DataLayerM8ComplianceRegistry {
         &mut self,
         request: DataLayerM8LegalHoldRequest,
     ) -> Result<DataLayerM8MessageRecord, DataLayerM8ComplianceError> {
-        authorize_owner_scope(
+        let owner_did = authorize_owner_scope(
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        let message =
-            self.owner_message_mut(request.owner_did.as_str(), request.message_id.as_str())?;
+        let message = self.owner_message_mut(owner_did.as_str(), request.message_id.as_str())?;
         if message.shredded_at_epoch_seconds.is_some() {
             return Err(DataLayerM8ComplianceError::AlreadyShredded {
                 message_id: message.message_id.clone(),
@@ -384,7 +385,7 @@ impl DataLayerM8ComplianceRegistry {
         &mut self,
         request: DataLayerM8CryptoShredRequest,
     ) -> Result<DataLayerM8MessageRecord, DataLayerM8ComplianceError> {
-        authorize_owner_scope(
+        let owner_did = authorize_owner_scope(
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
@@ -393,8 +394,7 @@ impl DataLayerM8ComplianceRegistry {
                 "shredded_at_epoch_seconds",
             ));
         }
-        let message =
-            self.owner_message_mut(request.owner_did.as_str(), request.message_id.as_str())?;
+        let message = self.owner_message_mut(owner_did.as_str(), request.message_id.as_str())?;
         if message.legal_hold_active {
             return Err(DataLayerM8ComplianceError::LegalHoldActive {
                 message_id: message.message_id.clone(),
@@ -421,12 +421,13 @@ impl DataLayerM8ComplianceRegistry {
         owner_did: &str,
         message_id: &str,
     ) -> Result<&DataLayerM8MessageRecord, DataLayerM8ComplianceError> {
-        let owner_records = self.owner_records_or_error(owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_records = self.owner_records_or_error(owner_did.as_str())?;
         owner_records
             .iter()
             .find(|record| record.message_id == message_id)
             .ok_or_else(|| DataLayerM8ComplianceError::MessageNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did.as_str().to_owned(),
                 message_id: message_id.to_owned(),
             })
     }
@@ -435,12 +436,13 @@ impl DataLayerM8ComplianceRegistry {
         &self,
         owner_did: &str,
     ) -> Result<&[DataLayerM8MessageRecord], DataLayerM8ComplianceError> {
-        validate_kamn_did(owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
         self.messages_by_owner
-            .get(owner_did)
+            .get(owner_did_key)
             .map(Vec::as_slice)
             .ok_or_else(|| DataLayerM8ComplianceError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did_key.to_owned(),
             })
     }
 
@@ -449,18 +451,20 @@ impl DataLayerM8ComplianceRegistry {
         owner_did: &str,
         message_id: &str,
     ) -> Result<&mut DataLayerM8MessageRecord, DataLayerM8ComplianceError> {
-        validate_kamn_did(owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
         validate_non_empty(message_id, "message_id")?;
-        let owner_records = self.messages_by_owner.get_mut(owner_did).ok_or_else(|| {
-            DataLayerM8ComplianceError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
-            }
-        })?;
+        let owner_records = self
+            .messages_by_owner
+            .get_mut(owner_did_key)
+            .ok_or_else(|| DataLayerM8ComplianceError::OwnerNotFound {
+                owner_did: owner_did_key.to_owned(),
+            })?;
         owner_records
             .iter_mut()
             .find(|record| record.message_id == message_id)
             .ok_or_else(|| DataLayerM8ComplianceError::MessageNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did_key.to_owned(),
                 message_id: message_id.to_owned(),
             })
     }
@@ -562,16 +566,8 @@ fn validate_non_empty(value: &str, field: &'static str) -> Result<(), DataLayerM
     Ok(())
 }
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM8ComplianceError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM8ComplianceError::InvalidDid(value.to_owned()));
-    }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM8ComplianceError::InvalidDid(value.to_owned()));
-    }
-    Ok(())
+fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM8ComplianceError> {
+    KamnDid::parse(value).map_err(|_| DataLayerM8ComplianceError::InvalidDid(value.to_owned()))
 }
 
 fn validate_wrapped_keys(
@@ -582,10 +578,11 @@ fn validate_wrapped_keys(
     }
     let mut seen_recipients = BTreeSet::new();
     for key in wrapped_keys {
-        validate_kamn_did(key.recipient_did.as_str())?;
-        if !seen_recipients.insert(key.recipient_did.as_str()) {
+        let recipient_did = parse_kamn_did(key.recipient_did.as_str())?;
+        let recipient_did_key = recipient_did.as_str().to_owned();
+        if !seen_recipients.insert(recipient_did_key.clone()) {
             return Err(DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient {
-                recipient_did: key.recipient_did.clone(),
+                recipient_did: recipient_did_key,
             });
         }
         if key.wrapped_cek.trim().is_empty() {
@@ -598,13 +595,13 @@ fn validate_wrapped_keys(
 fn authorize_owner_scope(
     requester_owner_did: &str,
     owner_did: &str,
-) -> Result<(), DataLayerM8ComplianceError> {
-    validate_kamn_did(requester_owner_did)?;
-    validate_kamn_did(owner_did)?;
-    if requester_owner_did != owner_did {
+) -> Result<KamnDid, DataLayerM8ComplianceError> {
+    let requester_owner_did = parse_kamn_did(requester_owner_did)?;
+    let owner_did = parse_kamn_did(owner_did)?;
+    if requester_owner_did.as_str() != owner_did.as_str() {
         return Err(DataLayerM8ComplianceError::OwnerScopeViolation {
             reason_code: DATA_LAYER_M8_OWNER_SCOPE_DENIED_REASON_CODE,
         });
     }
-    Ok(())
+    Ok(owner_did)
 }
