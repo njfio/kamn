@@ -80,6 +80,11 @@ fn doc_contains_task_escrow_proptest_invariant_catalog_contracts() {
     assert!(DOC.contains(
         "crates/kamn-core/proptest-regressions/tests/task_escrow_proptest_invariants.txt"
     ));
+    assert!(DOC.contains("bounded case-count envelope: TASK_CASES=192, ESCROW_CASES=192."));
+    assert!(DOC.contains("bounded sequence envelope: MAX_SEQUENCE_LEN=32."));
+    assert!(DOC.contains(
+        "deterministic shrink behavior relies on proptest minimal-counterexample shrinking with fixed seeds."
+    ));
     assert!(DOC.contains("accepted transitions must match the legal state graph."));
     assert!(DOC.contains("released + refunded + remaining == total"));
     assert!(DOC.contains("deterministic seed corpus is versioned in git"));

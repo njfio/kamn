@@ -104,6 +104,9 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - fixed runner seeds are used for task and escrow invariants (`TASK_SEED`, `ESCROW_SEED`).
   - runner persistence is enabled with `FileFailurePersistence::SourceParallel("proptest-regressions")`.
   - tracked seed corpus path: `crates/kamn-core/proptest-regressions/tests/task_escrow_proptest_invariants.txt`.
+  - bounded case-count envelope: TASK_CASES=192, ESCROW_CASES=192.
+  - bounded sequence envelope: MAX_SEQUENCE_LEN=32.
+  - deterministic shrink behavior relies on proptest minimal-counterexample shrinking with fixed seeds.
 - Task lifecycle invariants:
   - accepted transitions must match the legal state graph.
   - rejected transitions must preserve state and history.
