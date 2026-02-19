@@ -1,28 +1,26 @@
 use kamn_core::{PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError};
+#[path = "property_invariant_helpers.rs"]
+mod property_invariant_helpers;
+
 use proptest::collection::vec;
 use proptest::prelude::*;
-use proptest::test_runner::{
-    Config as ProptestConfig, FileFailurePersistence, RngAlgorithm, RngSeed,
-};
+use proptest::test_runner::{RngAlgorithm, RngSeed};
 
 const CASES: u32 = 192;
 const MAX_SEQUENCE_LEN: usize = 40;
 const LEGALITY_SEED: u64 = 0x3533_0000_0000_0001;
 const IDEMPOTENCE_SEED: u64 = 0x3533_0000_0000_0002;
 const REPLAY_SEED: u64 = 0x3533_0000_0000_0003;
+const PEER_SEED_ENV_KEY: &str = "KAMN_PROPTEST_PEER_LIFECYCLE_SEED";
+const PEER_REASON_CODE_SEED_SALT: u64 = 0x00cc_dd11;
 const PROPTEST_SOURCE_PATH: &str = file!();
 
-fn deterministic_config(cases: u32, seed: u64) -> ProptestConfig {
-    ProptestConfig {
-        cases,
-        failure_persistence: Some(Box::new(FileFailurePersistence::SourceParallel(
-            "proptest-regressions",
-        ))),
-        source_file: Some(PROPTEST_SOURCE_PATH),
-        rng_algorithm: RngAlgorithm::ChaCha,
-        rng_seed: RngSeed::Fixed(seed),
-        ..ProptestConfig::default()
-    }
+fn base_peer_seed() -> u64 {
+    property_invariant_helpers::resolve_seed_from_env(PEER_SEED_ENV_KEY, LEGALITY_SEED)
+}
+
+fn deterministic_config(cases: u32, seed: u64) -> proptest::test_runner::Config {
+    property_invariant_helpers::deterministic_proptest_config(cases, seed, PROPTEST_SOURCE_PATH)
 }
 
 fn peer_event_strategy() -> impl Strategy<Value = PeerLifecycleEvent> {
@@ -34,33 +32,6 @@ fn peer_event_strategy() -> impl Strategy<Value = PeerLifecycleEvent> {
         Just(PeerLifecycleEvent::Disconnect),
         Just(PeerLifecycleEvent::Rejoin),
     ]
-}
-
-fn expected_next_state(
-    from: PeerLifecycleState,
-    event: PeerLifecycleEvent,
-) -> Option<PeerLifecycleState> {
-    match (from, event) {
-        (PeerLifecycleState::Disconnected, PeerLifecycleEvent::StartConnect)
-        | (PeerLifecycleState::Disconnected, PeerLifecycleEvent::Rejoin) => {
-            Some(PeerLifecycleState::Connecting)
-        }
-        (PeerLifecycleState::Connecting, PeerLifecycleEvent::HandshakeSucceeded) => {
-            Some(PeerLifecycleState::Active)
-        }
-        (PeerLifecycleState::Connecting, PeerLifecycleEvent::Disconnect)
-        | (PeerLifecycleState::Active, PeerLifecycleEvent::Disconnect)
-        | (PeerLifecycleState::Degraded, PeerLifecycleEvent::Disconnect) => {
-            Some(PeerLifecycleState::Disconnected)
-        }
-        (PeerLifecycleState::Active, PeerLifecycleEvent::HeartbeatMissed) => {
-            Some(PeerLifecycleState::Degraded)
-        }
-        (PeerLifecycleState::Degraded, PeerLifecycleEvent::HeartbeatRestored) => {
-            Some(PeerLifecycleState::Active)
-        }
-        _ => None,
-    }
 }
 
 fn replay_sequence(
@@ -79,10 +50,11 @@ fn replay_sequence(
 
 #[test]
 fn unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent() {
-    let config = deterministic_config(CASES, LEGALITY_SEED);
+    let seed = base_peer_seed();
+    let config = deterministic_config(CASES, seed);
     assert_eq!(config.cases, CASES);
     assert_eq!(config.rng_algorithm, RngAlgorithm::ChaCha);
-    assert_eq!(config.rng_seed, RngSeed::Fixed(LEGALITY_SEED));
+    assert_eq!(config.rng_seed, RngSeed::Fixed(seed));
     assert_eq!(config.source_file, Some(PROPTEST_SOURCE_PATH));
     assert!(config.failure_persistence.is_some());
 }
@@ -95,7 +67,7 @@ fn regression_peer_lifecycle_seed_corpus_is_tracked() {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(CASES, LEGALITY_SEED))]
+    #![proptest_config(deterministic_config(CASES, base_peer_seed()))]
 
     #[test]
     fn functional_peer_lifecycle_proptest_enforces_legal_transition_graph(
@@ -104,7 +76,7 @@ proptest! {
         let mut lifecycle = PeerLifecycle::new("peer-proptest-legality").expect("peer should initialize");
         for event in sequence {
             let before_state = lifecycle.state();
-            let expected = expected_next_state(before_state, event);
+            let expected = property_invariant_helpers::expected_peer_next_state(before_state, event);
 
             match (expected, lifecycle.transition(event)) {
                 (Some(next_state), Ok(applied_state)) => {
@@ -137,7 +109,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(CASES, LEGALITY_SEED ^ 0x00cc_dd11))]
+    #![proptest_config(deterministic_config(
+        CASES,
+        property_invariant_helpers::derive_seed(base_peer_seed(), PEER_REASON_CODE_SEED_SALT)
+    ))]
 
     #[test]
     fn functional_peer_lifecycle_proptest_invalid_transition_reason_code_is_stable(
@@ -150,7 +125,10 @@ proptest! {
         }
 
         let before_state = lifecycle.state();
-        prop_assume!(expected_next_state(before_state, invalid_event).is_none());
+        prop_assume!(
+            property_invariant_helpers::expected_peer_next_state(before_state, invalid_event)
+                .is_none()
+        );
 
         match lifecycle.transition(invalid_event) {
             Err(error @ RuntimeLifecycleError::InvalidTransition { from, event: rejected }) => {
@@ -173,7 +151,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(CASES, IDEMPOTENCE_SEED))]
+    #![proptest_config(deterministic_config(
+        CASES,
+        property_invariant_helpers::derive_seed(base_peer_seed(), IDEMPOTENCE_SEED)
+    ))]
 
     #[test]
     fn integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent(
@@ -187,7 +168,10 @@ proptest! {
         }
 
         let baseline_state = lifecycle.state();
-        prop_assume!(expected_next_state(baseline_state, repeated_event).is_none());
+        prop_assume!(
+            property_invariant_helpers::expected_peer_next_state(baseline_state, repeated_event)
+                .is_none()
+        );
 
         for _ in 0..usize::from(repeats) {
             prop_assert_eq!(
@@ -203,7 +187,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(CASES, REPLAY_SEED))]
+    #![proptest_config(deterministic_config(
+        CASES,
+        property_invariant_helpers::derive_seed(base_peer_seed(), REPLAY_SEED)
+    ))]
 
     #[test]
     fn integration_peer_lifecycle_proptest_sequence_replay_is_deterministic(

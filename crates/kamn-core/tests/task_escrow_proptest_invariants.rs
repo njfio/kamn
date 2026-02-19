@@ -2,17 +2,23 @@ use kamn_core::{
     EscrowLifecycle, EscrowLifecycleError, EscrowStatus, EscrowTransitionAction, TaskLifecycle,
     TaskLifecycleError, TaskState, TaskTransition,
 };
+#[path = "property_invariant_helpers.rs"]
+mod property_invariant_helpers;
+
 use proptest::collection::vec;
 use proptest::prelude::*;
-use proptest::test_runner::{
-    Config as ProptestConfig, FileFailurePersistence, RngAlgorithm, RngSeed,
-};
+use proptest::test_runner::{RngAlgorithm, RngSeed};
 
 const TASK_CASES: u32 = 192;
 const ESCROW_CASES: u32 = 192;
 const MAX_SEQUENCE_LEN: usize = 32;
 const TASK_SEED: u64 = 0x3532_0000_0000_0001;
 const ESCROW_SEED: u64 = 0x3532_0000_0000_0002;
+const TASK_SEED_ENV_KEY: &str = "KAMN_PROPTEST_TASK_ESCROW_SEED";
+const ESCROW_SEED_ENV_KEY: &str = "KAMN_PROPTEST_ESCROW_SEED";
+const TASK_EVIDENCE_SEED_SALT: u64 = 0x0aa0_55ff;
+const TASK_RESTORE_SEED_SALT: u64 = 0x0f0f_0f0f;
+const ESCROW_EVIDENCE_SEED_SALT: u64 = 0x00ff_aacc;
 const PROPTASK_SOURCE_PATH: &str = file!();
 
 #[derive(Debug, Clone, Copy)]
@@ -24,17 +30,16 @@ enum EscrowAction {
     RefundRemaining,
 }
 
-fn deterministic_config(cases: u32, seed: u64) -> ProptestConfig {
-    ProptestConfig {
-        cases,
-        failure_persistence: Some(Box::new(FileFailurePersistence::SourceParallel(
-            "proptest-regressions",
-        ))),
-        source_file: Some(PROPTASK_SOURCE_PATH),
-        rng_algorithm: RngAlgorithm::ChaCha,
-        rng_seed: RngSeed::Fixed(seed),
-        ..ProptestConfig::default()
-    }
+fn task_seed() -> u64 {
+    property_invariant_helpers::resolve_seed_from_env(TASK_SEED_ENV_KEY, TASK_SEED)
+}
+
+fn escrow_seed() -> u64 {
+    property_invariant_helpers::resolve_seed_from_env(ESCROW_SEED_ENV_KEY, ESCROW_SEED)
+}
+
+fn deterministic_config(cases: u32, seed: u64) -> proptest::test_runner::Config {
+    property_invariant_helpers::deterministic_proptest_config(cases, seed, PROPTASK_SOURCE_PATH)
 }
 
 fn task_transition_strategy() -> impl Strategy<Value = TaskTransition> {
@@ -74,30 +79,6 @@ fn escrow_transition_action_strategy() -> impl Strategy<Value = EscrowTransition
             }
         }),
     ]
-}
-
-fn is_legal_task_state_step(from: TaskState, to: TaskState) -> bool {
-    matches!(
-        (from, to),
-        (TaskState::Submitted, TaskState::Accepted)
-            | (TaskState::Submitted, TaskState::Cancelled)
-            | (TaskState::Accepted, TaskState::Delegated)
-            | (TaskState::Accepted, TaskState::InProgress)
-            | (TaskState::Accepted, TaskState::Cancelled)
-            | (TaskState::Delegated, TaskState::InProgress)
-            | (TaskState::Delegated, TaskState::Cancelled)
-            | (TaskState::InProgress, TaskState::Blocked)
-            | (TaskState::InProgress, TaskState::InputRequired)
-            | (TaskState::InProgress, TaskState::Completed)
-            | (TaskState::InProgress, TaskState::Failed)
-            | (TaskState::InProgress, TaskState::Cancelled)
-            | (TaskState::InputRequired, TaskState::InProgress)
-            | (TaskState::InputRequired, TaskState::Failed)
-            | (TaskState::InputRequired, TaskState::Cancelled)
-            | (TaskState::Blocked, TaskState::InProgress)
-            | (TaskState::Blocked, TaskState::Failed)
-            | (TaskState::Blocked, TaskState::Cancelled)
-    )
 }
 
 fn apply_escrow_action(
@@ -192,10 +173,11 @@ fn escrow_invariant_violation(escrow: &EscrowLifecycle, total: u128) -> Option<S
 
 #[test]
 fn unit_task_escrow_proptest_config_is_deterministic_and_persistent() {
-    let config = deterministic_config(TASK_CASES, TASK_SEED);
+    let resolved_task_seed = task_seed();
+    let config = deterministic_config(TASK_CASES, resolved_task_seed);
     assert_eq!(config.cases, TASK_CASES);
     assert_eq!(config.rng_algorithm, RngAlgorithm::ChaCha);
-    assert_eq!(config.rng_seed, RngSeed::Fixed(TASK_SEED));
+    assert_eq!(config.rng_seed, RngSeed::Fixed(resolved_task_seed));
     assert_eq!(config.source_file, Some(PROPTASK_SOURCE_PATH));
     assert!(config.failure_persistence.is_some());
 }
@@ -207,7 +189,7 @@ fn regression_task_escrow_proptest_seed_corpus_is_tracked() {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(TASK_CASES, TASK_SEED))]
+    #![proptest_config(deterministic_config(TASK_CASES, task_seed()))]
 
     #[test]
     fn functional_task_lifecycle_proptest_sequence_invariants_hold(
@@ -222,7 +204,7 @@ proptest! {
                 Ok(()) => {
                     let after_state = lifecycle.state();
                     prop_assert!(
-                        is_legal_task_state_step(before_state, after_state),
+                        property_invariant_helpers::is_legal_task_state_step(before_state, after_state),
                         "illegal successful step: {before_state:?} -> {after_state:?} via {transition:?}"
                     );
                     prop_assert_eq!(lifecycle.history().len(), before_history.len() + 1);
@@ -251,7 +233,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(TASK_CASES, TASK_SEED ^ 0x0aa0_55ff))]
+    #![proptest_config(deterministic_config(
+        TASK_CASES,
+        property_invariant_helpers::derive_seed(task_seed(), TASK_EVIDENCE_SEED_SALT)
+    ))]
 
     #[test]
     fn functional_task_lifecycle_proptest_transition_evidence_is_legal_and_stable(
@@ -269,7 +254,10 @@ proptest! {
                     prop_assert_eq!(evidence.to, lifecycle.state());
                     prop_assert_eq!(evidence.reason_code, "task_transition_allowed");
                     prop_assert!(
-                        is_legal_task_state_step(before_state, lifecycle.state()),
+                        property_invariant_helpers::is_legal_task_state_step(
+                            before_state,
+                            lifecycle.state()
+                        ),
                         "illegal successful transition with evidence: {before_state:?} -> {:?} via {transition:?}",
                         lifecycle.state()
                     );
@@ -295,7 +283,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(TASK_CASES, TASK_SEED ^ 0x0f0f_0f0f))]
+    #![proptest_config(deterministic_config(
+        TASK_CASES,
+        property_invariant_helpers::derive_seed(task_seed(), TASK_RESTORE_SEED_SALT)
+    ))]
 
     #[test]
     fn integration_task_lifecycle_proptest_restore_roundtrip_is_stable(
@@ -316,7 +307,10 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(ESCROW_CASES, ESCROW_SEED ^ 0x00ff_aacc))]
+    #![proptest_config(deterministic_config(
+        ESCROW_CASES,
+        property_invariant_helpers::derive_seed(escrow_seed(), ESCROW_EVIDENCE_SEED_SALT)
+    ))]
 
     #[test]
     fn integration_escrow_proptest_transition_evidence_preserves_invariants(
@@ -369,7 +363,7 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(deterministic_config(ESCROW_CASES, ESCROW_SEED))]
+    #![proptest_config(deterministic_config(ESCROW_CASES, escrow_seed()))]
 
     #[test]
     fn integration_escrow_proptest_conserves_amounts_and_status_projections(
