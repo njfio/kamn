@@ -180,3 +180,22 @@ fn regression_duplicate_approval_is_rejected() {
         ))
     );
 }
+
+#[test]
+fn invalid_route_target_did_surfaces_reason_code_contract() {
+    let mut invalid = config();
+    invalid
+        .channel_routes
+        .insert("discord:channel:ops".to_owned(), "bad-did".to_owned());
+
+    let error = DiscordBridgeEngine::new(invalid)
+        .expect_err("invalid discord route target did must fail deterministically");
+    assert_eq!(
+        error,
+        DiscordBridgeError::InvalidDid {
+            field: "channel_routes.target_did",
+            reason_code: "discord_bridge_invalid_route_target_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        }
+    );
+}

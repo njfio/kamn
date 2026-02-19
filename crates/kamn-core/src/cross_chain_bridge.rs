@@ -11,6 +11,23 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+const CROSS_CHAIN_INVALID_BRIDGE_AGENT_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_bridge_agent_did";
+const CROSS_CHAIN_INVALID_LISTENER_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_listener_did";
+const CROSS_CHAIN_INVALID_APPROVER_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_approver_did";
+const CROSS_CHAIN_INVALID_ETHEREUM_ROUTE_TARGET_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_route_target_did";
+const CROSS_CHAIN_INVALID_SOLANA_ROUTE_TARGET_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_route_target_did";
+const CROSS_CHAIN_INVALID_INBOUND_LISTENER_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_inbound_listener_did";
+const CROSS_CHAIN_INVALID_INBOUND_TARGET_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_inbound_target_did";
+const CROSS_CHAIN_INVALID_OUTBOUND_APPROVER_DID_REASON_CODE: &str =
+    "cross_chain_bridge_invalid_outbound_approver_did";
+
 /// Supported external networks for cross-chain bridge routes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CrossChainNetwork {
@@ -59,6 +76,133 @@ pub struct CrossChainInboundRequest {
     pub inbound: BridgeInboundEnvelope,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CrossChainBridgeConfigValidated {
+    bridge_agent_did: AgentDid,
+    authorized_listener_dids: BTreeSet<AgentDid>,
+    authorized_approver_dids: BTreeSet<AgentDid>,
+    required_approvals: usize,
+    ethereum_routes: BTreeMap<String, AgentDid>,
+    solana_routes: BTreeMap<String, AgentDid>,
+}
+
+impl TryFrom<&CrossChainBridgeConfig> for CrossChainBridgeConfigValidated {
+    type Error = CrossChainBridgeError;
+
+    fn try_from(config: &CrossChainBridgeConfig) -> Result<Self, Self::Error> {
+        let bridge_agent_did = parse_agent_did(
+            config.bridge_agent_did.as_str(),
+            "bridge_agent_did",
+            CROSS_CHAIN_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
+        )?;
+
+        if config.authorized_listener_dids.is_empty() {
+            return Err(CrossChainBridgeError::EmptyField(
+                "authorized_listener_dids",
+            ));
+        }
+        let mut authorized_listener_dids = BTreeSet::new();
+        for listener_did in &config.authorized_listener_dids {
+            authorized_listener_dids.insert(parse_agent_did(
+                listener_did.as_str(),
+                "authorized_listener_dids[]",
+                CROSS_CHAIN_INVALID_LISTENER_DID_REASON_CODE,
+            )?);
+        }
+
+        if config.authorized_approver_dids.is_empty() {
+            return Err(CrossChainBridgeError::EmptyField(
+                "authorized_approver_dids",
+            ));
+        }
+        let mut authorized_approver_dids = BTreeSet::new();
+        for approver_did in &config.authorized_approver_dids {
+            authorized_approver_dids.insert(parse_agent_did(
+                approver_did.as_str(),
+                "authorized_approver_dids[]",
+                CROSS_CHAIN_INVALID_APPROVER_DID_REASON_CODE,
+            )?);
+        }
+
+        if config.required_approvals == 0
+            || config.required_approvals > authorized_approver_dids.len()
+        {
+            return Err(CrossChainBridgeError::InvalidRequiredApprovals {
+                required: config.required_approvals,
+                approver_count: authorized_approver_dids.len(),
+            });
+        }
+
+        if config.ethereum_routes.is_empty() {
+            return Err(CrossChainBridgeError::EmptyField("ethereum_routes"));
+        }
+        let mut ethereum_routes = BTreeMap::new();
+        for (channel_id, target_did) in &config.ethereum_routes {
+            validate_non_empty("ethereum_routes.channel_id", channel_id)?;
+            ethereum_routes.insert(
+                channel_id.clone(),
+                parse_agent_did(
+                    target_did.as_str(),
+                    "ethereum_routes.target_did",
+                    CROSS_CHAIN_INVALID_ETHEREUM_ROUTE_TARGET_DID_REASON_CODE,
+                )?,
+            );
+        }
+
+        if config.solana_routes.is_empty() {
+            return Err(CrossChainBridgeError::EmptyField("solana_routes"));
+        }
+        let mut solana_routes = BTreeMap::new();
+        for (channel_id, target_did) in &config.solana_routes {
+            validate_non_empty("solana_routes.channel_id", channel_id)?;
+            solana_routes.insert(
+                channel_id.clone(),
+                parse_agent_did(
+                    target_did.as_str(),
+                    "solana_routes.target_did",
+                    CROSS_CHAIN_INVALID_SOLANA_ROUTE_TARGET_DID_REASON_CODE,
+                )?,
+            );
+        }
+
+        Ok(Self {
+            bridge_agent_did,
+            authorized_listener_dids,
+            authorized_approver_dids,
+            required_approvals: config.required_approvals,
+            ethereum_routes,
+            solana_routes,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CrossChainInboundRequestValidated {
+    listener_did: AgentDid,
+    target_agent_did: AgentDid,
+}
+
+impl TryFrom<&CrossChainInboundRequest> for CrossChainInboundRequestValidated {
+    type Error = CrossChainBridgeError;
+
+    fn try_from(request: &CrossChainInboundRequest) -> Result<Self, Self::Error> {
+        let listener_did = parse_agent_did(
+            request.listener_did.as_str(),
+            "cross_chain_inbound_request.listener_did",
+            CROSS_CHAIN_INVALID_INBOUND_LISTENER_DID_REASON_CODE,
+        )?;
+        let target_agent_did = parse_agent_did(
+            request.inbound.target_agent_did.as_str(),
+            "cross_chain_inbound_request.inbound.target_agent_did",
+            CROSS_CHAIN_INVALID_INBOUND_TARGET_DID_REASON_CODE,
+        )?;
+        Ok(Self {
+            listener_did,
+            target_agent_did,
+        })
+    }
+}
+
 /// Approval quorum material for an outbound dispatch request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainOutboundApproval {
@@ -84,7 +228,7 @@ pub struct CrossChainOutboundDispatch {
 /// Engine coordinating inbound normalization and outbound gated dispatch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainBridgeEngine {
-    config: CrossChainBridgeConfig,
+    config: CrossChainBridgeConfigValidated,
     ethereum_bridge: BridgeAdapterEngine<PassThroughBridgeAdapter, AllowAllBridgePolicy>,
     solana_bridge: BridgeAdapterEngine<PassThroughBridgeAdapter, AllowAllBridgePolicy>,
 }
@@ -92,59 +236,17 @@ pub struct CrossChainBridgeEngine {
 impl CrossChainBridgeEngine {
     /// Constructs a bridge engine from validated configuration.
     pub fn new(config: CrossChainBridgeConfig) -> Result<Self, CrossChainBridgeError> {
-        validate_did(&config.bridge_agent_did)?;
-
-        if config.authorized_listener_dids.is_empty() {
-            return Err(CrossChainBridgeError::EmptyField(
-                "authorized_listener_dids",
-            ));
-        }
-        for listener_did in &config.authorized_listener_dids {
-            validate_did(listener_did)?;
-        }
-
-        if config.authorized_approver_dids.is_empty() {
-            return Err(CrossChainBridgeError::EmptyField(
-                "authorized_approver_dids",
-            ));
-        }
-        for approver_did in &config.authorized_approver_dids {
-            validate_did(approver_did)?;
-        }
-        if config.required_approvals == 0
-            || config.required_approvals > config.authorized_approver_dids.len()
-        {
-            return Err(CrossChainBridgeError::InvalidRequiredApprovals {
-                required: config.required_approvals,
-                approver_count: config.authorized_approver_dids.len(),
-            });
-        }
-
-        if config.ethereum_routes.is_empty() {
-            return Err(CrossChainBridgeError::EmptyField("ethereum_routes"));
-        }
-        for (channel_id, target_did) in &config.ethereum_routes {
-            validate_non_empty("ethereum_routes.channel_id", channel_id)?;
-            validate_did(target_did)?;
-        }
-
-        if config.solana_routes.is_empty() {
-            return Err(CrossChainBridgeError::EmptyField("solana_routes"));
-        }
-        for (channel_id, target_did) in &config.solana_routes {
-            validate_non_empty("solana_routes.channel_id", channel_id)?;
-            validate_did(target_did)?;
-        }
+        let config = CrossChainBridgeConfigValidated::try_from(&config)?;
 
         let ethereum_adapter = PassThroughBridgeAdapter::new(
             BridgePlatform::Custom(CrossChainNetwork::Ethereum.label().to_owned()),
-            &config.bridge_agent_did,
+            config.bridge_agent_did.as_str(),
         )
         .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))?;
 
         let solana_adapter = PassThroughBridgeAdapter::new(
             BridgePlatform::Custom(CrossChainNetwork::Solana.label().to_owned()),
-            &config.bridge_agent_did,
+            config.bridge_agent_did.as_str(),
         )
         .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))?;
 
@@ -163,7 +265,7 @@ impl CrossChainBridgeEngine {
         &self,
         request: &CrossChainInboundRequest,
     ) -> Result<NormalizedInboundMessage, CrossChainBridgeError> {
-        self.validate_inbound_request(request)?;
+        let _ = self.validate_inbound_request(request)?;
         self.bridge_engine(request.chain)
             .process_inbound(&request.inbound, request.observed_at_unix)
             .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
@@ -177,7 +279,7 @@ impl CrossChainBridgeEngine {
         expires: &str,
         nonce: u64,
     ) -> Result<CanonicalMessageEnvelope, CrossChainBridgeError> {
-        self.validate_inbound_request(request)?;
+        let _ = self.validate_inbound_request(request)?;
         self.bridge_engine(request.chain)
             .process_inbound_to_envelope(
                 &request.inbound,
@@ -192,15 +294,15 @@ impl CrossChainBridgeEngine {
     fn validate_inbound_request(
         &self,
         request: &CrossChainInboundRequest,
-    ) -> Result<(), CrossChainBridgeError> {
-        validate_did(&request.listener_did)?;
+    ) -> Result<CrossChainInboundRequestValidated, CrossChainBridgeError> {
+        let validated = CrossChainInboundRequestValidated::try_from(request)?;
         if !self
             .config
             .authorized_listener_dids
-            .contains(&request.listener_did)
+            .contains(&validated.listener_did)
         {
             return Err(CrossChainBridgeError::UnauthorizedListener(
-                request.listener_did.clone(),
+                validated.listener_did.as_str().to_owned(),
             ));
         }
 
@@ -214,15 +316,15 @@ impl CrossChainBridgeEngine {
                     channel_id: channel_id.clone(),
                 })?;
 
-        if expected_target_did != &request.inbound.target_agent_did {
+        if expected_target_did != &validated.target_agent_did {
             return Err(CrossChainBridgeError::RouteTargetMismatch {
                 chain: request.chain,
                 external_channel_id: channel_id,
-                expected_target_did: expected_target_did.clone(),
-                provided_target_did: request.inbound.target_agent_did.clone(),
+                expected_target_did: expected_target_did.as_str().to_owned(),
+                provided_target_did: validated.target_agent_did.as_str().to_owned(),
             });
         }
-        Ok(())
+        Ok(validated)
     }
 
     /// Validates approvals and dispatches an outbound bridge request.
@@ -250,7 +352,7 @@ impl CrossChainBridgeEngine {
         })
     }
 
-    fn route_map(&self, chain: CrossChainNetwork) -> &BTreeMap<String, String> {
+    fn route_map(&self, chain: CrossChainNetwork) -> &BTreeMap<String, AgentDid> {
         match chain {
             CrossChainNetwork::Ethereum => &self.config.ethereum_routes,
             CrossChainNetwork::Solana => &self.config.solana_routes,
@@ -291,12 +393,25 @@ impl CrossChainBridgeEngine {
     ) -> Result<BTreeSet<String>, CrossChainBridgeError> {
         let mut approved_by = BTreeSet::new();
         for approver_did in approver_dids {
-            validate_did(&approver_did)?;
-            if !self.config.authorized_approver_dids.contains(&approver_did) {
-                return Err(CrossChainBridgeError::UnauthorizedApprover(approver_did));
+            let validated_approver_did = parse_agent_did(
+                approver_did.as_str(),
+                "approver_dids[]",
+                CROSS_CHAIN_INVALID_OUTBOUND_APPROVER_DID_REASON_CODE,
+            )?;
+            if !self
+                .config
+                .authorized_approver_dids
+                .contains(&validated_approver_did)
+            {
+                return Err(CrossChainBridgeError::UnauthorizedApprover(
+                    validated_approver_did.as_str().to_owned(),
+                ));
             }
-            if !approved_by.insert(approver_did.clone()) {
-                return Err(CrossChainBridgeError::DuplicateApproval(approver_did));
+            let canonical_approver_did = validated_approver_did.as_str().to_owned();
+            if !approved_by.insert(canonical_approver_did.clone()) {
+                return Err(CrossChainBridgeError::DuplicateApproval(
+                    canonical_approver_did,
+                ));
             }
         }
         if approved_by.len() < self.config.required_approvals {
@@ -315,7 +430,14 @@ pub enum CrossChainBridgeError {
     /// Required field was empty.
     EmptyField(&'static str),
     /// DID value failed validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Required approvals value was invalid for configured approver set.
     InvalidRequiredApprovals {
         /// Required approval threshold requested.
@@ -362,7 +484,11 @@ impl fmt::Display for CrossChainBridgeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidRequiredApprovals {
                 required,
                 approver_count,
@@ -397,6 +523,26 @@ impl fmt::Display for CrossChainBridgeError {
 
 impl std::error::Error for CrossChainBridgeError {}
 
+impl CrossChainBridgeError {
+    /// Stable reason taxonomy for cross-chain bridge errors.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::EmptyField(_) => "cross_chain_bridge_empty_field",
+            Self::InvalidDid { reason_code, .. } => reason_code,
+            Self::InvalidRequiredApprovals { .. } => {
+                "cross_chain_bridge_invalid_required_approvals"
+            }
+            Self::UnauthorizedListener(_) => "cross_chain_bridge_unauthorized_listener",
+            Self::UnauthorizedApprover(_) => "cross_chain_bridge_unauthorized_approver",
+            Self::DuplicateApproval(_) => "cross_chain_bridge_duplicate_approval",
+            Self::InsufficientApprovals { .. } => "cross_chain_bridge_insufficient_approvals",
+            Self::UnknownRouteChannel { .. } => "cross_chain_bridge_unknown_route_channel",
+            Self::RouteTargetMismatch { .. } => "cross_chain_bridge_route_target_mismatch",
+            Self::Bridge(_) => "cross_chain_bridge_adapter_error",
+        }
+    }
+}
+
 fn validate_non_empty(field: &'static str, value: &str) -> Result<(), CrossChainBridgeError> {
     if value.trim().is_empty() {
         return Err(CrossChainBridgeError::EmptyField(field));
@@ -404,9 +550,16 @@ fn validate_non_empty(field: &'static str, value: &str) -> Result<(), CrossChain
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), CrossChainBridgeError> {
-    AgentDid::parse(value).map_err(|error| CrossChainBridgeError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, CrossChainBridgeError> {
+    AgentDid::parse(value).map_err(|error| CrossChainBridgeError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 #[cfg(test)]

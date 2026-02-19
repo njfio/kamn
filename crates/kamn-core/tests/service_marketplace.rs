@@ -167,3 +167,32 @@ fn regression_provider_must_be_marketplace_channel_member() {
         })
     );
 }
+
+#[test]
+fn invalid_requester_did_surfaces_reason_code_contract() {
+    let channels = marketplace_channels();
+    let mut engine = ServiceMarketplaceEngine::new();
+    engine
+        .register_listing(
+            ServiceListing {
+                listing_id: "listing-5".to_owned(),
+                provider_did: "kamn:did:agent:provider-1".to_owned(),
+                service_name: "Threat Modeling".to_owned(),
+                category: "security".to_owned(),
+                tags: vec!["threat-model".to_owned()],
+                hourly_rate: 130,
+                negotiation_channel_id: "chan-market-1".to_owned(),
+            },
+            &channels,
+        )
+        .expect("listing should register");
+
+    assert_eq!(
+        engine.open_negotiation_thread("listing-5", "bad-did"),
+        Err(ServiceMarketplaceError::InvalidDid {
+            field: "requester_did",
+            reason_code: "service_marketplace_invalid_requester_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
