@@ -148,9 +148,11 @@ fn reputation_state_rejects_invalid_agent_did() {
     let mut store = ReputationStore::default();
     assert_eq!(
         store.register_agent("did:example:agent-1", 1),
-        Err(ReputationError::InvalidAgentDid(
-            "invalid agent did prefix: did:example:agent-1".to_owned()
-        ))
+        Err(ReputationError::InvalidAgentDid {
+            field: "agent_did",
+            reason_code: "reputation_state_invalid_agent_did",
+            detail: "invalid agent did prefix: did:example:agent-1".to_owned(),
+        })
     );
 }
 

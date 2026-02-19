@@ -36,6 +36,38 @@ fn agent_upgrade_workflow_rejects_unallowlisted_agent_proposer() {
 }
 
 #[test]
+fn agent_upgrade_workflow_rejects_invalid_agent_did_with_structured_marker() {
+    let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+        current_version: "v0.5.0".to_owned(),
+        allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+        allowed_validator_voters: vec![
+            "kamn:did:agent:validator-1".to_owned(),
+            "kamn:did:agent:validator-2".to_owned(),
+        ],
+        required_human_reviews: 1,
+        required_validator_quorum: 2,
+        min_activation_delay_secs: 60,
+    })
+    .expect("workflow should initialize");
+
+    assert_eq!(
+        workflow.submit_agent_proposal(AgentUpgradeProposalDraft {
+            proposal_id: "pilot-upgrade-invalid-did".to_owned(),
+            target_version: "v0.6.0".to_owned(),
+            agent_did: "bad-did".to_owned(),
+            rationale: "invalid did coverage".to_owned(),
+            created_at_unix: 1_716_610_100,
+            voting_deadline_unix: 1_716_610_700,
+        }),
+        Err(AgentUpgradeWorkflowError::InvalidDid {
+            field: "proposal.agent_did",
+            reason_code: "agent_upgrade_workflow_invalid_proposal_agent_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn agent_upgrade_workflow_functional_human_review_governance_activation_flow() {
     let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
         current_version: "v0.5.0".to_owned(),
