@@ -13,6 +13,10 @@ use kamn_kolme::{
     KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitTransportErrorKind,
 };
+use std::{thread, time::Duration};
+
+const NOTIFICATIONS_RECONNECT_BASE_BACKOFF_MILLIS: u64 = 10;
+const NOTIFICATIONS_RECONNECT_MAX_BACKOFF_MILLIS: u64 = 40;
 
 /// Deterministic notifications consumer for Kolme websocket events with bounded reconnect policy.
 pub struct KolmeRuntimeCommitNotificationsConsumer<C>
@@ -108,6 +112,7 @@ where
                                     ),
                             });
                         }
+                        maybe_sleep_notifications_reconnect_backoff(reconnect_attempts);
                         continue;
                     }
                 }
@@ -122,6 +127,7 @@ where
                         ),
                     });
                 }
+                maybe_sleep_notifications_reconnect_backoff(reconnect_attempts);
                 continue;
             };
             let result = connection.read_text_message();
@@ -144,6 +150,7 @@ where
                             ),
                         });
                     }
+                    maybe_sleep_notifications_reconnect_backoff(reconnect_attempts);
                 }
             }
         }
@@ -159,5 +166,29 @@ where
                 return Ok(receipt);
             }
         }
+    }
+}
+
+fn deterministic_notifications_reconnect_backoff_millis(attempt: u32) -> u64 {
+    let exponent = attempt.saturating_sub(1).min(4);
+    let backoff = NOTIFICATIONS_RECONNECT_BASE_BACKOFF_MILLIS << exponent;
+    backoff.min(NOTIFICATIONS_RECONNECT_MAX_BACKOFF_MILLIS)
+}
+
+fn maybe_sleep_notifications_reconnect_backoff(attempt: u32) {
+    let backoff = deterministic_notifications_reconnect_backoff_millis(attempt);
+    thread::sleep(Duration::from_millis(backoff));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::deterministic_notifications_reconnect_backoff_millis;
+
+    #[test]
+    fn unit_notifications_reconnect_backoff_schedule_is_deterministic_and_bounded() {
+        assert_eq!(deterministic_notifications_reconnect_backoff_millis(1), 10);
+        assert_eq!(deterministic_notifications_reconnect_backoff_millis(2), 20);
+        assert_eq!(deterministic_notifications_reconnect_backoff_millis(3), 40);
+        assert_eq!(deterministic_notifications_reconnect_backoff_millis(8), 40);
     }
 }

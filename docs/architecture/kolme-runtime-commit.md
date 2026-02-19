@@ -65,6 +65,20 @@ Fail-closed behavior is preserved for continuous and single-cycle modes:
 | `Unavailable` | `unavailable` | retry with deterministic bounded backoff | `attempt_ceiling_reached` |
 | `MalformedResponse` | non-transient | fail closed immediately | `malformed_response_fail_fast` |
 
+### Notifications Reconnect Pacing Policy
+
+- `notifications_reconnect_pacing_contract_version=v1`
+- `notifications_reconnect_backoff_sequence_ms=10,20,40,40,40`
+- `notifications_reconnect_backoff_cap_ms=40`
+- terminal exhaustion reason:
+  - `notification reconnect attempts exhausted after <N> retries`
+
+| Reconnect attempt | Delay before next attempt | Budget behavior |
+|---|---|---|
+| 1 | `10ms` | retry if budget remains |
+| 2 | `20ms` | retry if budget remains |
+| 3+ | `40ms` (capped) | fail closed when attempt budget is exhausted |
+
 ### Signer Provenance Failure Taxonomy
 
 Signer contracts are fail-closed and reason-code stable:
