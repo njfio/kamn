@@ -230,6 +230,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `panic_path_policy_scope_root=crates/kamn-node/src`
   - `panic_path_policy_ci_lane_profile=low-cost`
   - `panic_path_policy_ci_smoke_max_seconds=30`
+- Remediation parity markers:
+  - `panic_path_policy_remediation_steps_version=v1`
+  - `panic_path_policy_remediation_step_1=replace_panic_primitives_with_typed_errors`
+  - `panic_path_policy_remediation_step_2=rerun_checker_until_status_ok`
+  - `panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr`
 
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:

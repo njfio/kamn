@@ -1384,3 +1384,29 @@ fn doc_contains_live_transport_fault_matrix_ci_exclusion_policy_contract_markers
     ));
     assert!(DOC.contains("retry_reconnect_marker_contract_status=verified"));
 }
+
+#[test]
+fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
+    assert!(DOC.contains("## Panic-Path Policy Checker Fast Lane"));
+    assert!(DOC.contains(
+        "bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_check_no_production_expect.sh"));
+    assert!(DOC.contains("kamn.ci.production-panic-replacement-reason-taxonomy.v1"));
+    assert!(DOC.contains(
+        "scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default"
+    ));
+    assert!(DOC.contains(
+        "runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
+    ));
+    assert!(DOC.contains("panic_path_policy_scope_root=crates/kamn-node/src"));
+    assert!(DOC.contains("panic_path_policy_ci_smoke_max_seconds=30"));
+    assert!(DOC.contains("panic_path_policy_remediation_steps_version=v1"));
+    assert!(DOC.contains(
+        "panic_path_policy_remediation_step_1=replace_panic_primitives_with_typed_errors"
+    ));
+    assert!(DOC.contains("panic_path_policy_remediation_step_2=rerun_checker_until_status_ok"));
+    assert!(DOC.contains(
+        "panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr"
+    ));
+}
