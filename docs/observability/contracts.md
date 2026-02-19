@@ -29,6 +29,21 @@ This document defines deterministic payload contracts for the runtime observabil
   - `runtime_tracing_taxonomy_schema_drift:<event>:<field>`
   - `runtime_tracing_taxonomy_event_marker_missing:<event>`
 
+## Startup Logging Configuration Contract
+
+- `startup_logging_configuration_version=kamn.node.startup-logging-config.v1`
+- Runtime modes with deterministic tracing bootstrap:
+  - `bootstrap`
+  - `full`
+  - `kolme-live`
+- Environment controls:
+  - `KAMN_NODE_LOG_LEVEL` accepted values: `error`, `warn`, `info`, `debug`, `trace`
+  - `KAMN_NODE_LOG_FORMAT` accepted values: `text`, `json`
+- Fail-closed invalid config markers:
+  - `ConfigError::InvalidLogConfig`
+  - `KAMN_NODE_LOG_LEVEL must be one of: error,warn,info,debug,trace`
+  - `KAMN_NODE_LOG_FORMAT must be one of: text,json`
+
 ## Health Payload Contract
 
 `/healthz` includes:
