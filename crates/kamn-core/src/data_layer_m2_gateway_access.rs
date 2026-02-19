@@ -4,7 +4,7 @@
 //! DID-authenticated session issuance, ABAC message visibility checks, RLS policy
 //! template emission, and append-only audit logging with hash-chain verification.
 
-use crate::AgentDid;
+use crate::{AgentDid, KamnDid, KamnDidError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -30,6 +30,19 @@ pub const DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE: &str =
 /// Negative authorization matrix result marker when any case drifts.
 pub const DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE: &str =
     "m2_negative_matrix_drift_detected";
+/// Invalid requester DID reason marker.
+pub const DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE: &str = "m2_invalid_requester_did";
+/// Invalid sender DID reason marker.
+pub const DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE: &str = "m2_invalid_sender_did";
+/// Invalid recipient DID reason marker.
+pub const DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE: &str = "m2_invalid_recipient_did";
+/// Invalid owner sender DID reason marker.
+pub const DATA_LAYER_M2_INVALID_OWNER_SENDER_DID_REASON_CODE: &str = "m2_invalid_owner_sender_did";
+/// Invalid owner recipient DID reason marker.
+pub const DATA_LAYER_M2_INVALID_OWNER_RECIPIENT_DID_REASON_CODE: &str =
+    "m2_invalid_owner_recipient_did";
+/// Invalid escrow-auditor DID reason marker.
+pub const DATA_LAYER_M2_INVALID_AUDITOR_DID_REASON_CODE: &str = "m2_invalid_auditor_did";
 
 /// Input for DID-authenticated session issuance.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,7 +86,11 @@ impl TryFrom<DataLayerM2DidAuthRequest> for DataLayerM2DidAuthRequestValidated {
         }
 
         Ok(Self {
-            requester_did: parse_agent_did(request.requester_did.as_str())?,
+            requester_did: parse_agent_did(
+                request.requester_did.as_str(),
+                "requester_did",
+                DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            )?,
             challenge: request.challenge,
             credential: request.credential,
             issued_at_epoch_seconds: request.issued_at_epoch_seconds,
@@ -202,9 +219,9 @@ pub struct DataLayerM2MessageScopeValidated {
     /// Recipient agent DID.
     pub recipient_did: AgentDid,
     /// Owner DID for sender.
-    pub owner_sender_did: String,
+    pub owner_sender_did: KamnDid,
     /// Owner DID for recipient.
-    pub owner_recipient_did: String,
+    pub owner_recipient_did: KamnDid,
     /// Optional escrow identifier when message is escrow-scoped.
     pub escrow_id: Option<String>,
 }
@@ -216,15 +233,29 @@ impl TryFrom<&DataLayerM2MessageScope> for DataLayerM2MessageScopeValidated {
         if scope.message_id.trim().is_empty() {
             return Err(DataLayerM2GatewayError::EmptyField("message_id"));
         }
-        validate_kamn_did(scope.owner_sender_did.as_str())?;
-        validate_kamn_did(scope.owner_recipient_did.as_str())?;
 
         Ok(Self {
             message_id: scope.message_id.clone(),
-            sender_did: parse_agent_did(scope.sender_did.as_str())?,
-            recipient_did: parse_agent_did(scope.recipient_did.as_str())?,
-            owner_sender_did: scope.owner_sender_did.clone(),
-            owner_recipient_did: scope.owner_recipient_did.clone(),
+            sender_did: parse_agent_did(
+                scope.sender_did.as_str(),
+                "sender_did",
+                DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
+            )?,
+            recipient_did: parse_agent_did(
+                scope.recipient_did.as_str(),
+                "recipient_did",
+                DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
+            )?,
+            owner_sender_did: parse_kamn_did(
+                scope.owner_sender_did.as_str(),
+                "owner_sender_did",
+                DATA_LAYER_M2_INVALID_OWNER_SENDER_DID_REASON_CODE,
+            )?,
+            owner_recipient_did: parse_kamn_did(
+                scope.owner_recipient_did.as_str(),
+                "owner_recipient_did",
+                DATA_LAYER_M2_INVALID_OWNER_RECIPIENT_DID_REASON_CODE,
+            )?,
             escrow_id: scope.escrow_id.clone(),
         })
     }
@@ -325,11 +356,15 @@ impl DataLayerM2AbacEngine {
         if escrow_id.trim().is_empty() {
             return Err(DataLayerM2GatewayError::EmptyField("escrow_id"));
         }
-        validate_kamn_did(auditor_did)?;
+        let auditor_did = parse_kamn_did(
+            auditor_did,
+            "auditor_did",
+            DATA_LAYER_M2_INVALID_AUDITOR_DID_REASON_CODE,
+        )?;
         self.escrow_auditors_by_escrow
             .entry(escrow_id.to_owned())
             .or_default()
-            .insert(auditor_did.to_owned());
+            .insert(auditor_did.as_str().to_owned());
         Ok(())
     }
 
@@ -367,8 +402,8 @@ impl DataLayerM2AbacEngine {
                 }
             }
             DataLayerM2ActorRole::Owner => {
-                if requester.as_str() == scope.owner_sender_did
-                    || requester.as_str() == scope.owner_recipient_did
+                if requester.as_str() == scope.owner_sender_did.as_str()
+                    || requester.as_str() == scope.owner_recipient_did.as_str()
                 {
                     DataLayerM2AuthorizationDecision::Allow {
                         reason_code: DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
@@ -648,7 +683,14 @@ pub enum DataLayerM2GatewayError {
     /// Required field was empty.
     EmptyField(&'static str),
     /// DID value failed validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Credential payload failed deterministic validation.
     InvalidCredential(String),
     /// Session TTL is invalid.
@@ -677,7 +719,13 @@ impl fmt::Display for DataLayerM2GatewayError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => {
+                write!(f, "invalid did field {field}: {reason_code} ({detail})")
+            }
             Self::InvalidCredential(reason) => write!(f, "invalid credential: {reason}"),
             Self::InvalidSessionTtl {
                 ttl_seconds,
@@ -708,7 +756,7 @@ impl std::error::Error for DataLayerM2GatewayError {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum DataLayerM2RequesterDidValidated {
     Agent(AgentDid),
-    KamnDid(String),
+    KamnDid(KamnDid),
 }
 
 impl DataLayerM2RequesterDidValidated {
@@ -725,16 +773,21 @@ fn validate_requester_did_for_role(
     requester_role: DataLayerM2ActorRole,
 ) -> Result<DataLayerM2RequesterDidValidated, DataLayerM2GatewayError> {
     match requester_role {
-        DataLayerM2ActorRole::Agent => Ok(DataLayerM2RequesterDidValidated::Agent(
-            parse_agent_did(requester_did)?,
-        )),
+        DataLayerM2ActorRole::Agent => {
+            Ok(DataLayerM2RequesterDidValidated::Agent(parse_agent_did(
+                requester_did,
+                "requester_did",
+                DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            )?))
+        }
         DataLayerM2ActorRole::Owner
         | DataLayerM2ActorRole::EscrowAuditor
         | DataLayerM2ActorRole::PlatformOperator => {
-            validate_kamn_did(requester_did)?;
-            Ok(DataLayerM2RequesterDidValidated::KamnDid(
-                requester_did.to_owned(),
-            ))
+            Ok(DataLayerM2RequesterDidValidated::KamnDid(parse_kamn_did(
+                requester_did,
+                "requester_did",
+                DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            )?))
         }
     }
 }
@@ -754,27 +807,52 @@ fn validate_audit_input(
     if input.event_epoch_seconds == 0 {
         return Err(DataLayerM2GatewayError::EmptyField("event_epoch_seconds"));
     }
-    validate_kamn_did(input.requester_did.as_str())?;
+    parse_kamn_did(
+        input.requester_did.as_str(),
+        "requester_did",
+        DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+    )?;
     Ok(())
 }
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM2GatewayError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(DataLayerM2GatewayError::InvalidDid(value.to_owned()));
+fn map_kamn_did_error(
+    error: KamnDidError,
+    field: &'static str,
+    reason_code: &'static str,
+) -> DataLayerM2GatewayError {
+    DataLayerM2GatewayError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
     }
-    if !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM2GatewayError::InvalidDid(value.to_owned()));
-    }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM2GatewayError::InvalidDid(value.to_owned()));
-    }
-    Ok(())
 }
 
-fn parse_agent_did(value: &str) -> Result<AgentDid, DataLayerM2GatewayError> {
-    AgentDid::parse(value).map_err(|_| DataLayerM2GatewayError::InvalidDid(value.to_owned()))
+fn map_agent_did_error(
+    error: crate::AgentDidError,
+    field: &'static str,
+    reason_code: &'static str,
+) -> DataLayerM2GatewayError {
+    DataLayerM2GatewayError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    }
+}
+
+fn parse_kamn_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<KamnDid, DataLayerM2GatewayError> {
+    KamnDid::parse(value).map_err(|error| map_kamn_did_error(error, field, reason_code))
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, DataLayerM2GatewayError> {
+    AgentDid::parse(value).map_err(|error| map_agent_did_error(error, field, reason_code))
 }
 
 fn compute_audit_record_hash(

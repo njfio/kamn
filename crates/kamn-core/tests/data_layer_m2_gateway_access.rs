@@ -4,6 +4,8 @@ use kamn_core::{
     DataLayerM2DidAuthRequest, DataLayerM2DidAuthRequestValidated, DataLayerM2DidSessionService,
     DataLayerM2GatewayError, DataLayerM2MessageScope, DataLayerM2MessageScopeValidated,
     DataLayerM2NegativeAuthorizationCase, DataLayerM2NegativeAuthorizationMatrixDecision,
+    DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
+    DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE, DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
     DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
     DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
     DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED, DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
@@ -62,7 +64,11 @@ fn spec_c02_did_authentication_rejects_invalid_identity_or_credential_inputs() {
     });
     assert!(matches!(
         invalid_did,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "requester_did",
+            reason_code: DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            ..
+        })
     ));
 
     let invalid_credential = service.authenticate(DataLayerM2DidAuthRequest {
@@ -93,7 +99,11 @@ fn spec_c02b_did_authentication_rejects_non_canonical_agent_did_shapes() {
     });
     assert!(matches!(
         uppercase_agent_segment,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "requester_did",
+            reason_code: DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            ..
+        })
     ));
 }
 
@@ -122,7 +132,11 @@ fn spec_c02c_auth_request_boundary_rejects_malformed_requester_did() {
     });
     assert!(matches!(
         invalid,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "requester_did",
+            reason_code: DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            ..
+        })
     ));
 }
 
@@ -203,7 +217,11 @@ fn spec_c03c_scope_boundary_conversion_uses_typed_agent_dids_and_fails_closed() 
     let invalid_conversion = DataLayerM2MessageScopeValidated::try_from(&invalid_scope);
     assert!(matches!(
         invalid_conversion,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "recipient_did",
+            reason_code: DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
+            ..
+        })
     ));
 }
 
@@ -220,7 +238,11 @@ fn spec_c03b_abac_rejects_non_canonical_agent_did_fields() {
     );
     assert!(matches!(
         invalid_sender,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "sender_did",
+            reason_code: DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
+            ..
+        })
     ));
 
     let invalid_agent_requester = abac.authorize_message_visibility(
@@ -230,7 +252,11 @@ fn spec_c03b_abac_rejects_non_canonical_agent_did_fields() {
     );
     assert!(matches!(
         invalid_agent_requester,
-        Err(DataLayerM2GatewayError::InvalidDid(_))
+        Err(DataLayerM2GatewayError::InvalidDid {
+            field: "requester_did",
+            reason_code: DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE,
+            ..
+        })
     ));
 }
 

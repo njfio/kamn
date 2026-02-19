@@ -2,7 +2,58 @@
 
 use std::{collections::BTreeSet, fmt};
 
+const KAMN_DID_PREFIX: &str = "kamn:did:";
 const AGENT_DID_PREFIX: &str = "kamn:did:agent:";
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Canonical KAMN DID wrapper for non-agent and agent role identifiers.
+pub struct KamnDid(String);
+
+impl KamnDid {
+    /// Parses and validates a generic KAMN DID shape.
+    pub fn parse(value: &str) -> Result<Self, KamnDidError> {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err(KamnDidError::EmptyValue);
+        }
+        if !trimmed.starts_with(KAMN_DID_PREFIX) {
+            return Err(KamnDidError::InvalidPrefix(trimmed.to_owned()));
+        }
+        let segments = trimmed.split(':').collect::<Vec<_>>();
+        if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
+            return Err(KamnDidError::InvalidShape(trimmed.to_owned()));
+        }
+        Ok(Self(trimmed.to_owned()))
+    }
+
+    /// Returns the full DID string.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Errors returned when parsing or validating a [`KamnDid`].
+pub enum KamnDidError {
+    /// DID input was empty after trimming.
+    EmptyValue,
+    /// DID did not start with required KAMN DID prefix.
+    InvalidPrefix(String),
+    /// DID segments were malformed.
+    InvalidShape(String),
+}
+
+impl fmt::Display for KamnDidError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyValue => write!(f, "kamn did must not be empty"),
+            Self::InvalidPrefix(value) => write!(f, "invalid kamn did prefix: {value}"),
+            Self::InvalidShape(value) => write!(f, "invalid kamn did shape: {value}"),
+        }
+    }
+}
+
+impl std::error::Error for KamnDidError {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// Canonical KAMN agent DID wrapper.
@@ -645,7 +696,7 @@ mod tests {
     use super::{
         canonical_did_document, canonical_service_endpoint,
         validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
-        DidDocumentError,
+        DidDocumentError, KamnDid, KamnDidError,
     };
 
     fn metadata() -> AgentDidMetadata {
@@ -662,6 +713,29 @@ mod tests {
         assert_eq!(
             AgentDid::parse("kamn:did:agent:Agent_1"),
             Err(AgentDidError::InvalidCharacter("Agent_1".to_owned()))
+        );
+    }
+
+    #[test]
+    fn parse_kamn_did_accepts_owner_and_agent_dids() {
+        let owner = KamnDid::parse("kamn:did:owner:sender-1")
+            .expect("owner did should parse as generic kamn did");
+        assert_eq!(owner.as_str(), "kamn:did:owner:sender-1");
+
+        let agent = KamnDid::parse("kamn:did:agent:agent-1")
+            .expect("agent did should parse as generic kamn did");
+        assert_eq!(agent.as_str(), "kamn:did:agent:agent-1");
+    }
+
+    #[test]
+    fn parse_kamn_did_rejects_invalid_prefix_and_shape() {
+        assert_eq!(
+            KamnDid::parse("did:example:alice"),
+            Err(KamnDidError::InvalidPrefix("did:example:alice".to_owned()))
+        );
+        assert_eq!(
+            KamnDid::parse("kamn:did:"),
+            Err(KamnDidError::InvalidShape("kamn:did:".to_owned()))
         );
     }
 
