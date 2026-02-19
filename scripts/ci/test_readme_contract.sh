@@ -37,7 +37,7 @@ required_snippets=(
   "check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json"
   "soft_budget_status=exceeded"
   "review_required=true"
-  "test_makefile_execution_contract.sh"
+  "cargo test -p kamn-core --test shell_test_surface_migration_wave2"
   "run_localhost_signed_demo.sh"
   "run_localhost_signed_demo.sh --help"
   "--timeout-seconds"

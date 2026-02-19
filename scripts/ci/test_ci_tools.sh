@@ -34,6 +34,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
   cargo test -p kamn-core --test shell_test_surface_migration_wave1
+  cargo test -p kamn-core --test shell_test_surface_migration_wave2
   cargo test -p kamn-core --test shell_test_surface_ratio_policy
   bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
@@ -48,7 +49,6 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_cargo_test_with_quarantine.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"
   bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"
   bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"
@@ -144,8 +144,6 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/kolme/test_dispatcher_manifest_metadata_contract.sh"
   bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_makefile_command_surface_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_makefile_execution_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"
@@ -181,6 +179,7 @@ bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
 cargo test -p kamn-core --test shell_test_surface_migration_wave1
+cargo test -p kamn-core --test shell_test_surface_migration_wave2
 cargo test -p kamn-core --test shell_test_surface_ratio_policy
 bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
@@ -195,7 +194,6 @@ bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_cargo_test_with_quarantine.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"
 bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"
@@ -280,8 +278,6 @@ bash "$ROOT_DIR/scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence
 bash "$ROOT_DIR/scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh"
 bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_makefile_command_surface_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_makefile_execution_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"
