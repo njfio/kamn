@@ -1,6 +1,6 @@
 use kamn_core::{
-    EscrowLifecycle, EscrowLifecycleError, EscrowStatus, TaskLifecycle, TaskLifecycleError,
-    TaskState, TaskTransition,
+    EscrowLifecycle, EscrowLifecycleError, EscrowStatus, EscrowTransitionAction, TaskLifecycle,
+    TaskLifecycleError, TaskState, TaskTransition,
 };
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -57,6 +57,22 @@ fn escrow_action_strategy() -> impl Strategy<Value = EscrowAction> {
         Just(EscrowAction::Dispute),
         Just(EscrowAction::ResolveHalfSplit),
         Just(EscrowAction::RefundRemaining),
+    ]
+}
+
+fn escrow_transition_action_strategy() -> impl Strategy<Value = EscrowTransitionAction> {
+    prop_oneof![
+        (1_u16..=256_u16).prop_map(|amount| EscrowTransitionAction::Release {
+            amount: u128::from(amount)
+        }),
+        Just(EscrowTransitionAction::RefundRemaining),
+        Just(EscrowTransitionAction::Dispute),
+        ((0_u16..=256_u16), (0_u16..=256_u16)).prop_map(|(release_to_payee, refund_to_payer)| {
+            EscrowTransitionAction::Resolve {
+                release_to_payee: u128::from(release_to_payee),
+                refund_to_payer: u128::from(refund_to_payer),
+            }
+        }),
     ]
 }
 
@@ -235,6 +251,50 @@ proptest! {
 }
 
 proptest! {
+    #![proptest_config(deterministic_config(TASK_CASES, TASK_SEED ^ 0x0aa0_55ff))]
+
+    #[test]
+    fn functional_task_lifecycle_proptest_transition_evidence_is_legal_and_stable(
+        transitions in vec(task_transition_strategy(), 0..(MAX_SEQUENCE_LEN + 1))
+    ) {
+        let mut lifecycle = TaskLifecycle::new("task-proptest-evidence").expect("task lifecycle must initialize");
+        for transition in transitions {
+            let before_state = lifecycle.state();
+            let before_history = lifecycle.history();
+
+            match lifecycle.transition_with_evidence(transition) {
+                Ok(evidence) => {
+                    prop_assert_eq!(evidence.from, before_state);
+                    prop_assert_eq!(evidence.transition, transition);
+                    prop_assert_eq!(evidence.to, lifecycle.state());
+                    prop_assert_eq!(evidence.reason_code, "task_transition_allowed");
+                    prop_assert!(
+                        is_legal_task_state_step(before_state, lifecycle.state()),
+                        "illegal successful transition with evidence: {before_state:?} -> {:?} via {transition:?}",
+                        lifecycle.state()
+                    );
+                    prop_assert_eq!(lifecycle.history().len(), before_history.len() + 1);
+                }
+                Err(TaskLifecycleError::InvalidTransition { from, transition: rejected }) => {
+                    prop_assert_eq!(from, before_state);
+                    prop_assert_eq!(rejected, transition);
+                    prop_assert_eq!(lifecycle.state(), before_state);
+                    prop_assert_eq!(lifecycle.history(), before_history);
+                }
+                Err(TaskLifecycleError::TerminalState(state)) => {
+                    prop_assert_eq!(state, before_state);
+                    prop_assert_eq!(lifecycle.state(), before_state);
+                    prop_assert_eq!(lifecycle.history(), before_history);
+                }
+                Err(error) => {
+                    prop_assert!(false, "unexpected task lifecycle evidence error: {error:?}");
+                }
+            }
+        }
+    }
+}
+
+proptest! {
     #![proptest_config(deterministic_config(TASK_CASES, TASK_SEED ^ 0x0f0f_0f0f))]
 
     #[test]
@@ -252,6 +312,59 @@ proptest! {
         prop_assert_eq!(restored.state(), lifecycle.state());
         prop_assert_eq!(restored.history(), history);
         prop_assert_eq!(restored.history().first().copied(), Some(TaskState::Submitted));
+    }
+}
+
+proptest! {
+    #![proptest_config(deterministic_config(ESCROW_CASES, ESCROW_SEED ^ 0x00ff_aacc))]
+
+    #[test]
+    fn integration_escrow_proptest_transition_evidence_preserves_invariants(
+        total_amount in 1_u128..513_u128,
+        actions in vec(escrow_transition_action_strategy(), 0..(MAX_SEQUENCE_LEN + 1))
+    ) {
+        let mut escrow = EscrowLifecycle::new(total_amount).expect("escrow lifecycle must initialize");
+        if let Some(violation) = escrow_invariant_violation(&escrow, total_amount) {
+            prop_assert!(false, "{violation}");
+        }
+
+        for action in actions {
+            let before_status = escrow.status();
+            let before_released = escrow.released_amount();
+            let before_refunded = escrow.refunded_amount();
+            let before_remaining = escrow.remaining_amount();
+
+            match escrow.apply_transition_with_evidence(action.clone()) {
+                Ok(evidence) => {
+                    prop_assert_eq!(evidence.from, before_status);
+                    prop_assert_eq!(evidence.action, action);
+                    prop_assert_eq!(evidence.to, escrow.status());
+                    prop_assert_eq!(evidence.reason_code, "escrow_transition_allowed");
+                }
+                Err(error) => {
+                    prop_assert_eq!(escrow.status(), before_status);
+                    prop_assert_eq!(escrow.released_amount(), before_released);
+                    prop_assert_eq!(escrow.refunded_amount(), before_refunded);
+                    prop_assert_eq!(escrow.remaining_amount(), before_remaining);
+                    prop_assert!(
+                        matches!(
+                            error.reason_code(),
+                            "escrow_amount_zero"
+                                | "escrow_amount_invalid"
+                                | "escrow_transition_invalid"
+                                | "escrow_resolution_mismatch"
+                                | "escrow_amount_overflow"
+                        ),
+                        "unexpected escrow rejection reason code: {}",
+                        error.reason_code()
+                    );
+                }
+            }
+
+            if let Some(violation) = escrow_invariant_violation(&escrow, total_amount) {
+                prop_assert!(false, "{violation}");
+            }
+        }
     }
 }
 

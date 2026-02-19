@@ -137,6 +137,42 @@ proptest! {
 }
 
 proptest! {
+    #![proptest_config(deterministic_config(CASES, LEGALITY_SEED ^ 0x00cc_dd11))]
+
+    #[test]
+    fn functional_peer_lifecycle_proptest_invalid_transition_reason_code_is_stable(
+        prefix in vec(peer_event_strategy(), 0..(MAX_SEQUENCE_LEN + 1)),
+        invalid_event in peer_event_strategy()
+    ) {
+        let mut lifecycle = PeerLifecycle::new("peer-proptest-reason-code").expect("peer should initialize");
+        for event in prefix {
+            let _ = lifecycle.transition(event);
+        }
+
+        let before_state = lifecycle.state();
+        prop_assume!(expected_next_state(before_state, invalid_event).is_none());
+
+        match lifecycle.transition(invalid_event) {
+            Err(error @ RuntimeLifecycleError::InvalidTransition { from, event: rejected }) => {
+                prop_assert_eq!(from, before_state);
+                prop_assert_eq!(rejected, invalid_event);
+                prop_assert_eq!(error.reason_code(), "runtime_peer_transition_invalid");
+                prop_assert_eq!(lifecycle.state(), before_state);
+            }
+            Ok(next_state) => {
+                prop_assert!(
+                    false,
+                    "expected invalid transition rejection from {before_state:?} via {invalid_event:?}, got state {next_state:?}"
+                );
+            }
+            Err(RuntimeLifecycleError::InvalidPeerId) => {
+                prop_assert!(false, "peer id is fixed and valid in this property lane");
+            }
+        }
+    }
+}
+
+proptest! {
     #![proptest_config(deterministic_config(CASES, IDEMPOTENCE_SEED))]
 
     #[test]
