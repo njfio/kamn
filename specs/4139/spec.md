@@ -1,7 +1,7 @@
 # Issue #4139 Spec
 
 - Title: Subtask: add red fuzz-corpus drift tests and parser failure-taxonomy assertions
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md
