@@ -583,7 +583,7 @@ Quorum profile matrix fixture controls:
 
 Validation commands:
 
-- `cargo test -p kamn-node signer::tests::functional_signer_preflight_quorum_decision_path_matrix -- --exact --nocapture`
+- `cargo test -p kamn-node signer::signer_policy::tests::unit_signer_quorum_decision_path_matrix -- --exact --nocapture`
 - `cargo test -p kamn-node main_tests::signer_tests::integration_kolme_live_signer_preflight_quorum_profile_matrix_paths -- --exact --nocapture`
 
 Regression marker:
