@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 231
+- archived_issue_count: 289
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -135,6 +135,12 @@
 | 4125 | Subtask: implement deterministic metrics healthz and stream emission wiring from observability structures | 2026-02-18 | `specs/archive/4125` | `specs/4125/ARCHIVED.md` |
 | 4126 | Subtask: add ci smoke checker for observability marker lineage with local-heavy scrape exclusion policy | 2026-02-18 | `specs/archive/4126` | `specs/4126/ARCHIVED.md` |
 | 4127 | Subtask: update observability governance docs and drift-contract tests for logging-telemetry closure | 2026-02-18 | `specs/archive/4127` | `specs/4127/ARCHIVED.md` |
+| 4150 | Subtask: add red tests for deployment preflight marker completeness and schema drift rejection | 2026-02-18 | `specs/archive/4150` | `specs/4150/ARCHIVED.md` |
+| 4151 | Subtask: implement preflight fail-closed checker outputs and runbook marker synchronization | 2026-02-18 | `specs/archive/4151` | `specs/4151/ARCHIVED.md` |
+| 4152 | Subtask: add red tests for rollback trigger mismatch and deterministic reason-code taxonomy | 2026-02-18 | `specs/archive/4152` | `specs/4152/ARCHIVED.md` |
+| 4153 | Subtask: implement rollback simulation lane contracts and policy checker parity validation | 2026-02-18 | `specs/archive/4153` | `specs/4153/ARCHIVED.md` |
+| 4154 | Subtask: add red tests for rehearsal bundle linked-artifact lineage completeness and tamper rejection | 2026-02-18 | `specs/archive/4154` | `specs/4154/ARCHIVED.md` |
+| 4155 | Subtask: implement rehearsal lineage verifier and deterministic promotion gate reason-code mapping | 2026-02-18 | `specs/archive/4155` | `specs/4155/ARCHIVED.md` |
 | 4156 | add ci smoke checker for rehearsal-promotion marker lineage and local-heavy exclusions | 2026-02-18 | `specs/archive/4156` | `specs/4156/ARCHIVED.md` |
 | 4157 | update rehearsal-rollback governance docs and drift-contract tests for closure | 2026-02-18 | `specs/archive/4157` | `specs/4157/ARCHIVED.md` |
 | 4158 | Epic: R27.20 close secret material zeroization and signer-rotation governance gaps | 2026-02-18 | `specs/archive/4158` | `specs/4158/ARCHIVED.md` |
@@ -238,3 +244,55 @@
 | 4976 | Subtask: add hard shell LOC ceiling threshold fixture and checker red-green tests | 2026-02-18 | `specs/archive/4976` | `specs/4976/ARCHIVED.md` |
 | 4977 | Subtask: integrate ceiling+ratio ratchet checks into ci-fast-gate required status checks | 2026-02-18 | `specs/archive/4977` | `specs/4977/ARCHIVED.md` |
 | 4978 | Subtask: enforce ratchet-only threshold update workflow and waiver-mitigation issue linkage | 2026-02-18 | `specs/archive/4978` | `specs/4978/ARCHIVED.md` |
+| 5000 | Task: execute docs-contract wrapper remediation and second spec-archive wave | 2026-02-18 | `specs/archive/5000` | `specs/5000/ARCHIVED.md` |
+| 5002 | Epic: execute KAMN data layer PRD M0-M11 with full integration and validation | 2026-02-18 | `specs/archive/5002` | `specs/5002/ARCHIVED.md` |
+| 5003 | Story: M0 foundation schema, append-only enforcement, and envelope crypto pipeline | 2026-02-18 | `specs/archive/5003` | `specs/5003/ARCHIVED.md` |
+| 5004 | Story: M1 trust anchor merkle batching and Kolme anchoring integration | 2026-02-18 | `specs/archive/5004` | `specs/5004/ARCHIVED.md` |
+| 5005 | Story: M2 DID access gateway with ABAC, RLS, and audit trails | 2026-02-18 | `specs/archive/5005` | `specs/5005/ARCHIVED.md` |
+| 5006 | Story: M3 metadata and blind-index search surfaces | 2026-02-18 | `specs/archive/5006` | `specs/5006/ARCHIVED.md` |
+| 5007 | Story: M4 escrow-scoped messaging and settlement evidence integration | 2026-02-18 | `specs/archive/5007` | `specs/5007/ARCHIVED.md` |
+| 5008 | Story: M5 vector embedding layer and semantic search | 2026-02-18 | `specs/archive/5008` | `specs/5008/ARCHIVED.md` |
+| 5009 | Story: M6 knowledge graph layer and trust propagation queries | 2026-02-18 | `specs/archive/5009` | `specs/5009/ARCHIVED.md` |
+| 5010 | Story: M7 time-series telemetry, aggregates, and billing metrics | 2026-02-18 | `specs/archive/5010` | `specs/5010/ARCHIVED.md` |
+| 5011 | Story: M8 compliance lifecycle with crypto-shredding and retention controls | 2026-02-18 | `specs/archive/5011` | `specs/5011/ARCHIVED.md` |
+| 5012 | Story: M9 real-time delivery, presence, and flow control | 2026-02-18 | `specs/archive/5012` | `specs/5012/ARCHIVED.md` |
+| 5013 | Story: M10 scaling, partition management, and archival pipelines | 2026-02-18 | `specs/archive/5013` | `specs/5013/ARCHIVED.md` |
+| 5014 | Story: M11 hardening with security, chaos, and benchmark validation | 2026-02-18 | `specs/archive/5014` | `specs/5014/ARCHIVED.md` |
+| 5015 | Story: cross-cutting conformance harness and shell-surface budget neutrality | 2026-02-18 | `specs/archive/5015` | `specs/5015/ARCHIVED.md` |
+| 5016 | Task: M0 deliver core schema, append-only controls, and envelope crypto primitives | 2026-02-18 | `specs/archive/5016` | `specs/5016/ARCHIVED.md` |
+| 5017 | Task: M1 implement merkle batching, Kolme anchoring worker, and proof APIs | 2026-02-18 | `specs/archive/5017` | `specs/5017/ARCHIVED.md` |
+| 5018 | Task: M2 ship DID gateway authn/authz, RLS policy set, and audit log path | 2026-02-18 | `specs/archive/5018` | `specs/5018/ARCHIVED.md` |
+| 5019 | Task: M3 implement blind-index + metadata search APIs with deterministic tests | 2026-02-18 | `specs/archive/5019` | `specs/5019/ARCHIVED.md` |
+| 5020 | Task: M4 integrate escrow state, scoped messaging, and settlement evidence storage | 2026-02-18 | `specs/archive/5020` | `specs/5020/ARCHIVED.md` |
+| 5021 | Task: M5 deliver pgvector embeddings pipeline and semantic query endpoints | 2026-02-18 | `specs/archive/5021` | `specs/5021/ARCHIVED.md` |
+| 5022 | Task: M6 deliver Apache AGE graph schema and trust propagation query service | 2026-02-18 | `specs/archive/5022` | `specs/5022/ARCHIVED.md` |
+| 5023 | Task: M7 deliver Timescale hypertables, aggregates, and billing telemetry surfaces | 2026-02-18 | `specs/archive/5023` | `specs/5023/ARCHIVED.md` |
+| 5024 | Task: M8 deliver crypto-shredding, retention policy enforcement, and legal-hold controls | 2026-02-18 | `specs/archive/5024` | `specs/5024/ARCHIVED.md` |
+| 5025 | Task: M9 deliver realtime delivery pipeline, presence, and deterministic backpressure | 2026-02-18 | `specs/archive/5025` | `specs/5025/ARCHIVED.md` |
+| 5026 | Task: M10 deliver scaling controls, partition lifecycle, and archival export path | 2026-02-18 | `specs/archive/5026` | `specs/5026/ARCHIVED.md` |
+| 5027 | Task: M11 execute hardening matrix (security, chaos, perf) and operator readiness | 2026-02-18 | `specs/archive/5027` | `specs/5027/ARCHIVED.md` |
+| 5028 | Task: enforce PRD critical-scenario conformance matrix with shell-neutral test orchestration | 2026-02-18 | `specs/archive/5028` | `specs/5028/ARCHIVED.md` |
+| 5029 | Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants | 2026-02-18 | `specs/archive/5029` | `specs/5029/ARCHIVED.md` |
+| 5030 | Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage | 2026-02-18 | `specs/archive/5030` | `specs/5030/ARCHIVED.md` |
+| 5031 | Subtask: M2 DID auth + ABAC + RLS negative matrix and audit evidence fixtures | 2026-02-18 | `specs/archive/5031` | `specs/5031/ARCHIVED.md` |
+| 5032 | Subtask: M3 blind-index correctness and search determinism regression corpus | 2026-02-18 | `specs/archive/5032` | `specs/5032/ARCHIVED.md` |
+| 5033 | Subtask: M4 escrow message visibility and settlement evidence integrity contracts | 2026-02-18 | `specs/archive/5033` | `specs/5033/ARCHIVED.md` |
+| 5034 | Subtask: M5 vector recall, drift, and anomaly-score regression harness | 2026-02-18 | `specs/archive/5034` | `specs/5034/ARCHIVED.md` |
+| 5035 | Subtask: M6 graph trust-propagation correctness and portability boundary contracts | 2026-02-18 | `specs/archive/5035` | `specs/5035/ARCHIVED.md` |
+| 5036 | Subtask: M7 telemetry aggregate correctness and billing reconciliation regressions | 2026-02-18 | `specs/archive/5036` | `specs/5036/ARCHIVED.md` |
+| 5037 | Subtask: M8 crypto-shred and retention-policy legal-hold conformance suite | 2026-02-18 | `specs/archive/5037` | `specs/5037/ARCHIVED.md` |
+| 5038 | Subtask: M9 realtime delivery ordering, presence, and backpressure fail-closed checks | 2026-02-18 | `specs/archive/5038` | `specs/5038/ARCHIVED.md` |
+| 5039 | Subtask: M10 partition lifecycle and archival recoverability contract suite | 2026-02-18 | `specs/archive/5039` | `specs/5039/ARCHIVED.md` |
+| 5040 | Subtask: M11 security-chaos-performance closure evidence and acceptance report | 2026-02-18 | `specs/archive/5040` | `specs/5040/ARCHIVED.md` |
+| 5041 | Subtask: shell-neutral test orchestration guardrail and ratio-budget evidence policy | 2026-02-18 | `specs/archive/5041` | `specs/5041/ARCHIVED.md` |
+| 5076 | Task: integrate M4 escrow + M8 compliance contracts with legacy core types | 2026-02-18 | `specs/archive/5076` | `specs/5076/ARCHIVED.md` |
+| 5091 | Task: integrate M2 gateway DID validation with canonical AgentDid parser | 2026-02-18 | `specs/archive/5091` | `specs/5091/ARCHIVED.md` |
+| 5093 | Task: integrate M9 realtime delivery with channel membership and anti-spam controls | 2026-02-18 | `specs/archive/5093` | `specs/5093/ARCHIVED.md` |
+| 5095 | Task: complete M2 AgentDid type integration for auth and ABAC contracts | 2026-02-18 | `specs/archive/5095` | `specs/5095/ARCHIVED.md` |
+| 5097 | Task: integrate M7 owner telemetry with observability monitor contracts | 2026-02-18 | `specs/archive/5097` | `specs/5097/ARCHIVED.md` |
+| 5099 | Task: integrate M3 blind-index output with content retrieval contracts | 2026-02-18 | `specs/archive/5099` | `specs/5099/ARCHIVED.md` |
+| 5101 | Task: bridge M9 realtime delivery queue state to runtime backpressure contracts | 2026-02-18 | `specs/archive/5101` | `specs/5101/ARCHIVED.md` |
+| 5103 | Task: bridge M10 archival shred completeness to M8 compliance lifecycle | 2026-02-18 | `specs/archive/5103` | `specs/5103/ARCHIVED.md` |
+| 5105 | Task: integrate M5 vector contracts with AgentDid parsing and content lifecycle retention | 2026-02-18 | `specs/archive/5105` | `specs/5105/ARCHIVED.md` |
+| 5107 | Task: integrate M2 gateway DID contracts with canonical AgentDid parsing | 2026-02-18 | `specs/archive/5107` | `specs/5107/ARCHIVED.md` |
+| 5109 | Task: integrate M9 realtime delivery DID contracts with canonical parser taxonomy | 2026-02-18 | `specs/archive/5109` | `specs/5109/ARCHIVED.md` |
