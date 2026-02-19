@@ -1,6 +1,7 @@
 use std::path::Path;
 
 const POLICY_COMMAND: &str = "check_triadic_devnet_smoke_policy.py";
+const POLICY_TAXONOMY_MARKER: &str = "kamn.kolme.triadic-devnet-smoke-policy-reason-taxonomy.v1";
 
 fn repo_file(path: &str) -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
@@ -42,5 +43,24 @@ fn regression_triadic_devnet_policy_docs_contract_contract_lane_invokes_policy_c
     assert!(
         contract_lane_impl.contains(POLICY_COMMAND),
         "expected triadic contract lane implementation to invoke triadic policy checker command"
+    );
+}
+
+#[test]
+fn functional_triadic_devnet_policy_docs_contract_planning_doc_declares_policy_taxonomy_marker() {
+    let planning_doc = repo_file("docs/planning/kolme-devnet-ops.md");
+    assert!(
+        planning_doc.contains(POLICY_TAXONOMY_MARKER),
+        "expected planning docs to declare triadic policy reason taxonomy marker"
+    );
+}
+
+#[test]
+fn integration_triadic_devnet_policy_docs_contract_contract_lane_emits_policy_output_artifact() {
+    let contract_lane_impl =
+        repo_file("scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py");
+    assert!(
+        contract_lane_impl.contains("--policy-output-json"),
+        "expected triadic contract lane implementation to emit policy output artifact option"
     );
 }
