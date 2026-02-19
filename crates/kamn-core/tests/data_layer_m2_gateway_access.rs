@@ -1,9 +1,9 @@
 use kamn_core::{
     data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,
     DataLayerM2AccessAuditLedger, DataLayerM2ActorRole, DataLayerM2AuthorizationDecision,
-    DataLayerM2DidAuthRequest, DataLayerM2DidSessionService, DataLayerM2GatewayError,
-    DataLayerM2MessageScope, DataLayerM2NegativeAuthorizationCase,
-    DataLayerM2NegativeAuthorizationMatrixDecision,
+    DataLayerM2DidAuthRequest, DataLayerM2DidAuthRequestValidated, DataLayerM2DidSessionService,
+    DataLayerM2GatewayError, DataLayerM2MessageScope, DataLayerM2MessageScopeValidated,
+    DataLayerM2NegativeAuthorizationCase, DataLayerM2NegativeAuthorizationMatrixDecision,
     DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
     DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
     DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED, DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
@@ -98,6 +98,35 @@ fn spec_c02b_did_authentication_rejects_non_canonical_agent_did_shapes() {
 }
 
 #[test]
+fn spec_c01b_auth_request_boundary_converts_to_typed_agent_did_contract() {
+    let validated = DataLayerM2DidAuthRequestValidated::try_from(DataLayerM2DidAuthRequest {
+        requester_did: "kamn:did:agent:sender-1".to_owned(),
+        challenge: "nonce-typed-1".to_owned(),
+        credential: "sig:kamn:did:agent:sender-1:nonce-typed-1".to_owned(),
+        issued_at_epoch_seconds: 1_708_160_111,
+        ttl_seconds: 300,
+    })
+    .expect("valid request should convert to typed contract");
+
+    assert_eq!(validated.requester_did.as_str(), "kamn:did:agent:sender-1");
+}
+
+#[test]
+fn spec_c02c_auth_request_boundary_rejects_malformed_requester_did() {
+    let invalid = DataLayerM2DidAuthRequestValidated::try_from(DataLayerM2DidAuthRequest {
+        requester_did: "kamn:did:owner:sender".to_owned(),
+        challenge: "nonce-typed-2".to_owned(),
+        credential: "sig:kamn:did:owner:sender:nonce-typed-2".to_owned(),
+        issued_at_epoch_seconds: 1_708_160_222,
+        ttl_seconds: 300,
+    });
+    assert!(matches!(
+        invalid,
+        Err(DataLayerM2GatewayError::InvalidDid(_))
+    ));
+}
+
+#[test]
 fn spec_c03_abac_message_visibility_matrix_is_fail_closed_for_unrelated_requesters() {
     let abac = seeded_abac();
 
@@ -156,6 +185,26 @@ fn spec_c03_abac_message_visibility_matrix_is_fail_closed_for_unrelated_requeste
             reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
         }
     );
+}
+
+#[test]
+fn spec_c03c_scope_boundary_conversion_uses_typed_agent_dids_and_fails_closed() {
+    let valid_scope = message_scope(None);
+    let validated = DataLayerM2MessageScopeValidated::try_from(&valid_scope)
+        .expect("valid scope should convert to typed contract");
+    assert_eq!(validated.sender_did.as_str(), "kamn:did:agent:sender-1");
+    assert_eq!(
+        validated.recipient_did.as_str(),
+        "kamn:did:agent:recipient-1"
+    );
+
+    let mut invalid_scope = message_scope(None);
+    invalid_scope.recipient_did = "kamn:did:owner:recipient".to_owned();
+    let invalid_conversion = DataLayerM2MessageScopeValidated::try_from(&invalid_scope);
+    assert!(matches!(
+        invalid_conversion,
+        Err(DataLayerM2GatewayError::InvalidDid(_))
+    ));
 }
 
 #[test]

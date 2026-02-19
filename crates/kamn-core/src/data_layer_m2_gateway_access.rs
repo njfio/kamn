@@ -46,6 +46,42 @@ pub struct DataLayerM2DidAuthRequest {
     pub ttl_seconds: u64,
 }
 
+/// Typed validated auth request used by internal M2 session issuance paths.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM2DidAuthRequestValidated {
+    /// Canonical requester agent DID.
+    pub requester_did: AgentDid,
+    /// Challenge/nonce bound to credential signature.
+    pub challenge: String,
+    /// Credential payload carrying deterministic signature binding.
+    pub credential: String,
+    /// Request issuance timestamp in epoch seconds.
+    pub issued_at_epoch_seconds: u64,
+    /// Requested session TTL in seconds.
+    pub ttl_seconds: u64,
+}
+
+impl TryFrom<DataLayerM2DidAuthRequest> for DataLayerM2DidAuthRequestValidated {
+    type Error = DataLayerM2GatewayError;
+
+    fn try_from(request: DataLayerM2DidAuthRequest) -> Result<Self, Self::Error> {
+        if request.challenge.trim().is_empty() {
+            return Err(DataLayerM2GatewayError::EmptyField("challenge"));
+        }
+        if request.credential.trim().is_empty() {
+            return Err(DataLayerM2GatewayError::EmptyField("credential"));
+        }
+
+        Ok(Self {
+            requester_did: parse_agent_did(request.requester_did.as_str())?,
+            challenge: request.challenge,
+            credential: request.credential,
+            issued_at_epoch_seconds: request.issued_at_epoch_seconds,
+            ttl_seconds: request.ttl_seconds,
+        })
+    }
+}
+
 /// Session token issued by M2 DID authentication.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM2SessionToken {
@@ -82,12 +118,8 @@ impl DataLayerM2DidSessionService {
         &self,
         request: DataLayerM2DidAuthRequest,
     ) -> Result<DataLayerM2SessionToken, DataLayerM2GatewayError> {
-        if request.challenge.trim().is_empty() {
-            return Err(DataLayerM2GatewayError::EmptyField("challenge"));
-        }
-        if request.credential.trim().is_empty() {
-            return Err(DataLayerM2GatewayError::EmptyField("credential"));
-        }
+        let request = DataLayerM2DidAuthRequestValidated::try_from(request)?;
+
         if request.ttl_seconds == 0 || request.ttl_seconds > self.max_ttl_seconds {
             return Err(DataLayerM2GatewayError::InvalidSessionTtl {
                 ttl_seconds: request.ttl_seconds,
@@ -95,8 +127,8 @@ impl DataLayerM2DidSessionService {
             });
         }
 
-        validate_agent_did(request.requester_did.as_str())?;
-        let expected_credential = format!("sig:{}:{}", request.requester_did, request.challenge);
+        let requester_did = request.requester_did.as_str().to_owned();
+        let expected_credential = format!("sig:{requester_did}:{}", request.challenge);
         if request.credential != expected_credential {
             return Err(DataLayerM2GatewayError::InvalidCredential(
                 "credential signature mismatch".to_owned(),
@@ -112,7 +144,7 @@ impl DataLayerM2DidSessionService {
             tagged_digest(
                 format!(
                     "did-session|did:{}|challenge:{}|issued:{}|expires:{}",
-                    request.requester_did,
+                    requester_did,
                     request.challenge,
                     request.issued_at_epoch_seconds,
                     expires_at_epoch_seconds
@@ -123,7 +155,7 @@ impl DataLayerM2DidSessionService {
 
         Ok(DataLayerM2SessionToken {
             token_id,
-            requester_did: request.requester_did,
+            requester_did,
             issued_at_epoch_seconds: request.issued_at_epoch_seconds,
             expires_at_epoch_seconds,
         })
@@ -158,6 +190,44 @@ pub struct DataLayerM2MessageScope {
     pub owner_recipient_did: String,
     /// Optional escrow identifier when message is escrow-scoped.
     pub escrow_id: Option<String>,
+}
+
+/// Typed validated scope used by internal M2 ABAC authorization paths.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM2MessageScopeValidated {
+    /// Stable message identifier.
+    pub message_id: String,
+    /// Sender agent DID.
+    pub sender_did: AgentDid,
+    /// Recipient agent DID.
+    pub recipient_did: AgentDid,
+    /// Owner DID for sender.
+    pub owner_sender_did: String,
+    /// Owner DID for recipient.
+    pub owner_recipient_did: String,
+    /// Optional escrow identifier when message is escrow-scoped.
+    pub escrow_id: Option<String>,
+}
+
+impl TryFrom<&DataLayerM2MessageScope> for DataLayerM2MessageScopeValidated {
+    type Error = DataLayerM2GatewayError;
+
+    fn try_from(scope: &DataLayerM2MessageScope) -> Result<Self, Self::Error> {
+        if scope.message_id.trim().is_empty() {
+            return Err(DataLayerM2GatewayError::EmptyField("message_id"));
+        }
+        validate_kamn_did(scope.owner_sender_did.as_str())?;
+        validate_kamn_did(scope.owner_recipient_did.as_str())?;
+
+        Ok(Self {
+            message_id: scope.message_id.clone(),
+            sender_did: parse_agent_did(scope.sender_did.as_str())?,
+            recipient_did: parse_agent_did(scope.recipient_did.as_str())?,
+            owner_sender_did: scope.owner_sender_did.clone(),
+            owner_recipient_did: scope.owner_recipient_did.clone(),
+            escrow_id: scope.escrow_id.clone(),
+        })
+    }
 }
 
 /// Authorization decision projected by ABAC evaluation.
@@ -279,17 +349,14 @@ impl DataLayerM2AbacEngine {
         requester_role: DataLayerM2ActorRole,
         scope: &DataLayerM2MessageScope,
     ) -> Result<DataLayerM2AuthorizationDecision, DataLayerM2GatewayError> {
-        validate_message_scope(scope)?;
-        match requester_role {
-            DataLayerM2ActorRole::Agent => validate_agent_did(requester_did)?,
-            DataLayerM2ActorRole::Owner
-            | DataLayerM2ActorRole::EscrowAuditor
-            | DataLayerM2ActorRole::PlatformOperator => validate_kamn_did(requester_did)?,
-        }
+        let requester = validate_requester_did_for_role(requester_did, requester_role)?;
+        let scope = DataLayerM2MessageScopeValidated::try_from(scope)?;
 
         let decision = match requester_role {
             DataLayerM2ActorRole::Agent => {
-                if requester_did == scope.sender_did || requester_did == scope.recipient_did {
+                if requester.as_str() == scope.sender_did.as_str()
+                    || requester.as_str() == scope.recipient_did.as_str()
+                {
                     DataLayerM2AuthorizationDecision::Allow {
                         reason_code: DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
                     }
@@ -300,8 +367,8 @@ impl DataLayerM2AbacEngine {
                 }
             }
             DataLayerM2ActorRole::Owner => {
-                if requester_did == scope.owner_sender_did
-                    || requester_did == scope.owner_recipient_did
+                if requester.as_str() == scope.owner_sender_did
+                    || requester.as_str() == scope.owner_recipient_did
                 {
                     DataLayerM2AuthorizationDecision::Allow {
                         reason_code: DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
@@ -317,7 +384,7 @@ impl DataLayerM2AbacEngine {
                 let auditor_allowed = self
                     .escrow_auditors_by_escrow
                     .get(escrow_id)
-                    .is_some_and(|auditors| auditors.contains(requester_did));
+                    .is_some_and(|auditors| auditors.contains(requester.as_str()));
                 let dispute_active = self.disputed_escrows.contains(escrow_id);
                 if !escrow_id.is_empty() && auditor_allowed && dispute_active {
                     DataLayerM2AuthorizationDecision::Allow {
@@ -638,30 +705,38 @@ impl fmt::Display for DataLayerM2GatewayError {
 
 impl std::error::Error for DataLayerM2GatewayError {}
 
-fn validate_message_scope(scope: &DataLayerM2MessageScope) -> Result<(), DataLayerM2GatewayError> {
-    if scope.message_id.trim().is_empty() {
-        return Err(DataLayerM2GatewayError::EmptyField("message_id"));
-    }
-    for (field, value, requires_agent_did) in [
-        ("sender_did", scope.sender_did.as_str(), true),
-        ("recipient_did", scope.recipient_did.as_str(), true),
-        ("owner_sender_did", scope.owner_sender_did.as_str(), false),
-        (
-            "owner_recipient_did",
-            scope.owner_recipient_did.as_str(),
-            false,
-        ),
-    ] {
-        if value.trim().is_empty() {
-            return Err(DataLayerM2GatewayError::EmptyField(field));
-        }
-        if requires_agent_did {
-            validate_agent_did(value)?;
-        } else {
-            validate_kamn_did(value)?;
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DataLayerM2RequesterDidValidated {
+    Agent(AgentDid),
+    KamnDid(String),
+}
+
+impl DataLayerM2RequesterDidValidated {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Agent(agent_did) => agent_did.as_str(),
+            Self::KamnDid(value) => value.as_str(),
         }
     }
-    Ok(())
+}
+
+fn validate_requester_did_for_role(
+    requester_did: &str,
+    requester_role: DataLayerM2ActorRole,
+) -> Result<DataLayerM2RequesterDidValidated, DataLayerM2GatewayError> {
+    match requester_role {
+        DataLayerM2ActorRole::Agent => Ok(DataLayerM2RequesterDidValidated::Agent(
+            parse_agent_did(requester_did)?,
+        )),
+        DataLayerM2ActorRole::Owner
+        | DataLayerM2ActorRole::EscrowAuditor
+        | DataLayerM2ActorRole::PlatformOperator => {
+            validate_kamn_did(requester_did)?;
+            Ok(DataLayerM2RequesterDidValidated::KamnDid(
+                requester_did.to_owned(),
+            ))
+        }
+    }
 }
 
 fn validate_audit_input(
@@ -698,9 +773,8 @@ fn validate_kamn_did(value: &str) -> Result<(), DataLayerM2GatewayError> {
     Ok(())
 }
 
-fn validate_agent_did(value: &str) -> Result<(), DataLayerM2GatewayError> {
-    AgentDid::parse(value).map_err(|_| DataLayerM2GatewayError::InvalidDid(value.to_owned()))?;
-    Ok(())
+fn parse_agent_did(value: &str) -> Result<AgentDid, DataLayerM2GatewayError> {
+    AgentDid::parse(value).map_err(|_| DataLayerM2GatewayError::InvalidDid(value.to_owned()))
 }
 
 fn compute_audit_record_hash(
