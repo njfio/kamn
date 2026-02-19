@@ -2029,6 +2029,7 @@ Operator checkpoints:
   - `peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout`
   - `peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted`
   - `peer_adapter_multi_process_validation_local_heavy_status=required`
+  - `retry_reconnect_marker_contract_status=verified`
 - Drift failure requirements:
   - partition/rejoin tamper must fail closed with `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`.
   - unstable reason classification tamper must fail closed with `live_transport_fault_matrix_policy_reason_codes_classification_mismatch`.

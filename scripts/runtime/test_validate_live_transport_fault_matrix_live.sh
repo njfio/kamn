@@ -66,6 +66,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^peer_adapter_multi_process_v
   echo "expected live transport fault matrix peer-adapter multi-process local-heavy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^retry_reconnect_marker_contract_status=verified$'; then
+  echo "expected live transport fault matrix retry/reconnect marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reason_taxonomy_version=kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1$'; then
   echo "expected live transport fault matrix reason taxonomy version marker" >&2
   exit 1
@@ -99,6 +103,8 @@ if payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "p2p_l
     raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker")
 if payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
     raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker")
+if payload.get("retry_reconnect_marker_contract_status") != "verified":
+    raise SystemExit("expected deterministic retry_reconnect_marker_contract_status marker")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.live-transport-fault-matrix-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reason taxonomy version marker")
 if payload.get("reason_codes") != ["none"]:

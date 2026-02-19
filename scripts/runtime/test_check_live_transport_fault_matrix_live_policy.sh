@@ -77,6 +77,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_multi_process_valid
   echo "expected deterministic live transport fault matrix policy peer-adapter multi-process local-heavy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^retry_reconnect_marker_contract_status=verified$'; then
+  echo "expected deterministic live transport fault matrix policy retry/reconnect marker contract status marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_POLICY" <<'PY'
 import json
@@ -106,6 +110,8 @@ if payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "p2p_l
     raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker in policy report")
 if payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
     raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker in policy report")
+if payload.get("retry_reconnect_marker_contract_status") != "verified":
+    raise SystemExit("expected deterministic retry_reconnect_marker_contract_status marker in policy report")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"

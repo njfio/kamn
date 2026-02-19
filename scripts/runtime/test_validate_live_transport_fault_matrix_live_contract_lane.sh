@@ -83,6 +83,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^peer_adapter_multi_process_validat
   echo "expected live transport fault matrix peer-adapter multi-process local-heavy marker in contract lane output" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^retry_reconnect_marker_contract_status=verified$'; then
+  echo "expected live transport fault matrix retry/reconnect marker contract status marker in contract lane output" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^peer_reason_docs_contract_status=verified$'; then
   echo "expected live transport fault matrix peer reason docs contract status marker in contract lane output" >&2
   exit 1
@@ -144,6 +148,8 @@ if lane_payload.get("peer_adapter_reason_projection_budget_exhausted_code") != "
     raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker in contract lane report")
 if lane_payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
     raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker in contract lane report")
+if lane_payload.get("retry_reconnect_marker_contract_status") != "verified":
+    raise SystemExit("expected deterministic retry_reconnect_marker_contract_status marker in contract lane report")
 if lane_payload.get("peer_reason_docs_contract_status") != "verified":
     raise SystemExit("expected peer_reason_docs_contract_status=verified in contract lane report")
 if lane_payload.get("evidence_convergence_status") != "verified":
@@ -176,6 +182,8 @@ if policy_payload.get("peer_adapter_reason_projection_budget_exhausted_code") !=
     raise SystemExit("expected deterministic peer_adapter_reason_projection_budget_exhausted_code marker in policy report")
 if policy_payload.get("peer_adapter_multi_process_validation_local_heavy_status") != "required":
     raise SystemExit("expected deterministic peer_adapter_multi_process_validation_local_heavy_status marker in policy report")
+if policy_payload.get("retry_reconnect_marker_contract_status") != "verified":
+    raise SystemExit("expected deterministic retry_reconnect_marker_contract_status marker in policy report")
 PY
 
 set +e
