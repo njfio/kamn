@@ -4,6 +4,9 @@ use std::fmt;
 
 const HUMAN_DID_PREFIX: &str = "kamn:did:human:";
 const CANONICAL_PROOF_TYPE: &str = "Ed25519Signature2020";
+const OPERATOR_BINDING_INVALID_AGENT_DID_REASON_CODE: &str = "operator_binding_invalid_agent_did";
+const OPERATOR_BINDING_INVALID_OPERATOR_DID_REASON_CODE: &str =
+    "operator_binding_invalid_operator_did";
 
 /// Permissioned actions that an operator binding may authorize.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,6 +53,71 @@ pub struct OperatorBindingEngine {
     bindings: BTreeMap<(String, String), OperatorBindingRecord>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct OperatorBindingPrincipals {
+    agent_did: AgentDid,
+    operator_did: OperatorHumanDid,
+}
+
+impl OperatorBindingPrincipals {
+    fn parse(agent_did: &str, operator_did: &str) -> Result<Self, OperatorBindingError> {
+        Ok(Self {
+            agent_did: parse_agent_did(
+                agent_did,
+                "agent_did",
+                OPERATOR_BINDING_INVALID_AGENT_DID_REASON_CODE,
+            )?,
+            operator_did: parse_operator_did(
+                operator_did,
+                "operator_did",
+                OPERATOR_BINDING_INVALID_OPERATOR_DID_REASON_CODE,
+            )?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct OperatorHumanDid(String);
+
+impl OperatorHumanDid {
+    fn parse(
+        value: &str,
+        field: &'static str,
+        reason_code: &'static str,
+    ) -> Result<Self, OperatorBindingError> {
+        if !value.starts_with(HUMAN_DID_PREFIX) {
+            return Err(OperatorBindingError::InvalidOperatorDid {
+                field,
+                reason_code,
+                detail: format!("invalid human did prefix: {value}"),
+            });
+        }
+        let method_specific_id = &value[HUMAN_DID_PREFIX.len()..];
+        if method_specific_id.is_empty() {
+            return Err(OperatorBindingError::InvalidOperatorDid {
+                field,
+                reason_code,
+                detail: "human did method-specific id must not be empty".to_owned(),
+            });
+        }
+        if !method_specific_id
+            .chars()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
+        {
+            return Err(OperatorBindingError::InvalidOperatorDid {
+                field,
+                reason_code,
+                detail: format!("human did has invalid characters: {method_specific_id}"),
+            });
+        }
+        Ok(Self(value.to_owned()))
+    }
+
+    fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl OperatorBindingEngine {
     /// Creates an empty operator binding engine.
     pub fn new() -> Self {
@@ -64,29 +132,31 @@ impl OperatorBindingEngine {
         proof: Option<OperatorBindingProof>,
         permissions: BTreeSet<OperatorBindingAction>,
     ) -> Result<(), OperatorBindingError> {
-        validate_agent_did(agent_did)?;
-        validate_operator_did(operator_did)?;
+        let principals = OperatorBindingPrincipals::parse(agent_did, operator_did)?;
         if permissions.is_empty() {
             return Err(OperatorBindingError::EmptyPermissions);
         }
 
         if let Some(proof_value) = &proof {
-            validate_proof(proof_value, operator_did)?;
+            validate_proof(proof_value, principals.operator_did.as_str())?;
         }
 
-        let key = (agent_did.to_owned(), operator_did.to_owned());
+        let key = (
+            principals.agent_did.as_str().to_owned(),
+            principals.operator_did.as_str().to_owned(),
+        );
         if self.bindings.contains_key(&key) {
             return Err(OperatorBindingError::DuplicateBinding {
-                agent_did: agent_did.to_owned(),
-                operator_did: operator_did.to_owned(),
+                agent_did: principals.agent_did.as_str().to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
             });
         }
 
         self.bindings.insert(
             key,
             OperatorBindingRecord {
-                agent_did: agent_did.to_owned(),
-                operator_did: operator_did.to_owned(),
+                agent_did: principals.agent_did.as_str().to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
                 proof,
                 permissions,
                 revoked: false,
@@ -102,19 +172,21 @@ impl OperatorBindingEngine {
         operator_did: &str,
         action: OperatorBindingAction,
     ) -> Result<(), OperatorBindingError> {
-        validate_agent_did(agent_did)?;
-        validate_operator_did(operator_did)?;
+        let principals = OperatorBindingPrincipals::parse(agent_did, operator_did)?;
 
-        let record = self.lookup(agent_did, operator_did)?;
+        let record = self.lookup(
+            principals.agent_did.as_str(),
+            principals.operator_did.as_str(),
+        )?;
         if record.revoked {
             return Err(OperatorBindingError::RevokedBinding {
-                agent_did: agent_did.to_owned(),
-                operator_did: operator_did.to_owned(),
+                agent_did: principals.agent_did.as_str().to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
             });
         }
         if !record.permissions.contains(&action) {
             return Err(OperatorBindingError::UnauthorizedAction {
-                operator_did: operator_did.to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
                 action,
             });
         }
@@ -127,28 +199,30 @@ impl OperatorBindingEngine {
         agent_did: &str,
         operator_did: &str,
     ) -> Result<(), OperatorBindingError> {
-        validate_agent_did(agent_did)?;
-        validate_operator_did(operator_did)?;
+        let principals = OperatorBindingPrincipals::parse(agent_did, operator_did)?;
 
-        let key = (agent_did.to_owned(), operator_did.to_owned());
+        let key = (
+            principals.agent_did.as_str().to_owned(),
+            principals.operator_did.as_str().to_owned(),
+        );
         let record =
             self.bindings
                 .get_mut(&key)
                 .ok_or_else(|| OperatorBindingError::MissingBinding {
-                    agent_did: agent_did.to_owned(),
-                    operator_did: operator_did.to_owned(),
+                    agent_did: principals.agent_did.as_str().to_owned(),
+                    operator_did: principals.operator_did.as_str().to_owned(),
                 })?;
 
         if record.revoked {
             return Err(OperatorBindingError::RevokedBinding {
-                agent_did: agent_did.to_owned(),
-                operator_did: operator_did.to_owned(),
+                agent_did: principals.agent_did.as_str().to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
             });
         }
 
         if !record.permissions.contains(&OperatorBindingAction::Revoke) {
             return Err(OperatorBindingError::UnauthorizedAction {
-                operator_did: operator_did.to_owned(),
+                operator_did: principals.operator_did.as_str().to_owned(),
                 action: OperatorBindingAction::Revoke,
             });
         }
@@ -163,9 +237,11 @@ impl OperatorBindingEngine {
         agent_did: &str,
         operator_did: &str,
     ) -> Result<&OperatorBindingRecord, OperatorBindingError> {
-        validate_agent_did(agent_did)?;
-        validate_operator_did(operator_did)?;
-        self.lookup(agent_did, operator_did)
+        let principals = OperatorBindingPrincipals::parse(agent_did, operator_did)?;
+        self.lookup(
+            principals.agent_did.as_str(),
+            principals.operator_did.as_str(),
+        )
     }
 
     fn lookup(
@@ -190,9 +266,23 @@ pub enum OperatorBindingError {
     /// Proof field was empty.
     EmptyProofField(&'static str),
     /// Agent DID failed validation.
-    InvalidAgentDid(String),
+    InvalidAgentDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Operator DID failed validation.
-    InvalidOperatorDid(String),
+    InvalidOperatorDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Proof type did not match required canonical type.
     InvalidProofType(String),
     /// Proof verification method prefix did not match operator DID.
@@ -237,8 +327,16 @@ impl fmt::Display for OperatorBindingError {
         match self {
             Self::EmptyPermissions => write!(f, "permissions must not be empty"),
             Self::EmptyProofField(field) => write!(f, "proof field must not be empty: {field}"),
-            Self::InvalidAgentDid(value) => write!(f, "invalid agent did: {value}"),
-            Self::InvalidOperatorDid(value) => write!(f, "invalid operator did: {value}"),
+            Self::InvalidAgentDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
+            Self::InvalidOperatorDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidProofType(value) => write!(f, "invalid proof type: {value}"),
             Self::ProofVerificationMethodMismatch {
                 expected_prefix,
@@ -272,33 +370,44 @@ impl fmt::Display for OperatorBindingError {
 
 impl std::error::Error for OperatorBindingError {}
 
-fn validate_agent_did(value: &str) -> Result<(), OperatorBindingError> {
-    AgentDid::parse(value)
-        .map_err(|error| OperatorBindingError::InvalidAgentDid(error.to_string()))?;
-    Ok(())
+impl OperatorBindingError {
+    /// Stable reason taxonomy for operator binding errors.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::EmptyPermissions => "operator_binding_empty_permissions",
+            Self::EmptyProofField(_) => "operator_binding_empty_proof_field",
+            Self::InvalidAgentDid { reason_code, .. } => reason_code,
+            Self::InvalidOperatorDid { reason_code, .. } => reason_code,
+            Self::InvalidProofType(_) => "operator_binding_invalid_proof_type",
+            Self::ProofVerificationMethodMismatch { .. } => {
+                "operator_binding_proof_verification_method_mismatch"
+            }
+            Self::DuplicateBinding { .. } => "operator_binding_duplicate_binding",
+            Self::MissingBinding { .. } => "operator_binding_missing_binding",
+            Self::RevokedBinding { .. } => "operator_binding_revoked_binding",
+            Self::UnauthorizedAction { .. } => "operator_binding_unauthorized_action",
+        }
+    }
 }
 
-fn validate_operator_did(value: &str) -> Result<(), OperatorBindingError> {
-    if !value.starts_with(HUMAN_DID_PREFIX) {
-        return Err(OperatorBindingError::InvalidOperatorDid(format!(
-            "invalid human did prefix: {value}"
-        )));
-    }
-    let method_specific_id = &value[HUMAN_DID_PREFIX.len()..];
-    if method_specific_id.is_empty() {
-        return Err(OperatorBindingError::InvalidOperatorDid(
-            "human did method-specific id must not be empty".to_owned(),
-        ));
-    }
-    if !method_specific_id
-        .chars()
-        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
-    {
-        return Err(OperatorBindingError::InvalidOperatorDid(format!(
-            "human did has invalid characters: {method_specific_id}"
-        )));
-    }
-    Ok(())
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, OperatorBindingError> {
+    AgentDid::parse(value).map_err(|error| OperatorBindingError::InvalidAgentDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
+}
+
+fn parse_operator_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<OperatorHumanDid, OperatorBindingError> {
+    OperatorHumanDid::parse(value, field, reason_code)
 }
 
 fn validate_non_empty(field: &'static str, value: &str) -> Result<(), OperatorBindingError> {
@@ -363,9 +472,11 @@ mod tests {
                 None,
                 permissions(&[OperatorBindingAction::Configure]),
             ),
-            Err(OperatorBindingError::InvalidOperatorDid(
-                "invalid human did prefix: did:example:operator".to_owned()
-            ))
+            Err(OperatorBindingError::InvalidOperatorDid {
+                field: "operator_did",
+                reason_code: "operator_binding_invalid_operator_did",
+                detail: "invalid human did prefix: did:example:operator".to_owned(),
+            })
         );
     }
 

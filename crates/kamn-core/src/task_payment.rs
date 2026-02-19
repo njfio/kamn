@@ -5,6 +5,10 @@ use crate::{
 use std::collections::BTreeMap;
 use std::fmt;
 
+const TASK_PAYMENT_INVALID_PAYER_DID_REASON_CODE: &str = "task_payment_invalid_payer_did";
+const TASK_PAYMENT_INVALID_PAYEE_DID_REASON_CODE: &str = "task_payment_invalid_payee_did";
+const TASK_PAYMENT_INVALID_CONFIRMER_DID_REASON_CODE: &str = "task_payment_invalid_confirmer_did";
+
 /// Payment offer submitted for a completed task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaymentOffer {
@@ -37,6 +41,50 @@ struct PendingOffer {
     confirmed: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PaymentOfferValidated {
+    payer_did: AgentDid,
+    payee_did: AgentDid,
+}
+
+impl TryFrom<&PaymentOffer> for PaymentOfferValidated {
+    type Error = TaskPaymentError;
+
+    fn try_from(offer: &PaymentOffer) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payer_did: parse_agent_did(
+                offer.payer_did.as_str(),
+                "payer_did",
+                TASK_PAYMENT_INVALID_PAYER_DID_REASON_CODE,
+            )?,
+            payee_did: parse_agent_did(
+                offer.payee_did.as_str(),
+                "payee_did",
+                TASK_PAYMENT_INVALID_PAYEE_DID_REASON_CODE,
+            )?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PaymentConfirmValidated {
+    confirmer_did: AgentDid,
+}
+
+impl TryFrom<&PaymentConfirm> for PaymentConfirmValidated {
+    type Error = TaskPaymentError;
+
+    fn try_from(confirm: &PaymentConfirm) -> Result<Self, Self::Error> {
+        Ok(Self {
+            confirmer_did: parse_agent_did(
+                confirm.confirmer_did.as_str(),
+                "confirmer_did",
+                TASK_PAYMENT_INVALID_CONFIRMER_DID_REASON_CODE,
+            )?,
+        })
+    }
+}
+
 /// Task payment workflow that validates and tracks escrow-backed offers.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskPaymentWorkflow {
@@ -57,8 +105,7 @@ impl TaskPaymentWorkflow {
         escrow: &EscrowLifecycle,
     ) -> Result<(), TaskPaymentError> {
         validate_offer_shape(&offer)?;
-        validate_did(&offer.payer_did)?;
-        validate_did(&offer.payee_did)?;
+        let validated_offer = PaymentOfferValidated::try_from(&offer)?;
 
         if self.offers_by_task.contains_key(&offer.task_id) {
             return Err(TaskPaymentError::DuplicateOffer(offer.task_id));
@@ -74,7 +121,13 @@ impl TaskPaymentWorkflow {
                 state,
             });
         }
-        validate_offer_participants(&offer, &task.requester, task.assignee.as_deref())?;
+        validate_offer_participants(
+            offer.task_id.as_str(),
+            validated_offer.payer_did.as_str(),
+            validated_offer.payee_did.as_str(),
+            task.requester.as_str(),
+            task.assignee.as_deref(),
+        )?;
 
         let remaining = escrow.remaining_amount();
         if offer.amount > remaining {
@@ -106,7 +159,7 @@ impl TaskPaymentWorkflow {
         if confirm.escrow_id.trim().is_empty() {
             return Err(TaskPaymentError::EmptyField("escrow_id"));
         }
-        validate_did(&confirm.confirmer_did)?;
+        let validated_confirm = PaymentConfirmValidated::try_from(&confirm)?;
 
         let pending = self
             .offers_by_task
@@ -124,7 +177,7 @@ impl TaskPaymentWorkflow {
         if pending.offer.payer_did != confirm.confirmer_did {
             return Err(TaskPaymentError::UnauthorizedConfirmer {
                 expected: pending.offer.payer_did.clone(),
-                found: confirm.confirmer_did,
+                found: validated_confirm.confirmer_did.as_str().to_owned(),
             });
         }
 
@@ -155,7 +208,14 @@ pub enum TaskPaymentError {
         found: String,
     },
     /// DID failed validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Offer amount is invalid.
     InvalidOfferAmount(u128),
     /// Payer DID does not match task requester.
@@ -216,7 +276,11 @@ impl fmt::Display for TaskPaymentError {
                 f,
                 "escrow reference mismatch, expected {expected}, found {found}"
             ),
-            Self::InvalidDid(error) => write!(f, "invalid did: {error}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidOfferAmount(amount) => {
                 write!(f, "offer amount must be greater than zero, found {amount}")
             }
@@ -266,29 +330,61 @@ fn validate_offer_shape(offer: &PaymentOffer) -> Result<(), TaskPaymentError> {
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), TaskPaymentError> {
-    AgentDid::parse(value).map_err(|error| TaskPaymentError::InvalidDid(error.to_string()))?;
-    Ok(())
+impl TaskPaymentError {
+    /// Stable reason taxonomy for task payment failures.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::DuplicateConfirm(_) => "task_payment_duplicate_confirm",
+            Self::DuplicateOffer(_) => "task_payment_duplicate_offer",
+            Self::EmptyField(_) => "task_payment_empty_field",
+            Self::Escrow(_) => "task_payment_escrow_error",
+            Self::EscrowMismatch { .. } => "task_payment_escrow_mismatch",
+            Self::InvalidDid { reason_code, .. } => reason_code,
+            Self::InvalidOfferAmount(_) => "task_payment_invalid_offer_amount",
+            Self::PayerRequesterMismatch { .. } => "task_payment_payer_requester_mismatch",
+            Self::PayeeAssigneeMismatch { .. } => "task_payment_payee_assignee_mismatch",
+            Self::OfferExceedsEscrow { .. } => "task_payment_offer_exceeds_escrow",
+            Self::TaskLookup(_) => "task_payment_task_lookup_error",
+            Self::TaskMissingAssignee(_) => "task_payment_task_missing_assignee",
+            Self::TaskNotCompleted { .. } => "task_payment_task_not_completed",
+            Self::UnauthorizedConfirmer { .. } => "task_payment_unauthorized_confirmer",
+            Self::UnknownOffer(_) => "task_payment_unknown_offer",
+        }
+    }
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, TaskPaymentError> {
+    AgentDid::parse(value).map_err(|error| TaskPaymentError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn validate_offer_participants(
-    offer: &PaymentOffer,
+    task_id: &str,
+    payer_did: &str,
+    payee_did: &str,
     task_requester: &str,
     task_assignee: Option<&str>,
 ) -> Result<(), TaskPaymentError> {
-    if offer.payer_did != task_requester {
+    if payer_did != task_requester {
         return Err(TaskPaymentError::PayerRequesterMismatch {
             expected: task_requester.to_owned(),
-            found: offer.payer_did.clone(),
+            found: payer_did.to_owned(),
         });
     }
 
-    let assignee = task_assignee
-        .ok_or_else(|| TaskPaymentError::TaskMissingAssignee(offer.task_id.clone()))?;
-    if offer.payee_did != assignee {
+    let assignee =
+        task_assignee.ok_or_else(|| TaskPaymentError::TaskMissingAssignee(task_id.to_owned()))?;
+    if payee_did != assignee {
         return Err(TaskPaymentError::PayeeAssigneeMismatch {
             expected: assignee.to_owned(),
-            found: offer.payee_did.clone(),
+            found: payee_did.to_owned(),
         });
     }
 
@@ -309,23 +405,15 @@ impl From<EscrowLifecycleError> for TaskPaymentError {
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_offer_participants, PaymentOffer, TaskPaymentError};
-
-    fn offer(payer: &str, payee: &str) -> PaymentOffer {
-        PaymentOffer {
-            task_id: "task-pay-unit".to_owned(),
-            escrow_id: "escrow-unit".to_owned(),
-            payer_did: payer.to_owned(),
-            payee_did: payee.to_owned(),
-            amount: 10,
-        }
-    }
+    use super::{validate_offer_participants, TaskPaymentError};
 
     #[test]
     fn participant_check_rejects_payer_requester_mismatch() {
         assert_eq!(
             validate_offer_participants(
-                &offer("kamn:did:agent:observer-9", "kamn:did:agent:worker-1"),
+                "task-pay-unit",
+                "kamn:did:agent:observer-9",
+                "kamn:did:agent:worker-1",
                 "kamn:did:agent:requester-1",
                 Some("kamn:did:agent:worker-1")
             ),
@@ -340,7 +428,9 @@ mod tests {
     fn participant_check_rejects_payee_assignee_mismatch() {
         assert_eq!(
             validate_offer_participants(
-                &offer("kamn:did:agent:requester-1", "kamn:did:agent:observer-9"),
+                "task-pay-unit",
+                "kamn:did:agent:requester-1",
+                "kamn:did:agent:observer-9",
                 "kamn:did:agent:requester-1",
                 Some("kamn:did:agent:worker-1")
             ),
@@ -355,7 +445,9 @@ mod tests {
     fn participant_check_requires_task_assignee() {
         assert_eq!(
             validate_offer_participants(
-                &offer("kamn:did:agent:requester-1", "kamn:did:agent:worker-1"),
+                "task-pay-unit",
+                "kamn:did:agent:requester-1",
+                "kamn:did:agent:worker-1",
                 "kamn:did:agent:requester-1",
                 None
             ),

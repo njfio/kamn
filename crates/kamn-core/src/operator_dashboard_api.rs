@@ -7,6 +7,23 @@ use crate::{
 use std::collections::BTreeMap;
 use std::fmt;
 
+const OPERATOR_DASHBOARD_API_INVALID_AGENT_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_agent_did";
+const OPERATOR_DASHBOARD_API_INVALID_TASK_REQUESTER_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_task_requester_did";
+const OPERATOR_DASHBOARD_API_INVALID_TASK_ASSIGNEE_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_task_assignee_did";
+const OPERATOR_DASHBOARD_API_INVALID_MESSAGE_SENDER_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_message_sender_did";
+const OPERATOR_DASHBOARD_API_INVALID_MESSAGE_RECIPIENT_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_message_recipient_did";
+const OPERATOR_DASHBOARD_API_INVALID_ESCROW_PAYER_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_escrow_payer_did";
+const OPERATOR_DASHBOARD_API_INVALID_ESCROW_PAYEE_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_escrow_payee_did";
+const OPERATOR_DASHBOARD_API_INVALID_REPUTATION_AGENT_DID_REASON_CODE: &str =
+    "operator_dashboard_api_invalid_reputation_agent_did";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Pagination request contract for dashboard list endpoints.
 pub struct DashboardPageRequest {
@@ -149,7 +166,11 @@ impl OperatorDashboardApi {
         agent_did: &str,
         hierarchy: &AgentKeyHierarchy,
     ) -> Result<(), OperatorDashboardApiError> {
-        validate_did(agent_did)?;
+        let agent_did = parse_agent_did(
+            agent_did,
+            "agent_did",
+            OPERATOR_DASHBOARD_API_INVALID_AGENT_DID_REASON_CODE,
+        )?;
         let identity_key_id = hierarchy
             .current_key(KeyRole::Identity)
             .map_err(|error| OperatorDashboardApiError::Hierarchy(error.to_string()))?
@@ -164,9 +185,9 @@ impl OperatorDashboardApi {
             .to_owned();
 
         self.agents.insert(
-            agent_did.to_owned(),
+            agent_did.as_str().to_owned(),
             OperatorAgentView {
-                agent_did: agent_did.to_owned(),
+                agent_did: agent_did.as_str().to_owned(),
                 identity_key_id,
                 signing_key_id,
                 agreement_key_id,
@@ -183,16 +204,29 @@ impl OperatorDashboardApi {
         if task.task_id.trim().is_empty() {
             return Err(OperatorDashboardApiError::EmptyField("task_id"));
         }
-        validate_did(&task.requester)?;
-        if let Some(assignee) = task.assignee.as_deref() {
-            validate_did(assignee)?;
-        }
+        let requester = parse_agent_did(
+            task.requester.as_str(),
+            "task.requester",
+            OPERATOR_DASHBOARD_API_INVALID_TASK_REQUESTER_DID_REASON_CODE,
+        )?;
+        let assignee = task
+            .assignee
+            .as_deref()
+            .map(|value| {
+                parse_agent_did(
+                    value,
+                    "task.assignee",
+                    OPERATOR_DASHBOARD_API_INVALID_TASK_ASSIGNEE_DID_REASON_CODE,
+                )
+                .map(|did| did.as_str().to_owned())
+            })
+            .transpose()?;
         self.tasks.insert(
             task.task_id.clone(),
             OperatorTaskView {
                 task_id: task.task_id.clone(),
-                requester: task.requester.clone(),
-                assignee: task.assignee.clone(),
+                requester: requester.as_str().to_owned(),
+                assignee,
                 state: task.lifecycle.state(),
             },
         );
@@ -211,17 +245,29 @@ impl OperatorDashboardApi {
         let (sender, recipients) = store
             .participants(message_id)
             .map_err(|error| OperatorDashboardApiError::Message(error.to_string()))?;
-        validate_did(sender)?;
-        for recipient in recipients {
-            validate_did(recipient)?;
-        }
+        let sender = parse_agent_did(
+            sender,
+            "message.sender",
+            OPERATOR_DASHBOARD_API_INVALID_MESSAGE_SENDER_DID_REASON_CODE,
+        )?;
+        let recipients = recipients
+            .iter()
+            .map(|recipient| {
+                parse_agent_did(
+                    recipient,
+                    "message.recipients[]",
+                    OPERATOR_DASHBOARD_API_INVALID_MESSAGE_RECIPIENT_DID_REASON_CODE,
+                )
+                .map(|did| did.as_str().to_owned())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         self.messages.insert(
             message_id.to_owned(),
             OperatorMessageView {
                 message_id: message_id.to_owned(),
-                sender: sender.to_owned(),
-                recipients: recipients.to_vec(),
+                sender: sender.as_str().to_owned(),
+                recipients,
                 status,
             },
         );
@@ -239,15 +285,23 @@ impl OperatorDashboardApi {
         if escrow_id.trim().is_empty() {
             return Err(OperatorDashboardApiError::EmptyField("escrow_id"));
         }
-        validate_did(payer)?;
-        validate_did(payee)?;
+        let payer = parse_agent_did(
+            payer,
+            "escrow.payer",
+            OPERATOR_DASHBOARD_API_INVALID_ESCROW_PAYER_DID_REASON_CODE,
+        )?;
+        let payee = parse_agent_did(
+            payee,
+            "escrow.payee",
+            OPERATOR_DASHBOARD_API_INVALID_ESCROW_PAYEE_DID_REASON_CODE,
+        )?;
 
         self.escrows.insert(
             escrow_id.to_owned(),
             OperatorEscrowView {
                 escrow_id: escrow_id.to_owned(),
-                payer: payer.to_owned(),
-                payee: payee.to_owned(),
+                payer: payer.as_str().to_owned(),
+                payee: payee.as_str().to_owned(),
                 status: escrow.status(),
                 remaining_amount: escrow.remaining_amount(),
             },
@@ -260,11 +314,15 @@ impl OperatorDashboardApi {
         &mut self,
         reputation: &crate::AgentReputation,
     ) -> Result<(), OperatorDashboardApiError> {
-        validate_did(&reputation.agent_did)?;
+        let agent_did = parse_agent_did(
+            reputation.agent_did.as_str(),
+            "reputation.agent_did",
+            OPERATOR_DASHBOARD_API_INVALID_REPUTATION_AGENT_DID_REASON_CODE,
+        )?;
         self.reputation.insert(
-            reputation.agent_did.clone(),
+            agent_did.as_str().to_owned(),
             OperatorReputationView {
-                agent_did: reputation.agent_did.clone(),
+                agent_did: agent_did.as_str().to_owned(),
                 trust_score: reputation.trust_score,
                 delivery_rate: reputation.delivery_rate,
                 dispute_rate: reputation.dispute_rate,
@@ -338,7 +396,14 @@ pub enum OperatorDashboardApiError {
     /// Required field is empty.
     EmptyField(&'static str),
     /// DID value is invalid.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Agent key hierarchy lookup failed.
     Hierarchy(String),
     /// Message lifecycle lookup failed.
@@ -359,7 +424,11 @@ impl fmt::Display for OperatorDashboardApiError {
                 write!(f, "invalid pagination cursor: {cursor}")
             }
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::Hierarchy(value) => write!(f, "key hierarchy error: {value}"),
             Self::Message(value) => write!(f, "message lifecycle error: {value}"),
             Self::Task(value) => write!(f, "task operation error: {value}"),
@@ -382,10 +451,32 @@ impl From<ReputationError> for OperatorDashboardApiError {
     }
 }
 
-fn validate_did(value: &str) -> Result<(), OperatorDashboardApiError> {
-    AgentDid::parse(value)
-        .map_err(|error| OperatorDashboardApiError::InvalidDid(error.to_string()))?;
-    Ok(())
+impl OperatorDashboardApiError {
+    /// Stable reason taxonomy for dashboard API failures.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidPageLimit(_) => "operator_dashboard_api_invalid_page_limit",
+            Self::InvalidPaginationCursor(_) => "operator_dashboard_api_invalid_pagination_cursor",
+            Self::EmptyField(_) => "operator_dashboard_api_empty_field",
+            Self::InvalidDid { reason_code, .. } => reason_code,
+            Self::Hierarchy(_) => "operator_dashboard_api_hierarchy_error",
+            Self::Message(_) => "operator_dashboard_api_message_error",
+            Self::Task(_) => "operator_dashboard_api_task_error",
+            Self::Reputation(_) => "operator_dashboard_api_reputation_error",
+        }
+    }
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, OperatorDashboardApiError> {
+    AgentDid::parse(value).map_err(|error| OperatorDashboardApiError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn paginate_map<T: Clone>(

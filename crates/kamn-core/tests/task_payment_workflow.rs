@@ -258,3 +258,31 @@ fn integration_timeout_refund_recovers_remaining_escrow_after_confirm() {
     assert_eq!(escrow.released_amount(), 60);
     assert_eq!(escrow.refunded_amount(), 40);
 }
+
+#[test]
+fn invalid_payer_did_surfaces_reason_code_contract() {
+    let mut workflow = TaskPaymentWorkflow::new();
+    let tasks = completed_task_engine("task-pay-invalid-payer-did");
+    let escrow = EscrowLifecycle::new(100).expect("escrow should initialize");
+
+    let result = workflow.submit_offer(
+        PaymentOffer {
+            task_id: "task-pay-invalid-payer-did".to_owned(),
+            escrow_id: "escrow-invalid-payer-did".to_owned(),
+            payer_did: "bad-did".to_owned(),
+            payee_did: "kamn:did:agent:worker-1".to_owned(),
+            amount: 60,
+        },
+        &tasks,
+        &escrow,
+    );
+
+    assert_eq!(
+        result,
+        Err(TaskPaymentError::InvalidDid {
+            field: "payer_did",
+            reason_code: "task_payment_invalid_payer_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
