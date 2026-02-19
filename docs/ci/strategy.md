@@ -4573,7 +4573,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 
 ### Overload CI Dry-Run Policy Checker Contract
 - Checker command:
-  - `bash scripts/ci/check_daemon_os_signal_stress_policy.sh --report-file /tmp/daemon-os-signal-stress-matrix-report.json --threshold-file fixtures/ci/daemon_os_signal_stress_policy_thresholds.env --ci-tools-script scripts/ci/test_ci_tools.sh --expected-final-decision GO --output-json /tmp/daemon-os-signal-stress-policy-report.json`
+  - `python3 scripts/ci/check_daemon_os_signal_stress_policy.py --report-file /tmp/daemon-os-signal-stress-matrix-report.json --threshold-file fixtures/ci/daemon_os_signal_stress_policy_thresholds.env --ci-tools-script scripts/ci/test_ci_tools.sh --expected-final-decision GO --output-json /tmp/daemon-os-signal-stress-policy-report.json`
 - Checker regression test command:
   - `bash scripts/ci/test_check_daemon_os_signal_stress_policy.sh`
 - Threshold fixture:

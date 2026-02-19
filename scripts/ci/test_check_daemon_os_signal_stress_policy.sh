@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 
-POLICY_SCRIPT="$ROOT_DIR/scripts/ci/check_daemon_os_signal_stress_policy.sh"
+POLICY_SCRIPT="$ROOT_DIR/scripts/ci/check_daemon_os_signal_stress_policy.py"
 THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/daemon_os_signal_stress_policy_thresholds.env"
 
 TMP_DIR="$(mktemp -d)"
@@ -24,7 +24,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$REPORT_FILE" <<'JSON'
 }
 JSON
 
-bash "$POLICY_SCRIPT" \
+python3 "$POLICY_SCRIPT" \
   --report-file "$REPORT_FILE" \
   --threshold-file "$THRESHOLD_FILE" \
   --ci-tools-script "$ROOT_DIR/scripts/ci/test_ci_tools.sh" \
@@ -46,7 +46,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$RUNTIME_FAIL_REPORT" <<'JSON'
 }
 JSON
 
-if bash "$POLICY_SCRIPT" \
+if python3 "$POLICY_SCRIPT" \
   --report-file "$RUNTIME_FAIL_REPORT" \
   --threshold-file "$THRESHOLD_FILE" \
   --ci-tools-script "$ROOT_DIR/scripts/ci/test_ci_tools.sh" \
@@ -68,7 +68,7 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$BAD_REASON_REPORT" <<'JSON'
 }
 JSON
 
-if bash "$POLICY_SCRIPT" \
+if python3 "$POLICY_SCRIPT" \
   --report-file "$BAD_REASON_REPORT" \
   --threshold-file "$THRESHOLD_FILE" \
   --ci-tools-script "$ROOT_DIR/scripts/ci/test_ci_tools.sh" \
@@ -91,7 +91,7 @@ fi
 EOF
 chmod +x "$FAKE_CI_TOOLS"
 
-if bash "$POLICY_SCRIPT" \
+if python3 "$POLICY_SCRIPT" \
   --report-file "$REPORT_FILE" \
   --threshold-file "$THRESHOLD_FILE" \
   --ci-tools-script "$FAKE_CI_TOOLS" \

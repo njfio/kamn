@@ -1649,7 +1649,7 @@ fn doc_contains_overload_docs_parity_and_go_no_go_markers() {
 fn doc_contains_overload_ci_dry_run_policy_checker_markers() {
     assert!(DOC.contains("### Overload CI Dry-Run Policy Checker Contract"));
     assert!(DOC.contains(
-        "bash scripts/ci/check_daemon_os_signal_stress_policy.sh --report-file /tmp/daemon-os-signal-stress-matrix-report.json --threshold-file fixtures/ci/daemon_os_signal_stress_policy_thresholds.env --ci-tools-script scripts/ci/test_ci_tools.sh --expected-final-decision GO --output-json /tmp/daemon-os-signal-stress-policy-report.json"
+        "python3 scripts/ci/check_daemon_os_signal_stress_policy.py --report-file /tmp/daemon-os-signal-stress-matrix-report.json --threshold-file fixtures/ci/daemon_os_signal_stress_policy_thresholds.env --ci-tools-script scripts/ci/test_ci_tools.sh --expected-final-decision GO --output-json /tmp/daemon-os-signal-stress-policy-report.json"
     ));
     assert!(DOC.contains("fixtures/ci/daemon_os_signal_stress_policy_thresholds.env"));
     assert!(DOC.contains(
