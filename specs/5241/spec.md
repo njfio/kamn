@@ -1,7 +1,7 @@
 # Issue #5241 Spec
 
 - Title: Subtask: offset #4096 shell LOC increase via overload checker test compaction
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-15-resource-quota-fairness-and-overload-resilience-governance/index.md
