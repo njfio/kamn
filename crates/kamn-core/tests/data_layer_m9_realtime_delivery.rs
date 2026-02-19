@@ -3,6 +3,7 @@ use kamn_core::{
     DataLayerM9DispatchAckStatus, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
     DataLayerM9PresenceQuery, DataLayerM9PresenceRelationshipRequest,
     DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
+    DataLayerM9RuntimeBackpressureProjectionRequest, PeerLifecycleState, RuntimeBackpressureAction,
     DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE,
     DATA_LAYER_M9_ACK_QUEUED_REASON_CODE, DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
     DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
@@ -10,6 +11,8 @@ use kamn_core::{
     DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
     DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
+    DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
 };
 
 fn dispatch_request(
@@ -27,6 +30,26 @@ fn dispatch_request(
         recipient_agent_did: recipient_agent_did.to_owned(),
         message_id: message_id.to_owned(),
         dispatched_at_epoch_seconds,
+    }
+}
+
+fn enqueue_messages(
+    registry: &mut DataLayerM9RealtimeDeliveryRegistry,
+    recipient_agent_did: &str,
+    count: usize,
+    base_epoch_seconds: u64,
+) {
+    for offset in 0..count {
+        let _ = registry
+            .dispatch_message(dispatch_request(
+                "kamn:did:owner:alpha",
+                "kamn:did:owner:alpha",
+                "kamn:did:agent:alpha-sender",
+                recipient_agent_did,
+                format!("m9-bridge-fill-{offset:04}").as_str(),
+                base_epoch_seconds + offset as u64,
+            ))
+            .expect("queue fill dispatch should succeed");
     }
 }
 
@@ -592,4 +615,145 @@ fn spec_c11_dispatch_with_controls_allows_member_sender_when_anti_spam_accepts()
 
     assert_eq!(outcome.ack_status, DataLayerM9DispatchAckStatus::Queued);
     assert_eq!(outcome.reason_code, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE);
+}
+
+#[test]
+fn spec_c12_runtime_backpressure_projection_maps_accept_slow_reject_and_purge_actions() {
+    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+    let base = 1_708_560_500;
+
+    let accept = registry
+        .project_runtime_backpressure_for_recipient(
+            DataLayerM9RuntimeBackpressureProjectionRequest {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+                recipient_agent_did: "kamn:did:agent:alpha-accept".to_owned(),
+                queue_capacity: 10,
+                lifecycle_state: PeerLifecycleState::Active,
+                slow_threshold_per_mille: 700,
+                reject_threshold_per_mille: 900,
+                purge_disconnected_with_pending_queue: true,
+            },
+        )
+        .expect("accept projection should succeed");
+    assert_eq!(
+        accept.runtime_decision.action,
+        RuntimeBackpressureAction::Accept
+    );
+    assert_eq!(accept.runtime_decision.reason_code(), accept.reason_code);
+
+    enqueue_messages(&mut registry, "kamn:did:agent:alpha-slow", 8, base + 10);
+    let slow = registry
+        .project_runtime_backpressure_for_recipient(
+            DataLayerM9RuntimeBackpressureProjectionRequest {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+                recipient_agent_did: "kamn:did:agent:alpha-slow".to_owned(),
+                queue_capacity: 10,
+                lifecycle_state: PeerLifecycleState::Active,
+                slow_threshold_per_mille: 700,
+                reject_threshold_per_mille: 900,
+                purge_disconnected_with_pending_queue: true,
+            },
+        )
+        .expect("slow projection should succeed");
+    assert_eq!(
+        slow.runtime_decision.action,
+        RuntimeBackpressureAction::SlowProducer
+    );
+
+    enqueue_messages(&mut registry, "kamn:did:agent:alpha-reject", 10, base + 30);
+    let reject = registry
+        .project_runtime_backpressure_for_recipient(
+            DataLayerM9RuntimeBackpressureProjectionRequest {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+                recipient_agent_did: "kamn:did:agent:alpha-reject".to_owned(),
+                queue_capacity: 10,
+                lifecycle_state: PeerLifecycleState::Active,
+                slow_threshold_per_mille: 700,
+                reject_threshold_per_mille: 900,
+                purge_disconnected_with_pending_queue: true,
+            },
+        )
+        .expect("reject projection should succeed");
+    assert_eq!(
+        reject.runtime_decision.action,
+        RuntimeBackpressureAction::RejectNewEnqueue
+    );
+
+    enqueue_messages(&mut registry, "kamn:did:agent:alpha-purge", 2, base + 50);
+    let purge = registry
+        .project_runtime_backpressure_for_recipient(
+            DataLayerM9RuntimeBackpressureProjectionRequest {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+                recipient_agent_did: "kamn:did:agent:alpha-purge".to_owned(),
+                queue_capacity: 10,
+                lifecycle_state: PeerLifecycleState::Disconnected,
+                slow_threshold_per_mille: 700,
+                reject_threshold_per_mille: 900,
+                purge_disconnected_with_pending_queue: true,
+            },
+        )
+        .expect("purge projection should succeed");
+    assert_eq!(
+        purge.runtime_decision.action,
+        RuntimeBackpressureAction::PurgeStalePeerQueue
+    );
+}
+
+#[test]
+fn spec_c13_runtime_backpressure_projection_fails_closed_for_invalid_policy_and_input() {
+    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+    enqueue_messages(
+        &mut registry,
+        "kamn:did:agent:alpha-invalid",
+        2,
+        1_708_560_700,
+    );
+
+    let invalid_policy = registry.project_runtime_backpressure_for_recipient(
+        DataLayerM9RuntimeBackpressureProjectionRequest {
+            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            recipient_agent_did: "kamn:did:agent:alpha-invalid".to_owned(),
+            queue_capacity: 10,
+            lifecycle_state: PeerLifecycleState::Active,
+            slow_threshold_per_mille: 900,
+            reject_threshold_per_mille: 900,
+            purge_disconnected_with_pending_queue: true,
+        },
+    );
+    assert!(matches!(
+        invalid_policy,
+        Err(
+            DataLayerM9RealtimeDeliveryError::RuntimeBackpressurePolicyInvalid {
+                reason_code: DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
+                ..
+            }
+        )
+    ));
+
+    let invalid_input = registry.project_runtime_backpressure_for_recipient(
+        DataLayerM9RuntimeBackpressureProjectionRequest {
+            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            recipient_agent_did: "kamn:did:agent:alpha-invalid".to_owned(),
+            queue_capacity: 1,
+            lifecycle_state: PeerLifecycleState::Active,
+            slow_threshold_per_mille: 700,
+            reject_threshold_per_mille: 900,
+            purge_disconnected_with_pending_queue: true,
+        },
+    );
+    assert!(matches!(
+        invalid_input,
+        Err(
+            DataLayerM9RealtimeDeliveryError::RuntimeBackpressureInputInvalid {
+                reason_code: DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
+                ..
+            }
+        )
+    ));
 }
