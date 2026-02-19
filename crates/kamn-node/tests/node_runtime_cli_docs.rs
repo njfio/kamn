@@ -1,4 +1,207 @@
 const DOC: &str = include_str!("../../../docs/foundation/node-runtime-cli.md");
+const KOLME_RUNTIME_COMMIT_DOC: &str =
+    include_str!("../../../docs/architecture/kolme-runtime-commit.md");
+const RUNTIME_PROCESSOR_HA_DOC: &str =
+    include_str!("../../../docs/foundation/runtime-processor-ha.md");
+const R42_API_SHELL_SURFACE_AUDIT_DOC: &str =
+    include_str!("../../../docs/review/r42-api-shell-surface-audit.md");
+const SIGNER_LIFECYCLE_DOC: &str = include_str!("../../../docs/architecture/signer-lifecycle.md");
+
+struct MigratedDocContractCase {
+    case_id: &'static str,
+    document_label: &'static str,
+    document: &'static str,
+    required_markers: &'static [&'static str],
+}
+
+const MIGRATED_DOC_CONTRACT_CASES: &[MigratedDocContractCase] = &[
+    MigratedDocContractCase {
+        case_id: "migration_kolme_runtime_commit_signer_provenance_failure_taxonomy_markers",
+        document_label: "docs/architecture/kolme-runtime-commit.md",
+        document: KOLME_RUNTIME_COMMIT_DOC,
+        required_markers: &[
+            "### Signer Provenance Failure Taxonomy",
+            "production_signer_key_source_env_local_forbidden",
+            "fallback_signer_secret_present_violation",
+            "managed_signer_raw_private_key_forbidden",
+            "managed_signer_backend_required_missing",
+            "managed_signer_key_reference_missing",
+            "managed_signer_key_reference_invalid",
+            "managed_signer_public_key_marker_missing",
+            "managed_signer_public_key_marker_invalid",
+            "managed_signer_backend_response_provenance_missing",
+            "managed_signer_backend_response_provenance_malformed",
+            "managed_signer_backend_response_provenance_mismatch",
+            "runtime_signer_key_source_profile_pair_disallowed",
+            "runtime_signer_rotation_epoch_stale",
+            "runtime_signer_attestation_quorum_shortfall",
+            "runtime_signer_quorum_linkage_violation",
+            "runtime_signer_failover_attestation_required_approvals_insufficient",
+            "runtime_signer_failover_attestation_previous_profile_not_approved",
+            "signer_quorum_linkage_contract_version=v1",
+            "signer_quorum_linked",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_kolme_runtime_commit_transient_classifier_and_retry_markers",
+        document_label: "docs/architecture/kolme-runtime-commit.md",
+        document: KOLME_RUNTIME_COMMIT_DOC,
+        required_markers: &[
+            "### Shared Transport Transient Classifier and Bounded Retry Schedule",
+            "retry_classifier_contract_version=v1",
+            "retry_backoff_sequence_ms=10,20,40,40,40",
+            "retry_backoff_cap_ms=40",
+            "attempt_ceiling_reached",
+            "malformed_response_fail_fast",
+            "timeout",
+            "unavailable",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_kolme_runtime_commit_notifications_reconnect_pacing_markers",
+        document_label: "docs/architecture/kolme-runtime-commit.md",
+        document: KOLME_RUNTIME_COMMIT_DOC,
+        required_markers: &[
+            "### Notifications Reconnect Pacing Policy",
+            "notifications_reconnect_pacing_contract_version=v1",
+            "notifications_reconnect_backoff_sequence_ms=10,20,40,40,40",
+            "notifications_reconnect_backoff_cap_ms=40",
+            "notification reconnect attempts exhausted after <N> retries",
+            "notifications_reconnect_terminal_reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1",
+            "notifications_reconnect_terminal_reason_codes_csv=notifications_reconnect_attempt_budget_exhausted",
+            "notifications_reconnect_terminal_reason_code=notifications_reconnect_attempt_budget_exhausted",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_runtime_processor_ha_doc_contains_scope_and_models",
+        document_label: "docs/foundation/runtime-processor-ha.md",
+        document: RUNTIME_PROCESSOR_HA_DOC,
+        required_markers: &[
+            "## Scope Delivered",
+            "## Snapshot Restore Rules",
+            "## Construct Lock Rules",
+            "## Fast and Cost-Effective Validation",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_runtime_processor_ha_doc_contains_fast_lane_command_references",
+        document_label: "docs/foundation/runtime-processor-ha.md",
+        document: RUNTIME_PROCESSOR_HA_DOC,
+        required_markers: &[
+            "cargo test -p kamn-node --test node_runtime_cli_docs migration_runtime_processor_ha_doc_contains_fast_lane_command_references -- --exact",
+            "cargo test -p kamn-node --test node_runtime_cli_docs",
+            "cargo test -p kamn-core construct_lock",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_runtime_processor_ha_regression_snapshot_restore_guard_rules",
+        document_label: "docs/foundation/runtime-processor-ha.md",
+        document: RUNTIME_PROCESSOR_HA_DOC,
+        required_markers: &["snapshot version/hash mismatch restores are rejected"],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_runtime_processor_ha_regression_construct_lock_guard_rules",
+        document_label: "docs/foundation/runtime-processor-ha.md",
+        document: RUNTIME_PROCESSOR_HA_DOC,
+        required_markers: &[
+            "split-brain lock acquisition attempts are rejected",
+            "stale lease renewal attempts are rejected",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id:
+            "migration_runtime_processor_ha_regression_construct_lock_release_transfer_tick_rules",
+        document_label: "docs/foundation/runtime-processor-ha.md",
+        document: RUNTIME_PROCESSOR_HA_DOC,
+        required_markers: &[
+            "lease release and transfer operations require matching active owner",
+            "daemon tick execution without active lease ownership is rejected",
+            "unauthorized release/transfer and no-lease daemon tick rejection (`Regression: #388`)",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_r42_api_shell_surface_audit_inventory_versions",
+        document_label: "docs/review/r42-api-shell-surface-audit.md",
+        document: R42_API_SHELL_SURFACE_AUDIT_DOC,
+        required_markers: &[
+            "public_api_surface_audit_version=",
+            "shell_rust_test_surface_audit_version=",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_r42_api_shell_surface_audit_ratchet_recommendations",
+        document_label: "docs/review/r42-api-shell-surface-audit.md",
+        document: R42_API_SHELL_SURFACE_AUDIT_DOC,
+        required_markers: &[
+            "api_surface_ratchet_recommendation_status=proposed",
+            "test_surface_ratchet_recommendation_status=proposed",
+            "kamn_core_public_item_count=",
+            "shell_to_rust_test_file_ratio=",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_r42_api_shell_surface_audit_follow_up_tasks",
+        document_label: "docs/review/r42-api-shell-surface-audit.md",
+        document: R42_API_SHELL_SURFACE_AUDIT_DOC,
+        required_markers: &[
+            "follow_up_issue_api_surface_ratchet=#5188",
+            "follow_up_issue_test_surface_migration=#5189",
+            "audit_follow_up_issue_count=2",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_signer_lifecycle_docs_declares_migration_parity_matrix",
+        document_label: "docs/architecture/signer-lifecycle.md",
+        document: SIGNER_LIFECYCLE_DOC,
+        required_markers: &[
+            "### Migration Parity Matrix",
+            "signer_migration_parity_matrix_version=kamn.signer.migration-parity-matrix.v1",
+            "matrix_case=primary_env_local_happy_path",
+            "matrix_case=secondary_env_local_happy_path",
+            "matrix_case=primary_managed_external_happy_path",
+            "matrix_case=secondary_managed_external_disallowed",
+            "legacy_behavior_diff_guard=enabled",
+        ],
+    },
+    MigratedDocContractCase {
+        case_id: "migration_signer_lifecycle_docs_declares_parity_guard_commands",
+        document_label: "docs/architecture/signer-lifecycle.md",
+        document: SIGNER_LIFECYCLE_DOC,
+        required_markers: &[
+            "cargo test -p kamn-node main_tests::signer_tests::functional_signer_migration_profile_key_source_parity_matrix -- --exact --nocapture",
+            "cargo test -p kamn-node --test node_runtime_cli_docs migration_signer_lifecycle_docs_declares_parity_guard_commands -- --exact --nocapture",
+        ],
+    },
+];
+
+#[test]
+fn functional_migrated_doc_contract_cases_require_markers() {
+    for case in MIGRATED_DOC_CONTRACT_CASES {
+        for marker in case.required_markers {
+            assert!(
+                case.document.contains(marker),
+                "missing marker in {} for case {}: {}",
+                case.document_label,
+                case.case_id,
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn regression_migrated_doc_contract_case_inventory_remains_stable() {
+    // Regression: #5192
+    assert_eq!(MIGRATED_DOC_CONTRACT_CASES.len(), 13);
+    assert!(MIGRATED_DOC_CONTRACT_CASES
+        .iter()
+        .all(|case| !case.required_markers.is_empty()));
+    let total_marker_count: usize = MIGRATED_DOC_CONTRACT_CASES
+        .iter()
+        .map(|case| case.required_markers.len())
+        .sum();
+    assert_eq!(total_marker_count, 67);
+}
 
 #[test]
 fn doc_contains_output_mode_scope_and_rules() {

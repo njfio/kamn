@@ -63,7 +63,7 @@ This document captures processor high-availability runtime contract text for sna
 Run targeted checks first:
 
 ```bash
-cargo test -p kamn-node --test runtime_processor_ha_docs
+cargo test -p kamn-node --test node_runtime_cli_docs migration_runtime_processor_ha_doc_contains_fast_lane_command_references -- --exact
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core construct_lock
