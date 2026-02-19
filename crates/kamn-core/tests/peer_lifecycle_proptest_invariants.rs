@@ -69,16 +69,20 @@ fn regression_peer_lifecycle_seed_corpus_is_tracked() {
 
 #[test]
 fn unit_peer_lifecycle_proptest_budget_envelope_is_bounded() {
+    let cases = std::hint::black_box(CASES);
+    let max_sequence_len = std::hint::black_box(MAX_SEQUENCE_LEN);
+    let anti_churn_repeat_max = std::hint::black_box(ANTI_CHURN_REPEAT_MAX);
+
     assert!(
-        CASES <= 256,
+        cases <= 256,
         "peer lifecycle property case budget must stay bounded for deterministic CI runtime"
     );
     assert!(
-        MAX_SEQUENCE_LEN <= 40,
+        max_sequence_len <= 40,
         "peer lifecycle transition sequence budget must stay bounded for deterministic CI runtime"
     );
     assert!(
-        ANTI_CHURN_REPEAT_MAX <= 8,
+        anti_churn_repeat_max <= 8,
         "anti-churn replay repeats must stay bounded for deterministic CI runtime"
     );
 }
