@@ -1,7 +1,7 @@
 # Issue #3783 Plan
 
 - Issue: #3783
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Add a red docs-contract test suite for tracing taxonomy markers in `docs/observability/contracts.md`.

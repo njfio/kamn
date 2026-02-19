@@ -1,7 +1,7 @@
 # Issue #3783 Spec
 
 - Title: Subtask: enforce tracing event taxonomy drift and docs-contract parity
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-14-observability-standardization-and-route-contract-hardening/index.md
