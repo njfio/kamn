@@ -135,6 +135,19 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - Contract: signer decode-failure assertions must remain `ConfigError::RuntimeKolmeLive` without `unreachable!()` usage.
   - Guard test: `cargo test -p kamn-node regression_signer_module_source_contains_no_unreachable_macro`
 
+## Node Runtime Test-Surface Ownership Mapping
+- `Extraction: #3944`
+  - Module shell owner: `crates/kamn-node/src/main_tests/runtime_tests.rs`
+  - Focused runtime test modules:
+    - `crates/kamn-node/src/main_tests/runtime_tests/arg_and_signer_policy_tests.rs`
+    - `crates/kamn-node/src/main_tests/runtime_tests/logging_and_bootstrap_tests.rs`
+    - `crates/kamn-node/src/main_tests/runtime_tests/runtime_mode_and_transport_profile_tests.rs`
+    - `crates/kamn-node/src/main_tests/runtime_tests/full_supervisor_and_shutdown_tests.rs`
+    - `crates/kamn-node/src/main_tests/runtime_tests/profile_and_config_layering_tests.rs`
+    - `crates/kamn-node/src/main_tests/runtime_tests/kolme_live_execution_tests.rs`
+  - Contract: `runtime_tests.rs` remains a bounded include-shell and must not re-inline runtime test bodies.
+  - Guard test: `cargo test -p kamn-node --test main_module_extraction_contract main_module_extraction_contract_runtime_tests_decomposition_shell_markers_remain_stable -- --exact`
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
