@@ -1,7 +1,7 @@
 # Issue #5188 Spec
 
 - Title: Task: implement kamn-core public API surface report and growth ratchet
-- Status: Reviewed
+- Status: Implemented
 - Priority: P2
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 
