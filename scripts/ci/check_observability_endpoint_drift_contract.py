@@ -289,7 +289,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--framework-file",
-        default=str(ROOT_DIR / "crates/kamn-node/src/service_api_endpoint.rs"),
+        default=str(ROOT_DIR / "crates/kamn-node/src/service_api_endpoint/server.rs"),
         help="Framework ingress source path for async marker checks.",
     )
     parser.add_argument(

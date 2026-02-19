@@ -61,7 +61,7 @@ start_epoch="$(date +%s)"
 
 if [ "$skip_tests" != true ]; then
   cargo test -p kamn-core --test group_sender_keys >/dev/null
-  cargo test -p kamn-core --test group_sender_key_rotation_docs >/dev/null
+  cargo test -p kamn-core --test docs_contract_matrix_wave2_harness >/dev/null
 fi
 
 tmp_dir="$(mktemp -d)"

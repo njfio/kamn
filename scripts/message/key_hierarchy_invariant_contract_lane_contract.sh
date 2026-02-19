@@ -61,7 +61,7 @@ if [ "$skip_tests" != true ]; then
   cargo test -p kamn-core --test agent_key_hierarchy >/dev/null
   cargo test -p kamn-core --test key_lifecycle >/dev/null
   cargo test -p kamn-core --test key_recovery >/dev/null
-  cargo test -p kamn-core --test key_management_and_encryption_docs >/dev/null
+  cargo test -p kamn-core --test docs_contract_matrix_wave2_harness >/dev/null
 fi
 
 tmp_dir="$(mktemp -d)"

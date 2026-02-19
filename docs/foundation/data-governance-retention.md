@@ -28,7 +28,7 @@ bash scripts/channel/check_channel_retention_redaction_policy.sh --help
 bash scripts/channel/run_channel_retention_redaction_contract_lane.sh
 bash scripts/channel/test_generate_channel_retention_redaction_evidence_bundle.sh
 bash scripts/channel/test_run_channel_retention_redaction_contract_lane.sh
-cargo test -p kamn-core --test data_governance_retention_docs
+cargo test -p kamn-core --test docs_contract_matrix_wave2_harness
 ```
 
 ## Policy Rules

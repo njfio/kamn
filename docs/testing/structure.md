@@ -20,6 +20,6 @@ Deterministic decomposition and budget status markers:
 
 Guard commands:
 - `cargo test -p kamn-node --test main_module_extraction_contract -- --nocapture`
-- `cargo test -p kamn-core --test testing_structure_docs -- --nocapture`
+- `cargo test -p kamn-core --test docs_contract_matrix_wave2_harness -- --nocapture`
 - `bash scripts/ci/test_check_test_harness_loc_soft_budget.sh`
 - `bash scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh`

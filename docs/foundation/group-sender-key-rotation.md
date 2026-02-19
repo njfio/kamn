@@ -29,7 +29,7 @@ bash scripts/message/run_group_sender_replay_ratchet_contract_lane.sh
 bash scripts/message/test_generate_group_sender_replay_ratchet_evidence_bundle.sh
 bash scripts/message/test_run_group_sender_replay_ratchet_contract_lane.sh
 cargo test -p kamn-core --test group_sender_keys
-cargo test -p kamn-core --test group_sender_key_rotation_docs
+cargo test -p kamn-core --test docs_contract_matrix_wave2_harness
 ```
 
 ## Policy Rules

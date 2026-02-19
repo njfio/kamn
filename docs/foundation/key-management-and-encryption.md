@@ -36,8 +36,7 @@ cargo test -p kamn-core --test agent_key_hierarchy
 cargo test -p kamn-core --test key_lifecycle
 cargo test -p kamn-core --test key_recovery
 cargo test -p kamn-core --test group_sender_keys
-cargo test -p kamn-core --test group_sender_key_rotation_docs
-cargo test -p kamn-core --test key_management_and_encryption_docs
+cargo test -p kamn-core --test docs_contract_matrix_wave2_harness
 ```
 
 ## Policy Rules

@@ -61,7 +61,7 @@ npm --prefix packages/kamn-schema test
 npm --prefix packages/kamn-sdk test
 cargo fmt --check
 cargo clippy -- -D warnings
-cargo test -p kamn-core --test typescript_sdk_beta_docs
+cargo test -p kamn-core --test docs_contract_matrix_wave2_harness
 cargo test -p kamn-core
 ```
 

@@ -85,6 +85,11 @@ expected_protocol_session_reason_codes_csv = sys.argv[6]
 source_text = source_file.read_text(encoding="utf-8")
 api_doc_text = api_doc_file.read_text(encoding="utf-8")
 release_checklist_text = release_checklist_file.read_text(encoding="utf-8")
+server_source_file = source_file.parent / "service_api_endpoint" / "server.rs"
+if not server_source_file.is_file():
+    raise SystemExit(f"expected service api websocket server source file: {server_source_file}")
+server_source_text = server_source_file.read_text(encoding="utf-8")
+marker_source_text = source_text + "\n" + server_source_text
 
 
 def parse_u64_const(name: str) -> int:
@@ -126,7 +131,7 @@ required_reason_markers = [
     "service_api_auth_sender_did_header_missing",
 ]
 missing_reason_markers = [
-    marker for marker in required_reason_markers if marker not in source_text
+    marker for marker in required_reason_markers if marker not in marker_source_text
 ]
 if missing_reason_markers:
     raise SystemExit(
@@ -139,7 +144,7 @@ required_lifecycle_markers = [
     "idle_timeout_ms",
 ]
 missing_lifecycle_markers = [
-    marker for marker in required_lifecycle_markers if marker not in source_text
+    marker for marker in required_lifecycle_markers if marker not in marker_source_text
 ]
 if missing_lifecycle_markers:
     raise SystemExit(

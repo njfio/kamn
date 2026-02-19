@@ -60,7 +60,7 @@ fi
 if [ "$skip_tests" != true ]; then
   cargo test -p kamn-core --test content_retention_tombstones >/dev/null
   cargo test -p kamn-core --test redaction_tombstones >/dev/null
-  cargo test -p kamn-core --test data_governance_retention_docs >/dev/null
+  cargo test -p kamn-core --test docs_contract_matrix_wave2_harness >/dev/null
 fi
 
 tmp_dir="$(mktemp -d)"
