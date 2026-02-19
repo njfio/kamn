@@ -113,6 +113,32 @@ fn service_api_ops_configuration_contains_fairness_starvation_fixture_controls()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_daemon_os_signal_stress_matrix_controls() {
+    assert!(DOC.contains("## Daemon OS-Signal Stress Matrix Overload Profiles (Issue #4094)"));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_matrix_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"
+    ));
+    assert!(DOC.contains("daemon_os_signal_stress_profile_baseline_reason_code=stable_success"));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_profile_injected_overload_reason_code=matrix_failure_threshold_exceeded"
+    ));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_profile_recovery_reason_code=stable_success_with_quarantine_followup"
+    ));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_profile_runtime_budget_reason_code=runtime_budget_exceeded"
+    ));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_profile_quarantine_reason_code=quarantine_reference_present_without_followup"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/ci/run_daemon_os_signal_stress_matrix.sh --iterations 10 --attempts-per-iteration 1 --max-seconds 600 --reproducer-max-seconds 180 --failure-threshold 0 --artifact-dir /tmp/daemon-os-signal-stress-matrix-artifacts --output-json /tmp/daemon-os-signal-stress-matrix-report.json"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"));
+    assert!(DOC.contains("Regression: #4094"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls() {
     assert!(DOC.contains(
         "## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)"
