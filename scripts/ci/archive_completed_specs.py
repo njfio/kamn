@@ -164,7 +164,12 @@ def main() -> int:
             continue
 
         spec_body = (source_dir / "spec.md").read_text(encoding="utf-8", errors="ignore")
-        status_match = re.search(r"^- Status:\s*`?([^`\n]+)`?\s*$", spec_body, flags=re.MULTILINE)
+        # Accept both legacy "Status: <value>" and list-style "- Status: <value>" headers.
+        status_match = re.search(
+            r"^(?:-\s*)?Status:\s*`?([^`\n]+)`?\s*$",
+            spec_body,
+            flags=re.MULTILINE,
+        )
         status_value = status_match.group(1).strip().lower() if status_match else ""
         if status_value != "implemented":
             add_reason(reasons, "spec_archive_tool_status_not_implemented")

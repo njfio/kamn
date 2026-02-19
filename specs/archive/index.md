@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 289
+- archived_issue_count: 415
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -159,11 +159,74 @@
 | 4185 | implement upgrade lineage verifier and deterministic promotion gate reason mapping | 2026-02-18 | `specs/archive/4185` | `specs/4185/ARCHIVED.md` |
 | 4186 | add ci smoke checker for upgrade compatibility-rehearsal marker drift and heavy-lane exclusions | 2026-02-18 | `specs/archive/4186` | `specs/4186/ARCHIVED.md` |
 | 4187 | update upgrade-governance docs and drift-contract tests for compatibility closure | 2026-02-18 | `specs/archive/4187` | `specs/4187/ARCHIVED.md` |
+| 4195 | Issue 4195 | 2026-02-18 | `specs/archive/4195` | `specs/4195/ARCHIVED.md` |
+| 4196 | Issue 4196 | 2026-02-18 | `specs/archive/4196` | `specs/4196/ARCHIVED.md` |
+| 4197 | Issue 4197 | 2026-02-18 | `specs/archive/4197` | `specs/4197/ARCHIVED.md` |
 | 4198 | Implement harness taxonomy enforcement and runbook marker parity contract checks | 2026-02-18 | `specs/archive/4198` | `specs/4198/ARCHIVED.md` |
 | 4199 | Add red tests for promotion evidence convergence completeness and tamper rejection | 2026-02-18 | `specs/archive/4199` | `specs/4199/ARCHIVED.md` |
 | 4200 | Implement convergence verifier and deterministic promotion decision reason mapping | 2026-02-18 | `specs/archive/4200` | `specs/4200/ARCHIVED.md` |
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
+| 4221 | Issue 4221 | 2026-02-18 | `specs/archive/4221` | `specs/4221/ARCHIVED.md` |
+| 4222 | Issue 4222 | 2026-02-18 | `specs/archive/4222` | `specs/4222/ARCHIVED.md` |
+| 4223 | Issue 4223 | 2026-02-18 | `specs/archive/4223` | `specs/4223/ARCHIVED.md` |
+| 4225 | Issue 4225 | 2026-02-18 | `specs/archive/4225` | `specs/4225/ARCHIVED.md` |
+| 4226 | Issue 4226 | 2026-02-18 | `specs/archive/4226` | `specs/4226/ARCHIVED.md` |
+| 4227 | Issue 4227 | 2026-02-18 | `specs/archive/4227` | `specs/4227/ARCHIVED.md` |
+| 4228 | Issue 4228 | 2026-02-18 | `specs/archive/4228` | `specs/4228/ARCHIVED.md` |
+| 4229 | Issue 4229 | 2026-02-18 | `specs/archive/4229` | `specs/4229/ARCHIVED.md` |
+| 4230 | Issue 4230 | 2026-02-18 | `specs/archive/4230` | `specs/4230/ARCHIVED.md` |
+| 4236 | Issue 4236 | 2026-02-18 | `specs/archive/4236` | `specs/4236/ARCHIVED.md` |
+| 4240 | Issue 4240 | 2026-02-18 | `specs/archive/4240` | `specs/4240/ARCHIVED.md` |
+| 4241 | Issue 4241 | 2026-02-18 | `specs/archive/4241` | `specs/4241/ARCHIVED.md` |
+| 4251 | Issue 4251 | 2026-02-18 | `specs/archive/4251` | `specs/4251/ARCHIVED.md` |
+| 4252 | Issue 4252 | 2026-02-18 | `specs/archive/4252` | `specs/4252/ARCHIVED.md` |
+| 4253 | Issue 4253 | 2026-02-18 | `specs/archive/4253` | `specs/4253/ARCHIVED.md` |
+| 4254 | Issue 4254 | 2026-02-18 | `specs/archive/4254` | `specs/4254/ARCHIVED.md` |
+| 4255 | Issue 4255 | 2026-02-18 | `specs/archive/4255` | `specs/4255/ARCHIVED.md` |
+| 4256 | Issue 4256 | 2026-02-18 | `specs/archive/4256` | `specs/4256/ARCHIVED.md` |
+| 4257 | Issue 4257 | 2026-02-18 | `specs/archive/4257` | `specs/4257/ARCHIVED.md` |
+| 4258 | Issue 4258 | 2026-02-18 | `specs/archive/4258` | `specs/4258/ARCHIVED.md` |
+| 4259 | Issue 4259 | 2026-02-18 | `specs/archive/4259` | `specs/4259/ARCHIVED.md` |
+| 4260 | Issue 4260 | 2026-02-18 | `specs/archive/4260` | `specs/4260/ARCHIVED.md` |
+| 4261 | Issue 4261 | 2026-02-18 | `specs/archive/4261` | `specs/4261/ARCHIVED.md` |
+| 4262 | Issue 4262 | 2026-02-18 | `specs/archive/4262` | `specs/4262/ARCHIVED.md` |
+| 4266 | Issue 4266 | 2026-02-18 | `specs/archive/4266` | `specs/4266/ARCHIVED.md` |
+| 4267 | Issue 4267 | 2026-02-18 | `specs/archive/4267` | `specs/4267/ARCHIVED.md` |
+| 4268 | Issue 4268 | 2026-02-18 | `specs/archive/4268` | `specs/4268/ARCHIVED.md` |
+| 4269 | Issue 4269 | 2026-02-18 | `specs/archive/4269` | `specs/4269/ARCHIVED.md` |
+| 4270 | Issue 4270 | 2026-02-18 | `specs/archive/4270` | `specs/4270/ARCHIVED.md` |
+| 4271 | Issue 4271 | 2026-02-18 | `specs/archive/4271` | `specs/4271/ARCHIVED.md` |
+| 4272 | Issue 4272 | 2026-02-18 | `specs/archive/4272` | `specs/4272/ARCHIVED.md` |
+| 4273 | Issue 4273 | 2026-02-18 | `specs/archive/4273` | `specs/4273/ARCHIVED.md` |
+| 4274 | Issue 4274 | 2026-02-18 | `specs/archive/4274` | `specs/4274/ARCHIVED.md` |
+| 4275 | Issue 4275 | 2026-02-18 | `specs/archive/4275` | `specs/4275/ARCHIVED.md` |
+| 4276 | Issue 4276 | 2026-02-18 | `specs/archive/4276` | `specs/4276/ARCHIVED.md` |
+| 4277 | Issue 4277 | 2026-02-18 | `specs/archive/4277` | `specs/4277/ARCHIVED.md` |
+| 4281 | Issue 4281 | 2026-02-18 | `specs/archive/4281` | `specs/4281/ARCHIVED.md` |
+| 4282 | Issue 4282 | 2026-02-18 | `specs/archive/4282` | `specs/4282/ARCHIVED.md` |
+| 4283 | Issue 4283 | 2026-02-18 | `specs/archive/4283` | `specs/4283/ARCHIVED.md` |
+| 4284 | Issue 4284 | 2026-02-18 | `specs/archive/4284` | `specs/4284/ARCHIVED.md` |
+| 4285 | Issue 4285 | 2026-02-18 | `specs/archive/4285` | `specs/4285/ARCHIVED.md` |
+| 4286 | Issue 4286 | 2026-02-18 | `specs/archive/4286` | `specs/4286/ARCHIVED.md` |
+| 4287 | Issue 4287 | 2026-02-18 | `specs/archive/4287` | `specs/4287/ARCHIVED.md` |
+| 4288 | Issue 4288 | 2026-02-18 | `specs/archive/4288` | `specs/4288/ARCHIVED.md` |
+| 4289 | Issue 4289 | 2026-02-18 | `specs/archive/4289` | `specs/4289/ARCHIVED.md` |
+| 4290 | Issue 4290 | 2026-02-18 | `specs/archive/4290` | `specs/4290/ARCHIVED.md` |
+| 4291 | Issue 4291 | 2026-02-18 | `specs/archive/4291` | `specs/4291/ARCHIVED.md` |
+| 4292 | Issue 4292 | 2026-02-18 | `specs/archive/4292` | `specs/4292/ARCHIVED.md` |
+| 4296 | Issue 4296 | 2026-02-18 | `specs/archive/4296` | `specs/4296/ARCHIVED.md` |
+| 4297 | Issue 4297 | 2026-02-18 | `specs/archive/4297` | `specs/4297/ARCHIVED.md` |
+| 4298 | Issue 4298 | 2026-02-18 | `specs/archive/4298` | `specs/4298/ARCHIVED.md` |
+| 4299 | Issue 4299 | 2026-02-18 | `specs/archive/4299` | `specs/4299/ARCHIVED.md` |
+| 4300 | Issue 4300 | 2026-02-18 | `specs/archive/4300` | `specs/4300/ARCHIVED.md` |
+| 4301 | Issue 4301 | 2026-02-18 | `specs/archive/4301` | `specs/4301/ARCHIVED.md` |
+| 4302 | Issue 4302 | 2026-02-18 | `specs/archive/4302` | `specs/4302/ARCHIVED.md` |
+| 4303 | Issue 4303 | 2026-02-18 | `specs/archive/4303` | `specs/4303/ARCHIVED.md` |
+| 4304 | Issue 4304 | 2026-02-18 | `specs/archive/4304` | `specs/4304/ARCHIVED.md` |
+| 4305 | Issue 4305 | 2026-02-18 | `specs/archive/4305` | `specs/4305/ARCHIVED.md` |
+| 4306 | Issue 4306 | 2026-02-18 | `specs/archive/4306` | `specs/4306/ARCHIVED.md` |
+| 4307 | Issue 4307 | 2026-02-18 | `specs/archive/4307` | `specs/4307/ARCHIVED.md` |
 | 4312 | `Task: enforce http-websocket protocol checker contracts and deterministic session violation reason mapping` | 2026-02-18 | `specs/archive/4312` | `specs/4312/ARCHIVED.md` |
 | 4313 | `Task: implement networked peer transport adapter integrity checks with deterministic retry-timeout governance` | 2026-02-18 | `specs/archive/4313` | `specs/4313/ARCHIVED.md` |
 | 4314 | `Task: implement durable block commit persistence with digest-finality fail-closed validation governance` | 2026-02-18 | `specs/archive/4314` | `specs/4314/ARCHIVED.md` |
@@ -175,6 +238,68 @@
 | 4320 | `Subtask: implement peer adapter reason projection and deterministic multi-process validation hooks` | 2026-02-18 | `specs/archive/4320` | `specs/4320/ARCHIVED.md` |
 | 4321 | `Subtask: add red tests for persisted block digest-finality mismatch rejection and tamper detection` | 2026-02-18 | `specs/archive/4321` | `specs/4321/ARCHIVED.md` |
 | 4322 | `Subtask: implement durable commit checker reason mapping with ci smoke and local-heavy boundary enforcement` | 2026-02-18 | `specs/archive/4322` | `specs/4322/ARCHIVED.md` |
+| 4329 | Issue 4329 | 2026-02-18 | `specs/archive/4329` | `specs/4329/ARCHIVED.md` |
+| 4336 | Issue 4336 | 2026-02-18 | `specs/archive/4336` | `specs/4336/ARCHIVED.md` |
+| 4337 | Issue 4337 | 2026-02-18 | `specs/archive/4337` | `specs/4337/ARCHIVED.md` |
+| 4341 | Issue 4341 | 2026-02-18 | `specs/archive/4341` | `specs/4341/ARCHIVED.md` |
+| 4342 | Issue 4342 | 2026-02-18 | `specs/archive/4342` | `specs/4342/ARCHIVED.md` |
+| 4345 | Issue 4345 | 2026-02-18 | `specs/archive/4345` | `specs/4345/ARCHIVED.md` |
+| 4346 | Issue 4346 | 2026-02-18 | `specs/archive/4346` | `specs/4346/ARCHIVED.md` |
+| 4347 | Issue 4347 | 2026-02-18 | `specs/archive/4347` | `specs/4347/ARCHIVED.md` |
+| 4348 | Issue 4348 | 2026-02-18 | `specs/archive/4348` | `specs/4348/ARCHIVED.md` |
+| 4371 | Issue 4371 | 2026-02-18 | `specs/archive/4371` | `specs/4371/ARCHIVED.md` |
+| 4372 | Issue 4372 | 2026-02-18 | `specs/archive/4372` | `specs/4372/ARCHIVED.md` |
+| 4373 | Issue 4373 | 2026-02-18 | `specs/archive/4373` | `specs/4373/ARCHIVED.md` |
+| 4374 | Issue 4374 | 2026-02-18 | `specs/archive/4374` | `specs/4374/ARCHIVED.md` |
+| 4375 | Issue 4375 | 2026-02-18 | `specs/archive/4375` | `specs/4375/ARCHIVED.md` |
+| 4376 | Issue 4376 | 2026-02-18 | `specs/archive/4376` | `specs/4376/ARCHIVED.md` |
+| 4377 | Issue 4377 | 2026-02-18 | `specs/archive/4377` | `specs/4377/ARCHIVED.md` |
+| 4378 | Issue 4378 | 2026-02-18 | `specs/archive/4378` | `specs/4378/ARCHIVED.md` |
+| 4379 | Issue 4379 | 2026-02-18 | `specs/archive/4379` | `specs/4379/ARCHIVED.md` |
+| 4380 | Issue 4380 | 2026-02-18 | `specs/archive/4380` | `specs/4380/ARCHIVED.md` |
+| 4381 | Issue 4381 | 2026-02-18 | `specs/archive/4381` | `specs/4381/ARCHIVED.md` |
+| 4382 | Issue 4382 | 2026-02-18 | `specs/archive/4382` | `specs/4382/ARCHIVED.md` |
+| 4387 | Issue 4387 | 2026-02-18 | `specs/archive/4387` | `specs/4387/ARCHIVED.md` |
+| 4388 | Issue 4388 | 2026-02-18 | `specs/archive/4388` | `specs/4388/ARCHIVED.md` |
+| 4389 | Issue 4389 | 2026-02-18 | `specs/archive/4389` | `specs/4389/ARCHIVED.md` |
+| 4392 | Issue 4392 | 2026-02-18 | `specs/archive/4392` | `specs/4392/ARCHIVED.md` |
+| 4393 | Issue 4393 | 2026-02-18 | `specs/archive/4393` | `specs/4393/ARCHIVED.md` |
+| 4394 | Issue 4394 | 2026-02-18 | `specs/archive/4394` | `specs/4394/ARCHIVED.md` |
+| 4395 | Issue 4395 | 2026-02-18 | `specs/archive/4395` | `specs/4395/ARCHIVED.md` |
+| 4396 | Issue 4396 | 2026-02-18 | `specs/archive/4396` | `specs/4396/ARCHIVED.md` |
+| 4397 | Issue 4397 | 2026-02-18 | `specs/archive/4397` | `specs/4397/ARCHIVED.md` |
+| 4431 | Issue 4431 | 2026-02-18 | `specs/archive/4431` | `specs/4431/ARCHIVED.md` |
+| 4432 | Issue 4432 | 2026-02-18 | `specs/archive/4432` | `specs/4432/ARCHIVED.md` |
+| 4433 | Issue 4433 | 2026-02-18 | `specs/archive/4433` | `specs/4433/ARCHIVED.md` |
+| 4434 | Issue 4434 | 2026-02-18 | `specs/archive/4434` | `specs/4434/ARCHIVED.md` |
+| 4435 | Issue 4435 | 2026-02-18 | `specs/archive/4435` | `specs/4435/ARCHIVED.md` |
+| 4436 | Issue 4436 | 2026-02-18 | `specs/archive/4436` | `specs/4436/ARCHIVED.md` |
+| 4437 | Issue 4437 | 2026-02-18 | `specs/archive/4437` | `specs/4437/ARCHIVED.md` |
+| 4438 | Issue 4438 | 2026-02-18 | `specs/archive/4438` | `specs/4438/ARCHIVED.md` |
+| 4439 | Issue 4439 | 2026-02-18 | `specs/archive/4439` | `specs/4439/ARCHIVED.md` |
+| 4440 | Issue 4440 | 2026-02-18 | `specs/archive/4440` | `specs/4440/ARCHIVED.md` |
+| 4441 | Issue 4441 | 2026-02-18 | `specs/archive/4441` | `specs/4441/ARCHIVED.md` |
+| 4442 | Issue 4442 | 2026-02-18 | `specs/archive/4442` | `specs/4442/ARCHIVED.md` |
+| 4450 | Issue 4450 | 2026-02-18 | `specs/archive/4450` | `specs/4450/ARCHIVED.md` |
+| 4451 | Issue 4451 | 2026-02-18 | `specs/archive/4451` | `specs/4451/ARCHIVED.md` |
+| 4452 | Issue 4452 | 2026-02-18 | `specs/archive/4452` | `specs/4452/ARCHIVED.md` |
+| 4453 | Issue 4453 | 2026-02-18 | `specs/archive/4453` | `specs/4453/ARCHIVED.md` |
+| 4454 | Issue 4454 | 2026-02-18 | `specs/archive/4454` | `specs/4454/ARCHIVED.md` |
+| 4455 | Issue 4455 | 2026-02-18 | `specs/archive/4455` | `specs/4455/ARCHIVED.md` |
+| 4456 | Issue 4456 | 2026-02-18 | `specs/archive/4456` | `specs/4456/ARCHIVED.md` |
+| 4457 | Issue 4457 | 2026-02-18 | `specs/archive/4457` | `specs/4457/ARCHIVED.md` |
+| 4461 | Issue 4461 | 2026-02-18 | `specs/archive/4461` | `specs/4461/ARCHIVED.md` |
+| 4462 | Issue 4462 | 2026-02-18 | `specs/archive/4462` | `specs/4462/ARCHIVED.md` |
+| 4463 | Issue 4463 | 2026-02-18 | `specs/archive/4463` | `specs/4463/ARCHIVED.md` |
+| 4464 | Issue 4464 | 2026-02-18 | `specs/archive/4464` | `specs/4464/ARCHIVED.md` |
+| 4465 | Issue 4465 | 2026-02-18 | `specs/archive/4465` | `specs/4465/ARCHIVED.md` |
+| 4466 | Issue 4466 | 2026-02-18 | `specs/archive/4466` | `specs/4466/ARCHIVED.md` |
+| 4467 | Issue 4467 | 2026-02-18 | `specs/archive/4467` | `specs/4467/ARCHIVED.md` |
+| 4468 | Issue 4468 | 2026-02-18 | `specs/archive/4468` | `specs/4468/ARCHIVED.md` |
+| 4469 | Issue 4469 | 2026-02-18 | `specs/archive/4469` | `specs/4469/ARCHIVED.md` |
+| 4470 | Issue 4470 | 2026-02-18 | `specs/archive/4470` | `specs/4470/ARCHIVED.md` |
+| 4471 | Issue 4471 | 2026-02-18 | `specs/archive/4471` | `specs/4471/ARCHIVED.md` |
+| 4472 | Issue 4472 | 2026-02-18 | `specs/archive/4472` | `specs/4472/ARCHIVED.md` |
 | 4476 | `Task: implement TLS certificate-policy checker updates with deterministic failure taxonomy` | 2026-02-18 | `specs/archive/4476` | `specs/4476/ARCHIVED.md` |
 | 4477 | `Task: enforce tls evidence bundle completeness-freshness convergence in release gate checks` | 2026-02-18 | `specs/archive/4477` | `specs/4477/ARCHIVED.md` |
 | 4478 | `Task: implement anti-flake classifier and deterministic rerun-policy checker contracts` | 2026-02-18 | `specs/archive/4478` | `specs/4478/ARCHIVED.md` |
@@ -296,3 +421,4 @@
 | 5105 | Task: integrate M5 vector contracts with AgentDid parsing and content lifecycle retention | 2026-02-18 | `specs/archive/5105` | `specs/5105/ARCHIVED.md` |
 | 5107 | Task: integrate M2 gateway DID contracts with canonical AgentDid parsing | 2026-02-18 | `specs/archive/5107` | `specs/5107/ARCHIVED.md` |
 | 5109 | Task: integrate M9 realtime delivery DID contracts with canonical parser taxonomy | 2026-02-18 | `specs/archive/5109` | `specs/5109/ARCHIVED.md` |
+| 5111 | Task: execute implemented-spec archival wave and reduce active spec surface | 2026-02-18 | `specs/archive/5111` | `specs/5111/ARCHIVED.md` |

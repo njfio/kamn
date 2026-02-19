@@ -101,7 +101,11 @@ else:
         spec_file = issue_dir / "spec.md"
         if spec_file.is_file():
             body = spec_file.read_text(encoding="utf-8", errors="ignore")
-            status_match = re.search(r"^- Status:\s*`?([^`\n]+)`?\s*$", body, flags=re.MULTILINE)
+            status_match = re.search(
+                r"^(?:-\s*)?Status:\s*`?([^`\n]+)`?\s*$",
+                body,
+                flags=re.MULTILINE,
+            )
             status_value = status_match.group(1).strip().lower() if status_match else ""
             if status_value != "implemented":
                 fail_reasons.append("spec_archive_status_not_implemented")
