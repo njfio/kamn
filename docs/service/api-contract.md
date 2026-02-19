@@ -31,7 +31,7 @@ Release checklist parity checks consume these markers and fail closed on drift.
 
 - `cargo test -p kamn-node websocket_protocol_ -- --nocapture`
 - `cargo test -p kamn-node websocket_session_ -- --nocapture`
-- `cargo test -p kamn-core --test service_api_contract_docs`
+- `cargo test -p kamn-core --test service_api_docs_contract_harness`
 
 ## Regression
 

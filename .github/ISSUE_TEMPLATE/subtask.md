@@ -42,6 +42,11 @@ Out of scope:
 - [ ] 🔵 Refactor — code improved, tests still green
 - [ ] 🔁 Regression — full suite clean
 
+## Docs-Contract Matrix Migration Checklist (Required when docs-contract suites are touched)
+- [ ] `docs_contract_matrix_migration_checklist_status=required-when-applicable`
+- [ ] `docs_contract_matrix_case_inventory_status=declared-or-not-applicable`
+- [ ] `docs_contract_matrix_legacy_suite_retirement_status=verified-or-not-applicable`
+
 ## Required Documentation Updates
 - `docs/<path>`: <what must be updated>
 
