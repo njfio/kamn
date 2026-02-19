@@ -6,7 +6,8 @@ CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_triadic_devnet_smoke_contract_lane.sh
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py"
 TMP_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT"' EXIT
+TMP_POLICY_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected triadic devnet smoke contract lane script to be executable" >&2
@@ -46,7 +47,9 @@ fi
 required_coverage_markers=(
   "run_triadic_devnet_smoke.sh"
   "validate_triadic_devnet_smoke.py"
+  "check_triadic_devnet_smoke_policy.py"
   "fixtures/kolme_compatibility/devnet_smoke_markers.json"
+  "docs/ci/strategy.md"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -55,13 +58,13 @@ for marker in "${required_coverage_markers[@]}"; do
   fi
 done
 
-lane_output="$(bash "$CONTRACT_LANE" --output-json "$TMP_REPORT")"
+lane_output="$(bash "$CONTRACT_LANE" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT")"
 if ! printf '%s\n' "$lane_output" | grep -q "triadic devnet smoke contract lane tests passed."; then
   echo "expected triadic devnet smoke contract lane success marker" >&2
   exit 1
 fi
 
-python3 - "$TMP_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -71,6 +74,11 @@ if payload.get("schema_version") != "kamn.kolme.triadic-devnet-smoke-validation-
     raise SystemExit("unexpected triadic devnet smoke report schema")
 if payload.get("final_decision") != "PASS":
     raise SystemExit("expected triadic devnet smoke report to pass")
+policy_payload = json.loads(pathlib.Path(sys.argv[2]).read_text())
+if policy_payload.get("schema_version") != "kamn.kolme.triadic-devnet-smoke-policy-report.v1":
+    raise SystemExit("unexpected triadic devnet smoke policy report schema")
+if policy_payload.get("final_decision") != "GO":
+    raise SystemExit("expected triadic devnet smoke policy report to pass")
 PY
 
 echo "triadic devnet smoke contract lane script tests passed."

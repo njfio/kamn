@@ -2229,6 +2229,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - combined migrated wrapper shell LOC must remain `<= 120`
   - runtime+triadic+bootstrap+e2e manifest migration guard stays on PR fast gate:
     - `bash scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh`
+    - triadic policy checker command-surface parity remains required:
+      - `python3 scripts/kolme/check_triadic_devnet_smoke_policy.py --report-file /tmp/triadic-devnet-report.json --expected-final-decision GO --require-reason-code triadic_devnet_smoke_policy_passed --output-json /tmp/triadic-devnet-policy-report.json`
     - enforces manifest-backed wrappers for:
       - `run_runtime_commit_contract_lane.sh`
       - `run_triadic_devnet_smoke_contract_lane.sh`

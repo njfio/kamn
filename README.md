@@ -500,6 +500,7 @@ make deep-live-network
 ```bash
 bash scripts/kolme/run_triadic_devnet_smoke.sh --output-file /tmp/triadic-devnet-markers.txt
 python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json
+python3 scripts/kolme/check_triadic_devnet_smoke_policy.py --report-file /tmp/triadic-devnet-report.json --expected-final-decision GO --require-reason-code triadic_devnet_smoke_policy_passed --output-json /tmp/triadic-devnet-policy-report.json
 ```
 
 ### Run Local Fork Sync Metadata Lane (Kolme)
