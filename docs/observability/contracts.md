@@ -9,6 +9,28 @@ This document defines deterministic payload contracts for the runtime observabil
 - `GET /readyz` emits JSON with `schema_version="kamn.runtime.observability.readiness.v1"`.
 - `GET /metrics.stream` emits NDJSON with `schema_version="kamn.runtime.observability.stream.v1"`.
 
+## Route Parity Matrix Contract
+
+- `observability_route_parity_matrix_version=kamn.runtime.observability.route-parity.v1`
+- Baseline and secure-mode route parity matrix:
+  - `GET /metrics -> 200 text/plain; version=0.0.4`
+  - `GET /healthz -> 200 application/json`
+  - `GET /readyz -> 200 application/json`
+  - `GET /metrics.stream -> 200 application/x-ndjson`
+- Fail-closed parity matrix rows:
+  - `GET /unknown -> 404 text/plain; charset=utf-8`
+  - `POST /metrics -> 404 text/plain; charset=utf-8`
+- Deterministic parity checkpoint markers:
+  - `route_parity_checkpoint_status=verified`
+  - `fail_closed_checkpoint_status=verified`
+  - `route_class_coverage_status=verified`
+- Fail-closed parity drift taxonomy markers:
+  - `service_api_observability_route_compatibility_policy_matrix_row_missing:<row_id>`
+  - `service_api_observability_route_compatibility_policy_matrix_row_route_mismatch:<row_id>`
+  - `service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:<row_id>`
+  - `service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch:<row_id>`
+  - `service_api_observability_route_compatibility_policy_marker_missing:route_parity_checkpoint_status`
+
 ## Tracing Event Taxonomy Contract
 
 - `tracing_event_taxonomy_version=kamn.node.tracing-event-taxonomy.v1`

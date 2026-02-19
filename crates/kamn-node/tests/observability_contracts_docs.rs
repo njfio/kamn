@@ -107,3 +107,50 @@ fn regression_runtime_network_observability_tls_contract_declares_policy_drift_m
     assert!(RUNTIME_NETWORK_DOC
         .contains("runtime_observability_policy_tls_negative_matrix_reason_codes_csv_mismatch"));
 }
+
+#[test]
+fn unit_observability_route_parity_contract_declares_required_matrix_markers() {
+    assert!(DOC.contains(
+        "observability_route_parity_matrix_version=kamn.runtime.observability.route-parity.v1"
+    ));
+    assert!(DOC.contains("GET /metrics -> 200 text/plain; version=0.0.4"));
+    assert!(DOC.contains("GET /healthz -> 200 application/json"));
+    assert!(DOC.contains("GET /readyz -> 200 application/json"));
+    assert!(DOC.contains("GET /metrics.stream -> 200 application/x-ndjson"));
+}
+
+#[test]
+fn functional_observability_route_parity_contract_declares_fail_closed_rows() {
+    assert!(DOC.contains("GET /unknown -> 404 text/plain; charset=utf-8"));
+    assert!(DOC.contains("POST /metrics -> 404 text/plain; charset=utf-8"));
+    assert!(DOC.contains("route_parity_checkpoint_status=verified"));
+    assert!(DOC.contains("fail_closed_checkpoint_status=verified"));
+    assert!(DOC.contains("route_class_coverage_status=verified"));
+}
+
+#[test]
+fn integration_observability_route_parity_contract_docs_align_with_endpoint_route_constants() {
+    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH"));
+    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH"));
+    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH"));
+    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH"));
+}
+
+#[test]
+fn regression_observability_route_parity_contract_declares_drift_reason_markers() {
+    assert!(DOC.contains(
+        "service_api_observability_route_compatibility_policy_matrix_row_missing:<row_id>"
+    ));
+    assert!(DOC.contains(
+        "service_api_observability_route_compatibility_policy_matrix_row_route_mismatch:<row_id>"
+    ));
+    assert!(DOC.contains(
+        "service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:<row_id>"
+    ));
+    assert!(DOC.contains(
+        "service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch:<row_id>"
+    ));
+    assert!(DOC.contains(
+        "service_api_observability_route_compatibility_policy_marker_missing:route_parity_checkpoint_status"
+    ));
+}
