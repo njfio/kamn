@@ -54,6 +54,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
     assert!(DOC.contains("KAMN_CI_TOOLS_FAST_MODE=true"));
+    assert!(DOC.contains(
+        "bash scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh"
+    ));
+    assert!(DOC.contains(
+        "`validate_unified_api_observability_local_heavy_live.sh --mode run --ci-fast-gate FAIL` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block."
+    ));
     assert!(DOC.contains("test_check_legacy_ingress_parser_drift.sh"));
     assert!(DOC.contains(
         "check_legacy_ingress_parser_drift.sh --source-root crates/kamn-node/src --baseline-file fixtures/ci/legacy_ingress_parser_baseline.json --output-json /tmp/legacy-ingress-parser-drift-report.json"
