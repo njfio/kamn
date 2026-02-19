@@ -4546,6 +4546,20 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - runtime signer key-source reason taxonomy marker drift (`production_signer_key_source_env_local_forbidden`, `fallback_signer_secret_present_violation`) fails the contract target.
   - signer provenance reason marker drift (`managed_signer_backend_response_provenance_missing`, `managed_signer_backend_response_provenance_malformed`, `managed_signer_backend_response_provenance_mismatch`) fails the contract target.
 
+### Task Escrow Suite Discovery + Parallel Boundary Contract
+- `task_escrow_suite_discovery_contract_status=verified`
+- `task_escrow_suite_discovery_expected_modules_csv=shared,task_domain,escrow_domain`
+- `task_escrow_suite_parallel_seed_isolation_status=verified`
+- `task_escrow_suite_parallel_case_budget_max=256`
+- `task_escrow_suite_parallel_sequence_budget_max=32`
+- Guard commands:
+  - `cargo test -p kamn-core --test task_escrow_suite_modularization_contract`
+  - `cargo test -p kamn-core --test task_escrow_suite_discovery_parallel_contract`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_task_escrow_suite_discovery_and_parallel_contract_markers -- --exact`
+- Fail-closed policy:
+  - modularized suite discovery marker drift fails closed when expected domain modules disappear or are renamed.
+  - parallel boundary drift fails closed when seed env-key isolation is lost or case/sequence budgets exceed configured caps.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
