@@ -1,10 +1,32 @@
 //! Operator dashboard UI projection contracts for human-facing control surfaces.
 
 use crate::{
-    EscrowStatus, MessageStatus, OperatorActionAuditRecord, OperatorActionOutcome,
+    AgentDid, EscrowStatus, MessageStatus, OperatorActionAuditRecord, OperatorActionOutcome,
     OperatorBindingAction, OperatorDashboardSnapshot, TaskState,
 };
 use std::fmt;
+
+const HUMAN_DID_PREFIX: &str = "kamn:did:human:";
+const OPERATOR_DASHBOARD_UI_INVALID_AGENT_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_agent_did";
+const OPERATOR_DASHBOARD_UI_INVALID_TASK_REQUESTER_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_task_requester_did";
+const OPERATOR_DASHBOARD_UI_INVALID_TASK_ASSIGNEE_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_task_assignee_did";
+const OPERATOR_DASHBOARD_UI_INVALID_MESSAGE_SENDER_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_message_sender_did";
+const OPERATOR_DASHBOARD_UI_INVALID_MESSAGE_RECIPIENT_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_message_recipient_did";
+const OPERATOR_DASHBOARD_UI_INVALID_ESCROW_PAYER_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_escrow_payer_did";
+const OPERATOR_DASHBOARD_UI_INVALID_ESCROW_PAYEE_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_escrow_payee_did";
+const OPERATOR_DASHBOARD_UI_INVALID_REPUTATION_AGENT_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_reputation_agent_did";
+const OPERATOR_DASHBOARD_UI_INVALID_AUDIT_AGENT_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_audit_agent_did";
+const OPERATOR_DASHBOARD_UI_INVALID_AUDIT_OPERATOR_DID_REASON_CODE: &str =
+    "operator_dashboard_ui_invalid_audit_operator_did";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// UI attention severity used for triage highlighting.
@@ -176,6 +198,11 @@ impl OperatorDashboardUi {
     ) -> Result<OperatorDashboardUiModel, OperatorDashboardUiError> {
         let mut agent_list = Vec::with_capacity(snapshot.agents.items.len());
         for agent in &snapshot.agents.items {
+            let agent_did = parse_agent_did(
+                agent.agent_did.as_str(),
+                "snapshot.agents[].agent_did",
+                OPERATOR_DASHBOARD_UI_INVALID_AGENT_DID_REASON_CODE,
+            )?;
             if agent.identity_key_id.trim().is_empty() {
                 return Err(OperatorDashboardUiError::EmptyAgentKey {
                     agent_did: agent.agent_did.clone(),
@@ -196,7 +223,7 @@ impl OperatorDashboardUi {
             }
 
             agent_list.push(OperatorAgentListRow {
-                agent_did: agent.agent_did.clone(),
+                agent_did: agent_did.as_str().to_owned(),
                 key_summary: format!(
                     "{}/{}/{}",
                     agent.identity_key_id, agent.signing_key_id, agent.agreement_key_id
@@ -207,12 +234,26 @@ impl OperatorDashboardUi {
 
         let mut task_timeline = Vec::with_capacity(snapshot.tasks.items.len());
         for task in &snapshot.tasks.items {
+            let requester = parse_agent_did(
+                task.requester.as_str(),
+                "snapshot.tasks[].requester",
+                OPERATOR_DASHBOARD_UI_INVALID_TASK_REQUESTER_DID_REASON_CODE,
+            )?;
+            let assignee = task
+                .assignee
+                .as_deref()
+                .map(|value| {
+                    parse_agent_did(
+                        value,
+                        "snapshot.tasks[].assignee",
+                        OPERATOR_DASHBOARD_UI_INVALID_TASK_ASSIGNEE_DID_REASON_CODE,
+                    )
+                    .map(|did| did.as_str().to_owned())
+                })
+                .transpose()?;
             task_timeline.push(OperatorTaskTimelineEntry {
                 task_id: task.task_id.clone(),
-                owner: task
-                    .assignee
-                    .clone()
-                    .unwrap_or_else(|| task.requester.clone()),
+                owner: assignee.unwrap_or_else(|| requester.as_str().to_owned()),
                 state: task.state,
                 attention: task_attention(task.state),
             });
@@ -226,10 +267,22 @@ impl OperatorDashboardUi {
                     message.message_id.clone(),
                 ));
             }
+            let sender = parse_agent_did(
+                message.sender.as_str(),
+                "snapshot.messages[].sender",
+                OPERATOR_DASHBOARD_UI_INVALID_MESSAGE_SENDER_DID_REASON_CODE,
+            )?;
+            for recipient in &message.recipients {
+                parse_agent_did(
+                    recipient.as_str(),
+                    "snapshot.messages[].recipients[]",
+                    OPERATOR_DASHBOARD_UI_INVALID_MESSAGE_RECIPIENT_DID_REASON_CODE,
+                )?;
+            }
 
             message_traces.push(OperatorMessageTraceEntry {
                 message_id: message.message_id.clone(),
-                sender: message.sender.clone(),
+                sender: sender.as_str().to_owned(),
                 recipient_count: message.recipients.len(),
                 status: message.status,
                 attention: message_attention(message.status),
@@ -239,10 +292,20 @@ impl OperatorDashboardUi {
 
         let mut escrow_status = Vec::with_capacity(snapshot.escrows.items.len());
         for escrow in &snapshot.escrows.items {
+            let payer = parse_agent_did(
+                escrow.payer.as_str(),
+                "snapshot.escrows[].payer",
+                OPERATOR_DASHBOARD_UI_INVALID_ESCROW_PAYER_DID_REASON_CODE,
+            )?;
+            let payee = parse_agent_did(
+                escrow.payee.as_str(),
+                "snapshot.escrows[].payee",
+                OPERATOR_DASHBOARD_UI_INVALID_ESCROW_PAYEE_DID_REASON_CODE,
+            )?;
             escrow_status.push(OperatorEscrowStatusEntry {
                 escrow_id: escrow.escrow_id.clone(),
-                payer: escrow.payer.clone(),
-                payee: escrow.payee.clone(),
+                payer: payer.as_str().to_owned(),
+                payee: payee.as_str().to_owned(),
                 status: escrow.status.clone(),
                 remaining_amount: escrow.remaining_amount,
                 attention: escrow_attention(&escrow.status),
@@ -252,18 +315,19 @@ impl OperatorDashboardUi {
 
         let mut reputation_overview = Vec::with_capacity(snapshot.reputation.items.len());
         for reputation in &snapshot.reputation.items {
+            let agent_did = parse_agent_did(
+                reputation.agent_did.as_str(),
+                "snapshot.reputation[].agent_did",
+                OPERATOR_DASHBOARD_UI_INVALID_REPUTATION_AGENT_DID_REASON_CODE,
+            )?;
             validate_rate(
                 "delivery_rate",
-                &reputation.agent_did,
+                agent_did.as_str(),
                 reputation.delivery_rate,
             )?;
-            validate_rate(
-                "dispute_rate",
-                &reputation.agent_did,
-                reputation.dispute_rate,
-            )?;
+            validate_rate("dispute_rate", agent_did.as_str(), reputation.dispute_rate)?;
             reputation_overview.push(OperatorReputationOverviewEntry {
-                agent_did: reputation.agent_did.clone(),
+                agent_did: agent_did.as_str().to_owned(),
                 trust_score: reputation.trust_score,
                 delivery_rate: reputation.delivery_rate,
                 dispute_rate: reputation.dispute_rate,
@@ -274,15 +338,25 @@ impl OperatorDashboardUi {
 
         let mut audit_traces = Vec::with_capacity(audit_log.len());
         for record in audit_log {
+            let agent_did = parse_agent_did(
+                record.agent_did.as_str(),
+                "audit_log[].agent_did",
+                OPERATOR_DASHBOARD_UI_INVALID_AUDIT_AGENT_DID_REASON_CODE,
+            )?;
+            let operator_did = parse_operator_did(
+                record.operator_did.as_str(),
+                "audit_log[].operator_did",
+                OPERATOR_DASHBOARD_UI_INVALID_AUDIT_OPERATOR_DID_REASON_CODE,
+            )?;
             if record.requested_at_unix == 0 {
                 return Err(OperatorDashboardUiError::InvalidAuditTimestamp {
-                    operator_did: record.operator_did.clone(),
+                    operator_did: operator_did.clone(),
                 });
             }
 
             audit_traces.push(OperatorAuditTraceEntry {
-                agent_did: record.agent_did.clone(),
-                operator_did: record.operator_did.clone(),
+                agent_did: agent_did.as_str().to_owned(),
+                operator_did: operator_did.clone(),
                 action: record.action,
                 target: record.target.clone(),
                 value: record.value.clone(),
@@ -364,6 +438,15 @@ pub enum OperatorDashboardUiError {
     },
     /// Message projection is missing recipients.
     EmptyMessageRecipients(String),
+    /// DID value is invalid.
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Reputation rate is outside the supported range.
     InvalidReputationRate {
         /// Agent DID associated with invalid rate.
@@ -395,6 +478,11 @@ impl fmt::Display for OperatorDashboardUiError {
                     "message trace must include at least one recipient: {message_id}"
                 )
             }
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidReputationRate {
                 agent_did,
                 field,
@@ -428,6 +516,51 @@ fn validate_rate(
         });
     }
     Ok(())
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, OperatorDashboardUiError> {
+    AgentDid::parse(value).map_err(|error| OperatorDashboardUiError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
+}
+
+fn parse_operator_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<String, OperatorDashboardUiError> {
+    if !value.starts_with(HUMAN_DID_PREFIX) {
+        return Err(OperatorDashboardUiError::InvalidDid {
+            field,
+            reason_code,
+            detail: format!("invalid human did prefix: {value}"),
+        });
+    }
+    let method_specific_id = &value[HUMAN_DID_PREFIX.len()..];
+    if method_specific_id.is_empty() {
+        return Err(OperatorDashboardUiError::InvalidDid {
+            field,
+            reason_code,
+            detail: "human did method-specific id must not be empty".to_owned(),
+        });
+    }
+    if !method_specific_id
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_')
+    {
+        return Err(OperatorDashboardUiError::InvalidDid {
+            field,
+            reason_code,
+            detail: format!("human did has invalid characters: {method_specific_id}"),
+        });
+    }
+    Ok(value.to_owned())
 }
 
 fn task_attention(state: TaskState) -> DashboardAttentionLevel {

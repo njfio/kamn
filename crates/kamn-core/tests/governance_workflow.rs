@@ -382,3 +382,25 @@ fn governance_workflow_functional_executes_valid_parameter_change_proposal() {
         })
     );
 }
+
+#[test]
+fn invalid_proposer_did_surfaces_reason_code_contract() {
+    let mut workflow = GovernanceWorkflow::new();
+    assert_eq!(
+        workflow.submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-invalid-did".to_owned(),
+            title: "Invalid proposer".to_owned(),
+            description: "Should fail deterministically".to_owned(),
+            proposer_did: "bad-did".to_owned(),
+            created_at_unix: 1_716_309_000,
+            voting_deadline_unix: 1_716_310_000,
+            quorum_threshold: 2,
+            parameter_change: None,
+        }),
+        Err(GovernanceWorkflowError::InvalidDid {
+            field: "proposer_did",
+            reason_code: "governance_workflow_invalid_proposer_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}

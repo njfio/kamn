@@ -1,6 +1,6 @@
 use kamn_core::{
-    OperatorActionServiceError, OperatorBindingAction, OperatorBindingEngine, OperatorBindingProof,
-    PermissionedOperatorActionService,
+    OperatorActionServiceError, OperatorBindingAction, OperatorBindingEngine, OperatorBindingError,
+    OperatorBindingProof, PermissionedOperatorActionService,
 };
 use std::collections::BTreeSet;
 
@@ -172,5 +172,36 @@ fn operator_actions_regression_unauthorized_operator_cannot_mutate_settings() {
     assert_eq!(
         service.setting("kamn:did:agent:ops-5", "maintenance_mode"),
         None
+    );
+}
+
+#[test]
+fn invalid_agent_did_surfaces_reason_code_contract() {
+    let mut bindings = OperatorBindingEngine::new();
+    bindings
+        .register_binding(
+            "kamn:did:agent:ops-6",
+            "kamn:did:human:alice-6",
+            Some(proof_for("kamn:did:human:alice-6")),
+            permissions(&[OperatorBindingAction::Configure]),
+        )
+        .expect("binding should register");
+    let mut service = PermissionedOperatorActionService::new(bindings);
+
+    assert_eq!(
+        service.configure(
+            "bad-did",
+            "kamn:did:human:alice-6",
+            "maintenance_mode",
+            "enabled",
+            1_716_100_500,
+        ),
+        Err(OperatorActionServiceError::Binding(
+            OperatorBindingError::InvalidAgentDid {
+                field: "agent_did",
+                reason_code: "operator_binding_invalid_agent_did",
+                detail: "invalid agent did prefix: bad-did".to_owned(),
+            }
+        ))
     );
 }

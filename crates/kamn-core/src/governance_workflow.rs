@@ -4,6 +4,13 @@ use crate::AgentDid;
 use std::collections::BTreeMap;
 use std::fmt;
 
+const GOVERNANCE_WORKFLOW_INVALID_PROPOSER_DID_REASON_CODE: &str =
+    "governance_workflow_invalid_proposer_did";
+const GOVERNANCE_WORKFLOW_INVALID_VOTER_DID_REASON_CODE: &str =
+    "governance_workflow_invalid_voter_did";
+const GOVERNANCE_WORKFLOW_INVALID_EXECUTOR_DID_REASON_CODE: &str =
+    "governance_workflow_invalid_executor_did";
+
 /// Draft proposal submitted into the governance workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceProposalDraft {
@@ -219,7 +226,11 @@ impl GovernanceWorkflow {
         require_non_empty("proposal_id", &draft.proposal_id)?;
         require_non_empty("title", &draft.title)?;
         require_non_empty("description", &draft.description)?;
-        validate_did(&draft.proposer_did)?;
+        let proposer_did = parse_agent_did(
+            draft.proposer_did.as_str(),
+            "proposer_did",
+            GOVERNANCE_WORKFLOW_INVALID_PROPOSER_DID_REASON_CODE,
+        )?;
         if draft.created_at_unix == 0 {
             return Err(GovernanceWorkflowError::InvalidTimestamp("created_at_unix"));
         }
@@ -248,7 +259,7 @@ impl GovernanceWorkflow {
                     proposal_id: draft.proposal_id,
                     title: draft.title,
                     description: draft.description,
-                    proposer_did: draft.proposer_did,
+                    proposer_did: proposer_did.as_str().to_owned(),
                     created_at_unix: draft.created_at_unix,
                     voting_deadline_unix: draft.voting_deadline_unix,
                     quorum_threshold: draft.quorum_threshold,
@@ -281,7 +292,11 @@ impl GovernanceWorkflow {
         if cast_at_unix == 0 {
             return Err(GovernanceWorkflowError::InvalidTimestamp("cast_at_unix"));
         }
-        validate_did(voter_did)?;
+        let voter_did = parse_agent_did(
+            voter_did,
+            "voter_did",
+            GOVERNANCE_WORKFLOW_INVALID_VOTER_DID_REASON_CODE,
+        )?;
         if state.record.status != GovernanceProposalStatus::Voting {
             return Err(GovernanceWorkflowError::ProposalClosed {
                 proposal_id: proposal_id.to_owned(),
@@ -295,20 +310,20 @@ impl GovernanceWorkflow {
                 status: state.record.status,
             });
         }
-        if state.votes.contains_key(voter_did) {
+        if state.votes.contains_key(voter_did.as_str()) {
             return Err(GovernanceWorkflowError::DuplicateVote {
                 proposal_id: proposal_id.to_owned(),
-                voter_did: voter_did.to_owned(),
+                voter_did: voter_did.as_str().to_owned(),
             });
         }
 
         let vote = GovernanceVoteRecord {
             proposal_id: proposal_id.to_owned(),
-            voter_did: voter_did.to_owned(),
+            voter_did: voter_did.as_str().to_owned(),
             choice,
             cast_at_unix,
         };
-        state.votes.insert(voter_did.to_owned(), vote);
+        state.votes.insert(voter_did.as_str().to_owned(), vote);
         match choice {
             GovernanceVoteChoice::Yes => state.record.yes_votes += 1,
             GovernanceVoteChoice::No => state.record.no_votes += 1,
@@ -351,7 +366,11 @@ impl GovernanceWorkflow {
                 "executed_at_unix",
             ));
         }
-        validate_did(executed_by)?;
+        let executed_by = parse_agent_did(
+            executed_by,
+            "executed_by",
+            GOVERNANCE_WORKFLOW_INVALID_EXECUTOR_DID_REASON_CODE,
+        )?;
         require_non_empty("operation_hash", operation_hash)?;
 
         let state = self
@@ -377,7 +396,7 @@ impl GovernanceWorkflow {
         state.record.executed_at_unix = Some(executed_at_unix);
         let record = GovernanceExecutionRecord {
             proposal_id: proposal_id.to_owned(),
-            executed_by: executed_by.to_owned(),
+            executed_by: executed_by.as_str().to_owned(),
             executed_at_unix,
             operation_hash: operation_hash.to_owned(),
         };
@@ -416,7 +435,14 @@ pub enum GovernanceWorkflowError {
     /// Required string field is empty.
     EmptyField(&'static str),
     /// DID failed canonical parsing/validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Timestamp field must be positive.
     InvalidTimestamp(&'static str),
     /// Voting deadline does not occur after creation timestamp.
@@ -507,7 +533,11 @@ impl fmt::Display for GovernanceWorkflowError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
             Self::InvalidDeadline {
                 created_at_unix,
@@ -601,10 +631,16 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<(), GovernanceW
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), GovernanceWorkflowError> {
-    AgentDid::parse(value)
-        .map_err(|error| GovernanceWorkflowError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, GovernanceWorkflowError> {
+    AgentDid::parse(value).map_err(|error| GovernanceWorkflowError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn validate_parameter_change(

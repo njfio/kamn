@@ -80,7 +80,7 @@ impl PermissionedOperatorActionService {
                 requested_at_unix,
                 outcome: OperatorActionOutcome::Denied,
             });
-            return Err(OperatorActionServiceError::Binding(error.to_string()));
+            return Err(OperatorActionServiceError::Binding(error));
         }
 
         self.settings.insert(
@@ -132,7 +132,7 @@ impl PermissionedOperatorActionService {
                     requested_at_unix,
                     outcome: OperatorActionOutcome::Denied,
                 });
-                Err(OperatorActionServiceError::Binding(error.to_string()))
+                Err(OperatorActionServiceError::Binding(error))
             }
         }
     }
@@ -161,7 +161,7 @@ impl PermissionedOperatorActionService {
                 requested_at_unix,
                 outcome: OperatorActionOutcome::Denied,
             });
-            return Err(OperatorActionServiceError::Binding(error.to_string()));
+            return Err(OperatorActionServiceError::Binding(error));
         }
 
         self.push_audit(OperatorActionAuditRecord {
@@ -199,14 +199,14 @@ pub enum OperatorActionServiceError {
     /// Required input field was empty.
     EmptyField(&'static str),
     /// Binding authorization or binding mutation failed.
-    Binding(String),
+    Binding(OperatorBindingError),
 }
 
 impl fmt::Display for OperatorActionServiceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::Binding(message) => write!(f, "operator binding error: {message}"),
+            Self::Binding(error) => write!(f, "operator binding error: {error}"),
         }
     }
 }
@@ -215,7 +215,7 @@ impl std::error::Error for OperatorActionServiceError {}
 
 impl From<OperatorBindingError> for OperatorActionServiceError {
     fn from(value: OperatorBindingError) -> Self {
-        Self::Binding(value.to_string())
+        Self::Binding(value)
     }
 }
 

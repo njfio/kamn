@@ -120,3 +120,22 @@ fn regression_unbound_operator_cannot_read_history() {
         })
     );
 }
+
+#[test]
+fn invalid_operator_did_surfaces_reason_code_contract() {
+    let mut engine = OperatorBindingEngine::new();
+
+    assert_eq!(
+        engine.register_binding(
+            "kamn:did:agent:agent-11",
+            "bad-did",
+            Some(valid_proof("kamn:did:human:operator-11")),
+            permission_set(&[OperatorBindingAction::Configure]),
+        ),
+        Err(OperatorBindingError::InvalidOperatorDid {
+            field: "operator_did",
+            reason_code: "operator_binding_invalid_operator_did",
+            detail: "invalid human did prefix: bad-did".to_owned(),
+        })
+    );
+}

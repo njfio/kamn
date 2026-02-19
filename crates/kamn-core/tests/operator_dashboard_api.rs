@@ -135,3 +135,19 @@ fn operator_dashboard_api_regression_rejects_tampered_cursor_tokens() {
         ))
     );
 }
+
+#[test]
+fn invalid_agent_did_surfaces_reason_code_contract() {
+    let mut api = OperatorDashboardApi::new();
+    let hierarchy =
+        AgentKeyHierarchy::new("id-4", "sig-4", "agr-4").expect("hierarchy should initialize");
+
+    assert_eq!(
+        api.upsert_agent_from_hierarchy("bad-did", &hierarchy),
+        Err(OperatorDashboardApiError::InvalidDid {
+            field: "agent_did",
+            reason_code: "operator_dashboard_api_invalid_agent_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}

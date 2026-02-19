@@ -220,3 +220,29 @@ fn operator_dashboard_ui_regression_orders_audit_traces_newest_first() {
         .collect();
     assert_eq!(ordered, vec![9, 6, 3]);
 }
+
+#[test]
+fn invalid_snapshot_agent_did_surfaces_reason_code_contract() {
+    let snapshot = OperatorDashboardSnapshot {
+        agents: page(vec![kamn_core::OperatorAgentView {
+            agent_did: "bad-did".to_owned(),
+            identity_key_id: "id-alpha".to_owned(),
+            signing_key_id: "sig-alpha".to_owned(),
+            agreement_key_id: "agr-alpha".to_owned(),
+        }]),
+        tasks: page(vec![]),
+        messages: page(vec![]),
+        escrows: page(vec![]),
+        reputation: page(vec![]),
+    };
+
+    let ui = OperatorDashboardUi::new();
+    assert_eq!(
+        ui.compose(&snapshot, &[]),
+        Err(OperatorDashboardUiError::InvalidDid {
+            field: "snapshot.agents[].agent_did",
+            reason_code: "operator_dashboard_ui_invalid_agent_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
