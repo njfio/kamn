@@ -1,7 +1,7 @@
 # Issue #4137 Spec
 
 - Title: Subtask: split monolithic test suites into domain modules with parity-preserving red tests
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md

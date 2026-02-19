@@ -1,7 +1,7 @@
 # Issue #4137 Plan
 
 - Issue: #4137
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Add a red modularization contract test that expects root-to-submodule split wiring.
