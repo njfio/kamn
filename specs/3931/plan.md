@@ -1,7 +1,7 @@
 # Issue #3931 Plan
 
 - Issue: #3931
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Add a red contract test that asserts required fuzz package files, corpus seed files, and CI strategy markers exist.

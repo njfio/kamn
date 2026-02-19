@@ -1,7 +1,7 @@
 # Issue #3931 Spec
 
 - Title: Subtask: add cargo-fuzz targets for message envelope and DID parsing with reproducible seed corpus
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md
