@@ -36,6 +36,7 @@ PEER_ADAPTER_REASON_PROJECTION_BUDGET_EXHAUSTED_CODE = (
     "p2p_live_reconnect_retry_budget_exhausted"
 )
 PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS = "required"
+RETRY_RECONNECT_MARKER_CONTRACT_STATUS = "verified"
 POLICY_REASON_CODES_CSV = ",".join(
     [
         "ci_fast_gate_failed",
@@ -208,6 +209,7 @@ def _run_lane(args: argparse.Namespace) -> int:
         "peer_adapter_multi_process_validation_local_heavy_status": (
             PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS
         ),
+        "retry_reconnect_marker_contract_status": RETRY_RECONNECT_MARKER_CONTRACT_STATUS,
         "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
         "reason_taxonomy_status": "verified",
         "reason_codes": ["none"],
@@ -252,6 +254,10 @@ def _run_lane(args: argparse.Namespace) -> int:
     print(
         "peer_adapter_multi_process_validation_local_heavy_status="
         f"{PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS}"
+    )
+    print(
+        "retry_reconnect_marker_contract_status="
+        f"{RETRY_RECONNECT_MARKER_CONTRACT_STATUS}"
     )
     print(f"reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
     print("reason_taxonomy_status=verified")
@@ -298,6 +304,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "peer_adapter_reason_projection_timeout_code",
         "peer_adapter_reason_projection_budget_exhausted_code",
         "peer_adapter_multi_process_validation_local_heavy_status",
+        "retry_reconnect_marker_contract_status",
         "reason_taxonomy_version",
         "reason_taxonomy_status",
         "reason_codes",
@@ -336,6 +343,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "peer_churn_recovery_status",
         "reason_taxonomy_status",
         "performance_budget_status",
+        "retry_reconnect_marker_contract_status",
     ):
         decision.reject_if(
             report.get(field_name) != "verified",
@@ -469,6 +477,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "peer_adapter_multi_process_validation_local_heavy_status": (
             PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS
         ),
+        "retry_reconnect_marker_contract_status": RETRY_RECONNECT_MARKER_CONTRACT_STATUS,
         "ci_fast_gate": ci_fast_gate,
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
@@ -500,6 +509,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(
         "peer_adapter_multi_process_validation_local_heavy_status="
         f"{PEER_ADAPTER_MULTI_PROCESS_VALIDATION_LOCAL_HEAVY_STATUS}"
+    )
+    print(
+        "retry_reconnect_marker_contract_status="
+        f"{RETRY_RECONNECT_MARKER_CONTRACT_STATUS}"
     )
     if output_json is not None:
         print(f"policy_report_file={output_json}")

@@ -9,6 +9,7 @@ fn doc_contains_transport_retry_validation_contract_markers() {
     assert!(DOC.contains("kolme.live.finality.retry.terminal"));
     assert!(DOC.contains("terminal_decision=attempt_ceiling_reached"));
     assert!(DOC.contains("terminal_decision=malformed_response_fail_fast"));
+    assert!(DOC.contains("retry_reconnect_marker_contract_status=verified"));
 }
 
 #[test]

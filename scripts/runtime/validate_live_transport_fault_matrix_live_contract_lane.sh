@@ -236,6 +236,10 @@ if ! printf '%s\n' "$policy_output" | grep -q '^peer_adapter_multi_process_valid
   echo "expected live transport fault matrix policy peer-adapter multi-process local-heavy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q '^retry_reconnect_marker_contract_status=verified$'; then
+  echo "expected live transport fault matrix policy retry/reconnect marker contract status marker" >&2
+  exit 1
+fi
 
 cp "$summary_report" "$tampered_report"
 python3 - "$tampered_report" <<'PY'
@@ -427,6 +431,9 @@ lane_report = {
     "peer_adapter_multi_process_validation_local_heavy_status": policy_report.get(
         "peer_adapter_multi_process_validation_local_heavy_status"
     ),
+    "retry_reconnect_marker_contract_status": policy_report.get(
+        "retry_reconnect_marker_contract_status"
+    ),
     "peer_reason_docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "convergence_fail_closed_reason_code": "live_transport_fault_matrix_contract_evidence_convergence_mismatch",
@@ -466,6 +473,7 @@ echo "peer_integrity_fail_closed_reason_code=p2p_transport_unknown_sender_peer"
 echo "peer_adapter_reason_projection_timeout_code=p2p_live_reconnect_retry_dial_timeout"
 echo "peer_adapter_reason_projection_budget_exhausted_code=p2p_live_reconnect_retry_budget_exhausted"
 echo "peer_adapter_multi_process_validation_local_heavy_status=required"
+echo "retry_reconnect_marker_contract_status=verified"
 echo "peer_reason_docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "convergence_fail_closed_reason_code=live_transport_fault_matrix_contract_evidence_convergence_mismatch"
