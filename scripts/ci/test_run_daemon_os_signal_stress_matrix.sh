@@ -116,6 +116,8 @@ stable_output="$(
 for marker in \
   '^daemon_os_signal_stress_matrix_status=pass$' \
   '^daemon_os_signal_stress_matrix_reason_code=stable_success$' \
+  '^daemon_os_signal_stress_matrix_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1$' \
+  '^daemon_os_signal_stress_matrix_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success$' \
   '^daemon_os_signal_stress_matrix_final_decision=GO$'; do
   if ! printf '%s\n' "$stable_output" | grep -q "$marker"; then
     echo "expected stable daemon stress matrix marker: $marker" >&2
@@ -131,6 +133,11 @@ import sys
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("schema_version") != "kamn.ci.daemon-os-signal-stress-matrix-report.v1":
     raise SystemExit("unexpected daemon stress matrix schema")
+if report.get("reason_taxonomy_version") != "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1":
+    raise SystemExit("expected daemon stress matrix reason taxonomy marker")
+expected_reason_codes_csv = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success"
+if report.get("reason_codes_csv") != expected_reason_codes_csv:
+    raise SystemExit("expected daemon stress matrix reason csv marker")
 if report.get("status") != "pass":
     raise SystemExit("expected daemon stress matrix stable status=pass")
 if report.get("final_decision") != "GO":

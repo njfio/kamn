@@ -17,6 +17,8 @@ REASON_CODES_CSV = (
     "overload_policy_reason_code_unknown,"
     "overload_policy_report_file_missing,"
     "overload_policy_report_json_invalid,"
+    "overload_policy_report_reason_codes_csv_mismatch,"
+    "overload_policy_report_reason_taxonomy_mismatch,"
     "overload_policy_report_schema_mismatch,"
     "overload_policy_runtime_budget_exceeded,"
     "overload_policy_threshold_file_missing,"
@@ -201,6 +203,8 @@ def main() -> int:
         "REPORT_SCHEMA_VERSION",
         "MAX_RUNTIME_SECONDS",
         "ALLOWED_REASON_CODES_CSV",
+        "REPORT_REASON_TAXONOMY_VERSION",
+        "REPORT_REASON_CODES_CSV",
         "CI_TOOLS_REQUIRED_ENTRY",
         "CI_TOOLS_FORBIDDEN_ENTRY",
     }
@@ -222,6 +226,8 @@ def main() -> int:
 
     report_schema_version = thresholds["REPORT_SCHEMA_VERSION"]
     allowed_reason_codes_csv = thresholds["ALLOWED_REASON_CODES_CSV"]
+    expected_report_reason_taxonomy_version = thresholds["REPORT_REASON_TAXONOMY_VERSION"]
+    expected_report_reason_codes_csv = thresholds["REPORT_REASON_CODES_CSV"]
     allowed_reason_codes = [entry.strip() for entry in allowed_reason_codes_csv.split(",") if entry.strip()]
     if not allowed_reason_codes:
         return fail(
@@ -294,6 +300,16 @@ def main() -> int:
     if actual_schema != report_schema_version:
         reason_codes.append("overload_policy_report_schema_mismatch")
         errors.append("report schema_version mismatch")
+
+    actual_reason_taxonomy_version = report_payload.get("reason_taxonomy_version")
+    if actual_reason_taxonomy_version != expected_report_reason_taxonomy_version:
+        reason_codes.append("overload_policy_report_reason_taxonomy_mismatch")
+        errors.append("report reason_taxonomy_version mismatch")
+
+    actual_reason_codes_csv = report_payload.get("reason_codes_csv")
+    if actual_reason_codes_csv != expected_report_reason_codes_csv:
+        reason_codes.append("overload_policy_report_reason_codes_csv_mismatch")
+        errors.append("report reason_codes_csv mismatch")
 
     runtime_seconds = report_payload.get("runtime_seconds")
     if not isinstance(runtime_seconds, int) or runtime_seconds < 0:
