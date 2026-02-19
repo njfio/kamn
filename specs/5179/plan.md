@@ -11,6 +11,8 @@
 2. GREEN:
    - Add poison-tolerant lock helper and route signer tests through it.
    - Replace deep-lane ignore annotation with explicit env-gated skip.
+   - Regenerate ignored-test inventory fixtures to keep governance baselines aligned.
+   - Restore missing notifications-consumer wrapper symlink required by tranche parity checks.
    - Move PRD source under `docs/planning/` and patch references.
    - Refresh stale specs to Reviewed with dated staleness notes.
 3. VERIFY:
