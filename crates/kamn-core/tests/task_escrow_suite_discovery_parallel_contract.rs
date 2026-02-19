@@ -33,21 +33,25 @@ fn regression_task_escrow_suite_discovery_markers_remain_stable() {
 
 #[test]
 fn regression_task_escrow_suite_parallel_boundaries_are_bounded_and_isolated() {
+    let task_cases = std::hint::black_box(shared::TASK_CASES);
+    let escrow_cases = std::hint::black_box(shared::ESCROW_CASES);
+    let max_sequence_len = std::hint::black_box(shared::MAX_SEQUENCE_LEN);
+
     assert_ne!(
         shared::TASK_SEED_ENV_KEY,
         shared::ESCROW_SEED_ENV_KEY,
         "parallel execution must not share the same seed env var key"
     );
     assert!(
-        shared::TASK_CASES <= 256,
+        task_cases <= 256,
         "task proptest case budget must stay bounded"
     );
     assert!(
-        shared::ESCROW_CASES <= 256,
+        escrow_cases <= 256,
         "escrow proptest case budget must stay bounded"
     );
     assert!(
-        shared::MAX_SEQUENCE_LEN <= 32,
+        max_sequence_len <= 32,
         "sequence length budget must stay bounded"
     );
 }
