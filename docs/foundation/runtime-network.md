@@ -154,6 +154,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `runtime_signer_rotation_epoch_invalid`
   - `runtime_signer_previous_rotation_epoch_invalid`
   - `runtime_signer_rotation_epoch_stale`
+  - `runtime_signer_rotation_epoch_regressed`
   - `runtime_signer_attestation_required_approvals_invalid`
   - `runtime_signer_failover_attestation_required_approvals_insufficient`
   - `runtime_signer_failover_attestation_previous_profile_not_approved`

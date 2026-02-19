@@ -66,6 +66,19 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - backpressure overflow sample validation rejects queue depth above capacity (`Regression: #618`).
 - stale disconnected peer queue purge mapping remains deterministic (`Regression: #618`).
 
+## Signer Rotation Freshness Reason Markers (Issue #3956)
+- `rotation_freshness_reason_taxonomy_version=kamn.runtime.signer-rotation-freshness-reason-taxonomy.v1`
+- `rotation_freshness_reason_codes_csv=runtime_signer_rotation_epoch_stale,runtime_signer_rotation_epoch_regressed`
+- `runtime_signer_rotation_epoch_stale`
+- `runtime_signer_rotation_epoch_regressed`
+- Validation commands:
+  - `cargo test -p kamn-node signer::signer_policy::tests::unit_signer_rotation_freshness_outcome_matrix -- --exact --nocapture`
+  - `cargo test -p kamn-node signer::tests::regression_signer_preflight_rejects_non_failover_rotation_epoch_regression -- --exact --nocapture`
+  - `cargo test -p kamn-node main_tests::signer_tests::integration_kolme_live_signer_preflight_rejects_non_failover_rotation_regression -- --exact --nocapture`
+  - `cargo test -p kamn-core --test runtime_watchdog_attestation_docs -- --nocapture`
+- Regression policy:
+  - non-failover rotation metadata regression must fail closed with `runtime_signer_rotation_epoch_regressed` (`Regression: #3956`).
+
 ## Validator/Watchdog Proof Consensus Deep-Lane Contract
 - PR-fast contract lane:
   - `bash scripts/runtime/run_watchdog_proof_consensus_contract_lane.sh`

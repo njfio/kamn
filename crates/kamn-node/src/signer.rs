@@ -782,6 +782,35 @@ mod tests {
     }
 
     #[test]
+    fn regression_signer_preflight_rejects_non_failover_rotation_epoch_regression() {
+        // Regression: #3956
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+            Some("ops-primary"),
+        );
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("2"));
+        let _required_approvals = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            Some("1"),
+        );
+        let _approved_signers = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            Some("ops-primary"),
+        );
+        let error = evaluate_kolme_live_signer_preflight_readiness(&test_primary_selection())
+            .expect_err("non-failover rotation epoch regression must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_rotation_epoch_regressed")),
+            "non-failover rotation regression must preserve runtime_signer_rotation_epoch_regressed"
+        );
+    }
+
+    #[test]
     fn regression_signer_preflight_rejects_disallowed_secondary_managed_external_pair() {
         // Regression: #3472
         let _lock = test_signer_env_lock()

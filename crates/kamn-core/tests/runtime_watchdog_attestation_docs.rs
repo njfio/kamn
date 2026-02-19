@@ -59,6 +59,29 @@ fn doc_contains_validator_watchdog_proof_consensus_deep_lane_contract() {
 }
 
 #[test]
+fn doc_contains_signer_rotation_freshness_reason_markers() {
+    assert!(DOC.contains("## Signer Rotation Freshness Reason Markers (Issue #3956)"));
+    assert!(DOC.contains(
+        "rotation_freshness_reason_taxonomy_version=kamn.runtime.signer-rotation-freshness-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "rotation_freshness_reason_codes_csv=runtime_signer_rotation_epoch_stale,runtime_signer_rotation_epoch_regressed"
+    ));
+    assert!(DOC.contains("runtime_signer_rotation_epoch_stale"));
+    assert!(DOC.contains("runtime_signer_rotation_epoch_regressed"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node signer::signer_policy::tests::unit_signer_rotation_freshness_outcome_matrix -- --exact --nocapture"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node signer::tests::regression_signer_preflight_rejects_non_failover_rotation_epoch_regression -- --exact --nocapture"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::signer_tests::integration_kolme_live_signer_preflight_rejects_non_failover_rotation_regression -- --exact --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #3956"));
+}
+
+#[test]
 fn doc_contains_parser_fuzz_surface_inventory_contracts() {
     assert!(DOC.contains("## Parser Fuzz Surface Inventory"));
     assert!(DOC.contains("message_envelope_fuzz_smoke"));

@@ -21,6 +21,39 @@ const KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV: &str =
     "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS";
 const KOLME_LIVE_SIGNER_QUORUM_LINKAGE_CONTRACT_VERSION: &str = "v1";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SignerRotationFreshnessOutcome {
+    Fresh,
+    FailoverEpochStale {
+        rotation_epoch: u64,
+        previous_rotation_epoch: u64,
+    },
+    NonFailoverEpochRegressed {
+        rotation_epoch: u64,
+        previous_rotation_epoch: u64,
+    },
+}
+
+pub(crate) fn evaluate_signer_rotation_freshness(
+    failover_active: bool,
+    rotation_epoch: u64,
+    previous_rotation_epoch: u64,
+) -> SignerRotationFreshnessOutcome {
+    if failover_active && rotation_epoch <= previous_rotation_epoch {
+        return SignerRotationFreshnessOutcome::FailoverEpochStale {
+            rotation_epoch,
+            previous_rotation_epoch,
+        };
+    }
+    if !failover_active && rotation_epoch < previous_rotation_epoch {
+        return SignerRotationFreshnessOutcome::NonFailoverEpochRegressed {
+            rotation_epoch,
+            previous_rotation_epoch,
+        };
+    }
+    SignerRotationFreshnessOutcome::Fresh
+}
+
 pub(crate) fn normalize_kolme_live_signer_profile_selector(
     value: &str,
 ) -> Result<&'static str, ConfigError> {
@@ -364,10 +397,28 @@ pub(crate) fn evaluate_kolme_live_signer_preflight_readiness(
         1,
         "runtime_signer_previous_rotation_epoch_invalid",
     )?;
-    if failover_active && rotation_epoch <= previous_rotation_epoch {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "signer failover rotation epoch must increase (current={rotation_epoch}, previous={previous_rotation_epoch}) (runtime_signer_rotation_epoch_stale)"
-        )));
+    match evaluate_signer_rotation_freshness(
+        failover_active,
+        rotation_epoch,
+        previous_rotation_epoch,
+    ) {
+        SignerRotationFreshnessOutcome::Fresh => {}
+        SignerRotationFreshnessOutcome::FailoverEpochStale {
+            rotation_epoch,
+            previous_rotation_epoch,
+        } => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "signer failover rotation epoch must increase (current={rotation_epoch}, previous={previous_rotation_epoch}) (runtime_signer_rotation_epoch_stale)"
+            )))
+        }
+        SignerRotationFreshnessOutcome::NonFailoverEpochRegressed {
+            rotation_epoch,
+            previous_rotation_epoch,
+        } => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "signer rotation epoch must not regress when failover is inactive (current={rotation_epoch}, previous={previous_rotation_epoch}) (runtime_signer_rotation_epoch_regressed)"
+            )))
+        }
     }
 
     let approved_signers = resolve_kolme_live_signer_quorum_approved_signers(signer_selection)?;
@@ -417,4 +468,45 @@ pub(crate) fn evaluate_kolme_live_signer_preflight_readiness(
         quorum_satisfied,
         quorum_linked,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{evaluate_signer_rotation_freshness, SignerRotationFreshnessOutcome};
+
+    #[test]
+    fn unit_signer_rotation_freshness_outcome_matrix() {
+        assert_eq!(
+            evaluate_signer_rotation_freshness(false, 1, 1),
+            SignerRotationFreshnessOutcome::Fresh
+        );
+        assert_eq!(
+            evaluate_signer_rotation_freshness(false, 2, 1),
+            SignerRotationFreshnessOutcome::Fresh
+        );
+        assert_eq!(
+            evaluate_signer_rotation_freshness(true, 2, 1),
+            SignerRotationFreshnessOutcome::Fresh
+        );
+        assert!(
+            matches!(
+                evaluate_signer_rotation_freshness(true, 1, 1),
+                SignerRotationFreshnessOutcome::FailoverEpochStale {
+                    rotation_epoch: 1,
+                    previous_rotation_epoch: 1,
+                }
+            ),
+            "failover stale epoch must emit typed stale outcome"
+        );
+        assert!(
+            matches!(
+                evaluate_signer_rotation_freshness(false, 1, 2),
+                SignerRotationFreshnessOutcome::NonFailoverEpochRegressed {
+                    rotation_epoch: 1,
+                    previous_rotation_epoch: 2,
+                }
+            ),
+            "non-failover epoch regression must emit typed regressed outcome"
+        );
+    }
 }
