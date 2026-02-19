@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::{AgentDid, AgentDidError, ContentLifecycleManager, ContentRetentionClass};
+use crate::{AgentDid, AgentDidError, ContentLifecycleManager, ContentRetentionClass, KamnDid};
 
 /// Hash algorithm label used by M5 deterministic record digests.
 pub const DATA_LAYER_M5_HASH_ALGORITHM: &str = "sha256";
@@ -270,7 +270,8 @@ impl DataLayerM5EmbeddingRegistry {
     ) -> Result<DataLayerM5EmbeddingRecord, DataLayerM5VectorIntegrationError> {
         validate_non_empty(input.embedding_id.as_str(), "embedding_id")?;
         validate_non_empty(input.message_id.as_str(), "message_id")?;
-        validate_kamn_did(input.owner_did.as_str())?;
+        let parsed_owner_did = parse_kamn_did(input.owner_did.as_str())?;
+        let owner_did_key = parsed_owner_did.as_str().to_owned();
         let parsed_agent_did = validate_agent_did(input.agent_did.as_str())?;
         validate_non_empty(input.model_id.as_str(), "model_id")?;
         if input.vector_encrypted.is_empty() {
@@ -312,7 +313,7 @@ impl DataLayerM5EmbeddingRegistry {
 
         let owner_records = self
             .records_by_owner
-            .entry(input.owner_did.clone())
+            .entry(owner_did_key.clone())
             .or_default();
         if let Some(expected_dimensions) = owner_vector_dimensions(owner_records) {
             if vector_dimensions > 0 && vector_dimensions != expected_dimensions {
@@ -332,7 +333,7 @@ impl DataLayerM5EmbeddingRegistry {
         let record_hash_material = DataLayerM5RecordHashMaterial {
             embedding_id: input.embedding_id.as_str(),
             message_id: input.message_id.as_str(),
-            owner_did: input.owner_did.as_str(),
+            owner_did: owner_did_key.as_str(),
             agent_did: parsed_agent_did.as_str(),
             retention_class: input.retention_class,
             model_id: input.model_id.as_str(),
@@ -351,7 +352,7 @@ impl DataLayerM5EmbeddingRegistry {
         let record = DataLayerM5EmbeddingRecord {
             embedding_id: input.embedding_id.clone(),
             message_id: input.message_id,
-            owner_did: input.owner_did.clone(),
+            owner_did: owner_did_key,
             agent_did: parsed_agent_did.as_str().to_owned(),
             retention_class: input.retention_class,
             model_id: input.model_id,
@@ -371,7 +372,10 @@ impl DataLayerM5EmbeddingRegistry {
 
     /// Returns embedding records for one owner scope in append order.
     pub fn embedding_records(&self, owner_did: &str) -> Option<&[DataLayerM5EmbeddingRecord]> {
-        self.records_by_owner.get(owner_did).map(Vec::as_slice)
+        let owner_did = parse_kamn_did(owner_did).ok()?;
+        self.records_by_owner
+            .get(owner_did.as_str())
+            .map(Vec::as_slice)
     }
 
     /// Returns owner-scoped retention-due embeddings aligned with content lifecycle policy.
@@ -380,16 +384,17 @@ impl DataLayerM5EmbeddingRegistry {
         owner_did: &str,
         now_epoch_seconds: u64,
     ) -> Result<Vec<DataLayerM5RetentionDueCandidate>, DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
         if now_epoch_seconds == 0 {
             return Err(DataLayerM5VectorIntegrationError::EmptyField(
                 "now_epoch_seconds",
             ));
         }
 
-        let owner_records = self.records_by_owner.get(owner_did).ok_or_else(|| {
+        let owner_records = self.records_by_owner.get(owner_did_key).ok_or_else(|| {
             DataLayerM5VectorIntegrationError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did_key.to_owned(),
             }
         })?;
 
@@ -430,7 +435,8 @@ impl DataLayerM5EmbeddingRegistry {
         &self,
         query: DataLayerM5SemanticQuery,
     ) -> Result<Vec<DataLayerM5SemanticQueryResult>, DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(query.owner_did.as_str())?;
+        let owner_did = parse_kamn_did(query.owner_did.as_str())?;
+        let owner_did_key = owner_did.as_str();
         let query_vector = validate_vector(query.query_vector, "query_vector")?;
         let limit = resolve_limit(query.limit)?;
         if self.privacy_mode == DataLayerM5EmbeddingPrivacyMode::OwnerSideEncrypted {
@@ -441,12 +447,11 @@ impl DataLayerM5EmbeddingRegistry {
             );
         }
 
-        let owner_records = self
-            .records_by_owner
-            .get(query.owner_did.as_str())
-            .ok_or_else(|| DataLayerM5VectorIntegrationError::OwnerNotFound {
-                owner_did: query.owner_did.clone(),
-            })?;
+        let owner_records = self.records_by_owner.get(owner_did_key).ok_or_else(|| {
+            DataLayerM5VectorIntegrationError::OwnerNotFound {
+                owner_did: owner_did_key.to_owned(),
+            }
+        })?;
         let expected_dimensions = owner_vector_dimensions(owner_records).ok_or(
             DataLayerM5VectorIntegrationError::SemanticQueryUnavailable {
                 reason_code: DATA_LAYER_M5_PLAINTEXT_INDEX_MISSING_FOR_OWNER_SCOPE_REASON_CODE,
@@ -492,7 +497,7 @@ impl DataLayerM5EmbeddingRegistry {
         &self,
         input: DataLayerM5RecallDriftEvaluationInput,
     ) -> Result<DataLayerM5RecallDriftReport, DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(input.owner_did.as_str())?;
+        let owner_did = parse_kamn_did(input.owner_did.as_str())?;
         let query_vector = validate_vector(input.query_vector, "query_vector")?;
         if input.baseline_top_k_embedding_ids.is_empty() {
             return Err(DataLayerM5VectorIntegrationError::EmptyField(
@@ -518,7 +523,7 @@ impl DataLayerM5EmbeddingRegistry {
         let evaluated_k = input.baseline_top_k_embedding_ids.len();
         let current_top_k_embedding_ids = self
             .semantic_query(DataLayerM5SemanticQuery {
-                owner_did: input.owner_did,
+                owner_did: owner_did.as_str().to_owned(),
                 query_vector,
                 limit: Some(evaluated_k),
             })?
@@ -579,7 +584,8 @@ impl DataLayerM5EmbeddingRegistry {
         &self,
         input: DataLayerM5AnomalyEvaluationInput,
     ) -> Result<DataLayerM5AnomalyDecision, DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(input.owner_did.as_str())?;
+        let owner_did = parse_kamn_did(input.owner_did.as_str())?;
+        let owner_did_key = owner_did.as_str();
         let parsed_agent_did = validate_agent_did(input.agent_did.as_str())?;
         let candidate_vector = validate_vector(input.candidate_vector, "candidate_vector")?;
         if !input.anomaly_distance_threshold.is_finite() || input.anomaly_distance_threshold <= 0.0
@@ -599,12 +605,11 @@ impl DataLayerM5EmbeddingRegistry {
             );
         }
 
-        let owner_records = self
-            .records_by_owner
-            .get(input.owner_did.as_str())
-            .ok_or_else(|| DataLayerM5VectorIntegrationError::OwnerNotFound {
-                owner_did: input.owner_did.clone(),
-            })?;
+        let owner_records = self.records_by_owner.get(owner_did_key).ok_or_else(|| {
+            DataLayerM5VectorIntegrationError::OwnerNotFound {
+                owner_did: owner_did_key.to_owned(),
+            }
+        })?;
         let mut agent_vectors = owner_records
             .iter()
             .filter(|record| record.agent_did == parsed_agent_did.as_str())
@@ -613,7 +618,7 @@ impl DataLayerM5EmbeddingRegistry {
         if agent_vectors.is_empty() {
             return Err(
                 DataLayerM5VectorIntegrationError::InsufficientAgentHistory {
-                    owner_did: input.owner_did,
+                    owner_did: owner_did_key.to_owned(),
                     agent_did: parsed_agent_did.as_str().to_owned(),
                 },
             );
@@ -661,10 +666,11 @@ impl DataLayerM5EmbeddingRegistry {
         &self,
         owner_did: &str,
     ) -> Result<(), DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(owner_did)?;
-        let records = self.records_by_owner.get(owner_did).ok_or_else(|| {
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
+        let records = self.records_by_owner.get(owner_did_key).ok_or_else(|| {
             DataLayerM5VectorIntegrationError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did_key.to_owned(),
             }
         })?;
 
@@ -673,7 +679,7 @@ impl DataLayerM5EmbeddingRegistry {
             if record.hash_chain_prev != expected_prev {
                 return Err(
                     DataLayerM5VectorIntegrationError::InvalidEmbeddingHashChain {
-                        owner_did: owner_did.to_owned(),
+                        owner_did: owner_did_key.to_owned(),
                         position,
                         reason: "hash_chain_prev mismatch",
                     },
@@ -700,7 +706,7 @@ impl DataLayerM5EmbeddingRegistry {
             if record.record_hash != expected_hash {
                 return Err(
                     DataLayerM5VectorIntegrationError::InvalidEmbeddingHashChain {
-                        owner_did: owner_did.to_owned(),
+                        owner_did: owner_did_key.to_owned(),
                         position,
                         reason: "record_hash mismatch",
                     },
@@ -720,19 +726,21 @@ impl DataLayerM5EmbeddingRegistry {
         sequence: u64,
         record_hash: &str,
     ) -> Result<(), DataLayerM5VectorIntegrationError> {
-        validate_kamn_did(owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
         validate_non_empty(record_hash, "record_hash")?;
-        let records = self.records_by_owner.get_mut(owner_did).ok_or_else(|| {
-            DataLayerM5VectorIntegrationError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
-            }
-        })?;
+        let records = self
+            .records_by_owner
+            .get_mut(owner_did_key)
+            .ok_or_else(|| DataLayerM5VectorIntegrationError::OwnerNotFound {
+                owner_did: owner_did_key.to_owned(),
+            })?;
         let record = records
             .iter_mut()
             .find(|entry| entry.sequence == sequence)
             .ok_or_else(
                 || DataLayerM5VectorIntegrationError::EmbeddingSequenceNotFound {
-                    owner_did: owner_did.to_owned(),
+                    owner_did: owner_did_key.to_owned(),
                     sequence,
                 },
             )?;
@@ -892,20 +900,9 @@ fn validate_non_empty(
     Ok(())
 }
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM5VectorIntegrationError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM5VectorIntegrationError::InvalidDid(
-            value.to_owned(),
-        ));
-    }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM5VectorIntegrationError::InvalidDid(
-            value.to_owned(),
-        ));
-    }
-    Ok(())
+fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM5VectorIntegrationError> {
+    KamnDid::parse(value)
+        .map_err(|_| DataLayerM5VectorIntegrationError::InvalidDid(value.to_owned()))
 }
 
 fn map_agent_did_error_to_m5(error: AgentDidError) -> DataLayerM5VectorIntegrationError {

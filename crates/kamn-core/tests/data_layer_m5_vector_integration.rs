@@ -457,3 +457,55 @@ fn spec_c11_retention_due_projection_aligns_with_content_lifecycle_windows() {
         ))
     ));
 }
+
+#[test]
+fn spec_c12_retention_due_accepts_canonical_equivalent_owner_did() {
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    registry
+        .append(DataLayerM5EmbeddingRecordInput {
+            embedding_id: "embed-m5-retention-canonical".to_owned(),
+            message_id: "msg-m5-retention-canonical".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            agent_did: "kamn:did:agent:alpha".to_owned(),
+            retention_class: ContentRetentionClass::ShortLived,
+            model_id: "text-embedding-3-large".to_owned(),
+            vector_encrypted: vec![0xde, 0xad, 0xbe, 0xef],
+            vector_plaintext: Some(vec![0.3, 0.4, 0.3]),
+            created_at_epoch_seconds: 1_708_300_000,
+        })
+        .expect("embedding should append");
+
+    let due = registry.retention_due_for_owner("  kamn:did:owner:alpha  ", 1_708_500_000);
+    assert!(
+        due.is_ok(),
+        "canonical-equivalent owner DID should resolve retention owner scope"
+    );
+}
+
+#[test]
+fn spec_c13_semantic_query_accepts_canonical_equivalent_owner_did() {
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    registry
+        .append(vector_input(
+            "embed-m5-canonical-query",
+            "msg-m5-canonical-query",
+            "kamn:did:owner:alpha",
+            "kamn:did:agent:alpha",
+            Some(vec![1.0, 0.0, 0.0]),
+        ))
+        .expect("embedding should append");
+
+    let results = registry.semantic_query(DataLayerM5SemanticQuery {
+        owner_did: "  kamn:did:owner:alpha  ".to_owned(),
+        query_vector: vec![1.0, 0.0, 0.0],
+        limit: Some(1),
+    });
+    assert!(
+        results.is_ok(),
+        "canonical-equivalent owner DID should resolve semantic query scope"
+    );
+}
