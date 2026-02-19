@@ -81,6 +81,23 @@ fn spec_c02_did_authentication_rejects_invalid_identity_or_credential_inputs() {
 }
 
 #[test]
+fn spec_c02b_did_authentication_rejects_non_canonical_agent_did_shapes() {
+    let service = DataLayerM2DidSessionService::new(900).expect("service should initialize");
+
+    let uppercase_agent_segment = service.authenticate(DataLayerM2DidAuthRequest {
+        requester_did: "kamn:did:agent:Sender-1".to_owned(),
+        challenge: "nonce-123".to_owned(),
+        credential: "sig:kamn:did:agent:Sender-1:nonce-123".to_owned(),
+        issued_at_epoch_seconds: 1_708_160_000,
+        ttl_seconds: 300,
+    });
+    assert!(matches!(
+        uppercase_agent_segment,
+        Err(DataLayerM2GatewayError::InvalidDid(_))
+    ));
+}
+
+#[test]
 fn spec_c03_abac_message_visibility_matrix_is_fail_closed_for_unrelated_requesters() {
     let abac = seeded_abac();
 
@@ -139,6 +156,33 @@ fn spec_c03_abac_message_visibility_matrix_is_fail_closed_for_unrelated_requeste
             reason_code: DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED,
         }
     );
+}
+
+#[test]
+fn spec_c03b_abac_rejects_non_canonical_agent_did_fields() {
+    let abac = seeded_abac();
+    let mut invalid_scope = message_scope(None);
+    invalid_scope.sender_did = "kamn:did:agent:Sender-1".to_owned();
+
+    let invalid_sender = abac.authorize_message_visibility(
+        "kamn:did:agent:recipient-1",
+        DataLayerM2ActorRole::Agent,
+        &invalid_scope,
+    );
+    assert!(matches!(
+        invalid_sender,
+        Err(DataLayerM2GatewayError::InvalidDid(_))
+    ));
+
+    let invalid_agent_requester = abac.authorize_message_visibility(
+        "kamn:did:owner:sender",
+        DataLayerM2ActorRole::Agent,
+        &message_scope(None),
+    );
+    assert!(matches!(
+        invalid_agent_requester,
+        Err(DataLayerM2GatewayError::InvalidDid(_))
+    ));
 }
 
 #[test]
