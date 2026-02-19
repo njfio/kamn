@@ -349,6 +349,19 @@ Deterministic stress matrix markers:
 - `daemon_os_signal_stress_profile_runtime_budget_reason_code=runtime_budget_exceeded`
 - `daemon_os_signal_stress_profile_quarantine_reason_code=quarantine_reference_present_without_followup`
 
+Docs parity and remediation markers:
+
+- `overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1`
+- `overload_docs_parity_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success`
+- `overload_docs_parity_remediation_map_version=v1`
+- `overload_docs_parity_remediation.runtime_budget_exceeded=reduce iterations or increase max-seconds budget after validating reproducer runtime`
+- `overload_docs_parity_remediation.matrix_failure_threshold_exceeded=triage failing iteration artifacts and rerun reproducer before promotion`
+- `overload_docs_parity_remediation.quarantine_registry_missing=restore .ci/flaky-tests.txt or pass an explicit --registry-file`
+- `overload_docs_parity_remediation.quarantine_reference_present_without_followup=add --quarantine-followup-issue #<id> or retire stale quarantine entries`
+- `overload_docs_parity_remediation.matrix_failures_within_threshold=track flaky rows and keep threshold + waiver evidence attached to release review`
+- `overload_docs_parity_remediation.stable_success_with_quarantine_followup=keep follow-up issue open until quarantine references are retired`
+- `overload_docs_parity_remediation.stable_success=no action required; retain report artifact link in release checklist`
+
 Validation commands:
 
 - `bash scripts/ci/run_daemon_os_signal_stress_matrix.sh --iterations 10 --attempts-per-iteration 1 --max-seconds 600 --reproducer-max-seconds 180 --failure-threshold 0 --artifact-dir /tmp/daemon-os-signal-stress-matrix-artifacts --output-json /tmp/daemon-os-signal-stress-matrix-report.json`
@@ -357,6 +370,7 @@ Validation commands:
 Regression marker:
 
 - `Regression: #4094`
+- `Regression: #4097`
 
 ## Upgrade Compatibility Marker Matrix Controls (Issue #4181)
 

@@ -113,6 +113,43 @@ fn service_api_ops_configuration_contains_fairness_starvation_fixture_controls()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_overload_docs_parity_remediation_controls() {
+    assert!(DOC.contains("## Daemon OS-Signal Stress Matrix Overload Profiles (Issue #4094)"));
+    assert!(DOC.contains(
+        "daemon_os_signal_stress_matrix_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success"
+    ));
+    assert!(DOC.contains("overload_docs_parity_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.runtime_budget_exceeded=reduce iterations or increase max-seconds budget after validating reproducer runtime"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.matrix_failure_threshold_exceeded=triage failing iteration artifacts and rerun reproducer before promotion"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.quarantine_registry_missing=restore .ci/flaky-tests.txt or pass an explicit --registry-file"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.quarantine_reference_present_without_followup=add --quarantine-followup-issue #<id> or retire stale quarantine entries"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.matrix_failures_within_threshold=track flaky rows and keep threshold + waiver evidence attached to release review"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.stable_success_with_quarantine_followup=keep follow-up issue open until quarantine references are retired"
+    ));
+    assert!(DOC.contains(
+        "overload_docs_parity_remediation.stable_success=no action required; retain report artifact link in release checklist"
+    ));
+    assert!(DOC.contains("Regression: #4097"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls() {
     assert!(DOC.contains(
         "## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)"
