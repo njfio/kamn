@@ -154,16 +154,25 @@ Deterministic fail-closed signer-config reasons:
 - `fallback_signer_secret_checkpoint_reason_mismatch`
 - `fallback_signer_secret_remediation_missing`
 
+Runtime signer key-source policy taxonomy markers:
+
+- `runtime_signer_key_source_policy_reason_codes_csv=production_signer_key_source_env_local_forbidden,fallback_signer_secret_present_violation`
+- `production_signer_key_source_env_local_forbidden`
+- `fallback_signer_secret_present_violation`
+
 Deterministic operator-facing remediation/error expectations:
 
 - missing signer material rejects with message `signer secret env is required for selected profile`.
 - fallback signer secret rejects with message `fallback signer secret env must not be set` and remediation
   marker `remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`.
+- runtime signer key-source policy rejects fallback signer secret env before signer preflight execution
+  with remediation `unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`.
 
 Validation commands:
 
 - `bash scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh`
 - `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
+- `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code -- --exact --nocapture`
 - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 
 Regression markers:
