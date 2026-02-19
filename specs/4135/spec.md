@@ -1,7 +1,7 @@
 # Issue #4135 Spec
 
 - Title: Subtask: add red proptest cases for transition legality and invariant preservation
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md
