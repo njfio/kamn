@@ -33,7 +33,10 @@ fn sample_consensus_input() -> BlockConsensusRoundInput {
         listener_event_id: "event-1".to_owned(),
         listener_event_sequence: 1,
         outbound_action_id: "outbound-1".to_owned(),
-        listener_votes: vec![("kamn:did:listener:alpha".to_owned(), "att-1".to_owned())],
+        listener_votes: vec![(
+            "kamn:did:agent:listener-alpha".to_owned(),
+            "att-1".to_owned(),
+        )],
         approver_votes: vec![(
             "kamn:did:agent:approver-alpha".to_owned(),
             "att-1".to_owned(),
