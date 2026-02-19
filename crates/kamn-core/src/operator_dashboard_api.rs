@@ -451,22 +451,6 @@ impl From<ReputationError> for OperatorDashboardApiError {
     }
 }
 
-impl OperatorDashboardApiError {
-    /// Stable reason taxonomy for dashboard API failures.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::InvalidPageLimit(_) => "operator_dashboard_api_invalid_page_limit",
-            Self::InvalidPaginationCursor(_) => "operator_dashboard_api_invalid_pagination_cursor",
-            Self::EmptyField(_) => "operator_dashboard_api_empty_field",
-            Self::InvalidDid { reason_code, .. } => reason_code,
-            Self::Hierarchy(_) => "operator_dashboard_api_hierarchy_error",
-            Self::Message(_) => "operator_dashboard_api_message_error",
-            Self::Task(_) => "operator_dashboard_api_task_error",
-            Self::Reputation(_) => "operator_dashboard_api_reputation_error",
-        }
-    }
-}
-
 fn parse_agent_did(
     value: &str,
     field: &'static str,

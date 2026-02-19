@@ -370,26 +370,6 @@ impl fmt::Display for OperatorBindingError {
 
 impl std::error::Error for OperatorBindingError {}
 
-impl OperatorBindingError {
-    /// Stable reason taxonomy for operator binding errors.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::EmptyPermissions => "operator_binding_empty_permissions",
-            Self::EmptyProofField(_) => "operator_binding_empty_proof_field",
-            Self::InvalidAgentDid { reason_code, .. } => reason_code,
-            Self::InvalidOperatorDid { reason_code, .. } => reason_code,
-            Self::InvalidProofType(_) => "operator_binding_invalid_proof_type",
-            Self::ProofVerificationMethodMismatch { .. } => {
-                "operator_binding_proof_verification_method_mismatch"
-            }
-            Self::DuplicateBinding { .. } => "operator_binding_duplicate_binding",
-            Self::MissingBinding { .. } => "operator_binding_missing_binding",
-            Self::RevokedBinding { .. } => "operator_binding_revoked_binding",
-            Self::UnauthorizedAction { .. } => "operator_binding_unauthorized_action",
-        }
-    }
-}
-
 fn parse_agent_did(
     value: &str,
     field: &'static str,

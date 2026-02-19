@@ -330,29 +330,6 @@ fn validate_offer_shape(offer: &PaymentOffer) -> Result<(), TaskPaymentError> {
     Ok(())
 }
 
-impl TaskPaymentError {
-    /// Stable reason taxonomy for task payment failures.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::DuplicateConfirm(_) => "task_payment_duplicate_confirm",
-            Self::DuplicateOffer(_) => "task_payment_duplicate_offer",
-            Self::EmptyField(_) => "task_payment_empty_field",
-            Self::Escrow(_) => "task_payment_escrow_error",
-            Self::EscrowMismatch { .. } => "task_payment_escrow_mismatch",
-            Self::InvalidDid { reason_code, .. } => reason_code,
-            Self::InvalidOfferAmount(_) => "task_payment_invalid_offer_amount",
-            Self::PayerRequesterMismatch { .. } => "task_payment_payer_requester_mismatch",
-            Self::PayeeAssigneeMismatch { .. } => "task_payment_payee_assignee_mismatch",
-            Self::OfferExceedsEscrow { .. } => "task_payment_offer_exceeds_escrow",
-            Self::TaskLookup(_) => "task_payment_task_lookup_error",
-            Self::TaskMissingAssignee(_) => "task_payment_task_missing_assignee",
-            Self::TaskNotCompleted { .. } => "task_payment_task_not_completed",
-            Self::UnauthorizedConfirmer { .. } => "task_payment_unauthorized_confirmer",
-            Self::UnknownOffer(_) => "task_payment_unknown_offer",
-        }
-    }
-}
-
 fn parse_agent_did(
     value: &str,
     field: &'static str,

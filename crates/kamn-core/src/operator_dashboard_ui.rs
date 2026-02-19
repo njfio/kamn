@@ -503,19 +503,6 @@ impl fmt::Display for OperatorDashboardUiError {
 
 impl std::error::Error for OperatorDashboardUiError {}
 
-impl OperatorDashboardUiError {
-    /// Stable reason taxonomy for dashboard UI validation failures.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::EmptyAgentKey { .. } => "operator_dashboard_ui_empty_agent_key",
-            Self::EmptyMessageRecipients(_) => "operator_dashboard_ui_empty_message_recipients",
-            Self::InvalidDid { reason_code, .. } => reason_code,
-            Self::InvalidReputationRate { .. } => "operator_dashboard_ui_invalid_reputation_rate",
-            Self::InvalidAuditTimestamp { .. } => "operator_dashboard_ui_invalid_audit_timestamp",
-        }
-    }
-}
-
 fn validate_rate(
     field: &'static str,
     agent_did: &str,

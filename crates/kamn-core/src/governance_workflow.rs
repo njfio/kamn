@@ -631,37 +631,6 @@ fn require_non_empty(field: &'static str, value: &str) -> Result<(), GovernanceW
     Ok(())
 }
 
-impl GovernanceWorkflowError {
-    /// Stable reason taxonomy for governance workflow failures.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::EmptyField(_) => "governance_workflow_empty_field",
-            Self::InvalidDid { reason_code, .. } => reason_code,
-            Self::InvalidTimestamp(_) => "governance_workflow_invalid_timestamp",
-            Self::InvalidDeadline { .. } => "governance_workflow_invalid_deadline",
-            Self::InvalidQuorum(_) => "governance_workflow_invalid_quorum",
-            Self::InvalidParameterTargetVersion(_) => {
-                "governance_workflow_invalid_parameter_target_version"
-            }
-            Self::InvalidParameterRange { .. } => "governance_workflow_invalid_parameter_range",
-            Self::UnknownParameterKey(_) => "governance_workflow_unknown_parameter_key",
-            Self::ParameterRangeOutsidePolicy { .. } => {
-                "governance_workflow_parameter_range_outside_policy"
-            }
-            Self::ParameterUnsupportedForVersion { .. } => {
-                "governance_workflow_parameter_unsupported_for_version"
-            }
-            Self::ParameterOutOfBounds { .. } => "governance_workflow_parameter_out_of_bounds",
-            Self::DuplicateProposal(_) => "governance_workflow_duplicate_proposal",
-            Self::ProposalNotFound(_) => "governance_workflow_proposal_not_found",
-            Self::DuplicateVote { .. } => "governance_workflow_duplicate_vote",
-            Self::ProposalClosed { .. } => "governance_workflow_proposal_closed",
-            Self::ProposalNotApproved { .. } => "governance_workflow_proposal_not_approved",
-            Self::AlreadyExecuted(_) => "governance_workflow_already_executed",
-        }
-    }
-}
-
 fn parse_agent_did(
     value: &str,
     field: &'static str,

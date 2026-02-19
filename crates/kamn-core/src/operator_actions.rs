@@ -219,16 +219,6 @@ impl From<OperatorBindingError> for OperatorActionServiceError {
     }
 }
 
-impl OperatorActionServiceError {
-    /// Stable reason taxonomy for permissioned operator action failures.
-    pub fn reason_code(&self) -> &'static str {
-        match self {
-            Self::EmptyField(_) => "operator_actions_empty_field",
-            Self::Binding(error) => error.reason_code(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{OperatorActionServiceError, PermissionedOperatorActionService};
