@@ -46,11 +46,11 @@ fn functional_block_pipeline_commits_after_listener_and_approver_quorum() {
             outbound_action_id: "outbound-action-1".to_owned(),
             listener_votes: vec![
                 (
-                    "kamn:did:listener:alpha".to_owned(),
+                    "kamn:did:agent:listener-alpha".to_owned(),
                     "listen-att-1".to_owned(),
                 ),
                 (
-                    "kamn:did:listener:beta".to_owned(),
+                    "kamn:did:agent:listener-beta".to_owned(),
                     "listen-att-2".to_owned(),
                 ),
             ],
@@ -97,7 +97,7 @@ fn regression_block_pipeline_rejects_payload_digest_mismatch_before_commit() {
         listener_event_sequence: 1,
         outbound_action_id: "outbound-action-1".to_owned(),
         listener_votes: vec![(
-            "kamn:did:listener:alpha".to_owned(),
+            "kamn:did:agent:listener-alpha".to_owned(),
             "listen-att-1".to_owned(),
         )],
         approver_votes: vec![(
