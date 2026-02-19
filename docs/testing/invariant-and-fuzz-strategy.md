@@ -64,6 +64,13 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - task terminal-state fail-closed behavior under parallel completion attempts
   - escrow invalid-transition rejection under parallel dispute attempts
   - peer lifecycle invalid-edge rejection under parallel handshake attempts
+- Transition-legality property suite sources:
+  - `crates/kamn-core/tests/task_escrow_proptest_invariants.rs`
+  - `crates/kamn-core/tests/peer_lifecycle_proptest_invariants.rs`
+- Transition rejection reason-code invariants covered by the property lanes:
+  - `task_transition_invalid_edge`
+  - `escrow_transition_invalid`
+  - `runtime_peer_transition_invalid`
 
 ## Evidence and Policy Contracts
 
