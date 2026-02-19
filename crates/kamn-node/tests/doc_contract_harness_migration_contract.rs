@@ -20,6 +20,10 @@ fn regression_doc_contract_harness_migrates_selected_legacy_doc_tests() {
         "tests/kolme_devnet_ops_docs.rs",
         "tests/node_module_map_docs.rs",
         "tests/observability_streaming_docs.rs",
+        "tests/kolme_runtime_commit_docs.rs",
+        "tests/runtime_processor_ha_docs.rs",
+        "tests/r42_api_shell_surface_audit_docs.rs",
+        "tests/signer_migration_parity_docs_contract.rs",
     ];
 
     for relative in migrated_files {

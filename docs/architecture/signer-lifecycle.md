@@ -90,7 +90,7 @@ Primary fail-closed signer reason codes include:
   - `matrix_case=secondary_managed_external_disallowed`
 - Guard commands:
   - `cargo test -p kamn-node main_tests::signer_tests::functional_signer_migration_profile_key_source_parity_matrix -- --exact --nocapture`
-  - `cargo test -p kamn-node --test signer_migration_parity_docs_contract -- --nocapture`
+  - `cargo test -p kamn-node --test node_runtime_cli_docs migration_signer_lifecycle_docs_declares_parity_guard_commands -- --exact --nocapture`
 
 ## Testing Coverage
 
