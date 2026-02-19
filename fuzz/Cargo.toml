@@ -1,0 +1,29 @@
+[package]
+name = "kamn-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+kamn-core = { path = "../crates/kamn-core" }
+libfuzzer-sys = "0.4"
+
+[[bin]]
+name = "message_envelope_parser"
+path = "fuzz_targets/message_envelope_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "did_parser"
+path = "fuzz_targets/did_parser.rs"
+test = false
+doc = false
+bench = false

@@ -1,0 +1,1 @@
+msg-001|kamn:message:v1|kamn:did:agent:seed-sender-1|kamn:did:agent:seed-recipient-1|2026-02-19T00:00:00Z|2026-02-19T00:10:00Z|Request|normal|application/json|kamn:did:agent:seed-recipient-1#key-1|kamn:did:agent:seed-sender-1#keys-1|proof-seed-1|msg=hello;status=ok|attachment-1|text/plain|ipfs://seed-envelope-1

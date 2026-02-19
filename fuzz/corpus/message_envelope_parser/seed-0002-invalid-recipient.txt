@@ -1,0 +1,1 @@
+msg-002|kamn:message:v1|kamn:did:agent:seed-sender-2|did:example:recipient|2026-02-19T00:00:00Z|2026-02-19T00:10:00Z|Request|normal|application/json|kamn:did:agent:seed-recipient-2#key-1|kamn:did:agent:seed-sender-2#keys-1|proof-seed-2|msg=invalid-recipient
