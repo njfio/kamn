@@ -88,6 +88,13 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("deterministic peer lifecycle phase summaries"));
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
     assert!(DOC.contains("run_concurrency_state_mutation_deep_lane.sh"));
+    assert!(DOC.contains("peer lifecycle property-run budget: CASES=192, MAX_SEQUENCE_LEN=40."));
+    assert!(DOC.contains(
+        "anti-churn replay envelope: invalid event replay repeats are bounded to 1..=8 attempts."
+    ));
+    assert!(DOC.contains(
+        "deterministic peer lifecycle failure replay uses fixed seed lanes (LEGALITY_SEED, IDEMPOTENCE_SEED, REPLAY_SEED)."
+    ));
 }
 
 #[test]

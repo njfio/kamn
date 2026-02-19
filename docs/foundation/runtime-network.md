@@ -351,6 +351,9 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `Connecting|Active|Degraded` + `Disconnect` -> `Disconnected`
 - Invalid transitions return `RuntimeLifecycleError::InvalidTransition`.
 - Empty peer IDs are rejected with `RuntimeLifecycleError::InvalidPeerId`.
+- peer lifecycle property-run budget: CASES=192, MAX_SEQUENCE_LEN=40.
+- anti-churn replay envelope: invalid event replay repeats are bounded to 1..=8 attempts.
+- deterministic peer lifecycle failure replay uses fixed seed lanes (LEGALITY_SEED, IDEMPOTENCE_SEED, REPLAY_SEED).
 
 ## Authenticated Peer Transport Framing Rules
 - `AuthenticatedPeerFrame` enforces deterministic wire fields:

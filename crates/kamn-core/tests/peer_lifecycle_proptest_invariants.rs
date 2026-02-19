@@ -8,6 +8,7 @@ use proptest::test_runner::{RngAlgorithm, RngSeed};
 
 const CASES: u32 = 192;
 const MAX_SEQUENCE_LEN: usize = 40;
+const ANTI_CHURN_REPEAT_MAX: u8 = 8;
 const LEGALITY_SEED: u64 = 0x3533_0000_0000_0001;
 const IDEMPOTENCE_SEED: u64 = 0x3533_0000_0000_0002;
 const REPLAY_SEED: u64 = 0x3533_0000_0000_0003;
@@ -64,6 +65,22 @@ fn regression_peer_lifecycle_seed_corpus_is_tracked() {
     let corpus =
         include_str!("../proptest-regressions/tests/peer_lifecycle_proptest_invariants.txt");
     assert!(corpus.contains("Seeds for failure cases"));
+}
+
+#[test]
+fn unit_peer_lifecycle_proptest_budget_envelope_is_bounded() {
+    assert!(
+        CASES <= 256,
+        "peer lifecycle property case budget must stay bounded for deterministic CI runtime"
+    );
+    assert!(
+        MAX_SEQUENCE_LEN <= 40,
+        "peer lifecycle transition sequence budget must stay bounded for deterministic CI runtime"
+    );
+    assert!(
+        ANTI_CHURN_REPEAT_MAX <= 8,
+        "anti-churn replay repeats must stay bounded for deterministic CI runtime"
+    );
 }
 
 proptest! {
@@ -160,7 +177,7 @@ proptest! {
     fn integration_peer_lifecycle_proptest_invalid_event_replays_are_idempotent(
         prefix in vec(peer_event_strategy(), 0..(MAX_SEQUENCE_LEN + 1)),
         repeated_event in peer_event_strategy(),
-        repeats in 1_u8..=8_u8
+        repeats in 1_u8..=ANTI_CHURN_REPEAT_MAX
     ) {
         let mut lifecycle = PeerLifecycle::new("peer-proptest-idempotence").expect("peer should initialize");
         for event in prefix {
