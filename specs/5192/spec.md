@@ -25,7 +25,7 @@ Out:
 
 ## Acceptance Criteria
 - AC-1: The four migration inventory suites are represented in a shared data-driven harness matrix with deterministic case IDs.
-- AC-2: The superseded inventory files are removed and `kamn-node` test file count decreases.
+- AC-2: The superseded inventory files are removed and covered by lightweight migration-contract shards so shell-vs-rust test-file ratio non-regression remains compliant.
 - AC-3: Targeted docs-contract lanes remain green after migration and command-marker updates.
 
 ## Migration Inventory
@@ -38,7 +38,7 @@ Out:
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
 | C-01 | AC-1 | Conformance | Shared harness source | New matrix contains inventory docs and required marker sets with stable case IDs |
-| C-02 | AC-2 | Regression | Git-tracked `kamn-node/tests` files | All four inventory files are removed; net test file count decreases |
+| C-02 | AC-2 | Regression | Git-tracked migration inventory + ratio policy lane | Four inventory files are removed, replacement migration-contract shards remain, and ratio non-regression gate stays green |
 | C-03 | AC-3 | Functional | Targeted docs-contract test runs | Shared harness and migration contract suites pass with updated command markers |
 
 ## Test Mapping
@@ -47,6 +47,7 @@ Out:
 - C-03 -> `cargo test -p kamn-node --test architecture_navigation_docs`
 
 ## Success Metrics
-- `kamn-node/tests` file count decreases by at least 4.
+- Four superseded inventory suites are removed from `kamn-node/tests`.
+- Shell-vs-rust test-file ratio policy remains non-regressive (`shell_test_surface_ratio_policy` green).
 - No marker parity regressions in migrated docs sections.
 - Shell LOC delta remains `0`.
