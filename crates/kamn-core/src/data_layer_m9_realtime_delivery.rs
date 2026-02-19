@@ -4,6 +4,7 @@
 //! owner-scoped dispatch acknowledgements, scoped presence visibility, and
 //! queue-cap backpressure escalation markers.
 
+use crate::{AntiSpamDecision, AntiSpamEngine, AntiSpamRejection, ChannelStore};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -25,6 +26,24 @@ pub const DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE: &str = "m9_realtime_owne
 /// Stable reason marker for scoped-presence visibility denials.
 pub const DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE: &str =
     "m9_realtime_presence_visibility_denied";
+/// Stable reason marker for channel-membership authorization denials.
+pub const DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE: &str =
+    "m9_realtime_channel_membership_denied";
+/// Stable reason marker for channel policy query failures.
+pub const DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE: &str =
+    "m9_realtime_channel_policy_query_failed";
+/// Stable reason marker for anti-spam insufficient deposit denials.
+pub const DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE: &str =
+    "m9_realtime_anti_spam_insufficient_deposit";
+/// Stable reason marker for anti-spam rate-limit denials.
+pub const DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE: &str =
+    "m9_realtime_anti_spam_rate_limited";
+/// Stable reason marker for anti-spam suspension denials.
+pub const DATA_LAYER_M9_ANTI_SPAM_SUSPENDED_REASON_CODE: &str =
+    "m9_realtime_anti_spam_sender_suspended";
+/// Stable reason marker for anti-spam duplicate-message denials.
+pub const DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE: &str =
+    "m9_realtime_anti_spam_duplicate_message_id";
 
 /// Dispatch acknowledgement status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +69,21 @@ pub struct DataLayerM9DispatchRequest {
     pub message_id: String,
     /// Dispatch timestamp in epoch seconds.
     pub dispatched_at_epoch_seconds: u64,
+}
+
+/// Channel dispatch authorization request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM9ChannelDispatchAuthorizationRequest {
+    /// Requester owner DID.
+    pub requester_owner_did: String,
+    /// Target owner DID.
+    pub owner_did: String,
+    /// Channel identifier used for membership validation.
+    pub channel_id: String,
+    /// Sender agent DID.
+    pub sender_agent_did: String,
+    /// Recipient agent DID.
+    pub recipient_agent_did: String,
 }
 
 /// Dispatch outcome projection.
@@ -320,6 +354,92 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         })
     }
 
+    /// Authorizes channel-scoped dispatch by enforcing sender/recipient membership.
+    pub fn authorize_channel_dispatch(
+        &self,
+        channel_store: &ChannelStore,
+        request: DataLayerM9ChannelDispatchAuthorizationRequest,
+    ) -> Result<(), DataLayerM9RealtimeDeliveryError> {
+        authorize_owner_scope(
+            request.requester_owner_did.as_str(),
+            request.owner_did.as_str(),
+        )?;
+        validate_non_empty(request.channel_id.as_str(), "channel_id")?;
+        validate_kamn_did(request.sender_agent_did.as_str())?;
+        validate_kamn_did(request.recipient_agent_did.as_str())?;
+
+        let sender_member = channel_store
+            .is_member(
+                request.channel_id.as_str(),
+                request.sender_agent_did.as_str(),
+            )
+            .map_err(
+                |error| DataLayerM9RealtimeDeliveryError::ChannelPolicyCheckFailed {
+                    reason_code: DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
+                    detail: error.to_string(),
+                },
+            )?;
+        let recipient_member = channel_store
+            .is_member(
+                request.channel_id.as_str(),
+                request.recipient_agent_did.as_str(),
+            )
+            .map_err(
+                |error| DataLayerM9RealtimeDeliveryError::ChannelPolicyCheckFailed {
+                    reason_code: DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
+                    detail: error.to_string(),
+                },
+            )?;
+
+        if !sender_member || !recipient_member {
+            return Err(DataLayerM9RealtimeDeliveryError::ChannelMembershipDenied {
+                reason_code: DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Dispatches one message after channel-membership and anti-spam admission controls.
+    pub fn dispatch_message_with_controls(
+        &mut self,
+        channel_store: &ChannelStore,
+        anti_spam: &mut AntiSpamEngine,
+        channel_id: &str,
+        request: DataLayerM9DispatchRequest,
+    ) -> Result<DataLayerM9DispatchOutcome, DataLayerM9RealtimeDeliveryError> {
+        self.authorize_channel_dispatch(
+            channel_store,
+            DataLayerM9ChannelDispatchAuthorizationRequest {
+                requester_owner_did: request.requester_owner_did.clone(),
+                owner_did: request.owner_did.clone(),
+                channel_id: channel_id.to_owned(),
+                sender_agent_did: request.sender_agent_did.clone(),
+                recipient_agent_did: request.recipient_agent_did.clone(),
+            },
+        )?;
+
+        let anti_spam_decision = anti_spam
+            .evaluate(
+                request.sender_agent_did.as_str(),
+                request.message_id.as_str(),
+                request.dispatched_at_epoch_seconds,
+            )
+            .map_err(
+                |error| DataLayerM9RealtimeDeliveryError::AntiSpamEngineError {
+                    detail: error.to_string(),
+                },
+            )?;
+        match anti_spam_decision {
+            AntiSpamDecision::Accepted => self.dispatch_message(request),
+            AntiSpamDecision::Rejected(rejection) => {
+                Err(DataLayerM9RealtimeDeliveryError::AntiSpamAdmissionDenied {
+                    reason_code: anti_spam_rejection_reason_code(&rejection),
+                })
+            }
+        }
+    }
+
     /// Dispatches one message and computes deterministic ACK outcome.
     pub fn dispatch_message(
         &mut self,
@@ -432,6 +552,28 @@ pub enum DataLayerM9RealtimeDeliveryError {
         /// Stable reason marker.
         reason_code: &'static str,
     },
+    /// Channel policy query failed.
+    ChannelPolicyCheckFailed {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable string detail from channel policy module.
+        detail: String,
+    },
+    /// Channel membership validation denied sender/recipient scope.
+    ChannelMembershipDenied {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// Anti-spam admission denied dispatch.
+    AntiSpamAdmissionDenied {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// Anti-spam engine failed to evaluate input.
+    AntiSpamEngineError {
+        /// Stable string detail from anti-spam module.
+        detail: String,
+    },
     /// Connected-since and heartbeat timestamps were ordered incorrectly.
     InvalidTimestampOrder {
         /// Connection start timestamp.
@@ -455,6 +597,21 @@ impl fmt::Display for DataLayerM9RealtimeDeliveryError {
             }
             Self::PresenceVisibilityDenied { reason_code } => {
                 write!(f, "presence visibility denied: {reason_code}")
+            }
+            Self::ChannelPolicyCheckFailed {
+                reason_code,
+                detail,
+            } => {
+                write!(f, "channel policy check failed: {reason_code} ({detail})")
+            }
+            Self::ChannelMembershipDenied { reason_code } => {
+                write!(f, "channel membership denied: {reason_code}")
+            }
+            Self::AntiSpamAdmissionDenied { reason_code } => {
+                write!(f, "anti-spam admission denied: {reason_code}")
+            }
+            Self::AntiSpamEngineError { detail } => {
+                write!(f, "anti-spam engine evaluation failed: {detail}")
             }
             Self::InvalidTimestampOrder {
                 connected_since_epoch_seconds,
@@ -482,6 +639,21 @@ fn queue_escalation(first_full_at: Option<u64>, now_epoch_seconds: u64) -> (bool
     let extension =
         full_duration_seconds > DATA_LAYER_M9_BACKPRESSURE_ESCROW_EXTENSION_AFTER_SECONDS;
     (warning, extension)
+}
+
+fn anti_spam_rejection_reason_code(rejection: &AntiSpamRejection) -> &'static str {
+    match rejection {
+        AntiSpamRejection::InsufficientDeposit { .. } => {
+            DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE
+        }
+        AntiSpamRejection::RateLimitExceeded { .. } => {
+            DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE
+        }
+        AntiSpamRejection::SenderSuspended { .. } => DATA_LAYER_M9_ANTI_SPAM_SUSPENDED_REASON_CODE,
+        AntiSpamRejection::DuplicateMessageId(_) => {
+            DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE
+        }
+    }
 }
 
 fn validate_non_empty(

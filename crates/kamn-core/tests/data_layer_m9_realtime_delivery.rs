@@ -1,10 +1,14 @@
 use kamn_core::{
+    AntiSpamConfig, AntiSpamEngine, ChannelStore, DataLayerM9ChannelDispatchAuthorizationRequest,
     DataLayerM9DispatchAckStatus, DataLayerM9DispatchRequest, DataLayerM9PresenceConnectRequest,
     DataLayerM9PresenceQuery, DataLayerM9PresenceRelationshipRequest,
     DataLayerM9RealtimeDeliveryError, DataLayerM9RealtimeDeliveryRegistry,
     DATA_LAYER_M9_ACK_DELIVERED_REASON_CODE, DATA_LAYER_M9_ACK_QUEUED_QUEUE_FULL_REASON_CODE,
-    DATA_LAYER_M9_ACK_QUEUED_REASON_CODE, DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES,
-    DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_ACK_QUEUED_REASON_CODE, DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
+    DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
+    DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE,
+    DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
+    DATA_LAYER_M9_MAX_PENDING_PER_AGENT_MESSAGES, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
 };
 
@@ -385,4 +389,207 @@ fn spec_c08_duplicate_message_identifier_is_rejected_fail_closed() {
         Err(DataLayerM9RealtimeDeliveryError::DuplicateMessageId(value))
         if value == "m9-duplicate-id"
     ));
+}
+
+#[test]
+fn spec_c09_channel_dispatch_requires_sender_and_recipient_membership() {
+    let mut channel_store = ChannelStore::new();
+    channel_store
+        .create_direct(
+            "m9-direct-1",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+        )
+        .expect("direct channel should be created");
+    let registry = DataLayerM9RealtimeDeliveryRegistry::new();
+
+    registry
+        .authorize_channel_dispatch(
+            &channel_store,
+            DataLayerM9ChannelDispatchAuthorizationRequest {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+                channel_id: "m9-direct-1".to_owned(),
+                sender_agent_did: "kamn:did:agent:alpha-sender".to_owned(),
+                recipient_agent_did: "kamn:did:agent:alpha-recipient".to_owned(),
+            },
+        )
+        .expect("member sender/recipient should authorize");
+
+    let denied = registry.authorize_channel_dispatch(
+        &channel_store,
+        DataLayerM9ChannelDispatchAuthorizationRequest {
+            requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            channel_id: "m9-direct-1".to_owned(),
+            sender_agent_did: "kamn:did:agent:alpha-sender".to_owned(),
+            recipient_agent_did: "kamn:did:agent:alpha-intruder".to_owned(),
+        },
+    );
+    assert!(matches!(
+        denied,
+        Err(DataLayerM9RealtimeDeliveryError::ChannelMembershipDenied {
+            reason_code: DATA_LAYER_M9_CHANNEL_MEMBERSHIP_DENIED_REASON_CODE,
+        })
+    ));
+}
+
+#[test]
+fn spec_c10_dispatch_with_controls_maps_anti_spam_rejections_to_stable_reason_codes() {
+    let mut channel_store = ChannelStore::new();
+    channel_store
+        .create_direct(
+            "m9-direct-anti-spam",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+        )
+        .expect("direct channel should be created");
+
+    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+    let mut anti_spam = AntiSpamEngine::new(AntiSpamConfig::default())
+        .expect("default anti-spam config should initialize");
+
+    let insufficient_deposit = registry.dispatch_message_with_controls(
+        &channel_store,
+        &mut anti_spam,
+        "m9-direct-anti-spam",
+        dispatch_request(
+            "kamn:did:owner:alpha",
+            "kamn:did:owner:alpha",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+            "m9-anti-spam-insufficient",
+            1_708_560_100,
+        ),
+    );
+    assert!(matches!(
+        insufficient_deposit,
+        Err(DataLayerM9RealtimeDeliveryError::AntiSpamAdmissionDenied {
+            reason_code: DATA_LAYER_M9_ANTI_SPAM_INSUFFICIENT_DEPOSIT_REASON_CODE,
+        })
+    ));
+
+    anti_spam
+        .set_deposit("kamn:did:agent:alpha-sender", 50)
+        .expect("sender deposit should be accepted");
+
+    let _ = registry
+        .dispatch_message_with_controls(
+            &channel_store,
+            &mut anti_spam,
+            "m9-direct-anti-spam",
+            dispatch_request(
+                "kamn:did:owner:alpha",
+                "kamn:did:owner:alpha",
+                "kamn:did:agent:alpha-sender",
+                "kamn:did:agent:alpha-recipient",
+                "m9-anti-spam-duplicate",
+                1_708_560_101,
+            ),
+        )
+        .expect("first dispatch should pass anti-spam");
+
+    let duplicate = registry.dispatch_message_with_controls(
+        &channel_store,
+        &mut anti_spam,
+        "m9-direct-anti-spam",
+        dispatch_request(
+            "kamn:did:owner:alpha",
+            "kamn:did:owner:alpha",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+            "m9-anti-spam-duplicate",
+            1_708_560_102,
+        ),
+    );
+    assert!(matches!(
+        duplicate,
+        Err(DataLayerM9RealtimeDeliveryError::AntiSpamAdmissionDenied {
+            reason_code: DATA_LAYER_M9_ANTI_SPAM_DUPLICATE_MESSAGE_ID_REASON_CODE,
+        })
+    ));
+
+    let mut rate_limit_engine = AntiSpamEngine::new(AntiSpamConfig {
+        max_messages_per_window: 1,
+        window_seconds: 60,
+        minimum_sybil_deposit: 1,
+        suspension_violation_threshold: 2,
+        suspension_seconds: 60,
+    })
+    .expect("custom anti-spam config should initialize");
+    rate_limit_engine
+        .set_deposit("kamn:did:agent:alpha-sender", 10)
+        .expect("sender deposit should be accepted");
+    let _ = registry
+        .dispatch_message_with_controls(
+            &channel_store,
+            &mut rate_limit_engine,
+            "m9-direct-anti-spam",
+            dispatch_request(
+                "kamn:did:owner:alpha",
+                "kamn:did:owner:alpha",
+                "kamn:did:agent:alpha-sender",
+                "kamn:did:agent:alpha-recipient",
+                "m9-anti-spam-rate-a",
+                1_708_560_200,
+            ),
+        )
+        .expect("first message should pass strict rate policy");
+
+    let rate_limited = registry.dispatch_message_with_controls(
+        &channel_store,
+        &mut rate_limit_engine,
+        "m9-direct-anti-spam",
+        dispatch_request(
+            "kamn:did:owner:alpha",
+            "kamn:did:owner:alpha",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+            "m9-anti-spam-rate-b",
+            1_708_560_201,
+        ),
+    );
+    assert!(matches!(
+        rate_limited,
+        Err(DataLayerM9RealtimeDeliveryError::AntiSpamAdmissionDenied {
+            reason_code: DATA_LAYER_M9_ANTI_SPAM_RATE_LIMITED_REASON_CODE,
+        })
+    ));
+}
+
+#[test]
+fn spec_c11_dispatch_with_controls_allows_member_sender_when_anti_spam_accepts() {
+    let mut channel_store = ChannelStore::new();
+    channel_store
+        .create_direct(
+            "m9-direct-allow",
+            "kamn:did:agent:alpha-sender",
+            "kamn:did:agent:alpha-recipient",
+        )
+        .expect("direct channel should be created");
+    let mut anti_spam = AntiSpamEngine::new(AntiSpamConfig::default())
+        .expect("default anti-spam config should initialize");
+    anti_spam
+        .set_deposit("kamn:did:agent:alpha-sender", 100)
+        .expect("sender deposit should be accepted");
+
+    let mut registry = DataLayerM9RealtimeDeliveryRegistry::new();
+    let outcome = registry
+        .dispatch_message_with_controls(
+            &channel_store,
+            &mut anti_spam,
+            "m9-direct-allow",
+            dispatch_request(
+                "kamn:did:owner:alpha",
+                "kamn:did:owner:alpha",
+                "kamn:did:agent:alpha-sender",
+                "kamn:did:agent:alpha-recipient",
+                "m9-controls-allow",
+                1_708_560_300,
+            ),
+        )
+        .expect("combined controls dispatch should succeed");
+
+    assert_eq!(outcome.ack_status, DataLayerM9DispatchAckStatus::Queued);
+    assert_eq!(outcome.reason_code, DATA_LAYER_M9_ACK_QUEUED_REASON_CODE);
 }
