@@ -1,7 +1,7 @@
 # R42 API and Test-Surface Audit
 
-As of: 2026-02-19  
-Issue: #5181  
+As of: 2026-02-19
+Issue: #5181
 Milestone: `specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md`
 
 public_api_surface_audit_version=kamn.r42.public-api-surface-audit.v1
@@ -67,7 +67,7 @@ Top shell test lanes by file count:
 | `scripts/sdk` | 35 |
 | `scripts/deploy` | 18 |
 
-`cargo test`-invoking shell tests: `10` files (`scripts/ci` + `scripts/kolme`, `4477` LOC total).  
+`cargo test`-invoking shell tests: `10` files (`scripts/ci` + `scripts/kolme`, `4477` LOC total).
 Low-risk wave-1 migration candidates (small wrappers first):
 
 - `scripts/ci/test_makefile_command_surface_contract.sh` (61 LOC)
