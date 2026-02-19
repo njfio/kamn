@@ -43,4 +43,13 @@ fn doc_contains_notifications_reconnect_pacing_policy_markers() {
     assert!(DOC.contains("notifications_reconnect_backoff_sequence_ms=10,20,40,40,40"));
     assert!(DOC.contains("notifications_reconnect_backoff_cap_ms=40"));
     assert!(DOC.contains("notification reconnect attempts exhausted after <N> retries"));
+    assert!(DOC.contains(
+        "notifications_reconnect_terminal_reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "notifications_reconnect_terminal_reason_codes_csv=notifications_reconnect_attempt_budget_exhausted"
+    ));
+    assert!(DOC.contains(
+        "notifications_reconnect_terminal_reason_code=notifications_reconnect_attempt_budget_exhausted"
+    ));
 }

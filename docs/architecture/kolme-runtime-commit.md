@@ -70,8 +70,11 @@ Fail-closed behavior is preserved for continuous and single-cycle modes:
 - `notifications_reconnect_pacing_contract_version=v1`
 - `notifications_reconnect_backoff_sequence_ms=10,20,40,40,40`
 - `notifications_reconnect_backoff_cap_ms=40`
+- `notifications_reconnect_terminal_reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1`
+- `notifications_reconnect_terminal_reason_codes_csv=notifications_reconnect_attempt_budget_exhausted`
+- `notifications_reconnect_terminal_reason_code=notifications_reconnect_attempt_budget_exhausted`
 - terminal exhaustion reason:
-  - `notification reconnect attempts exhausted after <N> retries`
+  - `notification reconnect attempts exhausted after <N> retries;reason_code=notifications_reconnect_attempt_budget_exhausted;reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1`
 
 | Reconnect attempt | Delay before next attempt | Budget behavior |
 |---|---|---|

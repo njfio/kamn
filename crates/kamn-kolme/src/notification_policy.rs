@@ -174,9 +174,35 @@ pub fn is_valid_notifications_reconnect_budget(max_reconnect_attempts: u32) -> b
     max_reconnect_attempts > 0
 }
 
+const NOTIFICATIONS_RECONNECT_TERMINAL_REASON_TAXONOMY_VERSION: &str =
+    "kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1";
+const NOTIFICATIONS_RECONNECT_TERMINAL_REASON_CODE_ATTEMPT_BUDGET_EXHAUSTED: &str =
+    "notifications_reconnect_attempt_budget_exhausted";
+const NOTIFICATIONS_RECONNECT_TERMINAL_REASON_CODES_CSV: &str =
+    "notifications_reconnect_attempt_budget_exhausted";
+
+/// Returns reconnect terminal-failure reason taxonomy version marker.
+pub fn notifications_reconnect_terminal_reason_taxonomy_version() -> &'static str {
+    NOTIFICATIONS_RECONNECT_TERMINAL_REASON_TAXONOMY_VERSION
+}
+
+/// Returns reconnect terminal-failure reason code vocabulary marker.
+pub fn notifications_reconnect_terminal_reason_codes_csv() -> &'static str {
+    NOTIFICATIONS_RECONNECT_TERMINAL_REASON_CODES_CSV
+}
+
+/// Returns reconnect terminal reason code for retry-budget exhaustion.
+pub fn notifications_reconnect_exhausted_reason_code() -> &'static str {
+    NOTIFICATIONS_RECONNECT_TERMINAL_REASON_CODE_ATTEMPT_BUDGET_EXHAUSTED
+}
+
 /// Composes deterministic notifications reconnect exhaustion reason text.
 pub fn compose_notifications_reconnect_exhausted_reason(max_reconnect_attempts: u32) -> String {
-    format!("notification reconnect attempts exhausted after {max_reconnect_attempts} retries")
+    format!(
+        "notification reconnect attempts exhausted after {max_reconnect_attempts} retries;reason_code={};reason_taxonomy_version={}",
+        notifications_reconnect_exhausted_reason_code(),
+        notifications_reconnect_terminal_reason_taxonomy_version()
+    )
 }
 
 fn find_notification_string_field(

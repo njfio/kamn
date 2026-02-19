@@ -300,7 +300,12 @@ fn regression_notifications_consumer_fails_closed_on_decode_and_retry_exhaustion
     assert_eq!(
         retry_consumer.next_notification_event(),
         Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notification reconnect attempts exhausted after 2 retries".to_owned(),
+            reason: concat!(
+                "notification reconnect attempts exhausted after 2 retries",
+                ";reason_code=notifications_reconnect_attempt_budget_exhausted",
+                ";reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+            )
+            .to_owned(),
         })
     );
 }
@@ -331,7 +336,12 @@ fn regression_issue_1924_notifications_consumer_reconnect_exhausted_reason_remai
     assert_eq!(
         retry_consumer.next_notification_event(),
         Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notification reconnect attempts exhausted after 3 retries".to_owned(),
+            reason: concat!(
+                "notification reconnect attempts exhausted after 3 retries",
+                ";reason_code=notifications_reconnect_attempt_budget_exhausted",
+                ";reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+            )
+            .to_owned(),
         })
     );
 }
@@ -365,7 +375,12 @@ fn functional_notifications_consumer_reconnect_exhaustion_applies_deterministic_
     assert_eq!(
         result,
         Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notification reconnect attempts exhausted after 3 retries".to_owned(),
+            reason: concat!(
+                "notification reconnect attempts exhausted after 3 retries",
+                ";reason_code=notifications_reconnect_attempt_budget_exhausted",
+                ";reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+            )
+            .to_owned(),
         })
     );
     assert!(
