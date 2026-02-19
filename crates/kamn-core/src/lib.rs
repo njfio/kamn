@@ -80,6 +80,8 @@ pub mod discord_bridge;
 pub mod durable_guard_store;
 /// Escrow hold, release, refund, and dispute lifecycle contracts.
 pub mod escrow;
+/// Fairness/starvation policy contracts for deterministic overload-governance checks.
+pub mod fairness_policy;
 /// Governance proposal, voting, and execution lifecycle contracts.
 pub mod governance_workflow;
 /// Group sender-key distribution, rotation, and encryption integrity contracts.
@@ -501,6 +503,11 @@ pub use durable_guard_store::{
 pub use escrow::{
     EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
     EscrowSettlementOutcome, EscrowStatus, EscrowTransitionAction, EscrowTransitionEvidence,
+};
+pub use fairness_policy::{
+    evaluate_fairness_policy, fairness_policy_reason_codes_csv,
+    fairness_policy_reason_taxonomy_version, FairnessPolicyDecision, FairnessPolicyInput,
+    FairnessPolicyViolationReason,
 };
 pub use governance_workflow::{
     GovernanceExecutionRecord, GovernanceParameterChangeDraft, GovernanceProposalDraft,

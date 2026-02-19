@@ -87,6 +87,32 @@ fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_fairness_starvation_fixture_controls() {
+    assert!(DOC.contains("## Fairness Starvation Fixture and Checker Contracts (Issue #4092)"));
+    assert!(DOC.contains(
+        "fairness_fixture_matrix_path=fixtures/runtime/starvation_fairness_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "fairness_fixture_matrix_schema_version=kamn.runtime.fairness-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap"
+    ));
+    assert!(DOC.contains(
+        "fairness_fixture_columns=case_id|scope|window_seconds|active_weighted_share|max_weighted_share_gap|expected_status|expected_reason_code"
+    ));
+    assert!(DOC.contains("fairness_scope_unknown"));
+    assert!(DOC.contains("fairness_window_non_positive"));
+    assert!(DOC.contains("fairness_max_gap_non_positive"));
+    assert!(DOC.contains("fairness_weighted_share_exceeds_gap"));
+    assert!(DOC.contains("cargo test -p kamn-core --test fairness_policy_checker_contract"));
+    assert!(DOC.contains("Regression: #4092"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_protocol_mismatch_reason_mapping_controls() {
     assert!(DOC.contains(
         "## API Protocol Compliance Mismatch Reason Mapping (Issues #4266, #4270, #4271)"

@@ -307,6 +307,34 @@ Regression marker:
 
 - `Regression: #4090`
 
+## Fairness Starvation Fixture and Checker Contracts (Issue #4092)
+
+Fairness-starvation governance requires deterministic fixture coverage so checker behavior stays
+stable across overload policy changes.
+
+Deterministic fixture markers:
+
+- `fairness_fixture_matrix_path=fixtures/runtime/starvation_fairness_fixture_matrix.txt`
+- `fairness_fixture_matrix_schema_version=kamn.runtime.fairness-fixture-matrix.v1`
+- `fairness_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1`
+- `fairness_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap`
+- `fairness_fixture_columns=case_id|scope|window_seconds|active_weighted_share|max_weighted_share_gap|expected_status|expected_reason_code`
+
+Deterministic fail-closed fairness reasons:
+
+- `fairness_scope_unknown`
+- `fairness_window_non_positive`
+- `fairness_max_gap_non_positive`
+- `fairness_weighted_share_exceeds_gap`
+
+Validation command:
+
+- `cargo test -p kamn-core --test fairness_policy_checker_contract`
+
+Regression marker:
+
+- `Regression: #4092`
+
 ## Upgrade Compatibility Marker Matrix Controls (Issue #4181)
 
 Compatibility promotion checks require deterministic matrix validation across version-report and

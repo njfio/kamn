@@ -1,0 +1,11 @@
+# Deterministic fairness starvation fixture matrix.
+fairness_fixture_matrix_schema_version=kamn.runtime.fairness-fixture-matrix.v1
+fairness_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1
+fairness_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap
+case_id|scope|window_seconds|active_weighted_share|max_weighted_share_gap|expected_status|expected_reason_code
+control_plane_no_starvation|control_plane|60|10|25|pass|none
+tenant_interactive_balanced|tenant_interactive|60|18|20|pass|none
+bulk_replication_starved|bulk_replication|60|30|20|fail|fairness_weighted_share_exceeds_gap
+unknown_scope_fail_closed|unknown_scope|60|10|25|fail|fairness_scope_unknown
+invalid_window_fail_closed|control_plane|0|10|25|fail|fairness_window_non_positive
+invalid_gap_fail_closed|tenant_interactive|60|10|0|fail|fairness_max_gap_non_positive
