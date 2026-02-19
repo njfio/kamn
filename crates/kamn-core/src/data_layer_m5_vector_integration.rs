@@ -8,6 +8,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use crate::{AgentDid, AgentDidError, ContentLifecycleManager, ContentRetentionClass};
+
 /// Hash algorithm label used by M5 deterministic record digests.
 pub const DATA_LAYER_M5_HASH_ALGORITHM: &str = "sha256";
 /// Genesis marker used by owner-scoped embedding hash chains.
@@ -39,6 +41,10 @@ pub const DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE: &str =
 pub const DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE: &str = "m5_vector_recall_drift_stable";
 /// Recall drift degraded beyond configured guardrails.
 pub const DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE: &str = "m5_vector_recall_drift_degraded";
+/// Agent DID failed canonical parser validation.
+pub const DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE: &str = "m5_vector_invalid_agent_did";
+/// Retention due projection reason marker.
+pub const DATA_LAYER_M5_RETENTION_DUE_REASON_CODE: &str = "m5_vector_retention_due";
 
 /// Embedding storage/privacy mode contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +75,8 @@ pub struct DataLayerM5EmbeddingRecordInput {
     pub owner_did: String,
     /// Agent DID associated with this embedding.
     pub agent_did: String,
+    /// Retention class aligned with content lifecycle policy.
+    pub retention_class: ContentRetentionClass,
     /// Embedding model identifier.
     pub model_id: String,
     /// Encrypted embedding payload bytes.
@@ -90,6 +98,8 @@ pub struct DataLayerM5EmbeddingRecord {
     pub owner_did: String,
     /// Agent DID associated with this embedding.
     pub agent_did: String,
+    /// Retention class aligned with content lifecycle policy.
+    pub retention_class: ContentRetentionClass,
     /// Embedding model identifier.
     pub model_id: String,
     /// Encrypted embedding payload bytes.
@@ -147,6 +157,23 @@ pub struct DataLayerM5AnomalyEvaluationInput {
     pub lookback_window: Option<usize>,
     /// Distance threshold for anomaly classification.
     pub anomaly_distance_threshold: f32,
+}
+
+/// Retention-due projection row for one embedding.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM5RetentionDueCandidate {
+    /// Owner DID scope.
+    pub owner_did: String,
+    /// Embedding identifier.
+    pub embedding_id: String,
+    /// Source message identifier.
+    pub message_id: String,
+    /// Retention class used for due calculation.
+    pub retention_class: ContentRetentionClass,
+    /// Due timestamp in epoch seconds.
+    pub due_at_epoch_seconds: u64,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
 }
 
 /// Recall-drift evaluation input for owner-scoped semantic top-k outputs.
@@ -244,7 +271,7 @@ impl DataLayerM5EmbeddingRegistry {
         validate_non_empty(input.embedding_id.as_str(), "embedding_id")?;
         validate_non_empty(input.message_id.as_str(), "message_id")?;
         validate_kamn_did(input.owner_did.as_str())?;
-        validate_kamn_did(input.agent_did.as_str())?;
+        let parsed_agent_did = validate_agent_did(input.agent_did.as_str())?;
         validate_non_empty(input.model_id.as_str(), "model_id")?;
         if input.vector_encrypted.is_empty() {
             return Err(DataLayerM5VectorIntegrationError::EmptyField(
@@ -306,7 +333,8 @@ impl DataLayerM5EmbeddingRegistry {
             embedding_id: input.embedding_id.as_str(),
             message_id: input.message_id.as_str(),
             owner_did: input.owner_did.as_str(),
-            agent_did: input.agent_did.as_str(),
+            agent_did: parsed_agent_did.as_str(),
+            retention_class: input.retention_class,
             model_id: input.model_id.as_str(),
             vector_encrypted: input.vector_encrypted.as_slice(),
             vector_plaintext: vector_plaintext.as_deref(),
@@ -324,7 +352,8 @@ impl DataLayerM5EmbeddingRegistry {
             embedding_id: input.embedding_id.clone(),
             message_id: input.message_id,
             owner_did: input.owner_did.clone(),
-            agent_did: input.agent_did,
+            agent_did: parsed_agent_did.as_str().to_owned(),
+            retention_class: input.retention_class,
             model_id: input.model_id,
             vector_encrypted: input.vector_encrypted,
             privacy_mode: self.privacy_mode,
@@ -343,6 +372,57 @@ impl DataLayerM5EmbeddingRegistry {
     /// Returns embedding records for one owner scope in append order.
     pub fn embedding_records(&self, owner_did: &str) -> Option<&[DataLayerM5EmbeddingRecord]> {
         self.records_by_owner.get(owner_did).map(Vec::as_slice)
+    }
+
+    /// Returns owner-scoped retention-due embeddings aligned with content lifecycle policy.
+    pub fn retention_due_for_owner(
+        &self,
+        owner_did: &str,
+        now_epoch_seconds: u64,
+    ) -> Result<Vec<DataLayerM5RetentionDueCandidate>, DataLayerM5VectorIntegrationError> {
+        validate_kamn_did(owner_did)?;
+        if now_epoch_seconds == 0 {
+            return Err(DataLayerM5VectorIntegrationError::EmptyField(
+                "now_epoch_seconds",
+            ));
+        }
+
+        let owner_records = self.records_by_owner.get(owner_did).ok_or_else(|| {
+            DataLayerM5VectorIntegrationError::OwnerNotFound {
+                owner_did: owner_did.to_owned(),
+            }
+        })?;
+
+        let mut due_candidates = owner_records
+            .iter()
+            .filter_map(|record| {
+                let retention_profile =
+                    ContentLifecycleManager::retention_profile(record.retention_class);
+                let due_at_epoch_seconds = record
+                    .created_at_epoch_seconds
+                    .saturating_add(retention_profile.retain_for_secs);
+                if now_epoch_seconds >= due_at_epoch_seconds {
+                    Some(DataLayerM5RetentionDueCandidate {
+                        owner_did: record.owner_did.clone(),
+                        embedding_id: record.embedding_id.clone(),
+                        message_id: record.message_id.clone(),
+                        retention_class: record.retention_class,
+                        due_at_epoch_seconds,
+                        reason_code: DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        due_candidates.sort_by(|left, right| {
+            left.due_at_epoch_seconds
+                .cmp(&right.due_at_epoch_seconds)
+                .then(left.embedding_id.cmp(&right.embedding_id))
+                .then(left.message_id.cmp(&right.message_id))
+        });
+        Ok(due_candidates)
     }
 
     /// Executes deterministic owner-scoped semantic top-k ranking.
@@ -500,7 +580,7 @@ impl DataLayerM5EmbeddingRegistry {
         input: DataLayerM5AnomalyEvaluationInput,
     ) -> Result<DataLayerM5AnomalyDecision, DataLayerM5VectorIntegrationError> {
         validate_kamn_did(input.owner_did.as_str())?;
-        validate_kamn_did(input.agent_did.as_str())?;
+        let parsed_agent_did = validate_agent_did(input.agent_did.as_str())?;
         let candidate_vector = validate_vector(input.candidate_vector, "candidate_vector")?;
         if !input.anomaly_distance_threshold.is_finite() || input.anomaly_distance_threshold <= 0.0
         {
@@ -527,14 +607,14 @@ impl DataLayerM5EmbeddingRegistry {
             })?;
         let mut agent_vectors = owner_records
             .iter()
-            .filter(|record| record.agent_did == input.agent_did)
+            .filter(|record| record.agent_did == parsed_agent_did.as_str())
             .filter_map(|record| record.vector_plaintext.as_ref().cloned())
             .collect::<Vec<_>>();
         if agent_vectors.is_empty() {
             return Err(
                 DataLayerM5VectorIntegrationError::InsufficientAgentHistory {
                     owner_did: input.owner_did,
-                    agent_did: input.agent_did,
+                    agent_did: parsed_agent_did.as_str().to_owned(),
                 },
             );
         }
@@ -604,6 +684,7 @@ impl DataLayerM5EmbeddingRegistry {
                 message_id: record.message_id.as_str(),
                 owner_did: record.owner_did.as_str(),
                 agent_did: record.agent_did.as_str(),
+                retention_class: record.retention_class,
                 model_id: record.model_id.as_str(),
                 vector_encrypted: record.vector_encrypted.as_slice(),
                 vector_plaintext: record.vector_plaintext.as_deref(),
@@ -667,6 +748,13 @@ pub enum DataLayerM5VectorIntegrationError {
     EmptyField(&'static str),
     /// DID failed validation.
     InvalidDid(String),
+    /// Agent DID failed canonical parser validation.
+    InvalidAgentDid {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail from parser.
+        detail: String,
+    },
     /// Duplicate embedding identifier registration was attempted.
     DuplicateEmbeddingId(String),
     /// Vector dimensions did not match expected shape.
@@ -732,6 +820,12 @@ impl fmt::Display for DataLayerM5VectorIntegrationError {
         match self {
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidAgentDid {
+                reason_code,
+                detail,
+            } => {
+                write!(f, "invalid agent did: {reason_code} ({detail})")
+            }
             Self::DuplicateEmbeddingId(embedding_id) => {
                 write!(f, "duplicate embedding_id: {embedding_id}")
             }
@@ -812,6 +906,17 @@ fn validate_kamn_did(value: &str) -> Result<(), DataLayerM5VectorIntegrationErro
         ));
     }
     Ok(())
+}
+
+fn map_agent_did_error_to_m5(error: AgentDidError) -> DataLayerM5VectorIntegrationError {
+    DataLayerM5VectorIntegrationError::InvalidAgentDid {
+        reason_code: DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE,
+        detail: error.to_string(),
+    }
+}
+
+fn validate_agent_did(value: &str) -> Result<AgentDid, DataLayerM5VectorIntegrationError> {
+    AgentDid::parse(value).map_err(map_agent_did_error_to_m5)
 }
 
 fn validate_vector(
@@ -899,6 +1004,7 @@ struct DataLayerM5RecordHashMaterial<'a> {
     message_id: &'a str,
     owner_did: &'a str,
     agent_did: &'a str,
+    retention_class: ContentRetentionClass,
     model_id: &'a str,
     vector_encrypted: &'a [u8],
     vector_plaintext: Option<&'a [f32]>,
@@ -914,7 +1020,7 @@ fn compute_embedding_record_hash(
 ) -> String {
     tagged_digest(
         format!(
-            "m5-embedding|seq:{sequence}|embedding:{embedding_id}|message:{message_id}|owner:{owner_did}|agent:{agent_did}|model:{model_id}|encrypted:{}|plaintext:{}|dims:{vector_dimensions}|created:{created_at_epoch_seconds}|mode:{}|metric:{}|prev:{hash_chain_prev}",
+            "m5-embedding|seq:{sequence}|embedding:{embedding_id}|message:{message_id}|owner:{owner_did}|agent:{agent_did}|retention:{retention_class}|model:{model_id}|encrypted:{}|plaintext:{}|dims:{vector_dimensions}|created:{created_at_epoch_seconds}|mode:{}|metric:{}|prev:{hash_chain_prev}",
             bytes_marker(material.vector_encrypted),
             vector_marker(material.vector_plaintext),
             material.privacy_mode.marker(),
@@ -923,12 +1029,21 @@ fn compute_embedding_record_hash(
             message_id = material.message_id,
             owner_did = material.owner_did,
             agent_did = material.agent_did,
+            retention_class = retention_class_marker(material.retention_class),
             model_id = material.model_id,
             vector_dimensions = material.vector_dimensions,
             created_at_epoch_seconds = material.created_at_epoch_seconds
         )
         .as_str(),
     )
+}
+
+fn retention_class_marker(class: ContentRetentionClass) -> &'static str {
+    match class {
+        ContentRetentionClass::ShortLived => "short_lived",
+        ContentRetentionClass::Standard => "standard",
+        ContentRetentionClass::Compliance => "compliance",
+    }
 }
 
 fn bytes_marker(value: &[u8]) -> String {

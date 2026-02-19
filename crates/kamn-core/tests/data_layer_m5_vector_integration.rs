@@ -1,11 +1,14 @@
 use kamn_core::{
-    DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput, DataLayerM5EmbeddingPrivacyMode,
-    DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry, DataLayerM5RecallDriftDecision,
-    DataLayerM5RecallDriftEvaluationInput, DataLayerM5SemanticQuery,
-    DataLayerM5VectorIntegrationError, DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
+    ContentRetentionClass, DataLayerM5AnomalyDecision, DataLayerM5AnomalyEvaluationInput,
+    DataLayerM5EmbeddingPrivacyMode, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
+    DataLayerM5RecallDriftDecision, DataLayerM5RecallDriftEvaluationInput,
+    DataLayerM5RetentionDueCandidate, DataLayerM5SemanticQuery, DataLayerM5VectorIntegrationError,
+    DATA_LAYER_M5_ANOMALY_THRESHOLD_EXCEEDED_REASON_CODE,
     DATA_LAYER_M5_ANOMALY_WITHIN_THRESHOLD_REASON_CODE,
+    DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE,
     DATA_LAYER_M5_OWNER_SIDE_QUERY_REQUIRES_LOCAL_INDEX_REASON_CODE,
     DATA_LAYER_M5_RECALL_DRIFT_DEGRADED_REASON_CODE, DATA_LAYER_M5_RECALL_DRIFT_STABLE_REASON_CODE,
+    DATA_LAYER_M5_RETENTION_DUE_REASON_CODE,
 };
 
 fn vector_input(
@@ -20,6 +23,7 @@ fn vector_input(
         message_id: message_id.to_owned(),
         owner_did: owner_did.to_owned(),
         agent_did: agent_did.to_owned(),
+        retention_class: ContentRetentionClass::Standard,
         model_id: "text-embedding-3-large".to_owned(),
         vector_encrypted: vec![0xde, 0xad, 0xbe, 0xef],
         vector_plaintext,
@@ -380,6 +384,76 @@ fn spec_c09_recall_drift_rejects_invalid_threshold_and_empty_baseline() {
         invalid_threshold,
         Err(DataLayerM5VectorIntegrationError::InvalidVectorValue(
             "min_recall_at_k"
+        ))
+    ));
+}
+
+#[test]
+fn spec_c10_agent_did_validation_uses_canonical_parser_and_fails_closed() {
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    let invalid_agent = registry.append(vector_input(
+        "embed-m5-invalid-agent",
+        "msg-m5-invalid-agent",
+        "kamn:did:owner:alpha",
+        "kamn:did:owner:not-an-agent",
+        Some(vec![0.4, 0.4, 0.2]),
+    ));
+    assert!(matches!(
+        invalid_agent,
+        Err(DataLayerM5VectorIntegrationError::InvalidAgentDid {
+            reason_code: DATA_LAYER_M5_INVALID_AGENT_DID_REASON_CODE,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn spec_c11_retention_due_projection_aligns_with_content_lifecycle_windows() {
+    let mut registry = DataLayerM5EmbeddingRegistry::new(
+        DataLayerM5EmbeddingPrivacyMode::ServerSidePlaintextOptIn,
+    );
+    registry
+        .append(DataLayerM5EmbeddingRecordInput {
+            embedding_id: "embed-m5-retention-1".to_owned(),
+            message_id: "msg-m5-retention-1".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            agent_did: "kamn:did:agent:alpha".to_owned(),
+            retention_class: ContentRetentionClass::ShortLived,
+            model_id: "text-embedding-3-large".to_owned(),
+            vector_encrypted: vec![0xde, 0xad, 0xbe, 0xef],
+            vector_plaintext: Some(vec![0.3, 0.4, 0.3]),
+            created_at_epoch_seconds: 1_708_300_000,
+        })
+        .expect("short-lived embedding should append");
+    registry
+        .append(DataLayerM5EmbeddingRecordInput {
+            embedding_id: "embed-m5-retention-2".to_owned(),
+            message_id: "msg-m5-retention-2".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+            agent_did: "kamn:did:agent:alpha".to_owned(),
+            retention_class: ContentRetentionClass::Compliance,
+            model_id: "text-embedding-3-large".to_owned(),
+            vector_encrypted: vec![0xde, 0xad, 0xbe, 0xef],
+            vector_plaintext: Some(vec![0.2, 0.5, 0.3]),
+            created_at_epoch_seconds: 1_708_300_010,
+        })
+        .expect("compliance embedding should append");
+
+    let due: Vec<DataLayerM5RetentionDueCandidate> = registry
+        .retention_due_for_owner("kamn:did:owner:alpha", 1_708_500_000)
+        .expect("retention due should succeed");
+    assert_eq!(due.len(), 1);
+    assert_eq!(due[0].embedding_id, "embed-m5-retention-1");
+    assert_eq!(due[0].message_id, "msg-m5-retention-1");
+    assert_eq!(due[0].reason_code, DATA_LAYER_M5_RETENTION_DUE_REASON_CODE);
+
+    let invalid_now = registry.retention_due_for_owner("kamn:did:owner:alpha", 0);
+    assert!(matches!(
+        invalid_now,
+        Err(DataLayerM5VectorIntegrationError::EmptyField(
+            "now_epoch_seconds"
         ))
     ));
 }
