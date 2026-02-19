@@ -136,6 +136,11 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - Guard test: `cargo test -p kamn-node regression_signer_module_source_contains_no_unreachable_macro`
 
 ## Node Runtime Test-Surface Ownership Mapping
+- Ownership marker taxonomy:
+  - `node_runtime_test_ownership_reason_taxonomy_version=kamn.node.runtime-test-ownership-reason-taxonomy.v1`
+  - `node_runtime_test_ownership_reason_codes_csv=runtime_tests_shell_owner_marker_missing,runtime_tests_fragment_owner_marker_missing,runtime_tests_guard_command_marker_missing`
+- Ownership marker status:
+  - `node_runtime_test_ownership_status=verified`
 - `Extraction: #3944`
   - Module shell owner: `crates/kamn-node/src/main_tests/runtime_tests.rs`
   - Focused runtime test modules:
