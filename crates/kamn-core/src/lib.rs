@@ -322,7 +322,9 @@ pub use data_layer_m2_gateway_access::{
     DataLayerM2NegativeAuthorizationAuditFixture, DataLayerM2NegativeAuthorizationCase,
     DataLayerM2NegativeAuthorizationMatrixDecision, DataLayerM2NegativeAuthorizationMatrixReport,
     DataLayerM2RlsPolicy, DataLayerM2SessionToken, DATA_LAYER_M2_AUDIT_HASH_CHAIN_GENESIS,
-    DATA_LAYER_M2_HASH_ALGORITHM, DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
+    DATA_LAYER_M2_HASH_ALGORITHM, DATA_LAYER_M2_INVALID_RECIPIENT_DID_REASON_CODE,
+    DATA_LAYER_M2_INVALID_REQUESTER_DID_REASON_CODE, DATA_LAYER_M2_INVALID_SENDER_DID_REASON_CODE,
+    DATA_LAYER_M2_NEGATIVE_MATRIX_ALL_DENIED_REASON_CODE,
     DATA_LAYER_M2_NEGATIVE_MATRIX_DRIFT_DETECTED_REASON_CODE,
     DATA_LAYER_M2_REASON_ABAC_SCOPE_DENIED, DATA_LAYER_M2_REASON_AGENT_COUNTERPARTY_SCOPE_ALLOWED,
     DATA_LAYER_M2_REASON_ESCROW_AUDITOR_SCOPE_ALLOWED, DATA_LAYER_M2_REASON_OWNER_SCOPE_ALLOWED,
@@ -460,7 +462,8 @@ pub use did::{
     validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
     DidDocument, DidDocumentError, DidService, DidVerificationMethod,
     FederatedDidHandshakeDecision, FederatedDidHandshakeError, FederatedDidHandshakeEvaluator,
-    FederatedDidHandshakeInput, FederatedDidTrustStore, InMemoryFederatedDidTrustStore,
+    FederatedDidHandshakeInput, FederatedDidTrustStore, InMemoryFederatedDidTrustStore, KamnDid,
+    KamnDidError,
 };
 pub use did_registry::{
     DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,
