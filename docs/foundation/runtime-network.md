@@ -685,8 +685,12 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `LatestBlock` events are decoded for watermark tracking and do not emit commit receipts.
 - Reconnect policy:
   - dropped or failed websocket connections trigger bounded reconnect attempts.
+  - reconnect terminal taxonomy markers are deterministic:
+    - `notifications_reconnect_terminal_reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1`
+    - `notifications_reconnect_terminal_reason_codes_csv=notifications_reconnect_attempt_budget_exhausted`
+    - `notifications_reconnect_terminal_reason_code=notifications_reconnect_attempt_budget_exhausted`
   - retry exhaustion fails closed with deterministic reason:
-    - `notification reconnect attempts exhausted after <retries> retries`
+    - `notification reconnect attempts exhausted after <retries> retries;reason_code=notifications_reconnect_attempt_budget_exhausted;reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1`
 - Validation commands:
   - `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json --phase contract`

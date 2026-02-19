@@ -3,8 +3,11 @@ use kamn_kolme::{
     is_valid_notifications_reconnect_budget, normalize_notifications_provider_input,
     notification_event_to_provider_receipt as notification_event_to_provider_receipt_contract,
     notification_event_to_receipt as notification_event_to_receipt_contract,
-    parse_notification_event, KolmeCommitReceiptFinality, KolmeNotificationEvent,
-    KolmeNotificationReceipt, KolmeProviderNotificationReceipt,
+    notifications_reconnect_exhausted_reason_code,
+    notifications_reconnect_terminal_reason_codes_csv,
+    notifications_reconnect_terminal_reason_taxonomy_version, parse_notification_event,
+    KolmeCommitReceiptFinality, KolmeNotificationEvent, KolmeNotificationReceipt,
+    KolmeProviderNotificationReceipt,
 };
 
 #[test]
@@ -132,9 +135,20 @@ fn regression_issue_1916_notification_policy_trims_outer_provider_whitespace() {
 
 #[test]
 fn functional_notification_policy_composes_reconnect_exhausted_reason() {
-    assert_eq!(
-        compose_notifications_reconnect_exhausted_reason(3),
-        "notification reconnect attempts exhausted after 3 retries"
+    let reason = compose_notifications_reconnect_exhausted_reason(3);
+    assert!(
+        reason.starts_with("notification reconnect attempts exhausted after 3 retries"),
+        "reconnect exhaustion reason should preserve deterministic human-readable prefix"
+    );
+    assert!(
+        reason.contains("reason_code=notifications_reconnect_attempt_budget_exhausted"),
+        "reconnect exhaustion reason should emit deterministic terminal reason code marker"
+    );
+    assert!(
+        reason.contains(
+            "reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+        ),
+        "reconnect exhaustion reason should emit deterministic terminal taxonomy version marker"
     );
 }
 
@@ -144,6 +158,27 @@ fn regression_issue_1924_notification_policy_composes_reconnect_exhausted_reason
     // Regression: #1924
     assert_eq!(
         compose_notifications_reconnect_exhausted_reason(2),
-        "notification reconnect attempts exhausted after 2 retries"
+        concat!(
+            "notification reconnect attempts exhausted after 2 retries",
+            ";reason_code=notifications_reconnect_attempt_budget_exhausted",
+            ";reason_taxonomy_version=kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+        )
+    );
+}
+
+#[test]
+fn regression_issue_3792_notification_policy_exports_reconnect_terminal_taxonomy_markers() {
+    // Regression: #3792
+    assert_eq!(
+        notifications_reconnect_terminal_reason_taxonomy_version(),
+        "kamn.kolme.notifications-reconnect-terminal-reason-taxonomy.v1"
+    );
+    assert_eq!(
+        notifications_reconnect_terminal_reason_codes_csv(),
+        "notifications_reconnect_attempt_budget_exhausted"
+    );
+    assert_eq!(
+        notifications_reconnect_exhausted_reason_code(),
+        "notifications_reconnect_attempt_budget_exhausted"
     );
 }
