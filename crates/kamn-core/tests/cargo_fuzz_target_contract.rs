@@ -53,3 +53,31 @@ fn regression_cargo_fuzz_seed_corpus_metadata_tracks_parser_failure_taxonomy_mar
     assert!(SEED_CORPUS_METADATA.contains("\"invalid kamn did prefix\""));
     assert!(SEED_CORPUS_METADATA.contains("\"invalid characters\""));
 }
+
+#[test]
+fn regression_cargo_fuzz_seed_corpus_metadata_tracks_deterministic_seed_provenance_markers() {
+    // Regression: #4140
+    assert!(SEED_CORPUS_METADATA
+        .contains("\"seed_provenance_version\": \"kamn.runtime.cargo-fuzz-seed-provenance.v1\""));
+    assert!(SEED_CORPUS_METADATA.contains(
+        "\"deterministic_seed_replay_key\": \"cargo_fuzz_seed_replay:message_envelope_parser:v1\""
+    ));
+    assert!(SEED_CORPUS_METADATA
+        .contains("\"deterministic_seed_replay_key\": \"cargo_fuzz_seed_replay:did_parser:v1\""));
+    assert!(SEED_CORPUS_METADATA.contains("\"seed_budget_ci_smoke_max_seconds\": 120"));
+    assert!(SEED_CORPUS_METADATA.contains("\"seed_budget_local_heavy_max_seconds\": 900"));
+}
+
+#[test]
+fn regression_ci_strategy_contains_cargo_fuzz_seed_provenance_budget_markers() {
+    // Regression: #4140
+    assert!(CI_STRATEGY_DOC
+        .contains("cargo_fuzz_seed_provenance_version=kamn.runtime.cargo-fuzz-seed-provenance.v1"));
+    assert!(CI_STRATEGY_DOC.contains(
+        "cargo_fuzz_seed_replay_keys_csv=cargo_fuzz_seed_replay:message_envelope_parser:v1,cargo_fuzz_seed_replay:did_parser:v1"
+    ));
+    assert!(
+        CI_STRATEGY_DOC
+            .contains("cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds")
+    );
+}
