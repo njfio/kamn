@@ -1372,3 +1372,15 @@ fn doc_contains_invariant_fuzz_concurrency_ci_smoke_boundary_contract_markers() 
     assert!(DOC.contains("invariant_fuzz_concurrency_local_heavy_execution_mode=opt_in"));
     assert!(DOC.contains("invariant_fuzz_concurrency_local_heavy_excluded_from_ci_fast_gate=true"));
 }
+
+#[test]
+fn doc_contains_live_transport_fault_matrix_ci_exclusion_policy_contract_markers() {
+    assert!(DOC.contains("bash scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh"));
+    assert!(DOC.contains(
+        "live_transport_fault_matrix_policy_peer_adapter_reason_projection_timeout_code_mismatch"
+    ));
+    assert!(DOC.contains(
+        "live_transport_fault_matrix_policy_marker_missing:retry_reconnect_marker_contract_status"
+    ));
+    assert!(DOC.contains("retry_reconnect_marker_contract_status=verified"));
+}
