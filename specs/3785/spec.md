@@ -1,7 +1,7 @@
 # Issue #3785 Spec
 
 - Title: Subtask: add CI exclusion and command-surface drift guards for observability local-heavy lane
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r26-5-observability-and-transport-resilience-hardening/index.md

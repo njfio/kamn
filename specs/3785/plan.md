@@ -1,7 +1,7 @@
 # Issue #3785 Plan
 
 - Issue: #3785
-- Status: In Progress
+- Status: Implemented
 
 ## Approach
 1. Add a red docs-contract assertion in `crates/kamn-core/tests/ci_strategy_docs.rs` for unified API-observability local-heavy CI exclusion command markers.
