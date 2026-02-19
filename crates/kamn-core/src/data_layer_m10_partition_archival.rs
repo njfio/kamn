@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry};
+use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
 
 /// Partition prefix for monthly message partitions.
 pub const DATA_LAYER_M10_PARTITION_PREFIX: &str = "messages_";
@@ -225,7 +225,7 @@ impl DataLayerM10PartitionLifecycleRegistry {
         request: DataLayerM10ComplianceShredProjectionRequest,
     ) -> Result<DataLayerM10ComplianceShredProjectionReport, DataLayerM10PartitionLifecycleError>
     {
-        authorize_owner_scope(
+        let owner_did = authorize_owner_scope(
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
@@ -246,7 +246,7 @@ impl DataLayerM10PartitionLifecycleRegistry {
         let mut shredded_partition_messages = 0usize;
         for message_id in &message_ids {
             let message = compliance_registry
-                .message_for_owner(request.owner_did.as_str(), message_id.as_str())
+                .message_for_owner(owner_did.as_str(), message_id.as_str())
                 .map_err(map_m8_projection_error_to_m10)?;
             if message.shredded_at_epoch_seconds.is_some() {
                 shredded_partition_messages += 1;
@@ -530,40 +530,27 @@ fn map_m8_projection_error_to_m10(
     }
 }
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(
-            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
-                reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
-                detail: format!("invalid did: {value}"),
-            },
-        );
-    }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(
-            DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
-                reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
-                detail: format!("invalid did: {value}"),
-            },
-        );
-    }
-    Ok(())
+fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM10PartitionLifecycleError> {
+    KamnDid::parse(value).map_err(|_| {
+        DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
+            reason_code: DATA_LAYER_M10_COMPLIANCE_INPUT_INVALID_REASON_CODE,
+            detail: format!("invalid did: {value}"),
+        }
+    })
 }
 
 fn authorize_owner_scope(
     requester_owner_did: &str,
     owner_did: &str,
-) -> Result<(), DataLayerM10PartitionLifecycleError> {
-    validate_kamn_did(requester_owner_did)?;
-    validate_kamn_did(owner_did)?;
-    if requester_owner_did != owner_did {
+) -> Result<KamnDid, DataLayerM10PartitionLifecycleError> {
+    let requester_owner_did = parse_kamn_did(requester_owner_did)?;
+    let owner_did = parse_kamn_did(owner_did)?;
+    if requester_owner_did.as_str() != owner_did.as_str() {
         return Err(DataLayerM10PartitionLifecycleError::OwnerScopeViolation {
             reason_code: DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
         });
     }
-    Ok(())
+    Ok(owner_did)
 }
 
 fn validate_non_empty(

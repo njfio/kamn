@@ -6,6 +6,7 @@ use kamn_core::{
     DataLayerM8CryptoShredRequest, DataLayerM8MessageRecordInput, DataLayerM8RetentionClass,
     DataLayerM8WrappedCekInput, DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
     DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE,
+    DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
@@ -301,5 +302,63 @@ fn spec_c07_partition_shred_projection_fails_closed_when_m8_message_lookup_is_mi
                 ..
             }
         )
+    ));
+}
+
+#[test]
+fn spec_c08_partition_projection_accepts_canonical_equivalent_owner_dids() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .expect("message should register");
+
+    let projection = m10_registry.project_partition_shred_completeness_from_m8(
+        &m8_registry,
+        DataLayerM10ComplianceShredProjectionRequest {
+            requester_owner_did: "  kamn:did:owner:alpha  ".to_owned(),
+            owner_did: owner_did.to_owned(),
+            partition_month_id: 202401,
+            partition_message_ids: vec!["m10-m8-msg-1".to_owned()],
+        },
+    );
+    assert!(
+        projection.is_ok(),
+        "canonical-equivalent owner DIDs should authorize projection scope"
+    );
+}
+
+#[test]
+fn spec_c09_partition_projection_denies_non_equivalent_owner_dids() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .expect("message should register");
+
+    let denied = m10_registry.project_partition_shred_completeness_from_m8(
+        &m8_registry,
+        DataLayerM10ComplianceShredProjectionRequest {
+            requester_owner_did: "kamn:did:owner:beta".to_owned(),
+            owner_did: owner_did.to_owned(),
+            partition_month_id: 202401,
+            partition_message_ids: vec!["m10-m8-msg-1".to_owned()],
+        },
+    );
+    assert!(matches!(
+        denied,
+        Err(DataLayerM10PartitionLifecycleError::OwnerScopeViolation {
+            reason_code: DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
+        })
     ));
 }
