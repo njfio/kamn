@@ -4,6 +4,10 @@
 //! owner/agent-scoped telemetry ingest, hourly/daily rollups, network summaries,
 //! and owner billing daily usage projection.
 
+use crate::{
+    ObservabilityError, ObservabilityMonitor, ObservabilityReport, ObservabilitySample,
+    ObservabilitySloProfile, ObservabilitySnapshot,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -23,6 +27,9 @@ pub const DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE: &str =
 /// Stable reason marker for billing reconciliation mismatch.
 pub const DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE: &str =
     "m7_billing_reconciliation_mismatch";
+/// Stable reason marker for invalid projected observability samples.
+pub const DATA_LAYER_M7_OBSERVABILITY_SAMPLE_INVALID_REASON_CODE: &str =
+    "m7_observability_sample_invalid";
 
 /// Input payload for one telemetry point.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,6 +166,17 @@ pub struct DataLayerM7BillingReconciliationReport {
     pub statement_queries_executed_total: u64,
     /// Statement metric: embeddings generated.
     pub statement_embeddings_generated_total: u64,
+}
+
+/// Owner-scoped observability evaluation output derived from M7 telemetry points.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataLayerM7OwnerObservabilityReport {
+    /// Owner DID scope.
+    pub owner_did: String,
+    /// Ordered observability reports per owner telemetry point.
+    pub reports: Vec<ObservabilityReport>,
+    /// Rolling snapshot derived from the report history.
+    pub snapshot: ObservabilitySnapshot,
 }
 
 /// Hourly aggregate row for one owner+agent.
@@ -578,6 +596,35 @@ impl DataLayerM7TelemetryRegistry {
         })
     }
 
+    /// Evaluates owner telemetry points through canonical observability contracts.
+    pub fn evaluate_owner_observability(
+        &self,
+        query: DataLayerM7BillingQuery,
+        profile: ObservabilitySloProfile,
+    ) -> Result<DataLayerM7OwnerObservabilityReport, DataLayerM7TimeseriesError> {
+        authorize_owner_scope(
+            query.requester_owner_did.as_str(),
+            query.owner_did.as_str(),
+            DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
+        )?;
+        let owner_points = self.owner_points_or_error(query.owner_did.as_str())?;
+        let mut monitor = ObservabilityMonitor::new(profile);
+        let mut reports = Vec::with_capacity(owner_points.len());
+        for point in owner_points {
+            let sample = data_layer_m7_project_observability_sample(point);
+            let report = monitor
+                .evaluate(sample)
+                .map_err(map_observability_error_to_timeseries)?;
+            reports.push(report);
+        }
+
+        Ok(DataLayerM7OwnerObservabilityReport {
+            owner_did: query.owner_did,
+            reports,
+            snapshot: monitor.snapshot(),
+        })
+    }
+
     fn owner_points_or_error(
         &self,
         owner_did: &str,
@@ -611,6 +658,11 @@ pub enum DataLayerM7TimeseriesError {
     },
     /// Billing day bucket epoch is zero or not daily-aligned.
     InvalidBucketDayEpochSeconds(u64),
+    /// Observability projection produced an invalid sample.
+    ObservabilitySampleInvalid {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
 }
 
 impl fmt::Display for DataLayerM7TimeseriesError {
@@ -625,11 +677,69 @@ impl fmt::Display for DataLayerM7TimeseriesError {
             Self::InvalidBucketDayEpochSeconds(value) => {
                 write!(f, "invalid billing day bucket epoch: {value}")
             }
+            Self::ObservabilitySampleInvalid { reason_code } => {
+                write!(f, "invalid observability sample projection: {reason_code}")
+            }
         }
     }
 }
 
 impl std::error::Error for DataLayerM7TimeseriesError {}
+
+/// Projects one M7 telemetry point into a canonical observability sample.
+pub fn data_layer_m7_project_observability_sample(
+    point: &DataLayerM7TelemetryPointRecord,
+) -> ObservabilitySample {
+    let latency_p50_ms = u64::from(point.ingress_latency_ms_p95);
+    let latency_p99_ms = u64::from(
+        point
+            .ingress_latency_ms_p95
+            .max(point.egress_latency_ms_p95),
+    );
+    let throughput_tps = derive_observability_throughput_tps(point);
+    let error_rate_pct = derive_observability_error_rate_pct(point);
+    let availability_pct = derive_observability_availability_pct(point.active_sessions);
+
+    ObservabilitySample {
+        latency_p50_ms,
+        latency_p99_ms,
+        throughput_tps,
+        error_rate_pct,
+        availability_pct,
+        timestamp_epoch_s: point.timestamp_epoch_seconds,
+    }
+}
+
+fn map_observability_error_to_timeseries(_error: ObservabilityError) -> DataLayerM7TimeseriesError {
+    DataLayerM7TimeseriesError::ObservabilitySampleInvalid {
+        reason_code: DATA_LAYER_M7_OBSERVABILITY_SAMPLE_INVALID_REASON_CODE,
+    }
+}
+
+fn derive_observability_throughput_tps(point: &DataLayerM7TelemetryPointRecord) -> u64 {
+    let activity = point
+        .message_count
+        .saturating_add(point.query_count)
+        .saturating_add(point.embedding_count);
+    let session_boost = u64::from(point.active_sessions).saturating_mul(1_000);
+    activity.saturating_add(session_boost).max(1)
+}
+
+fn derive_observability_error_rate_pct(point: &DataLayerM7TelemetryPointRecord) -> f64 {
+    if point.embedding_count == 0 {
+        return 0.0;
+    }
+    let ratio = (point.embedding_anomaly_count as f64 / point.embedding_count as f64) * 100.0;
+    ratio.clamp(0.0, 100.0)
+}
+
+fn derive_observability_availability_pct(active_sessions: u32) -> f64 {
+    if active_sessions == 0 {
+        0.0
+    } else {
+        100.0
+    }
+}
 
 fn validate_kamn_did(value: &str) -> Result<(), DataLayerM7TimeseriesError> {
     let trimmed = value.trim();

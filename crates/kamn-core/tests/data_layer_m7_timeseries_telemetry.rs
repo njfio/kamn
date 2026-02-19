@@ -1,7 +1,9 @@
 use kamn_core::{
-    DataLayerM7BillingQuery, DataLayerM7BillingReconciliationDecision,
-    DataLayerM7BillingReconciliationInput, DataLayerM7TelemetryPointInput,
+    data_layer_m7_project_observability_sample, DataLayerM7BillingQuery,
+    DataLayerM7BillingReconciliationDecision, DataLayerM7BillingReconciliationInput,
+    DataLayerM7OwnerObservabilityReport, DataLayerM7TelemetryPointInput,
     DataLayerM7TelemetryRegistry, DataLayerM7TelemetryScopeQuery, DataLayerM7TimeseriesError,
+    ObservabilityHealth, ObservabilitySloProfile,
     DATA_LAYER_M7_BILLING_RECONCILIATION_MATCH_REASON_CODE,
     DATA_LAYER_M7_BILLING_RECONCILIATION_MISMATCH_REASON_CODE,
     DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
@@ -354,5 +356,99 @@ fn spec_c09_reconciliation_rejects_non_daily_aligned_bucket() {
         Err(DataLayerM7TimeseriesError::InvalidBucketDayEpochSeconds(
             1_708_473_601
         ))
+    ));
+}
+
+#[test]
+fn spec_c10_telemetry_point_projection_maps_to_observability_sample_contract() {
+    let mut registry = DataLayerM7TelemetryRegistry::new();
+    registry
+        .ingest_point(telemetry_point(
+            "kamn:did:owner:alpha",
+            "kamn:did:agent:alpha-1",
+            1_708_560_100,
+            9,
+            1_500,
+            4,
+            2,
+        ))
+        .expect("telemetry point should ingest");
+    let point = registry
+        .points_for_owner("kamn:did:owner:alpha")
+        .expect("owner points should exist")
+        .first()
+        .expect("telemetry point should exist");
+
+    let sample = data_layer_m7_project_observability_sample(point);
+    assert_eq!(sample.timestamp_epoch_s, 1_708_560_100);
+    assert!(sample.latency_p99_ms >= sample.latency_p50_ms);
+    assert!(sample.throughput_tps > 0);
+    assert!((0.0..=100.0).contains(&sample.error_rate_pct));
+    assert!((0.0..=100.0).contains(&sample.availability_pct));
+}
+
+#[test]
+fn spec_c11_owner_observability_evaluation_is_owner_scoped_and_deterministic() {
+    let mut registry = DataLayerM7TelemetryRegistry::new();
+    let mut healthy_point = telemetry_point(
+        "kamn:did:owner:alpha",
+        "kamn:did:agent:alpha-1",
+        1_708_560_100,
+        12,
+        2_000,
+        6,
+        4,
+    );
+    healthy_point.ingress_latency_ms_p95 = 80;
+    healthy_point.egress_latency_ms_p95 = 90;
+    registry
+        .ingest_point(healthy_point)
+        .expect("healthy telemetry point should ingest");
+
+    let mut critical_point = telemetry_point(
+        "kamn:did:owner:alpha",
+        "kamn:did:agent:alpha-1",
+        1_708_560_200,
+        8,
+        1_000,
+        5,
+        3,
+    );
+    critical_point.active_sessions = 0;
+    registry
+        .ingest_point(critical_point)
+        .expect("critical telemetry point should ingest");
+
+    let evaluation: DataLayerM7OwnerObservabilityReport = registry
+        .evaluate_owner_observability(
+            DataLayerM7BillingQuery {
+                requester_owner_did: "kamn:did:owner:alpha".to_owned(),
+                owner_did: "kamn:did:owner:alpha".to_owned(),
+            },
+            ObservabilitySloProfile::baseline(),
+        )
+        .expect("owner observability evaluation should succeed");
+    assert_eq!(evaluation.owner_did, "kamn:did:owner:alpha");
+    assert_eq!(evaluation.reports.len(), 2);
+    assert_eq!(evaluation.snapshot.total_samples, 2);
+    assert_eq!(evaluation.snapshot.healthy_samples, 1);
+    assert_eq!(evaluation.snapshot.critical_samples, 1);
+    assert_eq!(
+        evaluation.snapshot.latest_health,
+        ObservabilityHealth::Critical
+    );
+
+    let denied = registry.evaluate_owner_observability(
+        DataLayerM7BillingQuery {
+            requester_owner_did: "kamn:did:owner:intruder".to_owned(),
+            owner_did: "kamn:did:owner:alpha".to_owned(),
+        },
+        ObservabilitySloProfile::baseline(),
+    );
+    assert!(matches!(
+        denied,
+        Err(DataLayerM7TimeseriesError::OwnerScopeViolation {
+            reason_code: DATA_LAYER_M7_OWNER_SCOPE_DENIED_REASON_CODE,
+        })
     ));
 }
