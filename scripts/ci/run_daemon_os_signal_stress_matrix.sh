@@ -24,6 +24,8 @@ EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+reason_taxonomy_version="kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1"
+reason_codes_csv="runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success"
 
 iterations="${KAMN_DAEMON_OS_SIGNAL_STRESS_ITERATIONS:-10}"
 attempts_per_iteration="${KAMN_DAEMON_OS_SIGNAL_STRESS_ATTEMPTS_PER_ITERATION:-1}"
@@ -306,6 +308,8 @@ python3 - \
   "$status" \
   "$final_decision" \
   "$reason_code" \
+  "$reason_taxonomy_version" \
+  "$reason_codes_csv" \
   "$registry_file" \
   "$quarantine_status" \
   "$quarantine_reason_code" \
@@ -329,12 +333,14 @@ fail_iterations = int(sys.argv[10])
 status = sys.argv[11]
 final_decision = sys.argv[12]
 reason_code = sys.argv[13]
-registry_file = sys.argv[14]
-quarantine_status = sys.argv[15]
-quarantine_reason_code = sys.argv[16]
-quarantine_followup_issue = sys.argv[17]
-quarantine_references_file = pathlib.Path(sys.argv[18])
-artifact_dir = sys.argv[19]
+reason_taxonomy_version = sys.argv[14]
+reason_codes_csv = sys.argv[15]
+registry_file = sys.argv[16]
+quarantine_status = sys.argv[17]
+quarantine_reason_code = sys.argv[18]
+quarantine_followup_issue = sys.argv[19]
+quarantine_references_file = pathlib.Path(sys.argv[20])
+artifact_dir = sys.argv[21]
 
 iteration_results = []
 anti_flake_chain_artifacts = []
@@ -375,6 +381,8 @@ payload = {
     "status": status,
     "final_decision": final_decision,
     "reason_code": reason_code,
+    "reason_taxonomy_version": reason_taxonomy_version,
+    "reason_codes_csv": reason_codes_csv,
     "iterations": iterations,
     "attempts_per_iteration": attempts_per_iteration,
     "failure_threshold": failure_threshold,
@@ -399,6 +407,8 @@ PY
 echo "daemon_os_signal_stress_matrix_status=$status"
 echo "daemon_os_signal_stress_matrix_final_decision=$final_decision"
 echo "daemon_os_signal_stress_matrix_reason_code=$reason_code"
+echo "daemon_os_signal_stress_matrix_reason_taxonomy_version=$reason_taxonomy_version"
+echo "daemon_os_signal_stress_matrix_reason_codes_csv=$reason_codes_csv"
 echo "daemon_os_signal_stress_matrix_iterations=$iterations"
 echo "daemon_os_signal_stress_matrix_pass_iterations=$pass_iterations"
 echo "daemon_os_signal_stress_matrix_fail_iterations=$fail_iterations"

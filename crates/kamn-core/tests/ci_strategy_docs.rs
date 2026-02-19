@@ -1656,13 +1656,21 @@ fn doc_contains_overload_ci_dry_run_policy_checker_markers() {
         "overload_policy_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-policy-reason-taxonomy.v1"
     ));
     assert!(DOC.contains(
-        "overload_policy_reason_codes_csv=overload_policy_argument_invalid,overload_policy_ci_tools_fast_mode_heavy_run_leaked,overload_policy_ci_tools_fast_mode_missing_overload_test,overload_policy_ci_tools_script_missing,overload_policy_expected_decision_mismatch,overload_policy_output_json_required,overload_policy_reason_code_unknown,overload_policy_report_file_missing,overload_policy_report_json_invalid,overload_policy_report_schema_mismatch,overload_policy_runtime_budget_exceeded,overload_policy_threshold_file_missing,overload_policy_threshold_key_missing,overload_policy_threshold_value_invalid"
+        "overload_policy_reason_codes_csv=overload_policy_argument_invalid,overload_policy_ci_tools_fast_mode_heavy_run_leaked,overload_policy_ci_tools_fast_mode_missing_overload_test,overload_policy_ci_tools_script_missing,overload_policy_expected_decision_mismatch,overload_policy_output_json_required,overload_policy_reason_code_unknown,overload_policy_report_file_missing,overload_policy_report_json_invalid,overload_policy_report_reason_codes_csv_mismatch,overload_policy_report_reason_taxonomy_mismatch,overload_policy_report_schema_mismatch,overload_policy_runtime_budget_exceeded,overload_policy_threshold_file_missing,overload_policy_threshold_key_missing,overload_policy_threshold_value_invalid"
+    ));
+    assert!(DOC.contains("REPORT_REASON_TAXONOMY_VERSION"));
+    assert!(DOC.contains("REPORT_REASON_CODES_CSV"));
+    assert!(DOC.contains(
+        "reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success"
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test ci_strategy_docs doc_contains_overload_ci_dry_run_policy_checker_markers -- --exact"
     ));
     assert!(DOC.contains("bash scripts/ci/test_check_daemon_os_signal_stress_policy.sh"));
-    assert!(DOC.contains("Regression: #4096"));
+    assert!(DOC.contains("Regression: #4096, #4095"));
 }
 
 #[test]

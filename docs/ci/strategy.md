@@ -4578,9 +4578,20 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `bash scripts/ci/test_check_daemon_os_signal_stress_policy.sh`
 - Threshold fixture:
   - `fixtures/ci/daemon_os_signal_stress_policy_thresholds.env`
+  - required threshold keys:
+    - `REPORT_SCHEMA_VERSION`
+    - `MAX_RUNTIME_SECONDS`
+    - `ALLOWED_REASON_CODES_CSV`
+    - `REPORT_REASON_TAXONOMY_VERSION`
+    - `REPORT_REASON_CODES_CSV`
+    - `CI_TOOLS_REQUIRED_ENTRY`
+    - `CI_TOOLS_FORBIDDEN_ENTRY`
 - Deterministic checker markers:
   - `overload_policy_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-policy-reason-taxonomy.v1`
-  - `overload_policy_reason_codes_csv=overload_policy_argument_invalid,overload_policy_ci_tools_fast_mode_heavy_run_leaked,overload_policy_ci_tools_fast_mode_missing_overload_test,overload_policy_ci_tools_script_missing,overload_policy_expected_decision_mismatch,overload_policy_output_json_required,overload_policy_reason_code_unknown,overload_policy_report_file_missing,overload_policy_report_json_invalid,overload_policy_report_schema_mismatch,overload_policy_runtime_budget_exceeded,overload_policy_threshold_file_missing,overload_policy_threshold_key_missing,overload_policy_threshold_value_invalid`
+  - `overload_policy_reason_codes_csv=overload_policy_argument_invalid,overload_policy_ci_tools_fast_mode_heavy_run_leaked,overload_policy_ci_tools_fast_mode_missing_overload_test,overload_policy_ci_tools_script_missing,overload_policy_expected_decision_mismatch,overload_policy_output_json_required,overload_policy_reason_code_unknown,overload_policy_report_file_missing,overload_policy_report_json_invalid,overload_policy_report_reason_codes_csv_mismatch,overload_policy_report_reason_taxonomy_mismatch,overload_policy_report_schema_mismatch,overload_policy_runtime_budget_exceeded,overload_policy_threshold_file_missing,overload_policy_threshold_key_missing,overload_policy_threshold_value_invalid`
+  - report contract markers:
+    - `reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1`
+    - `reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success`
 - Fast-gate selector boundary:
   - `scripts/ci/test_ci_tools.sh` fast mode must include `test_check_daemon_os_signal_stress_policy.sh`.
   - direct heavy-run command `scripts/ci/run_daemon_os_signal_stress_matrix.sh` must not be invoked by ci-tools fast mode.
@@ -4590,7 +4601,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - Fail-closed policy:
   - checker rejects schema drift, unknown reason markers, threshold violations, and selector command-surface regressions.
   - checker output `reason_codes=none|<csv>` remains deterministic for promotion evidence and CI triage.
-- Regression: #4096
+- Regression: #4096, #4095
 
 ### Signer Extraction Budget Guard
 - `signer_extraction_budget_guard_status=active`
