@@ -1,7 +1,7 @@
 # Issue #5184 Spec
 
 - Title: Task: consolidate doc-contract tests into data-driven harness to reduce file sprawl
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 
