@@ -5,7 +5,7 @@ use std::{collections::BTreeSet, fmt};
 const KAMN_DID_PREFIX: &str = "kamn:did:";
 const AGENT_DID_PREFIX: &str = "kamn:did:agent:";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// Canonical KAMN DID wrapper for non-agent and agent role identifiers.
 pub struct KamnDid(String);
 
@@ -55,7 +55,7 @@ impl fmt::Display for KamnDidError {
 
 impl std::error::Error for KamnDidError {}
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// Canonical KAMN agent DID wrapper.
 pub struct AgentDid(String);
 

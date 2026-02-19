@@ -10,6 +10,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 const DEFAULT_MAX_INBOUND_AGE_SECS: u64 = 300;
+const BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE: &str =
+    "bridge_adapter_invalid_bridge_agent_did";
+const BRIDGE_ADAPTER_INVALID_TARGET_AGENT_DID_REASON_CODE: &str =
+    "bridge_adapter_invalid_target_agent_did";
+const BRIDGE_ADAPTER_INVALID_FROM_AGENT_DID_REASON_CODE: &str =
+    "bridge_adapter_invalid_from_agent_did";
+const BRIDGE_ADAPTER_INVALID_NORMALIZED_TARGET_AGENT_DID_REASON_CODE: &str =
+    "bridge_adapter_invalid_normalized_target_agent_did";
 
 /// Supported external bridge platforms.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -105,6 +113,91 @@ pub struct BridgeOutboundRequest {
     pub created_at: String,
 }
 
+/// Typed validated inbound envelope used by core adapter execution paths.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BridgeInboundEnvelopeValidated {
+    external_message_id: String,
+    external_sender_id: String,
+    external_channel_id: String,
+    target_agent_did: AgentDid,
+    body: String,
+    received_at: String,
+    received_at_unix: u64,
+}
+
+impl TryFrom<&BridgeInboundEnvelope> for BridgeInboundEnvelopeValidated {
+    type Error = BridgeAdapterError;
+
+    fn try_from(inbound: &BridgeInboundEnvelope) -> Result<Self, Self::Error> {
+        validate_non_empty(
+            "bridge_inbound_envelope.external_message_id",
+            &inbound.external_message_id,
+        )?;
+        validate_non_empty(
+            "bridge_inbound_envelope.external_sender_id",
+            &inbound.external_sender_id,
+        )?;
+        validate_non_empty(
+            "bridge_inbound_envelope.external_channel_id",
+            &inbound.external_channel_id,
+        )?;
+        let target_agent_did = parse_agent_did(
+            inbound.target_agent_did.as_str(),
+            "bridge_inbound_envelope.target_agent_did",
+            BRIDGE_ADAPTER_INVALID_TARGET_AGENT_DID_REASON_CODE,
+        )?;
+        validate_non_empty("bridge_inbound_envelope.body", &inbound.body)?;
+        validate_non_empty("bridge_inbound_envelope.received_at", &inbound.received_at)?;
+        validate_timestamp(
+            "bridge_inbound_envelope.received_at_unix",
+            inbound.received_at_unix,
+        )?;
+
+        Ok(Self {
+            external_message_id: inbound.external_message_id.clone(),
+            external_sender_id: inbound.external_sender_id.clone(),
+            external_channel_id: inbound.external_channel_id.clone(),
+            target_agent_did,
+            body: inbound.body.clone(),
+            received_at: inbound.received_at.clone(),
+            received_at_unix: inbound.received_at_unix,
+        })
+    }
+}
+
+/// Typed validated outbound request used by core adapter execution paths.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BridgeOutboundRequestValidated {
+    request_id: String,
+    destination_channel_id: String,
+    body: String,
+}
+
+impl TryFrom<&BridgeOutboundRequest> for BridgeOutboundRequestValidated {
+    type Error = BridgeAdapterError;
+
+    fn try_from(request: &BridgeOutboundRequest) -> Result<Self, Self::Error> {
+        validate_non_empty("bridge_outbound_request.request_id", &request.request_id)?;
+        let _ = parse_agent_did(
+            request.from_agent_did.as_str(),
+            "bridge_outbound_request.from_agent_did",
+            BRIDGE_ADAPTER_INVALID_FROM_AGENT_DID_REASON_CODE,
+        )?;
+        validate_non_empty(
+            "bridge_outbound_request.destination_channel_id",
+            &request.destination_channel_id,
+        )?;
+        validate_non_empty("bridge_outbound_request.body", &request.body)?;
+        validate_non_empty("bridge_outbound_request.created_at", &request.created_at)?;
+
+        Ok(Self {
+            request_id: request.request_id.clone(),
+            destination_channel_id: request.destination_channel_id.clone(),
+            body: request.body.clone(),
+        })
+    }
+}
+
 /// Platform-ready outbound envelope emitted by a [`BridgeAdapter`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BridgeOutboundEnvelope {
@@ -179,7 +272,7 @@ impl BridgePolicyHook for AllowAllBridgePolicy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PassThroughBridgeAdapter {
     platform: BridgePlatform,
-    bridge_agent_did: String,
+    bridge_agent_did: AgentDid,
 }
 
 impl PassThroughBridgeAdapter {
@@ -191,10 +284,14 @@ impl PassThroughBridgeAdapter {
         if platform.label().is_empty() {
             return Err(BridgeAdapterError::EmptyField("platform"));
         }
-        validate_did(bridge_agent_did)?;
+        let bridge_agent_did = parse_agent_did(
+            bridge_agent_did,
+            "bridge_agent_did",
+            BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
+        )?;
         Ok(Self {
             platform,
-            bridge_agent_did: bridge_agent_did.to_owned(),
+            bridge_agent_did,
         })
     }
 }
@@ -205,23 +302,27 @@ impl BridgeAdapter for PassThroughBridgeAdapter {
     }
 
     fn bridge_agent_did(&self) -> &str {
-        &self.bridge_agent_did
+        self.bridge_agent_did.as_str()
     }
 
     fn normalize_inbound(
         &self,
         inbound: &BridgeInboundEnvelope,
     ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
-        validate_inbound_envelope(inbound)?;
+        let validated_inbound = validate_inbound_envelope(inbound)?;
 
         Ok(NormalizedInboundMessage {
-            bridge_message_id: format!("{}:{}", self.platform.label(), inbound.external_message_id),
-            sender_handle: inbound.external_sender_id.clone(),
-            source_channel: inbound.external_channel_id.clone(),
-            target_agent_did: inbound.target_agent_did.clone(),
-            body: inbound.body.clone(),
-            received_at: inbound.received_at.clone(),
-            received_at_unix: inbound.received_at_unix,
+            bridge_message_id: format!(
+                "{}:{}",
+                self.platform.label(),
+                validated_inbound.external_message_id
+            ),
+            sender_handle: validated_inbound.external_sender_id,
+            source_channel: validated_inbound.external_channel_id,
+            target_agent_did: validated_inbound.target_agent_did.as_str().to_owned(),
+            body: validated_inbound.body,
+            received_at: validated_inbound.received_at,
+            received_at_unix: validated_inbound.received_at_unix,
             platform: self.platform(),
         })
     }
@@ -230,15 +331,15 @@ impl BridgeAdapter for PassThroughBridgeAdapter {
         &self,
         request: &BridgeOutboundRequest,
     ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError> {
-        validate_outbound_request(request)?;
+        let validated_request = validate_outbound_request(request)?;
         Ok(BridgeOutboundEnvelope {
-            request_id: request.request_id.clone(),
-            destination_channel_id: request.destination_channel_id.clone(),
+            request_id: validated_request.request_id.clone(),
+            destination_channel_id: validated_request.destination_channel_id.clone(),
             payload: format!(
                 "{{\"platform\":\"{}\",\"channel\":\"{}\",\"message\":\"{}\"}}",
                 self.platform.label(),
-                escape_json(&request.destination_channel_id),
-                escape_json(&request.body),
+                escape_json(&validated_request.destination_channel_id),
+                escape_json(&validated_request.body),
             ),
             platform: self.platform(),
         })
@@ -282,8 +383,12 @@ where
         inbound: &BridgeInboundEnvelope,
         observed_at_unix: u64,
     ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
-        validate_did(self.adapter.bridge_agent_did())?;
-        validate_inbound_envelope(inbound)?;
+        parse_agent_did(
+            self.adapter.bridge_agent_did(),
+            "bridge_agent_did",
+            BRIDGE_ADAPTER_INVALID_BRIDGE_AGENT_DID_REASON_CODE,
+        )?;
+        let _ = validate_inbound_envelope(inbound)?;
         validate_timestamp("observed_at_unix", observed_at_unix)?;
         let normalized = self.adapter.normalize_inbound(inbound)?;
         validate_normalized_inbound(&normalized)?;
@@ -315,7 +420,7 @@ where
         &self,
         request: &BridgeOutboundRequest,
     ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError> {
-        validate_outbound_request(request)?;
+        let validated_request = validate_outbound_request(request)?;
         self.policy.authorize_outbound(request)?;
         let translated = self.adapter.translate_outbound(request)?;
         if translated.request_id != request.request_id {
@@ -332,7 +437,7 @@ where
         if !self
             .seen_outbound_request_ids
             .borrow_mut()
-            .insert(request.request_id.clone())
+            .insert(validated_request.request_id)
         {
             return Err(BridgeAdapterError::DuplicateOutboundRequestId(
                 request.request_id.clone(),
@@ -423,7 +528,14 @@ pub enum BridgeAdapterError {
     /// A required field was empty after normalization.
     EmptyField(&'static str),
     /// DID failed canonical parsing/validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// DID-carrying field name.
+        field: &'static str,
+        /// Stable reason marker for policy and contract tests.
+        reason_code: &'static str,
+        /// Canonical parser detail string.
+        detail: String,
+    },
     /// Timestamp value was invalid for the given field.
     InvalidTimestamp(&'static str),
     /// Envelope nonce must be positive.
@@ -467,7 +579,11 @@ impl fmt::Display for BridgeAdapterError {
                 write!(f, "duplicate outbound request id: {request_id}")
             }
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
             Self::InvalidNonce(value) => write!(f, "nonce must be greater than zero: {value}"),
             Self::StaleInboundMessage {
@@ -493,27 +609,28 @@ impl fmt::Display for BridgeAdapterError {
 
 impl std::error::Error for BridgeAdapterError {}
 
-fn validate_inbound_envelope(inbound: &BridgeInboundEnvelope) -> Result<(), BridgeAdapterError> {
-    validate_non_empty(
-        "bridge_inbound_envelope.external_message_id",
-        &inbound.external_message_id,
-    )?;
-    validate_non_empty(
-        "bridge_inbound_envelope.external_sender_id",
-        &inbound.external_sender_id,
-    )?;
-    validate_non_empty(
-        "bridge_inbound_envelope.external_channel_id",
-        &inbound.external_channel_id,
-    )?;
-    validate_did(&inbound.target_agent_did)?;
-    validate_non_empty("bridge_inbound_envelope.body", &inbound.body)?;
-    validate_non_empty("bridge_inbound_envelope.received_at", &inbound.received_at)?;
-    validate_timestamp(
-        "bridge_inbound_envelope.received_at_unix",
-        inbound.received_at_unix,
-    )?;
-    Ok(())
+impl BridgeAdapterError {
+    /// Stable reason-code taxonomy for bridge adapter failures.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::DuplicateInboundMessageId(_) => "bridge_adapter_duplicate_inbound_message_id",
+            Self::DuplicateOutboundRequestId(_) => "bridge_adapter_duplicate_outbound_request_id",
+            Self::EmptyField(_) => "bridge_adapter_empty_field",
+            Self::InvalidDid { reason_code, .. } => reason_code,
+            Self::InvalidTimestamp(_) => "bridge_adapter_invalid_timestamp",
+            Self::InvalidNonce(_) => "bridge_adapter_invalid_nonce",
+            Self::StaleInboundMessage { .. } => "bridge_adapter_stale_inbound_message",
+            Self::PolicyDenied { .. } => "bridge_adapter_policy_denied",
+            Self::OutboundRequestIdMismatch { .. } => "bridge_adapter_outbound_request_id_mismatch",
+            Self::Envelope(_) => "bridge_adapter_invalid_envelope",
+        }
+    }
+}
+
+fn validate_inbound_envelope(
+    inbound: &BridgeInboundEnvelope,
+) -> Result<BridgeInboundEnvelopeValidated, BridgeAdapterError> {
+    BridgeInboundEnvelopeValidated::try_from(inbound)
 }
 
 fn validate_normalized_inbound(
@@ -531,7 +648,11 @@ fn validate_normalized_inbound(
         "normalized_inbound_message.source_channel",
         &normalized.source_channel,
     )?;
-    validate_did(&normalized.target_agent_did)?;
+    parse_agent_did(
+        normalized.target_agent_did.as_str(),
+        "normalized_inbound_message.target_agent_did",
+        BRIDGE_ADAPTER_INVALID_NORMALIZED_TARGET_AGENT_DID_REASON_CODE,
+    )?;
     validate_non_empty("normalized_inbound_message.body", &normalized.body)?;
     validate_non_empty(
         "normalized_inbound_message.received_at",
@@ -549,16 +670,10 @@ fn validate_normalized_inbound(
     Ok(())
 }
 
-fn validate_outbound_request(request: &BridgeOutboundRequest) -> Result<(), BridgeAdapterError> {
-    validate_non_empty("bridge_outbound_request.request_id", &request.request_id)?;
-    validate_did(&request.from_agent_did)?;
-    validate_non_empty(
-        "bridge_outbound_request.destination_channel_id",
-        &request.destination_channel_id,
-    )?;
-    validate_non_empty("bridge_outbound_request.body", &request.body)?;
-    validate_non_empty("bridge_outbound_request.created_at", &request.created_at)?;
-    Ok(())
+fn validate_outbound_request(
+    request: &BridgeOutboundRequest,
+) -> Result<BridgeOutboundRequestValidated, BridgeAdapterError> {
+    BridgeOutboundRequestValidated::try_from(request)
 }
 
 fn validate_non_empty(field: &'static str, value: &str) -> Result<(), BridgeAdapterError> {
@@ -568,9 +683,16 @@ fn validate_non_empty(field: &'static str, value: &str) -> Result<(), BridgeAdap
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), BridgeAdapterError> {
-    AgentDid::parse(value).map_err(|error| BridgeAdapterError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, BridgeAdapterError> {
+    AgentDid::parse(value).map_err(|error| BridgeAdapterError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn validate_timestamp(field: &'static str, value: u64) -> Result<(), BridgeAdapterError> {
@@ -607,9 +729,11 @@ mod tests {
     fn constructor_rejects_invalid_bridge_agent_did() {
         assert_eq!(
             PassThroughBridgeAdapter::new(BridgePlatform::Discord, "not-a-did"),
-            Err(BridgeAdapterError::InvalidDid(
-                "invalid agent did prefix: not-a-did".to_owned()
-            ))
+            Err(BridgeAdapterError::InvalidDid {
+                field: "bridge_agent_did",
+                reason_code: "bridge_adapter_invalid_bridge_agent_did",
+                detail: "invalid agent did prefix: not-a-did".to_owned(),
+            })
         );
     }
 

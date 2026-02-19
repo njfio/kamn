@@ -2,6 +2,11 @@ use crate::{AgentDid, ChannelModelError, ChannelStore, ChannelType};
 use std::collections::BTreeMap;
 use std::fmt;
 
+const SERVICE_MARKETPLACE_INVALID_PROVIDER_DID_REASON_CODE: &str =
+    "service_marketplace_invalid_provider_did";
+const SERVICE_MARKETPLACE_INVALID_REQUESTER_DID_REASON_CODE: &str =
+    "service_marketplace_invalid_requester_did";
+
 /// Marketplace listing metadata published by a provider.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceListing {
@@ -45,6 +50,26 @@ pub struct NegotiationThreadHook {
     pub requester_did: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceListingValidated {
+    provider_did: AgentDid,
+}
+
+impl TryFrom<&ServiceListing> for ServiceListingValidated {
+    type Error = ServiceMarketplaceError;
+
+    fn try_from(listing: &ServiceListing) -> Result<Self, Self::Error> {
+        validate_listing_shape(listing)?;
+        Ok(Self {
+            provider_did: parse_agent_did(
+                listing.provider_did.as_str(),
+                "provider_did",
+                SERVICE_MARKETPLACE_INVALID_PROVIDER_DID_REASON_CODE,
+            )?,
+        })
+    }
+}
+
 /// In-memory marketplace engine for listing registration and lookup.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ServiceMarketplaceEngine {
@@ -63,8 +88,7 @@ impl ServiceMarketplaceEngine {
         listing: ServiceListing,
         channels: &ChannelStore,
     ) -> Result<(), ServiceMarketplaceError> {
-        validate_listing_shape(&listing)?;
-        validate_did(&listing.provider_did)?;
+        let validated_listing = ServiceListingValidated::try_from(&listing)?;
 
         if self.listings.contains_key(&listing.listing_id) {
             return Err(ServiceMarketplaceError::DuplicateListing(
@@ -83,11 +107,14 @@ impl ServiceMarketplaceEngine {
         }
 
         let provider_member = channels
-            .is_member(&listing.negotiation_channel_id, &listing.provider_did)
+            .is_member(
+                &listing.negotiation_channel_id,
+                validated_listing.provider_did.as_str(),
+            )
             .map_err(map_channel_error)?;
         if !provider_member {
             return Err(ServiceMarketplaceError::ProviderNotChannelMember {
-                provider_did: listing.provider_did.clone(),
+                provider_did: validated_listing.provider_did.as_str().to_owned(),
                 channel_id: listing.negotiation_channel_id.clone(),
             });
         }
@@ -114,7 +141,11 @@ impl ServiceMarketplaceEngine {
         if listing_id.trim().is_empty() {
             return Err(ServiceMarketplaceError::EmptyField("listing_id"));
         }
-        validate_did(requester_did)?;
+        let requester_did = parse_agent_did(
+            requester_did,
+            "requester_did",
+            SERVICE_MARKETPLACE_INVALID_REQUESTER_DID_REASON_CODE,
+        )?;
 
         let listing = self
             .listings
@@ -124,7 +155,7 @@ impl ServiceMarketplaceEngine {
             listing_id: listing.listing_id.clone(),
             negotiation_channel_id: listing.negotiation_channel_id.clone(),
             provider_did: listing.provider_did.clone(),
-            requester_did: requester_did.to_owned(),
+            requester_did: requester_did.as_str().to_owned(),
         })
     }
 }
@@ -139,7 +170,14 @@ pub enum ServiceMarketplaceError {
     /// Required field was empty.
     EmptyField(&'static str),
     /// DID validation failed.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying the DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Hourly rate was invalid.
     InvalidHourlyRate(u128),
     /// Listing was not found.
@@ -166,7 +204,11 @@ impl fmt::Display for ServiceMarketplaceError {
             Self::ChannelLookup(error) => write!(f, "channel lookup error: {error}"),
             Self::DuplicateListing(listing_id) => write!(f, "duplicate listing id: {listing_id}"),
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
-            Self::InvalidDid(error) => write!(f, "invalid did: {error}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidHourlyRate(value) => {
                 write!(f, "hourly rate must be greater than zero, found {value}")
             }
@@ -187,6 +229,24 @@ impl fmt::Display for ServiceMarketplaceError {
 }
 
 impl std::error::Error for ServiceMarketplaceError {}
+
+impl ServiceMarketplaceError {
+    /// Stable reason taxonomy for marketplace errors.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::ChannelLookup(_) => "service_marketplace_channel_lookup",
+            Self::DuplicateListing(_) => "service_marketplace_duplicate_listing",
+            Self::EmptyField(_) => "service_marketplace_empty_field",
+            Self::InvalidDid { reason_code, .. } => reason_code,
+            Self::InvalidHourlyRate(_) => "service_marketplace_invalid_hourly_rate",
+            Self::ListingNotFound(_) => "service_marketplace_listing_not_found",
+            Self::NegotiationChannelType { .. } => "service_marketplace_negotiation_channel_type",
+            Self::ProviderNotChannelMember { .. } => {
+                "service_marketplace_provider_not_channel_member"
+            }
+        }
+    }
+}
 
 fn validate_listing_shape(listing: &ServiceListing) -> Result<(), ServiceMarketplaceError> {
     if listing.listing_id.trim().is_empty() {
@@ -217,10 +277,16 @@ fn validate_listing_shape(listing: &ServiceListing) -> Result<(), ServiceMarketp
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), ServiceMarketplaceError> {
-    AgentDid::parse(value)
-        .map_err(|error| ServiceMarketplaceError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, ServiceMarketplaceError> {
+    AgentDid::parse(value).map_err(|error| ServiceMarketplaceError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn matches_filter(listing: &ServiceListing, filter: &MarketplaceSearchFilter) -> bool {
