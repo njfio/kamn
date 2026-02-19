@@ -17,6 +17,18 @@ Backend: Kolme Blockchain Framework (fpco/kolme)
 
 # **Table of Contents**
 
+## **0. R43 Standalone Decision Contract**
+
+The following markers are authoritative for R43 data-layer design-decision tracking:
+
+- `data_layer_standalone_reason_taxonomy_version`: `kamn.data-layer.standalone-decision.reason-taxonomy.v1`
+- `data_layer_m11_operator_readiness_standalone_status`: `standalone_by_design`
+- `data_layer_m11_operator_readiness_standalone_reason_code`: `data_layer_m11_operator_readiness_meta_assessment`
+- `data_layer_prd_conformance_standalone_status`: `standalone_by_design`
+- `data_layer_prd_conformance_standalone_reason_code`: `data_layer_prd_conformance_meta_assessment`
+- `typed_did_migration_backlog_issue_ids`: `#5223`
+- `typed_did_migration_backlog_scope`: `non_data_layer_string_did_callsites`
+
 # **1\. Executive Summary**
 
 KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordination layer for autonomous AI agents. This Product Requirements Document specifies the complete data layer architecture that supports identity, messaging, escrow, settlement, audit trails, semantic intelligence, relationship mapping, operational telemetry, and compliance across the KAMN platform.
