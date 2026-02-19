@@ -1,7 +1,7 @@
 # Issue #4097 Spec
 
 - Title: Subtask: add docs-runbook and go-no-go marker parity contracts for overload governance
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-15-resource-quota-fairness-and-overload-resilience-governance/index.md

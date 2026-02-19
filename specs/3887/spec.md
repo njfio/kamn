@@ -1,7 +1,7 @@
 # Issue #3887 Spec
 
 - Title: Subtask: add interoperability artifact schema and marker policy checks
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r26-4-native-libp2p-production-activation-and-live-node-validation/index.md
 
