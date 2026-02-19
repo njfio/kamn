@@ -1767,6 +1767,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo test -p kamn-node main_tests::runtime_tests::performance_runtime_kolme_live_retry_recovery_stays_within_budget -- --exact`
   - `cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_emits_ordered_bootstrap_readiness_markers -- --exact`
 
+## Main Tests Surface Budget Baseline Contract
+- Deterministic runtime test-surface budget taxonomy markers:
+  - `main_tests_surface_budget_reason_taxonomy_version=kamn.node.main-tests-surface-budget-reason-taxonomy.v1`
+  - `main_tests_surface_budget_reason_codes_csv=budget_fixture_missing,budget_fixture_json_invalid,budget_fixture_schema_mismatch,budget_threshold_missing,budget_threshold_invalid,main_tests_shell_budget_exceeded,runtime_tests_shell_budget_exceeded,runtime_tests_fragment_budget_exceeded,runtime_tests_fragment_count_below_min`
+- Deterministic budget status marker:
+  - `main_tests_surface_budget_status=verified`
+- Baseline fixture:
+  - `fixtures/ci/main_tests_runtime_surface_budget_baseline.json`
+- Guard command:
+  - `cargo test -p kamn-node --test main_tests_surface_budget_contract -- --nocapture`
+- Threshold refresh workflow:
+  - run `wc -l crates/kamn-node/src/main_tests.rs crates/kamn-node/src/main_tests/runtime_tests.rs crates/kamn-node/src/main_tests/runtime_tests/*.rs` to capture current shell/fragment counts.
+  - update `fixtures/ci/main_tests_runtime_surface_budget_baseline.json` with refreshed thresholds and captured metrics.
+  - rerun `cargo test -p kamn-node --test main_tests_surface_budget_contract -- --nocapture` before merge.
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`

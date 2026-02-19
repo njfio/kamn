@@ -1,0 +1,10 @@
+{
+  "schema_version": "kamn.node.main-tests-surface-budget-baseline.v1",
+  "main_tests_shell_max_lines": 260,
+  "runtime_tests_shell_max_lines": 120,
+  "runtime_tests_fragment_max_lines": 700,
+  "runtime_tests_fragment_min_count": 6,
+  "captured_runtime_tests_fragment_count": 6,
+  "captured_runtime_tests_fragment_max_lines": 637,
+  "captured_from_commit": "739b1cf4436eb8989663e0cce71e41b559924100"
+}
