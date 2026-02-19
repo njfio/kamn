@@ -1753,6 +1753,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
 - retry/tls local-heavy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 
+## Main Tests Command-Surface Parity Contract
+- Deterministic runtime command-surface parity taxonomy markers:
+  - `main_tests_command_surface_parity_reason_taxonomy_version=kamn.node.main-tests-command-surface-parity-reason-taxonomy.v1`
+  - `main_tests_command_surface_parity_reason_codes_csv=runtime_test_selector_symbol_missing,runtime_test_selector_command_missing,command_surface_parity_marker_missing`
+- Deterministic parity status marker:
+  - `main_tests_command_surface_parity_status=verified`
+- Guard command:
+  - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract -- --nocapture`
+- Required runtime selector commands:
+  - `cargo test -p kamn-node main_tests::runtime_tests::functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::regression_runtime_kolme_live_submit_malformed_response_fails_fast_without_retry -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::performance_runtime_kolme_live_retry_recovery_stays_within_budget -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_emits_ordered_bootstrap_readiness_markers -- --exact`
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
