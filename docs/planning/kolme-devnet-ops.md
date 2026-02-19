@@ -382,8 +382,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_triadic_devnet_smoke.sh --output-file /tmp/triadic-devnet-markers.txt`
 - Validate observed markers:
   - `python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json`
+- Enforce artifact schema and marker policy:
+  - `python3 scripts/kolme/check_triadic_devnet_smoke_policy.py --report-file /tmp/triadic-devnet-report.json --expected-final-decision GO --require-reason-code triadic_devnet_smoke_policy_passed --output-json /tmp/triadic-devnet-policy-report.json`
 - Run budgeted contract lane:
-  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json --phase contract --output-json /tmp/triadic-devnet-report.json`
+  - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json --phase contract --output-json /tmp/triadic-devnet-report.json --policy-output-json /tmp/triadic-devnet-policy-report.json`
 
 ## Deterministic Marker Contract
 
@@ -395,6 +397,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `marker_block_commit=ok`
   - `marker_teardown=ok`
   - `status=pass`
+- Policy taxonomy markers:
+  - `reason_taxonomy_version=kamn.kolme.triadic-devnet-smoke-policy-reason-taxonomy.v1`
+  - `reason_taxonomy_codes_csv=report_schema_version_mismatch,report_fixture_path_missing,report_marker_file_missing,report_required_markers_invalid,report_observed_markers_invalid,report_missing_markers_invalid,report_final_decision_invalid,report_missing_markers_non_empty,report_fail_without_missing_markers,report_final_decision_not_pass,report_final_decision_not_fail,report_expected_failure_markers_missing,required_reason_code_missing`
 
 ## Runtime and Cost Policy
 
