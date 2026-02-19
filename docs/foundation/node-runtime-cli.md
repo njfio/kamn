@@ -567,7 +567,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-node
 cargo test -p kamn-node --test node_runtime_cli_docs
-cargo test -p kamn-node --test node_module_map_docs
+cargo test -p kamn-node --test architecture_navigation_docs
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core construct_lock
 cargo fmt --check
