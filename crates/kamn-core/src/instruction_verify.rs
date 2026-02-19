@@ -5,6 +5,10 @@ use std::collections::{HashMap, HashSet};
 
 /// Default maximum claim validity window in seconds (24h).
 pub const DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS: u64 = 24 * 60 * 60;
+const INSTRUCTION_VERIFY_INVALID_CLAIM_SENDER_DID_REASON_CODE: &str =
+    "instruction_verify_invalid_claim_sender_did";
+const INSTRUCTION_VERIFY_INVALID_RECORD_SENDER_DID_REASON_CODE: &str =
+    "instruction_verify_invalid_record_sender_did";
 
 /// Canonical instruction record persisted for verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,9 +103,23 @@ pub enum VerificationFailure {
     /// Claim or record inclusion proof reference is missing.
     MissingInclusionProofReference,
     /// Claim sender DID is invalid.
-    InvalidClaimSenderDid(String),
+    InvalidClaimSenderDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Record sender DID is invalid.
-    InvalidRecordSenderDid(String),
+    InvalidRecordSenderDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Claim sender does not match record sender.
     SenderMismatch {
         /// Expected sender DID from record.
@@ -170,18 +188,30 @@ impl InstructionVerifier {
                 ));
             }
         };
-        if AgentDid::parse(&claim.from_did).is_err() {
-            return VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
-                claim.from_did.clone(),
-            ));
-        }
-        if AgentDid::parse(&record.from_did).is_err() {
-            return VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
-                record.from_did.clone(),
-            ));
-        }
+        let claim_sender = match AgentDid::parse(&claim.from_did) {
+            Ok(value) => value,
+            Err(error) => {
+                return VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid {
+                    field: "claim.from_did",
+                    reason_code: INSTRUCTION_VERIFY_INVALID_CLAIM_SENDER_DID_REASON_CODE,
+                    detail: error.to_string(),
+                });
+            }
+        };
+        let record_sender = match AgentDid::parse(&record.from_did) {
+            Ok(value) => value,
+            Err(error) => {
+                return VerificationOutcome::Rejected(
+                    VerificationFailure::InvalidRecordSenderDid {
+                        field: "record.from_did",
+                        reason_code: INSTRUCTION_VERIFY_INVALID_RECORD_SENDER_DID_REASON_CODE,
+                        detail: error.to_string(),
+                    },
+                );
+            }
+        };
 
-        if record.from_did != claim.from_did {
+        if record_sender.as_str() != claim_sender.as_str() {
             return VerificationOutcome::Rejected(VerificationFailure::SenderMismatch {
                 expected: record.from_did.clone(),
                 actual: claim.from_did.clone(),
@@ -490,9 +520,11 @@ mod tests {
 
         assert_eq!(
             InstructionVerifier::verify(&claim, &context),
-            VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
-                "not-a-did".to_owned()
-            ))
+            VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid {
+                field: "claim.from_did",
+                reason_code: "instruction_verify_invalid_claim_sender_did",
+                detail: "invalid agent did prefix: not-a-did".to_owned(),
+            })
         );
     }
 
@@ -518,9 +550,11 @@ mod tests {
 
         assert_eq!(
             InstructionVerifier::verify(&claim, &context),
-            VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
-                "bad-record-did".to_owned()
-            ))
+            VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid {
+                field: "record.from_did",
+                reason_code: "instruction_verify_invalid_record_sender_did",
+                detail: "invalid agent did prefix: bad-record-did".to_owned(),
+            })
         );
     }
 }

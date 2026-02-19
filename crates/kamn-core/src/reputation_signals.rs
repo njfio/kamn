@@ -2,6 +2,11 @@ use crate::{AgentDid, ReputationStore, ServiceListing};
 use std::collections::BTreeSet;
 use std::fmt;
 
+const REPUTATION_SIGNAL_INVALID_CANDIDATE_DID_REASON_CODE: &str =
+    "reputation_signal_invalid_candidate_did";
+const REPUTATION_SIGNAL_INVALID_PROVIDER_DID_REASON_CODE: &str =
+    "reputation_signal_invalid_provider_did";
+
 /// Weight configuration used to convert reputation evidence into routing adjustments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RoutingSignalWeights {
@@ -80,7 +85,14 @@ pub enum ReputationSignalError {
     /// No candidates were supplied.
     EmptyCandidates,
     /// Candidate DID failed validation.
-    InvalidCandidateDid(String),
+    InvalidCandidateDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Candidate DID appeared more than once.
     DuplicateCandidateDid(String),
     /// Candidate has no reputation record.
@@ -95,7 +107,11 @@ impl fmt::Display for ReputationSignalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyCandidates => write!(f, "at least one candidate is required"),
-            Self::InvalidCandidateDid(message) => write!(f, "invalid candidate did: {message}"),
+            Self::InvalidCandidateDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::DuplicateCandidateDid(agent_did) => {
                 write!(f, "duplicate candidate did: {agent_did}")
             }
@@ -131,8 +147,13 @@ pub fn rank_agents_for_routing(
     let mut seen = BTreeSet::new();
     let mut ranked = Vec::with_capacity(candidate_dids.len());
     for candidate_did in candidate_dids {
-        let parsed = AgentDid::parse(candidate_did)
-            .map_err(|error| ReputationSignalError::InvalidCandidateDid(error.to_string()))?;
+        let parsed = AgentDid::parse(candidate_did).map_err(|error| {
+            ReputationSignalError::InvalidCandidateDid {
+                field: "candidate_did",
+                reason_code: REPUTATION_SIGNAL_INVALID_CANDIDATE_DID_REASON_CODE,
+                detail: error.to_string(),
+            }
+        })?;
         if !seen.insert(parsed.as_str().to_owned()) {
             return Err(ReputationSignalError::DuplicateCandidateDid(
                 parsed.as_str().to_owned(),
@@ -183,8 +204,13 @@ pub fn rank_listings_by_reputation(
 
     let mut ranked = Vec::with_capacity(listings.len());
     for listing in listings {
-        let parsed = AgentDid::parse(&listing.provider_did)
-            .map_err(|error| ReputationSignalError::InvalidCandidateDid(error.to_string()))?;
+        let parsed = AgentDid::parse(&listing.provider_did).map_err(|error| {
+            ReputationSignalError::InvalidCandidateDid {
+                field: "listing.provider_did",
+                reason_code: REPUTATION_SIGNAL_INVALID_PROVIDER_DID_REASON_CODE,
+                detail: error.to_string(),
+            }
+        })?;
         let reputation = store
             .get_agent(parsed.as_str())
             .ok_or_else(|| ReputationSignalError::MissingReputation(parsed.as_str().to_owned()))?;

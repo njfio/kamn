@@ -1,4 +1,10 @@
-use kamn_core::{PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError};
+use kamn_core::runtime::{
+    ApproverAttestation, ApproverQuorumError, ListenerAttestation, ListenerQuorumError,
+};
+use kamn_core::{
+    AuthenticatedPeerFrame, AuthenticatedPeerFrameError, PeerFrameAuthenticator, PeerLifecycle,
+    PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
+};
 
 const PEER_EVENTS: [PeerLifecycleEvent; 6] = [
     PeerLifecycleEvent::StartConnect,
@@ -185,4 +191,59 @@ fn peer_lifecycle_property_roundtrip_disconnect_recovers_connection_path() {
         );
         assert_eq!(lifecycle.state(), PeerLifecycleState::Active);
     }
+}
+
+#[test]
+fn runtime_peer_contract_rejects_invalid_sender_did_with_structured_marker() {
+    assert_eq!(
+        AuthenticatedPeerFrame::new(
+            "frame-1",
+            "bad-did",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-1",
+            "sig-1",
+        ),
+        Err(AuthenticatedPeerFrameError::InvalidSenderDid {
+            field: "sender_peer_did",
+            reason_code: "runtime_peer_frame_invalid_sender_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn runtime_peer_contract_rejects_invalid_local_peer_did_with_structured_marker() {
+    assert_eq!(
+        PeerFrameAuthenticator::new("bad-local-did", vec!["kamn:did:agent:peer-a".to_owned()]),
+        Err(AuthenticatedPeerFrameError::InvalidLocalPeerDid {
+            field: "local_peer_did",
+            reason_code: "runtime_peer_frame_invalid_local_peer_did",
+            detail: "invalid agent did prefix: bad-local-did".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn runtime_phase_listener_attestation_rejects_invalid_did_with_structured_marker() {
+    assert_eq!(
+        ListenerAttestation::new("listener-a", "att-1"),
+        Err(ListenerQuorumError::InvalidListenerDid {
+            field: "listener_did",
+            reason_code: "runtime_listener_quorum_invalid_listener_did",
+            detail: "invalid agent did prefix: listener-a".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn runtime_phase_approver_attestation_rejects_invalid_did_with_structured_marker() {
+    assert_eq!(
+        ApproverAttestation::new("approver-a", "payload-hash-1", "att-1"),
+        Err(ApproverQuorumError::InvalidApproverDid {
+            field: "approver_did",
+            reason_code: "runtime_approver_quorum_invalid_approver_did",
+            detail: "invalid agent did prefix: approver-a".to_owned(),
+        })
+    );
 }

@@ -24,6 +24,27 @@ fn upgrade_orchestration_rejects_non_advancing_version_target() {
 }
 
 #[test]
+fn upgrade_orchestration_rejects_invalid_validator_did_with_structured_marker() {
+    let mut orchestrator =
+        VersionUpgradeOrchestrator::new("v0.2.0").expect("orchestrator should initialize");
+
+    assert_eq!(
+        orchestrator.propose_upgrade(
+            "gov-upgrade-invalid-did",
+            "v0.3.0",
+            "bad-did",
+            2,
+            1_716_500_010
+        ),
+        Err(UpgradeOrchestrationError::InvalidDid {
+            field: "proposed_by",
+            reason_code: "upgrade_orchestration_invalid_proposed_by_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn upgrade_orchestration_functional_propose_approve_activate_flow() {
     let mut orchestrator =
         VersionUpgradeOrchestrator::new("v0.1.0").expect("orchestrator should initialize");

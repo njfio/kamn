@@ -8,6 +8,13 @@ use std::fmt;
 pub const DEFAULT_TRUST_SCORE: u32 = 500;
 /// Maximum allowed trust score.
 pub const MAX_TRUST_SCORE: u32 = 1_000;
+const REPUTATION_STATE_INVALID_AGENT_DID_REASON_CODE: &str = "reputation_state_invalid_agent_did";
+const REPUTATION_STATE_INVALID_ENDORSER_DID_REASON_CODE: &str =
+    "reputation_state_invalid_endorser_did";
+const REPUTATION_STATE_INVALID_DISPUTE_OPENER_DID_REASON_CODE: &str =
+    "reputation_state_invalid_dispute_opener_did";
+const REPUTATION_STATE_INVALID_VERIFIER_DID_REASON_CODE: &str =
+    "reputation_state_invalid_verifier_did";
 
 /// Task outcome categories used for reputation accounting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,7 +141,14 @@ impl Default for ReputationStore {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReputationError {
     /// Agent DID is invalid.
-    InvalidAgentDid(String),
+    InvalidAgentDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Agent already exists in store.
     AgentAlreadyExists(String),
     /// Agent was not found in store.
@@ -184,7 +198,11 @@ pub enum ReputationError {
 impl fmt::Display for ReputationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidAgentDid(message) => write!(f, "invalid agent did: {message}"),
+            Self::InvalidAgentDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::AgentAlreadyExists(agent_did) => {
                 write!(f, "agent already exists: {agent_did}")
             }
@@ -247,7 +265,11 @@ impl ReputationStore {
         block_height: u64,
     ) -> Result<(), ReputationError> {
         validate_block_height(block_height)?;
-        validate_agent_did(agent_did)?;
+        validate_agent_did(
+            agent_did,
+            "agent_did",
+            REPUTATION_STATE_INVALID_AGENT_DID_REASON_CODE,
+        )?;
 
         if self.agents.contains_key(agent_did) {
             return Err(ReputationError::AgentAlreadyExists(agent_did.to_owned()));
@@ -340,7 +362,11 @@ impl ReputationStore {
         endorsement: Endorsement,
     ) -> Result<(), ReputationError> {
         validate_block_height(endorsement.block_height)?;
-        validate_agent_did(&endorsement.from_agent_did)?;
+        validate_agent_did(
+            &endorsement.from_agent_did,
+            "endorsement.from_agent_did",
+            REPUTATION_STATE_INVALID_ENDORSER_DID_REASON_CODE,
+        )?;
         require_non_empty("endorsement.endorsement_id", &endorsement.endorsement_id)?;
         require_non_empty("endorsement.note", &endorsement.note)?;
 
@@ -366,7 +392,11 @@ impl ReputationStore {
         dispute: DisputeRecord,
     ) -> Result<(), ReputationError> {
         validate_block_height(dispute.block_height)?;
-        validate_agent_did(&dispute.opened_by)?;
+        validate_agent_did(
+            &dispute.opened_by,
+            "dispute.opened_by",
+            REPUTATION_STATE_INVALID_DISPUTE_OPENER_DID_REASON_CODE,
+        )?;
         require_non_empty("dispute.dispute_id", &dispute.dispute_id)?;
         require_non_empty("dispute.reason", &dispute.reason)?;
 
@@ -398,7 +428,11 @@ impl ReputationStore {
         verification: CapabilityVerification,
     ) -> Result<(), ReputationError> {
         validate_block_height(verification.block_height)?;
-        validate_agent_did(&verification.verifier_did)?;
+        validate_agent_did(
+            &verification.verifier_did,
+            "verification.verifier_did",
+            REPUTATION_STATE_INVALID_VERIFIER_DID_REASON_CODE,
+        )?;
         require_non_empty("verification.capability", &verification.capability)?;
         require_non_empty("verification.proof_ref", &verification.proof_ref)?;
 
@@ -511,8 +545,11 @@ impl ReputationStore {
 
 /// Builds the canonical reputation state key for an agent DID.
 pub fn agent_state_key(agent_did: &str) -> Result<String, ReputationError> {
-    let did = AgentDid::parse(agent_did)
-        .map_err(|error| ReputationError::InvalidAgentDid(error.to_string()))?;
+    let did = validate_agent_did(
+        agent_did,
+        "agent_did",
+        REPUTATION_STATE_INVALID_AGENT_DID_REASON_CODE,
+    )?;
     canonical_state_key("kamn.reputation.scores", "agent", did.method_specific_id())
         .map_err(ReputationError::StateKey)
 }
@@ -529,10 +566,16 @@ fn calculate_dispute_rate(disputes: u64, completed_and_failed: u64) -> f64 {
     }
 }
 
-fn validate_agent_did(agent_did: &str) -> Result<(), ReputationError> {
-    AgentDid::parse(agent_did)
-        .map_err(|error| ReputationError::InvalidAgentDid(error.to_string()))?;
-    Ok(())
+fn validate_agent_did(
+    agent_did: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, ReputationError> {
+    AgentDid::parse(agent_did).map_err(|error| ReputationError::InvalidAgentDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn validate_block_height(block_height: u64) -> Result<(), ReputationError> {

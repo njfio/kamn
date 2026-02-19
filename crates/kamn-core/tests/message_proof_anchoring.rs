@@ -231,6 +231,35 @@ fn regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed()
 }
 
 #[test]
+fn regression_anchor_submission_rejects_invalid_actor_did_with_structured_marker() {
+    let mut lifecycle = MessageLifecycleStore::new();
+    let message_id = "urn:uuid:msg-anchor-invalid-did";
+    register_and_advance_broadcast(&mut lifecycle, message_id);
+
+    let mut anchoring = MessageProofAnchoringService::new();
+    let mut adapter = InMemoryMessageProofChainAdapter::new("kolme-local");
+    let result = anchoring.anchor_message_proof_via_chain_adapter(
+        &mut lifecycle,
+        &mut adapter,
+        MessageProofAnchorRequest {
+            message_id: message_id.to_owned(),
+            actor_did: "bad-did".to_owned(),
+            nonce: 17,
+            proof_hash: "fnv1a64:proof-anchor-invalid-did".to_owned(),
+        },
+    );
+
+    assert_eq!(
+        result,
+        Err(MessageProofAnchoringError::InvalidActorDid {
+            field: "actor_did",
+            reason_code: "message_proof_anchor_invalid_actor_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn performance_anchor_submission_contract_lane_stays_within_budget() {
     let started = Instant::now();
 

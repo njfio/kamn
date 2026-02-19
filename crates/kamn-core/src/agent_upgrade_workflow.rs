@@ -8,6 +8,19 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+const AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_PROPOSER_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_allowed_proposer_did";
+const AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_VALIDATOR_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_allowed_validator_did";
+const AGENT_UPGRADE_WORKFLOW_INVALID_PROPOSAL_AGENT_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_proposal_agent_did";
+const AGENT_UPGRADE_WORKFLOW_INVALID_REVIEWER_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_reviewer_did";
+const AGENT_UPGRADE_WORKFLOW_INVALID_VALIDATOR_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_validator_did";
+const AGENT_UPGRADE_WORKFLOW_INVALID_EXECUTED_BY_DID_REASON_CODE: &str =
+    "agent_upgrade_workflow_invalid_executed_by_did";
+
 /// Configuration parameters used to initialize an agent-driven upgrade workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentUpgradeWorkflowConfig {
@@ -151,12 +164,20 @@ impl AgentDrivenUpgradeWorkflow {
 
         let mut allowed_agent_proposers = BTreeSet::new();
         for proposer in config.allowed_agent_proposers {
-            validate_did(&proposer)?;
+            validate_did(
+                &proposer,
+                "config.allowed_agent_proposers[]",
+                AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_PROPOSER_DID_REASON_CODE,
+            )?;
             allowed_agent_proposers.insert(proposer);
         }
         let mut allowed_validator_voters = BTreeSet::new();
         for validator in config.allowed_validator_voters {
-            validate_did(&validator)?;
+            validate_did(
+                &validator,
+                "config.allowed_validator_voters[]",
+                AGENT_UPGRADE_WORKFLOW_INVALID_ALLOWED_VALIDATOR_DID_REASON_CODE,
+            )?;
             allowed_validator_voters.insert(validator);
         }
 
@@ -183,7 +204,11 @@ impl AgentDrivenUpgradeWorkflow {
     ) -> Result<(), AgentUpgradeWorkflowError> {
         require_non_empty("proposal_id", &draft.proposal_id)?;
         require_non_empty("rationale", &draft.rationale)?;
-        validate_did(&draft.agent_did)?;
+        validate_did(
+            &draft.agent_did,
+            "proposal.agent_did",
+            AGENT_UPGRADE_WORKFLOW_INVALID_PROPOSAL_AGENT_DID_REASON_CODE,
+        )?;
         validate_timestamp("created_at_unix", draft.created_at_unix)?;
         if draft.voting_deadline_unix <= draft.created_at_unix {
             return Err(AgentUpgradeWorkflowError::InvalidDeadline {
@@ -246,7 +271,11 @@ impl AgentDrivenUpgradeWorkflow {
         reviewer_did: &str,
         reviewed_at_unix: u64,
     ) -> Result<(), AgentUpgradeWorkflowError> {
-        validate_did(reviewer_did)?;
+        validate_did(
+            reviewer_did,
+            "reviewer_did",
+            AGENT_UPGRADE_WORKFLOW_INVALID_REVIEWER_DID_REASON_CODE,
+        )?;
         validate_timestamp("reviewed_at_unix", reviewed_at_unix)?;
         if !self.allowed_validator_voters.contains(reviewer_did) {
             return Err(AgentUpgradeWorkflowError::UnauthorizedHumanReviewer(
@@ -341,7 +370,11 @@ impl AgentDrivenUpgradeWorkflow {
         choice: GovernanceVoteChoice,
         cast_at_unix: u64,
     ) -> Result<(), AgentUpgradeWorkflowError> {
-        validate_did(validator_did)?;
+        validate_did(
+            validator_did,
+            "validator_did",
+            AGENT_UPGRADE_WORKFLOW_INVALID_VALIDATOR_DID_REASON_CODE,
+        )?;
         if !self.allowed_validator_voters.contains(validator_did) {
             return Err(AgentUpgradeWorkflowError::UnauthorizedValidatorVoter(
                 validator_did.to_owned(),
@@ -381,7 +414,11 @@ impl AgentDrivenUpgradeWorkflow {
         executed_at_unix: u64,
         operation_hash: &str,
     ) -> Result<(), AgentUpgradeWorkflowError> {
-        validate_did(executed_by)?;
+        validate_did(
+            executed_by,
+            "executed_by",
+            AGENT_UPGRADE_WORKFLOW_INVALID_EXECUTED_BY_DID_REASON_CODE,
+        )?;
         validate_timestamp("executed_at_unix", executed_at_unix)?;
         require_non_empty("operation_hash", operation_hash)?;
 
@@ -506,7 +543,14 @@ pub enum AgentUpgradeWorkflowError {
     /// Required string field was empty or whitespace.
     EmptyField(&'static str),
     /// DID failed canonical parse/validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Timestamp field was zero or otherwise invalid.
     InvalidTimestamp(&'static str),
     /// Voting deadline does not occur after the reference creation/submission timestamp.
@@ -585,7 +629,11 @@ impl fmt::Display for AgentUpgradeWorkflowError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
             Self::InvalidDeadline {
                 created_at_unix,
@@ -678,10 +726,16 @@ fn validate_timestamp(field: &'static str, value: u64) -> Result<(), AgentUpgrad
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), AgentUpgradeWorkflowError> {
-    AgentDid::parse(value)
-        .map_err(|error| AgentUpgradeWorkflowError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn validate_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, AgentUpgradeWorkflowError> {
+    AgentDid::parse(value).map_err(|error| AgentUpgradeWorkflowError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 #[cfg(test)]

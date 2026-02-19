@@ -185,9 +185,11 @@ fn regression_rejects_invalid_claim_sender_did() {
 
     assert_eq!(
         InstructionVerifier::verify(&claim, &context),
-        VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
-            "not-a-did".to_owned()
-        ))
+        VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid {
+            field: "claim.from_did",
+            reason_code: "instruction_verify_invalid_claim_sender_did",
+            detail: "invalid agent did prefix: not-a-did".to_owned(),
+        })
     );
 }
 
@@ -203,9 +205,11 @@ fn regression_rejects_invalid_record_sender_did() {
 
     assert_eq!(
         InstructionVerifier::verify(&claim, &context),
-        VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
-            "bad-record-did".to_owned()
-        ))
+        VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid {
+            field: "record.from_did",
+            reason_code: "instruction_verify_invalid_record_sender_did",
+            detail: "invalid agent did prefix: bad-record-did".to_owned(),
+        })
     );
 }
 

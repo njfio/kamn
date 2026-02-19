@@ -11,6 +11,10 @@ use std::fmt;
 pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "SenderKey-v1";
 /// Cipher algorithm identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
+const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =
+    "group_channel_crypto_invalid_sender_did";
+const GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE: &str =
+    "group_channel_crypto_invalid_recipient_did";
 
 /// Persisted sender-key distribution event for one sender generation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,7 +87,11 @@ impl GroupChannelCryptoEngine {
         sender_key_ref: &str,
         recipients: Vec<String>,
     ) -> Result<SenderKeyDistributionRecord, GroupChannelCryptoError> {
-        validate_did(sender_did)?;
+        validate_did(
+            sender_did,
+            "sender_did",
+            GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE,
+        )?;
         validate_sender_key_ref(sender_key_ref)?;
 
         let recipient_allowlist = validate_recipients(recipients)?;
@@ -164,7 +172,11 @@ impl GroupChannelCryptoEngine {
         plaintext: &str,
         nonce: u64,
     ) -> Result<GroupMessageCiphertext, GroupChannelCryptoError> {
-        validate_did(sender_did)?;
+        validate_did(
+            sender_did,
+            "sender_did",
+            GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE,
+        )?;
         if plaintext.is_empty() {
             return Err(GroupChannelCryptoError::EmptyPayload);
         }
@@ -224,7 +236,11 @@ impl GroupChannelCryptoEngine {
         recipient_did: &str,
         sealed: &GroupMessageCiphertext,
     ) -> Result<String, GroupChannelCryptoError> {
-        validate_did(recipient_did)?;
+        validate_did(
+            recipient_did,
+            "recipient_did",
+            GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE,
+        )?;
         if sealed.key_derivation_algorithm != GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM
             || sealed.cipher_algorithm != GROUP_MESSAGE_CIPHER_ALGORITHM
         {
@@ -293,7 +309,14 @@ pub enum GroupChannelCryptoError {
     /// Nonce was already used for the same sender/generation.
     NonceReuse(u64),
     /// DID failed parser validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Sender key reference format was invalid.
     InvalidSenderKeyRef,
     /// Sender DID has no registered sender-key generation.
@@ -339,7 +362,11 @@ impl fmt::Display for GroupChannelCryptoError {
             Self::EmptyPayload => write!(f, "plaintext payload must not be empty"),
             Self::InvalidNonce(value) => write!(f, "nonce must be positive: {value}"),
             Self::NonceReuse(value) => write!(f, "nonce reuse detected: {value}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidSenderKeyRef => {
                 write!(f, "sender key reference must include #sender-key-")
             }
@@ -372,10 +399,16 @@ impl fmt::Display for GroupChannelCryptoError {
 
 impl std::error::Error for GroupChannelCryptoError {}
 
-fn validate_did(value: &str) -> Result<(), GroupChannelCryptoError> {
-    AgentDid::parse(value)
-        .map_err(|error| GroupChannelCryptoError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn validate_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, GroupChannelCryptoError> {
+    AgentDid::parse(value).map_err(|error| GroupChannelCryptoError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn validate_sender_key_ref(value: &str) -> Result<(), GroupChannelCryptoError> {
@@ -394,7 +427,11 @@ fn validate_recipients(
 
     let mut allowlist = BTreeSet::new();
     for recipient in recipients {
-        validate_did(&recipient)?;
+        validate_did(
+            &recipient,
+            "recipients[]",
+            GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE,
+        )?;
         allowlist.insert(recipient);
     }
     Ok(allowlist)

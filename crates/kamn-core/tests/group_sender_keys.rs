@@ -123,3 +123,22 @@ fn regression_unauthorized_recipient_cannot_decrypt() {
         })
     );
 }
+
+#[test]
+fn group_sender_keys_reject_invalid_sender_did_with_structured_marker() {
+    let mut engine =
+        GroupChannelCryptoEngine::new("channel:group:epsilon").expect("engine should initialize");
+
+    assert_eq!(
+        engine.distribute_sender_key(
+            "not-a-did",
+            "kamn:did:agent:alice#sender-key-1",
+            vec!["kamn:did:agent:bob".to_owned()],
+        ),
+        Err(GroupChannelCryptoError::InvalidDid {
+            field: "sender_did",
+            reason_code: "group_channel_crypto_invalid_sender_did",
+            detail: "invalid agent did prefix: not-a-did".to_owned(),
+        })
+    );
+}

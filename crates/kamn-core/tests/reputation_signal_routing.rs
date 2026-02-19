@@ -133,9 +133,11 @@ fn reputation_signal_routing_rejects_invalid_candidate_did() {
     );
     assert_eq!(
         result,
-        Err(ReputationSignalError::InvalidCandidateDid(
-            "invalid agent did prefix: did:example:agent-1".to_owned()
-        ))
+        Err(ReputationSignalError::InvalidCandidateDid {
+            field: "candidate_did",
+            reason_code: "reputation_signal_invalid_candidate_did",
+            detail: "invalid agent did prefix: did:example:agent-1".to_owned(),
+        })
     );
 }
 

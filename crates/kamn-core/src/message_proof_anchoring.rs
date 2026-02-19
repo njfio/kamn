@@ -8,6 +8,9 @@ use crate::{AgentDid, MessageLifecycleError, MessageLifecycleStore, MessageStatu
 use std::collections::BTreeMap;
 use std::fmt;
 
+const MESSAGE_PROOF_ANCHOR_INVALID_ACTOR_DID_REASON_CODE: &str =
+    "message_proof_anchor_invalid_actor_did";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Retry classification for message proof anchor submissions.
 pub enum MessageProofAnchorRetryClass {
@@ -119,7 +122,14 @@ pub enum MessageProofAnchoringError {
     /// Actor DID is empty.
     EmptyActorDid,
     /// Actor DID is invalid.
-    InvalidActorDid(String),
+    InvalidActorDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Anchor nonce is invalid (zero).
     InvalidAnchorNonce(u64),
     /// Proof hash is empty.
@@ -177,7 +187,7 @@ impl MessageProofAnchoringError {
             Self::Lifecycle(_) => "message_proof_anchor_lifecycle_error",
             Self::EmptyMessageId => "message_proof_anchor_empty_message_id",
             Self::EmptyActorDid => "message_proof_anchor_empty_actor_did",
-            Self::InvalidActorDid(_) => "message_proof_anchor_invalid_actor_did",
+            Self::InvalidActorDid { .. } => MESSAGE_PROOF_ANCHOR_INVALID_ACTOR_DID_REASON_CODE,
             Self::InvalidAnchorNonce(_) => "message_proof_anchor_invalid_nonce",
             Self::EmptyProofHash => "message_proof_anchor_empty_proof_hash",
             Self::InvalidAnchorState { .. } => "message_proof_anchor_invalid_state",
@@ -196,7 +206,11 @@ impl fmt::Display for MessageProofAnchoringError {
             Self::Lifecycle(error) => write!(f, "{error}"),
             Self::EmptyMessageId => write!(f, "message_id must not be empty"),
             Self::EmptyActorDid => write!(f, "actor_did must not be empty"),
-            Self::InvalidActorDid(value) => write!(f, "invalid actor did: {value}"),
+            Self::InvalidActorDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidAnchorNonce(value) => {
                 write!(f, "anchor nonce must be positive (found {value})")
             }
@@ -587,11 +601,11 @@ impl MessageProofAnchoringService {
         if request.actor_did.trim().is_empty() {
             return Err(MessageProofAnchoringError::EmptyActorDid);
         }
-        if let Err(error) = AgentDid::parse(request.actor_did.as_str()) {
-            return Err(MessageProofAnchoringError::InvalidActorDid(
-                error.to_string(),
-            ));
-        }
+        parse_agent_did(
+            request.actor_did.as_str(),
+            "actor_did",
+            MESSAGE_PROOF_ANCHOR_INVALID_ACTOR_DID_REASON_CODE,
+        )?;
         if request.nonce == 0 {
             return Err(MessageProofAnchoringError::InvalidAnchorNonce(
                 request.nonce,
@@ -602,4 +616,16 @@ impl MessageProofAnchoringService {
         }
         Ok(())
     }
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, MessageProofAnchoringError> {
+    AgentDid::parse(value).map_err(|error| MessageProofAnchoringError::InvalidActorDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
