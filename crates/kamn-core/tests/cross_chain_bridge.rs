@@ -213,3 +213,23 @@ fn regression_unknown_ethereum_route_is_rejected() {
         })
     );
 }
+
+#[test]
+fn invalid_route_target_did_surfaces_reason_code_contract() {
+    let mut invalid = config();
+    invalid.ethereum_routes.insert(
+        "ethereum:sepolia:contract:escrow-v1".to_owned(),
+        "bad-did".to_owned(),
+    );
+
+    let error = CrossChainBridgeEngine::new(invalid)
+        .expect_err("invalid ethereum route target did must fail deterministically");
+    assert_eq!(
+        error,
+        CrossChainBridgeError::InvalidDid {
+            field: "ethereum_routes.target_did",
+            reason_code: "cross_chain_bridge_invalid_route_target_did",
+            detail: "invalid agent did prefix: bad-did".to_owned(),
+        }
+    );
+}
