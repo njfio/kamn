@@ -377,14 +377,14 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/message-lifecycle.md|docs/foundation/key-management-and-encryption.md|docs/foundation/group-sender-key-rotation.md|docs/foundation/didcomm-v2-compatibility-profile.md|docs/foundation/a2a-mcp-interoperability.md|crates/kamn-core/tests/message_lifecycle_docs.rs|crates/kamn-core/tests/key_management_and_encryption_docs.rs|crates/kamn-core/tests/group_sender_key_rotation_docs.rs|crates/kamn-core/tests/didcomm_compatibility_profile_docs.rs|crates/kamn-core/tests/a2a_mcp_interop_docs.rs|scripts/message/*|fixtures/didcomm_envelope_compatibility/*|fixtures/a2a_mcp_conformance/*)
+    docs/foundation/message-lifecycle.md|docs/foundation/key-management-and-encryption.md|docs/foundation/group-sender-key-rotation.md|docs/foundation/didcomm-v2-compatibility-profile.md|docs/foundation/a2a-mcp-interoperability.md|crates/kamn-core/tests/message_lifecycle_docs.rs|crates/kamn-core/tests/docs_contract_matrix_wave2_harness.rs|crates/kamn-core/tests/docs_contract_matrix_wave2_migration_contract.rs|crates/kamn-core/tests/didcomm_compatibility_profile_docs.rs|crates/kamn-core/tests/a2a_mcp_interop_docs.rs|scripts/message/*|fixtures/didcomm_envelope_compatibility/*|fixtures/a2a_mcp_conformance/*)
       MESSAGE_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/data_governance_retention_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/channel/*|scripts/compliance/*classification_redaction*|scripts/framework/manifests/compliance_classification_redaction_*)
+    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/docs_contract_matrix_wave2_harness.rs|crates/kamn-core/tests/docs_contract_matrix_wave2_migration_contract.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/channel/*|scripts/compliance/*classification_redaction*|scripts/framework/manifests/compliance_classification_redaction_*)
       CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
