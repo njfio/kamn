@@ -40,6 +40,57 @@ def is_excluded(path: Path) -> bool:
     )
 
 
+def is_test_cfg_attribute(line: str) -> bool:
+    stripped = line.strip()
+    return (
+        stripped.startswith("#[cfg(")
+        and "test" in stripped
+        and "not(test)" not in stripped
+    )
+
+
+def skip_cfg_test_item(lines: list[str], index: int) -> int:
+    while index < len(lines) and lines[index].strip() == "":
+        index += 1
+
+    while index < len(lines) and lines[index].lstrip().startswith("#["):
+        index += 1
+
+    if index >= len(lines):
+        return index
+
+    brace_depth = 0
+    saw_open_brace = False
+    while index < len(lines):
+        line = lines[index]
+        open_count = line.count("{")
+        close_count = line.count("}")
+        if open_count > 0:
+            saw_open_brace = True
+        brace_depth += open_count - close_count
+        index += 1
+
+        if saw_open_brace:
+            if brace_depth <= 0:
+                return index
+            continue
+
+        if line.rstrip().endswith(";"):
+            return index
+
+    return index
+
+
+def iter_production_lines(lines: list[str]):
+    index = 0
+    while index < len(lines):
+        if is_test_cfg_attribute(lines[index]):
+            index = skip_cfg_test_item(lines, index + 1)
+            continue
+        yield index + 1, lines[index]
+        index += 1
+
+
 def has_unsafe_env_fallback_default(line: str) -> bool:
     compact = line.replace(" ", "")
     has_env_var = "std::env::var(" in compact or "env::var(" in compact
@@ -108,12 +159,7 @@ def find_violations(root: Path) -> list[dict[str, object]]:
         if is_excluded(rust_file):
             continue
         lines = rust_file.read_text(encoding="utf-8").splitlines()
-        cutoff = len(lines)
-        for line_no, line in enumerate(lines, start=1):
-            if line.strip().startswith("#[cfg(test)]"):
-                cutoff = line_no - 1
-                break
-        for line_no, line in enumerate(lines[:cutoff], start=1):
+        for line_no, line in iter_production_lines(lines):
             reason_code = reason_code_for_line(line)
             if reason_code is not None:
                 violations.append(

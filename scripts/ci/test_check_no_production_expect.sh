@@ -239,4 +239,37 @@ RS
 
 python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 
+rm -f "$TMP_DIR/cfg_test_only.rs"
+
+cat <<'RS' > "$TMP_DIR/cfg_test_prefix_production_violation.rs"
+#[cfg(test)]
+use std::sync::Mutex;
+
+fn production_violation() {
+    let _value = std::env::var("X").expect("should be detected even after cfg(test) import");
+}
+RS
+
+set +e
+cfg_test_prefix_output="$(python3 "$PY_CHECKER" --root "$TMP_DIR" 2>&1)"
+cfg_test_prefix_code=$?
+set -e
+
+if [ "$cfg_test_prefix_code" -eq 0 ]; then
+  echo "expected checker to fail when production expect() appears after top-level cfg(test) attribute" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$cfg_test_prefix_output" | grep -q '^reason_codes_value=production_expect_reachable$'; then
+  echo "expected deterministic reason_codes_value for cfg(test)-prefixed production expect() violation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$cfg_test_prefix_output" | grep -q '^reason_class=panic_reachability$'; then
+  echo "expected reason_class=panic_reachability for cfg(test)-prefixed production expect() violation" >&2
+  exit 1
+fi
+
+rm -f "$TMP_DIR/cfg_test_prefix_production_violation.rs"
+
 echo "production expect checker tests passed."
