@@ -1,6 +1,66 @@
 use super::{cli, DiagnosticsMode, OutputMode, RuntimeMode};
 use kamn_core::{NodeRole, SyncMode};
 
+fn is_test_cfg_attribute(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
+}
+
+fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
+    while index < lines.len() && lines[index].trim().is_empty() {
+        index += 1;
+    }
+
+    while index < lines.len() && lines[index].trim_start().starts_with("#[") {
+        index += 1;
+    }
+
+    if index >= lines.len() {
+        return index;
+    }
+
+    let mut brace_depth = 0_i64;
+    let mut saw_open_brace = false;
+    while index < lines.len() {
+        let line = lines[index];
+        let open_count = line.matches('{').count() as i64;
+        let close_count = line.matches('}').count() as i64;
+        if open_count > 0 {
+            saw_open_brace = true;
+        }
+        brace_depth += open_count - close_count;
+        index += 1;
+
+        if saw_open_brace {
+            if brace_depth <= 0 {
+                return index;
+            }
+            continue;
+        }
+
+        if line.trim_end().ends_with(';') {
+            return index;
+        }
+    }
+
+    index
+}
+
+fn production_source_without_cfg_test_items(source: &str) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut retained = Vec::with_capacity(lines.len());
+    let mut index = 0usize;
+    while index < lines.len() {
+        if is_test_cfg_attribute(lines[index]) {
+            index = skip_cfg_test_item(&lines, index + 1);
+            continue;
+        }
+        retained.push(lines[index]);
+        index += 1;
+    }
+    retained.join("\n")
+}
+
 #[test]
 fn cli_module_parses_required_role_and_defaults() {
     let args = vec![
@@ -119,12 +179,26 @@ fn regression_2745_cli_kolme_live_branch_has_no_expect_panics() {
 }
 
 #[test]
+fn regression_3940_production_source_extractor_retains_non_test_items() {
+    // Regression: #3940
+    let source = r#"
+#[cfg(test)]
+use std::sync::Mutex;
+
+fn production_path() {
+    let _value = std::env::var("KAMN_REGRESSION_EXAMPLE").expect("typed path should be visible");
+}
+"#;
+    let production_source = production_source_without_cfg_test_items(source);
+    assert!(
+        production_source.contains("expect("),
+        "production extractor must retain non-test items after top-level cfg(test) imports"
+    );
+}
+
+#[test]
 fn regression_3598_startup_paths_have_no_panic_control_flow() {
     // Regression: #3598
-    fn production_source(source: &str) -> &str {
-        source.split("#[cfg(test)]").next().unwrap_or(source)
-    }
-
     for (name, source) in [
         ("cli.rs", include_str!("cli.rs")),
         ("main.rs", include_str!("main.rs")),
@@ -133,8 +207,25 @@ fn regression_3598_startup_paths_have_no_panic_control_flow() {
             include_str!("runtime_kolme_live.rs"),
         ),
         ("signer.rs", include_str!("signer.rs")),
+        ("daemon_shutdown.rs", include_str!("daemon_shutdown.rs")),
+        (
+            "service_api_endpoint.rs",
+            include_str!("service_api_endpoint.rs"),
+        ),
+        (
+            "observability_endpoint.rs",
+            include_str!("observability_endpoint.rs"),
+        ),
+        (
+            "daemon_observability.rs",
+            include_str!("daemon_observability.rs"),
+        ),
+        (
+            "kolme_live_observability.rs",
+            include_str!("kolme_live_observability.rs"),
+        ),
     ] {
-        let production_source = production_source(source);
+        let production_source = production_source_without_cfg_test_items(source);
         assert!(
             !production_source.contains("expect("),
             "startup production paths must not use expect(): {name}"
