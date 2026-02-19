@@ -167,6 +167,16 @@ Managed signer provenance taxonomy markers:
 - `managed_signer_backend_response_provenance_malformed`
 - `managed_signer_backend_response_provenance_mismatch`
 
+Managed key-source adapter provenance mapping markers:
+
+- `managed_key_source_adapter_provenance_status=verified`
+- `managed_key_source_adapter_provenance_fields_csv=profile,key_source,key_reference_env,signer_public_key_hex`
+- `managed_key_source_adapter_provenance_reason_codes_csv=managed_signer_provenance_marker_profile_mismatch,managed_signer_provenance_marker_key_source_mismatch,managed_signer_provenance_marker_key_reference_env_mismatch,managed_signer_provenance_marker_public_key_missing`
+- `managed_signer_provenance_marker_profile_mismatch`
+- `managed_signer_provenance_marker_key_source_mismatch`
+- `managed_signer_provenance_marker_key_reference_env_mismatch`
+- `managed_signer_provenance_marker_public_key_missing`
+
 Deterministic operator-facing remediation/error expectations:
 
 - missing signer material rejects with message `signer secret env is required for selected profile`.
@@ -181,12 +191,15 @@ Validation commands:
 - `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
 - `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code -- --exact --nocapture`
 - `cargo test -p kamn-node --test signer_provenance_fallback_policy_contract -- --nocapture`
+- `cargo test -p kamn-node signer::managed_backend::tests::unit_managed_key_source_adapter_emits_deterministic_provenance_marker -- --exact`
+- `cargo test -p kamn-node signer::tests::regression_managed_key_source_provenance_marker_profile_mismatch_fails_closed -- --exact`
 - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 
 Regression markers:
 
 - `Regression: #4167`
 - `Regression: #4168`
+- `Regression: #3955`
 
 ## Signer Secret Decode Buffer Zeroization Controls (Issues #4165, #4166)
 

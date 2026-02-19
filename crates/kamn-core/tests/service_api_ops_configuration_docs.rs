@@ -161,6 +161,28 @@ fn service_api_ops_configuration_contains_signer_material_validation_and_fallbac
 }
 
 #[test]
+fn service_api_ops_configuration_contains_managed_key_source_adapter_provenance_mapping() {
+    assert!(DOC.contains("managed_key_source_adapter_provenance_status=verified"));
+    assert!(DOC.contains(
+        "managed_key_source_adapter_provenance_fields_csv=profile,key_source,key_reference_env,signer_public_key_hex"
+    ));
+    assert!(DOC.contains(
+        "managed_key_source_adapter_provenance_reason_codes_csv=managed_signer_provenance_marker_profile_mismatch,managed_signer_provenance_marker_key_source_mismatch,managed_signer_provenance_marker_key_reference_env_mismatch,managed_signer_provenance_marker_public_key_missing"
+    ));
+    assert!(DOC.contains("managed_signer_provenance_marker_profile_mismatch"));
+    assert!(DOC.contains("managed_signer_provenance_marker_key_source_mismatch"));
+    assert!(DOC.contains("managed_signer_provenance_marker_key_reference_env_mismatch"));
+    assert!(DOC.contains("managed_signer_provenance_marker_public_key_missing"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node signer::managed_backend::tests::unit_managed_key_source_adapter_emits_deterministic_provenance_marker -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node signer::tests::regression_managed_key_source_provenance_marker_profile_mismatch_fails_closed -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #3955"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_multi_signer_quorum_signature_decision_controls() {
     assert!(DOC
         .contains("## Multi-Signer Profile and Quorum Signature-Decision Controls (Issue #4357)"));

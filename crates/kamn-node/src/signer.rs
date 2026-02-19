@@ -23,8 +23,10 @@ mod managed_backend;
 mod nonce;
 mod signer_adapter;
 mod signer_policy;
+#[cfg(test)]
+pub(crate) use managed_backend::sign_kolme_live_managed_external_message;
 pub(crate) use managed_backend::{
-    resolve_kolme_live_managed_signer_required_marker, sign_kolme_live_managed_external_message,
+    resolve_kolme_live_managed_signer_required_marker, ManagedExternalKeySourceAdapter,
 };
 use managed_backend::{
     resolve_required_kolme_live_managed_signer_command,
@@ -68,6 +70,33 @@ pub(crate) struct KolmeLiveSignerPreflightReadiness {
     pub(crate) quorum_profile_linked: bool,
     pub(crate) quorum_satisfied: bool,
     pub(crate) quorum_linked: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct KolmeLiveManagedKeySourceProvenanceMarker {
+    profile: &'static str,
+    key_source: &'static str,
+    key_reference_env: &'static str,
+    signer_public_key_hex: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct KolmeLiveManagedKeySourceAdapterOutput {
+    signature_hex: String,
+    recovery_id: u8,
+    provenance_marker: KolmeLiveManagedKeySourceProvenanceMarker,
+}
+
+trait KolmeLiveManagedKeySourceAdapter {
+    fn sign_message(
+        &self,
+        signer_selection: &KolmeLiveSignerSelection,
+        key_reference: &str,
+        request: &KolmeRuntimeCommitRequest,
+        nonce: u64,
+        canonical_message: &str,
+        signer_public_key_hex: &str,
+    ) -> Result<KolmeLiveManagedKeySourceAdapterOutput, ConfigError>;
 }
 pub(crate) fn enforce_kolme_live_signer_preflight(
     strict_signer_profile: Option<&str>,
@@ -222,6 +251,37 @@ fn ensure_kolme_live_managed_external_private_key_env_unset(
     }
 }
 
+fn enforce_kolme_live_managed_key_source_provenance_marker_parity(
+    signer_selection: &KolmeLiveSignerSelection,
+    marker: &KolmeLiveManagedKeySourceProvenanceMarker,
+) -> Result<(), ConfigError> {
+    if marker.profile != signer_selection.profile {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "managed key-source provenance marker profile {} does not match resolved signer profile {} (managed_signer_provenance_marker_profile_mismatch)",
+            marker.profile, signer_selection.profile
+        )));
+    }
+    if marker.key_source != signer_selection.key_source {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "managed key-source provenance marker key source {} does not match resolved signer key source {} (managed_signer_provenance_marker_key_source_mismatch)",
+            marker.key_source, signer_selection.key_source
+        )));
+    }
+    if marker.key_reference_env != signer_selection.key_reference_env {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "managed key-source provenance marker key-reference env {} does not match resolved signer key-reference env {} (managed_signer_provenance_marker_key_reference_env_mismatch)",
+            marker.key_reference_env, signer_selection.key_reference_env
+        )));
+    }
+    if marker.signer_public_key_hex.trim().is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "managed key-source provenance marker signer_public_key_hex must not be empty (managed_signer_provenance_marker_public_key_missing)"
+                .to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn read_kolme_live_signer_private_key_hex(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
@@ -255,6 +315,30 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
+    let managed_key_source_adapter =
+        ManagedExternalKeySourceAdapter::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_uniform_availability(true),
+        );
+    build_kolme_live_direct_signed_wire_payload_with_managed_key_source_adapter(
+        base_url,
+        transport,
+        request,
+        strict_signer_profile,
+        strict_signer_key_source,
+        &managed_key_source_adapter,
+    )
+}
+
+fn build_kolme_live_direct_signed_wire_payload_with_managed_key_source_adapter<
+    A: KolmeLiveManagedKeySourceAdapter,
+>(
+    base_url: &str,
+    transport: &mut KolmeRuntimeCommitHttpTransport,
+    request: &KolmeRuntimeCommitRequest,
+    strict_signer_profile: Option<&str>,
+    strict_signer_key_source: Option<&str>,
+    managed_key_source_adapter: &A,
+) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
     let signer_selection =
         resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
     let _signer_preflight = evaluate_kolme_live_signer_preflight_readiness(&signer_selection)?;
@@ -275,15 +359,23 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
             signer_public_key_hex.as_str(),
             nonce,
         )?;
-        let (signature_hex, recovery_id) = sign_kolme_live_managed_external_message(
+        let managed_output = managed_key_source_adapter.sign_message(
+            &signer_selection,
             key_reference.as_str(),
             request,
             nonce,
             canonical_message.as_str(),
-            SignerProviderHandshakeMatrix::with_uniform_availability(true),
             signer_public_key_hex.as_str(),
         )?;
-        (canonical_message, signature_hex, recovery_id)
+        enforce_kolme_live_managed_key_source_provenance_marker_parity(
+            &signer_selection,
+            &managed_output.provenance_marker,
+        )?;
+        (
+            canonical_message,
+            managed_output.signature_hex,
+            managed_output.recovery_id,
+        )
     } else {
         let (signer_adapter, signer_selection_from_adapter) =
             build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
@@ -322,7 +414,8 @@ mod tests {
     use super::{
         classify_nonce_retry_category, deterministic_nonce_retry_backoff_millis,
         evaluate_kolme_live_signer_preflight_readiness, ConfigError, Duration, Instant,
-        KolmeLiveSignerSelection, KolmeRuntimeCommitProviderError,
+        KolmeLiveManagedKeySourceProvenanceMarker, KolmeLiveSignerSelection,
+        KolmeRuntimeCommitProviderError,
     };
     use std::env;
     use std::sync::{Mutex, OnceLock};
@@ -332,7 +425,6 @@ mod tests {
     const TEST_PRIVATE_KEY_HEX_SECONDARY: &str =
         "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
-
     fn test_signer_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
@@ -368,6 +460,15 @@ mod tests {
         KolmeLiveSignerSelection {
             profile: "ops-primary",
             key_source: "env-local",
+            private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        }
+    }
+
+    fn test_primary_managed_selection() -> KolmeLiveSignerSelection {
+        KolmeLiveSignerSelection {
+            profile: "ops-primary",
+            key_source: "managed-external",
             private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
             key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
         }
@@ -518,6 +619,26 @@ mod tests {
         assert_eq!(deterministic_nonce_retry_backoff_millis(2), 20);
         assert_eq!(deterministic_nonce_retry_backoff_millis(3), 40);
         assert_eq!(deterministic_nonce_retry_backoff_millis(8), 40);
+    }
+
+    #[test]
+    fn regression_managed_key_source_provenance_marker_profile_mismatch_fails_closed() {
+        let selection = test_primary_managed_selection();
+        let marker = KolmeLiveManagedKeySourceProvenanceMarker {
+            profile: "ops-secondary",
+            key_source: selection.key_source,
+            key_reference_env: selection.key_reference_env,
+            signer_public_key_hex:
+                "021111111111111111111111111111111111111111111111111111111111111111".to_owned(),
+        };
+        let error = super::enforce_kolme_live_managed_key_source_provenance_marker_parity(
+            &selection, &marker,
+        )
+        .expect_err("profile mismatch must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_provenance_marker_profile_mismatch")),
+            "managed signer provenance profile mismatch must preserve deterministic reason code"
+        );
     }
 
     #[test]

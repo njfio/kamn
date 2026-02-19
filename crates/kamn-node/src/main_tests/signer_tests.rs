@@ -1032,7 +1032,7 @@ fn regression_kolme_live_managed_external_requires_backend_command_without_requi
 }
 
 #[test]
-fn integration_kolme_live_managed_external_builds_direct_signed_wire_payload() {
+fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection() {
     // Regression: #2323
     let _lock = signer_env_lock()
         .lock()
