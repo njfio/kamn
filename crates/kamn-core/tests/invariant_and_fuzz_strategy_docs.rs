@@ -50,3 +50,14 @@ fn regression_requires_coverage_guided_input_mutation_markers() {
     assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY"));
     assert!(DOC.contains("excluded from `ci-fast-gate`"));
 }
+
+#[test]
+fn regression_requires_parser_failure_taxonomy_markers() {
+    // Regression: #4139
+    assert!(DOC.contains(
+        "input_mutation_coverage_guided_parser_failure_taxonomy_version=kamn.runtime.input-mutation-coverage-guided-parser-failure-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "input_mutation_coverage_guided_parser_failure_codes_csv=invalid_envelope_type,invalid_sender_did,invalid_recipient_did,invalid_message_type,invalid_encryption_algorithm,empty_body,invalid_proof_purpose,proof_verification_method_mismatch,invalid_agent_did_prefix,invalid_kamn_did_prefix,invalid_characters,missing_method_specific_id"
+    ));
+}
