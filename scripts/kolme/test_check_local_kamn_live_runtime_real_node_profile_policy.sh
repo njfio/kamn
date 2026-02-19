@@ -290,6 +290,26 @@ if report.get("signature_decision_reason_codes_csv") != "runtime_signer_profile_
     raise SystemExit("expected deterministic signature_decision_reason_codes_csv marker")
 if report.get("signature_decision_reason_codes_value") != "none":
     raise SystemExit("expected signature_decision_reason_codes_value=none for GO real-node profile report")
+if report.get("signer_quorum_go_no_go_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signer-quorum-go-no-go-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signer_quorum_go_no_go_reason_taxonomy_version marker")
+if report.get("signer_quorum_go_no_go_reason_codes_csv") != "runtime_signer_quorum_linkage_drift,runtime_signer_quorum_linkage_violation":
+    raise SystemExit("expected deterministic signer_quorum_go_no_go_reason_codes_csv marker")
+if report.get("signer_quorum_go_no_go_status") != "verified":
+    raise SystemExit("expected signer_quorum_go_no_go_status=verified for GO real-node profile report")
+if report.get("signer_quorum_go_no_go_decision") != "GO":
+    raise SystemExit("expected signer_quorum_go_no_go_decision=GO for GO real-node profile report")
+if report.get("signer_quorum_go_no_go_reason_codes_value") != "none":
+    raise SystemExit("expected signer_quorum_go_no_go_reason_codes_value=none for GO real-node profile report")
+if report.get("signer_disagreement_go_no_go_reason_taxonomy_version") != "kamn.kolme.local-kamn-live-runtime-signer-disagreement-go-no-go-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic signer_disagreement_go_no_go_reason_taxonomy_version marker")
+if report.get("signer_disagreement_go_no_go_reason_codes_csv") != "runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_failover_attestation_previous_profile_not_approved":
+    raise SystemExit("expected deterministic signer_disagreement_go_no_go_reason_codes_csv marker")
+if report.get("signer_disagreement_go_no_go_status") != "verified":
+    raise SystemExit("expected signer_disagreement_go_no_go_status=verified for GO real-node profile report")
+if report.get("signer_disagreement_go_no_go_decision") != "GO":
+    raise SystemExit("expected signer_disagreement_go_no_go_decision=GO for GO real-node profile report")
+if report.get("signer_disagreement_go_no_go_reason_codes_value") != "none":
+    raise SystemExit("expected signer_disagreement_go_no_go_reason_codes_value=none for GO real-node profile report")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
@@ -916,6 +936,16 @@ if not isinstance(observed, str):
 observed_codes = set([] if observed == "none" else observed.split(","))
 if "runtime_signer_attestation_quorum_shortfall" not in observed_codes:
     raise SystemExit("expected signature_decision_reason_codes_value to include runtime_signer_attestation_quorum_shortfall")
+if report.get("signer_disagreement_go_no_go_status") != "disagreement_detected":
+    raise SystemExit("expected signer_disagreement_go_no_go_status=disagreement_detected for attestation quorum shortfall")
+if report.get("signer_disagreement_go_no_go_decision") != "NO-GO":
+    raise SystemExit("expected signer_disagreement_go_no_go_decision=NO-GO for attestation quorum shortfall")
+disagreement_observed = report.get("signer_disagreement_go_no_go_reason_codes_value")
+if not isinstance(disagreement_observed, str):
+    raise SystemExit("expected signer_disagreement_go_no_go_reason_codes_value string for attestation quorum shortfall failure")
+disagreement_codes = set([] if disagreement_observed == "none" else disagreement_observed.split(","))
+if "runtime_signer_attestation_quorum_shortfall" not in disagreement_codes:
+    raise SystemExit("expected signer_disagreement_go_no_go_reason_codes_value to include runtime_signer_attestation_quorum_shortfall")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" <<'PY'
@@ -963,6 +993,16 @@ if not isinstance(observed, str):
 observed_codes = set([] if observed == "none" else observed.split(","))
 if "runtime_signer_quorum_linkage_drift" not in observed_codes:
     raise SystemExit("expected signature_decision_reason_codes_value to include runtime_signer_quorum_linkage_drift")
+if report.get("signer_quorum_go_no_go_status") != "drift_detected":
+    raise SystemExit("expected signer_quorum_go_no_go_status=drift_detected for quorum drift failure")
+if report.get("signer_quorum_go_no_go_decision") != "NO-GO":
+    raise SystemExit("expected signer_quorum_go_no_go_decision=NO-GO for quorum drift failure")
+quorum_observed = report.get("signer_quorum_go_no_go_reason_codes_value")
+if not isinstance(quorum_observed, str):
+    raise SystemExit("expected signer_quorum_go_no_go_reason_codes_value string for quorum drift failure")
+quorum_codes = set([] if quorum_observed == "none" else quorum_observed.split(","))
+if "runtime_signer_quorum_linkage_drift" not in quorum_codes:
+    raise SystemExit("expected signer_quorum_go_no_go_reason_codes_value to include runtime_signer_quorum_linkage_drift")
 PY
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" <<'PY'

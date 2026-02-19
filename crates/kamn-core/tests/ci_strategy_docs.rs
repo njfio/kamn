@@ -1430,3 +1430,26 @@ fn doc_contains_panic_path_policy_checker_markers_and_remediation_parity() {
         "panic_path_policy_remediation_step_3=attach_reason_codes_and_evidence_outputs_to_pr"
     ));
 }
+
+#[test]
+fn doc_contains_signer_quorum_go_no_go_policy_markers() {
+    assert!(DOC.contains(
+        "signer_quorum_go_no_go_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-quorum-go-no-go-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "signer_quorum_go_no_go_reason_codes_csv=runtime_signer_quorum_linkage_drift,runtime_signer_quorum_linkage_violation"
+    ));
+    assert!(DOC.contains(
+        "signer_disagreement_go_no_go_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-disagreement-go-no-go-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "signer_disagreement_go_no_go_reason_codes_csv=runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_failover_attestation_previous_profile_not_approved"
+    ));
+    assert!(DOC.contains("signer_quorum_go_no_go_status=verified|drift_detected"));
+    assert!(DOC.contains("signer_quorum_go_no_go_decision=GO|NO-GO"));
+    assert!(DOC.contains("signer_disagreement_go_no_go_status=verified|disagreement_detected"));
+    assert!(DOC.contains("signer_disagreement_go_no_go_decision=GO|NO-GO"));
+    assert!(DOC.contains(
+        "python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py"
+    ));
+}

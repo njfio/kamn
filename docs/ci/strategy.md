@@ -3355,6 +3355,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `key_loading_error_classification_version=v1`
       - `key_loading_error_classifications_csv=none,fallback_private_key_present,managed_external_raw_private_key_present,key_source_profile_pair_disallowed,private_key_env_mismatch`
       - `observed_reason_codes_csv=none|<sorted reason csv>`
+      - `signer_quorum_go_no_go_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-quorum-go-no-go-reason-taxonomy.v1`
+      - `signer_quorum_go_no_go_reason_codes_csv=runtime_signer_quorum_linkage_drift,runtime_signer_quorum_linkage_violation`
+      - `signer_quorum_go_no_go_status=verified|drift_detected`
+      - `signer_quorum_go_no_go_decision=GO|NO-GO`
+      - `signer_quorum_go_no_go_reason_codes_value=none|<csv>`
+      - `signer_disagreement_go_no_go_reason_taxonomy_version=kamn.kolme.local-kamn-live-runtime-signer-disagreement-go-no-go-reason-taxonomy.v1`
+      - `signer_disagreement_go_no_go_reason_codes_csv=runtime_signer_attestation_quorum_shortfall,runtime_signer_attestation_profile_not_approved,runtime_signer_failover_attestation_previous_profile_not_approved`
+      - `signer_disagreement_go_no_go_status=verified|disagreement_detected`
+      - `signer_disagreement_go_no_go_decision=GO|NO-GO`
+      - `signer_disagreement_go_no_go_reason_codes_value=none|<csv>`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`

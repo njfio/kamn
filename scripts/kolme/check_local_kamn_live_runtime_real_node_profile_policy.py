@@ -150,6 +150,27 @@ SIGNATURE_DECISION_REASON_TAXONOMY_CODES = (
 SIGNATURE_DECISION_REASON_TAXONOMY_CODES_CSV = ",".join(
     SIGNATURE_DECISION_REASON_TAXONOMY_CODES
 )
+SIGNER_QUORUM_GO_NO_GO_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-signer-quorum-go-no-go-reason-taxonomy.v1"
+)
+SIGNER_QUORUM_GO_NO_GO_REASON_CODES = (
+    "runtime_signer_quorum_linkage_drift",
+    "runtime_signer_quorum_linkage_violation",
+)
+SIGNER_QUORUM_GO_NO_GO_REASON_CODES_CSV = ",".join(
+    SIGNER_QUORUM_GO_NO_GO_REASON_CODES
+)
+SIGNER_DISAGREEMENT_GO_NO_GO_REASON_TAXONOMY_VERSION = (
+    "kamn.kolme.local-kamn-live-runtime-signer-disagreement-go-no-go-reason-taxonomy.v1"
+)
+SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES = (
+    "runtime_signer_attestation_quorum_shortfall",
+    "runtime_signer_attestation_profile_not_approved",
+    "runtime_signer_failover_attestation_previous_profile_not_approved",
+)
+SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES_CSV = ",".join(
+    SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES
+)
 KEY_LOADING_ERROR_CLASSIFICATION_VERSION = "v1"
 KEY_LOADING_ERROR_CLASSIFICATIONS = (
     "none",
@@ -234,15 +255,36 @@ def classify_expected_key_loading_error(
     return "none"
 
 
-def observed_signature_decision_reason_codes_value(reason_codes: list[str]) -> str:
+def observed_reason_codes_value(
+    reason_codes: list[str], ordered_reason_codes: tuple[str, ...]
+) -> str:
     observed = [
-        reason_code
-        for reason_code in SIGNATURE_DECISION_REASON_TAXONOMY_CODES
-        if reason_code in reason_codes
+        ordered_reason_code
+        for ordered_reason_code in ordered_reason_codes
+        if ordered_reason_code in reason_codes
     ]
     if not observed:
         return "none"
     return ",".join(observed)
+
+
+def observed_signature_decision_reason_codes_value(reason_codes: list[str]) -> str:
+    return observed_reason_codes_value(
+        reason_codes, SIGNATURE_DECISION_REASON_TAXONOMY_CODES
+    )
+
+
+def classify_go_no_go_marker(
+    reason_codes: list[str],
+    marker_reason_codes: tuple[str, ...],
+    failure_status: str,
+) -> tuple[str, str, str]:
+    observed_codes_value = observed_reason_codes_value(
+        reason_codes, marker_reason_codes
+    )
+    if observed_codes_value == "none":
+        return "verified", "GO", observed_codes_value
+    return failure_status, "NO-GO", observed_codes_value
 
 
 def parse_args() -> argparse.Namespace:
@@ -1096,6 +1138,24 @@ def main() -> int:
 
     final_decision, reason_codes = evaluate(report, args)
     observed_reason_codes_csv = ",".join(reason_codes) if reason_codes else "none"
+    (
+        signer_quorum_go_no_go_status,
+        signer_quorum_go_no_go_decision,
+        signer_quorum_go_no_go_reason_codes_value,
+    ) = classify_go_no_go_marker(
+        reason_codes,
+        SIGNER_QUORUM_GO_NO_GO_REASON_CODES,
+        "drift_detected",
+    )
+    (
+        signer_disagreement_go_no_go_status,
+        signer_disagreement_go_no_go_decision,
+        signer_disagreement_go_no_go_reason_codes_value,
+    ) = classify_go_no_go_marker(
+        reason_codes,
+        SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES,
+        "disagreement_detected",
+    )
     output = {
         "schema_version": "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1",
         "report_file": str(report_path),
@@ -1140,6 +1200,28 @@ def main() -> int:
         ),
         "signature_decision_reason_codes_value": (
             observed_signature_decision_reason_codes_value(reason_codes)
+        ),
+        "signer_quorum_go_no_go_reason_taxonomy_version": (
+            SIGNER_QUORUM_GO_NO_GO_REASON_TAXONOMY_VERSION
+        ),
+        "signer_quorum_go_no_go_reason_codes_csv": (
+            SIGNER_QUORUM_GO_NO_GO_REASON_CODES_CSV
+        ),
+        "signer_quorum_go_no_go_status": signer_quorum_go_no_go_status,
+        "signer_quorum_go_no_go_decision": signer_quorum_go_no_go_decision,
+        "signer_quorum_go_no_go_reason_codes_value": (
+            signer_quorum_go_no_go_reason_codes_value
+        ),
+        "signer_disagreement_go_no_go_reason_taxonomy_version": (
+            SIGNER_DISAGREEMENT_GO_NO_GO_REASON_TAXONOMY_VERSION
+        ),
+        "signer_disagreement_go_no_go_reason_codes_csv": (
+            SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES_CSV
+        ),
+        "signer_disagreement_go_no_go_status": signer_disagreement_go_no_go_status,
+        "signer_disagreement_go_no_go_decision": signer_disagreement_go_no_go_decision,
+        "signer_disagreement_go_no_go_reason_codes_value": (
+            signer_disagreement_go_no_go_reason_codes_value
         ),
         "key_loading_error_classification_version": (
             KEY_LOADING_ERROR_CLASSIFICATION_VERSION
@@ -1206,6 +1288,34 @@ def main() -> int:
     print(
         "signature_decision_reason_codes_value="
         f"{observed_signature_decision_reason_codes_value(reason_codes)}"
+    )
+    print(
+        "signer_quorum_go_no_go_reason_taxonomy_version="
+        f"{SIGNER_QUORUM_GO_NO_GO_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "signer_quorum_go_no_go_reason_codes_csv="
+        f"{SIGNER_QUORUM_GO_NO_GO_REASON_CODES_CSV}"
+    )
+    print(f"signer_quorum_go_no_go_status={signer_quorum_go_no_go_status}")
+    print(f"signer_quorum_go_no_go_decision={signer_quorum_go_no_go_decision}")
+    print(
+        "signer_quorum_go_no_go_reason_codes_value="
+        f"{signer_quorum_go_no_go_reason_codes_value}"
+    )
+    print(
+        "signer_disagreement_go_no_go_reason_taxonomy_version="
+        f"{SIGNER_DISAGREEMENT_GO_NO_GO_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "signer_disagreement_go_no_go_reason_codes_csv="
+        f"{SIGNER_DISAGREEMENT_GO_NO_GO_REASON_CODES_CSV}"
+    )
+    print(f"signer_disagreement_go_no_go_status={signer_disagreement_go_no_go_status}")
+    print(f"signer_disagreement_go_no_go_decision={signer_disagreement_go_no_go_decision}")
+    print(
+        "signer_disagreement_go_no_go_reason_codes_value="
+        f"{signer_disagreement_go_no_go_reason_codes_value}"
     )
     print(
         "key_loading_error_classification_version="
