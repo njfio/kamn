@@ -1,7 +1,7 @@
 # Issue #3930 Spec
 
 - Title: Subtask: implement proptest invariants for peer lifecycle transitions and anti-churn guards
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md

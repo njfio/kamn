@@ -1,7 +1,7 @@
 # Issue #3930 Plan
 
 - Issue: #3930
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Validate current peer-lifecycle proptest coverage against ACs and identify missing explicit contract markers.
