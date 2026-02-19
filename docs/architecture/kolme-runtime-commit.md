@@ -50,6 +50,21 @@ Fail-closed behavior is preserved for continuous and single-cycle modes:
 - unsupported signer/profile declarations fail immediately
 - transient submit/finality transport errors retry with bounded deterministic backoff
 
+### Shared Transport Transient Classifier and Bounded Retry Schedule
+
+- `retry_classifier_contract_version=v1`
+- `retry_backoff_sequence_ms=10,20,40,40,40`
+- `retry_backoff_cap_ms=40`
+- terminal decision markers:
+  - `attempt_ceiling_reached`
+  - `malformed_response_fail_fast`
+
+| Provider error class | Classifier reason | Decision before max attempt | Decision at max attempt |
+|---|---|---|---|
+| `Timeout` | `timeout` | retry with deterministic bounded backoff | `attempt_ceiling_reached` |
+| `Unavailable` | `unavailable` | retry with deterministic bounded backoff | `attempt_ceiling_reached` |
+| `MalformedResponse` | non-transient | fail closed immediately | `malformed_response_fail_fast` |
+
 ### Signer Provenance Failure Taxonomy
 
 Signer contracts are fail-closed and reason-code stable:

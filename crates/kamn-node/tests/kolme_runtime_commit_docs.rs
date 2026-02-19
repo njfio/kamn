@@ -23,3 +23,15 @@ fn doc_contains_signer_provenance_failure_taxonomy_markers() {
     assert!(DOC.contains("signer_quorum_linkage_contract_version=v1"));
     assert!(DOC.contains("signer_quorum_linked"));
 }
+
+#[test]
+fn doc_contains_transient_classifier_and_bounded_retry_schedule_markers() {
+    assert!(DOC.contains("### Shared Transport Transient Classifier and Bounded Retry Schedule"));
+    assert!(DOC.contains("retry_classifier_contract_version=v1"));
+    assert!(DOC.contains("retry_backoff_sequence_ms=10,20,40,40,40"));
+    assert!(DOC.contains("retry_backoff_cap_ms=40"));
+    assert!(DOC.contains("attempt_ceiling_reached"));
+    assert!(DOC.contains("malformed_response_fail_fast"));
+    assert!(DOC.contains("timeout"));
+    assert!(DOC.contains("unavailable"));
+}
