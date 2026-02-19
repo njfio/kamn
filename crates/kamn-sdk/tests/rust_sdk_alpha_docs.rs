@@ -1,103 +1,160 @@
 const DOC: &str = include_str!("../../../docs/foundation/rust-sdk-alpha.md");
 
+struct DocContractCase {
+    case_id: &'static str,
+    document_label: &'static str,
+    document: &'static str,
+    required_markers: &'static [&'static str],
+}
+
+const DOC_CONTRACT_CASES: &[DocContractCase] = &[
+    DocContractCase {
+        case_id: "sdk_live_transport_scope_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "LiveTransportKamnClient",
+            "LiveTransportConfig",
+            "TransportMode",
+            "KamnTransport",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_live_transport_validation_command_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "bash scripts/sdk/run_local_e2e_demo.sh",
+            "bash scripts/sdk/run_localhost_signed_demo.sh",
+            "bash scripts/sdk/run_tcp_signed_relay_demo.sh",
+            "bash scripts/sdk/run_tcp_failover_reconnect_matrix.sh --lane fast",
+            "bash scripts/sdk/run_rust_live_transport_contract_lane.sh",
+            "bash scripts/sdk/run_rust_live_transport_deep_lane.sh",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_transport_mode_mismatch_guard",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &["mismatch rejection (`Regression: #620`)"],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_local_e2e_demo_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &["`Regression: #770`", "status=ok", "escrow_id=<id>"],
+    },
+    DocContractCase {
+        case_id: "sdk_schema_compatibility_contract_lane_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "## SDK Schema Compatibility Contract",
+            "run_sdk_schema_compatibility_contract_lane.sh",
+            "check_sdk_schema_compatibility_policy.sh",
+            "fixtures/sdk_parity/register_validation_cases.json",
+            "kamn.sdk.parity.matrix.v1",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_live_transport_smoke_parity_budget_contract_lane_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "## Live Transport Smoke Parity Budget Contract",
+            "run_live_transport_smoke_parity_lane.sh",
+            "check_live_transport_smoke_parity_policy.sh",
+            "run_live_transport_smoke_parity_contract_lane.sh",
+            "KAMN_SDK_SMOKE_PARITY_MAX_SECONDS",
+            "KAMN_SDK_SMOKE_PARITY_MAX_RETRIES",
+            "kamn.sdk.live-transport-smoke-parity-report.v1",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_localhost_signed_demo_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "`Regression: #807`",
+            "verified=true",
+            "signature=sig:ed25519:baseline-v1:...",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_tcp_signed_relay_demo_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "`Regression: #822`",
+            "adapter=tcp",
+            "tcp_signed_relay_listener",
+            "tcp_signed_relay_sender",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_tcp_handshake_replay_guard_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "`Regression: #823`",
+            "Forged handshake frames are rejected",
+            "conflict: tcp handshake replay detected",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_tcp_failover_reconnect_matrix_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "`Regression: #824`",
+            "kamn.sdk.tcp-failover-reconnect.matrix.v1",
+            "fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt",
+            "KAMN_TCP_FAILOVER_DEEP_CADENCE=scheduled",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_schema_compatibility_drift_guard_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`).",
+        ],
+    },
+    DocContractCase {
+        case_id: "sdk_regression_smoke_parity_budget_guard_markers",
+        document_label: "docs/foundation/rust-sdk-alpha.md",
+        document: DOC,
+        required_markers: &[
+            "retry-budget exhaustion, runtime-budget breaches, or transport parity drift force `NO-GO` (`Regression: #938`).",
+        ],
+    },
+];
+
 #[test]
-fn doc_contains_live_transport_sdk_scope() {
-    assert!(DOC.contains("LiveTransportKamnClient"));
-    assert!(DOC.contains("LiveTransportConfig"));
-    assert!(DOC.contains("TransportMode"));
-    assert!(DOC.contains("KamnTransport"));
+fn functional_rust_sdk_alpha_doc_contract_cases_require_markers() {
+    for case in DOC_CONTRACT_CASES {
+        for marker in case.required_markers {
+            assert!(
+                case.document.contains(marker),
+                "missing marker in {} for case {}: {}",
+                case.document_label,
+                case.case_id,
+                marker
+            );
+        }
+    }
 }
 
 #[test]
-fn doc_contains_live_transport_validation_commands() {
-    assert!(DOC.contains("bash scripts/sdk/run_local_e2e_demo.sh"));
-    assert!(DOC.contains("bash scripts/sdk/run_localhost_signed_demo.sh"));
-    assert!(DOC.contains("bash scripts/sdk/run_tcp_signed_relay_demo.sh"));
-    assert!(DOC.contains("bash scripts/sdk/run_tcp_failover_reconnect_matrix.sh --lane fast"));
-    assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_contract_lane.sh"));
-    assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_deep_lane.sh"));
-}
-
-#[test]
-fn regression_requires_transport_mode_mismatch_guard_contract() {
-    // Regression: #620
-    assert!(DOC.contains("mismatch rejection (`Regression: #620`)"));
-}
-
-#[test]
-fn regression_requires_local_e2e_demo_marker_contract() {
-    // Regression: #770
-    assert!(DOC.contains("`Regression: #770`"));
-    assert!(DOC.contains("status=ok"));
-    assert!(DOC.contains("escrow_id=<id>"));
-}
-
-#[test]
-fn doc_contains_sdk_schema_compatibility_contract_lane() {
-    assert!(DOC.contains("## SDK Schema Compatibility Contract"));
-    assert!(DOC.contains("run_sdk_schema_compatibility_contract_lane.sh"));
-    assert!(DOC.contains("check_sdk_schema_compatibility_policy.sh"));
-    assert!(DOC.contains("fixtures/sdk_parity/register_validation_cases.json"));
-    assert!(DOC.contains("kamn.sdk.parity.matrix.v1"));
-}
-
-#[test]
-fn doc_contains_live_transport_smoke_parity_budget_contract_lane() {
-    assert!(DOC.contains("## Live Transport Smoke Parity Budget Contract"));
-    assert!(DOC.contains("run_live_transport_smoke_parity_lane.sh"));
-    assert!(DOC.contains("check_live_transport_smoke_parity_policy.sh"));
-    assert!(DOC.contains("run_live_transport_smoke_parity_contract_lane.sh"));
-    assert!(DOC.contains("KAMN_SDK_SMOKE_PARITY_MAX_SECONDS"));
-    assert!(DOC.contains("KAMN_SDK_SMOKE_PARITY_MAX_RETRIES"));
-    assert!(DOC.contains("kamn.sdk.live-transport-smoke-parity-report.v1"));
-}
-
-#[test]
-fn regression_requires_localhost_signed_demo_marker_contract() {
-    // Regression: #807
-    assert!(DOC.contains("`Regression: #807`"));
-    assert!(DOC.contains("verified=true"));
-    assert!(DOC.contains("signature=sig:ed25519:baseline-v1:..."));
-}
-
-#[test]
-fn regression_requires_tcp_signed_relay_demo_marker_contract() {
-    // Regression: #822
-    assert!(DOC.contains("`Regression: #822`"));
-    assert!(DOC.contains("adapter=tcp"));
-    assert!(DOC.contains("tcp_signed_relay_listener"));
-    assert!(DOC.contains("tcp_signed_relay_sender"));
-}
-
-#[test]
-fn regression_requires_tcp_handshake_replay_guard_contract() {
-    // Regression: #823
-    assert!(DOC.contains("`Regression: #823`"));
-    assert!(DOC.contains("Forged handshake frames are rejected"));
-    assert!(DOC.contains("conflict: tcp handshake replay detected"));
-}
-
-#[test]
-fn regression_requires_tcp_failover_reconnect_matrix_contract() {
-    // Regression: #824
-    assert!(DOC.contains("`Regression: #824`"));
-    assert!(DOC.contains("kamn.sdk.tcp-failover-reconnect.matrix.v1"));
-    assert!(DOC.contains("fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt"));
-    assert!(DOC.contains("KAMN_TCP_FAILOVER_DEEP_CADENCE=scheduled"));
-}
-
-#[test]
-fn regression_requires_sdk_schema_compatibility_drift_guard_contract() {
-    // Regression: #937
-    assert!(DOC.contains(
-        "schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`)."
-    ));
-}
-
-#[test]
-fn regression_requires_live_transport_smoke_parity_budget_guard_contract() {
-    // Regression: #938
-    assert!(DOC.contains(
-        "retry-budget exhaustion, runtime-budget breaches, or transport parity drift force `NO-GO` (`Regression: #938`)."
-    ));
+fn regression_rust_sdk_alpha_doc_contract_case_inventory_remains_stable() {
+    // Regression: #5193
+    assert_eq!(DOC_CONTRACT_CASES.len(), 12);
+    assert!(DOC_CONTRACT_CASES
+        .iter()
+        .all(|case| !case.required_markers.is_empty()));
+    let total_marker_count: usize = DOC_CONTRACT_CASES
+        .iter()
+        .map(|case| case.required_markers.len())
+        .sum();
+    assert_eq!(total_marker_count, 42);
 }
