@@ -1,7 +1,7 @@
 # Issue #4138 Spec
 
 - Title: Subtask: add regression checks for test discovery stability and parallel execution boundaries
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md
