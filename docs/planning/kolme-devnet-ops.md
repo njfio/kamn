@@ -1596,6 +1596,11 @@ Operator checkpoints:
   - request/finality linkage markers (`request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, `request_finality_evidence_linked`) remain fail-closed in policy checks
   - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) remain fail-closed in policy checks
   - runtime retry marker emissions remain deterministic and bounded:
+    - `transport_retry_validation_contract_version=v1`
+    - transport retry validation commands:
+      - `cargo test -p kamn-node main_tests::runtime_tests::functional_kolme_live_retry_emits_structured_retry_markers -- --exact`
+      - `cargo test -p kamn-node main_tests::runtime_tests::regression_runtime_kolme_live_submit_retry_exhaustion_emits_terminal_decision_marker -- --exact`
+      - `cargo test -p kamn-node main_tests::runtime_tests::functional_kolme_live_finality_retry_exhaustion_emits_terminal_decision_marker -- --exact`
     - retry events: `kolme.live.submit.retry`, `kolme.live.finality.retry`
     - terminal events: `kolme.live.submit.retry.terminal`, `kolme.live.finality.retry.terminal`
     - retry events include marker fields `attempt`, `max_attempts`, `reason`, `decision=retry`, `jitter_seed`, `backoff_ms`
