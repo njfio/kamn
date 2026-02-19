@@ -1,4 +1,16 @@
 const DOC: &str = include_str!("../../../docs/ci/strategy.md");
+const OPS_DOC: &str = include_str!("../../../docs/ops/configuration.md");
+const FAIRNESS_FIXTURE: &str =
+    include_str!("../../../fixtures/runtime/starvation_fairness_fixture_matrix.txt");
+const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
+
+const FAIRNESS_REASON_TAXONOMY_VERSION: &str = "kamn.runtime.fairness-policy-reason-taxonomy.v1";
+const FAIRNESS_REASON_CODES_CSV: &str =
+    "fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap";
+
+fn fairness_reason_codes() -> Vec<&'static str> {
+    FAIRNESS_REASON_CODES_CSV.split(',').collect()
+}
 
 #[test]
 fn doc_contains_make_and_demo_scope_contract_rules() {
@@ -1499,6 +1511,97 @@ fn doc_contains_quota_policy_checker_taxonomy_contract_markers() {
     assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_checker_contract"));
     assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_fixture_parser_contract"));
     assert!(DOC.contains("Regression: #4091"));
+}
+
+#[test]
+fn doc_contains_fairness_docs_parity_and_remediation_markers() {
+    assert!(DOC.contains("### Fairness Docs Parity and Remediation Contract"));
+    assert!(DOC.contains(
+        "fairness_docs_parity_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_fixture_schema_version=kamn.runtime.fairness-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_fixture_path=fixtures/runtime/starvation_fairness_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("fairness_docs_parity_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("fairness_docs_parity_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("fairness_docs_parity_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_scope_unknown=use one of control_plane|tenant_interactive|bulk_replication"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_window_non_positive=set window_seconds >= 1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_max_gap_non_positive=set max_weighted_share_gap >= 1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_weighted_share_exceeds_gap=reduce active_weighted_share or increase max_weighted_share_gap"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_fairness_docs_parity_and_remediation_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_matches_ops_docs_and_fixture_metadata -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4093"));
+}
+
+#[test]
+fn doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic() {
+    assert!(FAIRNESS_POLICY_SOURCE
+        .contains("pub const FAIRNESS_POLICY_REASON_TAXONOMY_VERSION: &str ="));
+    assert!(FAIRNESS_POLICY_SOURCE.contains("pub const FAIRNESS_POLICY_REASON_CODES_CSV: &str ="));
+    assert!(FAIRNESS_POLICY_SOURCE.contains(FAIRNESS_REASON_TAXONOMY_VERSION));
+    assert!(FAIRNESS_POLICY_SOURCE.contains(FAIRNESS_REASON_CODES_CSV));
+}
+
+#[test]
+fn doc_enforces_fairness_docs_parity_matches_ops_docs_and_fixture_metadata() {
+    assert!(DOC.contains(&format!(
+        "fairness_docs_parity_reason_taxonomy_version={FAIRNESS_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "fairness_docs_parity_reason_codes_csv={FAIRNESS_REASON_CODES_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "fairness_reason_taxonomy_version={FAIRNESS_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "fairness_reason_codes_csv={FAIRNESS_REASON_CODES_CSV}"
+    )));
+
+    assert!(FAIRNESS_FIXTURE.contains(
+        "fairness_fixture_matrix_schema_version=kamn.runtime.fairness-fixture-matrix.v1"
+    ));
+    assert!(FAIRNESS_FIXTURE.contains(&format!(
+        "fairness_reason_taxonomy_version={FAIRNESS_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(FAIRNESS_FIXTURE.contains(&format!(
+        "fairness_reason_codes_csv={FAIRNESS_REASON_CODES_CSV}"
+    )));
+}
+
+#[test]
+fn doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason_code() {
+    for reason_code in fairness_reason_codes() {
+        assert!(
+            DOC.contains(&format!("fairness_docs_parity_remediation.{reason_code}=")),
+            "missing fairness remediation marker for {reason_code}"
+        );
+    }
 }
 
 #[test]

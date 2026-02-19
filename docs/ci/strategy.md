@@ -4637,6 +4637,28 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - docs marker drift fails the docs-contract target.
 - Regression: #4091
 
+### Fairness Docs Parity and Remediation Contract
+- `fairness_docs_parity_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1`
+- `fairness_docs_parity_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap`
+- `fairness_docs_parity_fixture_schema_version=kamn.runtime.fairness-fixture-matrix.v1`
+- `fairness_docs_parity_fixture_path=fixtures/runtime/starvation_fairness_fixture_matrix.txt`
+- `fairness_docs_parity_ops_doc_path=docs/ops/configuration.md`
+- `fairness_docs_parity_strategy_doc_path=docs/ci/strategy.md`
+- `fairness_docs_parity_remediation_map_version=v1`
+- `fairness_docs_parity_remediation.fairness_scope_unknown=use one of control_plane|tenant_interactive|bulk_replication`
+- `fairness_docs_parity_remediation.fairness_window_non_positive=set window_seconds >= 1`
+- `fairness_docs_parity_remediation.fairness_max_gap_non_positive=set max_weighted_share_gap >= 1`
+- `fairness_docs_parity_remediation.fairness_weighted_share_exceeds_gap=reduce active_weighted_share or increase max_weighted_share_gap`
+- Guard commands:
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_fairness_docs_parity_and_remediation_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_matches_ops_docs_and_fixture_metadata -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact`
+- Fail-closed policy:
+  - checker taxonomy, fixture metadata, and docs parity markers must remain synchronized.
+  - each fairness reason code must have a deterministic remediation marker in this document.
+- Regression: #4093
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
