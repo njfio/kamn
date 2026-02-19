@@ -428,9 +428,7 @@ struct ServiceApiTestEnvGuards {
 }
 
 fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
-    let env_lock = signer_env_lock()
-        .lock()
-        .expect("service api env lock should guard process-level overrides");
+    let env_lock = lock_signer_env_guard();
     ServiceApiTestEnvGuards {
         _env_lock: env_lock,
         _tls_mode_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", None),
@@ -441,6 +439,16 @@ fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
         _chain_id_guard: EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None),
         _sync_mode_guard: EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None),
     }
+}
+
+#[test]
+fn regression_service_api_env_lock_recovers_from_signer_lock_poison() {
+    // Regression: #5199
+    let _ = std::panic::catch_unwind(|| {
+        let _lock = lock_signer_env_guard();
+        panic!("intentional signer env lock poison");
+    });
+    let _env = acquire_service_api_test_env();
 }
 
 #[test]

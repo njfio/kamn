@@ -3,9 +3,7 @@ use super::*;
 #[test]
 fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
     // Regression: #2176
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -55,9 +53,7 @@ fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
 #[test]
 fn regression_runtime_kolme_live_rejects_missing_signer_private_key_env() {
     // Regression: #2220
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
@@ -650,9 +646,7 @@ fn rejects_kolme_live_strict_signer_contracts_with_empty_key_source() {
 #[test]
 fn regression_kolme_live_strict_signer_contracts_reject_profile_selector_env_mismatch() {
     // Regression: #2247
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _primary_key_guard = EnvVarGuard::set(
@@ -674,9 +668,7 @@ fn regression_kolme_live_strict_signer_contracts_reject_profile_selector_env_mis
 fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_network_on_selector_env_mismatch(
 ) {
     // Regression: #2247
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _primary_key_guard = EnvVarGuard::set(
@@ -727,9 +719,7 @@ fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_net
 #[test]
 fn regression_3599_startup_signer_mode_negative_matrix_corpus() {
     // Regression: #3599
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let mut covered_cases: Vec<&'static str> = Vec::new();
     let expected_cases = vec![
         "strict-missing-signer-profile",
