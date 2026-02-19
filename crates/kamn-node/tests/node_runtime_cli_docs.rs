@@ -241,7 +241,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 #[test]
 fn doc_contains_docs_fast_lane_command_checks() {
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
-    assert!(DOC.contains("cargo test -p kamn-node --test node_module_map_docs"));
+    assert!(DOC.contains("cargo test -p kamn-node --test architecture_navigation_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test runtime_network_docs"));
 }
 
