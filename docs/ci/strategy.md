@@ -1761,6 +1761,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `main_tests_command_surface_parity_status=verified`
 - Guard command:
   - `cargo test -p kamn-node --test main_tests_command_surface_parity_contract -- --nocapture`
+  - `cargo test -p kamn-core --test node_test_surface_ownership_docs -- --nocapture`
 - Required runtime selector commands:
   - `cargo test -p kamn-node main_tests::runtime_tests::functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors -- --exact`
   - `cargo test -p kamn-node main_tests::runtime_tests::regression_runtime_kolme_live_submit_malformed_response_fails_fast_without_retry -- --exact`
