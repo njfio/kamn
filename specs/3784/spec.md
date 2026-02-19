@@ -1,7 +1,7 @@
 # Issue #3784 Spec
 
 - Title: Subtask: implement local-heavy observability lane artifact and policy contracts
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r26-5-observability-and-transport-resilience-hardening/index.md

@@ -1,7 +1,7 @@
 # Issue #3784 Plan
 
 - Issue: #3784
-- Status: In Progress
+- Status: Implemented
 
 ## Approach
 1. Add a red docs-contract assertion for missing local observability artifact schema marker declarations.
