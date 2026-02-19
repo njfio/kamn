@@ -7,6 +7,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+use crate::KamnDid;
+
 /// Graph engine profile marker for M6 contracts.
 pub const DATA_LAYER_M6_GRAPH_ENGINE_APACHE_AGE: &str = "apache-age";
 /// Portability profile marker for exported edge projections.
@@ -205,29 +207,34 @@ impl DataLayerM6GraphRegistry {
         &mut self,
         input: DataLayerM6GraphNodeInput,
     ) -> Result<DataLayerM6GraphNodeRecord, DataLayerM6GraphIntegrationError> {
-        validate_kamn_did(input.owner_did.as_str())?;
-        validate_non_empty(input.node_id.as_str(), "node_id")?;
-        validate_non_empty(input.label.as_str(), "label")?;
+        let DataLayerM6GraphNodeInput {
+            owner_did,
+            node_id,
+            kind,
+            label,
+        } = input;
+        let owner_did = parse_kamn_did(owner_did.as_str())?;
+        validate_non_empty(node_id.as_str(), "node_id")?;
+        validate_non_empty(label.as_str(), "label")?;
+
+        let owner_did_key = owner_did.as_str().to_owned();
 
         let owner_nodes = self
             .nodes_by_owner
-            .entry(input.owner_did.clone())
+            .entry(owner_did_key.clone())
             .or_default();
-        if owner_nodes
-            .iter()
-            .any(|record| record.node_id == input.node_id)
-        {
+        if owner_nodes.iter().any(|record| record.node_id == node_id) {
             return Err(DataLayerM6GraphIntegrationError::DuplicateNodeId {
-                owner_did: input.owner_did,
-                node_id: input.node_id,
+                owner_did: owner_did_key,
+                node_id,
             });
         }
 
         let record = DataLayerM6GraphNodeRecord {
-            owner_did: input.owner_did,
-            node_id: input.node_id,
-            kind: input.kind,
-            label: input.label,
+            owner_did: owner_did.as_str().to_owned(),
+            node_id,
+            kind,
+            label,
             sequence: owner_nodes.len() as u64 + 1,
         };
         owner_nodes.push(record.clone());
@@ -239,87 +246,100 @@ impl DataLayerM6GraphRegistry {
         &mut self,
         input: DataLayerM6GraphEdgeInput,
     ) -> Result<DataLayerM6GraphEdgeRecord, DataLayerM6GraphIntegrationError> {
-        validate_kamn_did(input.owner_did.as_str())?;
-        validate_non_empty(input.edge_id.as_str(), "edge_id")?;
-        validate_non_empty(input.from_node_id.as_str(), "from_node_id")?;
-        validate_non_empty(input.to_node_id.as_str(), "to_node_id")?;
-        validate_weight(input.weight)?;
-        if input.observed_at_epoch_seconds == 0 {
+        let DataLayerM6GraphEdgeInput {
+            owner_did,
+            edge_id,
+            relation,
+            from_node_id,
+            to_node_id,
+            weight,
+            observed_at_epoch_seconds,
+        } = input;
+        let owner_did = parse_kamn_did(owner_did.as_str())?;
+        let owner_did_key = owner_did.as_str().to_owned();
+        validate_non_empty(edge_id.as_str(), "edge_id")?;
+        validate_non_empty(from_node_id.as_str(), "from_node_id")?;
+        validate_non_empty(to_node_id.as_str(), "to_node_id")?;
+        validate_weight(weight)?;
+        if observed_at_epoch_seconds == 0 {
             return Err(DataLayerM6GraphIntegrationError::EmptyField(
                 "observed_at_epoch_seconds",
             ));
         }
 
-        if self.seen_edge_ids.contains(input.edge_id.as_str()) {
-            return Err(DataLayerM6GraphIntegrationError::DuplicateEdgeId(
-                input.edge_id,
-            ));
+        if self.seen_edge_ids.contains(edge_id.as_str()) {
+            return Err(DataLayerM6GraphIntegrationError::DuplicateEdgeId(edge_id));
         }
 
         let owner_nodes = self
             .nodes_by_owner
-            .get(input.owner_did.as_str())
+            .get(owner_did_key.as_str())
             .ok_or_else(|| DataLayerM6GraphIntegrationError::OwnerNotFound {
-                owner_did: input.owner_did.clone(),
+                owner_did: owner_did_key.clone(),
             })?;
 
         if !owner_nodes
             .iter()
-            .any(|record| record.node_id == input.from_node_id)
+            .any(|record| record.node_id == from_node_id)
         {
-            if self.node_exists_outside_owner(input.owner_did.as_str(), input.from_node_id.as_str())
-            {
+            if self.node_exists_outside_owner(owner_did_key.as_str(), from_node_id.as_str()) {
                 return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
                     reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
                 });
             }
             return Err(DataLayerM6GraphIntegrationError::NodeNotFound {
-                owner_did: input.owner_did,
-                node_id: input.from_node_id,
+                owner_did: owner_did_key.clone(),
+                node_id: from_node_id,
             });
         }
         if !owner_nodes
             .iter()
-            .any(|record| record.node_id == input.to_node_id)
+            .any(|record| record.node_id == to_node_id)
         {
-            if self.node_exists_outside_owner(input.owner_did.as_str(), input.to_node_id.as_str()) {
+            if self.node_exists_outside_owner(owner_did_key.as_str(), to_node_id.as_str()) {
                 return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
                     reason_code: DATA_LAYER_M6_CROSS_OWNER_EDGE_DENIED_REASON_CODE,
                 });
             }
             return Err(DataLayerM6GraphIntegrationError::NodeNotFound {
-                owner_did: input.owner_did,
-                node_id: input.to_node_id,
+                owner_did: owner_did_key.clone(),
+                node_id: to_node_id,
             });
         }
 
         let owner_edges = self
             .edges_by_owner
-            .entry(input.owner_did.clone())
+            .entry(owner_did_key.clone())
             .or_default();
         let record = DataLayerM6GraphEdgeRecord {
-            owner_did: input.owner_did,
-            edge_id: input.edge_id.clone(),
-            relation: input.relation,
-            from_node_id: input.from_node_id,
-            to_node_id: input.to_node_id,
-            weight: input.weight,
-            observed_at_epoch_seconds: input.observed_at_epoch_seconds,
+            owner_did: owner_did_key,
+            edge_id: edge_id.clone(),
+            relation,
+            from_node_id,
+            to_node_id,
+            weight,
+            observed_at_epoch_seconds,
             sequence: owner_edges.len() as u64 + 1,
         };
         owner_edges.push(record.clone());
-        self.seen_edge_ids.insert(input.edge_id);
+        self.seen_edge_ids.insert(edge_id);
         Ok(record)
     }
 
     /// Returns owner-scoped node records.
     pub fn nodes_for_owner(&self, owner_did: &str) -> Option<&[DataLayerM6GraphNodeRecord]> {
-        self.nodes_by_owner.get(owner_did).map(Vec::as_slice)
+        let owner_did = parse_kamn_did(owner_did).ok()?;
+        self.nodes_by_owner
+            .get(owner_did.as_str())
+            .map(Vec::as_slice)
     }
 
     /// Returns owner-scoped edge records.
     pub fn edges_for_owner(&self, owner_did: &str) -> Option<&[DataLayerM6GraphEdgeRecord]> {
-        self.edges_by_owner.get(owner_did).map(Vec::as_slice)
+        let owner_did = parse_kamn_did(owner_did).ok()?;
+        self.edges_by_owner
+            .get(owner_did.as_str())
+            .map(Vec::as_slice)
     }
 
     /// Runs bounded trust propagation scoring for one owner graph.
@@ -327,64 +347,68 @@ impl DataLayerM6GraphRegistry {
         &self,
         query: DataLayerM6TrustPropagationQuery,
     ) -> Result<Vec<DataLayerM6TrustPropagationResult>, DataLayerM6GraphIntegrationError> {
-        validate_kamn_did(query.requester_owner_did.as_str())?;
-        validate_kamn_did(query.owner_did.as_str())?;
-        validate_non_empty(query.source_agent_node_id.as_str(), "source_agent_node_id")?;
-        if query.requester_owner_did != query.owner_did {
+        let DataLayerM6TrustPropagationQuery {
+            requester_owner_did,
+            owner_did,
+            source_agent_node_id,
+            max_depth,
+            attenuation_factor,
+            limit,
+        } = query;
+        let requester_owner_did = parse_kamn_did(requester_owner_did.as_str())?;
+        let owner_did = parse_kamn_did(owner_did.as_str())?;
+        validate_non_empty(source_agent_node_id.as_str(), "source_agent_node_id")?;
+        if requester_owner_did.as_str() != owner_did.as_str() {
             return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
                 reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
             });
         }
-        if query.max_depth == 0 {
-            return Err(DataLayerM6GraphIntegrationError::InvalidDepth(
-                query.max_depth,
-            ));
+        if max_depth == 0 {
+            return Err(DataLayerM6GraphIntegrationError::InvalidDepth(max_depth));
         }
-        if !query.attenuation_factor.is_finite()
-            || query.attenuation_factor <= 0.0
-            || query.attenuation_factor > 1.0
+        if !attenuation_factor.is_finite() || attenuation_factor <= 0.0 || attenuation_factor > 1.0
         {
             return Err(DataLayerM6GraphIntegrationError::InvalidAttenuationFactor(
-                query.attenuation_factor,
+                attenuation_factor,
             ));
         }
-        let limit = resolve_limit(query.limit)?;
+        let limit = resolve_limit(limit)?;
+        let owner_did = owner_did.as_str();
 
-        let owner_nodes = self
-            .nodes_by_owner
-            .get(query.owner_did.as_str())
-            .ok_or_else(|| DataLayerM6GraphIntegrationError::OwnerNotFound {
-                owner_did: query.owner_did.clone(),
-            })?;
+        let owner_nodes = self.nodes_by_owner.get(owner_did).ok_or_else(|| {
+            DataLayerM6GraphIntegrationError::OwnerNotFound {
+                owner_did: owner_did.to_owned(),
+            }
+        })?;
         let source_node = owner_nodes
             .iter()
-            .find(|record| record.node_id == query.source_agent_node_id)
+            .find(|record| record.node_id == source_agent_node_id)
             .ok_or_else(|| {
                 DataLayerM6GraphIntegrationError::InvalidSourceAgentNode(
-                    query.source_agent_node_id.clone(),
+                    source_agent_node_id.clone(),
                 )
             })?;
         if source_node.kind != DataLayerM6GraphNodeKind::Agent {
             return Err(DataLayerM6GraphIntegrationError::InvalidSourceAgentNode(
-                query.source_agent_node_id,
+                source_agent_node_id,
             ));
         }
 
         let owner_edges = self
             .edges_by_owner
-            .get(query.owner_did.as_str())
+            .get(owner_did)
             .map_or(&[] as &[DataLayerM6GraphEdgeRecord], Vec::as_slice);
 
         let mut frontier = vec![(source_node.node_id.clone(), 1.0_f32, 0_u8)];
         let mut best_scores: BTreeMap<String, (f32, u8)> = BTreeMap::new();
-        for depth in 1..=query.max_depth {
+        for depth in 1..=max_depth {
             let mut next_frontier: Vec<(String, f32, u8)> = Vec::new();
             for (current_node_id, current_score, _) in frontier {
                 for edge in owner_edges.iter().filter(|record| {
                     record.relation == DataLayerM6GraphEdgeRelation::Trusts
                         && record.from_node_id == current_node_id
                 }) {
-                    let next_score = current_score * edge.weight * query.attenuation_factor;
+                    let next_score = current_score * edge.weight * attenuation_factor;
                     let next_hops = depth;
                     let entry = best_scores
                         .entry(edge.to_node_id.clone())
@@ -432,10 +456,11 @@ impl DataLayerM6GraphRegistry {
         &self,
         owner_did: &str,
     ) -> Result<Vec<DataLayerM6PortableEdgeProjection>, DataLayerM6GraphIntegrationError> {
-        validate_kamn_did(owner_did)?;
-        let owner_edges = self.edges_by_owner.get(owner_did).ok_or_else(|| {
+        let owner_did = parse_kamn_did(owner_did)?;
+        let owner_did_key = owner_did.as_str();
+        let owner_edges = self.edges_by_owner.get(owner_did_key).ok_or_else(|| {
             DataLayerM6GraphIntegrationError::OwnerNotFound {
-                owner_did: owner_did.to_owned(),
+                owner_did: owner_did_key.to_owned(),
             }
         })?;
 
@@ -462,14 +487,14 @@ impl DataLayerM6GraphRegistry {
         requester_owner_did: &str,
         owner_did: &str,
     ) -> Result<Vec<DataLayerM6PortableEdgeProjection>, DataLayerM6GraphIntegrationError> {
-        validate_kamn_did(requester_owner_did)?;
-        validate_kamn_did(owner_did)?;
-        if requester_owner_did != owner_did {
+        let requester_owner_did = parse_kamn_did(requester_owner_did)?;
+        let owner_did = parse_kamn_did(owner_did)?;
+        if requester_owner_did.as_str() != owner_did.as_str() {
             return Err(DataLayerM6GraphIntegrationError::OwnerScopeViolation {
                 reason_code: DATA_LAYER_M6_OWNER_SCOPE_DENIED_REASON_CODE,
             });
         }
-        self.export_portable_edge_projection(owner_did)
+        self.export_portable_edge_projection(owner_did.as_str())
     }
 
     fn node_exists_outside_owner(&self, owner_did: &str, node_id: &str) -> bool {
@@ -555,20 +580,9 @@ impl fmt::Display for DataLayerM6GraphIntegrationError {
 
 impl std::error::Error for DataLayerM6GraphIntegrationError {}
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM6GraphIntegrationError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM6GraphIntegrationError::InvalidDid(
-            value.to_owned(),
-        ));
-    }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM6GraphIntegrationError::InvalidDid(
-            value.to_owned(),
-        ));
-    }
-    Ok(())
+fn parse_kamn_did(value: &str) -> Result<KamnDid, DataLayerM6GraphIntegrationError> {
+    KamnDid::parse(value)
+        .map_err(|_| DataLayerM6GraphIntegrationError::InvalidDid(value.to_owned()))
 }
 
 fn validate_non_empty(

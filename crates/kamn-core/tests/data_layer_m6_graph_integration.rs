@@ -345,3 +345,57 @@ fn spec_c07_scoped_portability_projection_matches_authorized_owner_projection() 
 
     assert_eq!(scoped_projection, owner_projection);
 }
+
+#[test]
+fn spec_c08_scoped_projection_accepts_canonical_equivalent_owner_dids() {
+    let mut registry = DataLayerM6GraphRegistry::new();
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-a",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent A should register");
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-b",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent B should register");
+    registry
+        .register_edge(edge_input(
+            "kamn:did:owner:alpha",
+            "edge-alpha-1",
+            DataLayerM6GraphEdgeRelation::Trusts,
+            "agent-a",
+            "agent-b",
+            0.8,
+        ))
+        .expect("edge should register");
+
+    let scoped_projection = registry
+        .export_portable_edge_projection_scoped("  kamn:did:owner:alpha  ", "kamn:did:owner:alpha");
+    assert!(
+        scoped_projection.is_ok(),
+        "canonical-equivalent owner DIDs should authorize"
+    );
+}
+
+#[test]
+fn spec_c09_owner_lookup_uses_canonical_kamn_did_keys() {
+    let mut registry = DataLayerM6GraphRegistry::new();
+    registry
+        .register_node(node_input(
+            "kamn:did:owner:alpha",
+            "agent-a",
+            DataLayerM6GraphNodeKind::Agent,
+        ))
+        .expect("agent A should register");
+
+    let lookup_with_whitespace = registry.nodes_for_owner("  kamn:did:owner:alpha  ");
+    assert!(
+        lookup_with_whitespace.is_some(),
+        "canonical-equivalent owner DID lookup should resolve existing owner scope"
+    );
+}
