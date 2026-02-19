@@ -10,7 +10,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[derive(Clone)]
 enum MockStep {
@@ -333,5 +333,47 @@ fn regression_issue_1924_notifications_consumer_reconnect_exhausted_reason_remai
         Err(KolmeRuntimeCommitProviderError::Unavailable {
             reason: "notification reconnect attempts exhausted after 3 retries".to_owned(),
         })
+    );
+}
+
+#[test]
+fn functional_notifications_consumer_reconnect_exhaustion_applies_deterministic_pacing() {
+    let retry_connector = MockConnector::new(vec![
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+    ]);
+    let mut retry_consumer = KolmeRuntimeCommitNotificationsConsumer::new(
+        "http://127.0.0.1:3030",
+        "/notifications",
+        "kolme-fork-local",
+        3,
+        retry_connector,
+    )
+    .expect("notifications consumer should build");
+
+    let start = Instant::now();
+    let result = retry_consumer.next_notification_event();
+    let elapsed = start.elapsed();
+
+    assert_eq!(
+        result,
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notification reconnect attempts exhausted after 3 retries".to_owned(),
+        })
+    );
+    assert!(
+        elapsed >= Duration::from_millis(20),
+        "reconnect pacing should apply deterministic backoff before exhaustion"
+    );
+    assert!(
+        elapsed <= Duration::from_millis(400),
+        "reconnect pacing should remain bounded"
     );
 }

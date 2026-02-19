@@ -35,3 +35,12 @@ fn doc_contains_transient_classifier_and_bounded_retry_schedule_markers() {
     assert!(DOC.contains("timeout"));
     assert!(DOC.contains("unavailable"));
 }
+
+#[test]
+fn doc_contains_notifications_reconnect_pacing_policy_markers() {
+    assert!(DOC.contains("### Notifications Reconnect Pacing Policy"));
+    assert!(DOC.contains("notifications_reconnect_pacing_contract_version=v1"));
+    assert!(DOC.contains("notifications_reconnect_backoff_sequence_ms=10,20,40,40,40"));
+    assert!(DOC.contains("notifications_reconnect_backoff_cap_ms=40"));
+    assert!(DOC.contains("notification reconnect attempts exhausted after <N> retries"));
+}
