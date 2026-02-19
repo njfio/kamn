@@ -72,6 +72,14 @@ TELEMETRY_STRATEGY_MARKER = (
 MAIN_WIRING_MARKER = "serve_observability_endpoint(&endpoint_config, &snapshot)"
 FRAMEWORK_INGRESS_MARKER = "tokio::net::TcpListener::bind(config.bind_addr.as_str())"
 
+DEFAULT_SOURCE_FILES = [
+    ROOT_DIR / "crates/kamn-node/src/observability_endpoint.rs",
+    ROOT_DIR / "crates/kamn-node/src/observability_endpoint/endpoint_server.rs",
+    ROOT_DIR / "crates/kamn-node/src/observability_endpoint/payload_contract.rs",
+    ROOT_DIR / "crates/kamn-node/src/observability_endpoint/payload_render.rs",
+    ROOT_DIR / "crates/kamn-node/src/observability_endpoint/tls_mode.rs",
+]
+
 
 def _read_text(path: Path, *, reason_code: str) -> str:
     if not path.is_file():
@@ -80,7 +88,11 @@ def _read_text(path: Path, *, reason_code: str) -> str:
 
 
 def _run(args: argparse.Namespace) -> int:
-    source_file = Path(args.source_file).resolve()
+    if args.source_file:
+        source_files = [Path(args.source_file).resolve()]
+    else:
+        source_files = [path.resolve() for path in DEFAULT_SOURCE_FILES]
+
     main_file = Path(args.main_file).resolve()
     framework_file = Path(args.framework_file).resolve()
     docs_file = Path(args.docs_file).resolve()
@@ -88,11 +100,14 @@ def _run(args: argparse.Namespace) -> int:
     observability_contract_doc_file = Path(args.observability_contract_doc_file).resolve()
     strategy_doc_file = Path(args.strategy_doc_file).resolve()
 
-    source_text = _read_text(
-        source_file,
-        reason_code="observability_source_file_missing",
+    source_texts = [
+        _read_text(path, reason_code="observability_source_file_missing")
+        for path in source_files
+    ]
+    source_text = "\n".join(source_texts)
+    source_contract_text = "\n".join(
+        text.split("\n#[cfg(test)]", 1)[0] for text in source_texts
     )
-    source_contract_text = source_text.split("\n#[cfg(test)]", 1)[0]
     main_text = _read_text(
         main_file,
         reason_code="observability_main_file_missing",
@@ -216,7 +231,8 @@ def _run(args: argparse.Namespace) -> int:
         ),
         "expected_contract_doc_marker_count": len(OBSERVABILITY_CONTRACT_DOC_MARKERS),
         "reason_codes": reason_codes,
-        "source_file": str(source_file),
+        "source_file": str(source_files[0]),
+        "source_files": [str(path) for path in source_files],
         "main_file": str(main_file),
         "framework_file": str(framework_file),
         "docs_file": str(docs_file),
@@ -260,8 +276,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--source-file",
-        default=str(ROOT_DIR / "crates/kamn-node/src/observability_endpoint.rs"),
-        help="Observability endpoint source path.",
+        default="",
+        help=(
+            "Optional single-source override path for targeted drift tests. "
+            "When omitted, checker reads the observability endpoint source bundle."
+        ),
     )
     parser.add_argument(
         "--main-file",
