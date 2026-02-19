@@ -1,7 +1,7 @@
 # Issue #5179 Spec
 
 - Title: Task: implement R42 immediate fixes (signer lock poisoning, ignored-test debt, PRD relocation, draft-spec review)
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 

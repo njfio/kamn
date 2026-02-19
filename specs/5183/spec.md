@@ -1,7 +1,7 @@
 # Issue #5183 Spec
 
 - Title: Task: automate merged-branch cleanup with safe retention policy
-- Status: Reviewed
+- Status: Implemented
 - Priority: P2
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 

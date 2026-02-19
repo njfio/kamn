@@ -1,7 +1,7 @@
 # Issue #5177 Spec
 
 - Title: Story: remediate R42 immediate stability and hygiene findings
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 
