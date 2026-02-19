@@ -4571,6 +4571,27 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - per-iteration reproducer runtime is bounded by `--reproducer-max-seconds`.
   - iteration count and failure threshold are explicit (`--iterations`, `--failure-threshold`).
 
+### Overload CI Dry-Run Policy Checker Contract
+- Checker command:
+  - `bash scripts/ci/check_daemon_os_signal_stress_policy.sh --report-file /tmp/daemon-os-signal-stress-matrix-report.json --threshold-file fixtures/ci/daemon_os_signal_stress_policy_thresholds.env --ci-tools-script scripts/ci/test_ci_tools.sh --expected-final-decision GO --output-json /tmp/daemon-os-signal-stress-policy-report.json`
+- Checker regression test command:
+  - `bash scripts/ci/test_check_daemon_os_signal_stress_policy.sh`
+- Threshold fixture:
+  - `fixtures/ci/daemon_os_signal_stress_policy_thresholds.env`
+- Deterministic checker markers:
+  - `overload_policy_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-policy-reason-taxonomy.v1`
+  - `overload_policy_reason_codes_csv=overload_policy_argument_invalid,overload_policy_ci_tools_fast_mode_heavy_run_leaked,overload_policy_ci_tools_fast_mode_missing_overload_test,overload_policy_ci_tools_script_missing,overload_policy_expected_decision_mismatch,overload_policy_output_json_required,overload_policy_reason_code_unknown,overload_policy_report_file_missing,overload_policy_report_json_invalid,overload_policy_report_schema_mismatch,overload_policy_runtime_budget_exceeded,overload_policy_threshold_file_missing,overload_policy_threshold_key_missing,overload_policy_threshold_value_invalid`
+- Fast-gate selector boundary:
+  - `scripts/ci/test_ci_tools.sh` fast mode must include `test_check_daemon_os_signal_stress_policy.sh`.
+  - direct heavy-run command `scripts/ci/run_daemon_os_signal_stress_matrix.sh` must not be invoked by ci-tools fast mode.
+- Guard commands:
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_overload_ci_dry_run_policy_checker_markers -- --exact`
+  - `bash scripts/ci/test_check_daemon_os_signal_stress_policy.sh`
+- Fail-closed policy:
+  - checker rejects schema drift, unknown reason markers, threshold violations, and selector command-surface regressions.
+  - checker output `reason_codes=none|<csv>` remains deterministic for promotion evidence and CI triage.
+- Regression: #4096
+
 ### Signer Extraction Budget Guard
 - `signer_extraction_budget_guard_status=active`
 - `signer_rs_max_lines=950`
