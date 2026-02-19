@@ -199,6 +199,24 @@ fn service_api_ops_configuration_contains_multi_signer_quorum_signature_decision
 }
 
 #[test]
+fn service_api_ops_configuration_contains_signer_quorum_profile_matrix_controls() {
+    assert!(DOC.contains("signer_quorum_profile_matrix_fixture_status=verified"));
+    assert!(DOC.contains(
+        "signer_quorum_profile_matrix_case_labels_csv=linked_non_failover_primary,profile_not_approved_non_failover,quorum_shortfall_non_failover,failover_previous_profile_not_approved,linked_failover_dual_approved"
+    ));
+    assert!(DOC.contains(
+        "signer_quorum_profile_matrix_fail_closed_reason_codes_csv=runtime_signer_quorum_linkage_violation,runtime_signer_attestation_quorum_shortfall,runtime_signer_failover_attestation_previous_profile_not_approved"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node signer::signer_policy::tests::unit_signer_quorum_decision_path_matrix -- --exact --nocapture"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::signer_tests::integration_kolme_live_signer_preflight_quorum_profile_matrix_paths -- --exact --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #3957"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_retry_envelope_exhaustion_reconnect_bound_governance() {
     assert!(
         DOC.contains("### Retry Envelope Exhaustion and Reconnect Bound Governance (Issue #4296)")

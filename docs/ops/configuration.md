@@ -575,6 +575,21 @@ Regression marker:
 
 - `Regression: #4357`
 
+Quorum profile matrix fixture controls:
+
+- `signer_quorum_profile_matrix_fixture_status=verified`
+- `signer_quorum_profile_matrix_case_labels_csv=linked_non_failover_primary,profile_not_approved_non_failover,quorum_shortfall_non_failover,failover_previous_profile_not_approved,linked_failover_dual_approved`
+- `signer_quorum_profile_matrix_fail_closed_reason_codes_csv=runtime_signer_quorum_linkage_violation,runtime_signer_attestation_quorum_shortfall,runtime_signer_failover_attestation_previous_profile_not_approved`
+
+Validation commands:
+
+- `cargo test -p kamn-node signer::signer_policy::tests::unit_signer_quorum_decision_path_matrix -- --exact --nocapture`
+- `cargo test -p kamn-node main_tests::signer_tests::integration_kolme_live_signer_preflight_quorum_profile_matrix_paths -- --exact --nocapture`
+
+Regression marker:
+
+- `Regression: #3957`
+
 ### Retry Decision Matrix and Jitter Seed Contracts
 
 `kamn-node` keeps retry behavior deterministic and bounded for live runtime submit/finality paths.
