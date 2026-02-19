@@ -5,9 +5,10 @@
 //! queue-cap backpressure escalation markers.
 
 use crate::{
-    AntiSpamDecision, AntiSpamEngine, AntiSpamRejection, ChannelStore,
-    DeterministicBackpressureController, PeerLifecycleState, RuntimeBackpressureDecision,
-    RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+    AgentDid, AgentDidError, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection, ChannelStore,
+    DeterministicBackpressureController, KamnDid, KamnDidError, PeerLifecycleState,
+    RuntimeBackpressureDecision, RuntimeBackpressureError, RuntimeBackpressureInput,
+    RuntimeBackpressurePolicy,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -57,6 +58,28 @@ pub const DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE: &str =
 /// Stable reason marker for runtime backpressure evaluation failures.
 pub const DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE: &str =
     "m9_realtime_runtime_backpressure_evaluation_failed";
+/// Stable reason marker for invalid requester-owner DID inputs.
+pub const DATA_LAYER_M9_INVALID_REQUESTER_OWNER_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_requester_owner_did";
+/// Stable reason marker for invalid target-owner DID inputs.
+pub const DATA_LAYER_M9_INVALID_OWNER_DID_REASON_CODE: &str = "m9_realtime_invalid_owner_did";
+/// Stable reason marker for invalid connected-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE: &str = "m9_realtime_invalid_agent_did";
+/// Stable reason marker for invalid requester-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_requester_agent_did";
+/// Stable reason marker for invalid target-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_TARGET_AGENT_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_target_agent_did";
+/// Stable reason marker for invalid counterparty-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_COUNTERPARTY_AGENT_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_counterparty_agent_did";
+/// Stable reason marker for invalid sender-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_sender_agent_did";
+/// Stable reason marker for invalid recipient-agent DID inputs.
+pub const DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE: &str =
+    "m9_realtime_invalid_recipient_agent_did";
 
 /// Dispatch acknowledgement status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -264,7 +287,11 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        validate_kamn_did(request.agent_did.as_str())?;
+        let parsed_agent_did = parse_agent_did(
+            request.agent_did.as_str(),
+            "agent_did",
+            DATA_LAYER_M9_INVALID_AGENT_DID_REASON_CODE,
+        )?;
         validate_non_empty(request.gateway_node.as_str(), "gateway_node")?;
         if request.connected_since_epoch_seconds == 0 {
             return Err(DataLayerM9RealtimeDeliveryError::EmptyField(
@@ -292,14 +319,14 @@ impl DataLayerM9RealtimeDeliveryRegistry {
 
         let record = DataLayerM9PresenceRecord {
             owner_did: request.owner_did,
-            agent_did: request.agent_did.clone(),
+            agent_did: parsed_agent_did.as_str().to_owned(),
             connected_since_epoch_seconds: request.connected_since_epoch_seconds,
             last_heartbeat_epoch_seconds: request.last_heartbeat_epoch_seconds,
             gateway_node: request.gateway_node,
             capabilities_active,
         };
         self.presence_by_agent
-            .insert(request.agent_did, record.clone());
+            .insert(parsed_agent_did.as_str().to_owned(), record.clone());
         Ok(record)
     }
 
@@ -312,14 +339,22 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        validate_kamn_did(request.requester_agent_did.as_str())?;
-        validate_kamn_did(request.counterparty_agent_did.as_str())?;
-        if request.requester_agent_did == request.counterparty_agent_did {
+        let requester_agent_did = parse_agent_did(
+            request.requester_agent_did.as_str(),
+            "requester_agent_did",
+            DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
+        )?;
+        let counterparty_agent_did = parse_agent_did(
+            request.counterparty_agent_did.as_str(),
+            "counterparty_agent_did",
+            DATA_LAYER_M9_INVALID_COUNTERPARTY_AGENT_DID_REASON_CODE,
+        )?;
+        if requester_agent_did.as_str() == counterparty_agent_did.as_str() {
             return Err(DataLayerM9RealtimeDeliveryError::SameAgentRelationship);
         }
         self.interaction_pairs.insert(normalize_pair(
-            request.requester_agent_did.as_str(),
-            request.counterparty_agent_did.as_str(),
+            requester_agent_did.as_str(),
+            counterparty_agent_did.as_str(),
         ));
         Ok(())
     }
@@ -333,14 +368,22 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        validate_kamn_did(request.requester_agent_did.as_str())?;
-        validate_kamn_did(request.counterparty_agent_did.as_str())?;
-        if request.requester_agent_did == request.counterparty_agent_did {
+        let requester_agent_did = parse_agent_did(
+            request.requester_agent_did.as_str(),
+            "requester_agent_did",
+            DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
+        )?;
+        let counterparty_agent_did = parse_agent_did(
+            request.counterparty_agent_did.as_str(),
+            "counterparty_agent_did",
+            DATA_LAYER_M9_INVALID_COUNTERPARTY_AGENT_DID_REASON_CODE,
+        )?;
+        if requester_agent_did.as_str() == counterparty_agent_did.as_str() {
             return Err(DataLayerM9RealtimeDeliveryError::SameAgentRelationship);
         }
         self.shared_escrow_pairs.insert(normalize_pair(
-            request.requester_agent_did.as_str(),
-            request.counterparty_agent_did.as_str(),
+            requester_agent_did.as_str(),
+            counterparty_agent_did.as_str(),
         ));
         Ok(())
     }
@@ -351,16 +394,21 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         query: DataLayerM9PresenceQuery,
     ) -> Result<Option<DataLayerM9PresenceRecord>, DataLayerM9RealtimeDeliveryError> {
         authorize_owner_scope(query.requester_owner_did.as_str(), query.owner_did.as_str())?;
-        validate_kamn_did(query.requester_agent_did.as_str())?;
-        validate_kamn_did(query.target_agent_did.as_str())?;
+        let requester_agent_did = parse_agent_did(
+            query.requester_agent_did.as_str(),
+            "requester_agent_did",
+            DATA_LAYER_M9_INVALID_REQUESTER_AGENT_DID_REASON_CODE,
+        )?;
+        let target_agent_did = parse_agent_did(
+            query.target_agent_did.as_str(),
+            "target_agent_did",
+            DATA_LAYER_M9_INVALID_TARGET_AGENT_DID_REASON_CODE,
+        )?;
 
-        let has_visibility = if query.requester_agent_did == query.target_agent_did {
+        let has_visibility = if requester_agent_did.as_str() == target_agent_did.as_str() {
             true
         } else {
-            let pair = normalize_pair(
-                query.requester_agent_did.as_str(),
-                query.target_agent_did.as_str(),
-            );
+            let pair = normalize_pair(requester_agent_did.as_str(), target_agent_did.as_str());
             self.interaction_pairs.contains(&pair) || self.shared_escrow_pairs.contains(&pair)
         };
 
@@ -370,7 +418,10 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             });
         }
 
-        Ok(self.presence_by_agent.get(&query.target_agent_did).cloned())
+        Ok(self
+            .presence_by_agent
+            .get(target_agent_did.as_str())
+            .cloned())
     }
 
     /// Snapshots one recipient queue preserving insertion ordering for pending/deferred IDs.
@@ -381,9 +432,13 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         recipient_agent_did: &str,
     ) -> Result<DataLayerM9RecipientQueueSnapshot, DataLayerM9RealtimeDeliveryError> {
         authorize_owner_scope(requester_owner_did, owner_did)?;
-        validate_kamn_did(recipient_agent_did)?;
+        let recipient_agent_did = parse_agent_did(
+            recipient_agent_did,
+            "recipient_agent_did",
+            DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
+        )?;
 
-        let queue_state = self.queue_by_recipient.get(recipient_agent_did);
+        let queue_state = self.queue_by_recipient.get(recipient_agent_did.as_str());
         let pending_message_ids = queue_state
             .map(|state| state.pending_message_ids.clone())
             .unwrap_or_default();
@@ -394,7 +449,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             queue_state.and_then(|state| state.first_full_at_epoch_seconds);
 
         Ok(DataLayerM9RecipientQueueSnapshot {
-            recipient_agent_did: recipient_agent_did.to_owned(),
+            recipient_agent_did: recipient_agent_did.as_str().to_owned(),
             pending_queue_depth: pending_message_ids.len(),
             deferred_count: deferred_message_ids.len(),
             pending_message_ids,
@@ -412,9 +467,13 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        validate_kamn_did(request.recipient_agent_did.as_str())?;
+        let recipient_agent_did = parse_agent_did(
+            request.recipient_agent_did.as_str(),
+            "recipient_agent_did",
+            DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
+        )?;
 
-        let queue_state = self.queue_by_recipient.get(&request.recipient_agent_did);
+        let queue_state = self.queue_by_recipient.get(recipient_agent_did.as_str());
         let pending_queue_depth = queue_state
             .map(|state| state.pending_message_ids.len())
             .unwrap_or_default();
@@ -430,7 +489,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         .map_err(map_runtime_backpressure_policy_error_to_m9_projection_error)?;
 
         let input = RuntimeBackpressureInput::new(
-            request.recipient_agent_did.as_str(),
+            recipient_agent_did.as_str(),
             pending_queue_depth,
             request.queue_capacity,
             request.lifecycle_state,
@@ -443,7 +502,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
         let reason_code = runtime_decision.reason_code();
 
         Ok(DataLayerM9RuntimeBackpressureProjection {
-            recipient_agent_did: request.recipient_agent_did,
+            recipient_agent_did: recipient_agent_did.as_str().to_owned(),
             pending_queue_depth,
             deferred_count,
             runtime_decision,
@@ -462,14 +521,19 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.owner_did.as_str(),
         )?;
         validate_non_empty(request.channel_id.as_str(), "channel_id")?;
-        validate_kamn_did(request.sender_agent_did.as_str())?;
-        validate_kamn_did(request.recipient_agent_did.as_str())?;
+        let sender_agent_did = parse_agent_did(
+            request.sender_agent_did.as_str(),
+            "sender_agent_did",
+            DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE,
+        )?;
+        let recipient_agent_did = parse_agent_did(
+            request.recipient_agent_did.as_str(),
+            "recipient_agent_did",
+            DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
+        )?;
 
         let sender_member = channel_store
-            .is_member(
-                request.channel_id.as_str(),
-                request.sender_agent_did.as_str(),
-            )
+            .is_member(request.channel_id.as_str(), sender_agent_did.as_str())
             .map_err(
                 |error| DataLayerM9RealtimeDeliveryError::ChannelPolicyCheckFailed {
                     reason_code: DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
@@ -477,10 +541,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
                 },
             )?;
         let recipient_member = channel_store
-            .is_member(
-                request.channel_id.as_str(),
-                request.recipient_agent_did.as_str(),
-            )
+            .is_member(request.channel_id.as_str(), recipient_agent_did.as_str())
             .map_err(
                 |error| DataLayerM9RealtimeDeliveryError::ChannelPolicyCheckFailed {
                     reason_code: DATA_LAYER_M9_CHANNEL_POLICY_QUERY_FAILED_REASON_CODE,
@@ -546,8 +607,16 @@ impl DataLayerM9RealtimeDeliveryRegistry {
             request.requester_owner_did.as_str(),
             request.owner_did.as_str(),
         )?;
-        validate_kamn_did(request.sender_agent_did.as_str())?;
-        validate_kamn_did(request.recipient_agent_did.as_str())?;
+        parse_agent_did(
+            request.sender_agent_did.as_str(),
+            "sender_agent_did",
+            DATA_LAYER_M9_INVALID_SENDER_AGENT_DID_REASON_CODE,
+        )?;
+        let recipient_agent_did = parse_agent_did(
+            request.recipient_agent_did.as_str(),
+            "recipient_agent_did",
+            DATA_LAYER_M9_INVALID_RECIPIENT_AGENT_DID_REASON_CODE,
+        )?;
         validate_non_empty(request.message_id.as_str(), "message_id")?;
         if request.dispatched_at_epoch_seconds == 0 {
             return Err(DataLayerM9RealtimeDeliveryError::EmptyField(
@@ -557,7 +626,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
 
         let queue_state = self
             .queue_by_recipient
-            .entry(request.recipient_agent_did.clone())
+            .entry(recipient_agent_did.as_str().to_owned())
             .or_default();
         if queue_state
             .pending_message_ids
@@ -573,7 +642,7 @@ impl DataLayerM9RealtimeDeliveryRegistry {
 
         let recipient_connected = self
             .presence_by_agent
-            .contains_key(&request.recipient_agent_did);
+            .contains_key(recipient_agent_did.as_str());
         if recipient_connected && queue_state.pending_message_ids.is_empty() {
             return Ok(DataLayerM9DispatchOutcome {
                 message_id: request.message_id,
@@ -638,7 +707,14 @@ pub enum DataLayerM9RealtimeDeliveryError {
     /// Required field was empty.
     EmptyField(&'static str),
     /// DID failed validation.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying DID value.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Owner-scope authorization failed.
     OwnerScopeViolation {
         /// Stable reason marker.
@@ -709,7 +785,14 @@ impl fmt::Display for DataLayerM9RealtimeDeliveryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(
+                f,
+                "invalid did field {field}: {reason_code} ({detail})"
+            ),
             Self::OwnerScopeViolation { reason_code } => {
                 write!(f, "owner scope violation: {reason_code}")
             }
@@ -838,29 +921,61 @@ fn validate_non_empty(
     Ok(())
 }
 
-fn validate_kamn_did(value: &str) -> Result<(), DataLayerM9RealtimeDeliveryError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || !trimmed.starts_with("kamn:did:") {
-        return Err(DataLayerM9RealtimeDeliveryError::InvalidDid(
-            value.to_owned(),
-        ));
+fn map_agent_did_error(
+    error: AgentDidError,
+    field: &'static str,
+    reason_code: &'static str,
+) -> DataLayerM9RealtimeDeliveryError {
+    DataLayerM9RealtimeDeliveryError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
     }
-    let segments = trimmed.split(':').collect::<Vec<_>>();
-    if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(DataLayerM9RealtimeDeliveryError::InvalidDid(
-            value.to_owned(),
-        ));
+}
+
+fn map_kamn_did_error(
+    error: KamnDidError,
+    field: &'static str,
+    reason_code: &'static str,
+) -> DataLayerM9RealtimeDeliveryError {
+    DataLayerM9RealtimeDeliveryError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
     }
-    Ok(())
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, DataLayerM9RealtimeDeliveryError> {
+    AgentDid::parse(value).map_err(|error| map_agent_did_error(error, field, reason_code))
+}
+
+fn parse_kamn_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<KamnDid, DataLayerM9RealtimeDeliveryError> {
+    KamnDid::parse(value).map_err(|error| map_kamn_did_error(error, field, reason_code))
 }
 
 fn authorize_owner_scope(
     requester_owner_did: &str,
     owner_did: &str,
 ) -> Result<(), DataLayerM9RealtimeDeliveryError> {
-    validate_kamn_did(requester_owner_did)?;
-    validate_kamn_did(owner_did)?;
-    if requester_owner_did != owner_did {
+    let requester_owner_did = parse_kamn_did(
+        requester_owner_did,
+        "requester_owner_did",
+        DATA_LAYER_M9_INVALID_REQUESTER_OWNER_DID_REASON_CODE,
+    )?;
+    let owner_did = parse_kamn_did(
+        owner_did,
+        "owner_did",
+        DATA_LAYER_M9_INVALID_OWNER_DID_REASON_CODE,
+    )?;
+    if requester_owner_did.as_str() != owner_did.as_str() {
         return Err(DataLayerM9RealtimeDeliveryError::OwnerScopeViolation {
             reason_code: DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
         });
