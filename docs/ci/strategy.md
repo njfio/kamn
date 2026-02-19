@@ -4525,6 +4525,17 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - fallback signer secret reason code remains forbidden in lifecycle policy checks.
   - lifecycle marker completeness and docs parity drift fail the contract target.
 
+### Signer Provenance and Fallback-Prohibition Docs/Config Parity Contract
+- `signer_provenance_fallback_policy_contract_status=active`
+- `signer_provenance_fallback_policy_contract_version=v1`
+- `signer_provenance_fallback_policy_required_markers_csv=runtime_signer_key_source_policy_reason_codes_csv,managed_signer_backend_response_provenance_missing,managed_signer_backend_response_provenance_malformed,managed_signer_backend_response_provenance_mismatch`
+- Guard commands:
+  - `cargo test -p kamn-node --test signer_provenance_fallback_policy_contract -- --nocapture`
+  - `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_signer_material_validation_and_fallback_prohibition_contracts -- --exact --nocapture`
+- Fail-closed policy:
+  - runtime signer key-source reason taxonomy marker drift (`production_signer_key_source_env_local_forbidden`, `fallback_signer_secret_present_violation`) fails the contract target.
+  - signer provenance reason marker drift (`managed_signer_backend_response_provenance_missing`, `managed_signer_backend_response_provenance_malformed`, `managed_signer_backend_response_provenance_mismatch`) fails the contract target.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.

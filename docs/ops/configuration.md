@@ -160,6 +160,13 @@ Runtime signer key-source policy taxonomy markers:
 - `production_signer_key_source_env_local_forbidden`
 - `fallback_signer_secret_present_violation`
 
+Managed signer provenance taxonomy markers:
+
+- `managed_signer_provenance_reason_codes_csv=managed_signer_backend_response_provenance_missing,managed_signer_backend_response_provenance_malformed,managed_signer_backend_response_provenance_mismatch`
+- `managed_signer_backend_response_provenance_missing`
+- `managed_signer_backend_response_provenance_malformed`
+- `managed_signer_backend_response_provenance_mismatch`
+
 Deterministic operator-facing remediation/error expectations:
 
 - missing signer material rejects with message `signer secret env is required for selected profile`.
@@ -173,6 +180,7 @@ Validation commands:
 - `bash scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh`
 - `bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh`
 - `cargo test -p kamn-node --bin kamn-node main_tests::runtime_tests::regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code -- --exact --nocapture`
+- `cargo test -p kamn-node --test signer_provenance_fallback_policy_contract -- --nocapture`
 - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 
 Regression markers:

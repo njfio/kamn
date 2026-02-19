@@ -425,6 +425,26 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
 }
 
 #[test]
+fn doc_contains_signer_provenance_fallback_policy_contract_markers() {
+    assert!(
+        DOC.contains("### Signer Provenance and Fallback-Prohibition Docs/Config Parity Contract")
+    );
+    assert!(DOC.contains("signer_provenance_fallback_policy_contract_status=active"));
+    assert!(DOC.contains("signer_provenance_fallback_policy_contract_version=v1"));
+    assert!(DOC.contains(
+        "signer_provenance_fallback_policy_required_markers_csv=runtime_signer_key_source_policy_reason_codes_csv,managed_signer_backend_response_provenance_missing,managed_signer_backend_response_provenance_malformed,managed_signer_backend_response_provenance_mismatch"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --test signer_provenance_fallback_policy_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("production_signer_key_source_env_local_forbidden"));
+    assert!(DOC.contains("fallback_signer_secret_present_violation"));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_missing"));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_malformed"));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_mismatch"));
+}
+
+#[test]
 fn doc_contains_node_runtime_startup_negative_matrix_fast_lane_contract_markers() {
     assert!(DOC.contains("## Node Runtime Startup Negative-Matrix Fast Lane"));
     assert!(DOC.contains(

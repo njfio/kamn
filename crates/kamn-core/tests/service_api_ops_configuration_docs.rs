@@ -136,11 +136,23 @@ fn service_api_ops_configuration_contains_signer_material_validation_and_fallbac
     assert!(DOC.contains("fallback_signer_secret_present_violation"));
     assert!(DOC.contains("fallback_signer_secret_checkpoint_reason_mismatch"));
     assert!(DOC.contains("fallback_signer_secret_remediation_missing"));
+    assert!(DOC.contains(
+        "runtime_signer_key_source_policy_reason_codes_csv=production_signer_key_source_env_local_forbidden,fallback_signer_secret_present_violation"
+    ));
+    assert!(DOC.contains(
+        "managed_signer_provenance_reason_codes_csv=managed_signer_backend_response_provenance_missing,managed_signer_backend_response_provenance_malformed,managed_signer_backend_response_provenance_mismatch"
+    ));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_missing"));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_malformed"));
+    assert!(DOC.contains("managed_signer_backend_response_provenance_mismatch"));
     assert!(DOC.contains("signer secret env is required for selected profile"));
     assert!(DOC.contains("fallback signer secret env must not be set"));
     assert!(DOC.contains("remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"));
     assert!(DOC.contains("test_run_local_kolme_live_deployment_preflight_lane.sh"));
     assert!(DOC.contains("test_check_local_kolme_live_deployment_preflight_policy.sh"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --test signer_provenance_fallback_policy_contract -- --nocapture"
+    ));
     assert!(DOC.contains(
         "check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-deployment-preflight-policy.json"
     ));
