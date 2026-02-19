@@ -4622,6 +4622,21 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - modularized suite discovery marker drift fails closed when expected domain modules disappear or are renamed.
   - parallel boundary drift fails closed when seed env-key isolation is lost or case/sequence budgets exceed configured caps.
 
+### Quota Policy Checker Taxonomy Contract
+- `quota_policy_checker_reason_taxonomy_version=kamn.runtime.quota-policy-reason-taxonomy.v1`
+- `quota_policy_checker_reason_codes_csv=quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive,quota_limit_exceeded`
+- `quota_policy_checker_fixture_schema_version=kamn.runtime.quota-policy-fixture-matrix.v1`
+- `quota_policy_checker_fixture_path=fixtures/runtime/quota_policy_fixture_matrix.txt`
+- Guard commands:
+  - `cargo test -p kamn-core --test quota_policy_checker_contract`
+  - `cargo test -p kamn-core --test quota_policy_fixture_parser_contract`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_quota_policy_checker_taxonomy_contract_markers -- --exact`
+- Fail-closed policy:
+  - unknown scopes, non-positive windows, non-positive limits, and exceeded limits must reject deterministically.
+  - checker taxonomy must remain a superset of fixture taxonomy reason codes.
+  - docs marker drift fails the docs-contract target.
+- Regression: #4091
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.

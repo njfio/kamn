@@ -1482,6 +1482,26 @@ fn doc_contains_task_escrow_suite_discovery_and_parallel_contract_markers() {
 }
 
 #[test]
+fn doc_contains_quota_policy_checker_taxonomy_contract_markers() {
+    assert!(DOC.contains("### Quota Policy Checker Taxonomy Contract"));
+    assert!(DOC.contains(
+        "quota_policy_checker_reason_taxonomy_version=kamn.runtime.quota-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_checker_reason_codes_csv=quota_scope_unknown,quota_window_non_positive,quota_limit_non_positive,quota_limit_exceeded"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_checker_fixture_schema_version=kamn.runtime.quota-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "quota_policy_checker_fixture_path=fixtures/runtime/quota_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_checker_contract"));
+    assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_fixture_parser_contract"));
+    assert!(DOC.contains("Regression: #4091"));
+}
+
+#[test]
 fn doc_contains_public_api_surface_ratchet_contract_markers() {
     assert!(DOC.contains("Public API surface ratchet (Rust-first, fail-closed):"));
     assert!(DOC.contains("fixtures/ci/kamn_core_public_api_surface_baseline.env"));

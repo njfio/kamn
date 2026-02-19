@@ -120,6 +120,8 @@ pub mod operator_dashboard_ui;
 pub mod p2p_transport;
 /// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;
+/// Per-scope quota policy evaluation and deterministic fail-closed taxonomy contracts.
+pub mod quota_policy;
 /// Redaction request approval, audit-event, and visibility compliance contracts.
 pub mod redaction_compliance;
 /// Reputation-signal weighting and candidate-ranking contracts for routing.
@@ -622,6 +624,10 @@ pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
     PerformanceMetric, PerformanceMetricResult, PerformanceRunError, PerformanceRunReport,
     PerformanceSample, PrdPerformanceTargets,
+};
+pub use quota_policy::{
+    evaluate_quota_policy, quota_policy_reason_codes_csv, quota_policy_reason_taxonomy_version,
+    QuotaPolicyDecision, QuotaPolicyInput, QuotaPolicyViolationReason,
 };
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
