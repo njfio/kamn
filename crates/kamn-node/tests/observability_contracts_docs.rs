@@ -2,7 +2,25 @@ const DOC: &str = include_str!("../../../docs/observability/contracts.md");
 const RUNTIME_NETWORK_DOC: &str = include_str!("../../../docs/foundation/runtime-network.md");
 const LOGGING_SRC: &str = include_str!("../src/logging.rs");
 const DAEMON_PHASE_SRC: &str = include_str!("../src/runtime_orchestration/daemon_phase.rs");
-const OBS_ENDPOINT_SRC: &str = include_str!("../src/observability_endpoint.rs");
+const OBS_ENDPOINT_ROOT_SRC: &str = include_str!("../src/observability_endpoint.rs");
+const OBS_ENDPOINT_SERVER_SRC: &str =
+    include_str!("../src/observability_endpoint/endpoint_server.rs");
+const OBS_ENDPOINT_PAYLOAD_CONTRACT_SRC: &str =
+    include_str!("../src/observability_endpoint/payload_contract.rs");
+const OBS_ENDPOINT_PAYLOAD_RENDER_SRC: &str =
+    include_str!("../src/observability_endpoint/payload_render.rs");
+const OBS_ENDPOINT_TLS_MODE_SRC: &str = include_str!("../src/observability_endpoint/tls_mode.rs");
+
+fn observability_endpoint_source_bundle() -> String {
+    [
+        OBS_ENDPOINT_ROOT_SRC,
+        OBS_ENDPOINT_SERVER_SRC,
+        OBS_ENDPOINT_PAYLOAD_CONTRACT_SRC,
+        OBS_ENDPOINT_PAYLOAD_RENDER_SRC,
+        OBS_ENDPOINT_TLS_MODE_SRC,
+    ]
+    .join("\n")
+}
 
 #[test]
 fn unit_tracing_taxonomy_required_field_vocabulary_is_documented() {
@@ -25,15 +43,16 @@ fn functional_tracing_taxonomy_declares_version_and_required_events() {
 
 #[test]
 fn integration_tracing_taxonomy_docs_align_with_runtime_sources() {
+    let observability_source = observability_endpoint_source_bundle();
     assert!(LOGGING_SRC.contains("reason_code"));
     assert!(DAEMON_PHASE_SRC.contains("execution_id"));
     assert!(DAEMON_PHASE_SRC.contains("runtime_mode"));
-    assert!(OBS_ENDPOINT_SRC.contains("route(\"/\", any(handle_observability_http_route))"));
-    assert!(OBS_ENDPOINT_SRC.contains("runtime_mode"));
-    assert!(OBS_ENDPOINT_SRC.contains("reason_code"));
-    assert!(OBS_ENDPOINT_SRC.contains("transport_checkpoint_failures"));
-    assert!(OBS_ENDPOINT_SRC.contains("signer_checkpoint_failures"));
-    assert!(OBS_ENDPOINT_SRC.contains("commit_checkpoint_failures"));
+    assert!(observability_source.contains("route(\"/\", any(handle_observability_http_route))"));
+    assert!(observability_source.contains("runtime_mode"));
+    assert!(observability_source.contains("reason_code"));
+    assert!(observability_source.contains("transport_checkpoint_failures"));
+    assert!(observability_source.contains("signer_checkpoint_failures"));
+    assert!(observability_source.contains("commit_checkpoint_failures"));
 }
 
 #[test]
@@ -94,12 +113,15 @@ fn functional_runtime_network_observability_tls_contract_declares_negative_matri
 
 #[test]
 fn integration_runtime_network_observability_tls_contract_aligns_with_endpoint_source() {
-    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE"));
-    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE"));
-    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE"));
-    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls certificate file read failed"));
-    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls key file parse failed"));
-    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls mode is invalid"));
+    let observability_source = observability_endpoint_source_bundle();
+    assert!(observability_source.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE"));
+    assert!(observability_source.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE"));
+    assert!(observability_source.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE"));
+    assert!(
+        observability_source.contains("observability endpoint tls certificate file read failed")
+    );
+    assert!(observability_source.contains("observability endpoint tls key file parse failed"));
+    assert!(observability_source.contains("observability endpoint tls mode is invalid"));
 }
 
 #[test]
@@ -130,10 +152,11 @@ fn functional_observability_route_parity_contract_declares_fail_closed_rows() {
 
 #[test]
 fn integration_observability_route_parity_contract_docs_align_with_endpoint_route_constants() {
-    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH"));
-    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH"));
-    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH"));
-    assert!(OBS_ENDPOINT_SRC.contains("DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH"));
+    let observability_source = observability_endpoint_source_bundle();
+    assert!(observability_source.contains("DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH"));
+    assert!(observability_source.contains("DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH"));
+    assert!(observability_source.contains("DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH"));
+    assert!(observability_source.contains("DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH"));
 }
 
 #[test]

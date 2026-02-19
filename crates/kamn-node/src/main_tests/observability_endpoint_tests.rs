@@ -1389,6 +1389,17 @@ fn integration_runtime_observability_endpoint_fails_closed_on_idle_timeout() {
     );
 }
 
+fn observability_endpoint_source_bundle() -> String {
+    [
+        include_str!("../observability_endpoint.rs"),
+        include_str!("../observability_endpoint/endpoint_server.rs"),
+        include_str!("../observability_endpoint/payload_contract.rs"),
+        include_str!("../observability_endpoint/payload_render.rs"),
+        include_str!("../observability_endpoint/tls_mode.rs"),
+    ]
+    .join("\n")
+}
+
 #[test]
 fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unchanged() {
     // Regression: #2830
@@ -1419,7 +1430,7 @@ fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unc
 #[test]
 fn regression_observability_endpoint_uses_async_listener_serving_path() {
     // Regression: #3511
-    let source = include_str!("../observability_endpoint.rs");
+    let source = observability_endpoint_source_bundle();
     assert!(
         source.contains("tokio::net::TcpListener::bind("),
         "observability endpoint must use tokio listener serving path"
@@ -1429,7 +1440,9 @@ fn regression_observability_endpoint_uses_async_listener_serving_path() {
         "observability endpoint should expose async serving function"
     );
     assert!(
-        source.contains("runtime.block_on(serve_observability_endpoint_async("),
+        source.contains("runtime.block_on(serve_observability_endpoint_async(")
+            || source
+                .contains("runtime.block_on(endpoint_server::serve_observability_endpoint_async("),
         "sync wrapper must drive async observability serving via runtime block_on"
     );
 }
@@ -1437,7 +1450,7 @@ fn regression_observability_endpoint_uses_async_listener_serving_path() {
 #[test]
 fn regression_observability_endpoint_uses_axum_route_composition() {
     // Regression: #3512
-    let source = include_str!("../observability_endpoint.rs");
+    let source = observability_endpoint_source_bundle();
     assert!(
         source.contains("fn build_observability_endpoint_router("),
         "observability endpoint should build an explicit axum router for route composition"
@@ -1459,7 +1472,7 @@ fn regression_observability_endpoint_uses_axum_route_composition() {
 #[test]
 fn regression_observability_endpoint_keeps_async_negative_matrix_contracts() {
     // Regression: #3514
-    let source = include_str!("../observability_endpoint.rs");
+    let source = observability_endpoint_source_bundle();
     assert!(
         source.contains("handle_observability_not_found_path().await"),
         "async dispatch must route unsupported paths through deterministic not-found handler"
