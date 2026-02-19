@@ -218,6 +218,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - all checks run in-process with deterministic env guards and localhost mock transport only.
   - no external Kolme node process is required for PR fast-gate validation.
 
+## Panic-Path Policy Checker Fast Lane
+- For panic-policy checker changes, keep PR validation on deterministic checker harness commands:
+  - `bash scripts/ci/check_no_production_expect.sh --output-json /tmp/no-production-expect-report.json`
+  - `bash scripts/ci/test_check_no_production_expect.sh`
+- Deterministic checker contracts:
+  - reason taxonomy marker: `kamn.ci.production-panic-replacement-reason-taxonomy.v1`
+  - reason codes marker: `scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default`
+  - runtime evidence output marker: `runtime_panic_replacement_evidence_outputs_csv=runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv`
+- Boundary markers:
+  - `panic_path_policy_scope_root=crates/kamn-node/src`
+  - `panic_path_policy_ci_lane_profile=low-cost`
+  - `panic_path_policy_ci_smoke_max_seconds=30`
+
 ## Node Runtime Daemon Shutdown Fast Lane
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`
