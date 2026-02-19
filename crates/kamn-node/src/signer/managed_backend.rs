@@ -10,7 +10,11 @@ use kamn_core::{
     SignerBackend, SignerBackendError, SignerProviderHandshakeMatrix, SigningRequest,
 };
 
-use super::{decode_kolme_hex_bytes, encode_kolme_hex_lower, KolmeLiveSignerSelection};
+use super::{
+    decode_kolme_hex_bytes, encode_kolme_hex_lower, KolmeLiveManagedKeySourceAdapter,
+    KolmeLiveManagedKeySourceAdapterOutput, KolmeLiveManagedKeySourceProvenanceMarker,
+    KolmeLiveSignerSelection,
+};
 use crate::{
     KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV, KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS,
     KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV, KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_DEFAULT,
@@ -24,6 +28,21 @@ struct ManagedExternalBackendSignature {
     signature_hex: String,
     recovery_id: u8,
     signer_public_key_hex: String,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ManagedExternalKeySourceAdapter {
+    provider_handshake_matrix: SignerProviderHandshakeMatrix,
+}
+
+impl ManagedExternalKeySourceAdapter {
+    pub(crate) fn with_provider_handshake_matrix(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+    ) -> Self {
+        Self {
+            provider_handshake_matrix,
+        }
+    }
 }
 
 fn map_kolme_live_secure_signer_backend_error(error: SignerBackendError) -> ConfigError {
@@ -465,6 +484,46 @@ pub(super) fn resolve_required_managed_signer_public_key_hex(
     }
 }
 
+impl KolmeLiveManagedKeySourceAdapter for ManagedExternalKeySourceAdapter {
+    fn sign_message(
+        &self,
+        signer_selection: &KolmeLiveSignerSelection,
+        key_reference: &str,
+        request: &KolmeRuntimeCommitRequest,
+        nonce: u64,
+        canonical_message: &str,
+        signer_public_key_hex: &str,
+    ) -> Result<KolmeLiveManagedKeySourceAdapterOutput, ConfigError> {
+        if signer_selection.key_source != KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "managed key-source adapter requires --kolme-live-signer-key-source={} for signer profile {} (managed_signer_adapter_key_source_unsupported)",
+                KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL,
+                signer_selection.profile
+            )));
+        }
+
+        let (signature_hex, recovery_id) = sign_kolme_live_managed_external_message(
+            key_reference,
+            request,
+            nonce,
+            canonical_message,
+            self.provider_handshake_matrix.clone(),
+            signer_public_key_hex,
+        )?;
+
+        Ok(KolmeLiveManagedKeySourceAdapterOutput {
+            signature_hex,
+            recovery_id,
+            provenance_marker: KolmeLiveManagedKeySourceProvenanceMarker {
+                profile: signer_selection.profile,
+                key_source: signer_selection.key_source,
+                key_reference_env: signer_selection.key_reference_env,
+                signer_public_key_hex: signer_public_key_hex.to_owned(),
+            },
+        })
+    }
+}
+
 pub(crate) fn sign_kolme_live_managed_external_message(
     key_reference: &str,
     request: &KolmeRuntimeCommitRequest,
@@ -513,4 +572,119 @@ pub(crate) fn sign_kolme_live_managed_external_message(
         backend_signature.signature_hex,
         backend_signature.recovery_id,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+    use std::sync::{Mutex, OnceLock};
+
+    use kamn_core::{KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix};
+
+    use super::{
+        KolmeLiveManagedKeySourceAdapter, KolmeLiveSignerSelection, ManagedExternalKeySourceAdapter,
+    };
+    use crate::signer::{build_kolme_live_managed_signing_key, encode_kolme_hex_lower};
+
+    const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE: &str =
+        "secure:aws-kms:role-operator/key-live-ops-primary";
+
+    fn managed_backend_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = env::var(key).ok();
+            match value {
+                Some(value) => env::set_var(key, value),
+                None => env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                env::set_var(self.key, previous);
+            } else {
+                env::remove_var(self.key);
+            }
+        }
+    }
+
+    #[test]
+    fn unit_managed_key_source_adapter_emits_deterministic_provenance_marker() {
+        let _lock = managed_backend_env_lock()
+            .lock()
+            .expect("managed backend env lock should guard test mutation");
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-3955-provenance",
+            "state:node-live-3955-provenance",
+            "kamn:did:agent:node-live-3955-provenance",
+            1,
+            "payload:node-live-3955-provenance",
+        )
+        .expect("request should build");
+        let canonical_message = "{\"managed\":\"adapter-provenance\"}";
+        let signing_key =
+            build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
+                .expect("managed signing key should derive");
+        let managed_pubkey = encode_kolme_hex_lower(
+            signing_key
+                .verifying_key()
+                .to_encoded_point(true)
+                .as_bytes(),
+        );
+        let (backend_signature, backend_recovery_id) = signing_key
+            .sign_recoverable(canonical_message.as_bytes())
+            .expect("managed signing key should sign canonical message");
+        let backend_command = format!(
+            "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
+            encode_kolme_hex_lower(backend_signature.to_bytes().as_ref()),
+            backend_recovery_id.to_byte(),
+            managed_pubkey
+        );
+        let _backend_command_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+            Some(backend_command.as_str()),
+        );
+
+        let selection = KolmeLiveSignerSelection {
+            profile: "ops-primary",
+            key_source: "managed-external",
+            private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        };
+        let adapter = ManagedExternalKeySourceAdapter::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_uniform_availability(true),
+        );
+        let output = KolmeLiveManagedKeySourceAdapter::sign_message(
+            &adapter,
+            &selection,
+            TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
+            &request,
+            55,
+            canonical_message,
+            managed_pubkey.as_str(),
+        )
+        .expect("managed adapter should emit deterministic provenance marker");
+        assert_eq!(output.provenance_marker.profile, selection.profile);
+        assert_eq!(output.provenance_marker.key_source, selection.key_source);
+        assert_eq!(
+            output.provenance_marker.key_reference_env,
+            selection.key_reference_env
+        );
+        assert_eq!(
+            output.provenance_marker.signer_public_key_hex,
+            managed_pubkey
+        );
+    }
 }
