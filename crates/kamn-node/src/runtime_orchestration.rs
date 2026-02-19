@@ -45,6 +45,8 @@ const SHUTDOWN_CHECKPOINT_RECONCILIATION_NOT_SIGNALED_CHECKPOINT_MISMATCH: &str 
     "shutdown_checkpoint_reconciliation_not_signaled_checkpoint_mismatch";
 const SHUTDOWN_CHECKPOINT_RECONCILIATION_UNKNOWN_COMPLETION_REASON: &str =
     "shutdown_checkpoint_reconciliation_unknown_completion_reason";
+const KOLME_LIVE_FALLBACK_SIGNER_SECRET_PRESENT_REASON_CODE: &str =
+    "fallback_signer_secret_present_violation";
 
 fn production_transport_profile_remediation(reason_code: &'static str) -> &'static str {
     match reason_code {
@@ -487,12 +489,28 @@ pub(crate) fn classify_kolme_live_signer_key_source_policy_violation(
     None
 }
 
+fn classify_kolme_live_signer_fallback_secret_policy_violation(
+) -> Result<Option<&'static str>, ConfigError> {
+    match env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV) {
+        Ok(_) => Ok(Some(KOLME_LIVE_FALLBACK_SIGNER_SECRET_PRESENT_REASON_CODE)),
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV} must be valid utf-8 when present ({KOLME_LIVE_FALLBACK_SIGNER_SECRET_PRESENT_REASON_CODE})"
+        ))),
+    }
+}
+
 pub(crate) fn enforce_kolme_live_signer_key_source_policy(
     strict_signer_contracts_enabled: bool,
     strict_signer_key_source: Option<&str>,
     allow_local_signer_testing_override: bool,
     is_test_build: bool,
 ) -> Result<(), ConfigError> {
+    if let Some(reason_code) = classify_kolme_live_signer_fallback_secret_policy_violation()? {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV} must remain unset for runtime signer policy enforcement; remediation: unset {KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV} ({reason_code})"
+        )));
+    }
     let reason_code = classify_kolme_live_signer_key_source_policy_violation(
         strict_signer_contracts_enabled,
         strict_signer_key_source,
