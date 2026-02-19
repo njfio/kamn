@@ -1,7 +1,7 @@
 # Issue #3929 Plan
 
 - Issue: #3929
-- Status: Reviewed
+- Status: Implemented
 
 ## Approach
 1. Validate current task/escrow property modules and deterministic replay wiring against issue ACs.

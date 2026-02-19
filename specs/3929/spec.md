@@ -1,7 +1,7 @@
 # Issue #3929 Spec
 
 - Title: Subtask: implement proptest generators and invariants for task and escrow state machines
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-18-advanced-validation-depth-and-deterministic-assurance-hardening/index.md
