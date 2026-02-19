@@ -335,6 +335,29 @@ Regression marker:
 
 - `Regression: #4092`
 
+## Daemon OS-Signal Stress Matrix Overload Profiles (Issue #4094)
+
+Daemon OS-signal local-heavy stress evidence must remain deterministic so
+degradation and recovery claims are auditable and fail closed.
+
+Deterministic stress matrix markers:
+
+- `daemon_os_signal_stress_matrix_schema_version=kamn.ci.daemon-os-signal-stress-matrix-report.v1`
+- `daemon_os_signal_stress_profile_baseline_reason_code=stable_success`
+- `daemon_os_signal_stress_profile_injected_overload_reason_code=matrix_failure_threshold_exceeded`
+- `daemon_os_signal_stress_profile_recovery_reason_code=stable_success_with_quarantine_followup`
+- `daemon_os_signal_stress_profile_runtime_budget_reason_code=runtime_budget_exceeded`
+- `daemon_os_signal_stress_profile_quarantine_reason_code=quarantine_reference_present_without_followup`
+
+Validation commands:
+
+- `bash scripts/ci/run_daemon_os_signal_stress_matrix.sh --iterations 10 --attempts-per-iteration 1 --max-seconds 600 --reproducer-max-seconds 180 --failure-threshold 0 --artifact-dir /tmp/daemon-os-signal-stress-matrix-artifacts --output-json /tmp/daemon-os-signal-stress-matrix-report.json`
+- `bash scripts/ci/test_run_daemon_os_signal_stress_matrix.sh`
+
+Regression marker:
+
+- `Regression: #4094`
+
 ## Upgrade Compatibility Marker Matrix Controls (Issue #4181)
 
 Compatibility promotion checks require deterministic matrix validation across version-report and
