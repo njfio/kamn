@@ -1,0 +1,34 @@
+{
+  "schema": "kamn.runtime.cargo-fuzz-seed-corpus.v1",
+  "generated_at": "2026-02-19T00:00:00Z",
+  "targets": [
+    {
+      "name": "message_envelope_parser",
+      "seed_dir": "fuzz/corpus/message_envelope_parser",
+      "seed_files": [
+        "seed-0001-wire.txt",
+        "seed-0002-invalid-recipient.txt"
+      ],
+      "parser_surface": "CanonicalMessageEnvelope::validate",
+      "failure_taxonomy_markers": [
+        "invalid envelope type",
+        "invalid sender did",
+        "invalid recipient did"
+      ]
+    },
+    {
+      "name": "did_parser",
+      "seed_dir": "fuzz/corpus/did_parser",
+      "seed_files": [
+        "seed-0001-valid-did.txt",
+        "seed-0002-invalid-did.txt"
+      ],
+      "parser_surface": "AgentDid::parse|KamnDid::parse",
+      "failure_taxonomy_markers": [
+        "invalid agent did prefix",
+        "invalid kamn did prefix",
+        "invalid characters"
+      ]
+    }
+  ]
+}

@@ -159,6 +159,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deep coverage-guided lane must remain excluded from `ci-fast-gate` while policy checks stay enforced.
 - Regression: #2693
 
+## Cargo Fuzz Parser Contract
+- CI-smoke parser fuzz command surface:
+  - `cargo fuzz run message_envelope_parser fuzz/corpus/message_envelope_parser -- -max_total_time=120`
+  - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=120`
+- Local-heavy parser fuzz command surface:
+  - `cargo fuzz run message_envelope_parser fuzz/corpus/message_envelope_parser -- -max_total_time=900`
+  - `cargo fuzz run did_parser fuzz/corpus/did_parser -- -max_total_time=900`
+- Corpus governance markers:
+  - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
+  - `kamn.runtime.cargo-fuzz-seed-corpus.v1`
+- Boundary markers:
+  - `cargo_fuzz_ci_smoke_max_seconds=120`
+  - `cargo_fuzz_local_heavy_max_seconds=900`
+  - `cargo_fuzz_local_heavy_excluded_from_ci_fast_gate=true`
+- Deep fuzz execution remains local-heavy only and excluded from `ci-fast-gate`.
+
 ## Invariant/Fuzz/Concurrency CI Smoke Boundary Contract
 - Bounded CI-smoke contract lane command:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
