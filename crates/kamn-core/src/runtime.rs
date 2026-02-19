@@ -1,4 +1,4 @@
-use runtime_recovery_guard::{is_valid_kamn_did, is_valid_listener_did};
+use runtime_recovery_guard::is_valid_kamn_did;
 
 #[path = "runtime_backpressure.rs"]
 mod runtime_backpressure;

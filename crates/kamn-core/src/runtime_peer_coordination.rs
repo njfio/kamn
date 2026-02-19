@@ -1,12 +1,20 @@
 use super::{
-    is_valid_kamn_did, DeterministicBackpressureController, RuntimeBackpressureAction,
-    RuntimeBackpressureDecision, RuntimeBackpressureError, RuntimeBackpressureInput,
+    DeterministicBackpressureController, RuntimeBackpressureAction, RuntimeBackpressureDecision,
+    RuntimeBackpressureError, RuntimeBackpressureInput,
 };
 use crate::config::{NodeConfig, NodeRole};
 use crate::signature_profile::baseline_signature_for_fields;
+use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+
+const RUNTIME_PEER_FRAME_INVALID_SENDER_DID_REASON_CODE: &str =
+    "runtime_peer_frame_invalid_sender_did";
+const RUNTIME_PEER_FRAME_INVALID_RECIPIENT_DID_REASON_CODE: &str =
+    "runtime_peer_frame_invalid_recipient_did";
+const RUNTIME_PEER_FRAME_INVALID_LOCAL_PEER_DID_REASON_CODE: &str =
+    "runtime_peer_frame_invalid_local_peer_did";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Peer lifecycle state.
@@ -329,11 +337,32 @@ pub enum AuthenticatedPeerFrameError {
     /// Invalid frame id.
     InvalidFrameId,
     /// Invalid sender did.
-    InvalidSenderDid,
+    InvalidSenderDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Invalid recipient did.
-    InvalidRecipientDid,
+    InvalidRecipientDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Invalid local peer did.
-    InvalidLocalPeerDid,
+    InvalidLocalPeerDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Empty allowed senders.
     EmptyAllowedSenders,
     /// Invalid nonce.
@@ -380,9 +409,21 @@ impl Display for AuthenticatedPeerFrameError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidFrameId => write!(f, "peer frame id cannot be empty"),
-            Self::InvalidSenderDid => write!(f, "peer frame sender DID is invalid"),
-            Self::InvalidRecipientDid => write!(f, "peer frame recipient DID is invalid"),
-            Self::InvalidLocalPeerDid => write!(f, "local peer DID is invalid"),
+            Self::InvalidSenderDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
+            Self::InvalidRecipientDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
+            Self::InvalidLocalPeerDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::EmptyAllowedSenders => write!(f, "allowed sender DID set cannot be empty"),
             Self::InvalidNonce => write!(f, "peer frame nonce must be positive"),
             Self::EmptyPayload => write!(f, "peer frame payload cannot be empty"),
@@ -445,12 +486,18 @@ impl AuthenticatedPeerFrame {
         if frame_id.trim().is_empty() {
             return Err(AuthenticatedPeerFrameError::InvalidFrameId);
         }
-        if !is_valid_kamn_did(sender_peer_did) {
-            return Err(AuthenticatedPeerFrameError::InvalidSenderDid);
-        }
-        if !is_valid_kamn_did(recipient_peer_did) {
-            return Err(AuthenticatedPeerFrameError::InvalidRecipientDid);
-        }
+        parse_agent_did(
+            sender_peer_did,
+            "sender_peer_did",
+            RUNTIME_PEER_FRAME_INVALID_SENDER_DID_REASON_CODE,
+            PeerDidRole::Sender,
+        )?;
+        parse_agent_did(
+            recipient_peer_did,
+            "recipient_peer_did",
+            RUNTIME_PEER_FRAME_INVALID_RECIPIENT_DID_REASON_CODE,
+            PeerDidRole::Recipient,
+        )?;
         if nonce == 0 {
             return Err(AuthenticatedPeerFrameError::InvalidNonce);
         }
@@ -634,18 +681,24 @@ impl PeerFrameAuthenticator {
         local_peer_did: &str,
         allowed_sender_dids: Vec<String>,
     ) -> Result<Self, AuthenticatedPeerFrameError> {
-        if !is_valid_kamn_did(local_peer_did) {
-            return Err(AuthenticatedPeerFrameError::InvalidLocalPeerDid);
-        }
+        parse_agent_did(
+            local_peer_did,
+            "local_peer_did",
+            RUNTIME_PEER_FRAME_INVALID_LOCAL_PEER_DID_REASON_CODE,
+            PeerDidRole::LocalPeer,
+        )?;
         if allowed_sender_dids.is_empty() {
             return Err(AuthenticatedPeerFrameError::EmptyAllowedSenders);
         }
 
         let mut allowlist = BTreeSet::new();
         for sender_did in allowed_sender_dids {
-            if !is_valid_kamn_did(&sender_did) {
-                return Err(AuthenticatedPeerFrameError::InvalidSenderDid);
-            }
+            parse_agent_did(
+                &sender_did,
+                "allowed_sender_dids[]",
+                RUNTIME_PEER_FRAME_INVALID_SENDER_DID_REASON_CODE,
+                PeerDidRole::Sender,
+            )?;
             allowlist.insert(sender_did);
         }
 
@@ -690,6 +743,38 @@ impl PeerFrameAuthenticator {
             .insert(frame.sender_peer_did.clone(), frame.nonce);
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PeerDidRole {
+    Sender,
+    Recipient,
+    LocalPeer,
+}
+
+fn parse_agent_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+    role: PeerDidRole,
+) -> Result<AgentDid, AuthenticatedPeerFrameError> {
+    AgentDid::parse(value).map_err(|error| match role {
+        PeerDidRole::Sender => AuthenticatedPeerFrameError::InvalidSenderDid {
+            field,
+            reason_code,
+            detail: error.to_string(),
+        },
+        PeerDidRole::Recipient => AuthenticatedPeerFrameError::InvalidRecipientDid {
+            field,
+            reason_code,
+            detail: error.to_string(),
+        },
+        PeerDidRole::LocalPeer => AuthenticatedPeerFrameError::InvalidLocalPeerDid {
+            field,
+            reason_code,
+            detail: error.to_string(),
+        },
+    })
 }
 
 fn expected_peer_frame_signature(

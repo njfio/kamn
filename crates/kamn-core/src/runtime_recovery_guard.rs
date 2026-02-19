@@ -2,11 +2,6 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-/// Handles listener DID format validation.
-pub(crate) fn is_valid_listener_did(value: &str) -> bool {
-    is_valid_kamn_did(value)
-}
-
 /// Handles runtime DID format validation.
 pub(crate) fn is_valid_kamn_did(value: &str) -> bool {
     let trimmed = value.trim();

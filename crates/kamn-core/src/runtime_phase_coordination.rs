@@ -1,7 +1,12 @@
-use super::{is_valid_kamn_did, is_valid_listener_did};
+use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+
+const RUNTIME_LISTENER_QUORUM_INVALID_LISTENER_DID_REASON_CODE: &str =
+    "runtime_listener_quorum_invalid_listener_did";
+const RUNTIME_APPROVER_QUORUM_INVALID_APPROVER_DID_REASON_CODE: &str =
+    "runtime_approver_quorum_invalid_approver_did";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Construct lock lease.
@@ -303,9 +308,11 @@ pub struct ListenerAttestation {
 impl ListenerAttestation {
     /// Handles new.
     pub fn new(listener_did: &str, attestation_id: &str) -> Result<Self, ListenerQuorumError> {
-        if !is_valid_listener_did(listener_did) {
-            return Err(ListenerQuorumError::InvalidListenerDid);
-        }
+        parse_listener_did(
+            listener_did,
+            "listener_did",
+            RUNTIME_LISTENER_QUORUM_INVALID_LISTENER_DID_REASON_CODE,
+        )?;
         if attestation_id.trim().is_empty() {
             return Err(ListenerQuorumError::InvalidAttestationId);
         }
@@ -398,7 +405,14 @@ pub enum ListenerQuorumError {
     /// Invalid event sequence.
     InvalidEventSequence,
     /// Invalid listener did.
-    InvalidListenerDid,
+    InvalidListenerDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Invalid attestation id.
     InvalidAttestationId,
     /// Duplicate listener attestation.
@@ -434,7 +448,11 @@ impl Display for ListenerQuorumError {
             Self::InvalidEventSequence => {
                 write!(f, "listener quorum event sequence must be positive")
             }
-            Self::InvalidListenerDid => write!(f, "listener attestation did is invalid"),
+            Self::InvalidListenerDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidAttestationId => write!(f, "listener attestation id cannot be empty"),
             Self::DuplicateListenerAttestation { listener_did } => {
                 write!(
@@ -502,9 +520,11 @@ impl ListenerQuorumEvaluator {
 
         let mut confirmed = BTreeSet::new();
         for attestation in input.attestations() {
-            if !is_valid_listener_did(attestation.listener_did()) {
-                return Err(ListenerQuorumError::InvalidListenerDid);
-            }
+            parse_listener_did(
+                attestation.listener_did(),
+                "attestations[].listener_did",
+                RUNTIME_LISTENER_QUORUM_INVALID_LISTENER_DID_REASON_CODE,
+            )?;
             if !confirmed.insert(attestation.listener_did().to_owned()) {
                 return Err(ListenerQuorumError::DuplicateListenerAttestation {
                     listener_did: attestation.listener_did().to_owned(),
@@ -556,9 +576,11 @@ impl ApproverAttestation {
         payload_digest: &str,
         attestation_id: &str,
     ) -> Result<Self, ApproverQuorumError> {
-        if !is_valid_kamn_did(approver_did) {
-            return Err(ApproverQuorumError::InvalidApproverDid);
-        }
+        parse_approver_did(
+            approver_did,
+            "approver_did",
+            RUNTIME_APPROVER_QUORUM_INVALID_APPROVER_DID_REASON_CODE,
+        )?;
         if payload_digest.trim().is_empty() {
             return Err(ApproverQuorumError::InvalidPayloadDigest);
         }
@@ -653,7 +675,14 @@ pub enum ApproverQuorumError {
     /// Invalid payload digest.
     InvalidPayloadDigest,
     /// Invalid approver did.
-    InvalidApproverDid,
+    InvalidApproverDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Invalid attestation id.
     InvalidAttestationId,
     /// Duplicate approver attestation.
@@ -687,7 +716,11 @@ impl Display for ApproverQuorumError {
             Self::InvalidPayloadDigest => {
                 write!(f, "approver quorum payload digest cannot be empty")
             }
-            Self::InvalidApproverDid => write!(f, "approver attestation did is invalid"),
+            Self::InvalidApproverDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidAttestationId => write!(f, "approver attestation id cannot be empty"),
             Self::DuplicateApproverAttestation { approver_did } => {
                 write!(
@@ -738,9 +771,11 @@ impl ApproverQuorumEvaluator {
         let mut approved = BTreeSet::new();
 
         for attestation in input.attestations() {
-            if !is_valid_kamn_did(attestation.approver_did()) {
-                return Err(ApproverQuorumError::InvalidApproverDid);
-            }
+            parse_approver_did(
+                attestation.approver_did(),
+                "attestations[].approver_did",
+                RUNTIME_APPROVER_QUORUM_INVALID_APPROVER_DID_REASON_CODE,
+            )?;
             if attestation.payload_digest() != input.payload_digest() {
                 return Err(ApproverQuorumError::PayloadDigestMismatch {
                     expected: input.payload_digest().to_owned(),
@@ -769,6 +804,30 @@ impl ApproverQuorumEvaluator {
             authorized: true,
         })
     }
+}
+
+fn parse_listener_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, ListenerQuorumError> {
+    AgentDid::parse(value).map_err(|error| ListenerQuorumError::InvalidListenerDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
+}
+
+fn parse_approver_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, ApproverQuorumError> {
+    AgentDid::parse(value).map_err(|error| ApproverQuorumError::InvalidApproverDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 /// Handles authorize daemon outbound action.

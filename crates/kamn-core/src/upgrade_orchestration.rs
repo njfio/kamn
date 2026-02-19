@@ -4,6 +4,15 @@ use crate::{AgentDid, GovernanceProposalStatus};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+const UPGRADE_ORCHESTRATION_INVALID_PROPOSED_BY_DID_REASON_CODE: &str =
+    "upgrade_orchestration_invalid_proposed_by_did";
+const UPGRADE_ORCHESTRATION_INVALID_VALIDATOR_DID_REASON_CODE: &str =
+    "upgrade_orchestration_invalid_validator_did";
+const UPGRADE_ORCHESTRATION_INVALID_ACTIVATED_BY_DID_REASON_CODE: &str =
+    "upgrade_orchestration_invalid_activated_by_did";
+const UPGRADE_ORCHESTRATION_INVALID_ROLLED_BACK_BY_DID_REASON_CODE: &str =
+    "upgrade_orchestration_invalid_rolled_back_by_did";
+
 /// Upgrade orchestration audit event categories.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpgradeAuditEventKind {
@@ -108,7 +117,11 @@ impl VersionUpgradeOrchestrator {
         proposed_at_unix: u64,
     ) -> Result<(), UpgradeOrchestrationError> {
         require_non_empty("proposal_id", proposal_id)?;
-        validate_did(proposed_by)?;
+        validate_did(
+            proposed_by,
+            "proposed_by",
+            UPGRADE_ORCHESTRATION_INVALID_PROPOSED_BY_DID_REASON_CODE,
+        )?;
         validate_timestamp("proposed_at_unix", proposed_at_unix)?;
         validate_version_format(target_version)?;
         if required_quorum == 0 {
@@ -158,7 +171,11 @@ impl VersionUpgradeOrchestrator {
         validator_did: &str,
         approved_at_unix: u64,
     ) -> Result<(), UpgradeOrchestrationError> {
-        validate_did(validator_did)?;
+        validate_did(
+            validator_did,
+            "validator_did",
+            UPGRADE_ORCHESTRATION_INVALID_VALIDATOR_DID_REASON_CODE,
+        )?;
         validate_timestamp("approved_at_unix", approved_at_unix)?;
         let proposal = self
             .proposals
@@ -215,7 +232,11 @@ impl VersionUpgradeOrchestrator {
         activated_by: &str,
         activated_at_unix: u64,
     ) -> Result<(), UpgradeOrchestrationError> {
-        validate_did(activated_by)?;
+        validate_did(
+            activated_by,
+            "activated_by",
+            UPGRADE_ORCHESTRATION_INVALID_ACTIVATED_BY_DID_REASON_CODE,
+        )?;
         validate_timestamp("activated_at_unix", activated_at_unix)?;
 
         let proposal = self
@@ -269,7 +290,11 @@ impl VersionUpgradeOrchestrator {
         rolled_back_at_unix: u64,
         reason: &str,
     ) -> Result<(), UpgradeOrchestrationError> {
-        validate_did(rolled_back_by)?;
+        validate_did(
+            rolled_back_by,
+            "rolled_back_by",
+            UPGRADE_ORCHESTRATION_INVALID_ROLLED_BACK_BY_DID_REASON_CODE,
+        )?;
         validate_timestamp("rolled_back_at_unix", rolled_back_at_unix)?;
         validate_version_format(rollback_version)?;
         require_non_empty("reason", reason)?;
@@ -319,7 +344,14 @@ pub enum UpgradeOrchestrationError {
     /// Timestamp is invalid.
     InvalidTimestamp(&'static str),
     /// DID parsing failed.
-    InvalidDid(String),
+    InvalidDid {
+        /// Input field carrying invalid DID.
+        field: &'static str,
+        /// Stable deterministic reason marker.
+        reason_code: &'static str,
+        /// Canonical parser detail.
+        detail: String,
+    },
     /// Version format is invalid.
     InvalidVersionFormat(String),
     /// Target version is not a valid forward transition from current version.
@@ -367,7 +399,11 @@ impl fmt::Display for UpgradeOrchestrationError {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
             Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
-            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidDid {
+                field,
+                reason_code,
+                detail,
+            } => write!(f, "invalid did field {field}: {reason_code} ({detail})"),
             Self::InvalidVersionFormat(value) => {
                 write!(f, "invalid version format, expected vX.Y.Z: {value}")
             }
@@ -422,10 +458,16 @@ fn validate_timestamp(field: &'static str, value: u64) -> Result<(), UpgradeOrch
     Ok(())
 }
 
-fn validate_did(value: &str) -> Result<(), UpgradeOrchestrationError> {
-    AgentDid::parse(value)
-        .map_err(|error| UpgradeOrchestrationError::InvalidDid(error.to_string()))?;
-    Ok(())
+fn validate_did(
+    value: &str,
+    field: &'static str,
+    reason_code: &'static str,
+) -> Result<AgentDid, UpgradeOrchestrationError> {
+    AgentDid::parse(value).map_err(|error| UpgradeOrchestrationError::InvalidDid {
+        field,
+        reason_code,
+        detail: error.to_string(),
+    })
 }
 
 fn require_non_empty(field: &'static str, value: &str) -> Result<(), UpgradeOrchestrationError> {
