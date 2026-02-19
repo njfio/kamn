@@ -35,6 +35,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh`
+  - `bash scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh`
 - Fail-closed CI scope rules:
   - `validate_full_io_scenario_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_local_full_stack_integration_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
@@ -42,6 +43,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `validate_libp2p_three_node_discovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_live_transport_fault_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile deep` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - `validate_unified_api_observability_local_heavy_live.sh --mode run --ci-fast-gate FAIL` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
