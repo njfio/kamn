@@ -9,6 +9,26 @@ This document defines deterministic payload contracts for the runtime observabil
 - `GET /readyz` emits JSON with `schema_version="kamn.runtime.observability.readiness.v1"`.
 - `GET /metrics.stream` emits NDJSON with `schema_version="kamn.runtime.observability.stream.v1"`.
 
+## Tracing Event Taxonomy Contract
+
+- `tracing_event_taxonomy_version=kamn.node.tracing-event-taxonomy.v1`
+- Required event-field vocabulary:
+  - `execution_id`
+  - `runtime_mode`
+  - `route`
+  - `reason_code`
+  - `transport_checkpoint_failures`
+  - `signer_checkpoint_failures`
+  - `commit_checkpoint_failures`
+- Required runtime event markers:
+  - `runtime_daemon_tick_summary`
+  - `runtime_daemon_shutdown_checkpoint_reconciliation`
+  - `runtime_observability_endpoint_request`
+- Fail-closed drift reason markers:
+  - `runtime_tracing_taxonomy_required_field_missing:<event>:<field>`
+  - `runtime_tracing_taxonomy_schema_drift:<event>:<field>`
+  - `runtime_tracing_taxonomy_event_marker_missing:<event>`
+
 ## Health Payload Contract
 
 `/healthz` includes:
