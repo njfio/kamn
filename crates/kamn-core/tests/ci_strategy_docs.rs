@@ -1453,3 +1453,23 @@ fn doc_contains_signer_quorum_go_no_go_policy_markers() {
         "python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py"
     ));
 }
+
+#[test]
+fn doc_contains_task_escrow_suite_discovery_and_parallel_contract_markers() {
+    assert!(DOC.contains("## Task Escrow Suite Discovery + Parallel Boundary Contract"));
+    assert!(
+        DOC.contains("cargo test -p kamn-core --test task_escrow_suite_modularization_contract")
+    );
+    assert!(DOC
+        .contains("cargo test -p kamn-core --test task_escrow_suite_discovery_parallel_contract"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_task_escrow_suite_discovery_and_parallel_contract_markers -- --exact"
+    ));
+    assert!(DOC.contains("task_escrow_suite_discovery_contract_status=verified"));
+    assert!(DOC.contains(
+        "task_escrow_suite_discovery_expected_modules_csv=shared,task_domain,escrow_domain"
+    ));
+    assert!(DOC.contains("task_escrow_suite_parallel_seed_isolation_status=verified"));
+    assert!(DOC.contains("task_escrow_suite_parallel_case_budget_max=256"));
+    assert!(DOC.contains("task_escrow_suite_parallel_sequence_budget_max=32"));
+}
