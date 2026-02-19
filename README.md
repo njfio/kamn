@@ -157,8 +157,8 @@ bash scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harn
 bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json
 # advisory markers: soft_budget_status=exceeded, review_required=true
 
-# dry-run make target execution contract (no command execution)
-bash scripts/ci/test_makefile_execution_contract.sh
+# Makefile command/execution parity migration suite
+cargo test -p kamn-core --test shell_test_surface_migration_wave2
 ```
 
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.

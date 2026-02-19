@@ -86,7 +86,7 @@ required_snippets=(
   "reason_codes=harness_shell_line_total_trend_warn_delta_exceeded"
   "reason_codes=harness_script_count_trend_fail_delta_exceeded"
   "reason_codes=harness_shell_line_total_trend_fail_delta_exceeded"
-  "test_makefile_execution_contract.sh"
+  "cargo test -p kamn-core --test shell_test_surface_migration_wave2"
   "test_kolme_command_surface_coverage_contract.sh"
   "test_kolme_command_surface_asymmetry_contract.sh"
   "test_run_continuous_runtime_commit_contract_lane.sh"

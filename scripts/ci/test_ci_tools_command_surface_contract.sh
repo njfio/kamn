@@ -80,6 +80,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_check_signature_parity_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_signature_parity_contract_lane.sh"'
   'cargo test -p kamn-core --test shell_test_surface_migration_wave1'
+  'cargo test -p kamn-core --test shell_test_surface_migration_wave2'
   'cargo test -p kamn-core --test shell_test_surface_ratio_policy'
   'bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"'
@@ -168,6 +169,19 @@ required_commands=(
 for command in "${required_commands[@]}"; do
   if ! grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
     echo "expected ci tools regression lane to include command: $command" >&2
+    exit 1
+  fi
+done
+
+forbidden_commands=(
+  'test_run_cargo_test_with_quarantine.sh'
+  'test_makefile_command_surface_contract.sh'
+  'test_makefile_execution_contract.sh'
+)
+
+for command in "${forbidden_commands[@]}"; do
+  if grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
+    echo "ci tools regression lane still references retired wave-2 shell wrapper: $command" >&2
     exit 1
   fi
 done

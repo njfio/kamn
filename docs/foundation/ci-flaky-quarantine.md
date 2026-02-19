@@ -11,7 +11,7 @@ This document captures the first implementation slice for story #70.
 - Added bounded retry policy regression checks:
   - `scripts/ci/test_workflow_retry_policy.sh` verifies retry limits remain bounded in fast and deep workflows.
 - Added quarantine and target-selection regression checks:
-  - `scripts/ci/test_run_cargo_test_with_quarantine.sh`
+  - `cargo test -p kamn-core --test shell_test_surface_migration_wave2`
   - `scripts/ci/test_select_targets.sh`
 
 ## Operational Guidance
@@ -30,5 +30,6 @@ Run from repository root:
 
 ```bash
 bash scripts/ci/test_ci_tools.sh
+cargo test -p kamn-core --test shell_test_surface_migration_wave2
 bash scripts/ci/run_cargo_test_with_quarantine.sh --dry-run -- cargo test -p kamn-core --test invariant_harness
 ```

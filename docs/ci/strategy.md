@@ -1858,8 +1858,7 @@ Contributor entrypoint commands must remain stable and synchronized across `Make
 - `make ci-tools`
 
 Fast-gate command contract coverage is intentionally split:
-- static command-surface parity (`scripts/ci/test_makefile_command_surface_contract.sh`)
-- dry-run execution parity (`scripts/ci/test_makefile_execution_contract.sh`) via `make -n` target resolution for bounded `check/test/demo` targets
+- Rust migration wave-2 parity suite (`cargo test -p kamn-core --test shell_test_surface_migration_wave2`) covering Makefile command-surface + `make -n` execution assertions
 - Kolme missing-both coverage (`scripts/ci/test_kolme_command_surface_coverage_contract.sh`) ensures every `scripts/kolme/test_*.sh` appears in at least one CI command surface (`ci-fast-gate` or aggregate `scripts/ci/test_ci_tools.sh`).
 - Kolme asymmetry split coverage (`scripts/ci/test_kolme_command_surface_asymmetry_contract.sh`) enforces the approved `fast_only` and `ci_tools_only` script sets from `.ci/kolme-command-surface-asymmetry-policy.json`.
 - Aggregate-only Kolme lane declarations (kept out of `ci-fast-gate` for cost) remain explicitly covered in `scripts/ci/test_ci_tools.sh`:
@@ -4148,6 +4147,11 @@ Fast-mode CI tooling regression coverage includes:
     - retry helper contract
     - CI exclusion policy contracts (local retry diagnostics, block reconciliation, local metrics, service API serde/reason-code/negative-matrix)
     - workflow cache + workflow performance policy contracts
+- Shell test-surface migration wave-2 Rust suite (`cargo test -p kamn-core --test shell_test_surface_migration_wave2`)
+  - migration coverage includes:
+    - Makefile command-surface parity contract
+    - Makefile `make -n` execution parity contract
+    - quarantine runner dry-run + invalid-command guard parity contract
     - runtime wrapper contracts (`run_input_mutation_coverage_guided_*`, `run_live_network_smoke_contract_lane`, `validate_async_runtime_live`, `validate_libp2p_process_isolated_harness`)
   - baseline fixture:
     - `fixtures/ci/legacy_ingress_parser_baseline.json`
@@ -4346,7 +4350,7 @@ Fast-mode CI tooling regression coverage includes:
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
 - Live-HTTPS dependency posture checker (`test_check_kamn_core_live_https_dependency_posture.sh`)
-- Makefile execution contract checker (`test_makefile_execution_contract.sh`)
+- Makefile command/execution parity checks (covered by `shell_test_surface_migration_wave2`)
 - Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 
 ## Release Evidence Manifest Schema
