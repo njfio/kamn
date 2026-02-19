@@ -46,6 +46,12 @@ fn signer_env_lock() -> &'static Mutex<()> {
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
+fn lock_signer_env_guard() -> std::sync::MutexGuard<'static, ()> {
+    signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+}
+
 fn log_env_lock() -> &'static Mutex<()> {
     // Log-config and signer tests both mutate process-wide env; share one lock to avoid races.
     signer_env_lock()

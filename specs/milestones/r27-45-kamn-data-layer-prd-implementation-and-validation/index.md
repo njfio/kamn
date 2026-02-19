@@ -1,10 +1,10 @@
 # R27.45 KAMN data layer PRD implementation and validation
 
 ## Milestone Summary
-Execution milestone for `kamn-data-layer-prd.docx.md` covering full PRD delivery from M0 through M11. The objective is to implement, integrate, test, and validate a PostgreSQL-centric privacy-first data layer with Kolme trust anchoring, deterministic crypto and integrity proofs, intelligence layers (vector + graph + time-series), compliance lifecycle controls, and production hardening.
+Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering full PRD delivery from M0 through M11. The objective is to implement, integrate, test, and validate a PostgreSQL-centric privacy-first data layer with Kolme trust anchoring, deterministic crypto and integrity proofs, intelligence layers (vector + graph + time-series), compliance lifecycle controls, and production hardening.
 
 ## Source Artifacts
-- PRD source: `kamn-data-layer-prd.docx.md`
+- PRD source: `docs/planning/kamn-data-layer-prd.docx.md`
 - Master execution plan: `docs/plans/2026-02-18-kamn-data-layer-prd-execution-plan.md`
 
 ## Issue Hierarchy

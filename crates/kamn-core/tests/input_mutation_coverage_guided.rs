@@ -3,6 +3,7 @@ use kamn_core::{
     EnvelopeHeader, EnvelopeMetadata, EnvelopeProof, MessageEnvelopeError,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -397,8 +398,14 @@ fn performance_input_mutation_coverage_guided_contract_lane_stays_within_budget(
 }
 
 #[test]
-#[ignore]
 fn performance_input_mutation_coverage_guided_deep_lane_stress() {
+    if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
+        eprintln!(
+            "skipping deep-lane coverage-guided stress test; set KAMN_KOLME_LOCAL_HEAVY=1 to run"
+        );
+        return;
+    }
+
     let started = Instant::now();
     let (envelope_frontier, _) = discover_envelope_frontier(16_384);
     let (did_frontier, _) = discover_did_frontier(16_384);

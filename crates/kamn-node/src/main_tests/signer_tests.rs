@@ -2,9 +2,7 @@ use super::*;
 
 #[test]
 fn unit_kolme_live_signer_builds_direct_signed_wire_payload() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -58,9 +56,7 @@ fn unit_kolme_live_signer_builds_direct_signed_wire_payload() {
 
 #[test]
 fn unit_kolme_live_signer_adapter_signs_and_verifies_runtime_message() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -90,9 +86,7 @@ fn unit_kolme_live_signer_adapter_signs_and_verifies_runtime_message() {
 #[test]
 fn functional_signer_migration_profile_key_source_parity_matrix() {
     // Regression: #3766
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
 
     {
         let _profile_env_guard =
@@ -236,9 +230,7 @@ fn functional_signer_migration_profile_key_source_parity_matrix() {
 #[test]
 fn integration_kolme_live_signer_preflight_rejects_non_failover_rotation_regression() {
     // Regression: #3956
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _primary_key_guard = EnvVarGuard::set(
@@ -273,9 +265,7 @@ fn integration_kolme_live_signer_preflight_rejects_non_failover_rotation_regress
 #[test]
 fn integration_kolme_live_signer_preflight_quorum_profile_matrix_paths() {
     // Regression: #3957
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
 
     struct Case {
         name: &'static str,
@@ -418,9 +408,7 @@ fn integration_kolme_live_signer_preflight_quorum_profile_matrix_paths() {
 #[test]
 fn regression_kolme_live_signer_adapter_rejects_malformed_signature_hex() {
     // Regression: #2297
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -589,9 +577,7 @@ fn integration_kolme_live_signer_vector_probe_contract() {
 
 #[test]
 fn unit_kolme_live_signer_profile_defaults_to_primary_key_env() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", None);
 
     let (profile, env_name) = resolve_kolme_live_signer_private_key_env_name(None)
@@ -603,9 +589,7 @@ fn unit_kolme_live_signer_profile_defaults_to_primary_key_env() {
 #[test]
 fn regression_kolme_live_signer_profile_rejects_unsupported_value() {
     // Regression: #2222
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("legacy"));
     assert!(
         matches!(
@@ -619,9 +603,7 @@ fn regression_kolme_live_signer_profile_rejects_unsupported_value() {
 
 #[test]
 fn integration_kolme_live_signer_profile_secondary_uses_secondary_key_env() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
@@ -664,9 +646,7 @@ fn integration_kolme_live_signer_profile_secondary_uses_secondary_key_env() {
 #[test]
 fn integration_runtime_kolme_live_renders_secondary_signer_selection_markers() {
     // Regression: #2241
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
@@ -711,9 +691,7 @@ fn integration_runtime_kolme_live_renders_secondary_signer_selection_markers() {
 #[test]
 fn integration_runtime_kolme_live_renders_managed_external_signer_selection_markers() {
     // Regression: #2323
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -900,9 +878,7 @@ fn regression_kolme_live_nonce_resolver_rejects_malformed_response() {
 #[test]
 fn regression_kolme_live_signer_requires_primary_key_env_value() {
     // Regression: #2222
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
@@ -919,9 +895,7 @@ fn regression_kolme_live_signer_requires_primary_key_env_value() {
 #[test]
 fn regression_issue_2279_kolme_live_signer_rejects_fallback_private_key_env_path() {
     // Regression: #2279
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _primary_key_guard = EnvVarGuard::set(
@@ -945,9 +919,7 @@ fn regression_issue_2279_kolme_live_signer_rejects_fallback_private_key_env_path
 #[test]
 fn regression_kolme_live_managed_external_requires_key_reference_env_marker() {
     // Regression: #2322
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_KEY_REF", None);
@@ -965,9 +937,7 @@ fn regression_kolme_live_managed_external_requires_key_reference_env_marker() {
 #[test]
 fn regression_kolme_live_signer_preflight_rejects_missing_managed_key_reference() {
     // Regression: #3539
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_KEY_REF", None);
@@ -994,9 +964,7 @@ fn regression_kolme_live_signer_preflight_rejects_missing_managed_key_reference(
 #[test]
 fn regression_kolme_live_managed_external_rejects_invalid_key_reference_schema() {
     // Regression: #2322
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard =
@@ -1015,9 +983,7 @@ fn regression_kolme_live_managed_external_rejects_invalid_key_reference_schema()
 #[test]
 fn regression_kolme_live_managed_external_rejects_raw_private_key_env_path() {
     // Regression: #2322
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1041,9 +1007,7 @@ fn regression_kolme_live_managed_external_rejects_raw_private_key_env_path() {
 #[test]
 fn regression_kolme_live_managed_external_strict_contracts_require_backend_command_marker() {
     // Regression: #2432
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1094,9 +1058,7 @@ fn regression_kolme_live_managed_external_strict_contracts_require_backend_comma
 #[test]
 fn regression_kolme_live_managed_external_required_marker_rejects_invalid_boolean() {
     // Regression: #2432
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _required_marker_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED",
         Some("invalid-bool"),
@@ -1114,9 +1076,7 @@ fn regression_kolme_live_managed_external_required_marker_rejects_invalid_boolea
 #[test]
 fn regression_kolme_live_managed_external_required_marker_forces_backend_command() {
     // Regression: #2432
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1169,9 +1129,7 @@ fn regression_kolme_live_managed_external_required_marker_forces_backend_command
 #[test]
 fn regression_kolme_live_managed_external_requires_backend_command_without_required_marker() {
     // Regression: #2505
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1216,9 +1174,7 @@ fn regression_kolme_live_managed_external_requires_backend_command_without_requi
 #[test]
 fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection() {
     // Regression: #2323
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1297,9 +1253,7 @@ fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer
 #[test]
 fn regression_kolme_live_managed_external_backend_response_requires_signer_public_key_marker() {
     // Regression: #2509
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1365,9 +1319,7 @@ fn regression_kolme_live_managed_external_backend_response_requires_signer_publi
 #[test]
 fn regression_kolme_live_managed_external_requires_runtime_signer_public_key_marker() {
     // Regression: #2512
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1432,9 +1384,7 @@ fn regression_kolme_live_managed_external_requires_runtime_signer_public_key_mar
 #[test]
 fn regression_kolme_live_managed_external_rejects_invalid_runtime_signer_public_key_marker() {
     // Regression: #2512
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1501,9 +1451,7 @@ fn regression_kolme_live_managed_external_rejects_invalid_runtime_signer_public_
 #[test]
 fn regression_kolme_live_managed_external_backend_response_rejects_signer_public_key_mismatch() {
     // Regression: #2509
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1612,9 +1560,7 @@ fn regression_kolme_live_managed_external_maps_provider_unavailable_reason_code(
 #[test]
 fn regression_kolme_live_managed_external_backend_timeout_maps_reason_code() {
     // Regression: #2423
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _backend_command_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", Some("sleep 2"));
     let _backend_timeout_guard =
@@ -1652,9 +1598,7 @@ fn regression_kolme_live_managed_external_backend_timeout_maps_reason_code() {
 #[test]
 fn regression_kolme_live_managed_external_backend_malformed_response_maps_reason_code() {
     // Regression: #2423
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _backend_command_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
         Some("printf 'signature_hex=zzzz\\nrecovery_id=9\\nsigner_public_key_hex=03af446f76cf36092a4e45864210a1dbf03e872756eec21de61910859f8a607dd2\\n'"),
@@ -1694,9 +1638,7 @@ fn regression_kolme_live_managed_external_backend_malformed_response_maps_reason
 #[test]
 fn regression_kolme_live_managed_external_backend_unavailable_maps_reason_code() {
     // Regression: #2423
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _backend_command_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
         Some("this-command-should-not-exist-2423"),
@@ -1736,9 +1678,7 @@ fn regression_kolme_live_managed_external_backend_unavailable_maps_reason_code()
 #[test]
 fn regression_kolme_live_managed_external_adapter_retired_not_integrated_marker() {
     // Regression: #2423
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(

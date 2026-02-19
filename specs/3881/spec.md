@@ -1,7 +1,7 @@
 # Issue #3881 Spec
 
 - Title: Task: deliver native transport cutover-rollback policy lane with CI governance
-- Status: Draft
+- Status: Reviewed
 - Priority: P1
 - Milestone: specs/milestones/r26-4-native-libp2p-production-activation-and-live-node-validation/index.md
 
@@ -31,7 +31,14 @@ Out:
 | C-04 | AC-4 | Unit/Functional/Integration/Regression | TBD in implementation task |  Unit, Functional, Integration, and Regression tests are present and passing. |
 
 ## Test Mapping
-- To be completed in implementation phase for issue #3881.
+- C-01 -> planned lane + artifact schema contract tests (to be defined in implementation PR)
+- C-02 -> planned policy fail-closed drift tests (to be defined in implementation PR)
+- C-03 -> planned CI exclusion/budget boundary tests (to be defined in implementation PR)
+- C-04 -> planned tier matrix verification in PR evidence
+
+## Staleness Review (2026-02-19)
+- Scope and acceptance criteria remain valid for the active R26.4 milestone.
+- Spec remains implementation-ready and is intentionally kept in planning until parent story sequencing resumes.
 
 ## Success Metrics
 - All ACs have matching conformance tests and pass in CI/local-heavy lanes as applicable.

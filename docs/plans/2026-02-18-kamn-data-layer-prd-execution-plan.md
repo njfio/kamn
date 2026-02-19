@@ -1,7 +1,7 @@
 # 2026-02-18 KAMN Data Layer PRD Execution Plan
 
 ## Source and Objective
-- Source PRD: `kamn-data-layer-prd.docx.md`
+- Source PRD: `docs/planning/kamn-data-layer-prd.docx.md`
 - Milestone container: `specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md`
 - Objective: Execute PRD milestones M0-M11 with contract-driven implementation, integration, testing, and validation, while keeping shell-surface growth neutral by default.
 
