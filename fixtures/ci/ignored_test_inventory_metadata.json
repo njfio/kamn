@@ -65,14 +65,6 @@
       "tracking_issue": "#2843"
     },
     {
-      "owner": "team-runtime",
-      "priority": "P2",
-      "reason": "deep-lane-performance",
-      "source_file": "crates/kamn-core/tests/input_mutation_coverage_guided.rs",
-      "test_name": "performance_input_mutation_coverage_guided_deep_lane_stress",
-      "tracking_issue": "#2843"
-    },
-    {
       "owner": "team-signer",
       "priority": "P2",
       "reason": "deep-lane-performance",
