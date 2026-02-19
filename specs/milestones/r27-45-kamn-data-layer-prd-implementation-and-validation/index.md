@@ -6,10 +6,12 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
 ## Source Artifacts
 - PRD source: `docs/planning/kamn-data-layer-prd.docx.md`
 - Master execution plan: `docs/plans/2026-02-18-kamn-data-layer-prd-execution-plan.md`
+- Infrastructure activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 ## Issue Hierarchy
 - Epic:
   - `#5002` — Epic: execute KAMN data layer PRD M0-M11 with full integration and validation
+  - `#5247` — Epic: activate data-layer infrastructure layer and close contract-to-runtime gap
 - Stories:
   - `#5003` — Story: M0 foundation schema, append-only enforcement, and envelope crypto pipeline
   - `#5004` — Story: M1 trust anchor merkle batching and Kolme anchoring integration
@@ -24,6 +26,13 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5013` — Story: M10 scaling, partition management, and archival pipelines
   - `#5014` — Story: M11 hardening with security, chaos, and benchmark validation
   - `#5015` — Story: cross-cutting conformance harness and shell-surface budget neutrality
+  - `#5248` — Story: build PostgreSQL persistence foundation and RLS contract bridge
+  - `#5249` — Story: implement envelope crypto and blind-index operational pipeline
+  - `#5250` — Story: wire Kolme anchoring client and merkle batch scheduler
+  - `#5251` — Story: deliver extension-backed intelligence adapters (pgvector, AGE, TimescaleDB)
+  - `#5252` — Story: implement realtime delivery gateway and owner-scoped presence service
+  - `#5253` — Story: automate retention crypto-shredding and partition archival execution
+  - `#5254` — Story: enforce contract-infrastructure convergence and operational failure-path validation
 - Tasks:
   - `#5016` — Task: M0 deliver core schema, append-only controls, and envelope crypto primitives
   - `#5017` — Task: M1 implement merkle batching, Kolme anchoring worker, and proof APIs
@@ -38,6 +47,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5026` — Task: M10 deliver scaling controls, partition lifecycle, and archival export path
   - `#5027` — Task: M11 execute hardening matrix (security, chaos, perf) and operator readiness
   - `#5028` — Task: enforce PRD critical-scenario conformance matrix with shell-neutral test orchestration
+  - `#5255` — Task: bootstrap data-layer PostgreSQL migration scaffolding and schema contract markers
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage
