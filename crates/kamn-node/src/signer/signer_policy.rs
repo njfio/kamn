@@ -34,6 +34,14 @@ pub(crate) enum SignerRotationFreshnessOutcome {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SignerQuorumDecisionPath {
+    Linked,
+    FailoverPreviousProfileNotApproved,
+    ProfileNotApproved,
+    QuorumShortfall,
+}
+
 pub(crate) fn evaluate_signer_rotation_freshness(
     failover_active: bool,
     rotation_epoch: u64,
@@ -52,6 +60,25 @@ pub(crate) fn evaluate_signer_rotation_freshness(
         };
     }
     SignerRotationFreshnessOutcome::Fresh
+}
+
+pub(crate) fn evaluate_signer_quorum_decision_path(
+    failover_active: bool,
+    signer_profile: &str,
+    previous_profile: &str,
+    quorum_required_approvals: usize,
+    approved_signers: &[&str],
+) -> SignerQuorumDecisionPath {
+    if failover_active && !approved_signers.contains(&previous_profile) {
+        return SignerQuorumDecisionPath::FailoverPreviousProfileNotApproved;
+    }
+    if !approved_signers.contains(&signer_profile) {
+        return SignerQuorumDecisionPath::ProfileNotApproved;
+    }
+    if approved_signers.len() < quorum_required_approvals {
+        return SignerQuorumDecisionPath::QuorumShortfall;
+    }
+    SignerQuorumDecisionPath::Linked
 }
 
 pub(crate) fn normalize_kolme_live_signer_profile_selector(
@@ -433,27 +460,34 @@ pub(crate) fn evaluate_kolme_live_signer_preflight_readiness(
         )));
     }
 
-    if failover_active && !approved_signers.contains(&previous_profile) {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "approved signer set must include previous signer profile {previous_profile} during failover (runtime_signer_failover_attestation_previous_profile_not_approved)"
-        )));
-    }
-
     let quorum_approved_signers_count = approved_signers.len();
     let quorum_profile_linked = approved_signers.contains(&signer_selection.profile);
     let quorum_satisfied = quorum_approved_signers_count >= quorum_required_approvals;
     let quorum_linked = quorum_profile_linked && quorum_satisfied;
-
-    if !quorum_profile_linked {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "current signer profile {} is not present in quorum-approved signer set (runtime_signer_quorum_linkage_violation)",
-            signer_selection.profile
-        )));
-    }
-    if !quorum_satisfied {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "runtime signer quorum shortfall: required {quorum_required_approvals}, approved {quorum_approved_signers_count} (runtime_signer_attestation_quorum_shortfall)"
-        )));
+    match evaluate_signer_quorum_decision_path(
+        failover_active,
+        signer_selection.profile,
+        previous_profile,
+        quorum_required_approvals,
+        approved_signers.as_slice(),
+    ) {
+        SignerQuorumDecisionPath::Linked => {}
+        SignerQuorumDecisionPath::FailoverPreviousProfileNotApproved => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "approved signer set must include previous signer profile {previous_profile} during failover (runtime_signer_failover_attestation_previous_profile_not_approved)"
+            )))
+        }
+        SignerQuorumDecisionPath::ProfileNotApproved => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "current signer profile {} is not present in quorum-approved signer set (runtime_signer_quorum_linkage_violation)",
+                signer_selection.profile
+            )))
+        }
+        SignerQuorumDecisionPath::QuorumShortfall => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "runtime signer quorum shortfall: required {quorum_required_approvals}, approved {quorum_approved_signers_count} (runtime_signer_attestation_quorum_shortfall)"
+            )))
+        }
     }
 
     Ok(KolmeLiveSignerPreflightReadiness {
@@ -472,7 +506,10 @@ pub(crate) fn evaluate_kolme_live_signer_preflight_readiness(
 
 #[cfg(test)]
 mod tests {
-    use super::{evaluate_signer_rotation_freshness, SignerRotationFreshnessOutcome};
+    use super::{
+        evaluate_signer_quorum_decision_path, evaluate_signer_rotation_freshness,
+        SignerQuorumDecisionPath, SignerRotationFreshnessOutcome,
+    };
 
     #[test]
     fn unit_signer_rotation_freshness_outcome_matrix() {
@@ -507,6 +544,50 @@ mod tests {
                 }
             ),
             "non-failover epoch regression must emit typed regressed outcome"
+        );
+    }
+
+    #[test]
+    fn unit_signer_quorum_decision_path_matrix() {
+        assert_eq!(
+            evaluate_signer_quorum_decision_path(
+                false,
+                "ops-primary",
+                "ops-primary",
+                1,
+                &["ops-primary"],
+            ),
+            SignerQuorumDecisionPath::Linked
+        );
+        assert_eq!(
+            evaluate_signer_quorum_decision_path(
+                false,
+                "ops-primary",
+                "ops-primary",
+                2,
+                &["ops-primary"],
+            ),
+            SignerQuorumDecisionPath::QuorumShortfall
+        );
+        assert_eq!(
+            evaluate_signer_quorum_decision_path(
+                false,
+                "ops-secondary",
+                "ops-secondary",
+                1,
+                &["ops-primary"],
+            ),
+            SignerQuorumDecisionPath::ProfileNotApproved
+        );
+        assert_eq!(
+            evaluate_signer_quorum_decision_path(
+                true,
+                "ops-secondary",
+                "ops-primary",
+                2,
+                &["ops-secondary"],
+            ),
+            SignerQuorumDecisionPath::FailoverPreviousProfileNotApproved
         );
     }
 }
