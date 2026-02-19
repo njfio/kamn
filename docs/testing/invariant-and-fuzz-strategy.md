@@ -100,6 +100,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
     - `input_mutation_coverage_guided_did_seed:v1`
   - minimizer marker:
     - `minimal_failing_seed_prefix`
+  - parser failure taxonomy markers:
+    - `input_mutation_coverage_guided_parser_failure_taxonomy_version=kamn.runtime.input-mutation-coverage-guided-parser-failure-taxonomy.v1`
+    - `input_mutation_coverage_guided_parser_failure_codes_csv=invalid_envelope_type,invalid_sender_did,invalid_recipient_did,invalid_message_type,invalid_encryption_algorithm,empty_body,invalid_proof_purpose,proof_verification_method_mismatch,invalid_agent_did_prefix,invalid_kamn_did_prefix,invalid_characters,missing_method_specific_id`
 - Concurrency mutation report schema:
   - `kamn.runtime.concurrency-mutation-contract-report.v1`
 - Concurrency mutation replay artifact key:
