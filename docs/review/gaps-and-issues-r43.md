@@ -236,6 +236,22 @@ Three DID types coexist:
 
 The gradual migration from `String` to typed DIDs remains incomplete in some non-data_layer modules.
 
+### 7.4 Typed-DID Backlog Markers (R43 Follow-Up)
+
+- `typed_did_migration_inventory_schema_version=kamn.typed-did-migration.inventory.v1`
+- `typed_did_migration_inventory_non_data_layer_module_count=20`
+- `typed_did_migration_inventory_non_data_layer_did_string_callsite_count=77`
+- `typed_did_migration_backlog_issue_ids=#5223,#5228,#5229,#5230`
+- `typed_did_migration_wave_issue_ids=#5228,#5229,#5230`
+- `typed_did_migration_wave_a_scope=bridge_and_marketplace`
+- `typed_did_migration_wave_b_scope=operator_and_governance`
+- `typed_did_migration_wave_c_scope=runtime_proof_and_reputation`
+
+Wave issue linkage:
+- Wave A: `#5228` (bridge + marketplace surfaces)
+- Wave B: `#5229` (operator + governance surfaces)
+- Wave C: `#5230` (runtime/proof/reputation surfaces)
+
 ---
 
 ## 8. Priority Summary
