@@ -5,16 +5,15 @@
 
 ## Approach
 1. Add an explicit fairness docs-parity governance section to `docs/ci/strategy.md` with deterministic markers.
-2. Add a new Rust contract test suite that:
-   - reads checker taxonomy markers from `kamn_core::fairness_policy`,
+2. Extend the existing Rust docs-contract suite in `ci_strategy_docs.rs` so it:
+   - verifies fairness taxonomy/reason-code markers remain deterministic in `src/fairness_policy.rs`,
    - verifies docs marker parity in `docs/ops/configuration.md` and `docs/ci/strategy.md`,
    - verifies each reason code has a remediation marker.
-3. Add a docs-contract assertion in `ci_strategy_docs.rs` for marker presence and command references.
+3. Add marker-presence assertions in `ci_strategy_docs.rs` for guard-command references.
 4. Run targeted tests and set spec status to `Implemented`.
 
 ## Affected Files
 - `docs/ci/strategy.md`
-- `crates/kamn-core/tests/fairness_docs_parity_contract.rs` (new)
 - `crates/kamn-core/tests/ci_strategy_docs.rs`
 - `specs/4093/{spec.md,plan.md,tasks.md}`
 

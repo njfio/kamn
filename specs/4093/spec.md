@@ -36,8 +36,10 @@ Out of scope:
 | C-04 | AC-4 | Regression | Marker-drift assertions | Missing/changed fairness marker contracts fail test deterministically |
 
 ## Test Mapping
-- `cargo test -p kamn-core --test fairness_docs_parity_contract`
 - `cargo test -p kamn-core --test ci_strategy_docs -- doc_contains_fairness_docs_parity_and_remediation_markers --exact`
+- `cargo test -p kamn-core --test ci_strategy_docs -- doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic --exact`
+- `cargo test -p kamn-core --test ci_strategy_docs -- doc_enforces_fairness_docs_parity_matches_ops_docs_and_fixture_metadata --exact`
+- `cargo test -p kamn-core --test ci_strategy_docs -- doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason_code --exact`
 
 ## Success Metrics
 - Fairness docs parity and remediation mapping are enforced by deterministic Rust tests.

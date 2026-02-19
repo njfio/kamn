@@ -4650,8 +4650,10 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - `fairness_docs_parity_remediation.fairness_max_gap_non_positive=set max_weighted_share_gap >= 1`
 - `fairness_docs_parity_remediation.fairness_weighted_share_exceeds_gap=reduce active_weighted_share or increase max_weighted_share_gap`
 - Guard commands:
-  - `cargo test -p kamn-core --test fairness_docs_parity_contract`
   - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_fairness_docs_parity_and_remediation_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_source_taxonomy_markers_remain_deterministic -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_matches_ops_docs_and_fixture_metadata -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact`
 - Fail-closed policy:
   - checker taxonomy, fixture metadata, and docs parity markers must remain synchronized.
   - each fairness reason code must have a deterministic remediation marker in this document.
