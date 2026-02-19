@@ -197,6 +197,10 @@ This refreshed version separates:
   - `deployment_hardening_local_heavy_contract_chain=#3950->#3954->(#3961,#3962)`
   - `deployment_hardening_local_heavy_contract_guard_command=cargo test -p kamn-core --test deployment_hardening_lane_contract -- --nocapture`
   - `deployment_hardening_local_heavy_required_reason_codes_csv=dry_run_no_commands_executed,deployment_preflight_passed,preflight_budget_exceeded,signer_rotation_rehearsal_drift_detected,signer_rotation_promotion_stalled`
+  - `deployment_hardening_ci_dry_run_contract_chain=#3950->#3954->#3962`
+  - `deployment_hardening_ci_dry_run_contract_guard_command=cargo test -p kamn-core --test deployment_hardening_ci_dry_run_contract -- --nocapture`
+  - `deployment_hardening_ci_dry_run_governance_checker=python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+  - `deployment_hardening_ci_dry_run_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
 - Guard command matrix:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
