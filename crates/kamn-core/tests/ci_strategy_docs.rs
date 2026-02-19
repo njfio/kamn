@@ -1502,6 +1502,43 @@ fn doc_contains_quota_policy_checker_taxonomy_contract_markers() {
 }
 
 #[test]
+fn doc_contains_fairness_docs_parity_and_remediation_markers() {
+    assert!(DOC.contains("### Fairness Docs Parity and Remediation Contract"));
+    assert!(DOC.contains(
+        "fairness_docs_parity_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_fixture_schema_version=kamn.runtime.fairness-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_fixture_path=fixtures/runtime/starvation_fairness_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("fairness_docs_parity_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("fairness_docs_parity_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("fairness_docs_parity_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_scope_unknown=use one of control_plane|tenant_interactive|bulk_replication"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_window_non_positive=set window_seconds >= 1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_max_gap_non_positive=set max_weighted_share_gap >= 1"
+    ));
+    assert!(DOC.contains(
+        "fairness_docs_parity_remediation.fairness_weighted_share_exceeds_gap=reduce active_weighted_share or increase max_weighted_share_gap"
+    ));
+    assert!(DOC.contains("cargo test -p kamn-core --test fairness_docs_parity_contract"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_fairness_docs_parity_and_remediation_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4093"));
+}
+
+#[test]
 fn doc_contains_public_api_surface_ratchet_contract_markers() {
     assert!(DOC.contains("Public API surface ratchet (Rust-first, fail-closed):"));
     assert!(DOC.contains("fixtures/ci/kamn_core_public_api_surface_baseline.env"));
