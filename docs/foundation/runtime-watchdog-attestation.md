@@ -125,6 +125,12 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - `critical` incidents must include rollback readiness evidence before action execution.
 - Incident closure requires a stable `WatchdogIncidentRecord` with captured evidence fields.
 
+## Panic-Path Retirement Mapping
+- `Regression: #3941`
+  - Module: `crates/kamn-node/src/signer.rs`
+  - Contract: signer decode-failure assertions must remain `ConfigError::RuntimeKolmeLive` without `unreachable!()` usage.
+  - Guard test: `cargo test -p kamn-node regression_signer_module_source_contains_no_unreachable_macro`
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 

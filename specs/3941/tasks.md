@@ -6,8 +6,9 @@
 ## Ordered Tasks
 - [x] T1 (Red): add signer-source regression test for `unreachable!()` and run it to fail first.
 - [x] T2 (Green): replace signer decode-failure `unreachable!()` branch with explicit typed assertion flow.
-- [x] T3 (Regression): run scoped signer/startup panic-path tests and confirm deterministic behavior.
-- [x] T4 (Verify): run formatting/lint checks for touched crate scope and finalize PR evidence.
+- [x] T3 (Docs): map panic-path retirement evidence in `docs/foundation/runtime-watchdog-attestation.md`.
+- [x] T4 (Regression): run scoped signer/startup panic-path tests and confirm deterministic behavior.
+- [x] T5 (Verify): run formatting/lint checks for touched crate scope and finalize PR evidence.
 
 ## Tier Mapping
 - Unit: typed decode-failure assertion path in signer tests.

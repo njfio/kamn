@@ -18,6 +18,7 @@
 ## Scope
 In scope:
 - `crates/kamn-node/src/signer.rs`
+- `docs/foundation/runtime-watchdog-attestation.md`
 - `specs/3941/spec.md`
 - `specs/3941/plan.md`
 - `specs/3941/tasks.md`
@@ -33,11 +34,13 @@ Out of scope:
 | C-02 | AC-2 | Unit | invalid signer private-key decode path | deterministic `ConfigError::RuntimeKolmeLive` without panic macro control-flow |
 | C-03 | AC-3 | Regression | signer module source regression test | test fails if `unreachable!()` appears in signer source |
 | C-04 | AC-4 | Integration | run scoped `kamn-node` test suite | signer + startup panic-path regression checks pass together |
+| C-05 | AC-4 | Regression | runtime watchdog attestation docs contract test | panic-path retirement mapping remains documented and test suite stays green |
 
 ## Test Mapping
 - `cargo test -p kamn-node regression_signer_module_source_contains_no_unreachable_macro -- --exact`
 - `cargo test -p kamn-node regression_signer_private_key_decode_failure_redacts_sensitive_input -- --exact`
 - `cargo test -p kamn-node regression_3598_startup_paths_have_no_panic_control_flow -- --exact`
+- `cargo test -p kamn-core --test runtime_watchdog_attestation_docs`
 
 ## Success Metrics
 - `unreachable!()` is absent from `crates/kamn-node/src/signer.rs`.

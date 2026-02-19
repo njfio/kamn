@@ -8,10 +8,12 @@
 1. Add a signer-source regression test that detects `unreachable!()` via a constructed marker (to avoid self-matching literals).
 2. Run the new regression test first to capture RED.
 3. Replace the remaining `unreachable!()` branch in signer decode-failure assertions with explicit typed-error assertions.
-4. Re-run the mapped scoped tests for GREEN + regression verification.
+4. Update runtime watchdog attestation docs with panic-path retirement mapping for this subtask.
+5. Re-run the mapped scoped tests for GREEN + regression verification.
 
 ## Affected Modules
 - `crates/kamn-node/src/signer.rs`
+- `docs/foundation/runtime-watchdog-attestation.md`
 
 ## Risks and Mitigations
 - Risk: source-string regression test becomes brittle.
@@ -26,4 +28,4 @@
 ## Verification Strategy
 - RED: run new signer-source regression before removing the macro.
 - GREEN: remove `unreachable!()` branch and keep typed assertions.
-- REGRESSION: run signer decode-failure and startup panic-control-flow tests.
+- REGRESSION: run signer decode-failure, startup panic-control-flow, and runtime watchdog docs contract tests.
