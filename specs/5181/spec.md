@@ -1,7 +1,7 @@
 # Issue #5181 Spec
 
 - Title: Task: audit public API and shell-vs-rust test surface with ratchet recommendations
-- Status: Reviewed
+- Status: Implemented
 - Priority: P2
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 

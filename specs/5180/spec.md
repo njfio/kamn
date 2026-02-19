@@ -1,7 +1,7 @@
 # Issue #5180 Spec
 
 - Title: Task: decompose observability_endpoint.rs into focused modules with parity guarantees
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-46-r42-gap-remediation-and-maintainability-closure/index.md
 
