@@ -18,6 +18,8 @@ Execute closure of the R42 review findings with immediate stability fixes and tr
   - `#5184` — Task: consolidate doc-contract tests into data-driven harness to reduce file sprawl
   - `#5183` — Task: automate merged-branch cleanup with safe retention policy
   - `#5181` — Task: audit public API and shell-vs-rust test surface with ratchet recommendations
+  - `#5188` — Task: implement kamn-core public API surface report and growth ratchet
+  - `#5189` — Task: migrate shell-first test wrappers to Rust-native suites and enforce shell-to-rust test ratio ratchet
 
 ## Governance Markers
 - `shell_loc_hard_ceiling_env=.ci/shell-loc-hard-ceiling.env`
