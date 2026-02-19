@@ -3444,6 +3444,13 @@ JSON`
       - `scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_lane.json`
     - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+    - CI dry-run governance/runbook parity contract markers:
+      - `deployment_preflight_ci_dry_run_governance_status=verified`
+      - `deployment_preflight_ci_dry_run_gate=PASS`
+      - `deployment_preflight_ci_dry_run_required_reason_code=dry_run_no_commands_executed`
+      - `deployment_preflight_runbook_marker_parity_status=verified`
+      - `deployment_preflight_runbook_reason_taxonomy_version=kamn.kolme.local-live-deployment-preflight-runbook-reason-taxonomy.v1`
+      - `deployment_preflight_runbook_reason_codes_csv=deployment_preflight_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
     - deterministic marker contracts:
       - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
       - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
