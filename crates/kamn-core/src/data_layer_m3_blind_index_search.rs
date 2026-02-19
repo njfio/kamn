@@ -4,6 +4,7 @@
 //! owner-scoped blind-index token derivation, exact-match blind-index lookups,
 //! and metadata filter queries with stable ordering.
 
+use crate::{ContentRetrievalError, ContentRetrievalRequest, ContentRetrievalScope};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -67,6 +68,32 @@ pub struct DataLayerM3BlindIndexQuery {
     pub mode: DataLayerM3BlindIndexSearchMode,
     /// Optional maximum number of rows to return.
     pub limit: Option<usize>,
+}
+
+/// Projection input envelope that bridges blind-index search output to retrieval contracts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM3BlindIndexRetrievalProjectionInput {
+    /// Blind-index query to execute before retrieval projection.
+    pub blind_index_query: DataLayerM3BlindIndexQuery,
+    /// Requester DID that will be bound to retrieval requests.
+    pub requester_did: String,
+    /// Retrieval scope to apply for all projected retrieval requests.
+    pub retrieval_scope: ContentRetrievalScope,
+    /// Request timestamp bound to all projected retrieval requests.
+    pub requested_at_unix: u64,
+    /// Message-ID to CID map used to bridge search results to retrieval IDs.
+    pub message_cids_by_message_id: BTreeMap<String, String>,
+}
+
+/// One projected retrieval contract record derived from blind-index search output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM3RetrievalProjectionRecord {
+    /// Message ID from blind-index search output.
+    pub message_id: String,
+    /// CID mapped for this message.
+    pub cid: String,
+    /// Validated retrieval request contract.
+    pub retrieval_request: ContentRetrievalRequest,
 }
 
 /// Metadata query input envelope.
@@ -226,6 +253,45 @@ impl DataLayerM3SearchCatalog {
             results.truncate(limit);
         }
         Ok(results)
+    }
+
+    /// Executes blind-index search and projects results to content-retrieval contracts.
+    pub fn project_blind_index_to_retrieval_requests(
+        &self,
+        input: DataLayerM3BlindIndexRetrievalProjectionInput,
+    ) -> Result<Vec<DataLayerM3RetrievalProjectionRecord>, DataLayerM3SearchError> {
+        let DataLayerM3BlindIndexRetrievalProjectionInput {
+            blind_index_query,
+            requester_did,
+            retrieval_scope,
+            requested_at_unix,
+            message_cids_by_message_id,
+        } = input;
+        let search_results = self.search_blind_index(blind_index_query)?;
+
+        let mut projection = Vec::with_capacity(search_results.len());
+        for record in search_results {
+            let cid = message_cids_by_message_id
+                .get(record.message_id.as_str())
+                .cloned()
+                .ok_or_else(|| DataLayerM3SearchError::MissingContentCidForMessage {
+                    message_id: record.message_id.clone(),
+                })?;
+            let retrieval_request = ContentRetrievalRequest::new(
+                cid.as_str(),
+                requester_did.as_str(),
+                retrieval_scope.clone(),
+                requested_at_unix,
+            )
+            .map_err(map_content_retrieval_error_to_m3_projection_error)?;
+            projection.push(DataLayerM3RetrievalProjectionRecord {
+                message_id: record.message_id,
+                cid,
+                retrieval_request,
+            });
+        }
+
+        Ok(projection)
     }
 
     /// Evaluates blind-index exact-match output determinism against a baseline ordering.
@@ -466,6 +532,16 @@ pub enum DataLayerM3SearchError {
     },
     /// Limit must be positive.
     InvalidLimit(usize),
+    /// Blind-index output message lacked a CID bridge mapping.
+    MissingContentCidForMessage {
+        /// Message ID missing from CID bridge map.
+        message_id: String,
+    },
+    /// Retrieval request projection failed validation.
+    InvalidRetrievalRequestProjection {
+        /// Deterministic validation reason.
+        reason: String,
+    },
 }
 
 impl fmt::Display for DataLayerM3SearchError {
@@ -490,6 +566,12 @@ impl fmt::Display for DataLayerM3SearchError {
                 "invalid timestamp bounds: after={created_after_inclusive}, before={created_before_inclusive}"
             ),
             Self::InvalidLimit(limit) => write!(f, "invalid limit: {limit}"),
+            Self::MissingContentCidForMessage { message_id } => {
+                write!(f, "missing content cid mapping for message_id: {message_id}")
+            }
+            Self::InvalidRetrievalRequestProjection { reason } => {
+                write!(f, "invalid retrieval request projection: {reason}")
+            }
         }
     }
 }
@@ -548,6 +630,14 @@ fn resolve_limit(limit: Option<usize>) -> Result<usize, DataLayerM3SearchError> 
         Some(0) => Err(DataLayerM3SearchError::InvalidLimit(0)),
         Some(value) => Ok(value),
         None => Ok(usize::MAX),
+    }
+}
+
+fn map_content_retrieval_error_to_m3_projection_error(
+    error: ContentRetrievalError,
+) -> DataLayerM3SearchError {
+    DataLayerM3SearchError::InvalidRetrievalRequestProjection {
+        reason: error.to_string(),
     }
 }
 

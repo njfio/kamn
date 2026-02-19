@@ -1,8 +1,9 @@
 use kamn_core::{
-    data_layer_m3_compute_blind_index, DataLayerM3BlindIndexDeterminismDecision,
-    DataLayerM3BlindIndexDeterminismInput, DataLayerM3BlindIndexQuery,
+    data_layer_m3_compute_blind_index, ContentRetrievalScope,
+    DataLayerM3BlindIndexDeterminismDecision, DataLayerM3BlindIndexDeterminismInput,
+    DataLayerM3BlindIndexQuery, DataLayerM3BlindIndexRetrievalProjectionInput,
     DataLayerM3BlindIndexSearchMode, DataLayerM3MessageMetadataRecord, DataLayerM3MetadataQuery,
-    DataLayerM3SearchCatalog, DataLayerM3SearchError,
+    DataLayerM3RetrievalProjectionRecord, DataLayerM3SearchCatalog, DataLayerM3SearchError,
     DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_DRIFTED_REASON_CODE,
     DATA_LAYER_M3_BLIND_INDEX_DETERMINISM_STABLE_REASON_CODE,
 };
@@ -388,4 +389,154 @@ fn spec_c08_blind_index_determinism_rejects_empty_baseline_and_invalid_limit() {
             limit: Some(0),
         });
     assert_eq!(invalid_limit, Err(DataLayerM3SearchError::InvalidLimit(0)));
+}
+
+#[test]
+fn spec_c09_blind_index_projection_builds_deterministic_content_retrieval_requests() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let mut catalog = DataLayerM3SearchCatalog::new();
+    for (message_id, created_at_epoch_seconds) in
+        [("msg-r-1", 1_708_160_010), ("msg-r-2", 1_708_160_020)]
+    {
+        catalog
+            .register_record(record(RecordSeed {
+                message_id,
+                owner_did: "kamn:did:owner:a",
+                sender_did: "kamn:did:agent:a1",
+                recipient_did: "kamn:did:agent:b1",
+                session_id: Some("session-r"),
+                escrow_id: None,
+                message_type: "text",
+                created_at_epoch_seconds,
+                blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+            }))
+            .expect("record registration should succeed");
+    }
+
+    let projection = catalog
+        .project_blind_index_to_retrieval_requests(DataLayerM3BlindIndexRetrievalProjectionInput {
+            blind_index_query: DataLayerM3BlindIndexQuery {
+                owner_did: "kamn:did:owner:a".to_owned(),
+                field_name: "subject".to_owned(),
+                token: token.clone(),
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: Some(10),
+            },
+            requester_did: "kamn:did:agent:reader-1".to_owned(),
+            retrieval_scope: ContentRetrievalScope::Task("task-1".to_owned()),
+            requested_at_unix: 1_708_160_100,
+            message_cids_by_message_id: BTreeMap::from([
+                (
+                    "msg-r-1".to_owned(),
+                    "kamn:cid:v1:aaaaaaaaaaaaaaaa".to_owned(),
+                ),
+                (
+                    "msg-r-2".to_owned(),
+                    "kamn:cid:v1:bbbbbbbbbbbbbbbb".to_owned(),
+                ),
+            ]),
+        })
+        .expect("projection should succeed");
+
+    let message_ids = projection
+        .iter()
+        .map(|entry| entry.message_id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(message_ids, vec!["msg-r-2", "msg-r-1"]);
+
+    let first: &DataLayerM3RetrievalProjectionRecord = projection
+        .first()
+        .expect("first projection record should exist");
+    assert_eq!(first.cid, "kamn:cid:v1:bbbbbbbbbbbbbbbb");
+    assert_eq!(first.retrieval_request.requester, "kamn:did:agent:reader-1");
+    assert_eq!(
+        first.retrieval_request.scope,
+        ContentRetrievalScope::Task("task-1".to_owned())
+    );
+}
+
+#[test]
+fn spec_c10_blind_index_projection_fails_closed_when_message_cid_map_missing() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let mut catalog = DataLayerM3SearchCatalog::new();
+    catalog
+        .register_record(record(RecordSeed {
+            message_id: "msg-missing-cid",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-m"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_010,
+            blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+        }))
+        .expect("record registration should succeed");
+
+    let missing = catalog.project_blind_index_to_retrieval_requests(
+        DataLayerM3BlindIndexRetrievalProjectionInput {
+            blind_index_query: DataLayerM3BlindIndexQuery {
+                owner_did: "kamn:did:owner:a".to_owned(),
+                field_name: "subject".to_owned(),
+                token,
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: Some(10),
+            },
+            requester_did: "kamn:did:agent:reader-1".to_owned(),
+            retrieval_scope: ContentRetrievalScope::Task("task-1".to_owned()),
+            requested_at_unix: 1_708_160_100,
+            message_cids_by_message_id: BTreeMap::new(),
+        },
+    );
+    assert_eq!(
+        missing,
+        Err(DataLayerM3SearchError::MissingContentCidForMessage {
+            message_id: "msg-missing-cid".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn spec_c11_blind_index_projection_fails_closed_for_invalid_requester_contract() {
+    let token = data_layer_m3_compute_blind_index("owner-key-a", "subject", "invoice 42")
+        .expect("token should derive");
+    let mut catalog = DataLayerM3SearchCatalog::new();
+    catalog
+        .register_record(record(RecordSeed {
+            message_id: "msg-invalid-requester",
+            owner_did: "kamn:did:owner:a",
+            sender_did: "kamn:did:agent:a1",
+            recipient_did: "kamn:did:agent:b1",
+            session_id: Some("session-i"),
+            escrow_id: None,
+            message_type: "text",
+            created_at_epoch_seconds: 1_708_160_010,
+            blind_indexes: blind_index_map(&[("subject", token.as_str())]),
+        }))
+        .expect("record registration should succeed");
+
+    let invalid = catalog.project_blind_index_to_retrieval_requests(
+        DataLayerM3BlindIndexRetrievalProjectionInput {
+            blind_index_query: DataLayerM3BlindIndexQuery {
+                owner_did: "kamn:did:owner:a".to_owned(),
+                field_name: "subject".to_owned(),
+                token,
+                mode: DataLayerM3BlindIndexSearchMode::ExactMatch,
+                limit: Some(10),
+            },
+            requester_did: "invalid-requester".to_owned(),
+            retrieval_scope: ContentRetrievalScope::Task("task-1".to_owned()),
+            requested_at_unix: 1_708_160_100,
+            message_cids_by_message_id: BTreeMap::from([(
+                "msg-invalid-requester".to_owned(),
+                "kamn:cid:v1:aaaaaaaaaaaaaaaa".to_owned(),
+            )]),
+        },
+    );
+    assert!(matches!(
+        invalid,
+        Err(DataLayerM3SearchError::InvalidRetrievalRequestProjection { .. })
+    ));
 }
