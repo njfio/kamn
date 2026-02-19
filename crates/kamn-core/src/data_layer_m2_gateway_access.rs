@@ -4,6 +4,7 @@
 //! DID-authenticated session issuance, ABAC message visibility checks, RLS policy
 //! template emission, and append-only audit logging with hash-chain verification.
 
+use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -94,7 +95,7 @@ impl DataLayerM2DidSessionService {
             });
         }
 
-        validate_kamn_did(request.requester_did.as_str())?;
+        validate_agent_did(request.requester_did.as_str())?;
         let expected_credential = format!("sig:{}:{}", request.requester_did, request.challenge);
         if request.credential != expected_credential {
             return Err(DataLayerM2GatewayError::InvalidCredential(
@@ -279,7 +280,12 @@ impl DataLayerM2AbacEngine {
         scope: &DataLayerM2MessageScope,
     ) -> Result<DataLayerM2AuthorizationDecision, DataLayerM2GatewayError> {
         validate_message_scope(scope)?;
-        validate_kamn_did(requester_did)?;
+        match requester_role {
+            DataLayerM2ActorRole::Agent => validate_agent_did(requester_did)?,
+            DataLayerM2ActorRole::Owner
+            | DataLayerM2ActorRole::EscrowAuditor
+            | DataLayerM2ActorRole::PlatformOperator => validate_kamn_did(requester_did)?,
+        }
 
         let decision = match requester_role {
             DataLayerM2ActorRole::Agent => {
@@ -636,16 +642,24 @@ fn validate_message_scope(scope: &DataLayerM2MessageScope) -> Result<(), DataLay
     if scope.message_id.trim().is_empty() {
         return Err(DataLayerM2GatewayError::EmptyField("message_id"));
     }
-    for (field, value) in [
-        ("sender_did", scope.sender_did.as_str()),
-        ("recipient_did", scope.recipient_did.as_str()),
-        ("owner_sender_did", scope.owner_sender_did.as_str()),
-        ("owner_recipient_did", scope.owner_recipient_did.as_str()),
+    for (field, value, requires_agent_did) in [
+        ("sender_did", scope.sender_did.as_str(), true),
+        ("recipient_did", scope.recipient_did.as_str(), true),
+        ("owner_sender_did", scope.owner_sender_did.as_str(), false),
+        (
+            "owner_recipient_did",
+            scope.owner_recipient_did.as_str(),
+            false,
+        ),
     ] {
         if value.trim().is_empty() {
             return Err(DataLayerM2GatewayError::EmptyField(field));
         }
-        validate_kamn_did(value)?;
+        if requires_agent_did {
+            validate_agent_did(value)?;
+        } else {
+            validate_kamn_did(value)?;
+        }
     }
     Ok(())
 }
@@ -681,6 +695,11 @@ fn validate_kamn_did(value: &str) -> Result<(), DataLayerM2GatewayError> {
     if segments.len() < 4 || segments.iter().any(|segment| segment.is_empty()) {
         return Err(DataLayerM2GatewayError::InvalidDid(value.to_owned()));
     }
+    Ok(())
+}
+
+fn validate_agent_did(value: &str) -> Result<(), DataLayerM2GatewayError> {
+    AgentDid::parse(value).map_err(|_| DataLayerM2GatewayError::InvalidDid(value.to_owned()))?;
     Ok(())
 }
 
