@@ -1,7 +1,7 @@
 # Issue #5218 Spec
 
 - Title: Task: Execute shell-test migration wave 2 with superseded script deletions
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-47-r43-gap-remediation-and-delivery-rebalancing/index.md
 
