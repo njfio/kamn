@@ -77,6 +77,11 @@ report_file = pathlib.Path(sys.argv[3])
 
 source_text = source_file.read_text(encoding="utf-8")
 api_doc_text = api_doc_file.read_text(encoding="utf-8")
+payload_source_file = source_file.parent / "service_api_endpoint" / "payload.rs"
+if not payload_source_file.is_file():
+    raise SystemExit(f"expected service api payload source file: {payload_source_file}")
+payload_source_text = payload_source_file.read_text(encoding="utf-8")
+marker_source_text = source_text + "\n" + payload_source_text
 
 def parse_u64_const(name: str) -> int:
     match = re.search(rf"pub\(crate\)\s+const\s+{name}:\s*u64\s*=\s*([^;]+);", source_text)
@@ -136,7 +141,7 @@ required_request_validation_reason_markers = [
 missing_request_validation_reason_markers = [
     marker
     for marker in required_request_validation_reason_markers
-    if marker not in source_text
+    if marker not in marker_source_text
 ]
 if missing_request_validation_reason_markers:
     raise SystemExit(
@@ -162,7 +167,7 @@ required_lifecycle_rejection_reason_markers = (
 missing_lifecycle_rejection_reason_markers = [
     marker
     for marker in required_lifecycle_rejection_reason_markers
-    if marker not in source_text
+    if marker not in marker_source_text
 ]
 if missing_lifecycle_rejection_reason_markers:
     raise SystemExit(
@@ -175,7 +180,7 @@ required_error_envelope_markers = [
     "pub(crate) message: String",
 ]
 missing_error_envelope_markers = [
-    marker for marker in required_error_envelope_markers if marker not in source_text
+    marker for marker in required_error_envelope_markers if marker not in marker_source_text
 ]
 if missing_error_envelope_markers:
     raise SystemExit(
