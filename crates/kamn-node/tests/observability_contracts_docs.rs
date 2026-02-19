@@ -1,4 +1,5 @@
 const DOC: &str = include_str!("../../../docs/observability/contracts.md");
+const RUNTIME_NETWORK_DOC: &str = include_str!("../../../docs/foundation/runtime-network.md");
 const LOGGING_SRC: &str = include_str!("../src/logging.rs");
 const DAEMON_PHASE_SRC: &str = include_str!("../src/runtime_orchestration/daemon_phase.rs");
 const OBS_ENDPOINT_SRC: &str = include_str!("../src/observability_endpoint.rs");
@@ -74,4 +75,35 @@ fn regression_startup_logging_contract_declares_fail_closed_invalid_config_marke
     assert!(DOC.contains("ConfigError::InvalidLogConfig"));
     assert!(DOC.contains("KAMN_NODE_LOG_LEVEL must be one of: error,warn,info,debug,trace"));
     assert!(DOC.contains("KAMN_NODE_LOG_FORMAT must be one of: text,json"));
+}
+
+#[test]
+fn unit_runtime_network_observability_tls_contract_declares_required_env_markers() {
+    assert!(RUNTIME_NETWORK_DOC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE=disabled|require"));
+    assert!(RUNTIME_NETWORK_DOC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE"));
+    assert!(RUNTIME_NETWORK_DOC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE"));
+}
+
+#[test]
+fn functional_runtime_network_observability_tls_contract_declares_negative_matrix_reason_codes() {
+    assert!(RUNTIME_NETWORK_DOC.contains("observability_tls_negative_matrix_status=verified"));
+    assert!(RUNTIME_NETWORK_DOC.contains(
+        "observability_tls_negative_matrix_reason_codes_csv=observability_endpoint_tls_certificate_file_read_failed,observability_endpoint_tls_key_file_parse_failed,observability_endpoint_tls_mode_invalid,observability_endpoint_tls_plain_http_handshake_rejected"
+    ));
+}
+
+#[test]
+fn integration_runtime_network_observability_tls_contract_aligns_with_endpoint_source() {
+    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_MODE"));
+    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_CERT_FILE"));
+    assert!(OBS_ENDPOINT_SRC.contains("KAMN_OBSERVABILITY_ENDPOINT_TLS_KEY_FILE"));
+    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls certificate file read failed"));
+    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls key file parse failed"));
+    assert!(OBS_ENDPOINT_SRC.contains("observability endpoint tls mode is invalid"));
+}
+
+#[test]
+fn regression_runtime_network_observability_tls_contract_declares_policy_drift_marker() {
+    assert!(RUNTIME_NETWORK_DOC
+        .contains("runtime_observability_policy_tls_negative_matrix_reason_codes_csv_mismatch"));
 }
