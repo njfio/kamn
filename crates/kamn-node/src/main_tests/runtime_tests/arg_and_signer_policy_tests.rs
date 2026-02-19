@@ -212,6 +212,12 @@ fn unit_kolme_live_signer_key_source_policy_classifier_matrix() {
 
 #[test]
 pub(super) fn functional_kolme_live_strict_env_local_key_source_rejects_with_reason_code() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -245,7 +251,33 @@ pub(super) fn functional_kolme_live_strict_env_local_key_source_rejects_with_rea
 }
 
 #[test]
+fn regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code(
+) {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _fallback_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        Some("11"),
+    );
+
+    let error =
+        enforce_kolme_live_signer_key_source_policy(true, Some("managed-external"), false, false)
+            .expect_err("fallback signer secret env path must fail closed at policy gate");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("fallback_signer_secret_present_violation")),
+        "fallback signer secret path must emit deterministic fail-closed reason code"
+    );
+}
+
+#[test]
 pub(super) fn functional_kolme_live_strict_env_local_key_source_allows_with_local_override() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -276,6 +308,12 @@ pub(super) fn functional_kolme_live_strict_env_local_key_source_allows_with_loca
 
 #[test]
 pub(super) fn integration_kolme_live_strict_managed_external_key_source_policy_passes() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
