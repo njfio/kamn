@@ -319,3 +319,30 @@ fn main_module_extraction_contract_main_tests_decomposition_and_budget_markers_r
         "main_tests.rs should keep decomposed domain module boundaries"
     );
 }
+
+#[test]
+fn main_module_extraction_contract_runtime_tests_decomposition_shell_markers_remain_stable() {
+    let runtime_tests_rs = read_repo_file("src/main_tests/runtime_tests.rs");
+    let runtime_tests_lines = runtime_tests_rs.lines().count();
+    let include_decl_count = runtime_tests_rs
+        .lines()
+        .filter(|line| line.trim_start().starts_with("include!(\"runtime_tests/"))
+        .count();
+
+    assert!(
+        runtime_tests_rs.contains("runtime_tests structural budget shell only"),
+        "runtime_tests.rs should carry explicit decomposition drift guard marker"
+    );
+    assert!(
+        !runtime_tests_rs.contains("#[test]"),
+        "runtime_tests.rs should not keep inline test bodies"
+    );
+    assert!(
+        runtime_tests_lines <= 120,
+        "runtime_tests.rs should remain a bounded shell (<=120 lines)"
+    );
+    assert!(
+        include_decl_count >= 6,
+        "runtime_tests.rs should route tests through focused include fragments"
+    );
+}
