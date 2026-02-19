@@ -450,6 +450,17 @@ mod tests {
     }
 
     #[test]
+    fn regression_signer_module_source_contains_no_unreachable_macro() {
+        // Regression: #3941
+        const SIGNER_SOURCE: &str = include_str!("signer.rs");
+        let marker = ["unreachable", "!", "("].concat();
+        assert!(
+            !SIGNER_SOURCE.contains(marker.as_str()),
+            "signer source must remain unreachable-macro free"
+        );
+    }
+
+    #[test]
     fn regression_signer_private_key_decode_failure_redacts_sensitive_input() {
         // Regression: #3914
         let sensitive_input = "secretshouldnotappear000";
@@ -459,9 +470,13 @@ mod tests {
             TEST_PRIVATE_KEY_ENV,
         )
         .expect_err("invalid private key material must fail closed");
+        assert!(
+            matches!(&error, ConfigError::RuntimeKolmeLive(_)),
+            "decode failure should map to RuntimeKolmeLive: {error:?}"
+        );
         let message = match &error {
             ConfigError::RuntimeKolmeLive(message) => message,
-            _ => unreachable!("decode failure should map to RuntimeKolmeLive"),
+            _ => "",
         };
         assert!(
             message.contains("invalid hex character"),
