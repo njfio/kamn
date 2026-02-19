@@ -126,6 +126,10 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - Incident closure requires a stable `WatchdogIncidentRecord` with captured evidence fields.
 
 ## Panic-Path Retirement Mapping
+- `Regression: #3940`
+  - Module: `crates/kamn-node/src/cli_tests.rs`
+  - Contract: panic-path source extraction must skip `#[cfg(test)]` items without truncating subsequent production code.
+  - Guard test: `cargo test -p kamn-node regression_3940_production_source_extractor_retains_non_test_items -- --exact`
 - `Regression: #3941`
   - Module: `crates/kamn-node/src/signer.rs`
   - Contract: signer decode-failure assertions must remain `ConfigError::RuntimeKolmeLive` without `unreachable!()` usage.
