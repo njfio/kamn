@@ -3920,6 +3920,40 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
   - refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata
   - required guard markers: `reason_codes=fast_gate_delta_threshold_file_stale` and `reason_codes=fast_gate_delta_threshold_file_corrupt`.
 
+Public API surface ratchet (Rust-first, fail-closed):
+- baseline fixture: `fixtures/ci/kamn_core_public_api_surface_baseline.env`
+- threshold fixture: `.ci/kamn-core-public-api-surface-thresholds.env`
+- optional waiver fixture: `.ci/kamn-core-public-api-surface-waiver.env`
+- waiver template: `.ci/kamn-core-public-api-surface-waiver.example.env`
+- report emission command:
+  - `KAMN_CORE_PUBLIC_API_SURFACE_REPORT_OUTPUT=/tmp/kamn-core-public-api-surface-report.env cargo test -p kamn-core --test public_api_surface_policy public_api_surface_report_schema_is_deterministic -- --exact --nocapture`
+- policy gate command:
+  - `cargo test -p kamn-core --test public_api_surface_policy public_api_surface_policy_enforces_warn_fail_contract -- --exact --nocapture`
+- deterministic report markers:
+  - `report_schema_version=kamn.core.public-api-surface-report.v1`
+  - `policy_schema_version=kamn.core.public-api-surface-thresholds.v1`
+  - `policy_status=within|warn|exception-applied`
+  - `total_public_items=<integer>`
+  - `baseline_total_public_items=<integer>`
+  - `public_items_delta=<integer>`
+  - `module_public_items.<module>=<integer>`
+  - `module_public_items_delta.<module>=<integer>`
+- deterministic reason taxonomy markers:
+  - `public_api_surface_reason_taxonomy_version=kamn.core.public-api-surface-reason-taxonomy.v1`
+  - `public_api_surface_reason_codes_csv=baseline_fixture_missing,baseline_fixture_invalid,baseline_schema_mismatch,baseline_threshold_missing,baseline_threshold_invalid,baseline_module_missing,module_source_missing,threshold_fixture_missing,threshold_fixture_invalid,threshold_schema_mismatch,threshold_value_invalid,waiver_fixture_invalid,waiver_schema_mismatch,waiver_missing_mitigation_issue,waiver_invalid_mitigation_issue,waiver_cap_exceeded,public_api_surface_fail_threshold_exceeded_unwaived,report_output_write_failed`
+  - `reason_codes=none|...`
+  - `reason_codes=public_api_surface_warn_threshold_exceeded`
+  - `reason_codes=public_api_surface_fail_threshold_exceeded_unwaived`
+  - `reason_codes=waiver_cap_exceeded`
+- baseline refresh workflow:
+  - run the report emission command and review `/tmp/kamn-core-public-api-surface-report.env`
+  - copy `total_public_items`, `module_count`, and every `module_public_items.<module>` line into `fixtures/ci/kamn_core_public_api_surface_baseline.env`
+  - rerun the policy gate command and `cargo test -p kamn-core --test ci_strategy_docs`
+- waiver workflow (temporary, tracked mitigation only):
+  - create `.ci/kamn-core-public-api-surface-waiver.env` from `.ci/kamn-core-public-api-surface-waiver.example.env`
+  - set `mitigation_issue=#<issue-id>` and a bounded `max_total_delta`
+  - remove waiver file after mitigation merges and baseline is refreshed.
+
 Test-harness growth advisory (non-blocking):
 - trend thresholds file: `.ci/test-harness-loc-trend-thresholds.env`
 - `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`

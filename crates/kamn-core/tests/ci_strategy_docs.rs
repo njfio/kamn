@@ -1473,3 +1473,33 @@ fn doc_contains_task_escrow_suite_discovery_and_parallel_contract_markers() {
     assert!(DOC.contains("task_escrow_suite_parallel_case_budget_max=256"));
     assert!(DOC.contains("task_escrow_suite_parallel_sequence_budget_max=32"));
 }
+
+#[test]
+fn doc_contains_public_api_surface_ratchet_contract_markers() {
+    assert!(DOC.contains("Public API surface ratchet (Rust-first, fail-closed):"));
+    assert!(DOC.contains("fixtures/ci/kamn_core_public_api_surface_baseline.env"));
+    assert!(DOC.contains(".ci/kamn-core-public-api-surface-thresholds.env"));
+    assert!(DOC.contains(".ci/kamn-core-public-api-surface-waiver.env"));
+    assert!(DOC.contains(".ci/kamn-core-public-api-surface-waiver.example.env"));
+    assert!(DOC.contains(
+        "KAMN_CORE_PUBLIC_API_SURFACE_REPORT_OUTPUT=/tmp/kamn-core-public-api-surface-report.env cargo test -p kamn-core --test public_api_surface_policy public_api_surface_report_schema_is_deterministic -- --exact --nocapture"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test public_api_surface_policy public_api_surface_policy_enforces_warn_fail_contract -- --exact --nocapture"
+    ));
+    assert!(DOC.contains("report_schema_version=kamn.core.public-api-surface-report.v1"));
+    assert!(DOC.contains("policy_schema_version=kamn.core.public-api-surface-thresholds.v1"));
+    assert!(DOC.contains("policy_status=within|warn|exception-applied"));
+    assert!(DOC.contains("module_public_items.<module>=<integer>"));
+    assert!(DOC.contains("module_public_items_delta.<module>=<integer>"));
+    assert!(DOC.contains(
+        "public_api_surface_reason_taxonomy_version=kamn.core.public-api-surface-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "public_api_surface_reason_codes_csv=baseline_fixture_missing,baseline_fixture_invalid,baseline_schema_mismatch,baseline_threshold_missing,baseline_threshold_invalid,baseline_module_missing,module_source_missing,threshold_fixture_missing,threshold_fixture_invalid,threshold_schema_mismatch,threshold_value_invalid,waiver_fixture_invalid,waiver_schema_mismatch,waiver_missing_mitigation_issue,waiver_invalid_mitigation_issue,waiver_cap_exceeded,public_api_surface_fail_threshold_exceeded_unwaived,report_output_write_failed"
+    ));
+    assert!(DOC.contains("reason_codes=public_api_surface_warn_threshold_exceeded"));
+    assert!(DOC.contains("reason_codes=public_api_surface_fail_threshold_exceeded_unwaived"));
+    assert!(DOC.contains("reason_codes=waiver_cap_exceeded"));
+    assert!(DOC.contains("set `mitigation_issue=#<issue-id>` and a bounded `max_total_delta`"));
+}
