@@ -64,6 +64,12 @@ def main() -> int:
         return 1
 
     start_epoch = time.monotonic()
+    skip_adapter_contract_lane = (
+        os.getenv("KAMN_RUNTIME_COMMIT_REPLAY_SKIP_ADAPTER_CONTRACT_LANE", "false")
+        .strip()
+        .lower()
+        == "true"
+    )
     tmp_report = Path(subprocess.check_output(["mktemp"], text=True).strip())
     try:
         go_code, go_output = command_output(
@@ -213,15 +219,16 @@ def main() -> int:
             print("expected runtime commit replay matrix to pass for fixture cases", file=sys.stderr)
             return 1
 
-        adapter_code, adapter_output = command_output(
-            ["bash", str(ADAPTER_CONTRACT_LANE)]
-        )
-        if adapter_code != 0:
-            print(adapter_output, file=sys.stderr)
-            return adapter_code
-        if "Kolme runtime commit adapter contract lane tests passed." not in adapter_output:
-            print("expected runtime commit adapter contract lane success marker", file=sys.stderr)
-            return 1
+        if not skip_adapter_contract_lane:
+            adapter_code, adapter_output = command_output(
+                ["bash", str(ADAPTER_CONTRACT_LANE)]
+            )
+            if adapter_code != 0:
+                print(adapter_output, file=sys.stderr)
+                return adapter_code
+            if "Kolme runtime commit adapter contract lane tests passed." not in adapter_output:
+                print("expected runtime commit adapter contract lane success marker", file=sys.stderr)
+                return 1
 
         matrix_payload = json.loads(tmp_report.read_text(encoding="utf-8"))
         if matrix_payload.get("schema_version") != "kamn.kolme.runtime-commit-replay-matrix.v1":
