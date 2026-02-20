@@ -123,6 +123,9 @@ pub const DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE: &str =
 /// Stable reason marker when Phase-6 scheduler cycle executes and budget evidence is within limits.
 pub const DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE: &str =
     "m10_phase6_scheduler_cycle_applied";
+/// Stable reason marker when Phase-6 stateful scheduler runtime is initialized.
+pub const DATA_LAYER_M10_PHASE6_SCHEDULER_RUNTIME_INITIALIZED_REASON_CODE: &str =
+    "m10_phase6_scheduler_runtime_initialized";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -443,6 +446,111 @@ pub struct DataLayerM10Phase6SchedulerCycleReport {
     pub budget_report: Option<DataLayerM10Phase6ExecutionTickBudgetReport>,
     /// Stable cycle result marker.
     pub reason_code: &'static str,
+}
+
+/// Stateful runtime snapshot for Phase-6 scheduler continuity and checkpointing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6SchedulerRuntimeState {
+    /// Last successful execution-tick timestamp.
+    pub last_successful_tick_epoch_seconds: Option<u64>,
+    /// Last observed scheduler timestamp (successful, deferred, or failed attempt).
+    pub last_observed_now_epoch_seconds: Option<u64>,
+    /// Total scheduler cycles attempted.
+    pub total_cycles: u64,
+    /// Total scheduler cycles that executed orchestration successfully.
+    pub executed_cycles: u64,
+    /// Total scheduler cycles deferred by trigger policy.
+    pub deferred_cycles: u64,
+    /// Total scheduler cycles that failed closed.
+    pub fail_closed_cycles: u64,
+    /// Stable reason marker from the most recent cycle outcome.
+    pub last_reason_code: &'static str,
+}
+
+/// Stateful Phase-6 scheduler runtime wrapper over deterministic cycle contracts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6SchedulerRuntime {
+    scheduler_policy: DataLayerM10Phase6SchedulerPolicy,
+    budget: DataLayerM10Phase6ExecutionTickBudget,
+    state: DataLayerM10Phase6SchedulerRuntimeState,
+}
+
+impl DataLayerM10Phase6SchedulerRuntime {
+    /// Creates a stateful scheduler runtime with deterministic zeroed counters.
+    pub fn new(
+        scheduler_policy: DataLayerM10Phase6SchedulerPolicy,
+        budget: DataLayerM10Phase6ExecutionTickBudget,
+    ) -> Result<Self, DataLayerM10PartitionLifecycleError> {
+        validate_phase6_scheduler_policy(scheduler_policy)?;
+        validate_phase6_execution_tick_budget(budget)?;
+        Ok(Self {
+            scheduler_policy,
+            budget,
+            state: DataLayerM10Phase6SchedulerRuntimeState {
+                last_successful_tick_epoch_seconds: None,
+                last_observed_now_epoch_seconds: None,
+                total_cycles: 0,
+                executed_cycles: 0,
+                deferred_cycles: 0,
+                fail_closed_cycles: 0,
+                last_reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_RUNTIME_INITIALIZED_REASON_CODE,
+            },
+        })
+    }
+
+    /// Returns an immutable snapshot of runtime scheduler state.
+    pub fn state(&self) -> &DataLayerM10Phase6SchedulerRuntimeState {
+        &self.state
+    }
+
+    /// Runs one stateful Phase-6 scheduler cycle and updates runtime checkpoint/counters.
+    pub fn run_cycle(
+        &mut self,
+        compliance_registry: &mut DataLayerM8ComplianceRegistry,
+        partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
+        execution_request: DataLayerM10Phase6ExecutionTickRequest,
+    ) -> Result<DataLayerM10Phase6SchedulerCycleReport, DataLayerM10PartitionLifecycleError> {
+        self.state.total_cycles = self.state.total_cycles.saturating_add(1);
+
+        if let Err(error) = validate_phase6_scheduler_runtime_clock(
+            execution_request.now_epoch_seconds,
+            self.state.last_observed_now_epoch_seconds,
+        ) {
+            self.state.fail_closed_cycles = self.state.fail_closed_cycles.saturating_add(1);
+            self.state.last_reason_code = phase6_scheduler_error_reason_code(&error);
+            return Err(error);
+        }
+
+        self.state.last_observed_now_epoch_seconds = Some(execution_request.now_epoch_seconds);
+        let cycle_result = data_layer_m10_execute_phase6_scheduler_cycle(
+            compliance_registry,
+            partition_registry,
+            DataLayerM10Phase6SchedulerCycleRequest {
+                scheduler_policy: self.scheduler_policy,
+                last_tick_epoch_seconds: self.state.last_successful_tick_epoch_seconds,
+                budget: self.budget,
+                execution_request,
+            },
+        );
+        match cycle_result {
+            Ok(report) => {
+                if report.reason_code == DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE {
+                    self.state.executed_cycles = self.state.executed_cycles.saturating_add(1);
+                    self.state.last_successful_tick_epoch_seconds =
+                        self.state.last_observed_now_epoch_seconds;
+                } else {
+                    self.state.deferred_cycles = self.state.deferred_cycles.saturating_add(1);
+                }
+                self.state.last_reason_code = report.reason_code;
+                Ok(report)
+            }
+            Err(error) => {
+                self.state.fail_closed_cycles = self.state.fail_closed_cycles.saturating_add(1);
+                self.state.last_reason_code = phase6_scheduler_error_reason_code(&error);
+                Err(error)
+            }
+        }
+    }
 }
 
 /// Recoverability readiness projection for one partition.
@@ -1485,6 +1593,63 @@ fn resolve_phase6_scheduler_elapsed(
                 .saturating_sub(last_tick_epoch_seconds))
         }
         None => Ok(signal.now_epoch_seconds),
+    }
+}
+
+fn validate_phase6_scheduler_runtime_clock(
+    now_epoch_seconds: u64,
+    last_observed_now_epoch_seconds: Option<u64>,
+) -> Result<(), DataLayerM10PartitionLifecycleError> {
+    if now_epoch_seconds == 0 {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
+                field: "now_epoch_seconds",
+                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
+            },
+        );
+    }
+    if let Some(last_observed_now_epoch_seconds) = last_observed_now_epoch_seconds {
+        if now_epoch_seconds < last_observed_now_epoch_seconds {
+            return Err(
+                DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
+                    field: "now_epoch_seconds",
+                    reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE,
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
+fn phase6_scheduler_error_reason_code(error: &DataLayerM10PartitionLifecycleError) -> &'static str {
+    match error {
+        DataLayerM10PartitionLifecycleError::OwnerScopeViolation { reason_code }
+        | DataLayerM10PartitionLifecycleError::InvalidRetryPolicy { reason_code, .. }
+        | DataLayerM10PartitionLifecycleError::InvalidRetryAttempt { reason_code, .. }
+        | DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+            reason_code, ..
+        }
+        | DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerPolicy {
+            reason_code, ..
+        }
+        | DataLayerM10PartitionLifecycleError::InvalidPhase6SchedulerSignal {
+            reason_code, ..
+        }
+        | DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
+            reason_code,
+            ..
+        } => reason_code,
+        DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed { reason_code, .. }
+        | DataLayerM10PartitionLifecycleError::InvalidLifecycleTransition { reason_code, .. }
+        | DataLayerM10PartitionLifecycleError::Phase6ExecutionFailed { reason_code, .. } => {
+            reason_code
+        }
+        DataLayerM10PartitionLifecycleError::EmptyField(_)
+        | DataLayerM10PartitionLifecycleError::InvalidPartitionMonthId(_)
+        | DataLayerM10PartitionLifecycleError::DuplicatePartitionMonthId(_)
+        | DataLayerM10PartitionLifecycleError::PartitionNotFound(_) => {
+            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE
+        }
     }
 }
 

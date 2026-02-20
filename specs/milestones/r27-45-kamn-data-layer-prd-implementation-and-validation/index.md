@@ -67,6 +67,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5289` — Task: add Phase-6 retention+archival execution tick orchestration contracts
   - `#5291` — Task: add Phase-6 execution-tick budget guardrail contracts
   - `#5293` — Task: add Phase-6 scheduler-cycle trigger and guarded execution contracts
+  - `#5295` — Task: add stateful Phase-6 scheduler runtime checkpoint contracts
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage

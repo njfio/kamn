@@ -27,7 +27,8 @@
 - Completed Phase-6 archival failure-retry contract task: `#5287`
 - Completed Phase-6 retention+archival execution-tick contract task: `#5289`
 - Completed Phase-6 execution-tick budget guardrail contract task: `#5291`
-- Current Phase-6 scheduler-cycle trigger and guarded execution contract task: `#5293`
+- Completed Phase-6 scheduler-cycle trigger and guarded execution contract task: `#5293`
+- Current Phase-6 scheduler runtime checkpoint contract task: `#5295`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -50,7 +51,8 @@ Current phase status:
 - Phase 6 archival failure-retry projection contracts: Implemented in `#5287` (merged)
 - Phase 6 retention+archival execution-tick orchestration contracts: Implemented in `#5289` (merged)
 - Phase 6 execution-tick budget guardrail contracts: Implemented in `#5291` (merged)
-- Phase 6 scheduler-cycle trigger and guarded execution contracts: In progress in `#5293`
+- Phase 6 scheduler-cycle trigger and guarded execution contracts: Implemented in `#5293` (merged)
+- Phase 6 scheduler runtime checkpoint contracts: In progress in `#5295`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
