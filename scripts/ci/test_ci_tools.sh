@@ -36,6 +36,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   cargo test -p kamn-core --test shell_test_surface_migration_wave1
   cargo test -p kamn-core --test shell_test_surface_migration_wave2
   cargo test -p kamn-core --test shell_test_surface_ratio_policy
+  cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
   bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
@@ -182,6 +183,7 @@ bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
 cargo test -p kamn-core --test shell_test_surface_migration_wave1
 cargo test -p kamn-core --test shell_test_surface_migration_wave2
 cargo test -p kamn-core --test shell_test_surface_ratio_policy
+cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
 bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
