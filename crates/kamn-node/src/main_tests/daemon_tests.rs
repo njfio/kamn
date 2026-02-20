@@ -17,6 +17,7 @@ const LIVE_POSTGRES_RUNTIME_TO_MATRIX_BRIDGE_REASON_CODES_CSV: &str =
 const LIVE_POSTGRES_MATRIX_LOAD_PROFILE_IDS_CSV: &str = "applied_t3_i10,applied_t5_i25,applied_t9_i40,deferred_t5_i25_s3_d2_to4,deferred_t7_i25_s3_d2_to4,deferred_t9_i40_s3_d2_to4";
 const LIVE_POSTGRES_MATRIX_ROLE_PROFILE_IDS_CSV: &str = "processor_applied,processor_deferred,listener_applied,listener_deferred,approver_applied,approver_deferred";
 const LIVE_POSTGRES_MATRIX_ROLE_PAIR_IDS_CSV: &str = "processor_to_listener_applied,processor_to_listener_deferred,listener_to_approver_applied,listener_to_approver_deferred,approver_to_processor_applied,approver_to_processor_deferred";
+const LIVE_POSTGRES_MATRIX_PARALLEL_ROLE_PAIR_LANE_IDS_CSV: &str = "processor_listener_parallel_applied,processor_listener_parallel_deferred,listener_approver_parallel_applied,listener_approver_parallel_deferred";
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -120,6 +121,21 @@ fn run_daemon_for_phase6_projection(mut args: Vec<String>) -> LivePostgresPhase6
         )
         .expect("daemon report should expose phase6 reason taxonomy version"),
     }
+}
+
+fn run_parallel_phase6_projections(
+    leg_a_args: Vec<String>,
+    leg_b_args: Vec<String>,
+) -> (LivePostgresPhase6Projection, LivePostgresPhase6Projection) {
+    let leg_a_handle = std::thread::spawn(move || run_daemon_for_phase6_projection(leg_a_args));
+    let leg_b_handle = std::thread::spawn(move || run_daemon_for_phase6_projection(leg_b_args));
+    let leg_a_projection = leg_a_handle
+        .join()
+        .expect("parallel role-pair lane leg A should complete");
+    let leg_b_projection = leg_b_handle
+        .join()
+        .expect("parallel role-pair lane leg B should complete");
+    (leg_a_projection, leg_b_projection)
 }
 
 fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
@@ -405,6 +421,63 @@ fn project_live_postgres_role_pair_profiles() -> Vec<LivePostgresRolePairProfile
             leg_b_profile_id: "processor_deferred",
             leg_b_args: daemon_args_for_live_postgres_profile(
                 "processor",
+                "5",
+                "25",
+                Some(("3", "2", "4")),
+            ),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+    ]
+}
+
+fn project_live_postgres_parallel_role_pair_lanes() -> Vec<LivePostgresRolePairProfile> {
+    vec![
+        LivePostgresRolePairProfile {
+            pair_id: "processor_listener_parallel_applied",
+            leg_a_profile_id: "processor_applied",
+            leg_a_args: daemon_args_for_live_postgres_profile("processor", "5", "25", None),
+            leg_b_profile_id: "listener_applied",
+            leg_b_args: daemon_args_for_live_postgres_profile("listener", "5", "25", None),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        },
+        LivePostgresRolePairProfile {
+            pair_id: "processor_listener_parallel_deferred",
+            leg_a_profile_id: "processor_deferred",
+            leg_a_args: daemon_args_for_live_postgres_profile(
+                "processor",
+                "5",
+                "25",
+                Some(("3", "2", "4")),
+            ),
+            leg_b_profile_id: "listener_deferred",
+            leg_b_args: daemon_args_for_live_postgres_profile(
+                "listener",
+                "5",
+                "25",
+                Some(("3", "2", "4")),
+            ),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+        LivePostgresRolePairProfile {
+            pair_id: "listener_approver_parallel_applied",
+            leg_a_profile_id: "listener_applied",
+            leg_a_args: daemon_args_for_live_postgres_profile("listener", "5", "25", None),
+            leg_b_profile_id: "approver_applied",
+            leg_b_args: daemon_args_for_live_postgres_profile("approver", "5", "25", None),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        },
+        LivePostgresRolePairProfile {
+            pair_id: "listener_approver_parallel_deferred",
+            leg_a_profile_id: "listener_deferred",
+            leg_a_args: daemon_args_for_live_postgres_profile(
+                "listener",
+                "5",
+                "25",
+                Some(("3", "2", "4")),
+            ),
+            leg_b_profile_id: "approver_deferred",
+            leg_b_args: daemon_args_for_live_postgres_profile(
+                "approver",
                 "5",
                 "25",
                 Some(("3", "2", "4")),
@@ -1655,6 +1728,121 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_role_pair_ma
             leg_a_first.reason_taxonomy_version, leg_b_first.reason_taxonomy_version,
             "pair {} legs should share the same runtime taxonomy version",
             pair.pair_id
+        );
+    }
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_parallel_role_pair_lane_contract_is_canonical(
+) {
+    let lanes = project_live_postgres_parallel_role_pair_lanes();
+    let lane_ids_csv = lanes
+        .iter()
+        .map(|lane| lane.pair_id)
+        .collect::<Vec<_>>()
+        .join(",");
+    assert_eq!(
+        lane_ids_csv,
+        LIVE_POSTGRES_MATRIX_PARALLEL_ROLE_PAIR_LANE_IDS_CSV
+    );
+    assert!(lanes
+        .iter()
+        .step_by(2)
+        .all(|lane| lane.expected_reason_code == LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE));
+    assert!(lanes
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .all(|lane| lane.expected_reason_code == LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE));
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_role_pair_lane_is_deterministic(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    for lane in project_live_postgres_parallel_role_pair_lanes() {
+        let (leg_a_first, leg_b_first) =
+            run_parallel_phase6_projections(lane.leg_a_args.clone(), lane.leg_b_args.clone());
+        let (leg_a_second, leg_b_second) =
+            run_parallel_phase6_projections(lane.leg_a_args, lane.leg_b_args);
+
+        assert_eq!(
+            leg_a_first.reason_code, lane.expected_reason_code,
+            "parallel lane {} leg A ({}) should project expected phase6 reason code",
+            lane.pair_id, lane.leg_a_profile_id
+        );
+        assert_eq!(
+            leg_b_first.reason_code, lane.expected_reason_code,
+            "parallel lane {} leg B ({}) should project expected phase6 reason code",
+            lane.pair_id, lane.leg_b_profile_id
+        );
+        assert_eq!(
+            leg_a_first.reason_code, leg_a_second.reason_code,
+            "parallel lane {} leg A reason code should remain stable across repeated runs",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_b_first.reason_code, leg_b_second.reason_code,
+            "parallel lane {} leg B reason code should remain stable across repeated runs",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_a_first.reason_taxonomy_version, LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+            "parallel lane {} leg A taxonomy should stay on runtime taxonomy version",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_b_first.reason_taxonomy_version, LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+            "parallel lane {} leg B taxonomy should stay on runtime taxonomy version",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_a_first.reason_taxonomy_version, leg_a_second.reason_taxonomy_version,
+            "parallel lane {} leg A taxonomy should remain stable across repeated runs",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_b_first.reason_taxonomy_version, leg_b_second.reason_taxonomy_version,
+            "parallel lane {} leg B taxonomy should remain stable across repeated runs",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_a_first.reason_taxonomy_version, leg_b_first.reason_taxonomy_version,
+            "parallel lane {} legs should share the same runtime taxonomy version",
+            lane.pair_id
         );
     }
 }
