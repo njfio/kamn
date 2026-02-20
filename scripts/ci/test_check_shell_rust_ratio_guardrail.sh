@@ -8,6 +8,14 @@ if [[ ! -x "$CHECKER" ]]; then
   echo "expected shell-rust ratio guardrail checker to be executable: $CHECKER" >&2
   exit 1
 fi
+if [[ "$(wc -l <"$CHECKER")" -gt 20 ]]; then
+  echo "expected shell-rust ratio checker shell surface to stay <=20 lines: $CHECKER" >&2
+  exit 1
+fi
+if ! grep -q "check_shell_rust_ratio_guardrail.py" "$CHECKER"; then
+  echo "expected shell-rust ratio checker to delegate to python implementation: $CHECKER" >&2
+  exit 1
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
