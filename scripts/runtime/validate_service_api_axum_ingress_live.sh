@@ -380,13 +380,14 @@ def run_keep_alive_probe() -> None:
 
 
 def auth_headers(
-    nonce: int, body: str = "", sender: str | None = None
+    nonce: int, *, scope: str, body: str = "", sender: str | None = None
 ) -> dict[str, str]:
     sender_value = sender_did if sender is None else sender
     return {
         "X-KAMN-Sender-DID": sender_value,
         "X-KAMN-Request-Nonce": str(nonce),
         "X-KAMN-Request-Signature": signature(nonce, body, sender_value),
+        "X-KAMN-Authz-Scope": scope,
     }
 
 
@@ -410,7 +411,7 @@ def run_request_validation_probe() -> None:
         "GET",
         "/v1/events/ws",
         "",
-        auth_headers(530, sender=request_validation_sender),
+        auth_headers(530, sender=request_validation_sender, scope="events:read"),
     )
     websocket_payload = parse_error_envelope(websocket_body, websocket_status, 400)
     if websocket_payload.get("error") != "bad-request":
@@ -426,7 +427,7 @@ def run_request_validation_probe() -> None:
         "DELETE",
         "/v1/messages/send",
         "",
-        auth_headers(531, sender=request_validation_sender),
+        auth_headers(531, sender=request_validation_sender, scope="protected:unknown"),
     )
     method_payload = parse_error_envelope(method_body, method_status, 405)
     if method_payload.get("error") != "method-not-allowed":
@@ -440,7 +441,7 @@ def run_request_validation_probe() -> None:
         "GET",
         "/v1/nope",
         "",
-        auth_headers(532, sender=request_validation_sender),
+        auth_headers(532, sender=request_validation_sender, scope="protected:unknown"),
     )
     route_payload = parse_error_envelope(route_body, route_status, 404)
     if route_payload.get("error") != "not-found":
@@ -466,6 +467,7 @@ def run_websocket_probe() -> None:
                 f"X-KAMN-Sender-DID: {sender_did}\r\n"
                 f"X-KAMN-Request-Nonce: {nonce}\r\n"
                 f"X-KAMN-Request-Signature: {signature(nonce, '')}\r\n"
+                "X-KAMN-Authz-Scope: events:read\r\n"
                 "Content-Length: 0\r\n\r\n"
             )
             ws_sock.sendall(request_payload.encode("utf-8"))
@@ -514,6 +516,7 @@ def run_concurrency_probe() -> None:
                 "X-KAMN-Request-Signature": (
                     f"sig:ed25519:baseline-v1:{sender}:{nonce}:{state_hash}:{len(payload)}"
                 ),
+                "X-KAMN-Authz-Scope": "messages:write",
             },
         )
         if status != 202:
@@ -568,6 +571,7 @@ oversized_status="$(curl -sS -o "$oversized_response_file" -w '%{http_code}' \
   -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
   -H "X-KAMN-Request-Nonce: ${oversized_nonce}" \
   -H "X-KAMN-Request-Signature: ${oversized_signature}" \
+  -H "X-KAMN-Authz-Scope: messages:write" \
   --data-binary "@${oversized_body_file}")"
 if [ "$oversized_status" != "400" ]; then
   cat "$oversized_response_file" >&2
