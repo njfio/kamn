@@ -3,6 +3,8 @@ use super::*;
 mod daemon_phase;
 
 #[cfg(test)]
+pub(crate) use daemon_phase::execute_daemon_convergence_projection_for_test;
+#[cfg(test)]
 pub(crate) use daemon_phase::execute_daemon_phase6_runtime_projection_for_test;
 use daemon_phase::execute_daemon_runtime;
 use daemon_phase::{

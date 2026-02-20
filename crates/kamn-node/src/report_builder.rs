@@ -105,6 +105,33 @@ pub(crate) fn build_bootstrap_report(
     let daemon_phase6_runtime_fail_closed_cycles = daemon
         .as_ref()
         .map(|daemon| daemon.phase6_runtime_fail_closed_cycles);
+    let daemon_convergence_reason_taxonomy_version = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_reason_taxonomy_version.clone());
+    let daemon_convergence_reason_codes_csv = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_reason_codes_csv.clone());
+    let daemon_convergence_decision = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_decision.clone());
+    let daemon_convergence_reason_code = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_reason_code.clone());
+    let daemon_convergence_schema_gate_passed = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_schema_gate_passed);
+    let daemon_convergence_error_path_gate_passed = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_error_path_gate_passed);
+    let daemon_convergence_concurrency_gate_passed = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_concurrency_gate_passed);
+    let daemon_convergence_performance_budget_gate_passed = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_performance_budget_gate_passed);
+    let daemon_convergence_cost_budget_gate_passed = daemon
+        .as_ref()
+        .map(|daemon| daemon.convergence_cost_budget_gate_passed);
     let kolme_live_provider_client_contract = kolme_live
         .as_ref()
         .map(|execution| execution.provider_client_contract.clone());
@@ -201,6 +228,15 @@ pub(crate) fn build_bootstrap_report(
         daemon_phase6_runtime_executed_cycles,
         daemon_phase6_runtime_deferred_cycles,
         daemon_phase6_runtime_fail_closed_cycles,
+        daemon_convergence_reason_taxonomy_version,
+        daemon_convergence_reason_codes_csv,
+        daemon_convergence_decision,
+        daemon_convergence_reason_code,
+        daemon_convergence_schema_gate_passed,
+        daemon_convergence_error_path_gate_passed,
+        daemon_convergence_concurrency_gate_passed,
+        daemon_convergence_performance_budget_gate_passed,
+        daemon_convergence_cost_budget_gate_passed,
         kolme_live_provider_client_contract,
         kolme_live_base_url,
         kolme_live_provider_hint,

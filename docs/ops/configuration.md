@@ -492,6 +492,29 @@ Regression marker:
 
 - `Regression: #5299`
 
+## Convergence Promotion Marker Contracts (Issue #5301)
+
+Daemon runtime report output now projects deterministic convergence promotion markers that summarize
+schema, error-path, concurrency, performance-budget, and cost-budget gates.
+
+Deterministic convergence markers:
+
+- `convergence_promotion_contract_status=verified`
+- `convergence_reason_taxonomy_version=kamn.runtime.daemon.convergence.reason-taxonomy.v1`
+- `convergence_reason_codes_csv=convergence_promotion_gate_go,convergence_schema_drift_detected,convergence_error_path_drift_detected,convergence_concurrency_drift_detected,convergence_performance_budget_exceeded,convergence_cost_budget_exceeded`
+- `convergence_promotion_contract=schema+error_path+concurrency+performance+cost->decision;any_failed_gate=no_go`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_runtime_daemon_shutdown_timeout_emits_structured_timeout_drain_markers -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_daemon_convergence_projection_fail_closed_reason_is_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_convergence_promotion_marker_contracts -- --exact`
+
+Regression marker:
+
+- `Regression: #5301`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
