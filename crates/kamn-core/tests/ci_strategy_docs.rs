@@ -9,6 +9,8 @@ const SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE: &str =
     include_str!("../../../scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py");
 const API_VERSION_POLICY_CONTRACT_SOURCE: &str =
     include_str!("../../../scripts/runtime/api_version_policy_live_contract.py");
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE: &str =
+    include_str!("../../../scripts/runtime/request_response_schema_compatibility_live_contract.py");
 const OVERLOAD_RUNNER_SOURCE: &str =
     include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
 
@@ -50,6 +52,16 @@ const API_VERSION_POLICY_FIXTURE_PATH: &str =
     "fixtures/runtime/api_version_policy_fixture_matrix.txt";
 const API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV: &str =
     "v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route";
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.request-response-schema-compatibility-reason-taxonomy.v1";
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_CODES_CSV: &str =
+    "ci_fast_gate_failed,request_response_schema_compatibility_schema_mismatch,request_response_schema_compatibility_status_invalid,request_response_schema_compatibility_final_decision_invalid,request_response_schema_compatibility_final_decision_mismatch,request_response_schema_compatibility_lane_mode_invalid,request_response_schema_compatibility_fixture_schema_mismatch,request_response_schema_compatibility_fixture_rows_invalid,request_response_schema_compatibility_fixture_row_count_mismatch,request_response_schema_compatibility_fixture_row_duplicate,request_response_schema_compatibility_fixture_row_id_invalid,request_response_schema_compatibility_fixture_row_missing,request_response_schema_compatibility_fixture_row_status_mismatch,request_response_schema_compatibility_fixture_row_decision_mismatch,request_response_schema_compatibility_fixture_row_reason_code_mismatch,request_response_schema_compatibility_fixture_row_version_pair_mismatch,request_response_schema_compatibility_fixture_row_change_class_mismatch,request_response_schema_compatibility_marker_missing,request_response_schema_compatibility_execution_reason_code_mismatch,request_response_schema_compatibility_command_count_invalid,request_response_schema_compatibility_command_count_mismatch,request_response_schema_compatibility_elapsed_seconds_invalid,request_response_schema_compatibility_max_seconds_invalid,request_response_schema_compatibility_runtime_budget_exceeded,request_response_schema_compatibility_docs_marker_missing";
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_SCHEMA_VERSION: &str =
+    "kamn.runtime.request-response-schema-compatibility-fixture-matrix.v1";
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_PATH: &str =
+    "fixtures/runtime/request_response_schema_compatibility_fixture_matrix.txt";
+const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REQUIRED_ROW_IDS_CSV: &str =
+    "v1_to_v2_messages_send_optional_request_addition,v1_to_v2_channels_create_optional_response_addition,v1_to_v2_messages_get_required_response_removal,v1_to_v2_tasks_create_required_request_removal";
 const AUDIT_INTEGRITY_REASON_TAXONOMY_VERSION: &str =
     "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1";
 const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded";
@@ -82,6 +94,12 @@ fn service_api_tenant_isolation_reason_codes() -> Vec<&'static str> {
 
 fn api_version_policy_reason_codes() -> Vec<&'static str> {
     API_VERSION_POLICY_REASON_CODES_CSV.split(',').collect()
+}
+
+fn request_response_schema_compatibility_reason_codes() -> Vec<&'static str> {
+    REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_CODES_CSV
+        .split(',')
+        .collect()
 }
 
 fn audit_integrity_reason_codes() -> Vec<&'static str> {
@@ -2037,6 +2055,96 @@ fn doc_enforces_api_version_policy_reason_codes_non_empty() {
         assert!(
             OPS_DOC.contains(reason_code),
             "ops docs missing api version-policy reason code marker: {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_runtime_request_response_schema_compatibility_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("### Request-Response Schema Compatibility Contract"));
+    assert!(DOC.contains(
+        "request_response_schema_compatibility_reason_taxonomy_version=kamn.runtime.request-response-schema-compatibility-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "request_response_schema_compatibility_reason_codes_csv=ci_fast_gate_failed,request_response_schema_compatibility_schema_mismatch,request_response_schema_compatibility_status_invalid,request_response_schema_compatibility_final_decision_invalid,request_response_schema_compatibility_final_decision_mismatch,request_response_schema_compatibility_lane_mode_invalid,request_response_schema_compatibility_fixture_schema_mismatch,request_response_schema_compatibility_fixture_rows_invalid,request_response_schema_compatibility_fixture_row_count_mismatch,request_response_schema_compatibility_fixture_row_duplicate,request_response_schema_compatibility_fixture_row_id_invalid,request_response_schema_compatibility_fixture_row_missing,request_response_schema_compatibility_fixture_row_status_mismatch,request_response_schema_compatibility_fixture_row_decision_mismatch,request_response_schema_compatibility_fixture_row_reason_code_mismatch,request_response_schema_compatibility_fixture_row_version_pair_mismatch,request_response_schema_compatibility_fixture_row_change_class_mismatch,request_response_schema_compatibility_marker_missing,request_response_schema_compatibility_execution_reason_code_mismatch,request_response_schema_compatibility_command_count_invalid,request_response_schema_compatibility_command_count_mismatch,request_response_schema_compatibility_elapsed_seconds_invalid,request_response_schema_compatibility_max_seconds_invalid,request_response_schema_compatibility_runtime_budget_exceeded,request_response_schema_compatibility_docs_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "request_response_schema_compatibility_fixture_schema_version=kamn.runtime.request-response-schema-compatibility-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "request_response_schema_compatibility_fixture_path=fixtures/runtime/request_response_schema_compatibility_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "request_response_schema_compatibility_required_row_ids_csv=v1_to_v2_messages_send_optional_request_addition,v1_to_v2_channels_create_optional_response_addition,v1_to_v2_messages_get_required_response_removal,v1_to_v2_tasks_create_required_request_removal"
+    ));
+    assert!(DOC
+        .contains("request_response_schema_compatibility_ops_doc_path=docs/ops/configuration.md"));
+    assert!(
+        DOC.contains("request_response_schema_compatibility_strategy_doc_path=docs/ci/strategy.md")
+    );
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test request_response_schema_compatibility_contract integration_request_response_schema_compatibility_contract_lane_composes_policy_and_docs_parity -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4042"));
+}
+
+#[test]
+fn doc_enforces_request_response_schema_compatibility_docs_parity_matches_source_taxonomy() {
+    assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE.contains(
+        "REASON_TAXONOMY_VERSION = \"kamn.runtime.request-response-schema-compatibility-reason-taxonomy.v1\""
+    ));
+    assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE
+        .contains("REASON_CODES_CSV = \",\".join("));
+    assert!(REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE
+        .contains("FIXTURE_SCHEMA = \"kamn.runtime.request-response-schema-compatibility-fixture-matrix.v1\""));
+
+    assert!(DOC.contains(&format!(
+        "request_response_schema_compatibility_reason_taxonomy_version={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "request_response_schema_compatibility_reason_codes_csv={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "request_response_schema_compatibility_fixture_schema_version={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "request_response_schema_compatibility_fixture_path={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_PATH}"
+    )));
+    assert!(DOC.contains(&format!(
+        "request_response_schema_compatibility_required_row_ids_csv={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REQUIRED_ROW_IDS_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "request_response_schema_compatibility_reason_taxonomy_version={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "request_response_schema_compatibility_reason_codes_csv={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "request_response_schema_compatibility_fixture_schema_version={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "request_response_schema_compatibility_fixture_path={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_FIXTURE_PATH}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "request_response_schema_compatibility_required_row_ids_csv={REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REQUIRED_ROW_IDS_CSV}"
+    )));
+}
+
+#[test]
+fn doc_enforces_request_response_schema_compatibility_reason_codes_non_empty() {
+    for reason_code in request_response_schema_compatibility_reason_codes() {
+        assert!(
+            !reason_code.trim().is_empty(),
+            "reason code entries must stay non-empty"
+        );
+        assert!(
+            DOC.contains(reason_code),
+            "ci strategy docs missing request-response schema compatibility reason code marker: {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(reason_code),
+            "ops docs missing request-response schema compatibility reason code marker: {reason_code}"
         );
     }
 }
