@@ -1679,6 +1679,42 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Regression coverage:
   - `Regression: #4044`
 
+## Capacity CI Dry-Run Governance Contract
+- Entry commands:
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --workload runtime --output-json /tmp/performance-smoke-runtime-summary.json`
+  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  - `python3 scripts/ci/check_capacity_ci_dry_run_governance.py --performance-report-file /tmp/performance-smoke-runtime-summary.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json --threshold-file fixtures/ci/capacity_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/capacity-ci-dry-run-governance-report.json`
+  - `cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - checker consumes dry-run performance and go/no-go artifacts only.
+  - run-mode go-no-go command remains excluded from ci-fast-gate workflow and ci-tools fast-mode block.
+  - checker runtime budget is bounded by fixture threshold metadata.
+- Deterministic checker markers:
+  - `capacity_ci_dry_run_reason_taxonomy_version=kamn.ci.capacity-ci-dry-run-governance-reason-taxonomy.v1`
+  - `capacity_ci_dry_run_reason_codes_csv=capacity_ci_dry_run_argument_invalid,capacity_ci_dry_run_threshold_contract_violation,capacity_ci_dry_run_report_contract_violation,capacity_ci_dry_run_go_no_go_marker_parity_drift,capacity_ci_dry_run_performance_marker_parity_drift,capacity_ci_dry_run_runtime_budget_exceeded,capacity_ci_dry_run_fast_mode_selector_drift,capacity_ci_dry_run_workflow_exclusion_drift,capacity_ci_dry_run_docs_marker_parity_drift,capacity_ci_dry_run_docs_remediation_marker_missing`
+  - `capacity_ci_dry_run_threshold_fixture_path=fixtures/ci/capacity_ci_dry_run_governance_thresholds.env`
+  - `capacity_ci_dry_run_max_seconds=120`
+  - `capacity_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture`
+  - `capacity_ci_dry_run_fast_mode_forbidden_entry=bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" --mode run`
+  - `capacity_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run`
+  - `capacity_ci_dry_run_remediation_map_version=v1`
+- Deterministic remediation markers:
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_argument_invalid=fix checker invocation flags and required file arguments`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_threshold_contract_violation=restore required keys/values in fixtures/ci/capacity_ci_dry_run_governance_thresholds.env`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_report_contract_violation=regenerate dry-run performance and go/no-go reports and restore contract markers`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_go_no_go_marker_parity_drift=restore required go/no-go dry-run schema and marker fields`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_performance_marker_parity_drift=restore required performance smoke markers and lane/workload contracts`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_runtime_budget_exceeded=reduce checker/report overhead or adjust threshold fixture with explicit review evidence`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_fast_mode_selector_drift=restore required ci-tools fast-mode checker entry and remove run-mode go/no-go leakage`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_workflow_exclusion_drift=remove run-mode go/no-go command from .github/workflows/ci-fast-gate.yml`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_docs_marker_parity_drift=realign docs/ci/strategy.md capacity marker block with fixture/checker contracts`
+  - `capacity_ci_dry_run_remediation.capacity_ci_dry_run_docs_remediation_marker_missing=add missing capacity_ci_dry_run_remediation.<reason>= marker entries to strategy docs`
+- Regression coverage:
+  - `Regression: #4006`
+
 ## SQLite Crash-Recovery CI Dry-Run Durability Governance Contract
 - Entry commands:
   - `bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-summary.json`
