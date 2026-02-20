@@ -712,6 +712,29 @@ Regression marker:
 
 - `Regression: #5299`
 
+## PostgreSQL Live Integration + Daemon Runtime Validation Slice (Issue #5338)
+
+This env-gated slice validates that a configured live PostgreSQL adapter path and daemon Phase-6
+runtime projection markers can be exercised in one deterministic integration lane.
+
+Deterministic live-postgres daemon slice markers:
+
+- `phase6_live_postgres_daemon_runtime_slice_status=verified`
+- `phase6_live_postgres_daemon_runtime_slice_env_gate=KAMN_TEST_POSTGRES_URL|DATABASE_URL`
+- `phase6_live_postgres_daemon_runtime_slice_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres.reason-taxonomy.v1`
+- `phase6_live_postgres_daemon_runtime_slice_reason_codes_csv=live_postgres_env_unset,live_postgres_adapter_connected,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred`
+- `phase6_live_postgres_daemon_runtime_slice_contract=live_postgres_env_gate->adapter_connect_and_migrate->daemon_phase6_runtime_projection`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice -- --exact`
+- `cargo test -p kamn-core --test data_layer_postgres_execution_adapter spec_c01_and_c03_live_adapter_executes_insert_and_lookup_with_session_context -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_validation_slice_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5338`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
