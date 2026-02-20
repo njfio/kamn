@@ -1020,6 +1020,27 @@ Regression marker:
 
 - `Regression: #5366`
 
+### Parallel Lane Topology Host-Pair Contracts (Issue #5368)
+
+The live-postgres matrix contracts now codify host-pair semantics so same-host and
+distributed-labeled topology fingerprints fail closed on host-pair drift.
+
+Deterministic host-pair markers:
+
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-pair.v1`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_required_host_pair_ids_csv=node_alpha->node_alpha,node_alpha->node_beta`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_contract=host_pair_ids_must_remain_stable_under_repeated_runs_and_topology_permutations`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_pair_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_pairs_are_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5368`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize

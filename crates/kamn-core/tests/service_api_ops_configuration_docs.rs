@@ -716,6 +716,31 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_pa
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_markers(
+) {
+    assert!(DOC.contains("### Parallel Lane Topology Host-Pair Contracts (Issue #5368)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-pair.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_required_host_pair_ids_csv=node_alpha->node_alpha,node_alpha->node_beta"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_contract=host_pair_ids_must_remain_stable_under_repeated_runs_and_topology_permutations"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_pair_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_pairs_are_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5368"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
