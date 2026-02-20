@@ -14,6 +14,7 @@ const LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE: &str =
     "m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_RUNTIME_TO_MATRIX_BRIDGE_REASON_CODES_CSV: &str =
     "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
+const LIVE_POSTGRES_MATRIX_LOAD_PROFILE_IDS_CSV: &str = "applied_t3_i10,applied_t5_i25,applied_t9_i40,deferred_t5_i25_s3_d2_to4,deferred_t7_i25_s3_d2_to4,deferred_t9_i40_s3_d2_to4";
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -60,6 +61,13 @@ struct LivePostgresMatrixRow {
 struct LivePostgresPhase6Projection {
     reason_code: String,
     reason_taxonomy_version: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct LivePostgresLoadProfile {
+    profile_id: &'static str,
+    args: Vec<String>,
+    expected_reason_code: &'static str,
 }
 
 fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
@@ -181,6 +189,68 @@ fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
         deferred_first,
         deferred_second,
     ))
+}
+
+fn daemon_args_for_live_postgres_profile(
+    max_ticks: &'static str,
+    tick_interval_ms: &'static str,
+    shutdown: Option<(&'static str, &'static str, &'static str)>,
+) -> Vec<String> {
+    let mut args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        max_ticks.to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        tick_interval_ms.to_owned(),
+    ];
+    if let Some((signal_tick, drain_ticks, timeout_ticks)) = shutdown {
+        args.push("--daemon-shutdown-signal-tick".to_owned());
+        args.push(signal_tick.to_owned());
+        args.push("--daemon-shutdown-drain-ticks".to_owned());
+        args.push(drain_ticks.to_owned());
+        args.push("--daemon-shutdown-timeout-ticks".to_owned());
+        args.push(timeout_ticks.to_owned());
+    }
+    args
+}
+
+fn project_live_postgres_load_profiles() -> Vec<LivePostgresLoadProfile> {
+    vec![
+        LivePostgresLoadProfile {
+            profile_id: "applied_t3_i10",
+            args: daemon_args_for_live_postgres_profile("3", "10", None),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        },
+        LivePostgresLoadProfile {
+            profile_id: "applied_t5_i25",
+            args: daemon_args_for_live_postgres_profile("5", "25", None),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        },
+        LivePostgresLoadProfile {
+            profile_id: "applied_t9_i40",
+            args: daemon_args_for_live_postgres_profile("9", "40", None),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        },
+        LivePostgresLoadProfile {
+            profile_id: "deferred_t5_i25_s3_d2_to4",
+            args: daemon_args_for_live_postgres_profile("5", "25", Some(("3", "2", "4"))),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+        LivePostgresLoadProfile {
+            profile_id: "deferred_t7_i25_s3_d2_to4",
+            args: daemon_args_for_live_postgres_profile("7", "25", Some(("3", "2", "4"))),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+        LivePostgresLoadProfile {
+            profile_id: "deferred_t9_i40_s3_d2_to4",
+            args: daemon_args_for_live_postgres_profile("9", "40", Some(("3", "2", "4"))),
+            expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+    ]
 }
 
 #[test]
@@ -1128,6 +1198,92 @@ fn functional_runtime_daemon_live_postgres_validation_slice_matrix_taxonomy_brid
         bridge_reason_codes_csv,
         LIVE_POSTGRES_RUNTIME_TO_MATRIX_BRIDGE_REASON_CODES_CSV
     );
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_load_profile_matrix_contract_is_canonical(
+) {
+    let profiles = project_live_postgres_load_profiles();
+    let profile_ids_csv = profiles
+        .iter()
+        .map(|profile| profile.profile_id)
+        .collect::<Vec<_>>()
+        .join(",");
+    assert_eq!(profile_ids_csv, LIVE_POSTGRES_MATRIX_LOAD_PROFILE_IDS_CSV);
+
+    assert!(profiles
+        .iter()
+        .take(3)
+        .all(|profile| profile.expected_reason_code
+            == LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE));
+    assert!(profiles
+        .iter()
+        .skip(3)
+        .all(|profile| profile.expected_reason_code
+            == LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE));
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_load_profile_matrix_is_deterministic(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    for profile in project_live_postgres_load_profiles() {
+        let first = run_daemon_for_phase6_projection(profile.args.clone());
+        let second = run_daemon_for_phase6_projection(profile.args);
+        assert_eq!(
+            first.reason_code, profile.expected_reason_code,
+            "profile {} should project expected phase6 reason code",
+            profile.profile_id
+        );
+        assert_eq!(
+            first.reason_code, second.reason_code,
+            "profile {} reason code should remain stable across repeated runs",
+            profile.profile_id
+        );
+        assert_eq!(
+            first.reason_taxonomy_version, LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+            "profile {} should remain bridged to runtime taxonomy version",
+            profile.profile_id
+        );
+        assert_eq!(
+            first.reason_taxonomy_version, second.reason_taxonomy_version,
+            "profile {} taxonomy version should remain stable across repeated runs",
+            profile.profile_id
+        );
+    }
 }
 
 #[test]

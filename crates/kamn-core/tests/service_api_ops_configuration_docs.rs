@@ -492,6 +492,28 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_ta
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_load_profile_markers()
+{
+    assert!(DOC.contains("### Bounded Load-Profile Matrix (Issue #5348)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_load_profile_ids_csv=applied_t3_i10,applied_t5_i25,applied_t9_i40,deferred_t5_i25_s3_d2_to4,deferred_t7_i25_s3_d2_to4,deferred_t9_i40_s3_d2_to4"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_load_profile_contract=applied_profiles->m10_phase6_scheduler_cycle_applied;deferred_profiles->m10_phase6_scheduler_cycle_deferred;runtime_taxonomy_version_stable"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_load_profile_matrix_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_load_profile_matrix_is_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_load_profile_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5348"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
