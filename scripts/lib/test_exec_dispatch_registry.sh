@@ -86,10 +86,10 @@ for wrapper_rel, entry in sorted(entries.items()):
 if invalid_entries:
     raise SystemExit("\n".join(invalid_entries))
 
-if len(declarative_policy_migration_v1_candidates) != 100:
+if len(declarative_policy_migration_v1_candidates) != 112:
     preview = "\n".join(declarative_policy_migration_v1_candidates[:80])
     raise SystemExit(
-        "expected 100 declarative policy migration v1 wrapper candidates, "
+        "expected 112 declarative policy migration v1 wrapper candidates, "
         f"found {len(declarative_policy_migration_v1_candidates)}\n{preview}"
     )
 
@@ -147,7 +147,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
                     "scripts/tmp/validate_demo_policy.sh": {
                         "interpreter": "python3",
                         "target": "scripts/tmp/demo_contract.py",
-                        "args_prefix": ["check"],
+                        "args_prefix": ["check", "--repo-root", "${KAMN_ROOT}"],
                         "passthrough": True,
                     }
                 },
@@ -181,9 +181,10 @@ with tempfile.TemporaryDirectory() as temp_dir:
         raise SystemExit(
             "expected delegated checker execution marker delegate_env=1 in dispatcher output"
         )
-    if "argv=check --report-file /tmp/demo-report.json" not in result.stdout:
+    expected_prefix = f"argv=check --repo-root {temp_root} --report-file /tmp/demo-report.json"
+    if expected_prefix not in result.stdout:
         raise SystemExit(
-            "expected delegated checker to preserve args_prefix + passthrough forwarding"
+            "expected delegated checker to preserve args_prefix token expansion + passthrough forwarding"
         )
 
 prefixes = ("$ROOT_DIR/", "$KAMN_ROOT/", "${ROOT_DIR}/", "${KAMN_ROOT}/")
@@ -205,6 +206,9 @@ for script in sorted((root / "scripts").rglob("*.sh")):
     if not target.startswith(prefixes):
         continue
     rel = script.relative_to(root).as_posix()
+    if rel == "scripts/kolme/contract_lane_dispatch_impl.sh":
+        # This file is an internal kolm dispatch bridge, not a registry-backed wrapper.
+        continue
     remaining_tiny_wrappers.append(rel)
 
 if remaining_tiny_wrappers:
