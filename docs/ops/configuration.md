@@ -536,6 +536,34 @@ Regression marker:
 
 - `Regression: #4014`
 
+## Journal/WAL Partial-Write Fault Injection Contracts (Issue #4016)
+
+File-backed snapshot stores for channel/message/task persistence must fail
+closed or recover deterministically under partial-write faults.
+
+Deterministic fixture/taxonomy markers:
+
+- `journal_wal_partial_write_fixture_path=fixtures/runtime/journal_wal_partial_write_fault_matrix.txt`
+- `journal_wal_partial_write_fixture_schema_version=kamn.runtime.journal-wal-partial-write-fault-matrix.v1`
+- `journal_wal_partial_write_reason_taxonomy_version=kamn.runtime.journal-wal-partial-write-reason-taxonomy.v1`
+- `journal_wal_partial_write_reason_codes_csv=partial_snapshot_file_write_recovered_from_journal,partial_journal_tail_write_fail_closed,partial_snapshot_without_journal_repaired`
+- `journal_wal_partial_write_required_fault_modes_csv=partial_snapshot_file_write,partial_journal_tail_write,partial_snapshot_without_journal`
+
+Drill inputs and expected outcomes:
+
+- `partial_snapshot_file_write -> recovery_clean`
+- `partial_journal_tail_write -> fail_closed_corrupt_tail`
+- `partial_snapshot_without_journal -> recovery_repaired_corrupt_payload`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test journal_wal_partial_write_fault_contract -- --nocapture`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_journal_wal_partial_write_fault_injection_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #4016`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
