@@ -88,7 +88,7 @@ Total: 1,143 lines across 5 files
 
 ### 2.3 Next Frontier
 
-The contract and infrastructure layers are complete. The next architectural milestone is **live integration testing** against PostgreSQL instances and **daemon runtime end-to-end validation**.
+The contract and infrastructure layers are complete. Execution of the next architectural milestone is now initiated under **#5338** with an env-gated slice for **live integration testing** against PostgreSQL and **daemon runtime end-to-end validation**. Broader multi-node/load lanes remain follow-up work.
 
 ---
 
@@ -211,7 +211,7 @@ The data layer has completed its three-phase evolution:
 2. **R45:** Infrastructure activation (6 new modules, Phases 1–6 complete)
 3. **R46:** Structural consolidation (both monoliths decomposed)
 
-**Next milestone:** Live integration testing against PostgreSQL and daemon runtime end-to-end validation.
+**Next milestone (initiated via #5338):** expand PostgreSQL live-integration and daemon runtime end-to-end validation beyond the initial env-gated slice.
 
 ### 7.5 Performance Baseline Infrastructure (New)
 

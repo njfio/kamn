@@ -12,6 +12,14 @@ fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli,
     parse_args(args)
 }
 
+fn live_postgres_url() -> Option<String> {
+    std::env::var("KAMN_TEST_POSTGRES_URL")
+        .ok()
+        .or_else(|| std::env::var("DATABASE_URL").ok())
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
 #[test]
 fn functional_runtime_daemon_emits_structured_transition_markers() {
     let _lock = log_env_lock()
@@ -703,6 +711,59 @@ fn functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutd
         extract_json_string_field(complete_line, "phase6_deferred_cycles").as_deref(),
         Some("1")
     );
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
+    let report = execute(parsed).expect("daemon execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains(
+        "\"daemon_phase6_runtime_reason_taxonomy_version\":\"kamn.runtime.daemon.phase6.reason-taxonomy.v1\""
+    ));
+    assert!(rendered
+        .contains("\"daemon_phase6_runtime_reason_code\":\"m10_phase6_scheduler_cycle_applied\""));
 }
 
 #[test]

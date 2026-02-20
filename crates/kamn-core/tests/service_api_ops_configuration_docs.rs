@@ -376,6 +376,33 @@ fn service_api_ops_configuration_contains_phase6_daemon_runtime_integration_mark
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_validation_slice_markers() {
+    assert!(DOC.contains(
+        "## PostgreSQL Live Integration + Daemon Runtime Validation Slice (Issue #5338)"
+    ));
+    assert!(DOC.contains("phase6_live_postgres_daemon_runtime_slice_status=verified"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_slice_env_gate=KAMN_TEST_POSTGRES_URL|DATABASE_URL"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_slice_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_slice_reason_codes_csv=live_postgres_env_unset,live_postgres_adapter_connected,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_slice_contract=live_postgres_env_gate->adapter_connect_and_migrate->daemon_phase6_runtime_projection"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_postgres_execution_adapter spec_c01_and_c03_live_adapter_executes_insert_and_lookup_with_session_context -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5338"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
