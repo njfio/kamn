@@ -16,7 +16,7 @@ bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --t
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_registry_transactions regression_lifecycle_replayed_or_unauthorized_mutation_fails_closed
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_registry_transactions performance_lifecycle_mutation_contract_lane_stays_within_budget
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_registry_transactions_docs
-bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test agent_interop_wave_docs
+bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test docs_contract_wave3_harness agent_interop_wave_docs::
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
 bash scripts/did/run_lifecycle_operator_binding_contract_lane.sh --skip-tests
 bash scripts/did/run_service_endpoint_canonicalization_contract_lane.sh --skip-tests

@@ -17,6 +17,6 @@ bash "$REPLAY_SCRIPT" \
   --suites "bridge_adapter,telegram_bridge" \
   --output-json "$TELEGRAM_INGRESS_REPORT" >/dev/null
 
-cargo test -p kamn-core --test telegram_bridge_listener_docs >/dev/null
+cargo test -p kamn-core --test docs_contract_wave3_harness telegram_bridge_listener_docs:: >/dev/null
 
 echo "telegram ingress deep lane tests passed."

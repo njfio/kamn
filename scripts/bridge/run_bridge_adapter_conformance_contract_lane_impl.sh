@@ -48,7 +48,7 @@ if ! printf '%s\n' "$matrix_output" | grep -q '^status=pass;'; then
 fi
 
 cargo test -p kamn-core --test bridge_adapter -- regression_rejects_adapter_outbound_request_id_mutation --exact >/dev/null
-cargo test -p kamn-core --test cross_chain_bridge_adapters_docs >/dev/null
+cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
 
 if [[ -n "$output_json" ]]; then
   cp "$report_file" "$output_json"

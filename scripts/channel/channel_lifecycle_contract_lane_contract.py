@@ -45,7 +45,15 @@ def main(argv: list[str]) -> int:
     commands = (
         ["cargo", "test", "-p", "kamn-core", "--lib", "channel_models::tests::"],
         ["cargo", "test", "-p", "kamn-core", "--test", "channel_models"],
-        ["cargo", "test", "-p", "kamn-core", "--test", "channel_models_docs"],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "channel_models_docs::",
+        ],
         ["bash", str(policy_lane)],
     )
     for command in commands:
