@@ -8,8 +8,8 @@
 5. Run ignored-test drift/parser checks and targeted Rust tests for promoted functions.
 
 ## Affected Modules
-- `crates/kamn-core/src/channel_models.rs`
-- `crates/kamn-core/src/message_lifecycle.rs`
+- `crates/kamn-core/tests/concurrency_state_mutation.rs`
+- `crates/kamn-core/tests/durable_guard_recovery_matrix.rs`
 - `fixtures/ci/ignored_test_inventory_baseline.json`
 - `fixtures/ci/ignored_test_inventory_metadata.json`
 - `specs/5329/{spec.md,plan.md,tasks.md}`

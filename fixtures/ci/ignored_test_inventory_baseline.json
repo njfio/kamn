@@ -2,6 +2,14 @@
   "ignored_test_count": 10,
   "ignored_tests": [
     {
+      "source_file": "crates/kamn-core/src/channel_models.rs",
+      "test_name": "performance_channel_snapshot_deep_lane_stress"
+    },
+    {
+      "source_file": "crates/kamn-core/src/message_lifecycle.rs",
+      "test_name": "performance_message_lifecycle_snapshot_deep_lane_stress"
+    },
+    {
       "source_file": "crates/kamn-core/src/runtime_tests_network_fault.rs",
       "test_name": "performance_network_fault_simulation_chaos_lane_stress"
     },
@@ -12,14 +20,6 @@
     {
       "source_file": "crates/kamn-core/src/task_operations.rs",
       "test_name": "performance_task_operation_snapshot_store_deep_lane_stress"
-    },
-    {
-      "source_file": "crates/kamn-core/tests/concurrency_state_mutation.rs",
-      "test_name": "performance_concurrency_state_mutation_deep_lane_stress"
-    },
-    {
-      "source_file": "crates/kamn-core/tests/durable_guard_recovery_matrix.rs",
-      "test_name": "performance_durable_guard_recovery_matrix_deep_lane"
     },
     {
       "source_file": "crates/kamn-core/tests/durable_guard_snapshot_store.rs",
