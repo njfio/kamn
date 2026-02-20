@@ -196,7 +196,10 @@ fn unit_capacity_ci_dry_run_checker_accepts_valid_reports() {
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         output_json: &checker_output_file,
     });
-    assert_success(&checker_output, "capacity ci dry-run governance checker baseline");
+    assert_success(
+        &checker_output,
+        "capacity ci dry-run governance checker baseline",
+    );
 
     let text = output_text(&checker_output);
     assert!(text.contains("status=pass"));
