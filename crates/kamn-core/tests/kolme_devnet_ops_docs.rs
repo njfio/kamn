@@ -424,6 +424,27 @@ fn deploy_compat_contains_sqlite_crash_replay_evidence_convergence_markers() {
 }
 
 #[test]
+fn deploy_compat_contains_sqlite_crash_restart_runbook_policy_markers() {
+    assert!(DEPLOY_COMPAT
+        .contains("## Crash-Restart Recovery Marker and Runbook Parity Contracts (Issue #4018)"));
+    assert!(DEPLOY_COMPAT.contains("sqlite_crash_restart_recovery_marker_status=verified"));
+    assert!(DEPLOY_COMPAT.contains("sqlite_crash_restart_runbook_marker_parity_status=verified"));
+    assert!(DEPLOY_COMPAT.contains(
+        "sqlite_crash_restart_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-restart-local-heavy-runbook-reason-taxonomy.v1"
+    ));
+    assert!(DEPLOY_COMPAT.contains(
+        "sqlite_crash_restart_runbook_reason_codes_csv=sqlite_crash_restart_recovery_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch"
+    ));
+    assert!(DEPLOY_COMPAT.contains("sqlite_crash_restart_runbook_reason_code=none|<reason>"));
+    assert!(DEPLOY_COMPAT.contains(
+        "check_sqlite_crash_restart_local_heavy_policy.sh --report-file /tmp/sqlite-crash-restart-local-heavy-lane-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --strategy-doc docs/ci/strategy.md --output-json /tmp/sqlite-crash-restart-local-heavy-policy-report.json"
+    ));
+    assert!(DEPLOY_COMPAT.contains("sqlite_crash_restart_recovery_taxonomy_mapping_drift_detected"));
+    assert!(DEPLOY_COMPAT.contains("runbook_marker_parity_mismatch"));
+    assert!(DEPLOY_COMPAT.contains("Regression: #4018"));
+}
+
+#[test]
 fn deploy_compat_contains_service_api_axum_protocol_taxonomy_runbook_parity_markers() {
     assert!(DEPLOY_COMPAT.contains(
         "## Service API Axum Protocol Taxonomy and Runbook Marker Parity Contracts (Issue #4267)"
