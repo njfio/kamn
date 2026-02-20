@@ -29,7 +29,8 @@
 - Completed Phase-6 execution-tick budget guardrail contract task: `#5291`
 - Completed Phase-6 scheduler-cycle trigger and guarded execution contract task: `#5293`
 - Completed Phase-6 scheduler runtime checkpoint contract task: `#5295`
-- Current Phase-6 runtime evidence bundle projection contract task: `#5297`
+- Completed Phase-6 runtime evidence bundle projection contract task: `#5297`
+- Current Phase-6 daemon runtime integration contract task: `#5299`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -54,7 +55,8 @@ Current phase status:
 - Phase 6 execution-tick budget guardrail contracts: Implemented in `#5291` (merged)
 - Phase 6 scheduler-cycle trigger and guarded execution contracts: Implemented in `#5293` (merged)
 - Phase 6 scheduler runtime checkpoint contracts: Implemented in `#5295` (merged)
-- Phase 6 runtime evidence bundle projection contracts: In progress in `#5297`
+- Phase 6 runtime evidence bundle projection contracts: Implemented in `#5297` (merged)
+- Phase 6 daemon runtime wiring contracts: In progress in `#5299`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
