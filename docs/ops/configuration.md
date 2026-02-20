@@ -564,6 +564,31 @@ Regression marker:
 
 - `Regression: #4016`
 
+## SQLite Crash-Restart Local-Heavy Lane Artifact Contract (Issue #4017)
+
+Deterministic crash-restart local-heavy runner markers:
+
+- `sqlite_crash_restart_local_heavy_lane_schema_version=kamn.runtime.sqlite-crash-restart-local-heavy-lane-report.v1`
+- `sqlite_crash_restart_local_heavy_artifact_schema_version=kamn.runtime.sqlite-crash-restart-local-heavy-artifact-schema.v1`
+- `sqlite_crash_restart_local_heavy_reason_taxonomy_version=kamn.runtime.sqlite-crash-restart-local-heavy-reason-taxonomy.v1`
+- `sqlite_crash_restart_local_heavy_reason_codes_csv=crash_restart_profile_restart_status_mismatch,crash_restart_profile_corruption_status_mismatch,crash_restart_profile_combined_status_mismatch`
+- `sqlite_crash_restart_local_heavy_required_profiles_csv=restart,corruption,combined`
+
+Profile projection contracts:
+
+- `profile=restart -> restart_drill_status=verified`
+- `profile=corruption -> corruption_drill_status=verified`
+- `profile=combined -> restart_drill_status=verified + corruption_drill_status=verified`
+
+Validation commands:
+
+- `bash scripts/runtime/run_sqlite_crash_restart_local_heavy_lane.sh --profile combined --mode dry-run --ci-fast-gate PASS --max-seconds 240 --output-json /tmp/sqlite-crash-restart-local-heavy-lane-report.json`
+- `cargo test -p kamn-core --test sqlite_crash_restart_local_heavy_lane_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4017`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
