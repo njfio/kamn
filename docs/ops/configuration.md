@@ -1146,6 +1146,27 @@ Regression marker:
 
 - `Regression: #5378`
 
+### Parallel Lane Topology Host-Cardinality Mapping Contracts (Issue #5380)
+
+The live-postgres matrix contracts now codify explicit topology-id to unique-host cardinality
+mapping rows so topology labels cannot drift between one-host and two-host expectations.
+
+Deterministic topology-id host-cardinality mapping markers:
+
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_cardinality_mapping_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-cardinality-mapping.v1`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_cardinality_mapping_rows_csv=same_host_parallel->1,distributed_label_parallel->2`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_cardinality_mapping_contract=topology_id_to_unique_host_cardinality_rows_must_remain_stable_under_repeated_runs_and_permutations`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_cardinality_mapping_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_cardinality_mapping_is_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_cardinality_mapping_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5380`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
