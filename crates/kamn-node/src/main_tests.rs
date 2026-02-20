@@ -25,12 +25,12 @@ use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
     NodeRole, SignerProviderHandshakeMatrix, SyncMode,
 };
+use std::env;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use std::{env, sync::OnceLock};
 
 const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
@@ -42,8 +42,7 @@ const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE_SECONDARY: &str =
     "secure:aws-kms:role-operator/key-live-ops-secondary";
 
 fn signer_env_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
+    super::signer_test_env_lock()
 }
 
 fn lock_signer_env_guard() -> std::sync::MutexGuard<'static, ()> {

@@ -131,6 +131,14 @@ pub(crate) fn daemon_test_env_lock() -> &'static std::sync::Mutex<()> {
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
+#[cfg(test)]
+pub(crate) fn signer_test_env_lock() -> &'static std::sync::Mutex<()> {
+    use std::sync::{Mutex, OnceLock};
+
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
     kind: OutputModeKind,
