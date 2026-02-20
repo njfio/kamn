@@ -8,6 +8,7 @@ use crate::service_api_endpoint::{
 use kamn_core::baseline_signature_for_fields;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use serde::Deserialize;
+use serde_json::Value;
 use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -389,17 +390,39 @@ fn parse_websocket_response(response: &[u8]) -> (String, String) {
         frame[0], 0x81,
         "expected single-frame text websocket opcode"
     );
-    let payload_len = (frame[1] & 0x7f) as usize;
     assert_eq!(
         frame[1] & 0x80,
         0,
         "server websocket frame must be unmasked"
     );
+    let mut payload_index = 2;
+    let payload_len = match frame[1] & 0x7f {
+        value @ 0..=125 => value as usize,
+        126 => {
+            assert!(
+                frame.len() >= 4,
+                "websocket frame extended payload length must be available"
+            );
+            payload_index = 4;
+            u16::from_be_bytes([frame[2], frame[3]]) as usize
+        }
+        127 => {
+            assert!(
+                frame.len() >= 10,
+                "websocket frame 64-bit payload length must be available"
+            );
+            payload_index = 10;
+            u64::from_be_bytes([
+                frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
+            ]) as usize
+        }
+        _ => unreachable!("websocket payload marker is constrained to 7 bits"),
+    };
     assert!(
-        frame.len() >= payload_len + 2,
+        frame.len() >= payload_len + payload_index,
         "websocket frame payload length must be available"
     );
-    let payload = std::str::from_utf8(&frame[2..2 + payload_len])
+    let payload = std::str::from_utf8(&frame[payload_index..payload_index + payload_len])
         .expect("websocket payload should be utf-8")
         .to_owned();
     (header, payload)
@@ -1736,6 +1759,322 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34058".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-1";
+    let nonce = 31_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "31"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Owner-DID", "kamn:did:owner:alpha"),
+            ("X-KAMN-Presence-Target-Owner-DID", "kamn:did:owner:alpha"),
+            ("X-KAMN-Presence-Target-Agent-DID", sender_did),
+            ("X-KAMN-Presence-Gateway-Node", "gateway-alpha"),
+            ("X-KAMN-Presence-Connected-Since", "1709000000"),
+            ("X-KAMN-Presence-Last-Heartbeat", "1709000005"),
+            ("X-KAMN-Presence-Capabilities", "ws,notify"),
+        ],
+    );
+    let (header, payload) = parse_websocket_response(response.as_slice());
+    assert!(header.contains("HTTP/1.1 101 Switching Protocols"));
+    let payload_json: Value =
+        serde_json::from_str(payload.as_str()).expect("presence websocket payload should be json");
+    assert_eq!(
+        payload_json.get("event").and_then(Value::as_str),
+        Some("m9.presence.snapshot")
+    );
+    assert_eq!(
+        payload_json
+            .get("transport_profile")
+            .and_then(Value::as_str),
+        Some("websocket")
+    );
+    assert_eq!(
+        payload_json
+            .get("requester_owner_did")
+            .and_then(Value::as_str),
+        Some("kamn:did:owner:alpha")
+    );
+    assert_eq!(
+        payload_json
+            .get("requester_agent_did")
+            .and_then(Value::as_str),
+        Some(sender_did)
+    );
+    assert_eq!(
+        payload_json.get("target_owner_did").and_then(Value::as_str),
+        Some("kamn:did:owner:alpha")
+    );
+    assert_eq!(
+        payload_json.get("target_agent_did").and_then(Value::as_str),
+        Some(sender_did)
+    );
+    assert_eq!(
+        payload_json.get("visible").and_then(Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        payload_json
+            .get("target_gateway_node")
+            .and_then(Value::as_str),
+        Some("gateway-alpha")
+    );
+    assert_eq!(
+        payload_json
+            .get("target_last_heartbeat_epoch_seconds")
+            .and_then(Value::as_u64),
+        Some(1_709_000_005)
+    );
+    assert_eq!(
+        payload_json.get("reason_code").and_then(Value::as_str),
+        Some("m9_gateway_presence_visible")
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after websocket presence request budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_unsupported_mode() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34059".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-unsupported";
+    let nonce = 37_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "37"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence-v2"),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("unsupported mode response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(payload.reason_code, "service_api_ws_events_mode_invalid");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after unsupported websocket mode rejection"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_missing_owner_header() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34060".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-missing-owner";
+    let nonce = 43_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "43"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Target-Agent-DID", sender_did),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("missing-owner response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(
+        payload.reason_code,
+        "service_api_ws_presence_owner_did_header_missing"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after missing-owner websocket rejection"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_presence_mode_rejects_cross_owner_scope() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34061".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-presence-client-scope";
+    let nonce = 41_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "41"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Events-Mode", "presence"),
+            ("X-KAMN-Presence-Owner-DID", "kamn:did:owner:alpha"),
+            ("X-KAMN-Presence-Target-Owner-DID", "kamn:did:owner:beta"),
+            (
+                "X-KAMN-Presence-Target-Agent-DID",
+                "kamn:did:agent:beta-target",
+            ),
+            ("X-KAMN-Presence-Gateway-Node", "gateway-beta"),
+            ("X-KAMN-Presence-Connected-Since", "1709000100"),
+            ("X-KAMN-Presence-Last-Heartbeat", "1709000105"),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("cross-owner scope denial response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 403 Forbidden"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "forbidden");
+    assert_eq!(payload.reason_code, "m9_realtime_owner_scope_denied");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after cross-owner websocket rejection"
     );
 }
 
