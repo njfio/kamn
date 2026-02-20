@@ -280,6 +280,39 @@ Regression marker:
 
 - `Regression: #4315`
 
+## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
+
+Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
+bounded guardrail validation for backpressure/anti-spam/replay safety paths.
+
+Deterministic presence-mode markers:
+
+- `service_api_ws_presence_mode_status=verified`
+- `service_api_ws_events_mode_header=x-kamn-events-mode`
+- `service_api_ws_events_mode_presence_value=presence`
+- `service_api_ws_presence_required_headers_csv=x-kamn-presence-owner-did,x-kamn-presence-target-agent-did,x-kamn-requester-agent-did`
+- `service_api_ws_presence_optional_headers_csv=x-kamn-presence-target-owner-did,x-kamn-presence-gateway-node,x-kamn-presence-connected-since,x-kamn-presence-last-heartbeat,x-kamn-presence-capabilities`
+- `service_api_ws_presence_fail_closed_reason_codes_csv=service_api_ws_events_mode_invalid,service_api_ws_presence_owner_did_header_missing,service_api_ws_presence_target_agent_did_header_missing,service_api_ws_presence_requester_agent_did_header_missing,m9_realtime_owner_scope_denied,m9_realtime_presence_visibility_denied`
+- `service_api_ws_presence_event_type=m9.presence.snapshot`
+- `service_api_ws_presence_transport_profile=websocket`
+
+Realtime guardrail validation markers:
+
+- `realtime_guardrail_burst_validation_status=verified`
+- `replay_duplicate_reason_ordering_status=verified`
+
+Validation commands:
+
+- `cargo test -p kamn-node integration_service_api_endpoint_websocket_presence_mode_streams_bridge_projection_event -- --exact`
+- `cargo test -p kamn-node integration_service_api_endpoint_sender_anti_spam_burst_rounds_remain_deterministic -- --exact`
+- `cargo test -p kamn-node integration_service_api_endpoint_concurrency_rejection_reason_stays_stable_under_bounded_bursts -- --exact`
+- `cargo test -p kamn-node regression_service_api_endpoint_replay_duplicate_sequence_reason_ordering_stays_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5283`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper

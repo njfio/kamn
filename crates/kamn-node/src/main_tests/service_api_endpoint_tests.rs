@@ -1356,6 +1356,113 @@ fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspens
 }
 
 #[test]
+fn integration_service_api_endpoint_sender_anti_spam_burst_rounds_remain_deterministic() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34069".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let rounds = 3_u64;
+    let requests_per_round = 6_u64;
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: rounds * requests_per_round,
+        idle_timeout_ms: 3_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: 10_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    for round in 0..rounds {
+        let sender_did = format!("kamn:did:agent:test-client-anti-spam-burst-{round}");
+        let message_body = format!("{{\"message\":\"anti-spam-burst-round-{round}\"}}");
+        let mut responses = Vec::new();
+
+        for request_index in 0..requests_per_round {
+            let nonce = 9_000 + round * requests_per_round + request_index;
+            let signature = baseline_signature_for_fields(
+                sender_did.as_str(),
+                nonce,
+                state_hash.as_str(),
+                message_body.as_str(),
+            );
+            let nonce_text = nonce.to_string();
+            responses.push(send_http_request_with_headers(
+                bind_addr.as_str(),
+                "POST",
+                "/v1/messages/send",
+                message_body.as_str(),
+                &[
+                    ("X-KAMN-Sender-DID", sender_did.as_str()),
+                    ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                    ("X-KAMN-Request-Signature", signature.as_str()),
+                ],
+            ));
+        }
+
+        assert!(
+            responses[0].contains("HTTP/1.1 202 Accepted"),
+            "round {round} first request should be accepted"
+        );
+        assert!(
+            responses[1].contains("HTTP/1.1 202 Accepted"),
+            "round {round} second request should be accepted"
+        );
+        assert!(
+            responses[2].contains("HTTP/1.1 202 Accepted"),
+            "round {round} third request should be accepted"
+        );
+
+        let fourth_payload = parse_error_envelope_from_http_response(responses[3].as_str());
+        assert_eq!(fourth_payload.error, "too-many-requests");
+        assert_eq!(
+            fourth_payload.reason_code,
+            "service_api_ingress_sender_rate_limit_exceeded"
+        );
+
+        let fifth_payload = parse_error_envelope_from_http_response(responses[4].as_str());
+        assert_eq!(fifth_payload.error, "too-many-requests");
+        assert_eq!(
+            fifth_payload.reason_code,
+            "service_api_ingress_sender_rate_limit_exceeded"
+        );
+
+        let sixth_payload = parse_error_envelope_from_http_response(responses[5].as_str());
+        assert_eq!(sixth_payload.error, "too-many-requests");
+        assert_eq!(
+            sixth_payload.reason_code,
+            "service_api_ingress_sender_suspended"
+        );
+    }
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after anti-spam burst rounds"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
@@ -1449,6 +1556,119 @@ fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded()
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_concurrency_rejection_reason_stays_stable_under_bounded_bursts()
+{
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34070".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let rounds = 2_u64;
+    let worker_count = 8_usize;
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: rounds * worker_count as u64,
+        idle_timeout_ms: 3_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: 1,
+        rate_limit_per_second: 10_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    for round in 0..rounds {
+        let barrier = Arc::new(Barrier::new(worker_count));
+        let mut clients = Vec::with_capacity(worker_count);
+        for request_index in 0..worker_count {
+            let client_bind_addr = bind_addr.clone();
+            let barrier = barrier.clone();
+            let state_hash = state_hash.clone();
+            clients.push(thread::spawn(move || {
+                let sender_did =
+                    format!("kamn:did:agent:test-client-concurrency-burst-{round}-{request_index}");
+                let body = format!(
+                    "{{\"message\":\"concurrency-burst-round-{round}-request-{request_index}\"}}"
+                );
+                let nonce = 12_000 + round * worker_count as u64 + request_index as u64;
+                let signature = baseline_signature_for_fields(
+                    sender_did.as_str(),
+                    nonce,
+                    state_hash.as_str(),
+                    body.as_str(),
+                );
+                let nonce_text = nonce.to_string();
+                barrier.wait();
+                send_http_request_with_headers(
+                    client_bind_addr.as_str(),
+                    "POST",
+                    "/v1/messages/send",
+                    body.as_str(),
+                    &[
+                        ("X-KAMN-Sender-DID", sender_did.as_str()),
+                        ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                        ("X-KAMN-Request-Signature", signature.as_str()),
+                    ],
+                )
+            }));
+        }
+
+        let responses = clients
+            .into_iter()
+            .map(|client| client.join().expect("client request should complete"))
+            .collect::<Vec<String>>();
+        assert!(
+            responses
+                .iter()
+                .any(|response| response.contains("HTTP/1.1 202 Accepted")),
+            "round {round} expected at least one accepted request"
+        );
+        let rejection_payloads = responses
+            .iter()
+            .filter(|response| response.contains("HTTP/1.1 429 Too Many Requests"))
+            .map(|response| parse_error_envelope_from_http_response(response))
+            .collect::<Vec<ServiceApiErrorEnvelope>>();
+        assert!(
+            !rejection_payloads.is_empty(),
+            "round {round} expected fail-closed concurrency rejections"
+        );
+        for payload in rejection_payloads {
+            assert_eq!(payload.error, "too-many-requests");
+            assert_eq!(
+                payload.reason_code,
+                "service_api_ingress_concurrency_limit_exceeded"
+            );
+            let projection = project_service_api_lifecycle_rejection(payload.reason_code.as_str())
+                .expect("concurrency reason code should remain mappable");
+            assert_eq!(projection.outcome, "concurrency-limit");
+        }
+    }
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after bounded concurrency bursts"
     );
 }
 
@@ -1696,6 +1916,103 @@ fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_sp
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_replay_duplicate_sequence_reason_ordering_stays_stable() {
+    // Regression: #5283
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34071".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let rounds = 3_u64;
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: rounds * 2,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:test-client-replay-duplicate-sequence";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let mut observed = Vec::new();
+
+    for round in 0..rounds {
+        let body = format!("{{\"message\":\"replay-duplicate-round-{round}\"}}");
+        let nonce = 13_000 + round;
+        let signature =
+            baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), body.as_str());
+        let nonce_text = nonce.to_string();
+        let headers = [
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ];
+
+        let first = send_http_request_with_headers(
+            bind_addr.as_str(),
+            "POST",
+            "/v1/messages/send",
+            body.as_str(),
+            &headers,
+        );
+        assert!(
+            first.contains("HTTP/1.1 202 Accepted"),
+            "round {round} initial request should be accepted"
+        );
+        observed.push("accepted".to_owned());
+
+        let replay = send_http_request_with_headers(
+            bind_addr.as_str(),
+            "POST",
+            "/v1/messages/send",
+            body.as_str(),
+            &headers,
+        );
+        assert!(
+            replay.contains("HTTP/1.1 409 Conflict"),
+            "round {round} replay request should fail closed"
+        );
+        let replay_payload = parse_error_envelope_from_http_response(replay.as_str());
+        observed.push(replay_payload.reason_code);
+    }
+
+    let expected = vec![
+        "accepted".to_owned(),
+        "service_api_auth_replay_nonce_detected".to_owned(),
+        "accepted".to_owned(),
+        "service_api_auth_replay_nonce_detected".to_owned(),
+        "accepted".to_owned(),
+        "service_api_auth_replay_nonce_detected".to_owned(),
+    ];
+    assert_eq!(observed, expected);
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after replay duplicate ordering regression"
     );
 }
 
