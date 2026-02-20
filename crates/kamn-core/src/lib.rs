@@ -36,6 +36,8 @@ pub mod content_storage;
 pub mod cross_chain_bridge;
 /// Cross-chain receipt proof normalization and finality mapping contracts.
 pub mod cross_chain_receipt;
+/// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
+pub mod cross_store_replay_consistency;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
 /// M0 data-layer foundation records, append-only ledger, and hash-chain contracts.
@@ -265,6 +267,11 @@ pub use cross_chain_receipt::{
     normalize_cross_chain_receipt, CrossChainReceiptFinality, CrossChainReceiptNetwork,
     CrossChainReceiptNormalizationError, CrossChainReceiptProof, CrossChainReceiptStatus,
     NormalizedCrossChainReceipt, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
+};
+pub use cross_store_replay_consistency::{
+    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
+    evaluate_cross_store_replay_consistency, CrossStoreReplayConsistencyReport,
+    CrossStoreReplayConsistencyStatus, CrossStoreReplayDivergenceClass,
 };
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
