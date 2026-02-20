@@ -37,6 +37,12 @@ pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE: &str =
 /// Reason marker for failed/no-retry follow-up policy decisions.
 pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE: &str =
     "m1_anchoring_follow_up_no_retry_failed";
+/// Reason marker for finality observations whose tx hash mismatches submission metadata.
+pub const DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_TX_MISMATCH_REASON_CODE: &str =
+    "m1_anchoring_finality_observation_tx_mismatch";
+/// Reason marker for finality observations missing block height on final receipts.
+pub const DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_FINAL_BLOCK_HEIGHT_REQUIRED_REASON_CODE:
+    &str = "m1_anchoring_finality_observation_final_block_height_required";
 
 const DATA_LAYER_M1_ANCHORING_RETRY_BACKOFF_SECONDS: u64 = 60;
 const DATA_LAYER_M1_ANCHORING_CONFIRMATION_POLL_SECONDS: u64 = 30;
@@ -67,6 +73,30 @@ pub struct DataLayerM1AnchoringFollowUpPolicy {
     pub retry_class: DataLayerM1AnchorRetryClass,
     /// Optional receipt finality when provider receipt exists.
     pub receipt_finality: Option<KolmeCommitReceiptFinality>,
+}
+
+/// One observed runtime finality signal for an anchored transaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchoringFinalityObservation {
+    /// Provider identifier for this observation.
+    pub provider: String,
+    /// Provider transaction/commit identifier.
+    pub transaction_id: String,
+    /// Observed finality classification.
+    pub finality: KolmeCommitReceiptFinality,
+    /// Optional observed block height when finality is terminal.
+    pub block_height: Option<i64>,
+    /// Observation timestamp as unix seconds.
+    pub observed_at_unix_seconds: i64,
+}
+
+/// Deterministic reconciliation projection from one finality observation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchoringFinalityReconciliationProjection {
+    /// Updated follow-up policy after reconciliation.
+    pub follow_up_policy: DataLayerM1AnchoringFollowUpPolicy,
+    /// Optional confirmation metadata projection for persistence.
+    pub confirmation: Option<DataLayerM1AnchoringConfirmationMetadata>,
 }
 
 /// One projected message assignment for merkle batch persistence.
@@ -172,6 +202,22 @@ pub enum DataLayerM1AnchoringOrchestratorError {
         /// Provider transaction identifier.
         transaction_id: String,
     },
+    /// Observed finality transaction id does not match planned submission metadata.
+    FinalityObservationTxMismatch {
+        /// Stable reason code.
+        reason_code: &'static str,
+        /// Expected provider transaction identifier.
+        expected_transaction_id: String,
+        /// Observed provider transaction identifier.
+        observed_transaction_id: String,
+    },
+    /// Final finality observation lacked required block height metadata.
+    MissingFinalityObservationBlockHeight {
+        /// Stable reason code.
+        reason_code: &'static str,
+        /// Provider transaction identifier.
+        transaction_id: String,
+    },
 }
 
 impl fmt::Display for DataLayerM1AnchoringOrchestratorError {
@@ -188,6 +234,21 @@ impl fmt::Display for DataLayerM1AnchoringOrchestratorError {
             } => write!(
                 formatter,
                 "missing confirmation metadata for final receipt {transaction_id}: {reason_code}"
+            ),
+            Self::FinalityObservationTxMismatch {
+                reason_code,
+                expected_transaction_id,
+                observed_transaction_id,
+            } => write!(
+                formatter,
+                "finality observation tx mismatch expected {expected_transaction_id}, observed {observed_transaction_id}: {reason_code}"
+            ),
+            Self::MissingFinalityObservationBlockHeight {
+                reason_code,
+                transaction_id,
+            } => write!(
+                formatter,
+                "missing finality observation block height for {transaction_id}: {reason_code}"
             ),
         }
     }
@@ -457,4 +518,111 @@ fn receipt_finality(anchor_result: &DataLayerM1AnchorResult) -> Option<KolmeComm
         | DataLayerM1AnchorOutcome::Duplicate(receipt) => Some(receipt.finality),
         DataLayerM1AnchorOutcome::Rejected { .. } => None,
     }
+}
+
+/// Reconciles one finality observation with a planned anchoring outcome.
+pub fn reconcile_data_layer_m1_finality_observation(
+    outcome: &DataLayerM1AnchoringTickOutcome,
+    observation: &DataLayerM1AnchoringFinalityObservation,
+) -> Result<
+    DataLayerM1AnchoringFinalityReconciliationProjection,
+    DataLayerM1AnchoringOrchestratorError,
+> {
+    validate_positive_timestamp(
+        observation.observed_at_unix_seconds,
+        "observed_at_unix_seconds",
+    )?;
+    let observed_at_unix_seconds =
+        u64::try_from(observation.observed_at_unix_seconds).map_err(|error| {
+            DataLayerM1AnchoringOrchestratorError::InvalidInput {
+                field: "observed_at_unix_seconds",
+                detail: format!("conversion to u64 failed: {error}"),
+            }
+        })?;
+    if observation.provider.trim().is_empty() {
+        return Err(DataLayerM1AnchoringOrchestratorError::InvalidInput {
+            field: "provider",
+            detail: "must not be empty".to_owned(),
+        });
+    }
+
+    let DataLayerM1AnchoringTickOutcome::Planned {
+        persistence_plan,
+        follow_up_policy,
+        ..
+    } = outcome
+    else {
+        return Err(DataLayerM1AnchoringOrchestratorError::InvalidInput {
+            field: "outcome",
+            detail: "finality reconciliation requires planned outcome".to_owned(),
+        });
+    };
+
+    let submission = persistence_plan.submission.as_ref().ok_or(
+        DataLayerM1AnchoringOrchestratorError::InvalidInput {
+            field: "submission",
+            detail: "planned outcome must include submission metadata".to_owned(),
+        },
+    )?;
+
+    if observation.transaction_id != submission.kolme_tx_hash {
+        return Err(
+            DataLayerM1AnchoringOrchestratorError::FinalityObservationTxMismatch {
+                reason_code: DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_TX_MISMATCH_REASON_CODE,
+                expected_transaction_id: submission.kolme_tx_hash.clone(),
+                observed_transaction_id: observation.transaction_id.clone(),
+            },
+        );
+    }
+
+    let follow_up_policy = match observation.finality {
+        KolmeCommitReceiptFinality::Pending => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::PollConfirmation,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: Some(
+                observed_at_unix_seconds
+                    .saturating_add(DATA_LAYER_M1_ANCHORING_CONFIRMATION_POLL_SECONDS),
+            ),
+            retry_class: follow_up_policy.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Pending),
+        },
+        KolmeCommitReceiptFinality::Final => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::NoRetry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: None,
+            retry_class: follow_up_policy.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Final),
+        },
+        KolmeCommitReceiptFinality::Failed => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::NoRetry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: None,
+            retry_class: follow_up_policy.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Failed),
+        },
+    };
+
+    let confirmation = if observation.finality == KolmeCommitReceiptFinality::Final {
+        let block_height = observation.block_height.ok_or(
+            DataLayerM1AnchoringOrchestratorError::MissingFinalityObservationBlockHeight {
+                reason_code:
+                    DATA_LAYER_M1_ANCHORING_FINALITY_OBSERVATION_FINAL_BLOCK_HEIGHT_REQUIRED_REASON_CODE,
+                transaction_id: observation.transaction_id.clone(),
+            },
+        )?;
+        Some(DataLayerM1AnchoringConfirmationMetadata {
+            kolme_block_height: block_height,
+            confirmed_at_unix_seconds: observation.observed_at_unix_seconds,
+        })
+    } else {
+        None
+    };
+
+    Ok(DataLayerM1AnchoringFinalityReconciliationProjection {
+        follow_up_policy,
+        confirmation,
+    })
 }

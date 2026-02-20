@@ -3,12 +3,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use kamn_core::{
     data_layer_m3_compute_blind_index, data_layer_pg_collect_migration_files,
-    DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerM1AnchoringFollowUpAction,
+    reconcile_data_layer_m1_finality_observation, DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey,
+    DataLayerM1AnchoringFinalityObservation, DataLayerM1AnchoringFollowUpAction,
     DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringTickOutcome,
     DataLayerM1BatchSchedulerPolicy, DataLayerM1PendingBatchMessage,
     DataLayerPgBlindIndexSearchRequest, DataLayerPgExecutionAdapter,
     DataLayerPgExecutionAdapterConfig, DataLayerPgExecutionAdapterError,
-    InMemoryKolmeRuntimeCommitClient, DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+    InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
 };
 
@@ -458,12 +460,23 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
                 None,
             )
             .expect("orchestrator tick should evaluate");
+        let final_projection = reconcile_data_layer_m1_finality_observation(
+            &outcome,
+            &DataLayerM1AnchoringFinalityObservation {
+                provider: "kolme-memory".to_owned(),
+                transaction_id: "commit-1".to_owned(),
+                finality: KolmeCommitReceiptFinality::Final,
+                block_height: Some(123_456),
+                observed_at_unix_seconds: 1_900_000_090,
+            },
+        )
+        .expect("finality reconciliation should succeed");
 
         let DataLayerM1AnchoringTickOutcome::Planned {
             persistence_plan,
             follow_up_policy,
             ..
-        } = outcome
+        } = &outcome
         else {
             panic!("expected planned outcome");
         };
@@ -514,16 +527,18 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
             .expect("submission persistence should succeed");
         assert_eq!(submitted, 1);
 
-        if let Some(confirmation) = persistence_plan.confirmation.as_ref() {
-            let confirmed = adapter
-                .execute_mark_merkle_batch_confirmed(
-                    &persistence_plan.batch_id,
-                    confirmation.kolme_block_height,
-                    confirmation.confirmed_at_unix_seconds,
-                )
-                .await
-                .expect("confirmation persistence should succeed");
-            assert_eq!(confirmed, 1);
-        }
+        let confirmation = final_projection
+            .confirmation
+            .as_ref()
+            .expect("final reconciliation should project confirmation metadata");
+        let confirmed = adapter
+            .execute_mark_merkle_batch_confirmed(
+                &persistence_plan.batch_id,
+                confirmation.kolme_block_height,
+                confirmation.confirmed_at_unix_seconds,
+            )
+            .await
+            .expect("confirmation persistence should succeed");
+        assert_eq!(confirmed, 1);
     });
 }
