@@ -899,6 +899,26 @@ Regression marker:
 
 - `Regression: #5354`
 
+### Asymmetric Parallel Lane Matrix (Issue #5356)
+
+The live-postgres matrix contracts now include bounded asymmetric parallel lanes so mixed-cadence
+concurrent role-pair legs remain deterministic for reason/taxonomy outputs.
+
+Deterministic asymmetric lane markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_asymmetric_parallel_lane_ids_csv=processor_listener_asymmetric_parallel_applied,processor_listener_asymmetric_parallel_deferred,listener_approver_asymmetric_parallel_applied,listener_approver_asymmetric_parallel_deferred`
+- `phase6_live_postgres_daemon_runtime_matrix_asymmetric_parallel_contract=asymmetric_parallel_leg_a_applied->m10_phase6_scheduler_cycle_applied;asymmetric_parallel_leg_b_applied->m10_phase6_scheduler_cycle_applied;asymmetric_parallel_leg_a_deferred->m10_phase6_scheduler_cycle_deferred;asymmetric_parallel_leg_b_deferred->m10_phase6_scheduler_cycle_deferred;runtime_taxonomy_version_stable`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_asymmetric_parallel_lane_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_asymmetric_parallel_lane_is_deterministic -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_asymmetric_parallel_lane_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5356`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
