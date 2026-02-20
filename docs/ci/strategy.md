@@ -4449,6 +4449,32 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `gate_policy_libp2p_fallback_markers_detected`
   - `gate_policy_native_libp2p_provider_marker_contract_status_mismatch`
 
+### Audit-Integrity Dry-Run Governance Contract
+- CI-safe contract verification commands:
+  - `bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh`
+  - `bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh`
+- Focused audit-integrity gate smoke commands:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-audit-integrity.json --release-candidate v1.0.0-rc-audit --schema-target-version 1.0.0 --runtime-image-digest sha256:audit-integrity-smoke --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --audit-integrity-report-file /tmp/sqlite-crash-recovery-live-policy-report.json --audit-integrity-max-age-seconds 1800`
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-audit-integrity.json`
+- Deterministic marker contract:
+  - `audit_integrity_reason_taxonomy_version=kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1`
+  - `audit_integrity_reason_codes_csv=gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded`
+  - `audit_integrity_reason_codes_value=none|<csv>`
+  - `audit_integrity_gate_final_decision=GO|NO-GO`
+- Deterministic fail-closed reasons:
+  - `gonogo_audit_integrity_reason_taxonomy_version_mismatch`
+  - `gonogo_audit_integrity_reason_codes_csv_mismatch`
+  - `gonogo_audit_integrity_schema_mismatch`
+  - `gonogo_audit_integrity_policy_status_not_verified`
+  - `gonogo_audit_integrity_freshness_window_exceeded`
+  - `audit integrity gate convergence mismatch`
+- Rust contract coverage:
+  - `cargo test -p kamn-core --test audit_evidence_integrity_contract spec_c01_audit_integrity_generate_bundle_emits_deterministic_go_markers -- --exact`
+  - `cargo test -p kamn-core --test audit_evidence_integrity_contract spec_c02_audit_integrity_policy_checker_accepts_converged_bundle -- --exact`
+  - `cargo test -p kamn-core --test audit_evidence_integrity_contract regression_spec_c03_audit_integrity_policy_checker_rejects_tampered_gate_payload -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_audit_integrity_dry_run_governance_markers -- --exact`
+- Regression coverage: `Regression: #4059`
+
 ### Incident go/no-go convergence and boundary governance
 - CI smoke contract-lane execution remains low-cost and bounded:
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120`
