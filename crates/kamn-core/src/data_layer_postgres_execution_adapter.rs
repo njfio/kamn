@@ -14,9 +14,11 @@ use sqlx::{PgPool, Postgres, Row, Transaction};
 use tracing::debug;
 
 use crate::{
-    data_layer_pg_project_insert_message_operation,
+    data_layer_pg_project_blind_index_search_operation,
+    data_layer_pg_project_default_rls_statements, data_layer_pg_project_insert_message_operation,
     data_layer_pg_project_select_message_by_id_operation, DataLayerM0EnvelopeRecord,
-    DataLayerPgOperationKind, DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession,
+    DataLayerPgBlindIndexSearchRequest, DataLayerPgOperationKind, DataLayerPgRepositoryBridgeError,
+    DataLayerPgRequesterSession,
 };
 
 /// Stable reason marker for invalid adapter database URL inputs.
@@ -31,6 +33,8 @@ pub const DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE: &str =
 /// Stable reason marker for requester session setup failures.
 pub const DATA_LAYER_PG_EXECUTION_SESSION_FAILED_REASON_CODE: &str =
     "data_layer_pg_execution_session_failed";
+/// Stable reason marker for default RLS statement application failures.
+const DATA_LAYER_PG_EXECUTION_RLS_FAILED_REASON_CODE: &str = "data_layer_pg_execution_rls_failed";
 
 const DATA_LAYER_PG_MIGRATIONS_DIR: &str = "migrations";
 
@@ -79,6 +83,39 @@ pub struct DataLayerPgStoredMessage {
     pub hash_chain_prev: String,
     /// Retention class marker.
     pub retention_class: String,
+}
+
+/// Blind-index search row projection returned by search operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgBlindIndexSearchRow {
+    /// Message identifier.
+    pub message_id: String,
+    /// Owner DID.
+    pub owner_did: String,
+    /// Sender DID.
+    pub sender_did: String,
+    /// Recipient DID.
+    pub recipient_did: String,
+    /// Content hash marker.
+    pub content_hash_sha256: String,
+}
+
+/// Deterministic default-RLS statement application report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgRlsApplyReport {
+    /// Statement outcomes in deterministic projection order.
+    pub statement_outcomes: Vec<DataLayerPgRlsStatementOutcome>,
+}
+
+/// One applied RLS statement outcome.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgRlsStatementOutcome {
+    /// Target table name.
+    pub table_name: String,
+    /// Policy name marker.
+    pub policy_name: String,
+    /// Rows affected marker from PostgreSQL execution metadata.
+    pub rows_affected: u64,
 }
 
 /// Live execution adapter for running PostgreSQL bridge descriptors.
@@ -307,6 +344,110 @@ impl DataLayerPgExecutionAdapter {
         row.map(data_layer_pg_decode_stored_message).transpose()
     }
 
+    /// Executes one blind-index search descriptor projected by the repository bridge.
+    pub async fn execute_search_messages_by_blind_index(
+        &self,
+        request: DataLayerPgBlindIndexSearchRequest,
+    ) -> Result<Vec<DataLayerPgBlindIndexSearchRow>, DataLayerPgExecutionAdapterError> {
+        let owner_did = request.owner_did.clone();
+        let index_key = request.index_key.clone();
+        let index_value_hash = request.index_value_hash.clone();
+        let limit = i64::from(request.limit);
+        let descriptor =
+            data_layer_pg_project_blind_index_search_operation(request).map_err(|error| {
+                DataLayerPgExecutionAdapterError::BridgeProjectionFailed {
+                    operation: DataLayerPgOperationKind::SearchMessagesByBlindIndex,
+                    detail: error.to_string(),
+                }
+            })?;
+
+        debug!(
+            operation = "search_messages_by_blind_index",
+            owner_did = %owner_did,
+            requester_did = %descriptor.session.requester_did,
+            "executing postgres blind-index search descriptor"
+        );
+
+        let mut tx = self
+            .begin_transaction(DataLayerPgOperationKind::SearchMessagesByBlindIndex)
+            .await?;
+        self.apply_requester_session(
+            &mut tx,
+            &descriptor.session,
+            DataLayerPgOperationKind::SearchMessagesByBlindIndex,
+        )
+        .await?;
+        let rows = sqlx::query(descriptor.sql.as_str())
+            .bind(owner_did.as_str())
+            .bind(index_key.as_str())
+            .bind(index_value_hash.as_str())
+            .bind(limit)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(
+                |error| DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                    operation: DataLayerPgOperationKind::SearchMessagesByBlindIndex,
+                    reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                    detail: error.to_string(),
+                },
+            )?;
+        tx.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                operation: DataLayerPgOperationKind::SearchMessagesByBlindIndex,
+                reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+
+        rows.into_iter()
+            .map(data_layer_pg_decode_blind_index_search_row)
+            .collect()
+    }
+
+    /// Applies default M2 RLS policy statements in deterministic projection order.
+    pub async fn apply_default_rls_statements(
+        &self,
+    ) -> Result<DataLayerPgRlsApplyReport, DataLayerPgExecutionAdapterError> {
+        let statements = data_layer_pg_project_default_rls_statements();
+        debug!(
+            statement_count = statements.len(),
+            "applying default data-layer postgres RLS statements"
+        );
+        let mut transaction = self.pool.begin().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::RlsStatementApplyFailed {
+                reason_code: DATA_LAYER_PG_EXECUTION_RLS_FAILED_REASON_CODE,
+                detail: format!("begin transaction failed: {error}"),
+            }
+        })?;
+        let mut statement_outcomes = Vec::with_capacity(statements.len());
+        for statement in statements {
+            let execution = sqlx::query(statement.sql.as_str())
+                .execute(&mut *transaction)
+                .await
+                .map_err(
+                    |error| DataLayerPgExecutionAdapterError::RlsStatementApplyFailed {
+                        reason_code: DATA_LAYER_PG_EXECUTION_RLS_FAILED_REASON_CODE,
+                        detail: format!(
+                            "table={} policy={} failed: {error}",
+                            statement.table_name, statement.policy_name
+                        ),
+                    },
+                )?;
+            statement_outcomes.push(DataLayerPgRlsStatementOutcome {
+                table_name: statement.table_name,
+                policy_name: statement.policy_name,
+                rows_affected: execution.rows_affected(),
+            });
+        }
+        transaction.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::RlsStatementApplyFailed {
+                reason_code: DATA_LAYER_PG_EXECUTION_RLS_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+        Ok(DataLayerPgRlsApplyReport { statement_outcomes })
+    }
+
     async fn begin_transaction(
         &self,
         operation: DataLayerPgOperationKind,
@@ -466,6 +607,43 @@ fn data_layer_pg_decode_stored_message(
     })
 }
 
+fn data_layer_pg_decode_blind_index_search_row(
+    row: sqlx::postgres::PgRow,
+) -> Result<DataLayerPgBlindIndexSearchRow, DataLayerPgExecutionAdapterError> {
+    Ok(DataLayerPgBlindIndexSearchRow {
+        message_id: row.try_get("message_id").map_err(|error| {
+            DataLayerPgExecutionAdapterError::DecodeFailed {
+                field: "message_id",
+                detail: error.to_string(),
+            }
+        })?,
+        owner_did: row.try_get("owner_did").map_err(|error| {
+            DataLayerPgExecutionAdapterError::DecodeFailed {
+                field: "owner_did",
+                detail: error.to_string(),
+            }
+        })?,
+        sender_did: row.try_get("sender_did").map_err(|error| {
+            DataLayerPgExecutionAdapterError::DecodeFailed {
+                field: "sender_did",
+                detail: error.to_string(),
+            }
+        })?,
+        recipient_did: row.try_get("recipient_did").map_err(|error| {
+            DataLayerPgExecutionAdapterError::DecodeFailed {
+                field: "recipient_did",
+                detail: error.to_string(),
+            }
+        })?,
+        content_hash_sha256: row.try_get("content_hash_sha256").map_err(|error| {
+            DataLayerPgExecutionAdapterError::DecodeFailed {
+                field: "content_hash_sha256",
+                detail: error.to_string(),
+            }
+        })?,
+    })
+}
+
 /// Error taxonomy for live PostgreSQL adapter behavior.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataLayerPgExecutionAdapterError {
@@ -510,6 +688,13 @@ pub enum DataLayerPgExecutionAdapterError {
         /// Stable reason marker.
         reason_code: &'static str,
         /// Migration error detail.
+        detail: String,
+    },
+    /// Default RLS statement application failed.
+    RlsStatementApplyFailed {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// SQL execution detail.
         detail: String,
     },
     /// Row decoding failed.
@@ -558,6 +743,13 @@ impl fmt::Display for DataLayerPgExecutionAdapterError {
                 reason_code,
                 detail,
             } => write!(formatter, "migration failed: {reason_code} ({detail})"),
+            Self::RlsStatementApplyFailed {
+                reason_code,
+                detail,
+            } => write!(
+                formatter,
+                "RLS statement application failed: {reason_code} ({detail})"
+            ),
             Self::DecodeFailed { field, detail } => {
                 write!(formatter, "decode failed for {field}: {detail}")
             }
