@@ -1300,6 +1300,14 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_service_api_tenant_isolation_matrix_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
     "scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/service_api_validation_negative_matrix_live_contract.py",
@@ -1557,6 +1565,22 @@
       "target": "scripts/runtime/service_api_shutdown_abrupt_close_regression_contract.py",
       "args_prefix": [
         "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_service_api_tenant_isolation_matrix_live_contract_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py",
+      "args_prefix": [
+        "run-contract-lane"
       ],
       "passthrough": true
     },

@@ -133,6 +133,7 @@ authorized_status="$(curl -sS -o "$authorized_file" -w '%{http_code}' \
   -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
   -H "X-KAMN-Request-Nonce: ${nonce}" \
   -H "X-KAMN-Request-Signature: ${signature}" \
+  -H "X-KAMN-Authz-Scope: messages:write" \
   --data "$auth_body")"
 if [ "$authorized_status" != "202" ]; then
   cat "$authorized_file" >&2
@@ -151,6 +152,7 @@ replay_status="$(curl -sS -o "$replay_file" -w '%{http_code}' \
   -H "X-KAMN-Sender-DID: ${auth_sender_did}" \
   -H "X-KAMN-Request-Nonce: ${nonce}" \
   -H "X-KAMN-Request-Signature: ${signature}" \
+  -H "X-KAMN-Authz-Scope: messages:write" \
   --data "$auth_body")"
 if [ "$replay_status" != "409" ]; then
   cat "$replay_file" >&2
