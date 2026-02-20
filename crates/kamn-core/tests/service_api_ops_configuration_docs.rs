@@ -146,6 +146,37 @@ fn service_api_ops_configuration_contains_request_response_schema_compatibility_
 }
 
 #[test]
+fn service_api_ops_configuration_contains_api_compatibility_matrix_local_heavy_markers() {
+    assert!(DOC.contains("## API Compatibility Matrix Local-Heavy Contract (Issue #4043)"));
+    assert!(DOC.contains(
+        "api_compatibility_matrix_local_heavy_reason_taxonomy_version=kamn.runtime.api-compatibility-matrix-local-heavy-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "api_compatibility_matrix_local_heavy_reason_codes_csv=ci_fast_gate_failed,api_compatibility_matrix_local_heavy_policy_schema_mismatch,api_compatibility_matrix_local_heavy_policy_status_invalid,api_compatibility_matrix_local_heavy_policy_final_decision_invalid,api_compatibility_matrix_local_heavy_policy_final_decision_mismatch,api_compatibility_matrix_local_heavy_policy_lane_mode_invalid,api_compatibility_matrix_local_heavy_policy_artifact_schema_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_schema_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_rows_invalid,api_compatibility_matrix_local_heavy_policy_fixture_row_count_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_duplicate,api_compatibility_matrix_local_heavy_policy_fixture_row_id_invalid,api_compatibility_matrix_local_heavy_policy_fixture_row_missing,api_compatibility_matrix_local_heavy_policy_fixture_row_status_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_decision_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_reason_code_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_version_pair_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_route_selector_mismatch,api_compatibility_matrix_local_heavy_policy_fixture_row_change_class_mismatch,api_compatibility_matrix_local_heavy_policy_marker_missing,api_compatibility_matrix_local_heavy_policy_execution_reason_code_mismatch,api_compatibility_matrix_local_heavy_policy_command_count_invalid,api_compatibility_matrix_local_heavy_policy_command_count_mismatch,api_compatibility_matrix_local_heavy_policy_elapsed_seconds_invalid,api_compatibility_matrix_local_heavy_policy_max_seconds_invalid,api_compatibility_matrix_local_heavy_policy_runtime_budget_exceeded,api_compatibility_matrix_local_heavy_policy_local_heavy_opt_in_required,api_compatibility_matrix_local_heavy_policy_local_heavy_scope_mismatch,api_compatibility_matrix_local_heavy_policy_docs_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "api_compatibility_matrix_local_heavy_fixture_schema_version=kamn.runtime.api-compatibility-matrix-local-heavy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "api_compatibility_matrix_local_heavy_fixture_path=fixtures/runtime/api_compatibility_matrix_local_heavy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "api_compatibility_matrix_local_heavy_required_row_ids_csv=v1_to_v2_messages_send_optional_request_addition,v1_to_v2_channels_create_optional_response_addition,v1_to_v2_tasks_create_required_request_removal,v1_to_v2_messages_get_required_response_removal,v1_to_v2_messages_send_enum_variant_removal"
+    ));
+    assert!(DOC.contains("incompatible_request_breaking_change"));
+    assert!(DOC.contains("incompatible_response_breaking_change"));
+    assert!(DOC.contains("incompatible_enum_breaking_change"));
+    assert!(DOC.contains("api_compatibility_matrix_local_heavy_policy_fixture_row_status_mismatch"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/api-compatibility-matrix-local-heavy-summary.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_api_compatibility_matrix_local_heavy_live_policy.sh --report-file /tmp/api-compatibility-matrix-local-heavy-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/api-compatibility-matrix-local-heavy-policy.json"
+    ));
+    assert!(DOC.contains("Regression: #4043"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"

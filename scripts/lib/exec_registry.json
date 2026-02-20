@@ -1102,6 +1102,14 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_api_compatibility_matrix_local_heavy_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/api_compatibility_matrix_local_heavy_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
     "scripts/runtime/check_api_version_policy_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/api_version_policy_live_contract.py",
@@ -1446,6 +1454,22 @@
       "interpreter": "python3",
       "target": "scripts/runtime/network_signer_finality_failure_drills_lane_contract.py",
       "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/api_compatibility_matrix_local_heavy_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_api_compatibility_matrix_local_heavy_live_contract_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/api_compatibility_matrix_local_heavy_live_contract.py",
+      "args_prefix": [
+        "run-contract-lane"
+      ],
       "passthrough": true
     },
     "scripts/runtime/validate_api_version_policy_live.sh": {
