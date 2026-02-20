@@ -32,7 +32,8 @@
 - Task (completed): `#5285` — start Phase-6 retention-to-archival gate execution contracts
 - Task (completed): `#5287` — add deterministic archival failure-retry policy contracts for Phase-6
 - Task (completed): `#5289` — add Phase-6 retention+archival execution tick orchestration contracts
-- Task (current wave): `#5291` — add Phase-6 execution-tick budget guardrail contracts
+- Task (completed): `#5291` — add Phase-6 execution-tick budget guardrail contracts
+- Task (current wave): `#5293` — add Phase-6 scheduler-cycle trigger and guarded execution contracts
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -62,7 +63,8 @@
 - `#5285`: merged to main (Phase-6 retention-to-archival gate execution kickoff).
 - `#5287`: merged to main (Phase-6 archival failure-retry policy execution contracts).
 - `#5289`: merged to main (Phase-6 retention+archival execution tick orchestration contracts).
-- `#5291`: in progress in this wave (Phase-6 execution-tick budget guardrail contracts).
+- `#5291`: merged to main (Phase-6 execution-tick budget guardrail contracts).
+- `#5293`: in progress in this wave (Phase-6 scheduler-cycle trigger and guarded execution contracts).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
