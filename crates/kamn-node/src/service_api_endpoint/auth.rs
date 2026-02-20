@@ -79,6 +79,33 @@ pub(super) fn authorize_service_api_request(
     Ok(())
 }
 
+pub(super) fn enforce_request_scope_policy(
+    request: &ParsedRequest,
+) -> Result<(), ServiceApiReasonedError> {
+    let Some(expected_scope) =
+        required_scope_for_route(request.method.as_str(), request.path.as_str())
+    else {
+        return Ok(());
+    };
+    let scope = header_value(&request.headers, REQUEST_AUTH_SCOPE_HEADER).ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SCOPE_HEADER_MISSING,
+            format!("missing required header: {REQUEST_AUTH_SCOPE_HEADER}"),
+        )
+    })?;
+    let parsed_scope = parse_scope(scope)?;
+    if parsed_scope != expected_scope {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH,
+            format!(
+                "scope {parsed_scope} is not authorized for route {} {}",
+                request.method, request.path
+            ),
+        ));
+    }
+    Ok(())
+}
+
 pub(super) async fn enforce_sender_anti_spam(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
@@ -173,4 +200,50 @@ pub(super) fn service_api_signature_state_hash(snapshot: &ServiceApiSnapshot) ->
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     )
+}
+
+fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
+    if !super::route_requires_auth(method, path) {
+        return None;
+    }
+    let scope = match (method, path) {
+        ("POST", ROUTE_MESSAGES_SEND) => "messages:write",
+        ("POST", ROUTE_CHANNELS_CREATE) => "channels:write",
+        ("POST", ROUTE_TASKS_CREATE) => "tasks:write",
+        ("GET", ROUTE_EVENTS_WS) => "events:read",
+        ("GET", _) if super::payload::message_path_id(path).is_some() => "messages:read",
+        ("GET", _) if super::payload::channel_messages_path_id(path).is_some() => "channels:read",
+        ("GET", _) if super::payload::task_path_id(path).is_some() => "tasks:read",
+        ("GET", _) if super::payload::agent_path_id(path).is_some() => "agents:read",
+        _ => "protected:unknown",
+    };
+    Some(scope)
+}
+
+fn parse_scope(scope: &str) -> Result<&str, ServiceApiReasonedError> {
+    let normalized = scope.trim();
+    if normalized.is_empty() {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SCOPE_INVALID,
+            format!("scope header must not be empty: {REQUEST_AUTH_SCOPE_HEADER}"),
+        ));
+    }
+    if !matches!(
+        normalized,
+        "messages:write"
+            | "messages:read"
+            | "channels:write"
+            | "channels:read"
+            | "tasks:write"
+            | "tasks:read"
+            | "agents:read"
+            | "events:read"
+            | "protected:unknown"
+    ) {
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SCOPE_INVALID,
+            format!("scope header value is invalid: {REQUEST_AUTH_SCOPE_HEADER}"),
+        ));
+    }
+    Ok(normalized)
 }

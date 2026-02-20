@@ -64,6 +64,7 @@ const ROUTE_METRICS: &str = "/metrics";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
 const REASON_CODE_ROUTE_NOT_FOUND: &str = "service_api_route_not_found";
@@ -95,11 +96,22 @@ const REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING: &str = "service_api_auth_signat
 const REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED: &str =
     "service_api_auth_signature_verification_failed";
 const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_nonce_detected";
+const REASON_CODE_AUTH_SCOPE_HEADER_MISSING: &str = "service_api_auth_scope_header_missing";
+const REASON_CODE_AUTH_SCOPE_INVALID: &str = "service_api_auth_scope_invalid";
+const REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH: &str = "service_api_auth_scope_route_mismatch";
 #[cfg(test)]
 pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
 #[cfg(test)]
 pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
+#[cfg(test)]
+pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-scope-policy-reason-taxonomy.v1";
+#[cfg(test)]
+pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str = "service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch";
+#[cfg(test)]
+pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
+    "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";

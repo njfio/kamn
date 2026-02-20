@@ -4704,6 +4704,31 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - each auth reason code must have deterministic remediation markers in strategy and ops docs.
 - Regression: #4057
 
+### Service API Scope Policy Checker Contract
+- `service_api_scope_policy_reason_taxonomy_version=kamn.runtime.service-api-scope-policy-reason-taxonomy.v1`
+- `service_api_scope_policy_reason_codes_csv=service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch`
+- `service_api_scope_policy_fixture_schema_version=kamn.runtime.service-api-scope-policy-fixture-matrix.v1`
+- `service_api_scope_policy_fixture_path=fixtures/runtime/service_api_scope_policy_fixture_matrix.txt`
+- `service_api_scope_policy_ops_doc_path=docs/ops/configuration.md`
+- `service_api_scope_policy_strategy_doc_path=docs/ci/strategy.md`
+- `service_api_scope_policy_remediation_map_version=v1`
+- `service_api_scope_policy_remediation.service_api_auth_scope_header_missing=add x-kamn-authz-scope with the route-required scope value`
+- `service_api_scope_policy_remediation.service_api_auth_scope_invalid=use one of messages:write|messages:read|channels:write|channels:read|tasks:write|tasks:read|agents:read|events:read|protected:unknown`
+- `service_api_scope_policy_remediation.service_api_auth_scope_route_mismatch=align x-kamn-authz-scope to the required scope for method/path`
+- Guard commands:
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::unit_service_api_scope_policy_fixture_parser_contract -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_service_api_scope_policy_docs_parity_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_docs_parity_matches_source_taxonomy -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_remediation_markers_cover_reason_codes -- --exact`
+- Fail-closed policy:
+  - protected signed requests without `x-kamn-authz-scope` reject with `401` and `service_api_auth_scope_header_missing`.
+  - invalid or empty scope header values reject with `401` and `service_api_auth_scope_invalid`.
+  - mismatched scope-to-route mappings reject with `401` and `service_api_auth_scope_route_mismatch`.
+  - source constants, strategy markers, and ops markers remain synchronized.
+- Regression: #4056
+
 ### Fairness Docs Parity and Remediation Contract
 - `fairness_docs_parity_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1`
 - `fairness_docs_parity_reason_codes_csv=fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap`
