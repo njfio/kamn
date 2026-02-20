@@ -741,6 +741,33 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_pa
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_directionality_markers(
+) {
+    assert!(
+        DOC.contains("### Parallel Lane Topology Host-Pair Directionality Contracts (Issue #5370)")
+    );
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-pair-directionality.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_extraction_rule=host_a_to_host_b_arrow_notation_non_commutative"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_forbidden_reverse_pairs_csv=node_beta->node_alpha"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_pair_directionality_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_pair_directionality_is_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_directionality_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5370"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
