@@ -5,7 +5,7 @@
 - [x] T2 (Green): implement deterministic M10 archival retry policy projection and reason-marker taxonomy (`C-01`..`C-04`).
 - [x] T3 (Regression): ensure invalid configuration and boundary-attempt inputs fail closed deterministically (`C-05`).
 - [x] T4 (Verify): run `cargo fmt --check`, strict `clippy`, and targeted M10 test suite (`C-06`).
-- [ ] T5 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
+- [x] T5 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
 
 ## Tier Mapping
 - Unit: retry policy math + reason-code projection.
