@@ -10,11 +10,13 @@
 - Phase 1 story (PostgreSQL + RLS foundation): `#5248`
 - Completed bootstrap task: `#5255`
 - Completed bridge task: `#5257`
+- Current execution-adapter task: `#5259`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
-- Phase 1 bootstrap migration scaffolding: Implemented in `#5255` (pending merge)
-- Phase 1 repository bridge contracts and RLS projection: Implemented in `#5257` (pending merge)
+- Phase 1 bootstrap migration scaffolding: Implemented in `#5255` (merged)
+- Phase 1 repository bridge contracts and RLS projection: Implemented in `#5257` (merged)
+- Phase 1 live sqlx execution adapter + migration runner: Implemented in `#5259` (pending merge)
 - Phases 2-6: Planned with dependency order captured in `#5249`..`#5254`
 
 ---
@@ -86,7 +88,7 @@ Implement the PRD section 5 schema as SQL migration files. The core tables are:
 
 Plus 15+ indexes (B-tree for DID lookups, GIN for blind indexes and capabilities, partial indexes for non-shredded messages).
 
-Use `sqlx::migrate!()` with versioned `.sql` files under a `migrations/` directory.
+Use versioned `.sql` files under a `migrations/` directory with deterministic runtime execution in the PostgreSQL adapter.
 
 #### 1.3 Implement Repository Layer
 
