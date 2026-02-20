@@ -418,16 +418,23 @@ mod tests {
         KolmeRuntimeCommitProviderError,
     };
     use std::env;
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::Mutex;
 
     const TEST_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_PRIVATE_KEY_HEX_SECONDARY: &str =
         "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+
     fn test_signer_env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+        crate::signer_test_env_lock()
+    }
+
+    fn lock_signer_env_guard() -> std::sync::MutexGuard<'static, ()> {
+        match test_signer_env_lock().lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
     }
 
     struct EnvVarGuard {
@@ -481,9 +488,7 @@ mod tests {
     #[test]
     fn regression_signer_secret_source_precedence_failure_zeroizes_env_secret_buffer() {
         // Regression: #4165
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _secondary_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
             Some(TEST_PRIVATE_KEY_HEX_SECONDARY),
@@ -665,9 +670,7 @@ mod tests {
     #[test]
     fn regression_strict_signer_secret_source_precedence_rejects_dual_private_key_envs() {
         // Regression: #4660
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _profile_guard =
             EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _primary_guard = EnvVarGuard::set(
@@ -693,9 +696,7 @@ mod tests {
     #[test]
     fn regression_strict_secondary_profile_requires_secondary_secret_even_with_primary_present() {
         // Regression: #4660
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _profile_guard =
             EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
         let _primary_guard = EnvVarGuard::set(
@@ -720,9 +721,7 @@ mod tests {
 
     #[test]
     fn unit_signer_preflight_defaults_to_single_signer_quorum_ready() {
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", None);
         let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", None);
         let _previous_rotation_epoch =
@@ -749,9 +748,7 @@ mod tests {
     #[test]
     fn regression_signer_preflight_rejects_stale_failover_rotation_epoch() {
         // Regression: #3472
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
             Some("ops-primary"),
@@ -784,9 +781,7 @@ mod tests {
     #[test]
     fn regression_signer_preflight_rejects_non_failover_rotation_epoch_regression() {
         // Regression: #3956
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
             Some("ops-primary"),
@@ -813,9 +808,7 @@ mod tests {
     #[test]
     fn regression_signer_preflight_rejects_disallowed_secondary_managed_external_pair() {
         // Regression: #3472
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
             Some("ops-secondary"),
@@ -847,9 +840,7 @@ mod tests {
 
     #[test]
     fn functional_signer_preflight_rejects_quorum_shortfall() {
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
             Some("ops-primary"),
@@ -875,9 +866,7 @@ mod tests {
 
     #[test]
     fn performance_signer_preflight_readiness_stays_bounded() {
-        let _lock = test_signer_env_lock()
-            .lock()
-            .expect("signer env lock should guard test mutation");
+        let _lock = lock_signer_env_guard();
         let _previous_profile = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
             Some("ops-primary"),
