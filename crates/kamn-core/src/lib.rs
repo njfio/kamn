@@ -453,9 +453,10 @@ pub use data_layer_m9_realtime_delivery::{
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
 };
 pub use data_layer_postgres_execution_adapter::{
-    data_layer_pg_collect_migration_files, DataLayerPgExecutionAdapter,
-    DataLayerPgExecutionAdapterConfig, DataLayerPgExecutionAdapterError,
-    DataLayerPgMigrationReport, DataLayerPgStoredMessage,
+    data_layer_pg_collect_migration_files, DataLayerPgBlindIndexSearchRow,
+    DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
+    DataLayerPgExecutionAdapterError, DataLayerPgMigrationReport, DataLayerPgRlsApplyReport,
+    DataLayerPgRlsStatementOutcome, DataLayerPgStoredMessage,
     DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_MIGRATION_FAILED_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_SESSION_FAILED_REASON_CODE,

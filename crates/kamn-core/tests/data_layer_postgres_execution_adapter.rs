@@ -2,8 +2,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use kamn_core::{
     data_layer_pg_collect_migration_files, DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey,
-    DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
-    DataLayerPgExecutionAdapterError, DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
+    DataLayerPgBlindIndexSearchRequest, DataLayerPgExecutionAdapter,
+    DataLayerPgExecutionAdapterConfig, DataLayerPgExecutionAdapterError,
+    DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
 };
 
 fn live_postgres_url() -> Option<String> {
@@ -116,5 +117,83 @@ fn spec_c01_and_c03_live_adapter_executes_insert_and_lookup_with_session_context
 
         assert_eq!(stored.message_id, message_id);
         assert_eq!(stored.owner_did, "kamn:did:owner:owner-1");
+    });
+}
+
+#[test]
+fn spec_c01_live_adapter_executes_blind_index_search_with_session_context() {
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = runtime();
+    runtime.block_on(async move {
+        let adapter = DataLayerPgExecutionAdapter::connect(DataLayerPgExecutionAdapterConfig {
+            database_url,
+            max_connections: 4,
+        })
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+
+        adapter
+            .apply_migrations()
+            .await
+            .expect("migrations should apply before execution");
+
+        let results = adapter
+            .execute_search_messages_by_blind_index(DataLayerPgBlindIndexSearchRequest {
+                requester_did: "kamn:did:agent:agent-1".to_owned(),
+                owner_did: "kamn:did:owner:owner-1".to_owned(),
+                index_key: "channel_topic".to_owned(),
+                index_value_hash: "missing-index-token".to_owned(),
+                limit: 10,
+            })
+            .await
+            .expect("search execution should succeed");
+        assert!(
+            results.is_empty(),
+            "search over empty/missing blind index should return deterministic empty result set"
+        );
+    });
+}
+
+#[test]
+fn spec_c02_live_adapter_applies_default_rls_statements_deterministically() {
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = runtime();
+    runtime.block_on(async move {
+        let adapter = DataLayerPgExecutionAdapter::connect(DataLayerPgExecutionAdapterConfig {
+            database_url,
+            max_connections: 4,
+        })
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+
+        adapter
+            .apply_migrations()
+            .await
+            .expect("migrations should apply before execution");
+
+        let first_report = adapter
+            .apply_default_rls_statements()
+            .await
+            .expect("default RLS policies should apply");
+        let second_report = adapter
+            .apply_default_rls_statements()
+            .await
+            .expect("default RLS policies should be idempotent");
+
+        assert!(
+            !first_report.statement_outcomes.is_empty(),
+            "RLS apply report should include deterministic statement outcomes"
+        );
+        assert_eq!(
+            first_report.statement_outcomes.len(),
+            second_report.statement_outcomes.len(),
+            "idempotent reapplies should execute the same number of statements"
+        );
     });
 }

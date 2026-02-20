@@ -16,7 +16,8 @@
 - Story (Cross-cutting): `#5254` — enforce contract-infrastructure convergence validation
 - Task (completed): `#5255` — bootstrap PostgreSQL migration scaffolding and schema contract markers
 - Task (completed): `#5257` — implement PostgreSQL repository bridge contracts and RLS session projection
-- Task (current wave): `#5259` — implement sqlx-backed PostgreSQL execution adapter and migration runner
+- Task (completed): `#5259` — implement sqlx-backed PostgreSQL execution adapter and migration runner
+- Task (current wave): `#5261` — extend PostgreSQL execution adapter with RLS policy application and blind-index search execution
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -30,7 +31,8 @@
 ## Current Status
 - `#5255`: merged to main (baseline migration scaffolding + marker tests).
 - `#5257`: merged to main (deterministic SQL descriptor projection + M2 RLS statement projection).
-- `#5259`: implemented in this wave (live sqlx execution adapter + migration runner), pending merge.
+- `#5259`: merged to main (live sqlx execution adapter + migration runner).
+- `#5261`: implemented in this wave (blind-index search execution + default RLS statement apply), pending merge.
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
