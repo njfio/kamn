@@ -1,7 +1,7 @@
 # Issue #5392 Spec
 
 - Title: Task: codify topology-id host-mode-host-pair-lane-set-lane-id-bundle coherence contracts for live-postgres validation
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-program-operational-hardening-and-live-validation/index.md
