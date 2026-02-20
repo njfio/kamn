@@ -14,8 +14,9 @@
 - Story (Phase 5): `#5252` — implement realtime delivery gateway and owner-scoped presence service
 - Story (Phase 6): `#5253` — automate retention crypto-shredding and partition archival execution
 - Story (Cross-cutting): `#5254` — enforce contract-infrastructure convergence validation
-- Task (current wave): `#5255` — bootstrap PostgreSQL migration scaffolding and schema contract markers
-- Task (current wave): `#5257` — implement PostgreSQL repository bridge contracts and RLS session projection
+- Task (completed): `#5255` — bootstrap PostgreSQL migration scaffolding and schema contract markers
+- Task (completed): `#5257` — implement PostgreSQL repository bridge contracts and RLS session projection
+- Task (current wave): `#5259` — implement sqlx-backed PostgreSQL execution adapter and migration runner
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -27,8 +28,9 @@
 7. Cross-cutting convergence: run `#5254` throughout all phases as a promotion gate.
 
 ## Current Status
-- `#5255`: implemented in this wave (migration artifacts + marker tests), pending merge.
-- `#5257`: implemented in this wave (deterministic SQL descriptor projection + M2 RLS statement projection), pending merge.
+- `#5255`: merged to main (baseline migration scaffolding + marker tests).
+- `#5257`: merged to main (deterministic SQL descriptor projection + M2 RLS statement projection).
+- `#5259`: implemented in this wave (live sqlx execution adapter + migration runner), pending merge.
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail

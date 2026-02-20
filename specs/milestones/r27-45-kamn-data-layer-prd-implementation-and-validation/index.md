@@ -49,6 +49,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5028` — Task: enforce PRD critical-scenario conformance matrix with shell-neutral test orchestration
   - `#5255` — Task: bootstrap data-layer PostgreSQL migration scaffolding and schema contract markers
   - `#5257` — Task: implement PostgreSQL repository bridge contracts and RLS session projection
+  - `#5259` — Task: implement sqlx-backed PostgreSQL execution adapter and migration runner
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage
