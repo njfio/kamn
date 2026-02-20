@@ -2,6 +2,8 @@ use super::*;
 
 mod daemon_phase;
 
+#[cfg(test)]
+pub(crate) use daemon_phase::execute_daemon_phase6_runtime_projection_for_test;
 use daemon_phase::execute_daemon_runtime;
 use daemon_phase::{
     daemon_shutdown_drain_status, daemon_shutdown_reason_field, daemon_shutdown_signal_tick,

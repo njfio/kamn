@@ -84,6 +84,27 @@ pub(crate) fn build_bootstrap_report(
     let daemon_peer_lifecycle_applied_events = daemon
         .as_ref()
         .and_then(|daemon| daemon.peer_lifecycle_applied_events.clone());
+    let daemon_phase6_runtime_reason_taxonomy_version = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_reason_taxonomy_version.clone());
+    let daemon_phase6_runtime_reason_codes_csv = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_reason_codes_csv.clone());
+    let daemon_phase6_runtime_reason_code = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_reason_code.clone());
+    let daemon_phase6_runtime_total_cycles = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_total_cycles);
+    let daemon_phase6_runtime_executed_cycles = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_executed_cycles);
+    let daemon_phase6_runtime_deferred_cycles = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_deferred_cycles);
+    let daemon_phase6_runtime_fail_closed_cycles = daemon
+        .as_ref()
+        .map(|daemon| daemon.phase6_runtime_fail_closed_cycles);
     let kolme_live_provider_client_contract = kolme_live
         .as_ref()
         .map(|execution| execution.provider_client_contract.clone());
@@ -173,6 +194,13 @@ pub(crate) fn build_bootstrap_report(
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
+        daemon_phase6_runtime_reason_taxonomy_version,
+        daemon_phase6_runtime_reason_codes_csv,
+        daemon_phase6_runtime_reason_code,
+        daemon_phase6_runtime_total_cycles,
+        daemon_phase6_runtime_executed_cycles,
+        daemon_phase6_runtime_deferred_cycles,
+        daemon_phase6_runtime_fail_closed_cycles,
         kolme_live_provider_client_contract,
         kolme_live_base_url,
         kolme_live_provider_hint,

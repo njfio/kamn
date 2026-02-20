@@ -575,3 +575,113 @@ pub(super) fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal(
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"daemon_completion_reason\":\"graceful-shutdown:signal@"));
 }
+
+#[test]
+fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("daemon execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains(
+        "\"daemon_phase6_runtime_reason_taxonomy_version\":\"kamn.runtime.daemon.phase6.reason-taxonomy.v1\""
+    ));
+    assert!(rendered
+        .contains("\"daemon_phase6_runtime_reason_code\":\"m10_phase6_scheduler_cycle_applied\""));
+    let complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .expect("daemon execution should emit structured completion marker");
+    assert_eq!(
+        extract_json_string_field(complete_line, "phase6_reason_taxonomy_version").as_deref(),
+        Some("kamn.runtime.daemon.phase6.reason-taxonomy.v1")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "phase6_reason_codes_csv").as_deref(),
+        Some("m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded")
+    );
+    assert!(
+        extract_json_string_field(complete_line, "phase6_reason_code").as_deref()
+            == Some("m10_phase6_scheduler_cycle_applied")
+    );
+}
+
+#[test]
+fn functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutdown_signals_are_present(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("daemon execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered
+        .contains("\"daemon_phase6_runtime_reason_code\":\"m10_phase6_scheduler_cycle_deferred\""));
+    assert!(rendered.contains("\"daemon_phase6_runtime_deferred_cycles\":1"));
+    let complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .expect("daemon execution should emit structured completion marker");
+    assert!(
+        extract_json_string_field(complete_line, "phase6_reason_code").as_deref()
+            == Some("m10_phase6_scheduler_cycle_deferred")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "phase6_deferred_cycles").as_deref(),
+        Some("1")
+    );
+}
+
+#[test]
+fn regression_daemon_phase6_runtime_projection_fail_closed_reason_is_stable_on_clock_regression() {
+    // Regression: #5299
+    let (reason_code, fail_closed_cycles) =
+        crate::execute_daemon_phase6_runtime_projection_for_test(5, 25, false, Some(1_700_000_119))
+            .expect("phase6 runtime projection helper should return deterministic snapshot");
+    assert_eq!(
+        reason_code, "m10_phase6_scheduler_signal_invalid",
+        "clock-regression path must remain fail-closed with stable reason marker"
+    );
+    assert_eq!(fail_closed_cycles, 1);
+}

@@ -1,4 +1,18 @@
 use super::*;
+use std::collections::BTreeMap;
+
+const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
+const DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV: &str =
+    "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded";
+
+struct DaemonPhase6RuntimeProjection {
+    reason_code: &'static str,
+    total_cycles: u64,
+    executed_cycles: u64,
+    deferred_cycles: u64,
+    fail_closed_cycles: u64,
+}
 
 fn daemon_lifecycle_event_as_str(event: PeerLifecycleEvent) -> &'static str {
     match event {
@@ -60,6 +74,156 @@ pub(super) fn daemon_shutdown_reason_field<'a>(
         }
         None
     })
+}
+
+fn execute_daemon_phase6_runtime_projection(
+    _max_ticks: u64,
+    tick_interval_ms: u64,
+    has_shutdown_signal: bool,
+    regressed_now_epoch_seconds: Option<u64>,
+) -> Result<DaemonPhase6RuntimeProjection, ConfigError> {
+    let owner_did = "kamn:did:owner:daemon-phase6";
+    let mut m8_registry = kamn_core::DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = kamn_core::DataLayerM10PartitionLifecycleRegistry::new();
+    let mut partition_message_ids_by_month = BTreeMap::new();
+
+    if !has_shutdown_signal {
+        m10_registry
+            .register_partition(kamn_core::DataLayerM10PartitionRecordInput {
+                partition_month_id: 202401,
+                all_messages_shredded: false,
+            })
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+
+        for (message_id, created_at_epoch_seconds) in [
+            ("daemon-phase6-message-a", 1_699_700_000_u64),
+            ("daemon-phase6-message-b", 1_699_700_100_u64),
+        ] {
+            m8_registry
+                .register_message(kamn_core::DataLayerM8MessageRecordInput {
+                    owner_did: owner_did.to_owned(),
+                    message_id: message_id.to_owned(),
+                    created_at_epoch_seconds,
+                    content_hash: format!("hash:{message_id}"),
+                    hash_chain_prev: format!("prev:{message_id}"),
+                    retention_class: kamn_core::DataLayerM8RetentionClass::Ephemeral,
+                    retention_extension_seconds: 0,
+                    wrapped_keys: vec![kamn_core::DataLayerM8WrappedCekInput {
+                        recipient_did: "kamn:did:agent:daemon-phase6".to_owned(),
+                        wrapped_cek: format!("cek:{message_id}"),
+                    }],
+                })
+                .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+        }
+
+        partition_message_ids_by_month.insert(
+            202401,
+            vec![
+                "daemon-phase6-message-b".to_owned(),
+                "daemon-phase6-message-a".to_owned(),
+            ],
+        );
+    } else {
+        m10_registry
+            .register_partition(kamn_core::DataLayerM10PartitionRecordInput {
+                partition_month_id: 202601,
+                all_messages_shredded: false,
+            })
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+
+        m8_registry
+            .register_message(kamn_core::DataLayerM8MessageRecordInput {
+                owner_did: owner_did.to_owned(),
+                message_id: "daemon-phase6-deferred-message".to_owned(),
+                created_at_epoch_seconds: 1_699_999_990,
+                content_hash: "hash:daemon-phase6-deferred-message".to_owned(),
+                hash_chain_prev: "prev:daemon-phase6-deferred-message".to_owned(),
+                retention_class: kamn_core::DataLayerM8RetentionClass::Ephemeral,
+                retention_extension_seconds: 0,
+                wrapped_keys: vec![kamn_core::DataLayerM8WrappedCekInput {
+                    recipient_did: "kamn:did:agent:daemon-phase6".to_owned(),
+                    wrapped_cek: "cek:daemon-phase6-deferred-message".to_owned(),
+                }],
+            })
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+
+        partition_message_ids_by_month
+            .insert(202601, vec!["daemon-phase6-deferred-message".to_owned()]);
+    }
+
+    let scheduler_policy = if has_shutdown_signal {
+        kamn_core::DataLayerM10Phase6SchedulerPolicy {
+            due_candidate_trigger_threshold: 2,
+            max_tick_interval_seconds: 2_000_000_000,
+        }
+    } else {
+        kamn_core::DataLayerM10Phase6SchedulerPolicy {
+            due_candidate_trigger_threshold: 1,
+            max_tick_interval_seconds: 60,
+        }
+    };
+    let mut runtime = kamn_core::DataLayerM10Phase6SchedulerRuntime::new(
+        scheduler_policy,
+        kamn_core::DataLayerM10Phase6ExecutionTickBudget {
+            max_due_candidates: 2,
+            max_shredded_messages: 2,
+            max_projection_reports: 1,
+            max_archived_entries: 1,
+        },
+    )
+    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+
+    let now_epoch_seconds = if has_shutdown_signal {
+        1_700_000_010_u64
+    } else {
+        1_700_000_000_u64 + tick_interval_ms.saturating_add(95)
+    };
+    let base_request = kamn_core::DataLayerM10Phase6ExecutionTickRequest {
+        requester_owner_did: owner_did.to_owned(),
+        owner_did: owner_did.to_owned(),
+        now_epoch_seconds,
+        shredded_at_epoch_seconds: 1_700_000_300,
+        now_month_id: 202602,
+        active_retention_months: 2,
+        object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        partition_message_ids_by_month,
+    };
+
+    let cycle_report = runtime
+        .run_cycle(&mut m8_registry, &mut m10_registry, base_request.clone())
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    let mut reason_code = cycle_report.reason_code;
+    if let Some(regressed_now_epoch_seconds) = regressed_now_epoch_seconds {
+        let mut regressed_request = base_request;
+        regressed_request.now_epoch_seconds = regressed_now_epoch_seconds;
+        let _ = runtime.run_cycle(&mut m8_registry, &mut m10_registry, regressed_request);
+        reason_code = runtime.state().last_reason_code;
+    }
+
+    let runtime_state = runtime.state();
+    Ok(DaemonPhase6RuntimeProjection {
+        reason_code,
+        total_cycles: runtime_state.total_cycles,
+        executed_cycles: runtime_state.executed_cycles,
+        deferred_cycles: runtime_state.deferred_cycles,
+        fail_closed_cycles: runtime_state.fail_closed_cycles,
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn execute_daemon_phase6_runtime_projection_for_test(
+    max_ticks: u64,
+    tick_interval_ms: u64,
+    has_shutdown_signal: bool,
+    regressed_now_epoch_seconds: Option<u64>,
+) -> Result<(&'static str, u64), ConfigError> {
+    let projection = execute_daemon_phase6_runtime_projection(
+        max_ticks,
+        tick_interval_ms,
+        has_shutdown_signal,
+        regressed_now_epoch_seconds,
+    )?;
+    Ok((projection.reason_code, projection.fail_closed_cycles))
 }
 
 pub(super) fn execute_daemon_runtime(
@@ -165,6 +329,16 @@ pub(super) fn execute_daemon_runtime(
     )
     .unwrap_or("0");
     let executed_ticks_label = daemon_completion.executed_ticks.to_string();
+    let phase6_projection = execute_daemon_phase6_runtime_projection(
+        max_ticks,
+        tick_interval_ms,
+        !daemon_shutdown_signal_ticks.is_empty(),
+        None,
+    )?;
+    let phase6_total_cycles_label = phase6_projection.total_cycles.to_string();
+    let phase6_executed_cycles_label = phase6_projection.executed_cycles.to_string();
+    let phase6_deferred_cycles_label = phase6_projection.deferred_cycles.to_string();
+    let phase6_fail_closed_cycles_label = phase6_projection.fail_closed_cycles.to_string();
     log_info(
         "node.runtime.daemon.execute.complete",
         &[
@@ -183,6 +357,28 @@ pub(super) fn execute_daemon_runtime(
             ("shutdown_drain_ticks", shutdown_drain_ticks),
             ("shutdown_timeout_ticks", shutdown_timeout_ticks),
             ("shutdown_ignored_signals", shutdown_ignored_signals),
+            (
+                "phase6_reason_taxonomy_version",
+                DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION,
+            ),
+            (
+                "phase6_reason_codes_csv",
+                DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV,
+            ),
+            ("phase6_reason_code", phase6_projection.reason_code),
+            ("phase6_total_cycles", phase6_total_cycles_label.as_str()),
+            (
+                "phase6_executed_cycles",
+                phase6_executed_cycles_label.as_str(),
+            ),
+            (
+                "phase6_deferred_cycles",
+                phase6_deferred_cycles_label.as_str(),
+            ),
+            (
+                "phase6_fail_closed_cycles",
+                phase6_fail_closed_cycles_label.as_str(),
+            ),
             ("execution_id", execution_id),
         ],
     )?;
@@ -206,5 +402,13 @@ pub(super) fn execute_daemon_runtime(
         peer_id,
         peer_lifecycle_final_state,
         peer_lifecycle_applied_events,
+        phase6_runtime_reason_taxonomy_version: DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION
+            .to_owned(),
+        phase6_runtime_reason_codes_csv: DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV.to_owned(),
+        phase6_runtime_reason_code: phase6_projection.reason_code.to_owned(),
+        phase6_runtime_total_cycles: phase6_projection.total_cycles,
+        phase6_runtime_executed_cycles: phase6_projection.executed_cycles,
+        phase6_runtime_deferred_cycles: phase6_projection.deferred_cycles,
+        phase6_runtime_fail_closed_cycles: phase6_projection.fail_closed_cycles,
     })
 }

@@ -237,6 +237,28 @@ fn service_api_ops_configuration_contains_phase6_runtime_evidence_bundle_markers
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_daemon_runtime_integration_markers() {
+    assert!(DOC.contains("## Phase-6 Daemon Runtime Integration Contracts (Issue #5299)"));
+    assert!(DOC.contains("phase6_daemon_runtime_contract_status=verified"));
+    assert!(DOC.contains(
+        "phase6_daemon_runtime_reason_taxonomy_version=kamn.runtime.daemon.phase6.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_daemon_runtime_reason_codes_csv=m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded"
+    ));
+    assert!(DOC.contains(
+        "phase6_daemon_runtime_contract=daemon_tick_executes_m10_scheduler_runtime;report_projects_phase6_reason_and_counters;clock_regression_fails_closed"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_daemon_phase6_runtime_projection_fail_closed_reason_is_stable_on_clock_regression -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5299"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
