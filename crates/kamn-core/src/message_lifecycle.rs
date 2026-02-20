@@ -754,9 +754,11 @@ impl MessageLifecycleSnapshotStore for FileMessageLifecycleSnapshotStore {
     fn read_latest(
         &self,
     ) -> Result<Option<MessageLifecycleSnapshot>, MessageLifecycleSnapshotStoreError> {
-        let snapshot_payload = read_message_lifecycle_snapshot_file(&self.path)?;
         let journal_snapshot = replay_message_lifecycle_snapshot_journal(&self.journal_path)?;
-        Ok(journal_snapshot.or(snapshot_payload))
+        if journal_snapshot.is_some() {
+            return Ok(journal_snapshot);
+        }
+        read_message_lifecycle_snapshot_file(&self.path)
     }
 }
 

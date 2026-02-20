@@ -858,9 +858,11 @@ impl ChannelSnapshotStore for FileChannelSnapshotStore {
     }
 
     fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError> {
-        let snapshot_payload = read_channel_snapshot_file(&self.path)?;
         let journal_snapshot = replay_channel_snapshot_journal(&self.journal_path)?;
-        Ok(journal_snapshot.or(snapshot_payload))
+        if journal_snapshot.is_some() {
+            return Ok(journal_snapshot);
+        }
+        read_channel_snapshot_file(&self.path)
     }
 }
 

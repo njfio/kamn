@@ -868,9 +868,11 @@ impl TaskOperationSnapshotStore for FileTaskOperationSnapshotStore {
     fn read_latest(
         &self,
     ) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
-        let snapshot_payload = read_task_operation_snapshot_file(&self.path)?;
         let journal_snapshot = replay_task_operation_snapshot_journal(&self.journal_path)?;
-        Ok(journal_snapshot.or(snapshot_payload))
+        if journal_snapshot.is_some() {
+            return Ok(journal_snapshot);
+        }
+        read_task_operation_snapshot_file(&self.path)
     }
 }
 
