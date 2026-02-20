@@ -363,6 +363,7 @@ def ws_upgrade_request(
                 f"X-KAMN-Sender-DID: {sender_did}",
                 f"X-KAMN-Request-Nonce: {nonce}",
                 f"X-KAMN-Request-Signature: {signature(nonce, '')}",
+                "X-KAMN-Authz-Scope: events:read",
             ]
         )
     return (

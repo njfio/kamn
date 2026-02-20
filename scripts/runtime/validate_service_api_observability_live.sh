@@ -142,6 +142,7 @@ post_metrics_status="$(curl -sS -o "$post_metrics_file" -w '%{http_code}' \
   -H "X-KAMN-Sender-DID: ${sender_did}" \
   -H "X-KAMN-Request-Nonce: ${nonce}" \
   -H "X-KAMN-Request-Signature: ${signature}" \
+  -H "X-KAMN-Authz-Scope: protected:unknown" \
   --data '')"
 if [ "$post_metrics_status" != "405" ]; then
   cat "$post_metrics_file" >&2
