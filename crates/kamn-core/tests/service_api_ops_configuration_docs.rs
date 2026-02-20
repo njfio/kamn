@@ -177,6 +177,57 @@ fn service_api_ops_configuration_contains_api_compatibility_matrix_local_heavy_m
 }
 
 #[test]
+fn service_api_ops_configuration_contains_sqlite_crash_recovery_ci_dry_run_governance_markers() {
+    assert!(DOC.contains(
+        "## SQLite Crash-Recovery CI Dry-Run Durability Governance Contract (Issue #4014)"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_reason_taxonomy_version=kamn.ci.sqlite-crash-recovery-ci-dry-run-governance-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_reason_codes_csv=sqlite_crash_recovery_ci_dry_run_argument_invalid,sqlite_crash_recovery_ci_dry_run_threshold_contract_violation,sqlite_crash_recovery_ci_dry_run_report_contract_violation,sqlite_crash_recovery_ci_dry_run_runtime_budget_exceeded,sqlite_crash_recovery_ci_dry_run_fast_mode_selector_drift,sqlite_crash_recovery_ci_dry_run_workflow_exclusion_drift,sqlite_crash_recovery_ci_dry_run_docs_marker_parity_drift,sqlite_crash_recovery_ci_dry_run_docs_remediation_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_threshold_fixture_path=fixtures/ci/sqlite_crash_recovery_ci_dry_run_governance_thresholds.env"
+    ));
+    assert!(DOC.contains("sqlite_crash_recovery_ci_dry_run_max_seconds=120"));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_fast_mode_forbidden_entry=bash \"$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live.sh\" --mode run"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_recovery_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode run"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_sqlite_crash_recovery_ci_dry_run_governance.py --sqlite-crash-recovery-summary-report-file /tmp/sqlite-crash-recovery-live-summary.json --sqlite-crash-recovery-policy-report-file /tmp/sqlite-crash-recovery-live-policy.json --sqlite-crash-recovery-contract-lane-report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --threshold-file fixtures/ci/sqlite_crash_recovery_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/sqlite-crash-recovery-ci-dry-run-governance-report.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("sqlite_crash_recovery_ci_dry_run_remediation_map_version=v1"));
+    for reason_code in [
+        "sqlite_crash_recovery_ci_dry_run_argument_invalid",
+        "sqlite_crash_recovery_ci_dry_run_threshold_contract_violation",
+        "sqlite_crash_recovery_ci_dry_run_report_contract_violation",
+        "sqlite_crash_recovery_ci_dry_run_runtime_budget_exceeded",
+        "sqlite_crash_recovery_ci_dry_run_fast_mode_selector_drift",
+        "sqlite_crash_recovery_ci_dry_run_workflow_exclusion_drift",
+        "sqlite_crash_recovery_ci_dry_run_docs_marker_parity_drift",
+        "sqlite_crash_recovery_ci_dry_run_docs_remediation_marker_missing",
+    ] {
+        assert!(
+            DOC.contains(&format!(
+                "sqlite_crash_recovery_ci_dry_run_remediation.{reason_code}="
+            )),
+            "missing ops remediation marker for reason code {reason_code}"
+        );
+    }
+    assert!(DOC.contains("Regression: #4014"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"
