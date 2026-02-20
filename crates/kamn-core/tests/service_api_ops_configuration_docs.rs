@@ -88,6 +88,35 @@ fn service_api_ops_configuration_contains_tenant_isolation_matrix_markers() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_api_version_policy_markers() {
+    assert!(DOC.contains("## API Version-Policy Contract (Issue #4041)"));
+    assert!(DOC.contains(
+        "api_version_policy_reason_taxonomy_version=kamn.runtime.api-version-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_reason_codes_csv=ci_fast_gate_failed,api_version_policy_schema_mismatch,api_version_policy_status_invalid,api_version_policy_final_decision_invalid,api_version_policy_final_decision_mismatch,api_version_policy_lane_mode_invalid,api_version_policy_fixture_schema_mismatch,api_version_policy_fixture_rows_invalid,api_version_policy_fixture_row_count_mismatch,api_version_policy_fixture_row_duplicate,api_version_policy_fixture_row_id_invalid,api_version_policy_fixture_row_missing,api_version_policy_fixture_row_status_mismatch,api_version_policy_fixture_row_decision_mismatch,api_version_policy_fixture_row_reason_code_mismatch,api_version_policy_fixture_row_version_mismatch,api_version_policy_fixture_row_window_mismatch,api_version_policy_marker_missing,api_version_policy_execution_reason_code_mismatch,api_version_policy_command_count_invalid,api_version_policy_command_count_mismatch,api_version_policy_elapsed_seconds_invalid,api_version_policy_max_seconds_invalid,api_version_policy_runtime_budget_exceeded,api_version_policy_docs_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_fixture_schema_version=kamn.runtime.api-version-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_fixture_path=fixtures/runtime/api_version_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_required_row_ids_csv=v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route"
+    ));
+    assert!(DOC.contains("api_version_unsupported_window"));
+    assert!(DOC.contains("api_version_policy_fixture_row_status_mismatch"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/validate_api_version_policy_live.sh --mode dry-run --output-json /tmp/api-version-policy-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_api_version_policy_live_policy.sh --report-file /tmp/api-version-policy-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/api-version-policy-live-policy.json"
+    ));
+    assert!(DOC.contains("Regression: #4041"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"

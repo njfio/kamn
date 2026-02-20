@@ -7,6 +7,8 @@ const SERVICE_API_ENDPOINT_SOURCE: &str =
     include_str!("../../kamn-node/src/service_api_endpoint.rs");
 const SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE: &str =
     include_str!("../../../scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py");
+const API_VERSION_POLICY_CONTRACT_SOURCE: &str =
+    include_str!("../../../scripts/runtime/api_version_policy_live_contract.py");
 const OVERLOAD_RUNNER_SOURCE: &str =
     include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
 
@@ -38,6 +40,16 @@ const SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-tenant-isolation-matrix.v1";
 const SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV: &str =
     "m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied";
+const API_VERSION_POLICY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.api-version-policy-reason-taxonomy.v1";
+const API_VERSION_POLICY_REASON_CODES_CSV: &str =
+    "ci_fast_gate_failed,api_version_policy_schema_mismatch,api_version_policy_status_invalid,api_version_policy_final_decision_invalid,api_version_policy_final_decision_mismatch,api_version_policy_lane_mode_invalid,api_version_policy_fixture_schema_mismatch,api_version_policy_fixture_rows_invalid,api_version_policy_fixture_row_count_mismatch,api_version_policy_fixture_row_duplicate,api_version_policy_fixture_row_id_invalid,api_version_policy_fixture_row_missing,api_version_policy_fixture_row_status_mismatch,api_version_policy_fixture_row_decision_mismatch,api_version_policy_fixture_row_reason_code_mismatch,api_version_policy_fixture_row_version_mismatch,api_version_policy_fixture_row_window_mismatch,api_version_policy_marker_missing,api_version_policy_execution_reason_code_mismatch,api_version_policy_command_count_invalid,api_version_policy_command_count_mismatch,api_version_policy_elapsed_seconds_invalid,api_version_policy_max_seconds_invalid,api_version_policy_runtime_budget_exceeded,api_version_policy_docs_marker_missing";
+const API_VERSION_POLICY_FIXTURE_SCHEMA_VERSION: &str =
+    "kamn.runtime.api-version-policy-fixture-matrix.v1";
+const API_VERSION_POLICY_FIXTURE_PATH: &str =
+    "fixtures/runtime/api_version_policy_fixture_matrix.txt";
+const API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV: &str =
+    "v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route";
 const AUDIT_INTEGRITY_REASON_TAXONOMY_VERSION: &str =
     "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1";
 const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded";
@@ -66,6 +78,10 @@ fn service_api_tenant_isolation_reason_codes() -> Vec<&'static str> {
     SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV
         .split(',')
         .collect()
+}
+
+fn api_version_policy_reason_codes() -> Vec<&'static str> {
+    API_VERSION_POLICY_REASON_CODES_CSV.split(',').collect()
 }
 
 fn audit_integrity_reason_codes() -> Vec<&'static str> {
@@ -983,6 +999,36 @@ fn doc_contains_runtime_service_api_tenant_isolation_matrix_contract_lane_ci_mod
         "service api tenant-isolation matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
     assert!(DOC.contains("service_api_tenant_isolation_policy_matrix_row_status_mismatch"));
+}
+
+#[test]
+fn doc_contains_runtime_api_version_policy_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime API Version-Policy Contract Lane"));
+    assert!(DOC.contains(
+        "validate_api_version_policy_live.sh --mode dry-run --output-json /tmp/api-version-policy-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_API_VERSION_POLICY_OPT_IN=1 bash scripts/runtime/validate_api_version_policy_live.sh --mode run --output-json /tmp/api-version-policy-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_api_version_policy_live_policy.sh --report-file /tmp/api-version-policy-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/api-version-policy-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_api_version_policy_live_contract_lane.sh --output-json /tmp/api-version-policy-contract-lane-report.json --policy-output-json /tmp/api-version-policy-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test api_version_policy_contract unit_api_version_policy_lane_dry_run_emits_deterministic_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test api_version_policy_contract integration_api_version_policy_contract_lane_composes_policy_and_docs_parity -- --exact"
+    ));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "api version-policy run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC.contains("api_version_policy_fixture_row_status_mismatch"));
 }
 
 #[test]
@@ -1905,6 +1951,92 @@ fn doc_enforces_service_api_tenant_isolation_matrix_reason_codes_non_empty() {
         assert!(
             OPS_DOC.contains(reason_code),
             "ops docs missing tenant-isolation reason code marker: {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_api_version_policy_docs_parity_markers() {
+    assert!(DOC.contains("### API Version-Policy Contract"));
+    assert!(DOC.contains(
+        "api_version_policy_reason_taxonomy_version=kamn.runtime.api-version-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_reason_codes_csv=ci_fast_gate_failed,api_version_policy_schema_mismatch,api_version_policy_status_invalid,api_version_policy_final_decision_invalid,api_version_policy_final_decision_mismatch,api_version_policy_lane_mode_invalid,api_version_policy_fixture_schema_mismatch,api_version_policy_fixture_rows_invalid,api_version_policy_fixture_row_count_mismatch,api_version_policy_fixture_row_duplicate,api_version_policy_fixture_row_id_invalid,api_version_policy_fixture_row_missing,api_version_policy_fixture_row_status_mismatch,api_version_policy_fixture_row_decision_mismatch,api_version_policy_fixture_row_reason_code_mismatch,api_version_policy_fixture_row_version_mismatch,api_version_policy_fixture_row_window_mismatch,api_version_policy_marker_missing,api_version_policy_execution_reason_code_mismatch,api_version_policy_command_count_invalid,api_version_policy_command_count_mismatch,api_version_policy_elapsed_seconds_invalid,api_version_policy_max_seconds_invalid,api_version_policy_runtime_budget_exceeded,api_version_policy_docs_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_fixture_schema_version=kamn.runtime.api-version-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_fixture_path=fixtures/runtime/api_version_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "api_version_policy_required_row_ids_csv=v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route"
+    ));
+    assert!(DOC.contains("api_version_policy_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("api_version_policy_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test api_version_policy_contract integration_api_version_policy_contract_lane_composes_policy_and_docs_parity -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4041"));
+}
+
+#[test]
+fn doc_enforces_api_version_policy_docs_parity_matches_source_taxonomy() {
+    assert!(API_VERSION_POLICY_CONTRACT_SOURCE.contains(
+        "REASON_TAXONOMY_VERSION = \"kamn.runtime.api-version-policy-reason-taxonomy.v1\""
+    ));
+    assert!(API_VERSION_POLICY_CONTRACT_SOURCE.contains("REASON_CODES_CSV = \",\".join("));
+    assert!(API_VERSION_POLICY_CONTRACT_SOURCE
+        .contains("FIXTURE_SCHEMA = \"kamn.runtime.api-version-policy-fixture-matrix.v1\""));
+
+    assert!(DOC.contains(&format!(
+        "api_version_policy_reason_taxonomy_version={API_VERSION_POLICY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_reason_codes_csv={API_VERSION_POLICY_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_fixture_schema_version={API_VERSION_POLICY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}"
+    )));
+    assert!(DOC.contains(&format!(
+        "api_version_policy_required_row_ids_csv={API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_reason_taxonomy_version={API_VERSION_POLICY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_reason_codes_csv={API_VERSION_POLICY_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_fixture_schema_version={API_VERSION_POLICY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_fixture_path={API_VERSION_POLICY_FIXTURE_PATH}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "api_version_policy_required_row_ids_csv={API_VERSION_POLICY_REQUIRED_ROW_IDS_CSV}"
+    )));
+}
+
+#[test]
+fn doc_enforces_api_version_policy_reason_codes_non_empty() {
+    for reason_code in api_version_policy_reason_codes() {
+        assert!(
+            !reason_code.trim().is_empty(),
+            "reason code entries must stay non-empty"
+        );
+        assert!(
+            DOC.contains(reason_code),
+            "ci strategy docs missing api version-policy reason code marker: {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(reason_code),
+            "ops docs missing api version-policy reason code marker: {reason_code}"
         );
     }
 }

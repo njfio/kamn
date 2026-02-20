@@ -372,6 +372,36 @@ Regression marker:
 
 - `Regression: #4058`
 
+## API Version-Policy Contract (Issue #4041)
+
+Deterministic API version-policy markers:
+
+- `api_version_policy_reason_taxonomy_version=kamn.runtime.api-version-policy-reason-taxonomy.v1`
+- `api_version_policy_reason_codes_csv=ci_fast_gate_failed,api_version_policy_schema_mismatch,api_version_policy_status_invalid,api_version_policy_final_decision_invalid,api_version_policy_final_decision_mismatch,api_version_policy_lane_mode_invalid,api_version_policy_fixture_schema_mismatch,api_version_policy_fixture_rows_invalid,api_version_policy_fixture_row_count_mismatch,api_version_policy_fixture_row_duplicate,api_version_policy_fixture_row_id_invalid,api_version_policy_fixture_row_missing,api_version_policy_fixture_row_status_mismatch,api_version_policy_fixture_row_decision_mismatch,api_version_policy_fixture_row_reason_code_mismatch,api_version_policy_fixture_row_version_mismatch,api_version_policy_fixture_row_window_mismatch,api_version_policy_marker_missing,api_version_policy_execution_reason_code_mismatch,api_version_policy_command_count_invalid,api_version_policy_command_count_mismatch,api_version_policy_elapsed_seconds_invalid,api_version_policy_max_seconds_invalid,api_version_policy_runtime_budget_exceeded,api_version_policy_docs_marker_missing`
+- `api_version_policy_fixture_schema_version=kamn.runtime.api-version-policy-fixture-matrix.v1`
+- `api_version_policy_fixture_path=fixtures/runtime/api_version_policy_fixture_matrix.txt`
+- `api_version_policy_required_row_ids_csv=v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route`
+- `api_version_policy_strategy_doc_path=docs/ci/strategy.md`
+- `api_version_policy_ops_doc_path=docs/ops/configuration.md`
+
+Deterministic fail-closed reason markers:
+
+- `api_version_unsupported_window`
+- `api_version_policy_fixture_row_status_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/validate_api_version_policy_live.sh --mode dry-run --output-json /tmp/api-version-policy-live-summary.json`
+- `KAMN_API_VERSION_POLICY_OPT_IN=1 bash scripts/runtime/validate_api_version_policy_live.sh --mode run --output-json /tmp/api-version-policy-live-summary.json`
+- `bash scripts/runtime/check_api_version_policy_live_policy.sh --report-file /tmp/api-version-policy-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/api-version-policy-live-policy.json`
+- `bash scripts/runtime/validate_api_version_policy_live_contract_lane.sh --output-json /tmp/api-version-policy-contract-lane-report.json --policy-output-json /tmp/api-version-policy-live-policy.json`
+- `cargo test -p kamn-core --test api_version_policy_contract functional_api_version_policy_checker_accepts_valid_report -- --exact`
+- `cargo test -p kamn-core --test api_version_policy_contract regression_api_version_policy_checker_rejects_tampered_marker -- --exact`
+
+Regression marker:
+
+- `Regression: #4041`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
