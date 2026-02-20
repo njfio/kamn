@@ -7,7 +7,8 @@
 use std::fmt;
 
 use crate::{
-    data_layer_m2_default_rls_policies, AgentDid, DataLayerM0EnvelopeRecord, KamnDid,
+    data_layer_m2_default_rls_policies, AgentDid, DataLayerM0EnvelopeRecord,
+    DataLayerM5EmbeddingRecord, DataLayerM5SemanticQuery, KamnDid,
     DATA_LAYER_M2_REQUESTER_DID_SETTING,
 };
 
@@ -16,8 +17,15 @@ pub const DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE: &str =
     "data_layer_pg_invalid_requester_did";
 /// Stable reason marker for invalid owner DID inputs.
 pub const DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE: &str = "data_layer_pg_invalid_owner_did";
+/// Stable reason marker for pgvector extension unavailability.
+pub const DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE: &str =
+    "data_layer_pg_pgvector_extension_unavailable";
+/// Stable reason marker for pgvector dimension mismatch.
+pub const DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE: &str =
+    "data_layer_pg_pgvector_dimension_mismatch";
 
 const DATA_LAYER_PG_MAX_BLIND_INDEX_SEARCH_LIMIT: u32 = 200;
+const DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT: usize = 200;
 
 /// Deterministic operation kind projected by the bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,6 +44,10 @@ pub enum DataLayerPgOperationKind {
     MarkMerkleBatchSubmitted,
     /// Update merkle batch row to confirmed status descriptor.
     MarkMerkleBatchConfirmed,
+    /// Insert one M5 embedding row for pgvector-backed search.
+    InsertEmbeddingVector,
+    /// Search M5 embedding rows using pgvector distance ordering.
+    SearchEmbeddingVectors,
 }
 
 /// Requester session metadata projected into SQL execution context.
@@ -73,6 +85,42 @@ pub struct DataLayerPgBlindIndexSearchRequest {
     pub index_value_hash: String,
     /// Maximum number of rows to return.
     pub limit: u32,
+}
+
+/// Deterministic pgvector capability configuration for M5 bridge projections.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DataLayerPgM5PgvectorConfig {
+    /// Whether pgvector extension surface is available.
+    pub extension_enabled: bool,
+    /// Configured vector dimensionality for embeddings and queries.
+    pub dimensions: usize,
+}
+
+impl DataLayerPgM5PgvectorConfig {
+    /// Creates deterministic pgvector configuration.
+    pub fn new(
+        extension_enabled: bool,
+        dimensions: usize,
+    ) -> Result<Self, DataLayerPgRepositoryBridgeError> {
+        if dimensions == 0 {
+            return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+                "pgvector_dimensions",
+            ));
+        }
+        Ok(Self {
+            extension_enabled,
+            dimensions,
+        })
+    }
+}
+
+/// M5 semantic query request projected into pgvector SQL operation descriptors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataLayerPgM5SimilaritySearchRequest {
+    /// Requester DID for RLS session context.
+    pub requester_did: String,
+    /// Semantic query projected from M5 contract inputs.
+    pub query: DataLayerM5SemanticQuery,
 }
 
 /// RLS SQL statement descriptor projected from M2 templates.
@@ -116,6 +164,20 @@ pub enum DataLayerPgRepositoryBridgeError {
         /// Maximum accepted limit.
         max_allowed: u32,
     },
+    /// pgvector extension is unavailable for requested projection.
+    PgvectorExtensionUnavailable {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// Vector dimensionality does not match pgvector configuration.
+    PgvectorDimensionMismatch {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Expected configured dimensionality.
+        expected: usize,
+        /// Found input dimensionality.
+        found: usize,
+    },
 }
 
 impl fmt::Display for DataLayerPgRepositoryBridgeError {
@@ -144,6 +206,17 @@ impl fmt::Display for DataLayerPgRepositoryBridgeError {
             } => write!(
                 formatter,
                 "invalid blind-index search limit: requested {requested}, max {max_allowed}"
+            ),
+            Self::PgvectorExtensionUnavailable { reason_code } => {
+                write!(formatter, "pgvector extension unavailable: {reason_code}")
+            }
+            Self::PgvectorDimensionMismatch {
+                reason_code,
+                expected,
+                found,
+            } => write!(
+                formatter,
+                "pgvector dimension mismatch: {reason_code} (expected {expected}, found {found})"
             ),
         }
     }
@@ -234,6 +307,98 @@ pub fn data_layer_pg_project_blind_index_search_operation(
     })
 }
 
+/// Projects a deterministic M5 pgvector embedding-insert SQL operation descriptor.
+pub fn data_layer_pg_project_m5_embedding_insert_operation(
+    record: &DataLayerM5EmbeddingRecord,
+    requester_did: &str,
+    config: DataLayerPgM5PgvectorConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_pgvector_extension(config)?;
+    validate_non_empty(record.embedding_id.as_str(), "embedding_id")?;
+    validate_non_empty(record.message_id.as_str(), "message_id")?;
+    validate_non_empty(record.owner_did.as_str(), "owner_did")?;
+    validate_non_empty(record.agent_did.as_str(), "agent_did")?;
+    validate_non_empty(record.model_id.as_str(), "model_id")?;
+    validate_owner_did(record.owner_did.as_str())?;
+    let vector = record.vector_plaintext.as_ref().ok_or(
+        DataLayerPgRepositoryBridgeError::PgvectorDimensionMismatch {
+            reason_code: DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
+            expected: config.dimensions,
+            found: 0,
+        },
+    )?;
+    if vector.len() != config.dimensions {
+        return Err(
+            DataLayerPgRepositoryBridgeError::PgvectorDimensionMismatch {
+                reason_code: DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
+                expected: config.dimensions,
+                found: vector.len(),
+            },
+        );
+    }
+    let session = build_requester_session(requester_did)?;
+
+    let sql = "INSERT INTO embeddings (embedding_id, message_id, owner_did, agent_did, model_id, vector_plaintext, vector_dimensions, created_at) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6::vector, $7, to_timestamp($8));";
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::InsertEmbeddingVector,
+        sql: sql.to_owned(),
+        bind_markers: vec![
+            "embedding_id",
+            "message_id",
+            "owner_did",
+            "agent_did",
+            "model_id",
+            "vector_plaintext",
+            "vector_dimensions",
+            "created_at_epoch_seconds",
+        ],
+        session,
+    })
+}
+
+/// Projects a deterministic M5 pgvector similarity-search SQL operation descriptor.
+pub fn data_layer_pg_project_m5_similarity_search_operation(
+    request: DataLayerPgM5SimilaritySearchRequest,
+    config: DataLayerPgM5PgvectorConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_pgvector_extension(config)?;
+    validate_non_empty(request.query.owner_did.as_str(), "owner_did")?;
+    validate_owner_did(request.query.owner_did.as_str())?;
+    if request.query.query_vector.is_empty() {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField("query_vector"));
+    }
+    if request.query.query_vector.len() != config.dimensions {
+        return Err(
+            DataLayerPgRepositoryBridgeError::PgvectorDimensionMismatch {
+                reason_code: DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
+                expected: config.dimensions,
+                found: request.query.query_vector.len(),
+            },
+        );
+    }
+    let limit = request
+        .query
+        .limit
+        .unwrap_or(DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT);
+    if limit == 0 || limit > DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT {
+        return Err(DataLayerPgRepositoryBridgeError::InvalidSearchLimit {
+            requested: limit as u32,
+            max_allowed: DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT as u32,
+        });
+    }
+    let session = build_requester_session(request.requester_did.as_str())?;
+
+    let sql = "SELECT embedding_id, message_id, owner_did, agent_did, model_id, vector_dimensions, vector_plaintext <=> $2::vector AS cosine_distance FROM embeddings WHERE owner_did = $1 ORDER BY vector_plaintext <=> $2::vector ASC LIMIT $3;";
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::SearchEmbeddingVectors,
+        sql: sql.to_owned(),
+        bind_markers: vec!["owner_did", "query_vector", "limit"],
+        session,
+    })
+}
+
 /// Projects default M2 RLS templates into deterministic SQL statement descriptors.
 pub fn data_layer_pg_project_default_rls_statements() -> Vec<DataLayerPgRlsStatement> {
     let mut policies = data_layer_m2_default_rls_policies();
@@ -304,6 +469,24 @@ fn validate_owner_did(owner_did: &str) -> Result<(), DataLayerPgRepositoryBridge
             detail: error.to_string(),
         }
     })?;
+    Ok(())
+}
+
+fn validate_pgvector_extension(
+    config: DataLayerPgM5PgvectorConfig,
+) -> Result<(), DataLayerPgRepositoryBridgeError> {
+    if !config.extension_enabled {
+        return Err(
+            DataLayerPgRepositoryBridgeError::PgvectorExtensionUnavailable {
+                reason_code: DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE,
+            },
+        );
+    }
+    if config.dimensions == 0 {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+            "pgvector_dimensions",
+        ));
+    }
     Ok(())
 }
 

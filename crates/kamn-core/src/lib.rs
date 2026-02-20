@@ -502,10 +502,15 @@ pub use data_layer_postgres_execution_adapter::{
 pub use data_layer_postgres_repository_bridge::{
     data_layer_pg_project_blind_index_search_operation,
     data_layer_pg_project_default_rls_statements, data_layer_pg_project_insert_message_operation,
+    data_layer_pg_project_m5_embedding_insert_operation,
+    data_layer_pg_project_m5_similarity_search_operation,
     data_layer_pg_project_select_message_by_id_operation, DataLayerPgBlindIndexSearchRequest,
-    DataLayerPgOperationKind, DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession,
-    DataLayerPgRlsStatement, DataLayerPgSqlOperation, DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE,
+    DataLayerPgM5PgvectorConfig, DataLayerPgM5SimilaritySearchRequest, DataLayerPgOperationKind,
+    DataLayerPgRepositoryBridgeError, DataLayerPgRequesterSession, DataLayerPgRlsStatement,
+    DataLayerPgSqlOperation, DATA_LAYER_PG_INVALID_OWNER_DID_REASON_CODE,
     DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE,
+    DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
+    DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE,
 };
 pub use data_layer_prd_critical_scenario_conformance::{
     DataLayerPrdCriticalScenarioConformanceDecision, DataLayerPrdCriticalScenarioConformanceError,
