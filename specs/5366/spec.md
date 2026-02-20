@@ -1,7 +1,7 @@
 # Issue #5366 Spec
 
 - Title: Task: add topology permutation-invariance contracts for live-postgres parallel lane validation
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-program-operational-hardening-and-live-validation/index.md
