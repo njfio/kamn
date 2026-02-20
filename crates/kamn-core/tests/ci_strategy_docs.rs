@@ -2442,9 +2442,7 @@ fn doc_contains_performance_baseline_provenance_contract_markers() {
     assert!(DOC.contains(
         "performance_baseline_refresh_contract=update fixture provenance + seed markers in the same PR as threshold-contract changes"
     ));
-    assert!(DOC.contains(
-        "missing required baseline marker: baseline_provenance_artifact_version"
-    ));
+    assert!(DOC.contains("missing required baseline marker: baseline_provenance_artifact_version"));
     assert!(DOC.contains("bash scripts/ci/test_generate_performance_smoke_report.sh"));
     assert!(DOC.contains("bash scripts/ci/test_check_performance_thresholds.sh"));
 }
