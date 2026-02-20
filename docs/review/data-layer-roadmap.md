@@ -8,11 +8,13 @@
 
 - Infrastructure activation epic: `#5247`
 - Phase 1 story (PostgreSQL + RLS foundation): `#5248`
-- Active bootstrap task: `#5255`
+- Completed bootstrap task: `#5255`
+- Completed bridge task: `#5257`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
 - Phase 1 bootstrap migration scaffolding: Implemented in `#5255` (pending merge)
+- Phase 1 repository bridge contracts and RLS projection: Implemented in `#5257` (pending merge)
 - Phases 2-6: Planned with dependency order captured in `#5249`..`#5254`
 
 ---
