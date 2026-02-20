@@ -1615,6 +1615,35 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `api_version_policy_fixture_row_status_mismatch`
   - `Regression: #4041`
 
+## Runtime Request-Response Schema Compatibility Contract Lane
+### Request-Response Schema Compatibility Contract
+- Entry commands:
+  - `bash scripts/runtime/validate_request_response_schema_compatibility_live.sh --mode dry-run --output-json /tmp/request-response-schema-compatibility-live-summary.json`
+  - `KAMN_REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_OPT_IN=1 bash scripts/runtime/validate_request_response_schema_compatibility_live.sh --mode run --output-json /tmp/request-response-schema-compatibility-live-summary.json`
+  - `bash scripts/runtime/check_request_response_schema_compatibility_live_policy.sh --report-file /tmp/request-response-schema-compatibility-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/request-response-schema-compatibility-live-policy.json`
+  - `bash scripts/runtime/validate_request_response_schema_compatibility_live_contract_lane.sh --output-json /tmp/request-response-schema-compatibility-contract-lane-report.json --policy-output-json /tmp/request-response-schema-compatibility-live-policy.json`
+  - `cargo test -p kamn-core --test request_response_schema_compatibility_contract unit_request_response_schema_compatibility_lane_dry_run_emits_deterministic_markers -- --exact`
+  - `cargo test -p kamn-core --test request_response_schema_compatibility_contract integration_request_response_schema_compatibility_contract_lane_composes_policy_and_docs_parity -- --exact`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested request-response schema compatibility commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_OPT_IN=1`.
+  - run mode replays fixture pair projection without nested cargo command fan-out.
+  - request-response schema compatibility run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic taxonomy markers:
+  - `request_response_schema_compatibility_reason_taxonomy_version=kamn.runtime.request-response-schema-compatibility-reason-taxonomy.v1`
+  - `request_response_schema_compatibility_reason_codes_csv=ci_fast_gate_failed,request_response_schema_compatibility_schema_mismatch,request_response_schema_compatibility_status_invalid,request_response_schema_compatibility_final_decision_invalid,request_response_schema_compatibility_final_decision_mismatch,request_response_schema_compatibility_lane_mode_invalid,request_response_schema_compatibility_fixture_schema_mismatch,request_response_schema_compatibility_fixture_rows_invalid,request_response_schema_compatibility_fixture_row_count_mismatch,request_response_schema_compatibility_fixture_row_duplicate,request_response_schema_compatibility_fixture_row_id_invalid,request_response_schema_compatibility_fixture_row_missing,request_response_schema_compatibility_fixture_row_status_mismatch,request_response_schema_compatibility_fixture_row_decision_mismatch,request_response_schema_compatibility_fixture_row_reason_code_mismatch,request_response_schema_compatibility_fixture_row_version_pair_mismatch,request_response_schema_compatibility_fixture_row_change_class_mismatch,request_response_schema_compatibility_marker_missing,request_response_schema_compatibility_execution_reason_code_mismatch,request_response_schema_compatibility_command_count_invalid,request_response_schema_compatibility_command_count_mismatch,request_response_schema_compatibility_elapsed_seconds_invalid,request_response_schema_compatibility_max_seconds_invalid,request_response_schema_compatibility_runtime_budget_exceeded,request_response_schema_compatibility_docs_marker_missing`
+  - `request_response_schema_compatibility_fixture_schema_version=kamn.runtime.request-response-schema-compatibility-fixture-matrix.v1`
+  - `request_response_schema_compatibility_fixture_path=fixtures/runtime/request_response_schema_compatibility_fixture_matrix.txt`
+  - `request_response_schema_compatibility_required_row_ids_csv=v1_to_v2_messages_send_optional_request_addition,v1_to_v2_channels_create_optional_response_addition,v1_to_v2_messages_get_required_response_removal,v1_to_v2_tasks_create_required_request_removal`
+  - `request_response_schema_compatibility_strategy_doc_path=docs/ci/strategy.md`
+  - `request_response_schema_compatibility_ops_doc_path=docs/ops/configuration.md`
+- Deterministic fail-closed marker for policy tamper drills:
+  - `request_response_schema_compatibility_fixture_row_status_mismatch`
+  - `Regression: #4042`
+
 ## Runtime Service API Graceful-Shutdown Drain Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json`
