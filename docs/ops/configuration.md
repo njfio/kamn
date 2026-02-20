@@ -470,6 +470,28 @@ Regression marker:
 
 - `Regression: #5297`
 
+## Phase-6 Daemon Runtime Integration Contracts (Issue #5299)
+
+Daemon runtime orchestration now executes a deterministic Phase-6 scheduler runtime path and emits
+structured completion markers for applied/deferred/fail-closed reason classes.
+
+Deterministic daemon Phase-6 runtime markers:
+
+- `phase6_daemon_runtime_contract_status=verified`
+- `phase6_daemon_runtime_reason_taxonomy_version=kamn.runtime.daemon.phase6.reason-taxonomy.v1`
+- `phase6_daemon_runtime_reason_codes_csv=m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded`
+- `phase6_daemon_runtime_contract=daemon_tick_executes_m10_scheduler_runtime;report_projects_phase6_reason_and_counters;clock_regression_fails_closed`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutdown_signals_are_present -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_daemon_phase6_runtime_projection_fail_closed_reason_is_stable_on_clock_regression -- --exact`
+
+Regression marker:
+
+- `Regression: #5299`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
