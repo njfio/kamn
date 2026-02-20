@@ -8,7 +8,8 @@ use std::fmt;
 
 use crate::{
     data_layer_m2_default_rls_policies, AgentDid, DataLayerM0EnvelopeRecord,
-    DataLayerM5EmbeddingRecord, DataLayerM5SemanticQuery, KamnDid,
+    DataLayerM5EmbeddingRecord, DataLayerM5SemanticQuery, DataLayerM6GraphEdgeRecord,
+    DataLayerM6GraphEdgeRelation, DataLayerM6TrustPropagationQuery, KamnDid,
     DATA_LAYER_M2_REQUESTER_DID_SETTING,
 };
 
@@ -23,9 +24,16 @@ pub const DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE: &str =
 /// Stable reason marker for pgvector dimension mismatch.
 pub const DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE: &str =
     "data_layer_pg_pgvector_dimension_mismatch";
+/// Stable reason marker for AGE extension unavailability.
+pub const DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE: &str =
+    "data_layer_pg_age_extension_unavailable";
+/// Stable reason marker for unsupported AGE relation projection.
+pub const DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE: &str =
+    "data_layer_pg_age_relation_unsupported";
 
 const DATA_LAYER_PG_MAX_BLIND_INDEX_SEARCH_LIMIT: u32 = 200;
 const DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT: usize = 200;
+const DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT: usize = 200;
 
 /// Deterministic operation kind projected by the bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,6 +56,10 @@ pub enum DataLayerPgOperationKind {
     InsertEmbeddingVector,
     /// Search M5 embedding rows using pgvector distance ordering.
     SearchEmbeddingVectors,
+    /// Upsert one M6 graph edge via AGE/openCypher descriptor.
+    UpsertGraphEdge,
+    /// Query M6 trust-propagation rows via AGE/openCypher descriptor.
+    QueryGraphTrustPropagation,
 }
 
 /// Requester session metadata projected into SQL execution context.
@@ -123,6 +135,43 @@ pub struct DataLayerPgM5SimilaritySearchRequest {
     pub query: DataLayerM5SemanticQuery,
 }
 
+/// Deterministic AGE capability configuration for M6 bridge projections.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgM6AgeConfig {
+    /// Whether AGE extension surface is available.
+    pub extension_enabled: bool,
+    /// Graph namespace marker.
+    pub graph_name: String,
+}
+
+impl DataLayerPgM6AgeConfig {
+    /// Creates deterministic AGE configuration.
+    pub fn new(
+        extension_enabled: bool,
+        graph_name: impl Into<String>,
+    ) -> Result<Self, DataLayerPgRepositoryBridgeError> {
+        let graph_name = graph_name.into();
+        if graph_name.trim().is_empty() {
+            return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+                "age_graph_name",
+            ));
+        }
+        Ok(Self {
+            extension_enabled,
+            graph_name,
+        })
+    }
+}
+
+/// M6 trust-propagation query request projected into AGE SQL descriptors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataLayerPgM6AgeTrustQueryRequest {
+    /// Requester DID for RLS/session scope projection.
+    pub requester_did: String,
+    /// Trust propagation query projected from M6 contract input.
+    pub query: DataLayerM6TrustPropagationQuery,
+}
+
 /// RLS SQL statement descriptor projected from M2 templates.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerPgRlsStatement {
@@ -178,6 +227,18 @@ pub enum DataLayerPgRepositoryBridgeError {
         /// Found input dimensionality.
         found: usize,
     },
+    /// AGE extension is unavailable for requested projection.
+    AgeExtensionUnavailable {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// AGE projection does not support the requested relation.
+    AgeUnsupportedRelation {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Relation marker that failed validation.
+        relation_marker: &'static str,
+    },
 }
 
 impl fmt::Display for DataLayerPgRepositoryBridgeError {
@@ -217,6 +278,16 @@ impl fmt::Display for DataLayerPgRepositoryBridgeError {
             } => write!(
                 formatter,
                 "pgvector dimension mismatch: {reason_code} (expected {expected}, found {found})"
+            ),
+            Self::AgeExtensionUnavailable { reason_code } => {
+                write!(formatter, "age extension unavailable: {reason_code}")
+            }
+            Self::AgeUnsupportedRelation {
+                reason_code,
+                relation_marker,
+            } => write!(
+                formatter,
+                "age relation unsupported: {reason_code} ({relation_marker})"
             ),
         }
     }
@@ -399,6 +470,83 @@ pub fn data_layer_pg_project_m5_similarity_search_operation(
     })
 }
 
+/// Projects a deterministic M6 AGE graph-edge upsert SQL operation descriptor.
+pub fn data_layer_pg_project_m6_age_edge_upsert_operation(
+    edge: &DataLayerM6GraphEdgeRecord,
+    requester_did: &str,
+    config: DataLayerPgM6AgeConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_age_config(&config)?;
+    validate_non_empty(edge.owner_did.as_str(), "owner_did")?;
+    validate_non_empty(edge.edge_id.as_str(), "edge_id")?;
+    validate_non_empty(edge.from_node_id.as_str(), "from_node_id")?;
+    validate_non_empty(edge.to_node_id.as_str(), "to_node_id")?;
+    validate_owner_did(edge.owner_did.as_str())?;
+    let relation_marker = map_age_supported_relation(edge.relation)?;
+    let session = build_requester_session(requester_did)?;
+
+    let sql = format!(
+        "SELECT * FROM cypher('{}', $$ MERGE (from:Agent {{node_id: $4, owner_did: $1}}) MERGE (to:Agent {{node_id: $5, owner_did: $1}}) MERGE (from)-[r:{} {{edge_id: $2, owner_did: $1}}]->(to) SET r.weight = $6, r.observed_at_epoch_seconds = $7 RETURN r.edge_id $$) AS (edge_id agtype);",
+        config.graph_name, relation_marker
+    );
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::UpsertGraphEdge,
+        sql,
+        bind_markers: vec![
+            "owner_did",
+            "edge_id",
+            "relation_marker",
+            "from_node_id",
+            "to_node_id",
+            "weight",
+            "observed_at_epoch_seconds",
+        ],
+        session,
+    })
+}
+
+/// Projects a deterministic M6 AGE trust-propagation SQL operation descriptor.
+pub fn data_layer_pg_project_m6_age_trust_query_operation(
+    request: DataLayerPgM6AgeTrustQueryRequest,
+    config: DataLayerPgM6AgeConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_age_config(&config)?;
+    validate_non_empty(request.query.owner_did.as_str(), "owner_did")?;
+    validate_non_empty(
+        request.query.source_agent_node_id.as_str(),
+        "source_agent_node_id",
+    )?;
+    validate_owner_did(request.query.owner_did.as_str())?;
+    validate_owner_did(request.query.requester_owner_did.as_str())?;
+    if request.query.max_depth == 0 {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField("max_depth"));
+    }
+    let limit = request
+        .query
+        .limit
+        .unwrap_or(DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT);
+    if limit == 0 || limit > DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT {
+        return Err(DataLayerPgRepositoryBridgeError::InvalidSearchLimit {
+            requested: limit as u32,
+            max_allowed: DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT as u32,
+        });
+    }
+    let session = build_requester_session(request.requester_did.as_str())?;
+
+    let sql = format!(
+        "SELECT * FROM cypher('{}', $$ MATCH (source:Agent {{node_id: $2, owner_did: $1}})-[:TRUSTS*1..$3]->(target:Agent {{owner_did: $1}}) RETURN target.node_id AS target_agent_node_id $$) AS (target_agent_node_id agtype) LIMIT $4;",
+        config.graph_name
+    );
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::QueryGraphTrustPropagation,
+        sql,
+        bind_markers: vec!["owner_did", "source_agent_node_id", "max_depth", "limit"],
+        session,
+    })
+}
+
 /// Projects default M2 RLS templates into deterministic SQL statement descriptors.
 pub fn data_layer_pg_project_default_rls_statements() -> Vec<DataLayerPgRlsStatement> {
     let mut policies = data_layer_m2_default_rls_policies();
@@ -488,6 +636,44 @@ fn validate_pgvector_extension(
         ));
     }
     Ok(())
+}
+
+fn validate_age_config(
+    config: &DataLayerPgM6AgeConfig,
+) -> Result<(), DataLayerPgRepositoryBridgeError> {
+    if !config.extension_enabled {
+        return Err(DataLayerPgRepositoryBridgeError::AgeExtensionUnavailable {
+            reason_code: DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE,
+        });
+    }
+    if config.graph_name.trim().is_empty() {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+            "age_graph_name",
+        ));
+    }
+    Ok(())
+}
+
+fn map_age_supported_relation(
+    relation: DataLayerM6GraphEdgeRelation,
+) -> Result<&'static str, DataLayerPgRepositoryBridgeError> {
+    let relation_marker = match relation {
+        DataLayerM6GraphEdgeRelation::Messaged => "MESSAGED",
+        DataLayerM6GraphEdgeRelation::Trusts => "TRUSTS",
+        DataLayerM6GraphEdgeRelation::ParticipatedIn => "PARTICIPATED_IN",
+        DataLayerM6GraphEdgeRelation::Owns => "OWNS",
+        DataLayerM6GraphEdgeRelation::DelegatedTo => "DELEGATED_TO",
+        DataLayerM6GraphEdgeRelation::BelongsToCluster => "BELONGS_TO_CLUSTER",
+        DataLayerM6GraphEdgeRelation::ForkedFrom => "FORKED_FROM",
+    };
+    if relation == DataLayerM6GraphEdgeRelation::Trusts {
+        Ok(relation_marker)
+    } else {
+        Err(DataLayerPgRepositoryBridgeError::AgeUnsupportedRelation {
+            reason_code: DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE,
+            relation_marker,
+        })
+    }
 }
 
 fn validate_non_empty(

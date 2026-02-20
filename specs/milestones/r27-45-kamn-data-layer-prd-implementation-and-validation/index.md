@@ -57,6 +57,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5269` — Task: implement M1 anchoring follow-up retry and confirmation policy projection
   - `#5271` — Task: implement M1 finality-observation reconciliation projection
   - `#5273` — Task: implement M5 pgvector adapter projection and fail-closed extension contracts
+  - `#5275` — Task: implement M6 AGE adapter projection and fail-closed graph-extension contracts
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage
