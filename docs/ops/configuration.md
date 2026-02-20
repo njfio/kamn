@@ -819,6 +819,26 @@ Regression marker:
 
 - `Regression: #5346`
 
+### Bounded Load-Profile Matrix (Issue #5348)
+
+The live-postgres matrix slice now enforces deterministic bounded load-profile contracts so
+reason/taxonomy projections remain stable across applied and deferred runtime profiles.
+
+Deterministic load-profile markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_load_profile_ids_csv=applied_t3_i10,applied_t5_i25,applied_t9_i40,deferred_t5_i25_s3_d2_to4,deferred_t7_i25_s3_d2_to4,deferred_t9_i40_s3_d2_to4`
+- `phase6_live_postgres_daemon_runtime_matrix_load_profile_contract=applied_profiles->m10_phase6_scheduler_cycle_applied;deferred_profiles->m10_phase6_scheduler_cycle_deferred;runtime_taxonomy_version_stable`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_load_profile_matrix_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_load_profile_matrix_is_deterministic -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_load_profile_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5348`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
