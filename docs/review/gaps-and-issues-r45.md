@@ -88,7 +88,7 @@ Total: 1,143 lines across 5 files
 
 ### 2.3 Next Frontier
 
-The contract and infrastructure layers are complete. Execution of the next architectural milestone is now initiated under **#5338**, hardened by **#5340**, scenario-matrix stabilized by **#5342**, and taxonomy/order contract-hardened by **#5344** for the first env-gated slice of **live integration testing** against PostgreSQL and **daemon runtime end-to-end validation**. Broader multi-node/load lanes remain follow-up work.
+The contract and infrastructure layers are complete. Execution of the next architectural milestone is now initiated under **#5338**, hardened by **#5340**, scenario-matrix stabilized by **#5342**, taxonomy/order contract-hardened by **#5344**, and runtime-to-matrix taxonomy bridge-hardened by **#5346** for the first env-gated slice of **live integration testing** against PostgreSQL and **daemon runtime end-to-end validation**. Broader multi-node/load lanes remain follow-up work.
 
 ---
 
@@ -211,7 +211,7 @@ The data layer has completed its three-phase evolution:
 2. **R45:** Infrastructure activation (6 new modules, Phases 1–6 complete)
 3. **R46:** Structural consolidation (both monoliths decomposed)
 
-**Next milestone (initiated via #5338, hardened via #5340, matrix-stabilized via #5342, taxonomy/order-hardened via #5344):** expand PostgreSQL live-integration and daemon runtime end-to-end validation beyond the current env-gated matrix-stability conformance slice.
+**Next milestone (initiated via #5338, hardened via #5340, matrix-stabilized via #5342, taxonomy/order-hardened via #5344, taxonomy-bridge-hardened via #5346):** expand PostgreSQL live-integration and daemon runtime end-to-end validation beyond the current env-gated matrix-stability conformance slice.
 
 ### 7.5 Performance Baseline Infrastructure (New)
 

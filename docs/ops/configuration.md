@@ -798,6 +798,27 @@ Regression marker:
 
 - `Regression: #5344`
 
+### Runtime-to-Matrix Taxonomy Bridge (Issue #5346)
+
+The live-postgres validation matrix now explicitly bridges daemon runtime taxonomy markers to
+matrix taxonomy semantics so applied/deferred runtime reason outputs remain taxonomy-consistent.
+
+Deterministic taxonomy-bridge markers:
+
+- `phase6_live_postgres_daemon_runtime_reason_taxonomy_version=kamn.runtime.daemon.phase6.reason-taxonomy.v1`
+- `phase6_live_postgres_daemon_runtime_matrix_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1`
+- `phase6_live_postgres_daemon_runtime_taxonomy_bridge_contract=runtime_reason_taxonomy_v1->matrix_scenario_taxonomy_v1;applied_and_deferred_reasons_must_align`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_matrix_taxonomy_bridge_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_taxonomy_versions_are_stable_across_repeated_runs -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_bridge_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5346`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
