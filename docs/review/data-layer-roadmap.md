@@ -23,7 +23,8 @@
 - Completed Phase-5 realtime gateway bridge task: `#5279`
 - Completed Phase-5 websocket presence-route integration task: `#5281`
 - Completed Phase-5 backpressure/ops-doc closure task: `#5283`
-- Current Phase-6 retention-to-archival gate kickoff task: `#5285`
+- Completed Phase-6 retention-to-archival gate kickoff task: `#5285`
+- Current Phase-6 archival failure-retry contract task: `#5287`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -42,7 +43,8 @@ Current phase status:
 - Phase 5 realtime gateway bridge projection contracts: Implemented in `#5279` (merged)
 - Phase 5 websocket presence-route integration: Implemented in `#5281` (merged)
 - Phase 5 bounded-load guardrail validation + ops-doc closure: Implemented in `#5283` (merged)
-- Phase 6 retention-to-archival gate execution kickoff: In progress in `#5285`
+- Phase 6 retention-to-archival gate execution kickoff: Implemented in `#5285` (merged)
+- Phase 6 archival failure-retry projection contracts: In progress in `#5287`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
