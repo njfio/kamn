@@ -1356,6 +1356,28 @@ Regression marker:
 
 - `Regression: #5398`
 
+### Parallel Lane Topology Host-Mode-Host-Pair-Lane-Set-Lane-Fingerprint-Hash Order-Normalization-Digest Contracts (Issue #5400)
+
+The live-postgres matrix contracts now codify deterministic digest markers for canonical topology-id to
+host-mode-host-pair-lane-set-lane-fingerprint-hash order-normalization rows so lightweight integrity checks can fail closed on row drift.
+
+Deterministic topology-id host/lane fingerprint-hash order-normalization digest markers:
+
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-order-normalization-digest.v1`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_rows_csv=distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_rows_fnv1a64_hex=25b9729eaeb44fe9`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_contract=topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_digest_must_remain_stable_under_order_normalization_and_permutations`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5400`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
