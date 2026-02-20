@@ -692,6 +692,30 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_pa
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_permutation_markers(
+) {
+    assert!(
+        DOC.contains("### Parallel Lane Topology Permutation-Invariance Contracts (Issue #5366)")
+    );
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_permutation_ids_csv=baseline,reverse,rotate_left_1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_topology_permutation_contract=deterministic_topology_profile_permutations_must_preserve_sorted_topology_fingerprint_bundles"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_permutation_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_permutations_are_invariant -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_permutation_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5366"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
