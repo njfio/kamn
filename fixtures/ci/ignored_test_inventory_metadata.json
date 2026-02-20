@@ -50,6 +50,24 @@
       "owner": "team-runtime",
       "priority": "P2",
       "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/concurrency_state_mutation.rs",
+      "test_name": "performance_concurrency_state_mutation_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "disposition": "retained_deep_lane_opt_in_required",
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/durable_guard_recovery_matrix.rs",
+      "test_name": "performance_durable_guard_recovery_matrix_deep_lane",
+      "tracking_issue": "#2843"
+    },
+    {
+      "disposition": "retained_deep_lane_opt_in_required",
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
       "source_file": "crates/kamn-core/tests/durable_guard_snapshot_store.rs",
       "test_name": "performance_bundle_store_deep_lane_stress",
       "tracking_issue": "#2843"

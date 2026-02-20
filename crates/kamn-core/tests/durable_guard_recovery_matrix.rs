@@ -3,7 +3,6 @@ use kamn_core::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshotError, DeliveryValidationResult,
     MessageDeliveryGuards, PermissionRule, RetentionMessage, RetentionPolicy,
 };
-use std::env;
 use std::time::Instant;
 
 fn delivery_input(message_id: &str, nonce: u64, received_at: &str) -> DeliveryGuardInput {
@@ -280,14 +279,8 @@ fn performance_durable_guard_recovery_contract_lane_budget() {
 }
 
 #[test]
+#[ignore = "scheduled durable guard recovery deep matrix"]
 fn performance_durable_guard_recovery_matrix_deep_lane() {
-    if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
-        eprintln!(
-            "skipping deep-lane durable guard recovery matrix; set KAMN_KOLME_LOCAL_HEAVY=1 to run"
-        );
-        return;
-    }
-
     let mut guards = MessageDeliveryGuards::new();
     let mut channel_engine = ChannelPermissionEngine::new();
     register_channel(

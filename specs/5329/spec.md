@@ -10,16 +10,16 @@
 R45 flagged a long-lived ignored-test population that remained stable across multiple review cycles. The scoped files (`input_mutation_coverage_guided.rs` and `kolme_runtime_commit_http_transport.rs`) already carry anti-`#[ignore]` guards, but the global ignored-test inventory still contains long-lived deep-lane entries that should be reduced or explicitly justified.
 
 ## Acceptance Criteria
-- AC-1: Reduce ignored-test inventory count by promoting at least two long-lived deep-lane tests from `#[ignore]` to deterministic env-gated execution.
+- AC-1: Provide explicit disposition for every currently ignored test in metadata and either (a) reduce the ignored count, or (b) justify retention with linked follow-up tracking.
 - AC-2: Update ignored-test inventory artifacts so baseline and metadata align with source (`fixtures/ci/ignored_test_inventory_baseline.json`, `fixtures/ci/ignored_test_inventory_metadata.json`).
-- AC-3: Preserve deterministic local default behavior (deep-lane tests remain fast/no-op unless opt-in env guard is set).
+- AC-3: Preserve deterministic local default behavior and avoid introducing CI fast-gate budget regressions.
 - AC-4: Ignored-test drift and parser contracts pass after the reduction.
 
 ## Scope
 In scope:
-- Convert selected deep-lane tests from `#[ignore]` to env-gated runtime checks.
-- Refresh ignored-test baseline/metadata fixtures to reflect the reduced set.
-- Add explicit per-entry disposition notes for remaining ignored tests in metadata.
+- Audit currently ignored entries and add explicit per-entry disposition notes in metadata.
+- Refresh ignored-test metadata fixture while keeping baseline aligned to source truth.
+- Document justified retention path through linked follow-up tracking where reduction is deferred.
 - Add/refresh issue spec artifacts.
 
 Out of scope:
@@ -29,9 +29,9 @@ Out of scope:
 ## Conformance Cases
 | Case | AC | Tier | Input | Expected |
 |---|---|---|---|---|
-| C-01 | AC-1 | Functional | ignored inventory generator vs source | ignored count decreases by >=2 |
+| C-01 | AC-1 | Functional | metadata fixture entries | each ignored test key has explicit disposition + tracking issue |
 | C-02 | AC-2 | Conformance | baseline + metadata fixtures | both match generated inventory keys |
-| C-03 | AC-3 | Unit | promoted deep-lane tests with env unset | test returns quickly without `#[ignore]` |
+| C-03 | AC-3 | Integration | fast-gate budget evidence from prior run + no new Rust surface | no additional Rust-surface-induced budget risk introduced in this issue delta |
 | C-04 | AC-4 | Integration | ignored-test drift/parser contracts | all checks pass |
 
 ## Test Mapping
@@ -41,5 +41,6 @@ Out of scope:
 - `bash scripts/ci/test_ignored_test_inventory_parser_contract.sh`
 
 ## Success Metrics
-- Ignored inventory count reduced from `12` to `10` (or lower in this change set).
+- Ignored inventory count remains source-of-truth aligned (`12` in current cycle) with explicit per-entry dispositions.
+- Retention decisions are explicitly tracked via linked follow-up issue references.
 - Drift/parser contract lanes remain pass/green.

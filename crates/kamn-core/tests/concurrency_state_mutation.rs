@@ -2,7 +2,6 @@ use kamn_core::{
     EscrowLifecycle, EscrowTransitionAction, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
     RuntimeLifecycleError, TaskOperationEngine, TaskOperationError, TaskState,
 };
-use std::env;
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -588,14 +587,8 @@ fn performance_escrow_dispute_refund_concurrency_lane_stays_within_budget() {
 }
 
 #[test]
+#[ignore = "scheduled concurrency stress deep lane"]
 fn performance_concurrency_state_mutation_deep_lane_stress() {
-    if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
-        eprintln!(
-            "skipping deep-lane concurrency mutation stress test; set KAMN_KOLME_LOCAL_HEAVY=1 to run"
-        );
-        return;
-    }
-
     let contenders = [
         "kamn:did:agent:worker-deep-1",
         "kamn:did:agent:worker-deep-2",
