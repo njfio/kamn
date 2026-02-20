@@ -5,4 +5,4 @@
 - [x] T3 (Green): implement guarded scheduler-cycle contract with preflight budget admission + execution composition (`C-04`..`C-06`).
 - [x] T4 (Regression): ensure preflight overflow and invalid scheduler policy inputs fail closed deterministically (`C-05`).
 - [x] T5 (Verify): run `cargo fmt --check`, strict `clippy`, targeted M10 tests, and docs-contract tests (`C-07`).
-- [ ] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
+- [x] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
