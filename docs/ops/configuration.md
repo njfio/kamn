@@ -370,6 +370,29 @@ Regression marker:
 
 - `Regression: #5289`
 
+## Phase-6 Execution Tick Budget Guardrail Contracts (Issue #5291)
+
+Phase-6 orchestration tick output must be bounded by deterministic per-tick workload ceilings
+before scheduler wiring is promoted.
+
+Deterministic budget markers:
+
+- `phase6_execution_tick_budget_status=verified`
+- `phase6_execution_tick_budget_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-execution-budget-reason-taxonomy.v1`
+- `phase6_execution_tick_budget_reason_codes_csv=m10_phase6_execution_budget_within_limit,m10_phase6_execution_budget_due_candidates_exceeded,m10_phase6_execution_budget_shredded_messages_exceeded,m10_phase6_execution_budget_projections_exceeded,m10_phase6_execution_budget_archive_entries_exceeded,m10_phase6_execution_budget_invalid`
+- `phase6_execution_tick_budget_contract=due_candidates<=max_due_candidates;shredded_messages<=max_shredded_messages;projection_reports<=max_projection_reports;archived_entries<=max_archived_entries`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c20_phase6_execution_tick_budget_within_limits_and_exceeded_paths_are_deterministic -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c21_phase6_execution_tick_budget_projection_and_archive_limits_fail_closed -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_phase6_execution_tick_budget_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5291`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
