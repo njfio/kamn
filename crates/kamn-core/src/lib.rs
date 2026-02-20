@@ -328,11 +328,17 @@ pub use data_layer_m11_hardening_readiness::{
     DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
 };
 pub use data_layer_m1_anchoring_orchestrator::{
-    DataLayerM1AnchoringConfirmationMetadata, DataLayerM1AnchoringMessageAssignment,
+    DataLayerM1AnchoringConfirmationMetadata, DataLayerM1AnchoringFollowUpAction,
+    DataLayerM1AnchoringFollowUpPolicy, DataLayerM1AnchoringMessageAssignment,
     DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringOrchestratorError,
     DataLayerM1AnchoringPersistencePlan, DataLayerM1AnchoringSubmissionMetadata,
     DataLayerM1AnchoringTickOutcome,
     DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_DEFERRED_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE,
