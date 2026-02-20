@@ -251,6 +251,10 @@ Fixture-to-SLO mapping:
 | `signing` | signer/policy hot path | `latency_p50_ms`, `latency_p99_ms`, `throughput_tps`, `availability_pct` |
 | `transport` | ingress/transport hot path | `latency_p50_ms`, `latency_p99_ms`, `throughput_tps`, `availability_pct` |
 
+Regression policy:
+
+- fixture schema and workload matrix drift must fail closed (`Regression: #4000`).
+
 Required reason-key markers:
 
 - `slo_alert_reason_codes:GO:v1`

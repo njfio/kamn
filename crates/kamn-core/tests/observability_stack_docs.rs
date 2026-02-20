@@ -50,6 +50,16 @@ fn doc_contains_slo_alert_policy_checker_contract() {
 }
 
 #[test]
+fn doc_contains_performance_hot_path_fixture_matrix_mapping() {
+    assert!(DOC.contains("Performance smoke fixture matrix (Issue #4000):"));
+    assert!(DOC.contains("fixtures/ci/performance_hot_path_fixture_matrix.json"));
+    assert!(DOC.contains("--workload runtime"));
+    assert!(DOC.contains("| `runtime` | queue/orchestration hot path |"));
+    assert!(DOC.contains("| `signing` | signer/policy hot path |"));
+    assert!(DOC.contains("| `transport` | ingress/transport hot path |"));
+}
+
+#[test]
 fn doc_contains_dashboard_stale_error_budget_contract_lane() {
     assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
     assert!(DOC.contains("stale_error_budget_policy_contract.py"));
@@ -203,6 +213,14 @@ fn regression_requires_slo_alert_schema_fail_closed_guard() {
     // Regression: #913
     assert!(DOC.contains(
         "missing or drifted alert evidence schema/keys must fail closed (`Regression: #913`)."
+    ));
+}
+
+#[test]
+fn regression_requires_performance_fixture_matrix_fail_closed_guard() {
+    // Regression: #4000
+    assert!(DOC.contains(
+        "fixture schema and workload matrix drift must fail closed (`Regression: #4000`)."
     ));
 }
 
