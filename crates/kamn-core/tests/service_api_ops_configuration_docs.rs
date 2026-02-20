@@ -60,6 +60,39 @@ fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
+    assert!(DOC.contains(
+        "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"
+    ));
+    assert!(DOC.contains("service_api_ws_presence_mode_status=verified"));
+    assert!(DOC.contains("service_api_ws_events_mode_header=x-kamn-events-mode"));
+    assert!(DOC.contains("service_api_ws_events_mode_presence_value=presence"));
+    assert!(DOC.contains(
+        "service_api_ws_presence_required_headers_csv=x-kamn-presence-owner-did,x-kamn-presence-target-agent-did,x-kamn-requester-agent-did"
+    ));
+    assert!(DOC.contains(
+        "service_api_ws_presence_optional_headers_csv=x-kamn-presence-target-owner-did,x-kamn-presence-gateway-node,x-kamn-presence-connected-since,x-kamn-presence-last-heartbeat,x-kamn-presence-capabilities"
+    ));
+    assert!(DOC.contains(
+        "service_api_ws_presence_fail_closed_reason_codes_csv=service_api_ws_events_mode_invalid,service_api_ws_presence_owner_did_header_missing,service_api_ws_presence_target_agent_did_header_missing,service_api_ws_presence_requester_agent_did_header_missing,m9_realtime_owner_scope_denied,m9_realtime_presence_visibility_denied"
+    ));
+    assert!(DOC.contains("service_api_ws_presence_event_type=m9.presence.snapshot"));
+    assert!(DOC.contains("service_api_ws_presence_transport_profile=websocket"));
+    assert!(DOC.contains("realtime_guardrail_burst_validation_status=verified"));
+    assert!(DOC.contains("replay_duplicate_reason_ordering_status=verified"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node integration_service_api_endpoint_sender_anti_spam_burst_rounds_remain_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node integration_service_api_endpoint_concurrency_rejection_reason_stays_stable_under_bounded_bursts -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node regression_service_api_endpoint_replay_duplicate_sequence_reason_ordering_stays_stable -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5283"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
