@@ -20,7 +20,8 @@
 - Completed Phase-4 pgvector adapter task: `#5273`
 - Completed Phase-4 AGE adapter task: `#5275`
 - Completed Phase-4 Timescale adapter task: `#5277`
-- Current Phase-5 realtime gateway bridge task: `#5279`
+- Completed Phase-5 realtime gateway bridge task: `#5279`
+- Current Phase-5 websocket presence-route integration task: `#5281`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -36,7 +37,8 @@ Current phase status:
 - Phase 4 pgvector adapter projection contracts: Implemented in `#5273` (merged)
 - Phase 4 AGE adapter projection contracts: Implemented in `#5275` (merged)
 - Phase 4 Timescale adapter projection contracts: Implemented in `#5277` (merged)
-- Phase 5 realtime gateway bridge projection contracts: In progress in `#5279`
+- Phase 5 realtime gateway bridge projection contracts: Implemented in `#5279` (merged)
+- Phase 5 websocket presence-route integration: In progress in `#5281`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---

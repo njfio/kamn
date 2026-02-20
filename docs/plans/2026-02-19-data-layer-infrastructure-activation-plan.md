@@ -26,7 +26,8 @@
 - Task (completed): `#5273` — implement M5 pgvector adapter projection and fail-closed extension contracts
 - Task (completed): `#5275` — implement M6 AGE adapter projection and fail-closed graph-extension contracts
 - Task (completed): `#5277` — implement M7 Timescale adapter projection and fail-closed telemetry-extension contracts
-- Task (current wave): `#5279` — implement M9 realtime gateway bridge projection and fail-closed presence-scope contracts
+- Task (completed): `#5279` — implement M9 realtime gateway bridge projection and fail-closed presence-scope contracts
+- Task (current wave): `#5281` — integrate service-api websocket presence route with M9 gateway bridge contracts
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -50,7 +51,8 @@
 - `#5273`: merged to main (Phase-4 pgvector adapter projection contracts).
 - `#5275`: merged to main (Phase-4 AGE adapter projection contracts).
 - `#5277`: merged to main (Phase-4 Timescale adapter projection contracts).
-- `#5279`: in progress in this wave (Phase-5 realtime gateway bridge projection contracts).
+- `#5279`: merged to main (Phase-5 realtime gateway bridge projection contracts).
+- `#5281`: in progress in this wave (Phase-5 websocket presence-route integration with gateway bridge contracts).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
