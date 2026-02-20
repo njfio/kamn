@@ -735,6 +735,27 @@ Regression marker:
 
 - `Regression: #5338`
 
+### Gate and Deferred Path Hardening (Issue #5340)
+
+The live-postgres daemon validation slice additionally enforces deterministic env-gate reason
+resolution and an explicit deferred-path validation lane when daemon shutdown signals are active.
+
+Deterministic gate/deferred markers:
+
+- `phase6_live_postgres_daemon_runtime_gate_reason_contract=env_unset->skip_with_reason;env_set->adapter_connect_and_migrate`
+- `phase6_live_postgres_daemon_runtime_deferred_contract=live_postgres_adapter_connected+shutdown_signal->m10_phase6_scheduler_cycle_deferred`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_runtime_daemon_live_postgres_validation_slice_reports_unset_env_gate_reason -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::unit_runtime_daemon_live_postgres_validation_slice_prefers_kamn_test_postgres_url -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_deferred_path -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_gate_and_deferred_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5340`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize

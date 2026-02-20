@@ -403,6 +403,27 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_validatio
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_gate_and_deferred_markers() {
+    assert!(DOC.contains("### Gate and Deferred Path Hardening (Issue #5340)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_gate_reason_contract=env_unset->skip_with_reason;env_set->adapter_connect_and_migrate"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_deferred_contract=live_postgres_adapter_connected+shutdown_signal->m10_phase6_scheduler_cycle_deferred"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_runtime_daemon_live_postgres_validation_slice_reports_unset_env_gate_reason -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::unit_runtime_daemon_live_postgres_validation_slice_prefers_kamn_test_postgres_url -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_deferred_path -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5340"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
