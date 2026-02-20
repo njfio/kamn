@@ -19,6 +19,8 @@ const LIVE_POSTGRES_MATRIX_ROLE_PROFILE_IDS_CSV: &str = "processor_applied,proce
 const LIVE_POSTGRES_MATRIX_ROLE_PAIR_IDS_CSV: &str = "processor_to_listener_applied,processor_to_listener_deferred,listener_to_approver_applied,listener_to_approver_deferred,approver_to_processor_applied,approver_to_processor_deferred";
 const LIVE_POSTGRES_MATRIX_PARALLEL_ROLE_PAIR_LANE_IDS_CSV: &str = "processor_listener_parallel_applied,processor_listener_parallel_deferred,listener_approver_parallel_applied,listener_approver_parallel_deferred";
 const LIVE_POSTGRES_MATRIX_ASYMMETRIC_PARALLEL_LANE_IDS_CSV: &str = "processor_listener_asymmetric_parallel_applied,processor_listener_asymmetric_parallel_deferred,listener_approver_asymmetric_parallel_applied,listener_approver_asymmetric_parallel_deferred";
+const LIVE_POSTGRES_MATRIX_ORDER_INVARIANCE_LANE_SETS_CSV: &str =
+    "symmetric_parallel,asymmetric_parallel";
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -137,6 +139,44 @@ fn run_parallel_phase6_projections(
         .join()
         .expect("parallel role-pair lane leg B should complete");
     (leg_a_projection, leg_b_projection)
+}
+
+fn run_parallel_lane_set_fingerprints(lanes: Vec<LivePostgresRolePairProfile>) -> Vec<String> {
+    let mut fingerprints = Vec::with_capacity(lanes.len());
+    for lane in lanes {
+        let (leg_a_projection, leg_b_projection) =
+            run_parallel_phase6_projections(lane.leg_a_args, lane.leg_b_args);
+        assert_eq!(
+            leg_a_projection.reason_code, lane.expected_reason_code,
+            "lane {} leg A ({}) should project expected reason code",
+            lane.pair_id, lane.leg_a_profile_id
+        );
+        assert_eq!(
+            leg_b_projection.reason_code, lane.expected_reason_code,
+            "lane {} leg B ({}) should project expected reason code",
+            lane.pair_id, lane.leg_b_profile_id
+        );
+        assert_eq!(
+            leg_a_projection.reason_taxonomy_version, LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+            "lane {} leg A taxonomy should remain stable",
+            lane.pair_id
+        );
+        assert_eq!(
+            leg_b_projection.reason_taxonomy_version, LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+            "lane {} leg B taxonomy should remain stable",
+            lane.pair_id
+        );
+        fingerprints.push(format!(
+            "{}|{}|{}|{}|{}",
+            lane.pair_id,
+            leg_a_projection.reason_code,
+            leg_a_projection.reason_taxonomy_version,
+            leg_b_projection.reason_code,
+            leg_b_projection.reason_taxonomy_version
+        ));
+    }
+    fingerprints.sort();
+    fingerprints
 }
 
 fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
@@ -2018,6 +2058,105 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_asymmetric_p
             lane.pair_id
         );
     }
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_order_invariance_contract_is_canonical(
+) {
+    let lane_sets_csv = ["symmetric_parallel", "asymmetric_parallel"].join(",");
+    assert_eq!(
+        lane_sets_csv,
+        LIVE_POSTGRES_MATRIX_ORDER_INVARIANCE_LANE_SETS_CSV
+    );
+
+    let mut expected_symmetric_fingerprints = project_live_postgres_parallel_role_pair_lanes()
+        .iter()
+        .map(|lane| lane.pair_id)
+        .collect::<Vec<_>>();
+    expected_symmetric_fingerprints.sort();
+
+    let mut expected_asymmetric_fingerprints = project_live_postgres_asymmetric_parallel_lanes()
+        .iter()
+        .map(|lane| lane.pair_id)
+        .collect::<Vec<_>>();
+    expected_asymmetric_fingerprints.sort();
+
+    assert_eq!(
+        expected_symmetric_fingerprints,
+        vec![
+            "listener_approver_parallel_applied",
+            "listener_approver_parallel_deferred",
+            "processor_listener_parallel_applied",
+            "processor_listener_parallel_deferred"
+        ]
+    );
+    assert_eq!(
+        expected_asymmetric_fingerprints,
+        vec![
+            "listener_approver_asymmetric_parallel_applied",
+            "listener_approver_asymmetric_parallel_deferred",
+            "processor_listener_asymmetric_parallel_applied",
+            "processor_listener_asymmetric_parallel_deferred"
+        ]
+    );
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_order_is_invariant(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let symmetric_baseline =
+        run_parallel_lane_set_fingerprints(project_live_postgres_parallel_role_pair_lanes());
+    let mut symmetric_permuted_lanes = project_live_postgres_parallel_role_pair_lanes();
+    symmetric_permuted_lanes.reverse();
+    let symmetric_permuted = run_parallel_lane_set_fingerprints(symmetric_permuted_lanes);
+    assert_eq!(
+        symmetric_baseline, symmetric_permuted,
+        "symmetric parallel lane fingerprints should remain invariant to lane order"
+    );
+
+    let asymmetric_baseline =
+        run_parallel_lane_set_fingerprints(project_live_postgres_asymmetric_parallel_lanes());
+    let mut asymmetric_permuted_lanes = project_live_postgres_asymmetric_parallel_lanes();
+    asymmetric_permuted_lanes.reverse();
+    let asymmetric_permuted = run_parallel_lane_set_fingerprints(asymmetric_permuted_lanes);
+    assert_eq!(
+        asymmetric_baseline, asymmetric_permuted,
+        "asymmetric parallel lane fingerprints should remain invariant to lane order"
+    );
 }
 
 #[test]

@@ -601,6 +601,28 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_as
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_order_invariance_markers(
+) {
+    assert!(DOC.contains("### Parallel Lane Order-Invariance Matrix (Issue #5358)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_order_invariance_contract=baseline_and_permuted_lane_orders_must_produce_equivalent_sorted_reason_taxonomy_fingerprints"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_order_invariance_lane_sets_csv=symmetric_parallel,asymmetric_parallel"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_order_invariance_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_order_is_invariant -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_order_invariance_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5358"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
