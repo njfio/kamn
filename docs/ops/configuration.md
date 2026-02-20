@@ -839,6 +839,26 @@ Regression marker:
 
 - `Regression: #5348`
 
+### Role-Profile Matrix Determinism (Issue #5350)
+
+The live-postgres matrix contracts now enforce deterministic role-profile behavior across
+`processor`, `listener`, and `approver` applied/deferred runtime variants.
+
+Deterministic role-profile markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_role_profile_ids_csv=processor_applied,processor_deferred,listener_applied,listener_deferred,approver_applied,approver_deferred`
+- `phase6_live_postgres_daemon_runtime_matrix_role_profile_contract=processor|listener|approver_applied->m10_phase6_scheduler_cycle_applied;processor|listener|approver_deferred->m10_phase6_scheduler_cycle_deferred;runtime_taxonomy_version_stable`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_role_profile_matrix_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_role_profile_matrix_is_deterministic -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_role_profile_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5350`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
