@@ -20,7 +20,8 @@
 - Task (completed): `#5261` — extend PostgreSQL execution adapter with RLS policy application and blind-index search execution
 - Task (completed): `#5263` — implement Phase-2 envelope+blind-index operational pipeline and persist blind indexes in adapter inserts
 - Task (completed): `#5265` — implement M1 batch scheduler thresholds and merkle-batch persistence execution path
-- Task (current wave): `#5267` — implement M1 anchoring orchestrator tick and persistence-plan projection
+- Task (completed): `#5267` — implement M1 anchoring orchestrator tick and persistence-plan projection
+- Task (current wave): `#5269` — implement M1 anchoring follow-up retry and confirmation policy projection
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -38,7 +39,8 @@
 - `#5261`: merged to main (blind-index search execution + default RLS statement apply).
 - `#5263`: merged to main (Phase-2 operational envelope+blind-index pipeline + adapter blind-index persistence).
 - `#5265`: merged to main (Phase-3 scheduler trigger + merkle batch lifecycle persistence).
-- `#5267`: implemented in this wave (Phase-3 orchestrator tick + persistence-plan projection), pending merge.
+- `#5267`: merged to main (Phase-3 orchestrator tick + persistence-plan projection).
+- `#5269`: in progress in this wave (Phase-3 deterministic follow-up retry/confirmation policy projection).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
