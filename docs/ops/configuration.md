@@ -756,6 +756,27 @@ Regression marker:
 
 - `Regression: #5340`
 
+### Scenario Matrix Stability (Issue #5342)
+
+The live-postgres daemon validation slice now includes a deterministic scenario matrix and repeated
+run stability checks to ensure reason-code projections remain stable for env-unset, applied, and
+deferred paths.
+
+Deterministic matrix/stability markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_contract=env_unset->live_postgres_env_unset;env_set_no_shutdown->m10_phase6_scheduler_cycle_applied;env_set_shutdown->m10_phase6_scheduler_cycle_deferred`
+- `phase6_live_postgres_daemon_runtime_stability_contract=repeated_runs_preserve_reason_code_per_matrix_scenario`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_env_matrix_contract_is_deterministic -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_stability_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5342`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize

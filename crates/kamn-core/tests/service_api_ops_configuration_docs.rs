@@ -424,6 +424,24 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_gate_and_
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_stability_markers() {
+    assert!(DOC.contains("### Scenario Matrix Stability (Issue #5342)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_contract=env_unset->live_postgres_env_unset;env_set_no_shutdown->m10_phase6_scheduler_cycle_applied;env_set_shutdown->m10_phase6_scheduler_cycle_deferred"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_stability_contract=repeated_runs_preserve_reason_code_per_matrix_scenario"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_env_matrix_contract_is_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5342"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
