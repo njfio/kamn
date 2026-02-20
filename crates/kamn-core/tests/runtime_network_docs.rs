@@ -7,6 +7,7 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("crates/kamn-core/src/runtime_phase_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_transport_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_snapshot_store.rs"));
+    assert!(DOC.contains("crates/kamn-core/src/cross_store_replay_consistency.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_tests_snapshot_store.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_tests_network_fault.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_recovery_guard.rs"));
@@ -138,6 +139,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     ));
     assert!(DOC.contains("cargo test -p kamn-core network_fault_simulation"));
     assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
+    assert!(DOC.contains("cargo test -p kamn-core --test cross_store_replay_consistency"));
     assert!(DOC.contains("cargo test -p kamn-core --test block_pipeline_recovery_matrix"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_notifications"));
@@ -199,6 +201,30 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh"));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_deep_lane.sh"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
+}
+
+#[test]
+fn doc_contains_cross_store_replay_consistency_checker_taxonomy_markers() {
+    assert!(DOC.contains("## Cross-Store Replay Consistency Checker Rules"));
+    assert!(DOC.contains("crates/kamn-core/src/cross_store_replay_consistency.rs"));
+    assert!(DOC.contains("evaluate_cross_store_replay_consistency(...)"));
+    assert!(DOC.contains("cross_store_replay_reason_taxonomy_version()"));
+    assert!(DOC.contains("cross_store_replay_reason_codes_csv()"));
+    assert!(DOC.contains("CrossStoreReplayConsistencyReport"));
+    assert!(DOC.contains("CrossStoreReplayConsistencyStatus"));
+    assert!(DOC.contains("CrossStoreReplayDivergenceClass"));
+    assert!(DOC.contains(
+        "cross_store_replay_reason_taxonomy_version=kamn.runtime.cross-store-replay-consistency-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "cross_store_replay_reason_codes_csv=none,cross_store_replay_divergence_all_snapshots_missing,cross_store_replay_divergence_runtime_snapshot_missing,cross_store_replay_divergence_channel_snapshot_missing,cross_store_replay_divergence_message_snapshot_missing,cross_store_replay_divergence_task_snapshot_missing,cross_store_replay_divergence_channel_schema_version_mismatch,cross_store_replay_divergence_message_schema_version_mismatch,cross_store_replay_divergence_task_schema_version_mismatch,cross_store_replay_divergence_runtime_cursor_state_version_mismatch,cross_store_replay_divergence_aggregate_records_missing_for_advanced_runtime_state,cross_store_replay_divergence_aggregate_records_exceed_runtime_cursor"
+    ));
+    assert!(DOC.contains("cross_store_replay_source_marker=cross_store_replay_consistency_checker"));
+    assert!(DOC.contains(
+        "cross_store_replay_divergence_class=Consistent|PresenceDrift|SchemaDrift|RuntimeContinuityDrift|CardinalityDrift"
+    ));
+    assert!(DOC.contains("cross_store_replay_divergence_aggregate_records_exceed_runtime_cursor"));
+    assert!(DOC.contains("Regression: #4013"));
 }
 
 #[test]
