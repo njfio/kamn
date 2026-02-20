@@ -1167,6 +1167,27 @@ Regression marker:
 
 - `Regression: #5380`
 
+### Parallel Lane Topology Host-Mode-Cardinality Coherence Contracts (Issue #5382)
+
+The live-postgres matrix contracts now codify explicit topology-id to host-mode-cardinality
+coherence rows so host-mode labels and host-count expectations cannot drift apart.
+
+Deterministic topology-id host-mode-cardinality coherence markers:
+
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_cardinality_coherence_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-cardinality-coherence.v1`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_cardinality_coherence_rows_csv=same_host_parallel->same_host->1,distributed_label_parallel->distributed_label->2`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_mode_cardinality_coherence_contract=topology_id_to_host_mode_cardinality_rows_must_remain_stable_under_repeated_runs_and_permutations`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_mode_cardinality_coherence_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_cardinality_coherence_is_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_mode_cardinality_coherence_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5382`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
