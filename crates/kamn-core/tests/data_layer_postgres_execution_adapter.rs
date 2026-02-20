@@ -22,6 +22,18 @@ fn runtime() -> tokio::runtime::Runtime {
         .expect("tokio runtime should be constructible")
 }
 
+fn uuid_from_u128(seed: u128) -> String {
+    let hex = format!("{seed:032x}");
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
+
 fn fixture_record(message_id: String) -> DataLayerM0EnvelopeRecord {
     DataLayerM0EnvelopeRecord {
         message_id,
@@ -101,7 +113,7 @@ fn spec_c01_and_c03_live_adapter_executes_insert_and_lookup_with_session_context
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be after unix epoch")
             .as_nanos();
-        let message_id = format!("msg-live-{suffix}");
+        let message_id = uuid_from_u128(suffix);
         let record = fixture_record(message_id.clone());
 
         let inserted = adapter
@@ -223,7 +235,7 @@ fn spec_c03_live_adapter_persists_blind_indexes_on_insert_and_search_retrieves_r
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be after unix epoch")
             .as_nanos();
-        let message_id = format!("msg-live-blind-index-{suffix}");
+        let message_id = uuid_from_u128(suffix);
         let record = fixture_record(message_id.clone());
         let blind_index_token =
             data_layer_m3_compute_blind_index("owner-phase2-key", "channel_topic", "alpha")
@@ -257,6 +269,121 @@ fn spec_c03_live_adapter_persists_blind_indexes_on_insert_and_search_retrieves_r
                 .iter()
                 .any(|row| row.message_id == message_id),
             "search result should include inserted message keyed by blind-index token"
+        );
+    });
+}
+
+#[test]
+fn spec_c03_live_adapter_persists_merkle_batch_assignment_and_lifecycle_transitions() {
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = runtime();
+    runtime.block_on(async move {
+        let adapter = DataLayerPgExecutionAdapter::connect(DataLayerPgExecutionAdapterConfig {
+            database_url,
+            max_connections: 4,
+        })
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+
+        adapter
+            .apply_migrations()
+            .await
+            .expect("migrations should apply before execution");
+
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let message_id = uuid_from_u128(suffix);
+        let batch_id = uuid_from_u128(suffix + 1);
+        let record = fixture_record(message_id.clone());
+
+        adapter
+            .execute_insert_message(&record, "kamn:did:owner:owner-1", "kamn:did:agent:agent-1")
+            .await
+            .expect("insert should succeed");
+
+        let created = adapter
+            .execute_create_merkle_batch(&batch_id, "sha256:merkle-root-c03", 1, 1_900_000_000)
+            .await
+            .expect("merkle batch create should succeed");
+        assert_eq!(created, 1, "create should affect one row");
+
+        let assigned = adapter
+            .execute_assign_message_to_merkle_batch(&message_id, &batch_id, 0)
+            .await
+            .expect("message assignment should succeed");
+        assert_eq!(assigned, 1, "assignment should affect one row");
+
+        let submitted = adapter
+            .execute_mark_merkle_batch_submitted(&batch_id, "tx-c03", 1_900_000_010)
+            .await
+            .expect("submitted transition should succeed");
+        assert_eq!(submitted, 1, "submitted transition should affect one row");
+
+        let confirmed = adapter
+            .execute_mark_merkle_batch_confirmed(&batch_id, 123_456, 1_900_000_020)
+            .await
+            .expect("confirmed transition should succeed");
+        assert_eq!(confirmed, 1, "confirmed transition should affect one row");
+    });
+}
+
+#[test]
+fn spec_c04_merkle_batch_lifecycle_fails_closed_for_invalid_payloads() {
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = runtime();
+    runtime.block_on(async move {
+        let adapter = DataLayerPgExecutionAdapter::connect(DataLayerPgExecutionAdapterConfig {
+            database_url,
+            max_connections: 4,
+        })
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+
+        adapter
+            .apply_migrations()
+            .await
+            .expect("migrations should apply before execution");
+
+        let invalid_batch = adapter
+            .execute_create_merkle_batch("not-a-uuid", "sha256:root", 1, 1_900_000_000)
+            .await
+            .expect_err("invalid batch id should fail closed");
+        assert!(
+            matches!(
+                invalid_batch,
+                DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                    field: "batch_id",
+                    ..
+                }
+            ),
+            "invalid batch identifier should map to fail-closed payload error"
+        );
+
+        let invalid_confirm = adapter
+            .execute_mark_merkle_batch_confirmed(
+                "00000000-0000-0000-0000-000000000000",
+                -1,
+                1_900_000_020,
+            )
+            .await
+            .expect_err("negative block height should fail closed");
+        assert!(
+            matches!(
+                invalid_confirm,
+                DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                    field: "kolme_block_height",
+                    ..
+                }
+            ),
+            "invalid block height should map to fail-closed payload error"
         );
     });
 }

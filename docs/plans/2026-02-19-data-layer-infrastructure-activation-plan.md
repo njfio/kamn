@@ -18,7 +18,8 @@
 - Task (completed): `#5257` — implement PostgreSQL repository bridge contracts and RLS session projection
 - Task (completed): `#5259` — implement sqlx-backed PostgreSQL execution adapter and migration runner
 - Task (completed): `#5261` — extend PostgreSQL execution adapter with RLS policy application and blind-index search execution
-- Task (current wave): `#5263` — implement Phase-2 envelope+blind-index operational pipeline and persist blind indexes in adapter inserts
+- Task (completed): `#5263` — implement Phase-2 envelope+blind-index operational pipeline and persist blind indexes in adapter inserts
+- Task (current wave): `#5265` — implement M1 batch scheduler thresholds and merkle-batch persistence execution path
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -34,7 +35,8 @@
 - `#5257`: merged to main (deterministic SQL descriptor projection + M2 RLS statement projection).
 - `#5259`: merged to main (live sqlx execution adapter + migration runner).
 - `#5261`: merged to main (blind-index search execution + default RLS statement apply).
-- `#5263`: implemented in this wave (Phase-2 operational envelope+blind-index pipeline + adapter blind-index persistence), pending merge.
+- `#5263`: merged to main (Phase-2 operational envelope+blind-index pipeline + adapter blind-index persistence).
+- `#5265`: implemented in this wave (Phase-3 scheduler trigger + merkle batch lifecycle persistence), pending merge.
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail

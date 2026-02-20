@@ -48,6 +48,8 @@ pub mod data_layer_m10_partition_archival;
 pub mod data_layer_m11_closure_evidence;
 /// M11 hardening contracts for security/chaos/performance matrix and operator readiness synthesis.
 pub mod data_layer_m11_hardening_readiness;
+/// M1 scheduler contracts for deterministic count/window trigger evaluation.
+pub mod data_layer_m1_batch_scheduler;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
 pub mod data_layer_m2_gateway_access;
 /// M3 search contracts for owner-scoped blind-index and metadata query APIs.
@@ -322,6 +324,13 @@ pub use data_layer_m11_hardening_readiness::{
     DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
     DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
     DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
+};
+pub use data_layer_m1_batch_scheduler::{
+    evaluate_data_layer_m1_batch_trigger, DataLayerM1BatchSchedulerError,
+    DataLayerM1BatchSchedulerPolicy, DataLayerM1BatchTriggerDecision,
+    DataLayerM1PendingBatchMessage, DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_COUNT_THRESHOLD,
+    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_DEFERRED,
+    DATA_LAYER_M1_BATCH_TRIGGER_REASON_CODE_WINDOW_THRESHOLD,
 };
 pub use data_layer_m2_gateway_access::{
     data_layer_m2_default_rls_policies, DataLayerM2AbacEngine, DataLayerM2AccessAuditInput,

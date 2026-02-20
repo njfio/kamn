@@ -28,6 +28,14 @@ pub enum DataLayerPgOperationKind {
     SelectMessageById,
     /// Search message rows via blind-index descriptor.
     SearchMessagesByBlindIndex,
+    /// Insert one merkle batch row descriptor.
+    InsertMerkleBatch,
+    /// Assign one message row to merkle batch descriptor.
+    AssignMessageMerkleBatch,
+    /// Update merkle batch row to submitted status descriptor.
+    MarkMerkleBatchSubmitted,
+    /// Update merkle batch row to confirmed status descriptor.
+    MarkMerkleBatchConfirmed,
 }
 
 /// Requester session metadata projected into SQL execution context.
