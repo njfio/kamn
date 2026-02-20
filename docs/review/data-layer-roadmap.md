@@ -21,7 +21,8 @@
 - Completed Phase-4 AGE adapter task: `#5275`
 - Completed Phase-4 Timescale adapter task: `#5277`
 - Completed Phase-5 realtime gateway bridge task: `#5279`
-- Current Phase-5 websocket presence-route integration task: `#5281`
+- Completed Phase-5 websocket presence-route integration task: `#5281`
+- Current Phase-5 backpressure/ops-doc closure task: `#5283`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -38,7 +39,8 @@ Current phase status:
 - Phase 4 AGE adapter projection contracts: Implemented in `#5275` (merged)
 - Phase 4 Timescale adapter projection contracts: Implemented in `#5277` (merged)
 - Phase 5 realtime gateway bridge projection contracts: Implemented in `#5279` (merged)
-- Phase 5 websocket presence-route integration: In progress in `#5281`
+- Phase 5 websocket presence-route integration: Implemented in `#5281` (merged)
+- Phase 5 bounded-load guardrail validation + ops-doc closure: In progress in `#5283`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
