@@ -442,6 +442,31 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_st
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_ordering_markers(
+) {
+    assert!(DOC.contains("### Matrix Taxonomy and Canonical Ordering (Issue #5344)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_reason_codes_csv=live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_scenarios_csv=env_unset,env_set_no_shutdown,env_set_shutdown"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_order_contract=matrix_rows_order=env_unset->env_set_no_shutdown->env_set_shutdown;reason_codes_align_with_scenarios"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_ordering_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5344"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));

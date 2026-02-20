@@ -5,6 +5,14 @@ use crate::{configure_os_signal_test_triggers, OsSignalTestKind, OsSignalTestTri
 
 const LIVE_POSTGRES_ENV_UNSET_REASON_CODE: &str = "live_postgres_env_unset";
 const LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE: &str = "live_postgres_adapter_connected";
+const LIVE_POSTGRES_MATRIX_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1";
+const LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE: &str = "m10_phase6_scheduler_cycle_applied";
+const LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE: &str =
+    "m10_phase6_scheduler_cycle_deferred";
+const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
+    "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
+const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
 
 fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli, ConfigError> {
     let _env_lock = daemon_test_env_lock()
@@ -35,6 +43,33 @@ fn resolve_live_postgres_gate_decision() -> (&'static str, Option<String>) {
         ),
         None => (LIVE_POSTGRES_ENV_UNSET_REASON_CODE, None),
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct LivePostgresMatrixRow {
+    scenario_id: &'static str,
+    gate_reason_code: &'static str,
+    daemon_phase6_reason_code: Option<&'static str>,
+}
+
+fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
+    vec![
+        LivePostgresMatrixRow {
+            scenario_id: "env_unset",
+            gate_reason_code: LIVE_POSTGRES_ENV_UNSET_REASON_CODE,
+            daemon_phase6_reason_code: None,
+        },
+        LivePostgresMatrixRow {
+            scenario_id: "env_set_no_shutdown",
+            gate_reason_code: LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE,
+            daemon_phase6_reason_code: Some(LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE),
+        },
+        LivePostgresMatrixRow {
+            scenario_id: "env_set_shutdown",
+            gate_reason_code: LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE,
+            daemon_phase6_reason_code: Some(LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE),
+        },
+    ]
 }
 
 fn run_daemon_for_phase6_reason_code(mut args: Vec<String>) -> String {
@@ -927,6 +962,51 @@ fn functional_runtime_daemon_live_postgres_validation_slice_env_matrix_contract_
 }
 
 #[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical(
+) {
+    let rows = project_live_postgres_matrix_rows();
+    assert_eq!(
+        rows,
+        vec![
+            LivePostgresMatrixRow {
+                scenario_id: "env_unset",
+                gate_reason_code: LIVE_POSTGRES_ENV_UNSET_REASON_CODE,
+                daemon_phase6_reason_code: None,
+            },
+            LivePostgresMatrixRow {
+                scenario_id: "env_set_no_shutdown",
+                gate_reason_code: LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE,
+                daemon_phase6_reason_code: Some(LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE),
+            },
+            LivePostgresMatrixRow {
+                scenario_id: "env_set_shutdown",
+                gate_reason_code: LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE,
+                daemon_phase6_reason_code: Some(LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE),
+            },
+        ],
+        "matrix projection rows must remain canonical and ordered"
+    );
+    let scenario_csv = rows
+        .iter()
+        .map(|row| row.scenario_id)
+        .collect::<Vec<_>>()
+        .join(",");
+    assert_eq!(scenario_csv, LIVE_POSTGRES_MATRIX_SCENARIOS_CSV);
+
+    let reason_codes_csv = format!(
+        "{},{},{}",
+        LIVE_POSTGRES_ENV_UNSET_REASON_CODE,
+        LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+        LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE
+    );
+    assert_eq!(reason_codes_csv, LIVE_POSTGRES_MATRIX_REASON_CODES_CSV);
+    assert_eq!(
+        LIVE_POSTGRES_MATRIX_REASON_TAXONOMY_VERSION,
+        "kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1"
+    );
+}
+
+#[test]
 fn integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs(
 ) {
     let _lock = log_env_lock()
@@ -976,7 +1056,10 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reaso
     ];
     let applied_first = run_daemon_for_phase6_reason_code(applied_args.clone());
     let applied_second = run_daemon_for_phase6_reason_code(applied_args);
-    assert_eq!(applied_first, "m10_phase6_scheduler_cycle_applied");
+    assert_eq!(
+        applied_first,
+        LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE
+    );
     assert_eq!(
         applied_first, applied_second,
         "applied scenario reason should remain stable across repeated runs"
@@ -1001,7 +1084,10 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reaso
     ];
     let deferred_first = run_daemon_for_phase6_reason_code(deferred_args.clone());
     let deferred_second = run_daemon_for_phase6_reason_code(deferred_args);
-    assert_eq!(deferred_first, "m10_phase6_scheduler_cycle_deferred");
+    assert_eq!(
+        deferred_first,
+        LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE
+    );
     assert_eq!(
         deferred_first, deferred_second,
         "deferred scenario reason should remain stable across repeated runs"

@@ -777,6 +777,27 @@ Regression marker:
 
 - `Regression: #5342`
 
+### Matrix Taxonomy and Canonical Ordering (Issue #5344)
+
+The live-postgres matrix contracts now include explicit reason-taxonomy versioning and canonical
+scenario ordering markers to prevent drift between matrix semantics and docs.
+
+Deterministic taxonomy/ordering markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1`
+- `phase6_live_postgres_daemon_runtime_matrix_reason_codes_csv=live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred`
+- `phase6_live_postgres_daemon_runtime_matrix_scenarios_csv=env_unset,env_set_no_shutdown,env_set_shutdown`
+- `phase6_live_postgres_daemon_runtime_matrix_order_contract=matrix_rows_order=env_unset->env_set_no_shutdown->env_set_shutdown;reason_codes_align_with_scenarios`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_ordering_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5344`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
