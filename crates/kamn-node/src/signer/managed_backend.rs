@@ -623,7 +623,7 @@ mod tests {
     fn unit_managed_key_source_adapter_emits_deterministic_provenance_marker() {
         let _lock = managed_backend_env_lock()
             .lock()
-            .expect("managed backend env lock should guard test mutation");
+            .unwrap_or_else(|error| error.into_inner());
         let request = KolmeRuntimeCommitRequest::deterministic(
             "op-node-live-3955-provenance",
             "state:node-live-3955-provenance",
