@@ -919,6 +919,26 @@ Regression marker:
 
 - `Regression: #5356`
 
+### Parallel Lane Order-Invariance Matrix (Issue #5358)
+
+The live-postgres matrix contracts now enforce order-invariance so bounded same-host parallel lane
+outcomes remain equivalent even when lane execution order is permuted.
+
+Deterministic order-invariance markers:
+
+- `phase6_live_postgres_daemon_runtime_matrix_order_invariance_contract=baseline_and_permuted_lane_orders_must_produce_equivalent_sorted_reason_taxonomy_fingerprints`
+- `phase6_live_postgres_daemon_runtime_matrix_order_invariance_lane_sets_csv=symmetric_parallel,asymmetric_parallel`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_order_invariance_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_order_is_invariant -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_order_invariance_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5358`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
