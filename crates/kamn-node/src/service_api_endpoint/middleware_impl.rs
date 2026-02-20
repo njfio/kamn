@@ -134,6 +134,22 @@ pub(super) async fn service_api_auth_middleware(
         }
     }
 
+    if let Err(error) = super::auth::enforce_request_scope_policy(&parsed_request) {
+        return service_api_middleware_error_response(
+            &state,
+            ServiceApiMiddlewareError {
+                correlation_id: correlation_id.as_str(),
+                method: parsed_request.method.as_str(),
+                path: parsed_request.path.as_str(),
+                status_code: StatusCode::UNAUTHORIZED,
+                error_label: "unauthorized",
+                reason_code: error.reason_code,
+                message: error.message.as_str(),
+                outcome: "unauthorized",
+            },
+        );
+    }
+
     if let Err(error) = super::enforce_sender_anti_spam(&state, &parsed_request).await {
         let projection = service_api_lifecycle_rejection_policy(error.reason_code).unwrap_or(
             ServiceApiLifecycleRejectionPolicy {

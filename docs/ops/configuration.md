@@ -313,6 +313,34 @@ Regression marker:
 
 - `Regression: #4057`
 
+## Service API Scope Policy Checker Contract (Issue #4056)
+
+Deterministic scope-policy markers:
+
+- `service_api_scope_policy_reason_taxonomy_version=kamn.runtime.service-api-scope-policy-reason-taxonomy.v1`
+- `service_api_scope_policy_reason_codes_csv=service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch`
+- `service_api_scope_policy_fixture_schema_version=kamn.runtime.service-api-scope-policy-fixture-matrix.v1`
+- `service_api_scope_policy_fixture_path=fixtures/runtime/service_api_scope_policy_fixture_matrix.txt`
+
+Deterministic remediation markers:
+
+- `service_api_scope_policy_remediation_map_version=v1`
+- `service_api_scope_policy_remediation.service_api_auth_scope_header_missing=add x-kamn-authz-scope with the route-required scope value`
+- `service_api_scope_policy_remediation.service_api_auth_scope_invalid=use one of messages:write|messages:read|channels:write|channels:read|tasks:write|tasks:read|agents:read|events:read|protected:unknown`
+- `service_api_scope_policy_remediation.service_api_auth_scope_route_mismatch=align x-kamn-authz-scope to the required scope for method/path`
+
+Validation commands:
+
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::unit_service_api_scope_policy_fixture_parser_contract -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes -- --exact`
+- `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_docs_parity_matches_source_taxonomy -- --exact`
+- `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_remediation_markers_cover_reason_codes -- --exact`
+
+Regression marker:
+
+- `Regression: #4056`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and

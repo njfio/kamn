@@ -5,11 +5,14 @@ use crate::service_api_endpoint::{
     ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
+    SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION, SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV,
+    SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION,
 };
 use kamn_core::baseline_signature_for_fields;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -77,6 +80,13 @@ struct ServiceApiErrorEnvelope {
 
 const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =
     "service_api_auth_sender_did_header_missing";
+const SERVICE_API_AUTH_SCOPE_HEADER_MISSING_REASON_CODE: &str =
+    "service_api_auth_scope_header_missing";
+const SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE: &str = "service_api_auth_scope_invalid";
+const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
+    "service_api_auth_scope_route_mismatch";
+const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
+    include_str!("../../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ServiceApiRouteAuthzMatrixRow {
@@ -162,6 +172,95 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
     ]
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceApiScopePolicyFixtureRow {
+    method: String,
+    path: String,
+    scope: String,
+    expected: String,
+}
+
+fn parse_service_api_scope_policy_fixture(
+    fixture: &str,
+) -> (
+    BTreeMap<String, String>,
+    Vec<ServiceApiScopePolicyFixtureRow>,
+) {
+    let mut metadata = BTreeMap::new();
+    let mut rows = Vec::new();
+    for line in fixture.lines().map(str::trim) {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            metadata.insert(key.trim().to_owned(), value.trim().to_owned());
+            continue;
+        }
+        if let Some(payload) = line.strip_prefix("row|") {
+            let mut parts = payload.split('|');
+            let method = parts.next().unwrap_or_default().trim().to_owned();
+            let path = parts.next().unwrap_or_default().trim().to_owned();
+            let scope = parts.next().unwrap_or_default().trim().to_owned();
+            let expected = parts.next().unwrap_or_default().trim().to_owned();
+            if !method.is_empty() && !path.is_empty() && !scope.is_empty() && !expected.is_empty() {
+                rows.push(ServiceApiScopePolicyFixtureRow {
+                    method,
+                    path,
+                    scope,
+                    expected,
+                });
+            }
+        }
+    }
+    (metadata, rows)
+}
+
+fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static str> {
+    if !crate::service_api_endpoint::route_requires_auth(method, path) {
+        return None;
+    }
+    let scope = match (method, path) {
+        ("POST", "/v1/messages/send") => "messages:write",
+        ("POST", "/v1/channels/create") => "channels:write",
+        ("POST", "/v1/tasks/create") => "tasks:write",
+        ("GET", "/v1/events/ws") => "events:read",
+        ("GET", _) if path.starts_with("/v1/messages/") && path != "/v1/messages/send" => {
+            "messages:read"
+        }
+        ("GET", _) if path.starts_with("/v1/channels/") && path.ends_with("/messages") => {
+            "channels:read"
+        }
+        ("GET", _) if path.starts_with("/v1/tasks/") && path != "/v1/tasks/create" => "tasks:read",
+        ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
+        _ => "protected:unknown",
+    };
+    Some(scope)
+}
+
+fn signed_header_present(headers: &[(&str, &str)], name: &str) -> bool {
+    headers
+        .iter()
+        .any(|(header_name, _)| header_name.eq_ignore_ascii_case(name))
+}
+
+fn enrich_signed_headers_with_scope<'a>(
+    method: &str,
+    path: &str,
+    headers: &'a [(&'a str, &'a str)],
+) -> Vec<(&'a str, &'a str)> {
+    let mut enriched = headers.to_vec();
+    let signed_request = signed_header_present(headers, "X-KAMN-Sender-DID")
+        && signed_header_present(headers, "X-KAMN-Request-Nonce")
+        && signed_header_present(headers, "X-KAMN-Request-Signature");
+    let has_scope_header = signed_header_present(headers, "X-KAMN-Authz-Scope");
+    if signed_request && !has_scope_header {
+        if let Some(scope) = required_scope_for_test_route(method, path) {
+            enriched.push(("X-KAMN-Authz-Scope", scope));
+        }
+    }
+    enriched
+}
+
 #[derive(Debug)]
 struct TestSkipServerVerification(Arc<rustls::crypto::CryptoProvider>);
 
@@ -234,6 +333,17 @@ fn send_http_request_with_headers(
     body: &str,
     headers: &[(&str, &str)],
 ) -> String {
+    let enriched_headers = enrich_signed_headers_with_scope(method, path, headers);
+    send_http_request_with_headers_raw(addr, method, path, body, &enriched_headers)
+}
+
+fn send_http_request_with_headers_raw(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+) -> String {
     let mut stream = TcpStream::connect(addr).expect("endpoint should accept connections");
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
@@ -274,6 +384,18 @@ fn send_http_request_with_headers(
 }
 
 fn send_https_request_with_headers(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+    _root_cert_pem: &str,
+) -> String {
+    let enriched_headers = enrich_signed_headers_with_scope(method, path, headers);
+    send_https_request_with_headers_raw(addr, method, path, body, &enriched_headers, _root_cert_pem)
+}
+
+fn send_https_request_with_headers_raw(
     addr: &str,
     method: &str,
     path: &str,
@@ -367,8 +489,9 @@ fn send_websocket_upgrade_request_with_version(
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .expect("websocket read timeout should be configurable");
+    let enriched_headers = enrich_signed_headers_with_scope("GET", path, headers);
     let mut header_lines = String::new();
-    for (name, value) in headers {
+    for (name, value) in &enriched_headers {
         header_lines.push_str(name);
         header_lines.push_str(": ");
         header_lines.push_str(value);
@@ -1318,6 +1441,205 @@ fn integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_w
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after route authz matrix validation"
+    );
+}
+
+#[test]
+fn unit_service_api_scope_policy_fixture_parser_contract() {
+    let (metadata, rows) = parse_service_api_scope_policy_fixture(SERVICE_API_SCOPE_POLICY_FIXTURE);
+    assert_eq!(
+        metadata
+            .get("scope_policy_fixture_matrix_schema_version")
+            .map(String::as_str),
+        Some(SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION)
+    );
+    assert_eq!(
+        metadata
+            .get("scope_policy_reason_taxonomy_version")
+            .map(String::as_str),
+        Some(SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION)
+    );
+    assert_eq!(
+        metadata
+            .get("scope_policy_reason_codes_csv")
+            .map(String::as_str),
+        Some(SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV)
+    );
+    assert!(
+        rows.len() >= 6,
+        "scope policy fixture matrix should provide representative coverage"
+    );
+    assert!(
+        rows.iter().any(|row| {
+            row.method == "POST"
+                && row.path == "/v1/messages/send"
+                && row.scope == "messages:write"
+                && row.expected == "allow"
+        }),
+        "fixture should include allow case for message send write scope"
+    );
+    assert!(
+        rows.iter().any(|row| {
+            row.method == "POST"
+                && row.path == "/v1/messages/send"
+                && row.scope == "messages:read"
+                && row.expected == "deny"
+        }),
+        "fixture should include deny case for message send read scope"
+    );
+}
+
+#[test]
+fn functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping() {
+    let (_, rows) = parse_service_api_scope_policy_fixture(SERVICE_API_SCOPE_POLICY_FIXTURE);
+    for row in rows {
+        let expected_scope = required_scope_for_test_route(row.method.as_str(), row.path.as_str())
+            .expect("fixture rows should target protected routes only");
+        if row.expected == "allow" {
+            assert_eq!(
+                row.scope, expected_scope,
+                "allow fixture row scope must match required route scope"
+            );
+        } else if row.expected == "deny" {
+            assert_ne!(
+                row.scope, expected_scope,
+                "deny fixture row scope must not match required route scope"
+            );
+        } else {
+            panic!("scope fixture expected field must be allow|deny");
+        }
+    }
+}
+
+#[test]
+fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34075".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 4,
+        idle_timeout_ms: 2_500,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let message_body = "{\"message\":\"scope-policy-check\"}";
+    let sender_did = "kamn:did:agent:test-client-scope-policy";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature_missing_scope =
+        baseline_signature_for_fields(sender_did, 9101, state_hash.as_str(), message_body);
+    let signature_invalid_scope =
+        baseline_signature_for_fields(sender_did, 9102, state_hash.as_str(), message_body);
+    let signature_mismatch_scope =
+        baseline_signature_for_fields(sender_did, 9103, state_hash.as_str(), message_body);
+    let signature_allowed_scope =
+        baseline_signature_for_fields(sender_did, 9104, state_hash.as_str(), message_body);
+
+    let missing_scope_response = send_http_request_with_headers_raw(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "9101"),
+            ("X-KAMN-Request-Signature", signature_missing_scope.as_str()),
+        ],
+    );
+    assert!(missing_scope_response.contains("HTTP/1.1 401 Unauthorized"));
+    let missing_scope_payload =
+        parse_error_envelope_from_http_response(missing_scope_response.as_str());
+    assert_eq!(missing_scope_payload.error, "unauthorized");
+    assert_eq!(
+        missing_scope_payload.reason_code,
+        SERVICE_API_AUTH_SCOPE_HEADER_MISSING_REASON_CODE
+    );
+
+    let invalid_scope_response = send_http_request_with_headers_raw(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "9102"),
+            ("X-KAMN-Request-Signature", signature_invalid_scope.as_str()),
+            ("X-KAMN-Authz-Scope", ""),
+        ],
+    );
+    assert!(invalid_scope_response.contains("HTTP/1.1 401 Unauthorized"));
+    let invalid_scope_payload =
+        parse_error_envelope_from_http_response(invalid_scope_response.as_str());
+    assert_eq!(invalid_scope_payload.error, "unauthorized");
+    assert_eq!(
+        invalid_scope_payload.reason_code,
+        SERVICE_API_AUTH_SCOPE_INVALID_REASON_CODE
+    );
+
+    let mismatch_scope_response = send_http_request_with_headers_raw(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "9103"),
+            (
+                "X-KAMN-Request-Signature",
+                signature_mismatch_scope.as_str(),
+            ),
+            ("X-KAMN-Authz-Scope", "messages:read"),
+        ],
+    );
+    assert!(mismatch_scope_response.contains("HTTP/1.1 401 Unauthorized"));
+    let mismatch_scope_payload =
+        parse_error_envelope_from_http_response(mismatch_scope_response.as_str());
+    assert_eq!(mismatch_scope_payload.error, "unauthorized");
+    assert_eq!(
+        mismatch_scope_payload.reason_code,
+        SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE
+    );
+
+    let allowed_scope_response = send_http_request_with_headers_raw(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "9104"),
+            ("X-KAMN-Request-Signature", signature_allowed_scope.as_str()),
+            ("X-KAMN-Authz-Scope", "messages:write"),
+        ],
+    );
+    assert!(allowed_scope_response.contains("HTTP/1.1 202 Accepted"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after scope policy checks"
     );
 }
 

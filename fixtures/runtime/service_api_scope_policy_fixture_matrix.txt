@@ -1,0 +1,12 @@
+# Service API scope-policy fixture matrix
+scope_policy_fixture_matrix_schema_version=kamn.runtime.service-api-scope-policy-fixture-matrix.v1
+scope_policy_reason_taxonomy_version=kamn.runtime.service-api-scope-policy-reason-taxonomy.v1
+scope_policy_reason_codes_csv=service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch
+row|POST|/v1/messages/send|messages:write|allow
+row|POST|/v1/messages/send|messages:read|deny
+row|POST|/v1/channels/create|channels:write|allow
+row|POST|/v1/channels/create|tasks:write|deny
+row|GET|/v1/messages/msg-123|messages:read|allow
+row|GET|/v1/messages/msg-123|channels:read|deny
+row|GET|/v1/events/ws|events:read|allow
+row|GET|/v1/events/ws|agents:read|deny

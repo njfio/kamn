@@ -21,6 +21,14 @@ const SERVICE_API_REQUEST_PATH_AUTHZ_PUBLIC_ROUTES_CSV: &str = "GET:/healthz,GET
 const SERVICE_API_REQUEST_PATH_AUTHZ_PROTECTED_ROUTES_CSV: &str = "POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws";
 const SERVICE_API_REQUEST_PATH_AUTHZ_MISSING_HEADER_REASON_CODE: &str =
     "service_api_auth_sender_did_header_missing";
+const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-scope-policy-reason-taxonomy.v1";
+const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str =
+    "service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch";
+const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
+    "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
+const SERVICE_API_SCOPE_POLICY_FIXTURE_PATH: &str =
+    "fixtures/runtime/service_api_scope_policy_fixture_matrix.txt";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -32,6 +40,12 @@ fn overload_reason_codes() -> Vec<&'static str> {
 
 fn service_api_request_path_authz_reason_codes() -> Vec<&'static str> {
     SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV
+        .split(',')
+        .collect()
+}
+
+fn service_api_scope_policy_reason_codes() -> Vec<&'static str> {
+    SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV
         .split(',')
         .collect()
 }
@@ -1628,6 +1642,99 @@ fn doc_enforces_service_api_request_path_authz_remediation_markers_cover_reason_
                 "service_api_request_path_authz_remediation.{reason_code}="
             )),
             "ops docs missing request-path authz remediation marker for {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_service_api_scope_policy_docs_parity_markers() {
+    assert!(DOC.contains("### Service API Scope Policy Checker Contract"));
+    assert!(DOC.contains(
+        "service_api_scope_policy_reason_taxonomy_version=kamn.runtime.service-api-scope-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_scope_policy_reason_codes_csv=service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch"
+    ));
+    assert!(DOC.contains(
+        "service_api_scope_policy_fixture_schema_version=kamn.runtime.service-api-scope-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_scope_policy_fixture_path=fixtures/runtime/service_api_scope_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("service_api_scope_policy_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("service_api_scope_policy_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("service_api_scope_policy_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::service_api_endpoint_tests::unit_service_api_scope_policy_fixture_parser_contract -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::service_api_endpoint_tests::functional_service_api_scope_policy_fixture_rows_match_route_scope_mapping -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mismatched_scopes -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_docs_parity_matches_source_taxonomy -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_scope_policy_remediation_markers_cover_reason_codes -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4056"));
+}
+
+#[test]
+fn doc_enforces_service_api_scope_policy_docs_parity_matches_source_taxonomy() {
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION));
+    assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV));
+    assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION));
+
+    assert!(DOC.contains(&format!(
+        "service_api_scope_policy_reason_taxonomy_version={SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_scope_policy_reason_codes_csv={SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_scope_policy_fixture_schema_version={SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_scope_policy_reason_taxonomy_version={SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_scope_policy_reason_codes_csv={SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_scope_policy_fixture_schema_version={SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_scope_policy_fixture_path={SERVICE_API_SCOPE_POLICY_FIXTURE_PATH}"
+    )));
+}
+
+#[test]
+fn doc_enforces_service_api_scope_policy_remediation_markers_cover_reason_codes() {
+    for reason_code in service_api_scope_policy_reason_codes() {
+        assert!(
+            DOC.contains(&format!(
+                "service_api_scope_policy_remediation.{reason_code}="
+            )),
+            "missing scope-policy remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&format!(
+                "service_api_scope_policy_remediation.{reason_code}="
+            )),
+            "ops docs missing scope-policy remediation marker for {reason_code}"
         );
     }
 }
