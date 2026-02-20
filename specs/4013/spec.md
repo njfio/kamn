@@ -1,7 +1,7 @@
 # Issue #4013 Spec
 
 - Title: Task: implement cross-store replay consistency checker with deterministic divergence taxonomy
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-10-durability-crash-recovery-and-state-consistency-hardening/index.md

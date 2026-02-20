@@ -2,13 +2,13 @@
 
 ## Ordered Tasks
 
-- [ ] T1 (RED): add failing checker tests in `crates/kamn-core/tests/cross_store_replay_consistency.rs`.
-- [ ] T2 (Implement): add cross-store replay consistency checker module and deterministic taxonomy projection.
-- [ ] T3 (Expose): export checker APIs via `crates/kamn-core/src/lib.rs`.
-- [ ] T4 (Integration): add composed store->snapshot->checker integration test coverage.
-- [ ] T5 (Docs Conformance): update `docs/foundation/runtime-network.md` and docs-contract assertions.
-- [ ] T6 (GREEN Verify): run targeted checker/docs tests until green.
-- [ ] T7 (Quality): run `cargo fmt --check` and `cargo clippy -p kamn-core --tests -- -D warnings`.
+- [x] T1 (RED): add failing checker tests in `crates/kamn-core/tests/cross_store_replay_consistency.rs`.
+- [x] T2 (Implement): add cross-store replay consistency checker module and deterministic taxonomy projection.
+- [x] T3 (Expose): export checker APIs via `crates/kamn-core/src/lib.rs`.
+- [x] T4 (Integration): add composed store->snapshot->checker integration test coverage.
+- [x] T5 (Docs Conformance): update `docs/foundation/runtime-network.md` and docs-contract assertions.
+- [x] T6 (GREEN Verify): run targeted checker/docs tests until green.
+- [x] T7 (Quality): run `cargo fmt --check` and `cargo clippy -p kamn-core --tests -- -D warnings`.
 
 ## Dependency Notes
 
