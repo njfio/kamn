@@ -191,6 +191,30 @@ fn service_api_ops_configuration_contains_phase6_scheduler_cycle_markers() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_scheduler_runtime_checkpoint_markers() {
+    assert!(
+        DOC.contains("## Phase-6 Stateful Scheduler Runtime Checkpoint Contracts (Issue #5295)")
+    );
+    assert!(DOC.contains("phase6_scheduler_runtime_checkpoint_status=verified"));
+    assert!(DOC.contains(
+        "phase6_scheduler_runtime_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-scheduler-runtime-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_runtime_reason_codes_csv=m10_phase6_scheduler_runtime_initialized,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_runtime_state_contract=total_cycles=executed_cycles+deferred_cycles+fail_closed_cycles;last_successful_tick_epoch_seconds_updates_on_applied_only;last_observed_now_epoch_seconds_monotonic_non_decreasing"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c28_phase6_scheduler_runtime_initializes_zeroed_state_and_checkpoint -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c31_phase6_scheduler_runtime_preflight_fail_closed_increments_fail_counter_without_checkpoint_advance -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5295"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
