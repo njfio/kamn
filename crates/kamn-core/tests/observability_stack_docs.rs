@@ -60,6 +60,19 @@ fn doc_contains_performance_hot_path_fixture_matrix_mapping() {
 }
 
 #[test]
+fn doc_contains_capacity_ci_dry_run_threshold_reason_taxonomy_contract() {
+    assert!(DOC.contains("## Capacity CI Dry-Run Threshold Reason Taxonomy Contract"));
+    assert!(DOC.contains(
+        "capacity_ci_dry_run_reason_taxonomy_version=kamn.ci.capacity-ci-dry-run-governance-reason-taxonomy.v1",
+    ));
+    assert!(DOC.contains(
+        "capacity_ci_dry_run_reason_codes_csv=capacity_ci_dry_run_argument_invalid,capacity_ci_dry_run_threshold_contract_violation,capacity_ci_dry_run_report_contract_violation,capacity_ci_dry_run_go_no_go_marker_parity_drift,capacity_ci_dry_run_performance_marker_parity_drift,capacity_ci_dry_run_runtime_budget_exceeded,capacity_ci_dry_run_fast_mode_selector_drift,capacity_ci_dry_run_workflow_exclusion_drift,capacity_ci_dry_run_docs_marker_parity_drift,capacity_ci_dry_run_docs_remediation_marker_missing",
+    ));
+    assert!(DOC.contains("capacity_ci_dry_run_contract_status=verified"));
+    assert!(DOC.contains("capacity_ci_dry_run_threshold_status=verified"));
+}
+
+#[test]
 fn doc_contains_dashboard_stale_error_budget_contract_lane() {
     assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
     assert!(DOC.contains("stale_error_budget_policy_contract.py"));
@@ -221,6 +234,14 @@ fn regression_requires_performance_fixture_matrix_fail_closed_guard() {
     // Regression: #4000
     assert!(DOC.contains(
         "fixture schema and workload matrix drift must fail closed (`Regression: #4000`)."
+    ));
+}
+
+#[test]
+fn regression_requires_capacity_ci_dry_run_fail_closed_taxonomy_guard() {
+    // Regression: #4005
+    assert!(DOC.contains(
+        "threshold, report marker, selector/workflow parity, docs marker drift, or runtime budget overflow force `NO-GO` (`Regression: #4005`)."
     ));
 }
 
