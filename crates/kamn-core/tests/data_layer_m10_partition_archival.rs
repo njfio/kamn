@@ -1,11 +1,13 @@
 use kamn_core::{
+    data_layer_m10_evaluate_phase6_execution_tick_budget,
     data_layer_m10_execute_phase6_orchestration_tick, data_layer_m10_format_partition_name,
     data_layer_m10_project_archival_retry_decision, DataLayerM10ArchivalFailureClass,
     DataLayerM10ArchivalRecoveryAction, DataLayerM10ArchivalRetryPolicy,
     DataLayerM10ArchiveDueRequest, DataLayerM10ComplianceShredProjectionReport,
     DataLayerM10ComplianceShredProjectionRequest, DataLayerM10PartitionLifecycleError,
     DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecordInput,
-    DataLayerM10PartitionStatus, DataLayerM10Phase6ExecutionTickRequest,
+    DataLayerM10PartitionStatus, DataLayerM10Phase6ExecutionBudgetDecision,
+    DataLayerM10Phase6ExecutionTickBudget, DataLayerM10Phase6ExecutionTickRequest,
     DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
     DataLayerM8MessageRecordInput, DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
     DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
@@ -21,6 +23,12 @@ use kamn_core::{
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
     DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
     DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
     DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M10_REATTACH_REASON_CODE,
@@ -86,6 +94,20 @@ fn phase6_request(
         active_retention_months: 2,
         object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
         partition_message_ids_by_month,
+    }
+}
+
+fn phase6_budget(
+    max_due_candidates: usize,
+    max_shredded_messages: usize,
+    max_projection_reports: usize,
+    max_archived_entries: usize,
+) -> DataLayerM10Phase6ExecutionTickBudget {
+    DataLayerM10Phase6ExecutionTickBudget {
+        max_due_candidates,
+        max_shredded_messages,
+        max_projection_reports,
+        max_archived_entries,
     }
 }
 
@@ -889,5 +911,146 @@ fn spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_proje
             reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
             ..
         })
+    ));
+}
+
+#[test]
+fn spec_c20_phase6_execution_tick_budget_within_limits_and_exceeded_paths_are_deterministic() {
+    let owner_did = "kamn:did:owner:phase6-budget-alpha";
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    for (message_id, created_at) in [
+        ("budget-a", 1_699_800_000_u64),
+        ("budget-b", 1_699_800_100_u64),
+    ] {
+        let mut input = m8_message_input(owner_did, message_id, created_at);
+        input.retention_class = DataLayerM8RetentionClass::Ephemeral;
+        m8_registry
+            .register_message(input)
+            .expect("message should register");
+    }
+
+    let report = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut m8_registry,
+        &mut m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([(202401, vec!["budget-a".to_owned(), "budget-b".to_owned()])]),
+        ),
+    )
+    .expect("phase6 execution should succeed");
+
+    let within_budget =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(2, 2, 1, 1))
+            .expect("within-budget evaluation should succeed");
+    assert_eq!(
+        within_budget.decision,
+        DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget
+    );
+    assert_eq!(
+        within_budget.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE
+    );
+
+    let due_exceeded =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(1, 3, 2, 2))
+            .expect("due-exceeded evaluation should succeed");
+    assert_eq!(
+        due_exceeded.decision,
+        DataLayerM10Phase6ExecutionBudgetDecision::Exceeded
+    );
+    assert_eq!(
+        due_exceeded.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE
+    );
+
+    let shredded_exceeded =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(3, 1, 2, 2))
+            .expect("shredded-exceeded evaluation should succeed");
+    assert_eq!(
+        shredded_exceeded.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c21_phase6_execution_tick_budget_projection_and_archive_limits_fail_closed() {
+    let owner_did = "kamn:did:owner:phase6-budget-beta";
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+    m10_registry
+        .register_partition(partition_input(202402, false))
+        .expect("partition should register");
+
+    for (message_id, created_at) in [
+        ("proj-a", 1_699_700_000_u64),
+        ("proj-b", 1_699_700_100_u64),
+        ("proj-c", 1_699_700_200_u64),
+    ] {
+        let mut input = m8_message_input(owner_did, message_id, created_at);
+        input.retention_class = DataLayerM8RetentionClass::Ephemeral;
+        m8_registry
+            .register_message(input)
+            .expect("message should register");
+    }
+
+    let report = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut m8_registry,
+        &mut m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([
+                (202401, vec!["proj-a".to_owned(), "proj-b".to_owned()]),
+                (202402, vec!["proj-c".to_owned()]),
+            ]),
+        ),
+    )
+    .expect("phase6 execution should succeed");
+
+    let projection_exceeded =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(5, 5, 1, 5))
+            .expect("projection-exceeded evaluation should succeed");
+    assert_eq!(
+        projection_exceeded.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE
+    );
+
+    let archive_exceeded =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(5, 5, 5, 1))
+            .expect("archive-exceeded evaluation should succeed");
+    assert_eq!(
+        archive_exceeded.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed() {
+    let report = kamn_core::DataLayerM10Phase6ExecutionTickReport {
+        owner_did: "kamn:did:owner:phase6-budget-invalid".to_owned(),
+        due_candidate_count: 0,
+        shredded_message_ids: Vec::new(),
+        projection_reports: Vec::new(),
+        archived_entries: Vec::new(),
+        reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+    };
+
+    let invalid_budget =
+        data_layer_m10_evaluate_phase6_execution_tick_budget(&report, phase6_budget(0, 1, 1, 1));
+    assert!(matches!(
+        invalid_budget,
+        Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+                field: "max_due_candidates",
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+            }
+        )
     ));
 }

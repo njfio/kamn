@@ -84,6 +84,24 @@ pub const DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE: 
 /// Stable reason marker when Phase-6 orchestration projection fails.
 pub const DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_FAILED_REASON_CODE: &str =
     "m10_phase6_execution_projection_failed";
+/// Stable reason marker when Phase-6 execution tick budget is within configured limits.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE: &str =
+    "m10_phase6_execution_budget_within_limit";
+/// Stable reason marker when Phase-6 due candidate count exceeds budget.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE: &str =
+    "m10_phase6_execution_budget_due_candidates_exceeded";
+/// Stable reason marker when Phase-6 shred operation count exceeds budget.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE: &str =
+    "m10_phase6_execution_budget_shredded_messages_exceeded";
+/// Stable reason marker when Phase-6 projection count exceeds budget.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE: &str =
+    "m10_phase6_execution_budget_projections_exceeded";
+/// Stable reason marker when Phase-6 archive entry count exceeds budget.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE: &str =
+    "m10_phase6_execution_budget_archive_entries_exceeded";
+/// Stable reason marker when Phase-6 execution budget configuration is invalid.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE: &str =
+    "m10_phase6_execution_budget_invalid";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -283,6 +301,45 @@ pub struct DataLayerM10Phase6ExecutionTickReport {
     pub reason_code: &'static str,
 }
 
+/// Deterministic Phase-6 execution tick budget limits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DataLayerM10Phase6ExecutionTickBudget {
+    /// Maximum retention-due candidate count allowed in one tick.
+    pub max_due_candidates: usize,
+    /// Maximum shredded message operations allowed in one tick.
+    pub max_shredded_messages: usize,
+    /// Maximum partition projections allowed in one tick.
+    pub max_projection_reports: usize,
+    /// Maximum archived entries allowed in one tick.
+    pub max_archived_entries: usize,
+}
+
+/// Budget classification decision for one Phase-6 execution tick report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataLayerM10Phase6ExecutionBudgetDecision {
+    /// Report is within all configured limits.
+    WithinBudget,
+    /// One or more limits were exceeded.
+    Exceeded,
+}
+
+/// Budget evaluation report for one Phase-6 execution tick.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6ExecutionTickBudgetReport {
+    /// Evaluation decision.
+    pub decision: DataLayerM10Phase6ExecutionBudgetDecision,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
+    /// Observed due-candidate count.
+    pub due_candidate_count: usize,
+    /// Observed shredded message count.
+    pub shredded_message_count: usize,
+    /// Observed projection report count.
+    pub projection_report_count: usize,
+    /// Observed archived-entry count.
+    pub archived_entry_count: usize,
+}
+
 /// Recoverability readiness projection for one partition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM10RecoveryReadinessReport {
@@ -478,6 +535,56 @@ pub fn data_layer_m10_execute_phase6_orchestration_tick(
         archived_entries,
         reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
     })
+}
+
+/// Evaluates one Phase-6 execution report against deterministic per-tick budget limits.
+pub fn data_layer_m10_evaluate_phase6_execution_tick_budget(
+    report: &DataLayerM10Phase6ExecutionTickReport,
+    budget: DataLayerM10Phase6ExecutionTickBudget,
+) -> Result<DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10PartitionLifecycleError> {
+    validate_phase6_execution_tick_budget(budget)?;
+
+    let budget_result = DataLayerM10Phase6ExecutionTickBudgetReport {
+        decision: DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget,
+        reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
+        due_candidate_count: report.due_candidate_count,
+        shredded_message_count: report.shredded_message_ids.len(),
+        projection_report_count: report.projection_reports.len(),
+        archived_entry_count: report.archived_entries.len(),
+    };
+
+    if budget_result.due_candidate_count > budget.max_due_candidates {
+        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
+            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_DUE_CANDIDATES_EXCEEDED_REASON_CODE,
+            ..budget_result
+        });
+    }
+    if budget_result.shredded_message_count > budget.max_shredded_messages {
+        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
+            reason_code:
+                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_SHREDDED_MESSAGES_EXCEEDED_REASON_CODE,
+            ..budget_result
+        });
+    }
+    if budget_result.projection_report_count > budget.max_projection_reports {
+        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
+            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_PROJECTIONS_EXCEEDED_REASON_CODE,
+            ..budget_result
+        });
+    }
+    if budget_result.archived_entry_count > budget.max_archived_entries {
+        return Ok(DataLayerM10Phase6ExecutionTickBudgetReport {
+            decision: DataLayerM10Phase6ExecutionBudgetDecision::Exceeded,
+            reason_code:
+                DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_ARCHIVE_ENTRIES_EXCEEDED_REASON_CODE,
+            ..budget_result
+        });
+    }
+
+    Ok(budget_result)
 }
 
 /// M10 partition lifecycle registry.
@@ -796,6 +903,13 @@ pub enum DataLayerM10PartitionLifecycleError {
         /// Stable detail marker for diagnostics.
         detail: String,
     },
+    /// Phase-6 execution budget configuration is invalid.
+    InvalidPhase6ExecutionBudget {
+        /// Invalid field.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
 }
 
 impl fmt::Display for DataLayerM10PartitionLifecycleError {
@@ -844,6 +958,10 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
             } => {
                 write!(f, "phase6 execution failed: {reason_code} ({detail})")
             }
+            Self::InvalidPhase6ExecutionBudget { field, reason_code } => write!(
+                f,
+                "invalid phase6 execution budget field {field} ({reason_code})"
+            ),
         }
     }
 }
@@ -1021,6 +1139,44 @@ fn month_distance(
 
 fn deterministic_checksum_marker(partition_name: &str, partition_month_id: u32) -> String {
     format!("sha256:{partition_name}:{partition_month_id}")
+}
+
+fn validate_phase6_execution_tick_budget(
+    budget: DataLayerM10Phase6ExecutionTickBudget,
+) -> Result<(), DataLayerM10PartitionLifecycleError> {
+    if budget.max_due_candidates == 0 {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+                field: "max_due_candidates",
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+            },
+        );
+    }
+    if budget.max_shredded_messages == 0 {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+                field: "max_shredded_messages",
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+            },
+        );
+    }
+    if budget.max_projection_reports == 0 {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+                field: "max_projection_reports",
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+            },
+        );
+    }
+    if budget.max_archived_entries == 0 {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6ExecutionBudget {
+                field: "max_archived_entries",
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_INVALID_REASON_CODE,
+            },
+        );
+    }
+    Ok(())
 }
 
 fn validate_archival_retry_policy(

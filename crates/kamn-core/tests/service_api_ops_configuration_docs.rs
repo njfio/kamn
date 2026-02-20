@@ -139,6 +139,28 @@ fn service_api_ops_configuration_contains_phase6_execution_tick_orchestration_ma
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_execution_tick_budget_markers() {
+    assert!(DOC.contains("## Phase-6 Execution Tick Budget Guardrail Contracts (Issue #5291)"));
+    assert!(DOC.contains("phase6_execution_tick_budget_status=verified"));
+    assert!(DOC.contains(
+        "phase6_execution_tick_budget_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-execution-budget-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_execution_tick_budget_reason_codes_csv=m10_phase6_execution_budget_within_limit,m10_phase6_execution_budget_due_candidates_exceeded,m10_phase6_execution_budget_shredded_messages_exceeded,m10_phase6_execution_budget_projections_exceeded,m10_phase6_execution_budget_archive_entries_exceeded,m10_phase6_execution_budget_invalid"
+    ));
+    assert!(DOC.contains(
+        "phase6_execution_tick_budget_contract=due_candidates<=max_due_candidates;shredded_messages<=max_shredded_messages;projection_reports<=max_projection_reports;archived_entries<=max_archived_entries"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c20_phase6_execution_tick_budget_within_limits_and_exceeded_paths_are_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c22_phase6_execution_tick_budget_invalid_limits_fail_closed -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5291"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
