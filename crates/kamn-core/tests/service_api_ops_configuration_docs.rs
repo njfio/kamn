@@ -161,6 +161,36 @@ fn service_api_ops_configuration_contains_phase6_execution_tick_budget_markers()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_scheduler_cycle_markers() {
+    assert!(DOC.contains(
+        "## Phase-6 Scheduler Cycle Trigger and Guarded Execution Contracts (Issue #5293)"
+    ));
+    assert!(DOC.contains("phase6_scheduler_cycle_status=verified"));
+    assert!(DOC.contains(
+        "phase6_scheduler_trigger_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-scheduler-trigger-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_trigger_reason_codes_csv=m10_phase6_scheduler_trigger_deferred,m10_phase6_scheduler_trigger_due_threshold,m10_phase6_scheduler_trigger_interval_elapsed"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_cycle_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-scheduler-cycle-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_cycle_reason_codes_csv=m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_policy_invalid,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded,m10_phase6_execution_budget_shredded_messages_exceeded,m10_phase6_execution_budget_projections_exceeded,m10_phase6_execution_budget_archive_entries_exceeded"
+    ));
+    assert!(DOC.contains(
+        "phase6_scheduler_cycle_contract=trigger_decision->preflight_budget_admission->phase6_execution_tick->budget_evidence"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c23_phase6_scheduler_trigger_decision_orders_due_threshold_interval_and_deferred -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c25_phase6_scheduler_cycle_preflight_budget_overflow_fails_closed_before_execution -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5293"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")

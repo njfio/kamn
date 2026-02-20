@@ -393,6 +393,33 @@ Regression marker:
 
 - `Regression: #5291`
 
+## Phase-6 Scheduler Cycle Trigger and Guarded Execution Contracts (Issue #5293)
+
+Phase-6 runtime wiring now has a deterministic scheduler-cycle boundary that composes trigger
+evaluation, preflight budget admission, execution tick orchestration, and budget evidence emission.
+
+Deterministic scheduler markers:
+
+- `phase6_scheduler_cycle_status=verified`
+- `phase6_scheduler_trigger_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-scheduler-trigger-reason-taxonomy.v1`
+- `phase6_scheduler_trigger_reason_codes_csv=m10_phase6_scheduler_trigger_deferred,m10_phase6_scheduler_trigger_due_threshold,m10_phase6_scheduler_trigger_interval_elapsed`
+- `phase6_scheduler_cycle_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-scheduler-cycle-reason-taxonomy.v1`
+- `phase6_scheduler_cycle_reason_codes_csv=m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_policy_invalid,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded,m10_phase6_execution_budget_shredded_messages_exceeded,m10_phase6_execution_budget_projections_exceeded,m10_phase6_execution_budget_archive_entries_exceeded`
+- `phase6_scheduler_cycle_contract=trigger_decision->preflight_budget_admission->phase6_execution_tick->budget_evidence`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c23_phase6_scheduler_trigger_decision_orders_due_threshold_interval_and_deferred -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c24_phase6_scheduler_cycle_deferred_path_returns_no_execution_side_effects -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c25_phase6_scheduler_cycle_preflight_budget_overflow_fails_closed_before_execution -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c26_phase6_scheduler_cycle_triggered_executes_within_budget_evidence -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c27_phase6_scheduler_policy_and_signal_validation_fail_closed -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_phase6_scheduler_cycle_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5293`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
