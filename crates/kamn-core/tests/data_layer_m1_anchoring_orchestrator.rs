@@ -1,10 +1,14 @@
 use kamn_core::{
-    DataLayerM1AnchoringConfirmationMetadata, DataLayerM1AnchoringOrchestrator,
+    DataLayerM1AnchoringConfirmationMetadata, DataLayerM1AnchoringFollowUpAction,
+    DataLayerM1AnchoringFollowUpPolicy, DataLayerM1AnchoringOrchestrator,
     DataLayerM1AnchoringOrchestratorError, DataLayerM1AnchoringTickOutcome,
     DataLayerM1BatchSchedulerPolicy, DataLayerM1PendingBatchMessage,
     InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality, KolmeRuntimeCommitClient,
     KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitReceipt,
     KolmeRuntimeCommitRequest, DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_DEFERRED_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE,
     DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE,
@@ -112,6 +116,7 @@ fn spec_c02_orchestrator_tick_projects_planned_persistence_metadata() {
     let DataLayerM1AnchoringTickOutcome::Planned {
         reason_code,
         persistence_plan,
+        follow_up_policy,
         ..
     } = outcome
     else {
@@ -129,6 +134,17 @@ fn spec_c02_orchestrator_tick_projects_planned_persistence_metadata() {
     );
     assert!(persistence_plan.submission.is_some());
     assert!(persistence_plan.confirmation.is_none());
+    assert_eq!(
+        follow_up_policy,
+        DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::PollConfirmation,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: Some(1_900_000_040),
+            retry_class: kamn_core::DataLayerM1AnchorRetryClass::NewSubmission,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Pending),
+        }
+    );
 }
 
 #[test]
@@ -248,6 +264,7 @@ fn spec_c04_rejected_anchor_projects_rejected_outcome() {
     let DataLayerM1AnchoringTickOutcome::Rejected {
         reason_code,
         rejection_reason,
+        follow_up_policy,
         ..
     } = outcome
     else {
@@ -258,4 +275,75 @@ fn spec_c04_rejected_anchor_projects_rejected_outcome() {
         DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE
     );
     assert_eq!(rejection_reason, "provider-policy-rejection".to_owned());
+    assert_eq!(
+        follow_up_policy.action,
+        DataLayerM1AnchoringFollowUpAction::NoRetry
+    );
+    assert_eq!(
+        follow_up_policy.reason_code,
+        DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE
+    );
+    assert!(follow_up_policy.retry_after_unix_seconds.is_none());
+    assert!(follow_up_policy.poll_after_unix_seconds.is_none());
+}
+
+#[test]
+fn spec_c04_duplicate_pending_anchor_projects_retry_follow_up_policy() {
+    let client = ScriptedKolmeRuntimeCommitClient::new(vec![KolmeRuntimeCommitOutcome::Duplicate(
+        KolmeRuntimeCommitReceipt {
+            provider: "kolme-scripted".to_owned(),
+            commit_id: "commit-c04-duplicate".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        },
+    )]);
+    let policy = DataLayerM1BatchSchedulerPolicy::new(1, 60).expect("policy should be valid");
+    let mut orchestrator = DataLayerM1AnchoringOrchestrator::new(
+        client,
+        "kamn:did:agent:m1-orchestrator-c04-duplicate",
+        "m1-root",
+        policy,
+    )
+    .expect("orchestrator should initialize");
+
+    let outcome = orchestrator
+        .plan_tick(
+            &[pending(
+                "00000000-0000-0000-0000-000000000404",
+                "sha256:c04d",
+                1_900_000_000,
+            )],
+            1_900_000_010,
+            1_900_000_010,
+            1_900_000_011,
+            None,
+        )
+        .expect("duplicate pending anchors should evaluate deterministically");
+
+    let DataLayerM1AnchoringTickOutcome::Planned {
+        follow_up_policy, ..
+    } = outcome
+    else {
+        panic!("expected planned outcome");
+    };
+    assert_eq!(
+        follow_up_policy.action,
+        DataLayerM1AnchoringFollowUpAction::Retry
+    );
+    assert_eq!(
+        follow_up_policy.reason_code,
+        DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE
+    );
+    assert_eq!(
+        follow_up_policy.retry_after_unix_seconds,
+        Some(1_900_000_070)
+    );
+    assert!(follow_up_policy.poll_after_unix_seconds.is_none());
+    assert_eq!(
+        follow_up_policy.retry_class,
+        kamn_core::DataLayerM1AnchorRetryClass::RetryableInFlight
+    );
+    assert_eq!(
+        follow_up_policy.receipt_finality,
+        Some(KolmeCommitReceiptFinality::Pending)
+    );
 }

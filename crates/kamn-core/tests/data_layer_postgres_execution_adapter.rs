@@ -3,11 +3,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use kamn_core::{
     data_layer_m3_compute_blind_index, data_layer_pg_collect_migration_files,
-    DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerM1AnchoringOrchestrator,
-    DataLayerM1AnchoringTickOutcome, DataLayerM1BatchSchedulerPolicy,
-    DataLayerM1PendingBatchMessage, DataLayerPgBlindIndexSearchRequest,
-    DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
-    DataLayerPgExecutionAdapterError, InMemoryKolmeRuntimeCommitClient,
+    DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerM1AnchoringFollowUpAction,
+    DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringTickOutcome,
+    DataLayerM1BatchSchedulerPolicy, DataLayerM1PendingBatchMessage,
+    DataLayerPgBlindIndexSearchRequest, DataLayerPgExecutionAdapter,
+    DataLayerPgExecutionAdapterConfig, DataLayerPgExecutionAdapterError,
+    InMemoryKolmeRuntimeCommitClient, DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
     DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
 };
 
@@ -459,11 +460,21 @@ fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
             .expect("orchestrator tick should evaluate");
 
         let DataLayerM1AnchoringTickOutcome::Planned {
-            persistence_plan, ..
+            persistence_plan,
+            follow_up_policy,
+            ..
         } = outcome
         else {
             panic!("expected planned outcome");
         };
+        assert_eq!(
+            follow_up_policy.action,
+            DataLayerM1AnchoringFollowUpAction::PollConfirmation
+        );
+        assert_eq!(
+            follow_up_policy.reason_code,
+            DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE
+        );
 
         let created = adapter
             .execute_create_merkle_batch(

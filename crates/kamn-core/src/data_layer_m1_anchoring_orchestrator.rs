@@ -6,7 +6,7 @@
 
 use crate::{
     evaluate_data_layer_m1_batch_trigger, DataLayerM1AnchorOutcome, DataLayerM1AnchorResult,
-    DataLayerM1BatchSchedulerError, DataLayerM1BatchSchedulerPolicy,
+    DataLayerM1AnchorRetryClass, DataLayerM1BatchSchedulerError, DataLayerM1BatchSchedulerPolicy,
     DataLayerM1BatchTriggerDecision, DataLayerM1Error, DataLayerM1KolmeAnchoringWorker,
     DataLayerM1MerkleBatch, DataLayerM1MerkleLeaf, DataLayerM1PendingBatchMessage,
     KolmeCommitReceiptFinality,
@@ -22,6 +22,52 @@ pub const DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE: &str = "m1_anchorin
 /// Reason marker for final-receipt paths missing confirmation metadata.
 pub const DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE: &str =
     "m1_anchoring_confirmation_hint_required_for_final_receipt";
+/// Reason marker for retryable in-flight follow-up policy decisions.
+pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE: &str =
+    "m1_anchoring_follow_up_retry_in_flight";
+/// Reason marker for pending confirmation follow-up policy decisions.
+pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE: &str =
+    "m1_anchoring_follow_up_poll_pending";
+/// Reason marker for conflict/no-retry follow-up policy decisions.
+pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE: &str =
+    "m1_anchoring_follow_up_no_retry_conflict";
+/// Reason marker for finalized/no-retry follow-up policy decisions.
+pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE: &str =
+    "m1_anchoring_follow_up_no_retry_final";
+/// Reason marker for failed/no-retry follow-up policy decisions.
+pub const DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE: &str =
+    "m1_anchoring_follow_up_no_retry_failed";
+
+const DATA_LAYER_M1_ANCHORING_RETRY_BACKOFF_SECONDS: u64 = 60;
+const DATA_LAYER_M1_ANCHORING_CONFIRMATION_POLL_SECONDS: u64 = 30;
+
+/// Deterministic follow-up action after one anchoring attempt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataLayerM1AnchoringFollowUpAction {
+    /// Retry anchoring after a deterministic delay.
+    Retry,
+    /// Poll provider confirmation after a deterministic delay.
+    PollConfirmation,
+    /// Do not retry/poll this batch automatically.
+    NoRetry,
+}
+
+/// Deterministic follow-up policy projected from retry-class and receipt finality.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM1AnchoringFollowUpPolicy {
+    /// Follow-up action classification.
+    pub action: DataLayerM1AnchoringFollowUpAction,
+    /// Stable reason marker for this policy decision.
+    pub reason_code: &'static str,
+    /// Retry timestamp when action is `Retry`.
+    pub retry_after_unix_seconds: Option<u64>,
+    /// Poll timestamp when action is `PollConfirmation`.
+    pub poll_after_unix_seconds: Option<u64>,
+    /// Retry-class projection from anchoring worker result.
+    pub retry_class: DataLayerM1AnchorRetryClass,
+    /// Optional receipt finality when provider receipt exists.
+    pub receipt_finality: Option<KolmeCommitReceiptFinality>,
+}
 
 /// One projected message assignment for merkle batch persistence.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,6 +135,8 @@ pub enum DataLayerM1AnchoringTickOutcome {
         anchor_result: DataLayerM1AnchorResult,
         /// Deterministic persistence plan.
         persistence_plan: Box<DataLayerM1AnchoringPersistencePlan>,
+        /// Deterministic follow-up policy projection for retry/confirmation flow.
+        follow_up_policy: DataLayerM1AnchoringFollowUpPolicy,
     },
     /// Anchoring was rejected by provider.
     Rejected {
@@ -98,6 +146,8 @@ pub enum DataLayerM1AnchoringTickOutcome {
         batch: Box<DataLayerM1MerkleBatch>,
         /// Provider rejection reason.
         rejection_reason: String,
+        /// Deterministic follow-up policy for this rejected outcome.
+        follow_up_policy: DataLayerM1AnchoringFollowUpPolicy,
     },
 }
 
@@ -213,6 +263,7 @@ where
 
         let batch = assemble_batch_for_pending_messages(pending_messages)?;
         let anchor_result = self.worker.anchor_batch(&batch)?;
+        let follow_up_policy = project_follow_up_policy(&anchor_result, now_unix_seconds);
 
         match &anchor_result.outcome {
             DataLayerM1AnchorOutcome::Rejected { reason } => {
@@ -220,6 +271,7 @@ where
                     reason_code: DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE,
                     batch: Box::new(batch),
                     rejection_reason: reason.clone(),
+                    follow_up_policy,
                 })
             }
             DataLayerM1AnchorOutcome::Submitted(receipt)
@@ -260,6 +312,7 @@ where
                     batch: Box::new(batch),
                     anchor_result,
                     persistence_plan: Box::new(persistence_plan),
+                    follow_up_policy,
                 })
             }
         }
@@ -341,4 +394,67 @@ fn project_assignments(
             })
         })
         .collect()
+}
+
+fn project_follow_up_policy(
+    anchor_result: &DataLayerM1AnchorResult,
+    now_unix_seconds: u64,
+) -> DataLayerM1AnchoringFollowUpPolicy {
+    if anchor_result.retry_class == DataLayerM1AnchorRetryClass::RetryableInFlight {
+        return DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::Retry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_RETRY_IN_FLIGHT_REASON_CODE,
+            retry_after_unix_seconds: Some(
+                now_unix_seconds.saturating_add(DATA_LAYER_M1_ANCHORING_RETRY_BACKOFF_SECONDS),
+            ),
+            poll_after_unix_seconds: None,
+            retry_class: anchor_result.retry_class,
+            receipt_finality: receipt_finality(anchor_result),
+        };
+    }
+
+    match receipt_finality(anchor_result) {
+        Some(KolmeCommitReceiptFinality::Pending) => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::PollConfirmation,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_POLL_PENDING_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: Some(
+                now_unix_seconds.saturating_add(DATA_LAYER_M1_ANCHORING_CONFIRMATION_POLL_SECONDS),
+            ),
+            retry_class: anchor_result.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Pending),
+        },
+        Some(KolmeCommitReceiptFinality::Final) => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::NoRetry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FINAL_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: None,
+            retry_class: anchor_result.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Final),
+        },
+        Some(KolmeCommitReceiptFinality::Failed) => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::NoRetry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_FAILED_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: None,
+            retry_class: anchor_result.retry_class,
+            receipt_finality: Some(KolmeCommitReceiptFinality::Failed),
+        },
+        None => DataLayerM1AnchoringFollowUpPolicy {
+            action: DataLayerM1AnchoringFollowUpAction::NoRetry,
+            reason_code: DATA_LAYER_M1_ANCHORING_FOLLOW_UP_NO_RETRY_CONFLICT_REASON_CODE,
+            retry_after_unix_seconds: None,
+            poll_after_unix_seconds: None,
+            retry_class: anchor_result.retry_class,
+            receipt_finality: None,
+        },
+    }
+}
+
+fn receipt_finality(anchor_result: &DataLayerM1AnchorResult) -> Option<KolmeCommitReceiptFinality> {
+    match &anchor_result.outcome {
+        DataLayerM1AnchorOutcome::Submitted(receipt)
+        | DataLayerM1AnchorOutcome::Duplicate(receipt) => Some(receipt.finality),
+        DataLayerM1AnchorOutcome::Rejected { .. } => None,
+    }
 }
