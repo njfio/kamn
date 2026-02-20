@@ -1,7 +1,7 @@
 # Issue #5384 Spec
 
 - Title: Task: codify topology-id host-pair-cardinality coherence contracts for live-postgres validation
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-program-operational-hardening-and-live-validation/index.md
