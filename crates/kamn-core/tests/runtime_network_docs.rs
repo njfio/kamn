@@ -228,6 +228,36 @@ fn doc_contains_cross_store_replay_consistency_checker_taxonomy_markers() {
 }
 
 #[test]
+fn doc_contains_journal_wal_commit_boundary_marker_rules() {
+    assert!(DOC.contains("## Journal/WAL Commit-Boundary Marker Rules"));
+    assert!(DOC.contains("fixtures/runtime/journal_wal_commit_boundary_fixture_matrix.txt"));
+    assert!(DOC.contains(
+        "journal_wal_fixture_matrix_schema_version=kamn.runtime.journal-wal-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains("journal_entry_shape=entry|1|<payload_hex>"));
+    assert!(DOC.contains(
+        "commit_boundary_marker_taxonomy_version=kamn.runtime.snapshot-journal-commit-boundary-markers.v1"
+    ));
+    assert!(DOC.contains(
+        "channel -> channel_snapshot_recovery_empty|channel_snapshot_recovery_clean|channel_snapshot_recovery_repaired_corrupt_payload"
+    ));
+    assert!(DOC.contains(
+        "message_lifecycle -> message_lifecycle_snapshot_recovery_empty|message_lifecycle_snapshot_recovery_clean|message_lifecycle_snapshot_recovery_repaired_corrupt_payload"
+    ));
+    assert!(DOC.contains(
+        "task_operation -> task_operation_snapshot_recovery_empty|task_operation_snapshot_recovery_clean|task_operation_snapshot_recovery_repaired_corrupt_payload"
+    ));
+    assert!(DOC.contains("channel -> channel_snapshot_journal_corrupt_tail:<line-index>"));
+    assert!(DOC.contains(
+        "message_lifecycle -> message_lifecycle_snapshot_journal_corrupt_tail:<line-index>"
+    ));
+    assert!(
+        DOC.contains("task_operation -> task_operation_snapshot_journal_corrupt_tail:<line-index>")
+    );
+    assert!(DOC.contains("Regression: #4015"));
+}
+
+#[test]
 fn regression_requires_rejoin_and_overflow_rejection_rules() {
     // Regression: #324
     assert!(DOC.contains("rejoin without disconnect is rejected"));
