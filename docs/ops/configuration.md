@@ -464,6 +464,42 @@ Regression marker:
 
 - `Regression: #4043`
 
+## API Compatibility CI Dry-Run Governance Contract (Issue #4044)
+
+Deterministic checker markers:
+
+- `compatibility_ci_dry_run_reason_taxonomy_version=kamn.ci.api-compatibility-ci-dry-run-governance-reason-taxonomy.v1`
+- `compatibility_ci_dry_run_reason_codes_csv=compatibility_ci_dry_run_argument_invalid,compatibility_ci_dry_run_threshold_contract_violation,compatibility_ci_dry_run_report_contract_violation,compatibility_ci_dry_run_runtime_budget_exceeded,compatibility_ci_dry_run_fast_mode_selector_drift,compatibility_ci_dry_run_workflow_exclusion_drift,compatibility_ci_dry_run_docs_marker_parity_drift,compatibility_ci_dry_run_docs_remediation_marker_missing`
+- `compatibility_ci_dry_run_threshold_fixture_path=fixtures/ci/api_compatibility_ci_dry_run_governance_thresholds.env`
+- `compatibility_ci_dry_run_max_seconds=120`
+- `compatibility_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture`
+- `compatibility_ci_dry_run_fast_mode_forbidden_entry=bash "$ROOT_DIR/scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh" --mode run`
+- `compatibility_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh --mode run`
+- `compatibility_ci_dry_run_remediation_map_version=v1`
+
+Validation commands:
+
+- `bash scripts/runtime/validate_api_version_policy_live.sh --mode dry-run --output-json /tmp/api-version-policy-live-summary.json`
+- `bash scripts/runtime/validate_request_response_schema_compatibility_live.sh --mode dry-run --output-json /tmp/request-response-schema-compatibility-live-summary.json`
+- `bash scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/api-compatibility-matrix-local-heavy-summary.json`
+- `python3 scripts/ci/check_api_compatibility_ci_dry_run_governance.py --api-version-policy-report-file /tmp/api-version-policy-live-summary.json --request-response-schema-compatibility-report-file /tmp/request-response-schema-compatibility-live-summary.json --api-compatibility-matrix-local-heavy-report-file /tmp/api-compatibility-matrix-local-heavy-summary.json --threshold-file fixtures/ci/api_compatibility_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/api-compatibility-ci-dry-run-governance-report.json`
+- `cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture`
+
+Deterministic remediation markers:
+
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_argument_invalid=fix checker invocation flags and required file arguments`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_threshold_contract_violation=restore required keys/values in fixtures/ci/api_compatibility_ci_dry_run_governance_thresholds.env`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_report_contract_violation=regenerate dry-run compatibility reports and restore schema/taxonomy markers`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_runtime_budget_exceeded=reduce compatibility checker/report overhead or adjust threshold fixture with explicit review evidence`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_fast_mode_selector_drift=restore required ci-tools fast-mode checker entry and remove local-heavy run leakage`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_workflow_exclusion_drift=remove local-heavy run-mode command from .github/workflows/ci-fast-gate.yml`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_docs_marker_parity_drift=realign docs/ci/strategy.md and docs/ops/configuration.md compatibility marker blocks with fixture/checker contracts`
+- `compatibility_ci_dry_run_remediation.compatibility_ci_dry_run_docs_remediation_marker_missing=add missing compatibility_ci_dry_run_remediation.<reason>= marker entries to strategy and ops docs`
+
+Regression marker:
+
+- `Regression: #4044`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
