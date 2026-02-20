@@ -860,6 +860,33 @@ continuity and emits deterministic divergence taxonomy markers.
   - taxonomy marker, reason-code CSV, source marker, and deterministic
     fingerprint drift must fail closed (`Regression: #4013`).
 
+## Journal/WAL Commit-Boundary Marker Rules
+
+File-backed snapshot stores append deterministic journal entries and expose
+deterministic commit-boundary recovery markers used by replay and recovery
+contracts.
+
+- Fixture contract:
+  - `fixtures/runtime/journal_wal_commit_boundary_fixture_matrix.txt`
+- Deterministic schema markers:
+  - `journal_wal_fixture_matrix_schema_version=kamn.runtime.journal-wal-fixture-matrix.v1`
+  - `journal_entry_shape=entry|1|<payload_hex>`
+  - `journal_entry_prefix=entry`
+  - `journal_entry_version=1`
+  - `payload_encoding=lowercase_hex_utf8_payload`
+  - `commit_boundary_marker_taxonomy_version=kamn.runtime.snapshot-journal-commit-boundary-markers.v1`
+- Commit-boundary recovery marker map:
+  - `channel -> channel_snapshot_recovery_empty|channel_snapshot_recovery_clean|channel_snapshot_recovery_repaired_corrupt_payload`
+  - `message_lifecycle -> message_lifecycle_snapshot_recovery_empty|message_lifecycle_snapshot_recovery_clean|message_lifecycle_snapshot_recovery_repaired_corrupt_payload`
+  - `task_operation -> task_operation_snapshot_recovery_empty|task_operation_snapshot_recovery_clean|task_operation_snapshot_recovery_repaired_corrupt_payload`
+- Corrupt-tail marker prefix map:
+  - `channel -> channel_snapshot_journal_corrupt_tail:<line-index>`
+  - `message_lifecycle -> message_lifecycle_snapshot_journal_corrupt_tail:<line-index>`
+  - `task_operation -> task_operation_snapshot_journal_corrupt_tail:<line-index>`
+- Regression policy:
+  - fixture schema, marker taxonomy, and docs parity drift must fail closed
+    (`Regression: #4015`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
@@ -872,6 +899,7 @@ cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_f
 cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test cross_store_replay_consistency
+cargo test -p kamn-core --test journal_wal_commit_schema_contract
 cargo test -p kamn-core --test block_pipeline_recovery_matrix
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
