@@ -126,6 +126,15 @@ pub const DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE: &str =
 /// Stable reason marker when Phase-6 stateful scheduler runtime is initialized.
 pub const DATA_LAYER_M10_PHASE6_SCHEDULER_RUNTIME_INITIALIZED_REASON_CODE: &str =
     "m10_phase6_scheduler_runtime_initialized";
+/// Stable reason marker when Phase-6 runtime evidence projection succeeds for an applied cycle.
+pub const DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_APPLIED_REASON_CODE: &str =
+    "m10_phase6_runtime_evidence_applied";
+/// Stable reason marker when Phase-6 runtime evidence projection succeeds for a deferred cycle.
+pub const DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_DEFERRED_REASON_CODE: &str =
+    "m10_phase6_runtime_evidence_deferred";
+/// Stable reason marker when Phase-6 runtime evidence projection input is invalid.
+pub const DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE: &str =
+    "m10_phase6_runtime_evidence_input_invalid";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -550,6 +559,203 @@ impl DataLayerM10Phase6SchedulerRuntime {
                 Err(error)
             }
         }
+    }
+}
+
+/// Evidence projection input combining one scheduler-cycle report with runtime state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6RuntimeEvidenceInput {
+    /// Owner DID for this evidence bundle.
+    pub owner_did: String,
+    /// Scheduler-cycle report for this evidence bundle.
+    pub cycle_report: DataLayerM10Phase6SchedulerCycleReport,
+    /// Runtime state snapshot captured after the cycle.
+    pub runtime_state: DataLayerM10Phase6SchedulerRuntimeState,
+}
+
+/// Canonical evidence bundle projected from Phase-6 scheduler runtime execution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6RuntimeEvidenceBundle {
+    /// Owner DID for this evidence bundle.
+    pub owner_did: String,
+    /// Stable reason marker from scheduler-cycle outcome (`applied` or `deferred`).
+    pub cycle_reason_code: &'static str,
+    /// Stable trigger-decision reason marker.
+    pub trigger_reason_code: &'static str,
+    /// Stable budget reason marker for applied cycles.
+    pub budget_reason_code: Option<&'static str>,
+    /// Archived partition names sorted in deterministic order.
+    pub archived_partition_names: Vec<String>,
+    /// Archived object URIs sorted in deterministic order matching partition names.
+    pub archived_object_uris: Vec<String>,
+    /// Due-candidate count represented by this cycle evidence.
+    pub due_candidate_count: usize,
+    /// Shredded message count represented by this cycle evidence.
+    pub shredded_message_count: usize,
+    /// Projection report count represented by this cycle evidence.
+    pub projection_report_count: usize,
+    /// Archived-entry count represented by this cycle evidence.
+    pub archived_entry_count: usize,
+    /// Runtime total cycle count.
+    pub runtime_total_cycles: u64,
+    /// Runtime executed cycle count.
+    pub runtime_executed_cycles: u64,
+    /// Runtime deferred cycle count.
+    pub runtime_deferred_cycles: u64,
+    /// Runtime fail-closed cycle count.
+    pub runtime_fail_closed_cycles: u64,
+    /// Runtime last successful tick checkpoint.
+    pub runtime_last_successful_tick_epoch_seconds: Option<u64>,
+    /// Runtime last observed scheduler clock value.
+    pub runtime_last_observed_now_epoch_seconds: Option<u64>,
+    /// Runtime last outcome reason marker.
+    pub runtime_last_reason_code: &'static str,
+    /// Evidence projection result marker.
+    pub reason_code: &'static str,
+}
+
+/// Projects canonical Phase-6 runtime evidence from one scheduler-cycle report and runtime state.
+pub fn data_layer_m10_project_phase6_runtime_evidence_bundle(
+    input: DataLayerM10Phase6RuntimeEvidenceInput,
+) -> Result<DataLayerM10Phase6RuntimeEvidenceBundle, DataLayerM10PartitionLifecycleError> {
+    validate_non_empty(input.owner_did.as_str(), "owner_did")?;
+    let owner_did = parse_kamn_did(input.owner_did.as_str())?;
+    if input.runtime_state.total_cycles
+        != input.runtime_state.executed_cycles
+            + input.runtime_state.deferred_cycles
+            + input.runtime_state.fail_closed_cycles
+    {
+        return Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                field: "runtime_state",
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+            },
+        );
+    }
+
+    let trigger_reason_code = phase6_trigger_reason_code(&input.cycle_report.trigger_decision);
+    let runtime_total_cycles = input.runtime_state.total_cycles;
+    let runtime_executed_cycles = input.runtime_state.executed_cycles;
+    let runtime_deferred_cycles = input.runtime_state.deferred_cycles;
+    let runtime_fail_closed_cycles = input.runtime_state.fail_closed_cycles;
+    let runtime_last_successful_tick_epoch_seconds =
+        input.runtime_state.last_successful_tick_epoch_seconds;
+    let runtime_last_observed_now_epoch_seconds =
+        input.runtime_state.last_observed_now_epoch_seconds;
+    let runtime_last_reason_code = input.runtime_state.last_reason_code;
+
+    match input.cycle_report.reason_code {
+        DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE => {
+            let execution_report = input.cycle_report.execution_report.ok_or(
+                DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                    field: "cycle_report",
+                    reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+                },
+            )?;
+            let budget_report = input.cycle_report.budget_report.ok_or(
+                DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                    field: "cycle_report",
+                    reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+                },
+            )?;
+            let execution_owner_did = parse_kamn_did(execution_report.owner_did.as_str())?;
+            if owner_did.as_str() != execution_owner_did.as_str() {
+                return Err(
+                    DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                        field: "owner_did",
+                        reason_code:
+                            DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+                    },
+                );
+            }
+
+            let mut archived_entries = execution_report.archived_entries;
+            archived_entries.sort_by(|left, right| {
+                left.partition_month_id
+                    .cmp(&right.partition_month_id)
+                    .then(left.partition_name.cmp(&right.partition_name))
+            });
+
+            let archived_partition_names = archived_entries
+                .iter()
+                .map(|entry| entry.partition_name.clone())
+                .collect();
+            let archived_object_uris = archived_entries
+                .iter()
+                .map(|entry| entry.archived_object_uri.clone())
+                .collect();
+
+            Ok(DataLayerM10Phase6RuntimeEvidenceBundle {
+                owner_did: owner_did.as_str().to_owned(),
+                cycle_reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
+                trigger_reason_code,
+                budget_reason_code: Some(budget_report.reason_code),
+                archived_partition_names,
+                archived_object_uris,
+                due_candidate_count: execution_report.due_candidate_count,
+                shredded_message_count: execution_report.shredded_message_ids.len(),
+                projection_report_count: execution_report.projection_reports.len(),
+                archived_entry_count: archived_entries.len(),
+                runtime_total_cycles,
+                runtime_executed_cycles,
+                runtime_deferred_cycles,
+                runtime_fail_closed_cycles,
+                runtime_last_successful_tick_epoch_seconds,
+                runtime_last_observed_now_epoch_seconds,
+                runtime_last_reason_code,
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_APPLIED_REASON_CODE,
+            })
+        }
+        DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE => {
+            if input.cycle_report.execution_report.is_some()
+                || input.cycle_report.budget_report.is_some()
+            {
+                return Err(
+                    DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                        field: "cycle_report",
+                        reason_code:
+                            DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+                    },
+                );
+            }
+            let due_candidate_count = match input.cycle_report.trigger_decision {
+                DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+                    due_candidate_count,
+                    ..
+                }
+                | DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+                    due_candidate_count,
+                    ..
+                } => due_candidate_count,
+            };
+
+            Ok(DataLayerM10Phase6RuntimeEvidenceBundle {
+                owner_did: owner_did.as_str().to_owned(),
+                cycle_reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
+                trigger_reason_code,
+                budget_reason_code: None,
+                archived_partition_names: Vec::new(),
+                archived_object_uris: Vec::new(),
+                due_candidate_count,
+                shredded_message_count: 0,
+                projection_report_count: 0,
+                archived_entry_count: 0,
+                runtime_total_cycles,
+                runtime_executed_cycles,
+                runtime_deferred_cycles,
+                runtime_fail_closed_cycles,
+                runtime_last_successful_tick_epoch_seconds,
+                runtime_last_observed_now_epoch_seconds,
+                runtime_last_reason_code,
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_DEFERRED_REASON_CODE,
+            })
+        }
+        _ => Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                field: "cycle_report",
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+            },
+        ),
     }
 }
 
@@ -1262,6 +1468,13 @@ pub enum DataLayerM10PartitionLifecycleError {
         /// Stable detail marker for diagnostics.
         detail: String,
     },
+    /// Phase-6 runtime evidence input payload is invalid.
+    InvalidPhase6RuntimeEvidenceInput {
+        /// Invalid field.
+        field: &'static str,
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
 }
 
 impl fmt::Display for DataLayerM10PartitionLifecycleError {
@@ -1328,6 +1541,10 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
                     "phase6 scheduler budget preflight exceeded: {reason_code} ({detail})"
                 )
             }
+            Self::InvalidPhase6RuntimeEvidenceInput { field, reason_code } => write!(
+                f,
+                "invalid phase6 runtime evidence input field {field} ({reason_code})"
+            ),
         }
     }
 }
@@ -1424,6 +1641,15 @@ fn phase6_execution_failed(
     DataLayerM10PartitionLifecycleError::Phase6ExecutionFailed {
         reason_code,
         detail: detail.into(),
+    }
+}
+
+fn phase6_trigger_reason_code(
+    trigger_decision: &DataLayerM10Phase6SchedulerTriggerDecision,
+) -> &'static str {
+    match trigger_decision {
+        DataLayerM10Phase6SchedulerTriggerDecision::Deferred { reason_code, .. }
+        | DataLayerM10Phase6SchedulerTriggerDecision::Triggered { reason_code, .. } => reason_code,
     }
 }
 
@@ -1636,6 +1862,10 @@ fn phase6_scheduler_error_reason_code(error: &DataLayerM10PartitionLifecycleErro
             reason_code, ..
         }
         | DataLayerM10PartitionLifecycleError::Phase6SchedulerBudgetPreflightExceeded {
+            reason_code,
+            ..
+        }
+        | DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
             reason_code,
             ..
         } => reason_code,
