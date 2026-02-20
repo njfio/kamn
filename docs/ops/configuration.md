@@ -345,6 +345,31 @@ Regression marker:
 
 - `Regression: #5287`
 
+## Phase-6 Retention+Archival Execution Tick Contracts (Issue #5289)
+
+Phase-6 compliance automation now includes a single deterministic execution-tick boundary composing
+M8 retention due lookup, crypto-shredding execution, M10 shred-completeness projection, and M10
+archival due evaluation.
+
+Deterministic orchestration markers:
+
+- `phase6_execution_tick_status=verified`
+- `phase6_execution_tick_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-execution-reason-taxonomy.v1`
+- `phase6_execution_tick_reason_codes_csv=m10_phase6_execution_applied,m10_phase6_execution_owner_scope_denied,m10_phase6_execution_legal_hold_active,m10_phase6_execution_input_invalid,m10_phase6_execution_projection_input_invalid,m10_phase6_execution_projection_failed`
+- `phase6_execution_tick_contract=retention_due_lookup->crypto_shred->partition_projection->archive_due`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c17_phase6_orchestration_tick_orders_outputs_deterministically -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c18_phase6_orchestration_tick_reports_zero_due_without_archival -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_projection_entries -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_phase6_execution_tick_orchestration_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5289`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper

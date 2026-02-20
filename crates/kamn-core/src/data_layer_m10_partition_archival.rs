@@ -7,7 +7,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use crate::{DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, KamnDid};
+use crate::{
+    DataLayerM8ComplianceError, DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest,
+    DataLayerM8OwnerScopeQuery, KamnDid,
+};
 
 /// Partition prefix for monthly message partitions.
 pub const DATA_LAYER_M10_PARTITION_PREFIX: &str = "messages_";
@@ -63,6 +66,24 @@ pub const DATA_LAYER_M10_ARCHIVAL_RETRY_POLICY_INVALID_REASON_CODE: &str =
 /// Stable reason marker when archival retry attempt metadata is invalid.
 pub const DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE: &str =
     "m10_archival_retry_attempt_invalid";
+/// Stable reason marker when a Phase-6 retention/archival orchestration tick completes.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE: &str =
+    "m10_phase6_execution_applied";
+/// Stable reason marker when Phase-6 orchestration fails owner-scope authorization.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE: &str =
+    "m10_phase6_execution_owner_scope_denied";
+/// Stable reason marker when Phase-6 orchestration encounters legal-hold blocking.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE: &str =
+    "m10_phase6_execution_legal_hold_active";
+/// Stable reason marker when Phase-6 orchestration input is invalid.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE: &str =
+    "m10_phase6_execution_input_invalid";
+/// Stable reason marker when Phase-6 orchestration projection input is invalid.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE: &str =
+    "m10_phase6_execution_projection_input_invalid";
+/// Stable reason marker when Phase-6 orchestration projection fails.
+pub const DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_FAILED_REASON_CODE: &str =
+    "m10_phase6_execution_projection_failed";
 
 /// Partition lifecycle status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -224,6 +245,44 @@ pub struct DataLayerM10ComplianceShredProjectionReport {
     pub projection_reason_code: &'static str,
 }
 
+/// Phase-6 orchestration request composing retention + projection + archival execution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6ExecutionTickRequest {
+    /// Requester owner DID.
+    pub requester_owner_did: String,
+    /// Target owner DID.
+    pub owner_did: String,
+    /// Current epoch timestamp used for retention-due evaluation.
+    pub now_epoch_seconds: u64,
+    /// Epoch timestamp applied to newly shredded messages.
+    pub shredded_at_epoch_seconds: u64,
+    /// Current month identifier as `YYYYMM`.
+    pub now_month_id: u32,
+    /// Active retention window in months.
+    pub active_retention_months: u16,
+    /// Object-storage prefix used for archived artifacts.
+    pub object_storage_prefix: String,
+    /// Partition message membership used for M8->M10 shred-completeness projection.
+    pub partition_message_ids_by_month: BTreeMap<u32, Vec<String>>,
+}
+
+/// Phase-6 orchestration execution report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerM10Phase6ExecutionTickReport {
+    /// Canonical owner scope for execution.
+    pub owner_did: String,
+    /// Number of retention-due candidates evaluated this tick.
+    pub due_candidate_count: usize,
+    /// Message ids shredded in this tick (sorted deterministic order).
+    pub shredded_message_ids: Vec<String>,
+    /// M10 partition shred-completeness projection reports in deterministic order.
+    pub projection_reports: Vec<DataLayerM10ComplianceShredProjectionReport>,
+    /// Archival entries created in this tick.
+    pub archived_entries: Vec<DataLayerM10ArchivalIndexEntry>,
+    /// Stable reason marker.
+    pub reason_code: &'static str,
+}
+
 /// Recoverability readiness projection for one partition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerM10RecoveryReadinessReport {
@@ -303,6 +362,122 @@ pub fn data_layer_m10_project_archival_retry_decision(
             reason_code: DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
         }),
     }
+}
+
+/// Executes one deterministic Phase-6 retention/shred/projection/archive orchestration tick.
+pub fn data_layer_m10_execute_phase6_orchestration_tick(
+    compliance_registry: &mut DataLayerM8ComplianceRegistry,
+    partition_registry: &mut DataLayerM10PartitionLifecycleRegistry,
+    request: DataLayerM10Phase6ExecutionTickRequest,
+) -> Result<DataLayerM10Phase6ExecutionTickReport, DataLayerM10PartitionLifecycleError> {
+    let owner_did = authorize_owner_scope(
+        request.requester_owner_did.as_str(),
+        request.owner_did.as_str(),
+    )
+    .map_err(map_phase6_owner_scope_error_to_m10)?;
+    if request.now_epoch_seconds == 0 {
+        return Err(phase6_execution_failed(
+            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
+            "now_epoch_seconds must be > 0",
+        ));
+    }
+    if request.shredded_at_epoch_seconds == 0 {
+        return Err(phase6_execution_failed(
+            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE,
+            "shredded_at_epoch_seconds must be > 0",
+        ));
+    }
+    validate_non_empty(
+        request.object_storage_prefix.as_str(),
+        "object_storage_prefix",
+    )
+    .map_err(map_phase6_projection_error_to_m10)?;
+
+    let due_candidates = compliance_registry
+        .retention_due_for_owner(
+            DataLayerM8OwnerScopeQuery {
+                requester_owner_did: request.requester_owner_did.clone(),
+                owner_did: request.owner_did.clone(),
+            },
+            request.now_epoch_seconds,
+        )
+        .map_err(map_m8_execution_error_to_m10)?;
+    let due_candidate_count = due_candidates.len();
+
+    let mut shredded_message_ids = Vec::with_capacity(due_candidate_count);
+    for candidate in due_candidates {
+        compliance_registry
+            .crypto_shred(DataLayerM8CryptoShredRequest {
+                requester_owner_did: request.requester_owner_did.clone(),
+                owner_did: request.owner_did.clone(),
+                message_id: candidate.message_id.clone(),
+                shredded_at_epoch_seconds: request.shredded_at_epoch_seconds,
+            })
+            .map_err(map_m8_execution_error_to_m10)?;
+        shredded_message_ids.push(candidate.message_id);
+    }
+    shredded_message_ids.sort();
+
+    let mut projection_reports = Vec::with_capacity(request.partition_message_ids_by_month.len());
+    for (partition_month_id, partition_message_ids) in request.partition_message_ids_by_month {
+        if partition_message_ids.is_empty() {
+            return Err(phase6_execution_failed(
+                DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
+                format!("partition {partition_month_id} message set is empty"),
+            ));
+        }
+
+        let mut deduped_partition_message_ids = BTreeSet::new();
+        for message_id in partition_message_ids {
+            validate_non_empty(message_id.as_str(), "partition_message_ids")
+                .map_err(map_phase6_projection_error_to_m10)?;
+            let message = compliance_registry
+                .message_for_owner(owner_did.as_str(), message_id.as_str())
+                .map_err(map_m8_execution_error_to_m10)?;
+            if message.legal_hold_active {
+                return Err(phase6_execution_failed(
+                    DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
+                    format!("message {} is under legal hold", message.message_id),
+                ));
+            }
+            deduped_partition_message_ids.insert(message_id);
+        }
+
+        let projection_report = partition_registry
+            .project_partition_shred_completeness_from_m8(
+                compliance_registry,
+                DataLayerM10ComplianceShredProjectionRequest {
+                    requester_owner_did: request.requester_owner_did.clone(),
+                    owner_did: request.owner_did.clone(),
+                    partition_month_id,
+                    partition_message_ids: deduped_partition_message_ids.into_iter().collect(),
+                },
+            )
+            .map_err(map_phase6_projection_error_to_m10)?;
+        projection_reports.push(projection_report);
+    }
+    projection_reports.sort_by(|left, right| {
+        left.partition_month_id
+            .cmp(&right.partition_month_id)
+            .then(left.partition_name.cmp(&right.partition_name))
+    });
+
+    let archived_entries = partition_registry
+        .archive_due_partitions(DataLayerM10ArchiveDueRequest {
+            now_month_id: request.now_month_id,
+            active_retention_months: request.active_retention_months,
+            object_storage_prefix: request.object_storage_prefix,
+        })
+        .map_err(map_phase6_projection_error_to_m10)?;
+
+    Ok(DataLayerM10Phase6ExecutionTickReport {
+        owner_did: owner_did.as_str().to_owned(),
+        due_candidate_count,
+        shredded_message_ids,
+        projection_reports,
+        archived_entries,
+        reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+    })
 }
 
 /// M10 partition lifecycle registry.
@@ -614,6 +789,13 @@ pub enum DataLayerM10PartitionLifecycleError {
         /// Stable reason marker.
         reason_code: &'static str,
     },
+    /// Phase-6 orchestration failed before completing execution.
+    Phase6ExecutionFailed {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Stable detail marker for diagnostics.
+        detail: String,
+    },
 }
 
 impl fmt::Display for DataLayerM10PartitionLifecycleError {
@@ -656,6 +838,12 @@ impl fmt::Display for DataLayerM10PartitionLifecycleError {
                 f,
                 "invalid archival retry attempt for {field}: {value} ({reason_code})"
             ),
+            Self::Phase6ExecutionFailed {
+                reason_code,
+                detail,
+            } => {
+                write!(f, "phase6 execution failed: {reason_code} ({detail})")
+            }
         }
     }
 }
@@ -688,6 +876,70 @@ fn map_m8_projection_error_to_m10(
     DataLayerM10PartitionLifecycleError::ComplianceProjectionFailed {
         reason_code,
         detail: error.to_string(),
+    }
+}
+
+fn map_m8_execution_error_to_m10(
+    error: DataLayerM8ComplianceError,
+) -> DataLayerM10PartitionLifecycleError {
+    let reason_code = match error {
+        DataLayerM8ComplianceError::OwnerScopeViolation { .. } => {
+            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE
+        }
+        DataLayerM8ComplianceError::LegalHoldActive { .. } => {
+            DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE
+        }
+        DataLayerM8ComplianceError::OwnerNotFound { .. }
+        | DataLayerM8ComplianceError::MessageNotFound { .. }
+        | DataLayerM8ComplianceError::InvalidDid(_)
+        | DataLayerM8ComplianceError::EmptyField(_)
+        | DataLayerM8ComplianceError::EmptyWrappedKeys
+        | DataLayerM8ComplianceError::InvalidWrappedKey(_)
+        | DataLayerM8ComplianceError::DuplicateWrappedKeyRecipient { .. }
+        | DataLayerM8ComplianceError::DuplicateMessageId { .. }
+        | DataLayerM8ComplianceError::AlreadyShredded { .. } => {
+            DATA_LAYER_M10_PHASE6_EXECUTION_INPUT_INVALID_REASON_CODE
+        }
+    };
+    phase6_execution_failed(reason_code, error.to_string())
+}
+
+fn map_phase6_projection_error_to_m10(
+    error: DataLayerM10PartitionLifecycleError,
+) -> DataLayerM10PartitionLifecycleError {
+    let reason_code = match &error {
+        DataLayerM10PartitionLifecycleError::OwnerScopeViolation { .. } => {
+            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE
+        }
+        DataLayerM10PartitionLifecycleError::EmptyField(field)
+            if *field == "partition_message_ids" || *field == "object_storage_prefix" =>
+        {
+            DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE
+        }
+        _ => DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_FAILED_REASON_CODE,
+    };
+    phase6_execution_failed(reason_code, error.to_string())
+}
+
+fn map_phase6_owner_scope_error_to_m10(
+    error: DataLayerM10PartitionLifecycleError,
+) -> DataLayerM10PartitionLifecycleError {
+    match error {
+        DataLayerM10PartitionLifecycleError::OwnerScopeViolation { .. } => phase6_execution_failed(
+            DATA_LAYER_M10_PHASE6_EXECUTION_OWNER_SCOPE_DENIED_REASON_CODE,
+            "phase6 owner scope authorization failed",
+        ),
+        other => other,
+    }
+}
+
+fn phase6_execution_failed(
+    reason_code: &'static str,
+    detail: impl Into<String>,
+) -> DataLayerM10PartitionLifecycleError {
+    DataLayerM10PartitionLifecycleError::Phase6ExecutionFailed {
+        reason_code,
+        detail: detail.into(),
     }
 }
 

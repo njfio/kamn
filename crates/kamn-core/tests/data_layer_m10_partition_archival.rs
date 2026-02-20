@@ -1,12 +1,13 @@
 use kamn_core::{
-    data_layer_m10_format_partition_name, data_layer_m10_project_archival_retry_decision,
-    DataLayerM10ArchivalFailureClass, DataLayerM10ArchivalRecoveryAction,
-    DataLayerM10ArchivalRetryPolicy, DataLayerM10ArchiveDueRequest,
-    DataLayerM10ComplianceShredProjectionReport, DataLayerM10ComplianceShredProjectionRequest,
-    DataLayerM10PartitionLifecycleError, DataLayerM10PartitionLifecycleRegistry,
-    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus, DataLayerM8ComplianceRegistry,
-    DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest, DataLayerM8MessageRecordInput,
-    DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
+    data_layer_m10_execute_phase6_orchestration_tick, data_layer_m10_format_partition_name,
+    data_layer_m10_project_archival_retry_decision, DataLayerM10ArchivalFailureClass,
+    DataLayerM10ArchivalRecoveryAction, DataLayerM10ArchivalRetryPolicy,
+    DataLayerM10ArchiveDueRequest, DataLayerM10ComplianceShredProjectionReport,
+    DataLayerM10ComplianceShredProjectionRequest, DataLayerM10PartitionLifecycleError,
+    DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecordInput,
+    DataLayerM10PartitionStatus, DataLayerM10Phase6ExecutionTickRequest,
+    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
+    DataLayerM8MessageRecordInput, DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
     DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
@@ -19,8 +20,12 @@ use kamn_core::{
     DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE, DATA_LAYER_M10_PARTITION_PREFIX,
+    DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M10_REATTACH_REASON_CODE,
 };
+use std::collections::BTreeMap;
 
 fn partition_input(
     partition_month_id: u32,
@@ -65,6 +70,22 @@ fn project_request(
             .into_iter()
             .map(str::to_owned)
             .collect(),
+    }
+}
+
+fn phase6_request(
+    owner_did: &str,
+    partition_message_ids_by_month: BTreeMap<u32, Vec<String>>,
+) -> DataLayerM10Phase6ExecutionTickRequest {
+    DataLayerM10Phase6ExecutionTickRequest {
+        requester_owner_did: owner_did.to_owned(),
+        owner_did: owner_did.to_owned(),
+        now_epoch_seconds: 1_700_000_000,
+        shredded_at_epoch_seconds: 1_700_000_300,
+        now_month_id: 202602,
+        active_retention_months: 2,
+        object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        partition_message_ids_by_month,
     }
 }
 
@@ -658,6 +679,215 @@ fn spec_c15_archival_retry_policy_and_attempt_validation_fail_closed() {
             field: "current_attempt",
             value: 0,
             reason_code: DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE,
+        })
+    ));
+}
+
+#[test]
+fn spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive() {
+    let owner_did = "kamn:did:owner:phase6-alpha";
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut message_a = m8_message_input(owner_did, "message-a", 1_699_800_000);
+    message_a.retention_class = DataLayerM8RetentionClass::Ephemeral;
+    m8_registry
+        .register_message(message_a)
+        .expect("message-a should register");
+    let mut message_b = m8_message_input(owner_did, "message-b", 1_699_810_000);
+    message_b.retention_class = DataLayerM8RetentionClass::Ephemeral;
+    m8_registry
+        .register_message(message_b)
+        .expect("message-b should register");
+
+    let report = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut m8_registry,
+        &mut m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([(202401, vec!["message-b".to_owned(), "message-a".to_owned()])]),
+        ),
+    )
+    .expect("phase6 execution tick should succeed");
+
+    assert_eq!(report.owner_did, owner_did);
+    assert_eq!(report.due_candidate_count, 2);
+    assert_eq!(
+        report.shredded_message_ids,
+        vec!["message-a".to_owned(), "message-b".to_owned()]
+    );
+    assert_eq!(report.projection_reports.len(), 1);
+    assert!(report.projection_reports[0].all_messages_shredded);
+    assert_eq!(report.archived_entries.len(), 1);
+    assert_eq!(
+        report.archived_entries[0].partition_name,
+        "messages_2024_01"
+    );
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c17_phase6_orchestration_tick_orders_outputs_deterministically() {
+    let owner_did = "kamn:did:owner:phase6-beta";
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+    m10_registry
+        .register_partition(partition_input(202402, false))
+        .expect("partition should register");
+
+    for (message_id, created_at) in [
+        ("m-01", 1_699_700_000_u64),
+        ("m-02", 1_699_700_100_u64),
+        ("m-11", 1_699_700_200_u64),
+        ("m-12", 1_699_700_300_u64),
+    ] {
+        let mut input = m8_message_input(owner_did, message_id, created_at);
+        input.retention_class = DataLayerM8RetentionClass::Ephemeral;
+        m8_registry
+            .register_message(input)
+            .expect("message should register");
+    }
+
+    let report = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut m8_registry,
+        &mut m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([
+                (202402, vec!["m-12".to_owned(), "m-11".to_owned()]),
+                (202401, vec!["m-02".to_owned(), "m-01".to_owned()]),
+            ]),
+        ),
+    )
+    .expect("phase6 execution tick should succeed");
+
+    let projection_months: Vec<u32> = report
+        .projection_reports
+        .iter()
+        .map(|report| report.partition_month_id)
+        .collect();
+    assert_eq!(projection_months, vec![202401, 202402]);
+    assert_eq!(
+        report.shredded_message_ids,
+        vec![
+            "m-01".to_owned(),
+            "m-02".to_owned(),
+            "m-11".to_owned(),
+            "m-12".to_owned(),
+        ]
+    );
+    let archived_partition_names: Vec<String> = report
+        .archived_entries
+        .iter()
+        .map(|entry| entry.partition_name.clone())
+        .collect();
+    assert_eq!(
+        archived_partition_names,
+        vec!["messages_2024_01".to_owned(), "messages_2024_02".to_owned()]
+    );
+}
+
+#[test]
+fn spec_c18_phase6_orchestration_tick_reports_zero_due_without_archival() {
+    let owner_did = "kamn:did:owner:phase6-gamma";
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202601, false))
+        .expect("partition should register");
+
+    let mut recent_message = m8_message_input(owner_did, "message-z", 1_699_999_900);
+    recent_message.retention_class = DataLayerM8RetentionClass::Ephemeral;
+    m8_registry
+        .register_message(recent_message)
+        .expect("message should register");
+
+    let report = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut m8_registry,
+        &mut m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([(202601, vec!["message-z".to_owned()])]),
+        ),
+    )
+    .expect("phase6 execution tick should succeed");
+
+    assert_eq!(report.due_candidate_count, 0);
+    assert!(report.shredded_message_ids.is_empty());
+    assert_eq!(report.projection_reports.len(), 1);
+    assert!(!report.projection_reports[0].all_messages_shredded);
+    assert!(report.archived_entries.is_empty());
+    assert_eq!(
+        report.reason_code,
+        DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_projection_entries() {
+    let owner_did = "kamn:did:owner:phase6-delta";
+
+    let mut hold_m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut hold_m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    hold_m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+    let mut held_message = m8_message_input(owner_did, "message-held", 1_699_700_000);
+    held_message.retention_class = DataLayerM8RetentionClass::Ephemeral;
+    hold_m8_registry
+        .register_message(held_message)
+        .expect("message should register");
+    hold_m8_registry
+        .set_legal_hold(DataLayerM8LegalHoldRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "message-held".to_owned(),
+            legal_hold_active: true,
+        })
+        .expect("legal hold should apply");
+    let legal_hold_error = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut hold_m8_registry,
+        &mut hold_m10_registry,
+        phase6_request(
+            owner_did,
+            BTreeMap::from([(202401, vec!["message-held".to_owned()])]),
+        ),
+    );
+    assert!(matches!(
+        legal_hold_error,
+        Err(DataLayerM10PartitionLifecycleError::Phase6ExecutionFailed {
+            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
+            ..
+        })
+    ));
+
+    let mut empty_m8_registry = DataLayerM8ComplianceRegistry::new();
+    let mut empty_m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    empty_m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+    empty_m8_registry
+        .register_message(m8_message_input(owner_did, "message-empty", 1_699_999_000))
+        .expect("message should register");
+    let empty_projection_error = data_layer_m10_execute_phase6_orchestration_tick(
+        &mut empty_m8_registry,
+        &mut empty_m10_registry,
+        phase6_request(owner_did, BTreeMap::from([(202401, Vec::new())])),
+    );
+    assert!(matches!(
+        empty_projection_error,
+        Err(DataLayerM10PartitionLifecycleError::Phase6ExecutionFailed {
+            reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
+            ..
         })
     ));
 }

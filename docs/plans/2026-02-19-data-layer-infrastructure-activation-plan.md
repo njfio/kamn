@@ -30,7 +30,8 @@
 - Task (completed): `#5281` — integrate service-api websocket presence route with M9 gateway bridge contracts
 - Task (completed): `#5283` — validate realtime backpressure guardrails and finalize presence gateway ops docs
 - Task (completed): `#5285` — start Phase-6 retention-to-archival gate execution contracts
-- Task (current wave): `#5287` — add deterministic archival failure-retry policy contracts for Phase-6
+- Task (completed): `#5287` — add deterministic archival failure-retry policy contracts for Phase-6
+- Task (current wave): `#5289` — add Phase-6 retention+archival execution tick orchestration contracts
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -58,7 +59,8 @@
 - `#5281`: merged to main (Phase-5 websocket presence-route integration with gateway bridge contracts).
 - `#5283`: merged to main (Phase-5 guardrail validation + realtime ops-doc closure).
 - `#5285`: merged to main (Phase-6 retention-to-archival gate execution kickoff).
-- `#5287`: in progress in this wave (Phase-6 archival failure-retry policy execution contracts).
+- `#5287`: merged to main (Phase-6 archival failure-retry policy execution contracts).
+- `#5289`: in progress in this wave (Phase-6 retention+archival execution tick orchestration contracts).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
