@@ -21,6 +21,9 @@ grep -q '"lane": "smoke"' "$RUNTIME_SMOKE_REPORT"
 grep -q '"workload": "runtime"' "$RUNTIME_SMOKE_REPORT"
 grep -q '"latency_p50_ms": 92' "$RUNTIME_SMOKE_REPORT"
 grep -q '"throughput_tps": 11250' "$RUNTIME_SMOKE_REPORT"
+grep -q '"baseline_provenance_artifact_version": "r27.9-v1"' "$RUNTIME_SMOKE_REPORT"
+grep -q '"drift_threshold_seed_id": "seed-runtime-smoke-v1"' "$RUNTIME_SMOKE_REPORT"
+grep -q '"drift_threshold_seed_max_latency_p50_ms": 100' "$RUNTIME_SMOKE_REPORT"
 
 bash "$SCRIPT" \
   --lane smoke \
@@ -30,6 +33,7 @@ bash "$SCRIPT" \
 grep -q '"workload": "signing"' "$SIGNING_SMOKE_REPORT"
 grep -q '"latency_p50_ms": 58' "$SIGNING_SMOKE_REPORT"
 grep -q '"throughput_tps": 15100' "$SIGNING_SMOKE_REPORT"
+grep -q '"drift_threshold_seed_id": "seed-signing-smoke-v1"' "$SIGNING_SMOKE_REPORT"
 
 bash "$SCRIPT" \
   --lane deep \
@@ -40,6 +44,7 @@ grep -q '"lane": "deep"' "$TRANSPORT_DEEP_REPORT"
 grep -q '"workload": "transport"' "$TRANSPORT_DEEP_REPORT"
 grep -q '"latency_p99_ms": 430' "$TRANSPORT_DEEP_REPORT"
 grep -q '"availability_pct": 99.9' "$TRANSPORT_DEEP_REPORT"
+grep -q '"drift_threshold_seed_id": "seed-transport-deep-v1"' "$TRANSPORT_DEEP_REPORT"
 
 if bash "$SCRIPT" \
   --lane smoke \

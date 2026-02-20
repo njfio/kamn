@@ -2423,3 +2423,28 @@ fn doc_contains_public_api_surface_ratchet_contract_markers() {
     assert!(DOC.contains("reason_codes=waiver_cap_exceeded"));
     assert!(DOC.contains("set `mitigation_issue=#<issue-id>` and a bounded `max_total_delta`"));
 }
+
+#[test]
+fn doc_contains_performance_baseline_provenance_contract_markers() {
+    assert!(DOC.contains("## Performance Baseline Artifact Provenance Contract"));
+    assert!(DOC.contains("fixtures/ci/performance_hot_path_fixture_matrix.json"));
+    assert!(DOC.contains("baseline_provenance.artifact_version"));
+    assert!(DOC.contains("baseline_provenance.source_commit"));
+    assert!(DOC.contains("baseline_provenance.source_run_id"));
+    assert!(DOC.contains("baseline_provenance.generated_at_utc"));
+    assert!(DOC.contains("baseline_provenance.generator"));
+    assert!(DOC.contains("drift_threshold_seed_id"));
+    assert!(DOC.contains("drift_threshold_seed.max_latency_p50_ms"));
+    assert!(DOC.contains("drift_threshold_seed.max_latency_p99_ms"));
+    assert!(DOC.contains("drift_threshold_seed.min_throughput_tps"));
+    assert!(DOC.contains("drift_threshold_seed.min_availability_pct"));
+    assert!(DOC.contains("performance_baseline_refresh_policy=manual_on_contract_change"));
+    assert!(DOC.contains(
+        "performance_baseline_refresh_contract=update fixture provenance + seed markers in the same PR as threshold-contract changes"
+    ));
+    assert!(DOC.contains(
+        "missing required baseline marker: baseline_provenance_artifact_version"
+    ));
+    assert!(DOC.contains("bash scripts/ci/test_generate_performance_smoke_report.sh"));
+    assert!(DOC.contains("bash scripts/ci/test_check_performance_thresholds.sh"));
+}

@@ -4210,6 +4210,32 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 - Merge gate wiring:
   - `ci-fast-gate` runs anti-flake policy enforcement after registry format validation and uploads `ci-anti-flake-policy-report.json` as artifact telemetry.
 
+## Performance Baseline Artifact Provenance Contract
+- Baseline fixture artifact:
+  - `fixtures/ci/performance_hot_path_fixture_matrix.json`
+- Baseline provenance metadata markers:
+  - `baseline_provenance.artifact_version`
+  - `baseline_provenance.source_commit`
+  - `baseline_provenance.source_run_id`
+  - `baseline_provenance.generated_at_utc`
+  - `baseline_provenance.generator`
+- Per-workload drift-threshold seed markers:
+  - `drift_threshold_seed_id`
+  - `drift_threshold_seed.max_latency_p50_ms`
+  - `drift_threshold_seed.max_latency_p99_ms`
+  - `drift_threshold_seed.min_throughput_tps`
+  - `drift_threshold_seed.min_availability_pct`
+- Baseline refresh policy:
+  - `performance_baseline_refresh_policy=manual_on_contract_change`
+  - `performance_baseline_refresh_contract=update fixture provenance + seed markers in the same PR as threshold-contract changes`
+- Deterministic checker fail-closed marker:
+  - `missing required baseline marker: baseline_provenance_artifact_version`
+- Validation commands:
+  - `bash scripts/ci/test_generate_performance_smoke_report.sh`
+  - `bash scripts/ci/test_check_performance_thresholds.sh`
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --workload runtime --fixture-file fixtures/ci/performance_hot_path_fixture_matrix.json --output-json /tmp/performance-smoke-report.json`
+  - `bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json /tmp/performance-smoke-report.json --profile-file .ci/performance-targets.env`
+
 ## PR CI Impact Declaration
 When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.ci/*`), PR description must explicitly declare CI impact.
 

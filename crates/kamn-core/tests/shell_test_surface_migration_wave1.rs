@@ -375,7 +375,17 @@ fn spec_c03_performance_threshold_checker_contract() {
   "latency_p50_ms": 88,
   "latency_p99_ms": 300,
   "throughput_tps": 12500,
-  "availability_pct": 99.95
+  "availability_pct": 99.95,
+  "baseline_provenance_artifact_version": "kamn.ci.performance-baseline.v1",
+  "baseline_provenance_source_commit": "abc123def456",
+  "baseline_provenance_source_run_id": "run-1001",
+  "baseline_provenance_generated_at_utc": "2026-02-20T12:00:00Z",
+  "baseline_provenance_generator": "scripts/ci/generate_performance_smoke_report.sh",
+  "drift_threshold_seed_id": "smoke-seed-v1",
+  "drift_threshold_seed_max_latency_p50_ms": 95,
+  "drift_threshold_seed_max_latency_p99_ms": 350,
+  "drift_threshold_seed_min_throughput_tps": 12000,
+  "drift_threshold_seed_min_availability_pct": 99.9
 }
 "#,
     )
@@ -386,7 +396,17 @@ fn spec_c03_performance_threshold_checker_contract() {
   "latency_p50_ms": 101,
   "latency_p99_ms": 540,
   "throughput_tps": 9800,
-  "availability_pct": 99.7
+  "availability_pct": 99.7,
+  "baseline_provenance_artifact_version": "kamn.ci.performance-baseline.v1",
+  "baseline_provenance_source_commit": "abc123def456",
+  "baseline_provenance_source_run_id": "run-1001",
+  "baseline_provenance_generated_at_utc": "2026-02-20T12:00:00Z",
+  "baseline_provenance_generator": "scripts/ci/generate_performance_smoke_report.sh",
+  "drift_threshold_seed_id": "smoke-seed-v1",
+  "drift_threshold_seed_max_latency_p50_ms": 95,
+  "drift_threshold_seed_max_latency_p99_ms": 350,
+  "drift_threshold_seed_min_throughput_tps": 12000,
+  "drift_threshold_seed_min_availability_pct": 99.9
 }
 "#,
     )
