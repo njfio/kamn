@@ -313,6 +313,38 @@ Regression marker:
 
 - `Regression: #5283`
 
+## Phase-6 Archival Failure-Retry Policy Contracts (Issues #5285, #5287)
+
+Phase-6 retention/archival execution requires deterministic recovery projection when archival export
+attempts fail.
+
+Deterministic retry-policy markers:
+
+- `archival_retry_policy_status=verified`
+- `archival_retry_reason_taxonomy_version=kamn.runtime.data-layer-m10-archival-retry-reason-taxonomy.v1`
+- `archival_retry_reason_codes_csv=m10_archival_retry_scheduled,m10_archival_retry_exhausted,m10_archival_failure_permanent,m10_archival_retry_policy_invalid,m10_archival_retry_attempt_invalid`
+- `archival_retry_policy_contract=max_attempts>=1;base_backoff_seconds>=1;max_backoff_seconds>=base_backoff_seconds`
+
+Deterministic fail-closed and recoverable branches:
+
+- `m10_archival_retry_scheduled`
+- `m10_archival_retry_exhausted`
+- `m10_archival_failure_permanent`
+- `m10_archival_retry_policy_invalid`
+- `m10_archival_retry_attempt_invalid`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c12_transient_archival_failure_projects_deterministic_retry_window -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c13_transient_archival_retry_backoff_caps_at_policy_maximum -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c14_archival_retry_budget_exhaustion_and_permanent_failure_fail_closed -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c15_archival_retry_policy_and_attempt_validation_fail_closed -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_phase6_archival_retry_policy_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5287`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper

@@ -93,6 +93,30 @@ fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_m
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_archival_retry_policy_markers() {
+    assert!(
+        DOC.contains("## Phase-6 Archival Failure-Retry Policy Contracts (Issues #5285, #5287)")
+    );
+    assert!(DOC.contains("archival_retry_policy_status=verified"));
+    assert!(DOC.contains(
+        "archival_retry_reason_taxonomy_version=kamn.runtime.data-layer-m10-archival-retry-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "archival_retry_reason_codes_csv=m10_archival_retry_scheduled,m10_archival_retry_exhausted,m10_archival_failure_permanent,m10_archival_retry_policy_invalid,m10_archival_retry_attempt_invalid"
+    ));
+    assert!(DOC.contains(
+        "archival_retry_policy_contract=max_attempts>=1;base_backoff_seconds>=1;max_backoff_seconds>=base_backoff_seconds"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c12_transient_archival_failure_projects_deterministic_retry_window -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c14_archival_retry_budget_exhaustion_and_permanent_failure_fail_closed -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5287"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
