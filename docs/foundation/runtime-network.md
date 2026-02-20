@@ -832,6 +832,34 @@ in a single fail-closed taxonomy surface.
 - Deterministic fail-closed drift marker:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
 
+## Cross-Store Replay Consistency Checker Rules
+
+Cross-store replay consistency validates runtime/channel/message/task snapshot
+continuity and emits deterministic divergence taxonomy markers.
+
+- Production checker ownership:
+  - `crates/kamn-core/src/cross_store_replay_consistency.rs`
+- API surface:
+  - `evaluate_cross_store_replay_consistency(...)`
+  - `cross_store_replay_reason_taxonomy_version()`
+  - `cross_store_replay_reason_codes_csv()`
+  - `CrossStoreReplayConsistencyReport`
+  - `CrossStoreReplayConsistencyStatus`
+  - `CrossStoreReplayDivergenceClass`
+- Deterministic taxonomy markers:
+  - `cross_store_replay_reason_taxonomy_version=kamn.runtime.cross-store-replay-consistency-reason-taxonomy.v1`
+  - `cross_store_replay_reason_codes_csv=none,cross_store_replay_divergence_all_snapshots_missing,cross_store_replay_divergence_runtime_snapshot_missing,cross_store_replay_divergence_channel_snapshot_missing,cross_store_replay_divergence_message_snapshot_missing,cross_store_replay_divergence_task_snapshot_missing,cross_store_replay_divergence_channel_schema_version_mismatch,cross_store_replay_divergence_message_schema_version_mismatch,cross_store_replay_divergence_task_schema_version_mismatch,cross_store_replay_divergence_runtime_cursor_state_version_mismatch,cross_store_replay_divergence_aggregate_records_missing_for_advanced_runtime_state,cross_store_replay_divergence_aggregate_records_exceed_runtime_cursor`
+  - `cross_store_replay_source_marker=cross_store_replay_consistency_checker`
+  - `cross_store_replay_divergence_class=Consistent|PresenceDrift|SchemaDrift|RuntimeContinuityDrift|CardinalityDrift`
+- Divergence checks:
+  - snapshot presence drift (missing runtime/channel/message/task snapshots)
+  - snapshot schema-version drift across channel/message/task schemas
+  - runtime continuity drift (`cursor < state_version`)
+  - aggregate cardinality drift (domain record count sum exceeds runtime cursor)
+- Regression policy:
+  - taxonomy marker, reason-code CSV, source marker, and deterministic
+    fingerprint drift must fail closed (`Regression: #4013`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
@@ -843,6 +871,7 @@ cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roun
 cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_frame_is_rejected
 cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
+cargo test -p kamn-core --test cross_store_replay_consistency
 cargo test -p kamn-core --test block_pipeline_recovery_matrix
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
