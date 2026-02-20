@@ -1378,6 +1378,26 @@ Regression marker:
 
 - `Regression: #5400`
 
+### Daemon Tests Live-Postgres Fixture Decomposition Contracts (Issue #5402)
+
+Daemon test decomposition phase-1 extracts live-postgres fixture/topology/hash helpers into a dedicated
+submodule while preserving existing `main_tests::daemon_tests::...` command paths for operator-run validation checks.
+
+Deterministic decomposition markers:
+
+- `daemon_tests_live_postgres_fixture_module_path=crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs`
+- `daemon_tests_live_postgres_fixture_phase1_target_max_lines=4300`
+- `daemon_tests_live_postgres_fixture_test_path_contract=main_tests::daemon_tests::path_prefix_must_remain_stable_after_fixture_extraction`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_contract_is_canonical -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_daemon_tests_live_postgres_fixture_decomposition_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5402`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
