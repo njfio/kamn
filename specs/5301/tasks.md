@@ -5,4 +5,4 @@
 - [x] T3 (Green): project convergence markers through daemon execution and report builder/render contracts (`C-04`).
 - [x] T4 (Regression): assert stable fail-closed reason ordering/decision output for repeated evaluation (`C-05`).
 - [x] T5 (Verify): run `cargo fmt --check`, strict clippy, and targeted daemon/report/docs tests (`C-06`).
-- [ ] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
+- [x] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
