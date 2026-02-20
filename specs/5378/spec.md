@@ -1,7 +1,7 @@
 # Issue #5378 Spec
 
 - Title: Task: codify topology-id host-mode mapping contracts for live-postgres validation
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-program-operational-hardening-and-live-validation/index.md
