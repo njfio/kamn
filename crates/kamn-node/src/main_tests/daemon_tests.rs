@@ -5,11 +5,15 @@ use crate::{configure_os_signal_test_triggers, OsSignalTestKind, OsSignalTestTri
 
 const LIVE_POSTGRES_ENV_UNSET_REASON_CODE: &str = "live_postgres_env_unset";
 const LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE: &str = "live_postgres_adapter_connected";
+const LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
 const LIVE_POSTGRES_MATRIX_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1";
 const LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE: &str = "m10_phase6_scheduler_cycle_applied";
 const LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE: &str =
     "m10_phase6_scheduler_cycle_deferred";
+const LIVE_POSTGRES_RUNTIME_TO_MATRIX_BRIDGE_REASON_CODES_CSV: &str =
+    "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -52,6 +56,12 @@ struct LivePostgresMatrixRow {
     daemon_phase6_reason_code: Option<&'static str>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct LivePostgresPhase6Projection {
+    reason_code: String,
+    reason_taxonomy_version: String,
+}
+
 fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
     vec![
         LivePostgresMatrixRow {
@@ -72,14 +82,105 @@ fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
     ]
 }
 
-fn run_daemon_for_phase6_reason_code(mut args: Vec<String>) -> String {
+fn run_daemon_for_phase6_projection(mut args: Vec<String>) -> LivePostgresPhase6Projection {
     args.push("--output".to_owned());
     args.push("json".to_owned());
     let parsed = parse_args_with_clean_daemon_env(args).expect("daemon args should parse");
     let report = execute(parsed).expect("daemon execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
-    extract_json_string_field(rendered.as_str(), "daemon_phase6_runtime_reason_code")
-        .expect("daemon report should expose phase6 reason code")
+    LivePostgresPhase6Projection {
+        reason_code: extract_json_string_field(
+            rendered.as_str(),
+            "daemon_phase6_runtime_reason_code",
+        )
+        .expect("daemon report should expose phase6 reason code"),
+        reason_taxonomy_version: extract_json_string_field(
+            rendered.as_str(),
+            "daemon_phase6_runtime_reason_taxonomy_version",
+        )
+        .expect("daemon report should expose phase6 reason taxonomy version"),
+    }
+}
+
+fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
+    LivePostgresPhase6Projection,
+    LivePostgresPhase6Projection,
+    LivePostgresPhase6Projection,
+    LivePostgresPhase6Projection,
+)> {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return None;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let applied_args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ];
+    let applied_first = run_daemon_for_phase6_projection(applied_args.clone());
+    let applied_second = run_daemon_for_phase6_projection(applied_args);
+
+    let deferred_args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+    ];
+    let deferred_first = run_daemon_for_phase6_projection(deferred_args.clone());
+    let deferred_second = run_daemon_for_phase6_projection(deferred_args);
+    Some((
+        applied_first,
+        applied_second,
+        deferred_first,
+        deferred_second,
+    ))
 }
 
 #[test]
@@ -1007,90 +1108,82 @@ fn functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_co
 }
 
 #[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_matrix_taxonomy_bridge_contract_is_canonical(
+) {
+    let rows = project_live_postgres_matrix_rows();
+    let bridge_reason_codes_csv = rows
+        .iter()
+        .filter_map(|row| row.daemon_phase6_reason_code)
+        .collect::<Vec<_>>()
+        .join(",");
+    assert_eq!(
+        LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+        "kamn.runtime.daemon.phase6.reason-taxonomy.v1"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_MATRIX_REASON_TAXONOMY_VERSION,
+        "kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1"
+    );
+    assert_eq!(
+        bridge_reason_codes_csv,
+        LIVE_POSTGRES_RUNTIME_TO_MATRIX_BRIDGE_REASON_CODES_CSV
+    );
+}
+
+#[test]
 fn integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs(
 ) {
-    let _lock = log_env_lock()
-        .lock()
-        .expect("log env lock should guard test mutation");
-    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
-    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
-    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
-    let Some(database_url) = maybe_database_url else {
-        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+    let Some((applied_first, applied_second, deferred_first, deferred_second)) =
+        run_live_postgres_matrix_repeated_run_projections()
+    else {
         return;
     };
     assert_eq!(
-        gate_reason_code,
-        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
-    );
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("tokio runtime should be constructible for live postgres validation");
-    runtime.block_on(async move {
-        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
-            kamn_core::DataLayerPgExecutionAdapterConfig {
-                database_url,
-                max_connections: 4,
-            },
-        )
-        .await
-        .expect("live postgres connection should succeed when test URL is provided");
-        adapter
-            .apply_migrations()
-            .await
-            .expect("live postgres migrations should apply for validation slice");
-    });
-
-    let applied_args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "5".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-    ];
-    let applied_first = run_daemon_for_phase6_reason_code(applied_args.clone());
-    let applied_second = run_daemon_for_phase6_reason_code(applied_args);
-    assert_eq!(
-        applied_first,
+        applied_first.reason_code,
         LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE
     );
     assert_eq!(
-        applied_first, applied_second,
+        applied_first.reason_code, applied_second.reason_code,
         "applied scenario reason should remain stable across repeated runs"
     );
 
-    let deferred_args = vec![
-        "kamn-node".to_owned(),
-        "--role".to_owned(),
-        "processor".to_owned(),
-        "--runtime-mode".to_owned(),
-        "daemon".to_owned(),
-        "--daemon-max-ticks".to_owned(),
-        "5".to_owned(),
-        "--daemon-tick-interval-ms".to_owned(),
-        "25".to_owned(),
-        "--daemon-shutdown-signal-tick".to_owned(),
-        "3".to_owned(),
-        "--daemon-shutdown-drain-ticks".to_owned(),
-        "2".to_owned(),
-        "--daemon-shutdown-timeout-ticks".to_owned(),
-        "4".to_owned(),
-    ];
-    let deferred_first = run_daemon_for_phase6_reason_code(deferred_args.clone());
-    let deferred_second = run_daemon_for_phase6_reason_code(deferred_args);
     assert_eq!(
-        deferred_first,
+        deferred_first.reason_code,
         LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE
     );
     assert_eq!(
-        deferred_first, deferred_second,
+        deferred_first.reason_code, deferred_second.reason_code,
         "deferred scenario reason should remain stable across repeated runs"
+    );
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_taxonomy_versions_are_stable_across_repeated_runs(
+) {
+    let Some((applied_first, applied_second, deferred_first, deferred_second)) =
+        run_live_postgres_matrix_repeated_run_projections()
+    else {
+        return;
+    };
+    assert_eq!(
+        applied_first.reason_taxonomy_version,
+        LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION
+    );
+    assert_eq!(
+        applied_first.reason_taxonomy_version, applied_second.reason_taxonomy_version,
+        "applied scenario taxonomy version should remain stable across repeated runs"
+    );
+    assert_eq!(
+        deferred_first.reason_taxonomy_version,
+        LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION
+    );
+    assert_eq!(
+        deferred_first.reason_taxonomy_version, deferred_second.reason_taxonomy_version,
+        "deferred scenario taxonomy version should remain stable across repeated runs"
+    );
+    assert_eq!(
+        applied_first.reason_taxonomy_version, deferred_first.reason_taxonomy_version,
+        "applied/deferred scenarios should remain bridged to the same runtime taxonomy version"
     );
 }
 

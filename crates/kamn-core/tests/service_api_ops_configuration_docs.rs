@@ -467,6 +467,31 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_ta
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_bridge_markers(
+) {
+    assert!(DOC.contains("### Runtime-to-Matrix Taxonomy Bridge (Issue #5346)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_reason_taxonomy_version=kamn.runtime.daemon.phase6.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres-matrix.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_taxonomy_bridge_contract=runtime_reason_taxonomy_v1->matrix_scenario_taxonomy_v1;applied_and_deferred_reasons_must_align"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_matrix_taxonomy_bridge_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_taxonomy_versions_are_stable_across_repeated_runs -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_taxonomy_bridge_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5346"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
