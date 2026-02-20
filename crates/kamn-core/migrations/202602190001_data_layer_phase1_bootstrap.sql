@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS messages (
     merkle_leaf_index INTEGER,
     envelope_ciphertext BYTEA NOT NULL,
     wrapped_keys JSONB NOT NULL DEFAULT '[]'::JSONB,
-    envelope_nonce BYTEA NOT NULL,
+    envelope_nonce BIGINT NOT NULL,
     compression_codec TEXT NOT NULL,
     compression_dictionary_id TEXT,
     content_hash_sha256 TEXT NOT NULL,

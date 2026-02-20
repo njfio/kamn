@@ -64,6 +64,8 @@ pub mod data_layer_m7_timeseries_telemetry;
 pub mod data_layer_m8_compliance_lifecycle;
 /// M9 realtime contracts for dispatch acknowledgements, scoped presence, and backpressure markers.
 pub mod data_layer_m9_realtime_delivery;
+/// PostgreSQL execution adapter contracts for live bridge-descriptor execution and migrations.
+pub mod data_layer_postgres_execution_adapter;
 /// PostgreSQL repository bridge contracts for deterministic data-layer SQL descriptor projection.
 pub mod data_layer_postgres_repository_bridge;
 /// PRD critical-scenario conformance contracts for shell-neutral validation (`62..71`).
@@ -449,6 +451,15 @@ pub use data_layer_m9_realtime_delivery::{
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_EVALUATION_FAILED_REASON_CODE,
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M9_RUNTIME_BACKPRESSURE_POLICY_INVALID_REASON_CODE,
+};
+pub use data_layer_postgres_execution_adapter::{
+    data_layer_pg_collect_migration_files, DataLayerPgExecutionAdapter,
+    DataLayerPgExecutionAdapterConfig, DataLayerPgExecutionAdapterError,
+    DataLayerPgMigrationReport, DataLayerPgStoredMessage,
+    DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
+    DATA_LAYER_PG_EXECUTION_MIGRATION_FAILED_REASON_CODE,
+    DATA_LAYER_PG_EXECUTION_SESSION_FAILED_REASON_CODE,
+    DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
 };
 pub use data_layer_postgres_repository_bridge::{
     data_layer_pg_project_blind_index_search_operation,
