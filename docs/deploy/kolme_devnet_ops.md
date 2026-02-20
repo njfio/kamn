@@ -185,6 +185,30 @@ Validation command:
 - `Regression: #4242`
 - `Regression: #4243`
 
+## Crash-Restart Recovery Marker and Runbook Parity Contracts (Issue #4018)
+
+Sqlite crash-restart local-heavy recovery markers and runbook declarations must remain synchronized
+so policy checks fail closed under corruption/recovery drift.
+
+Required checker/runbook parity markers:
+
+- `sqlite_crash_restart_recovery_marker_status=verified`
+- `sqlite_crash_restart_runbook_marker_parity_status=verified`
+- `sqlite_crash_restart_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-restart-local-heavy-runbook-reason-taxonomy.v1`
+- `sqlite_crash_restart_runbook_reason_codes_csv=sqlite_crash_restart_recovery_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch`
+- `sqlite_crash_restart_runbook_reason_code=none|<reason>`
+
+Fail-closed drift reasons:
+
+- `sqlite_crash_restart_recovery_taxonomy_mapping_drift_detected`
+- `runbook_marker_parity_mismatch`
+
+Validation command:
+
+- `bash scripts/runtime/check_sqlite_crash_restart_local_heavy_policy.sh --report-file /tmp/sqlite-crash-restart-local-heavy-lane-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --strategy-doc docs/ci/strategy.md --output-json /tmp/sqlite-crash-restart-local-heavy-policy-report.json`
+
+- `Regression: #4018`
+
 ## Crash-Replay Evidence Convergence and Promotion Reason Mapping Contracts (Issue #4238)
 
 Sqlite crash-replay convergence and promotion decision reason mappings must remain deterministic

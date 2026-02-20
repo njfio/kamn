@@ -591,9 +591,6 @@ mod tests {
     use super::{bootstrap, bootstrap_from_state_version};
     use crate::config::{ConfigError, NodeConfig, NodeRole, SyncMode};
     use crate::state::{StateVersion, APP_STATE_VERSION};
-    use crate::task_operations::{
-        FileTaskOperationSnapshotStore, TaskOperationSnapshot, TaskOperationSnapshotStore,
-    };
     use crate::token::DEFAULT_TOKEN_SYMBOL;
     use std::fs;
     use std::path::PathBuf;
@@ -716,13 +713,8 @@ mod tests {
         let storage_dir = temp_storage_dir("incompatible-task-snapshot");
         fs::create_dir_all(&storage_dir).expect("fixture directory should build");
         let path = storage_dir.join(TASK_OPERATION_STORE_FIXTURE);
-        let mut store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
-        store
-            .write(TaskOperationSnapshot {
-                schema_version: 1,
-                tasks: vec![],
-            })
-            .expect("fixture snapshot should persist");
+        // Write an explicit schema-mismatched fixture to ensure bootstrap fail-closed checks do
+        // not get bypassed by companion journal recovery.
         fs::write(path, "schema|99\n").expect("fixture mutation should write");
 
         let config = NodeConfig {

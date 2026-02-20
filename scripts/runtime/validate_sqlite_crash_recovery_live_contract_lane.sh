@@ -107,143 +107,143 @@ validation_output="$(
     --ci-fast-gate "$ci_fast_gate" \
     --output-json "$summary_report"
 )"
-if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
+if ! grep -q '^status=pass$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation status=pass marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
+if ! grep -q '^final_decision=GO$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation final_decision=GO marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^fast_gate_exclusion_status=verified$'; then
+if ! grep -q '^fast_gate_exclusion_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation fast-gate exclusion marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^sqlite_crash_recovery_state_replay_status=verified$'; then
+if ! grep -q '^sqlite_crash_recovery_state_replay_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation replay marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^sqlite_crash_recovery_abrupt_kill_status=verified$'; then
+if ! grep -q '^sqlite_crash_recovery_abrupt_kill_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation abrupt-kill marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^wal_append_status=verified$'; then
+if ! grep -q '^wal_append_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation wal-append marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^wal_checkpoint_status=verified$'; then
+if ! grep -q '^wal_checkpoint_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation wal-checkpoint marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_integrity_status=verified$'; then
+if ! grep -q '^append_checkpoint_integrity_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation append-checkpoint integrity marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1$'; then
+if ! grep -q '^append_checkpoint_reason_taxonomy_version=kamn.runtime.append-checkpoint-integrity-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation append-checkpoint taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch$'; then
+if ! grep -q '^append_checkpoint_reason_codes_csv=wal_append_marker_missing,wal_checkpoint_marker_missing,append_checkpoint_marker_parity_mismatch$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation append-checkpoint taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1$'; then
+if ! grep -q '^wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation wal-durability taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete$'; then
+if ! grep -q '^wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation wal-durability taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_index_status=verified$'; then
+if ! grep -q '^historical_query_index_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation historical-query index marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_latency_budget_status=verified$'; then
+if ! grep -q '^historical_query_latency_budget_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation historical-query latency budget marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$'; then
+if ! grep -q '^historical_query_reason_taxonomy_version=kamn.runtime.historical-query-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation historical-query taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$'; then
+if ! grep -q '^historical_query_reason_codes_csv=historical_query_index_drift,historical_query_latency_budget_exceeded,historical_query_consistency_mismatch$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation historical-query taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_drift_detection_status=verified$'; then
+if ! grep -q '^journal_replay_drift_detection_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation journal replay drift detection marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^checkpoint_divergence_bypass_rejection_status=verified$'; then
+if ! grep -q '^checkpoint_divergence_bypass_rejection_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation checkpoint divergence bypass rejection marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1$'; then
+if ! grep -q '^journal_replay_reason_taxonomy_version=kamn.runtime.journal-replay-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation journal replay taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected$'; then
+if ! grep -q '^journal_replay_reason_codes_csv=journal_replay_drift_detected,checkpoint_divergence_bypass_detected$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation journal replay taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_taxonomy_mapping_status=verified$'; then
+if ! grep -q '^replay_idempotency_taxonomy_mapping_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation replay idempotency taxonomy mapping status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^runbook_marker_parity_status=verified$'; then
+if ! grep -q '^runbook_marker_parity_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation runbook marker parity status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1$'; then
+if ! grep -q '^replay_idempotency_runbook_reason_taxonomy_version=kamn.runtime.sqlite-crash-recovery-replay-idempotency-runbook-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation replay idempotency runbook reason taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$'; then
+if ! grep -q '^replay_idempotency_runbook_reason_codes_csv=replay_idempotency_taxonomy_mapping_drift_detected,runbook_marker_parity_mismatch$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation replay idempotency runbook reason csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^replay_idempotency_runbook_reason_code=none$'; then
+if ! grep -q '^replay_idempotency_runbook_reason_code=none$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation replay idempotency runbook reason code marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_readiness_progress_status=verified$'; then
+if ! grep -q '^crash_recovery_readiness_progress_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation readiness-progress marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^snapshot_parity_status=verified$'; then
+if ! grep -q '^snapshot_parity_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation snapshot-parity marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_recovery_budget_boundary_status=verified$'; then
+if ! grep -q '^ci_local_recovery_budget_boundary_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation ci-local recovery budget boundary marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1$'; then
+if ! grep -q '^state_consistency_reason_taxonomy_version=kamn.runtime.crash-recovery-state-consistency-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation state-consistency taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded$'; then
+if ! grep -q '^state_consistency_reason_codes_csv=crash_recovery_readiness_progress_stalled,snapshot_parity_drift_detected,ci_local_recovery_budget_boundary_exceeded$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation state-consistency taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^crash_recovery_promotion_gate_status=verified$'; then
+if ! grep -q '^crash_recovery_promotion_gate_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation promotion-gate marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^audit_trail_parity_status=verified$'; then
+if ! grep -q '^audit_trail_parity_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation audit-trail parity marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^ci_local_promotion_budget_boundary_status=verified$'; then
+if ! grep -q '^ci_local_promotion_budget_boundary_status=verified$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation ci-local promotion budget boundary marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1$'; then
+if ! grep -q '^durability_governance_reason_taxonomy_version=kamn.runtime.durability-governance-reason-taxonomy.v1$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation durability-governance taxonomy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$validation_output" | grep -q '^durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$'; then
+if ! grep -q '^durability_governance_reason_codes_csv=crash_recovery_promotion_stalled,audit_trail_parity_mismatch,ci_local_promotion_budget_boundary_exceeded$' <<<"$validation_output"; then
   echo "expected sqlite crash-recovery live validation durability-governance taxonomy csv marker" >&2
   exit 1
 fi
@@ -256,31 +256,31 @@ policy_output="$(
     --runbook-file "$RUNBOOK_DOC" \
     --output-json "$policy_report"
 )"
-if ! printf '%s\n' "$policy_output" | grep -q '^status=ok$'; then
+if ! grep -q '^status=ok$' <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker status=ok marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^final_decision=GO$'; then
+if ! grep -q '^final_decision=GO$' <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker final_decision=GO marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^sqlite_crash_recovery_policy_status=verified$'; then
+if ! grep -q '^sqlite_crash_recovery_policy_status=verified$' <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_mapping_status=verified$'; then
+if ! grep -q '^promotion_decision_reason_mapping_status=verified$' <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker promotion decision reason mapping status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q "^promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}$"; then
+if ! grep -q "^promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}$" <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker promotion decision reason taxonomy version marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q "^promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}$"; then
+if ! grep -q "^promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}$" <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker promotion decision reason taxonomy csv marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$policy_output" | grep -q '^promotion_decision_reason_code=none$'; then
+if ! grep -q '^promotion_decision_reason_code=none$' <<<"$policy_output"; then
   echo "expected sqlite crash-recovery policy checker promotion decision reason code marker on GO path" >&2
   exit 1
 fi
@@ -312,7 +312,7 @@ if [ "$tampered_policy_code" -eq 0 ]; then
   echo "expected tampered sqlite crash-recovery report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_policy_output" | grep -q 'sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch'; then
+if ! grep -q 'sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch' <<<"$tampered_policy_output"; then
   echo "expected deterministic fail-closed reason for tampered sqlite crash-recovery report" >&2
   exit 1
 fi
@@ -525,7 +525,7 @@ for marker in \
   "promotion_decision_reason_taxonomy_version=${PROMOTION_DECISION_REASON_TAXONOMY_VERSION}" \
   "promotion_decision_reason_codes_csv=${PROMOTION_DECISION_REASON_CODES_CSV}" \
   "promotion_decision_reason_code=none"; do
-  if ! printf '%s\n' "$convergence_output" | grep -q "^${marker}$"; then
+  if ! grep -q "^${marker}$" <<<"$convergence_output"; then
     echo "expected sqlite crash-recovery convergence marker ${marker}" >&2
     exit 1
   fi
@@ -557,7 +557,7 @@ if [[ "$tampered_convergence_code" -eq 0 ]]; then
   echo "expected tampered sqlite crash-recovery promotion mapping to fail evidence convergence checker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_convergence_output" | grep -q "$EVIDENCE_TAMPER_REASON_CODE"; then
+if ! grep -q "$EVIDENCE_TAMPER_REASON_CODE" <<<"$tampered_convergence_output"; then
   echo "expected deterministic fail-closed reason for tampered sqlite crash-recovery promotion mapping" >&2
   exit 1
 fi

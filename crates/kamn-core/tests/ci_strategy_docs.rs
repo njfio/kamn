@@ -1540,6 +1540,31 @@ fn doc_contains_sqlite_crash_recovery_ci_dry_run_durability_governance_contract(
 }
 
 #[test]
+fn doc_contains_sqlite_crash_restart_local_heavy_policy_checker_contract() {
+    assert!(DOC.contains("## SQLite Crash-Restart Local-Heavy Policy Checker Contract"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_sqlite_crash_restart_local_heavy_policy.sh --report-file /tmp/sqlite-crash-restart-local-heavy-lane-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --strategy-doc docs/ci/strategy.md --output-json /tmp/sqlite-crash-restart-local-heavy-policy-report.json"
+    ));
+    assert!(
+        DOC.contains("bash scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh")
+    );
+    assert!(DOC.contains(
+        "sqlite_crash_restart_local_heavy_policy_reason_taxonomy_version=kamn.runtime.sqlite-crash-restart-local-heavy-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_restart_local_heavy_policy_reason_codes_csv=sqlite_crash_restart_policy_required_field_missing,sqlite_crash_restart_policy_marker_mismatch,sqlite_crash_restart_policy_reason_taxonomy_mismatch,sqlite_crash_restart_policy_profile_contract_mismatch,sqlite_crash_restart_policy_runbook_marker_parity_mismatch,sqlite_crash_restart_policy_strategy_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_restart_policy_expected_decision_mismatch,sqlite_crash_restart_policy_violation"
+    ));
+    assert!(DOC.contains(
+        "sqlite_crash_restart_local_heavy_policy_runbook_path=docs/deploy/kolme_devnet_ops.md"
+    ));
+    assert!(DOC
+        .contains("sqlite_crash_restart_local_heavy_policy_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("sqlite_crash_restart_policy_runbook_marker_parity_mismatch"));
+    assert!(DOC.contains("sqlite_crash_restart_policy_strategy_marker_parity_mismatch"));
+    assert!(DOC.contains("Regression: #4018"));
+}
+
+#[test]
 fn doc_contains_failover_drift_ci_smoke_convergence_governance() {
     assert!(DOC.contains("### Failover Drift CI smoke convergence governance"));
     assert!(DOC.contains("python3 scripts/ci/check_failover_drift_ci_smoke_convergence.py"));

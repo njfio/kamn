@@ -1472,6 +1472,12 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_sqlite_crash_restart_local_heavy_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_restart_local_heavy_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/runtime/check_structured_logging_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/structured_logging_live_contract.py",
@@ -1553,6 +1559,12 @@
     "scripts/runtime/run_network_signer_finality_failure_drills_lane_impl.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/network_signer_finality_failure_drills_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/run_sqlite_crash_restart_local_heavy_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_restart_local_heavy_lane_contract.py",
       "args_prefix": [],
       "passthrough": true
     },

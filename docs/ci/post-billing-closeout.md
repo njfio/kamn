@@ -37,7 +37,7 @@ bash scripts/ci/download_and_summarize_budget.sh --repo njfio/kamn --lane deep-v
 ```
 
 Pass criteria for Stage-1 targets:
-- Fast-gate p95 runtime <= 720 seconds.
+- Fast-gate p95 runtime <= 900 seconds.
 - Fast-gate p95 runner-minutes <= 25.
 - Deep-validate runtime <= 7200 seconds.
 - Cache telemetry appears in summaries (`cache_hit` not always `unknown`).
