@@ -1679,6 +1679,41 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Regression coverage:
   - `Regression: #4044`
 
+## SQLite Crash-Recovery CI Dry-Run Durability Governance Contract
+- Entry commands:
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-summary.json`
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-policy.json`
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-contract-lane-policy.json --summary-output-json /tmp/sqlite-crash-recovery-live-contract-lane-summary.json --convergence-output-json /tmp/sqlite-crash-recovery-live-contract-lane-convergence.json`
+  - `python3 scripts/ci/check_sqlite_crash_recovery_ci_dry_run_governance.py --sqlite-crash-recovery-summary-report-file /tmp/sqlite-crash-recovery-live-summary.json --sqlite-crash-recovery-policy-report-file /tmp/sqlite-crash-recovery-live-policy.json --sqlite-crash-recovery-contract-lane-report-file /tmp/sqlite-crash-recovery-live-contract-lane-report.json --threshold-file fixtures/ci/sqlite_crash_recovery_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/sqlite-crash-recovery-ci-dry-run-governance-report.json`
+  - `cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - checker consumes sqlite crash-recovery dry-run artifacts only; no run-mode commands are executed.
+  - sqlite crash-recovery run-mode commands remain excluded from ci-fast-gate workflow and ci-tools fast-mode block.
+  - checker runtime budget remains bounded by fixture threshold metadata.
+- Deterministic checker markers:
+  - `sqlite_crash_recovery_ci_dry_run_reason_taxonomy_version=kamn.ci.sqlite-crash-recovery-ci-dry-run-governance-reason-taxonomy.v1`
+  - `sqlite_crash_recovery_ci_dry_run_reason_codes_csv=sqlite_crash_recovery_ci_dry_run_argument_invalid,sqlite_crash_recovery_ci_dry_run_threshold_contract_violation,sqlite_crash_recovery_ci_dry_run_report_contract_violation,sqlite_crash_recovery_ci_dry_run_runtime_budget_exceeded,sqlite_crash_recovery_ci_dry_run_fast_mode_selector_drift,sqlite_crash_recovery_ci_dry_run_workflow_exclusion_drift,sqlite_crash_recovery_ci_dry_run_docs_marker_parity_drift,sqlite_crash_recovery_ci_dry_run_docs_remediation_marker_missing`
+  - `sqlite_crash_recovery_ci_dry_run_threshold_fixture_path=fixtures/ci/sqlite_crash_recovery_ci_dry_run_governance_thresholds.env`
+  - `sqlite_crash_recovery_ci_dry_run_max_seconds=120`
+  - `sqlite_crash_recovery_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture`
+  - `sqlite_crash_recovery_ci_dry_run_fast_mode_forbidden_entry=bash "$ROOT_DIR/scripts/runtime/validate_sqlite_crash_recovery_live.sh" --mode run`
+  - `sqlite_crash_recovery_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode run`
+  - `sqlite_crash_recovery_ci_dry_run_remediation_map_version=v1`
+- Deterministic remediation markers:
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_argument_invalid=fix checker invocation flags and required file arguments`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_threshold_contract_violation=restore required keys/values in fixtures/ci/sqlite_crash_recovery_ci_dry_run_governance_thresholds.env`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_report_contract_violation=regenerate sqlite crash-recovery dry-run reports and restore schema/taxonomy markers`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_runtime_budget_exceeded=reduce durability checker/report overhead or adjust threshold fixture with explicit review evidence`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_fast_mode_selector_drift=restore required ci-tools fast-mode checker entry and remove sqlite run-mode leakage`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_workflow_exclusion_drift=remove sqlite run-mode command from .github/workflows/ci-fast-gate.yml`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_docs_marker_parity_drift=realign docs/ci/strategy.md and docs/ops/configuration.md sqlite durability marker blocks with fixture/checker contracts`
+  - `sqlite_crash_recovery_ci_dry_run_remediation.sqlite_crash_recovery_ci_dry_run_docs_remediation_marker_missing=add missing sqlite_crash_recovery_ci_dry_run_remediation.<reason>= marker entries to strategy and ops docs`
+- Regression coverage:
+  - `Regression: #4014`
+
 ## Runtime Service API Graceful-Shutdown Drain Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json`
