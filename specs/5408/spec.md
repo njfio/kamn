@@ -46,7 +46,7 @@ Out of scope:
 
 ## Test Mapping
 
-- `bash scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.sh`
+- `python3 scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py`
 - `bash scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh`
 - `cargo test -p kamn-core --test sqlite_crash_restart_local_heavy_lane_contract -- --nocapture`
 - `cargo test -p kamn-core --test sqlite_crash_restart_local_heavy_policy_contract -- --nocapture`

@@ -6,7 +6,7 @@
 ## Implementation Approach
 
 1. RED first:
-- add a new runtime shell test that asserts dispatcher-symlink + exec-registry mapping for the crash-restart runner wrapper.
+- add a new runtime regression test module that asserts dispatcher-symlink + exec-registry mapping for the crash-restart runner wrapper.
 - run the new test and capture failing output against current inline-shell implementation.
 
 2. GREEN implementation:
@@ -26,7 +26,7 @@
 - `specs/5408/tasks.md`
 - `scripts/runtime/run_sqlite_crash_restart_local_heavy_lane.sh`
 - `scripts/runtime/sqlite_crash_restart_local_heavy_lane_contract.py` (new)
-- `scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.sh` (new)
+- `scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py` (new)
 - `scripts/lib/exec_registry.json`
 - `scripts/ci/test_ci_tools.sh`
 
