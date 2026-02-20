@@ -5,7 +5,7 @@
 - [x] T2 (Green): implement Phase-6 budget input/report contracts and deterministic evaluator (`C-01`..`C-03`).
 - [x] T3 (Regression): add fail-closed invalid-budget validation with stable reason marker (`C-04`).
 - [x] T4 (Verify): run fmt, strict clippy, and targeted test suites (`C-06`).
-- [ ] T5 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
+- [x] T5 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
 
 ## Tier Mapping
 - Unit: within-budget + exceeded dimension mapping.
