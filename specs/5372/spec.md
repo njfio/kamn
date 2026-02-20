@@ -1,7 +1,7 @@
 # Issue #5372 Spec
 
 - Title: Task: codify topology-id to host-pair mapping contracts for live-postgres lane validation
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: specs/milestones/r27-program-operational-hardening-and-live-validation/index.md
