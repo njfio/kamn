@@ -270,6 +270,21 @@ Regression policy:
 - missing or drifted alert evidence schema/keys must fail closed (`Regression: #913`).
 - burn-rate parity and alert-governance taxonomy drift must fail closed.
 
+## Capacity CI Dry-Run Threshold Reason Taxonomy Contract (Issue #4005)
+Load-lane capacity threshold policy enforcement is validated through deterministic dry-run governance contracts.
+
+- Checker command:
+  - `python3 scripts/ci/check_capacity_ci_dry_run_governance.py --performance-report-file /tmp/performance-smoke-runtime-summary.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json --threshold-file fixtures/ci/capacity_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/capacity-ci-dry-run-governance-report.json`
+- Required taxonomy markers:
+  - `capacity_ci_dry_run_reason_taxonomy_version=kamn.ci.capacity-ci-dry-run-governance-reason-taxonomy.v1`
+  - `capacity_ci_dry_run_reason_codes_csv=capacity_ci_dry_run_argument_invalid,capacity_ci_dry_run_threshold_contract_violation,capacity_ci_dry_run_report_contract_violation,capacity_ci_dry_run_go_no_go_marker_parity_drift,capacity_ci_dry_run_performance_marker_parity_drift,capacity_ci_dry_run_runtime_budget_exceeded,capacity_ci_dry_run_fast_mode_selector_drift,capacity_ci_dry_run_workflow_exclusion_drift,capacity_ci_dry_run_docs_marker_parity_drift,capacity_ci_dry_run_docs_remediation_marker_missing`
+  - `capacity_ci_dry_run_contract_status=verified`
+  - `capacity_ci_dry_run_threshold_status=verified`
+
+Regression policy:
+
+- threshold, report marker, selector/workflow parity, docs marker drift, or runtime budget overflow force `NO-GO` (`Regression: #4005`).
+
 ## Dashboard Stale/Error Budget Policy Checker Contract
 Deterministic stale-data and error-budget policy checks are enforced through a bounded dashboard evidence lane:
 
