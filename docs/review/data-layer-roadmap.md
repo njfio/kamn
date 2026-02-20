@@ -15,7 +15,8 @@
 - Completed Phase-2 operational pipeline task: `#5263`
 - Completed Phase-3 scheduling/persistence task: `#5265`
 - Completed Phase-3 orchestration task: `#5267`
-- Current Phase-3 follow-up policy task: `#5269`
+- Completed Phase-3 follow-up policy task: `#5269`
+- Current Phase-3 finality-reconciliation task: `#5271`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -26,7 +27,8 @@ Current phase status:
 - Phase 2 envelope+blind-index operational pipeline: Implemented in `#5263` (merged)
 - Phase 3 scheduler threshold + merkle lifecycle persistence: Implemented in `#5265` (merged)
 - Phase 3 anchoring orchestrator tick + persistence-plan projection: Implemented in `#5267` (merged)
-- Phase 3 follow-up retry/confirmation policy projection: In progress in `#5269`
+- Phase 3 follow-up retry/confirmation policy projection: Implemented in `#5269` (merged)
+- Phase 3 finality-observation reconciliation projection: In progress in `#5271`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---

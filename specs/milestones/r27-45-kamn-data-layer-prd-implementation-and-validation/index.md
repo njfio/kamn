@@ -55,6 +55,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5265` — Task: implement M1 batch scheduler thresholds and merkle-batch persistence execution path
   - `#5267` — Task: implement M1 anchoring orchestrator tick and persistence-plan projection
   - `#5269` — Task: implement M1 anchoring follow-up retry and confirmation policy projection
+  - `#5271` — Task: implement M1 finality-observation reconciliation projection
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage
