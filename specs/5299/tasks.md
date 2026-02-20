@@ -5,4 +5,4 @@
 - [x] T3 (Green): project Phase-6 runtime reason/counter markers into daemon/report output contracts (`C-02`..`C-04`).
 - [x] T4 (Regression): validate fail-closed clock-regression behavior projects stable reason markers (`C-03`).
 - [x] T5 (Verify): run `cargo fmt --check`, strict clippy, and targeted daemon/report/docs tests (`C-05`).
-- [ ] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
+- [x] T6 (Closeout): open PR with AC mapping, RED/GREEN evidence, and shell-surface markers.
