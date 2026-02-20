@@ -1403,6 +1403,7 @@ mod tests {
         ChannelSnapshot, ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError,
         ChannelStore, ChannelType, FileChannelSnapshotStore,
     };
+    use std::env;
     use std::fs;
     use std::fs::OpenOptions;
     use std::io::Write;
@@ -1789,8 +1790,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "scheduled channel snapshot deep lane"]
     fn performance_channel_snapshot_deep_lane_stress() {
+        if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
+            eprintln!(
+                "skipping deep-lane channel snapshot stress test; set KAMN_KOLME_LOCAL_HEAVY=1 to run"
+            );
+            return;
+        }
+
         let mut store = ChannelStore::new();
         for index in 0..6000 {
             store

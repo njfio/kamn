@@ -1249,6 +1249,7 @@ mod tests {
         MessageProofAdmissionError, MessageStatus,
     };
     use crate::{ProcessorProofAdmissionEvaluator, ProcessorProofArtifact, ZkDesignError};
+    use std::env;
     use std::fs;
     use std::fs::OpenOptions;
     use std::io::Write;
@@ -1745,8 +1746,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "scheduled message lifecycle deep lane"]
     fn performance_message_lifecycle_snapshot_deep_lane_stress() {
+        if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
+            eprintln!(
+                "skipping deep-lane message lifecycle snapshot test; set KAMN_KOLME_LOCAL_HEAVY=1 to run"
+            );
+            return;
+        }
+
         let mut store = MessageLifecycleStore::new();
         for index in 0..6000 {
             store
