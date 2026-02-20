@@ -38,6 +38,9 @@ const SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-tenant-isolation-matrix.v1";
 const SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV: &str =
     "m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied";
+const AUDIT_INTEGRITY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1";
+const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -63,6 +66,10 @@ fn service_api_tenant_isolation_reason_codes() -> Vec<&'static str> {
     SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV
         .split(',')
         .collect()
+}
+
+fn audit_integrity_reason_codes() -> Vec<&'static str> {
+    AUDIT_INTEGRITY_REASON_CODES_CSV.split(',').collect()
 }
 
 #[test]
@@ -1315,6 +1322,41 @@ fn doc_contains_live_gonogo_boundary_reason_taxonomy_markers() {
     ));
     assert!(DOC.contains("milestone_review_go_no_go_gate_ci_local_boundary_contract_mismatch"));
     assert!(DOC.contains("Regression: #4442"));
+}
+
+#[test]
+fn doc_contains_audit_integrity_dry_run_governance_markers() {
+    assert!(DOC.contains("### Audit-Integrity Dry-Run Governance Contract"));
+    assert!(DOC.contains("bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh"));
+    assert!(DOC.contains("bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh"));
+    assert!(DOC.contains(
+        "bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-audit-integrity.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-audit-integrity.json"
+    ));
+    assert!(DOC.contains(&format!(
+        "audit_integrity_reason_taxonomy_version={AUDIT_INTEGRITY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "audit_integrity_reason_codes_csv={AUDIT_INTEGRITY_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains("audit_integrity_reason_codes_value=none|<csv>"));
+    assert!(DOC.contains("audit_integrity_gate_final_decision=GO|NO-GO"));
+    assert!(DOC.contains("audit integrity gate convergence mismatch"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test audit_evidence_integrity_contract spec_c01_audit_integrity_generate_bundle_emits_deterministic_go_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_audit_integrity_dry_run_governance_markers -- --exact"
+    ));
+    for reason_code in audit_integrity_reason_codes() {
+        assert!(
+            DOC.contains(reason_code),
+            "missing audit-integrity fail-closed reason marker {reason_code}"
+        );
+    }
+    assert!(DOC.contains("Regression: #4059"));
 }
 
 #[test]
