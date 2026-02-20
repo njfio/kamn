@@ -341,6 +341,37 @@ Regression marker:
 
 - `Regression: #4056`
 
+## Service API Tenant-Isolation Matrix Contract (Issue #4058)
+
+Deterministic tenant-isolation matrix markers:
+
+- `service_api_tenant_isolation_matrix_reason_taxonomy_version=kamn.runtime.service-api-tenant-isolation-matrix-policy-reason-taxonomy.v1`
+- `service_api_tenant_isolation_matrix_reason_codes_csv=ci_fast_gate_failed,service_api_tenant_isolation_policy_schema_mismatch,service_api_tenant_isolation_policy_status_invalid,service_api_tenant_isolation_policy_final_decision_invalid,service_api_tenant_isolation_policy_final_decision_mismatch,service_api_tenant_isolation_policy_lane_mode_invalid,service_api_tenant_isolation_policy_matrix_schema_mismatch,service_api_tenant_isolation_policy_matrix_rows_invalid,service_api_tenant_isolation_policy_matrix_row_count_mismatch,service_api_tenant_isolation_policy_matrix_row_duplicate,service_api_tenant_isolation_policy_matrix_row_id_invalid,service_api_tenant_isolation_policy_matrix_row_missing,service_api_tenant_isolation_policy_matrix_row_status_mismatch,service_api_tenant_isolation_policy_matrix_row_leakage_result_mismatch,service_api_tenant_isolation_policy_matrix_row_reason_code_mismatch,service_api_tenant_isolation_policy_matrix_row_selector_mismatch,service_api_tenant_isolation_policy_marker_missing,service_api_tenant_isolation_policy_execution_reason_code_mismatch,service_api_tenant_isolation_policy_command_count_invalid,service_api_tenant_isolation_policy_command_count_mismatch,service_api_tenant_isolation_policy_elapsed_seconds_invalid,service_api_tenant_isolation_policy_max_seconds_invalid,service_api_tenant_isolation_policy_runtime_budget_exceeded,service_api_tenant_isolation_policy_docs_marker_missing`
+- `service_api_tenant_isolation_matrix_matrix_schema_version=kamn.runtime.service-api-tenant-isolation-matrix.v1`
+- `service_api_tenant_isolation_matrix_required_row_ids_csv=m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied`
+- `service_api_tenant_isolation_matrix_strategy_doc_path=docs/ci/strategy.md`
+- `service_api_tenant_isolation_matrix_ops_doc_path=docs/ops/configuration.md`
+
+Deterministic leakage rejection reason markers:
+
+- `m2_abac_scope_denied`
+- `m8_compliance_owner_scope_denied`
+- `m9_realtime_owner_scope_denied`
+- `service_api_tenant_isolation_policy_matrix_row_status_mismatch`
+
+Validation commands:
+
+- `bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh --mode dry-run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json`
+- `KAMN_SERVICE_API_TENANT_ISOLATION_MATRIX_OPT_IN=1 bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh --mode run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json`
+- `bash scripts/runtime/check_service_api_tenant_isolation_matrix_live_policy.sh --report-file /tmp/service-api-tenant-isolation-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-tenant-isolation-matrix-policy.json`
+- `bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live_contract_lane.sh --output-json /tmp/service-api-tenant-isolation-matrix-contract-lane-report.json --policy-output-json /tmp/service-api-tenant-isolation-matrix-policy.json`
+- `cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract integration_tenant_isolation_matrix_contract_lane_composes_lane_policy_and_docs_parity -- --exact`
+- `cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract regression_tenant_isolation_matrix_policy_rejects_tampered_leakage_marker -- --exact`
+
+Regression marker:
+
+- `Regression: #4058`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and

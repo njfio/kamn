@@ -1558,6 +1558,34 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_validation_negative_matrix_policy_marker_missing:replay_guard_status`
 
+## Runtime Service API Tenant-Isolation Matrix Contract Lane
+### Service API Tenant-Isolation Matrix Contract
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh --mode dry-run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json`
+  - `KAMN_SERVICE_API_TENANT_ISOLATION_MATRIX_OPT_IN=1 bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh --mode run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json`
+  - `bash scripts/runtime/check_service_api_tenant_isolation_matrix_live_policy.sh --report-file /tmp/service-api-tenant-isolation-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-tenant-isolation-matrix-policy.json`
+  - `bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live_contract_lane.sh --output-json /tmp/service-api-tenant-isolation-matrix-contract-lane-report.json --policy-output-json /tmp/service-api-tenant-isolation-matrix-policy.json`
+  - `cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract unit_tenant_isolation_matrix_lane_dry_run_emits_deterministic_schema_and_markers -- --exact`
+  - `cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract integration_tenant_isolation_matrix_contract_lane_composes_lane_policy_and_docs_parity -- --exact`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested tenant-isolation matrix commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_SERVICE_API_TENANT_ISOLATION_MATRIX_OPT_IN=1`.
+  - run mode executes four deterministic `kamn-core` cross-tenant fail-closed selectors only.
+  - service api tenant-isolation matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic taxonomy markers:
+  - `service_api_tenant_isolation_matrix_reason_taxonomy_version=kamn.runtime.service-api-tenant-isolation-matrix-policy-reason-taxonomy.v1`
+  - `service_api_tenant_isolation_matrix_reason_codes_csv=ci_fast_gate_failed,service_api_tenant_isolation_policy_schema_mismatch,service_api_tenant_isolation_policy_status_invalid,service_api_tenant_isolation_policy_final_decision_invalid,service_api_tenant_isolation_policy_final_decision_mismatch,service_api_tenant_isolation_policy_lane_mode_invalid,service_api_tenant_isolation_policy_matrix_schema_mismatch,service_api_tenant_isolation_policy_matrix_rows_invalid,service_api_tenant_isolation_policy_matrix_row_count_mismatch,service_api_tenant_isolation_policy_matrix_row_duplicate,service_api_tenant_isolation_policy_matrix_row_id_invalid,service_api_tenant_isolation_policy_matrix_row_missing,service_api_tenant_isolation_policy_matrix_row_status_mismatch,service_api_tenant_isolation_policy_matrix_row_leakage_result_mismatch,service_api_tenant_isolation_policy_matrix_row_reason_code_mismatch,service_api_tenant_isolation_policy_matrix_row_selector_mismatch,service_api_tenant_isolation_policy_marker_missing,service_api_tenant_isolation_policy_execution_reason_code_mismatch,service_api_tenant_isolation_policy_command_count_invalid,service_api_tenant_isolation_policy_command_count_mismatch,service_api_tenant_isolation_policy_elapsed_seconds_invalid,service_api_tenant_isolation_policy_max_seconds_invalid,service_api_tenant_isolation_policy_runtime_budget_exceeded,service_api_tenant_isolation_policy_docs_marker_missing`
+  - `service_api_tenant_isolation_matrix_matrix_schema_version=kamn.runtime.service-api-tenant-isolation-matrix.v1`
+  - `service_api_tenant_isolation_matrix_required_row_ids_csv=m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied`
+  - `service_api_tenant_isolation_matrix_strategy_doc_path=docs/ci/strategy.md`
+  - `service_api_tenant_isolation_matrix_ops_doc_path=docs/ops/configuration.md`
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_tenant_isolation_policy_matrix_row_status_mismatch`
+  - `Regression: #4058`
+
 ## Runtime Service API Graceful-Shutdown Drain Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json`

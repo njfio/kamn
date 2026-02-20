@@ -5,6 +5,8 @@ const FAIRNESS_FIXTURE: &str =
 const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
 const SERVICE_API_ENDPOINT_SOURCE: &str =
     include_str!("../../kamn-node/src/service_api_endpoint.rs");
+const SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE: &str =
+    include_str!("../../../scripts/runtime/service_api_tenant_isolation_matrix_live_contract.py");
 const OVERLOAD_RUNNER_SOURCE: &str =
     include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
 
@@ -29,6 +31,13 @@ const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
 const SERVICE_API_SCOPE_POLICY_FIXTURE_PATH: &str =
     "fixtures/runtime/service_api_scope_policy_fixture_matrix.txt";
+const SERVICE_API_TENANT_ISOLATION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-tenant-isolation-matrix-policy-reason-taxonomy.v1";
+const SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV: &str = "ci_fast_gate_failed,service_api_tenant_isolation_policy_schema_mismatch,service_api_tenant_isolation_policy_status_invalid,service_api_tenant_isolation_policy_final_decision_invalid,service_api_tenant_isolation_policy_final_decision_mismatch,service_api_tenant_isolation_policy_lane_mode_invalid,service_api_tenant_isolation_policy_matrix_schema_mismatch,service_api_tenant_isolation_policy_matrix_rows_invalid,service_api_tenant_isolation_policy_matrix_row_count_mismatch,service_api_tenant_isolation_policy_matrix_row_duplicate,service_api_tenant_isolation_policy_matrix_row_id_invalid,service_api_tenant_isolation_policy_matrix_row_missing,service_api_tenant_isolation_policy_matrix_row_status_mismatch,service_api_tenant_isolation_policy_matrix_row_leakage_result_mismatch,service_api_tenant_isolation_policy_matrix_row_reason_code_mismatch,service_api_tenant_isolation_policy_matrix_row_selector_mismatch,service_api_tenant_isolation_policy_marker_missing,service_api_tenant_isolation_policy_execution_reason_code_mismatch,service_api_tenant_isolation_policy_command_count_invalid,service_api_tenant_isolation_policy_command_count_mismatch,service_api_tenant_isolation_policy_elapsed_seconds_invalid,service_api_tenant_isolation_policy_max_seconds_invalid,service_api_tenant_isolation_policy_runtime_budget_exceeded,service_api_tenant_isolation_policy_docs_marker_missing";
+const SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION: &str =
+    "kamn.runtime.service-api-tenant-isolation-matrix.v1";
+const SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV: &str =
+    "m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -46,6 +55,12 @@ fn service_api_request_path_authz_reason_codes() -> Vec<&'static str> {
 
 fn service_api_scope_policy_reason_codes() -> Vec<&'static str> {
     SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV
+        .split(',')
+        .collect()
+}
+
+fn service_api_tenant_isolation_reason_codes() -> Vec<&'static str> {
+    SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV
         .split(',')
         .collect()
 }
@@ -934,6 +949,36 @@ fn doc_contains_runtime_service_api_validation_negative_matrix_contract_lane_ci_
 }
 
 #[test]
+fn doc_contains_runtime_service_api_tenant_isolation_matrix_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Service API Tenant-Isolation Matrix Contract Lane"));
+    assert!(DOC.contains(
+        "validate_service_api_tenant_isolation_matrix_live.sh --mode dry-run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_SERVICE_API_TENANT_ISOLATION_MATRIX_OPT_IN=1 bash scripts/runtime/validate_service_api_tenant_isolation_matrix_live.sh --mode run --output-json /tmp/service-api-tenant-isolation-matrix-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_service_api_tenant_isolation_matrix_live_policy.sh --report-file /tmp/service-api-tenant-isolation-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-tenant-isolation-matrix-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_service_api_tenant_isolation_matrix_live_contract_lane.sh --output-json /tmp/service-api-tenant-isolation-matrix-contract-lane-report.json --policy-output-json /tmp/service-api-tenant-isolation-matrix-policy.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract unit_tenant_isolation_matrix_lane_dry_run_emits_deterministic_schema_and_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract integration_tenant_isolation_matrix_contract_lane_composes_lane_policy_and_docs_parity -- --exact"
+    ));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "service api tenant-isolation matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC.contains("service_api_tenant_isolation_policy_matrix_row_status_mismatch"));
+}
+
+#[test]
 fn doc_contains_runtime_service_api_graceful_shutdown_drain_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("## Runtime Service API Graceful-Shutdown Drain Contract Lane"));
     assert!(DOC.contains(
@@ -1735,6 +1780,89 @@ fn doc_enforces_service_api_scope_policy_remediation_markers_cover_reason_codes(
                 "service_api_scope_policy_remediation.{reason_code}="
             )),
             "ops docs missing scope-policy remediation marker for {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_service_api_tenant_isolation_matrix_docs_parity_markers() {
+    assert!(DOC.contains("### Service API Tenant-Isolation Matrix Contract"));
+    assert!(DOC.contains(
+        "service_api_tenant_isolation_matrix_reason_taxonomy_version=kamn.runtime.service-api-tenant-isolation-matrix-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_tenant_isolation_matrix_reason_codes_csv=ci_fast_gate_failed,service_api_tenant_isolation_policy_schema_mismatch,service_api_tenant_isolation_policy_status_invalid,service_api_tenant_isolation_policy_final_decision_invalid,service_api_tenant_isolation_policy_final_decision_mismatch,service_api_tenant_isolation_policy_lane_mode_invalid,service_api_tenant_isolation_policy_matrix_schema_mismatch,service_api_tenant_isolation_policy_matrix_rows_invalid,service_api_tenant_isolation_policy_matrix_row_count_mismatch,service_api_tenant_isolation_policy_matrix_row_duplicate,service_api_tenant_isolation_policy_matrix_row_id_invalid,service_api_tenant_isolation_policy_matrix_row_missing,service_api_tenant_isolation_policy_matrix_row_status_mismatch,service_api_tenant_isolation_policy_matrix_row_leakage_result_mismatch,service_api_tenant_isolation_policy_matrix_row_reason_code_mismatch,service_api_tenant_isolation_policy_matrix_row_selector_mismatch,service_api_tenant_isolation_policy_marker_missing,service_api_tenant_isolation_policy_execution_reason_code_mismatch,service_api_tenant_isolation_policy_command_count_invalid,service_api_tenant_isolation_policy_command_count_mismatch,service_api_tenant_isolation_policy_elapsed_seconds_invalid,service_api_tenant_isolation_policy_max_seconds_invalid,service_api_tenant_isolation_policy_runtime_budget_exceeded,service_api_tenant_isolation_policy_docs_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "service_api_tenant_isolation_matrix_matrix_schema_version=kamn.runtime.service-api-tenant-isolation-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_tenant_isolation_matrix_required_row_ids_csv=m2_abac_cross_tenant_visibility_denied,m8_cross_owner_retention_and_shred_denied,m9_cross_owner_dispatch_and_presence_denied,m9_gateway_cross_owner_presence_denied"
+    ));
+    assert!(
+        DOC.contains("service_api_tenant_isolation_matrix_ops_doc_path=docs/ops/configuration.md")
+    );
+    assert!(
+        DOC.contains("service_api_tenant_isolation_matrix_strategy_doc_path=docs/ci/strategy.md")
+    );
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_tenant_isolation_matrix_contract integration_tenant_isolation_matrix_contract_lane_composes_lane_policy_and_docs_parity -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4058"));
+}
+
+#[test]
+fn doc_enforces_service_api_tenant_isolation_matrix_docs_parity_matches_source_taxonomy() {
+    assert!(
+        SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains(
+            "REASON_TAXONOMY_VERSION = \"kamn.runtime.service-api-tenant-isolation-matrix-policy-reason-taxonomy.v1\""
+        )
+    );
+    assert!(SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE.contains("REASON_CODES_CSV = \",\".join("));
+    assert!(SERVICE_API_TENANT_ISOLATION_CONTRACT_SOURCE
+        .contains("MATRIX_SCHEMA = \"kamn.runtime.service-api-tenant-isolation-matrix.v1\""));
+
+    assert!(DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_reason_taxonomy_version={SERVICE_API_TENANT_ISOLATION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_reason_codes_csv={SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_matrix_schema_version={SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_required_row_ids_csv={SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_reason_taxonomy_version={SERVICE_API_TENANT_ISOLATION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_reason_codes_csv={SERVICE_API_TENANT_ISOLATION_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_matrix_schema_version={SERVICE_API_TENANT_ISOLATION_MATRIX_SCHEMA_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_tenant_isolation_matrix_required_row_ids_csv={SERVICE_API_TENANT_ISOLATION_REQUIRED_ROW_IDS_CSV}"
+    )));
+}
+
+#[test]
+fn doc_enforces_service_api_tenant_isolation_matrix_reason_codes_non_empty() {
+    for reason_code in service_api_tenant_isolation_reason_codes() {
+        assert!(
+            !reason_code.trim().is_empty(),
+            "reason code entries must stay non-empty"
+        );
+        assert!(
+            DOC.contains(reason_code),
+            "ci strategy docs missing tenant-isolation reason code marker: {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(reason_code),
+            "ops docs missing tenant-isolation reason code marker: {reason_code}"
         );
     }
 }
