@@ -536,6 +536,27 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_ro
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_role_pair_markers() {
+    assert!(DOC.contains("### Two-Node Role-Pair Matrix (Issue #5352)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_role_pair_ids_csv=processor_to_listener_applied,processor_to_listener_deferred,listener_to_approver_applied,listener_to_approver_deferred,approver_to_processor_applied,approver_to_processor_deferred"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_matrix_role_pair_contract=role_pair_leg_a_applied->m10_phase6_scheduler_cycle_applied;role_pair_leg_b_applied->m10_phase6_scheduler_cycle_applied;role_pair_leg_a_deferred->m10_phase6_scheduler_cycle_deferred;role_pair_leg_b_deferred->m10_phase6_scheduler_cycle_deferred;runtime_taxonomy_version_stable"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_role_pair_matrix_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_role_pair_matrix_is_deterministic -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_role_pair_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5352"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
