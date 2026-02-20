@@ -65,6 +65,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5285` — Task: start Phase-6 retention-to-archival gate execution contracts
   - `#5287` — Task: add deterministic archival failure-retry policy contracts for Phase-6
   - `#5289` — Task: add Phase-6 retention+archival execution tick orchestration contracts
+  - `#5291` — Task: add Phase-6 execution-tick budget guardrail contracts
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage
