@@ -5,19 +5,26 @@ use kamn_core::{
     data_layer_pg_project_m5_similarity_search_operation,
     data_layer_pg_project_m6_age_edge_upsert_operation,
     data_layer_pg_project_m6_age_trust_query_operation,
+    data_layer_pg_project_m7_timescale_ingest_operation,
+    data_layer_pg_project_m7_timescale_owner_rollup_query_operation,
     data_layer_pg_project_select_message_by_id_operation, ContentRetentionClass,
     DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerM5EmbeddingPrivacyMode,
     DataLayerM5EmbeddingRecord, DataLayerM5EmbeddingRecordInput, DataLayerM5EmbeddingRegistry,
     DataLayerM5SemanticQuery, DataLayerM6GraphEdgeInput, DataLayerM6GraphEdgeRecord,
     DataLayerM6GraphEdgeRelation, DataLayerM6GraphNodeInput, DataLayerM6GraphNodeKind,
-    DataLayerM6GraphRegistry, DataLayerM6TrustPropagationQuery, DataLayerPgBlindIndexSearchRequest,
-    DataLayerPgM5PgvectorConfig, DataLayerPgM5SimilaritySearchRequest, DataLayerPgM6AgeConfig,
-    DataLayerPgM6AgeTrustQueryRequest, DataLayerPgOperationKind, DataLayerPgRepositoryBridgeError,
-    DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DataLayerM6GraphRegistry, DataLayerM6TrustPropagationQuery, DataLayerM7BillingQuery,
+    DataLayerM7TelemetryPointInput, DataLayerM7TelemetryPointRecord, DataLayerM7TelemetryRegistry,
+    DataLayerPgBlindIndexSearchRequest, DataLayerPgM5PgvectorConfig,
+    DataLayerPgM5SimilaritySearchRequest, DataLayerPgM6AgeConfig,
+    DataLayerPgM6AgeTrustQueryRequest, DataLayerPgM7TimescaleConfig,
+    DataLayerPgM7TimescaleOwnerRollupRequest, DataLayerPgOperationKind,
+    DataLayerPgRepositoryBridgeError, DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE,
     DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE,
     DATA_LAYER_PG_INVALID_REQUESTER_DID_REASON_CODE,
     DATA_LAYER_PG_PGVECTOR_DIMENSION_MISMATCH_REASON_CODE,
     DATA_LAYER_PG_PGVECTOR_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE,
+    DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
 };
 
 fn fixture_record() -> DataLayerM0EnvelopeRecord {
@@ -93,6 +100,25 @@ fn fixture_m6_edge_record() -> DataLayerM6GraphEdgeRecord {
             observed_at_epoch_seconds: 1_900_000_000,
         })
         .expect("trust edge should register")
+}
+
+fn fixture_m7_telemetry_record() -> DataLayerM7TelemetryPointRecord {
+    let mut registry = DataLayerM7TelemetryRegistry::new();
+    registry
+        .ingest_point(DataLayerM7TelemetryPointInput {
+            owner_did: "kamn:did:owner:owner-1".to_owned(),
+            agent_did: "kamn:did:agent:agent-1".to_owned(),
+            timestamp_epoch_seconds: 1_900_000_000,
+            message_count: 12,
+            bytes_stored: 2048,
+            query_count: 7,
+            embedding_count: 3,
+            embedding_anomaly_count: 0,
+            ingress_latency_ms_p95: 45,
+            egress_latency_ms_p95: 50,
+            active_sessions: 2,
+        })
+        .expect("fixture telemetry point should ingest")
 }
 
 #[test]
@@ -423,5 +449,125 @@ fn spec_c08_m6_age_projection_fails_closed_for_extension_and_relation_mismatch()
             );
         }
         other => panic!("unexpected relation error variant: {other:?}"),
+    }
+}
+
+#[test]
+fn spec_c09_m7_timescale_projection_is_deterministic_for_ingest_and_rollup() {
+    let record = fixture_m7_telemetry_record();
+    let config = DataLayerPgM7TimescaleConfig::new(true, "telemetry_points")
+        .expect("Timescale config should construct deterministically");
+
+    let ingest_descriptor = data_layer_pg_project_m7_timescale_ingest_operation(
+        &record,
+        "kamn:did:agent:agent-1",
+        config.clone(),
+    )
+    .expect("valid telemetry record should project Timescale ingest descriptor");
+    assert_eq!(
+        ingest_descriptor.kind,
+        DataLayerPgOperationKind::InsertTelemetryPoint
+    );
+    assert!(
+        ingest_descriptor
+            .sql
+            .starts_with("INSERT INTO telemetry_points"),
+        "Timescale ingest descriptor should target telemetry_points table"
+    );
+    assert_eq!(
+        ingest_descriptor.bind_markers,
+        vec![
+            "owner_did",
+            "agent_did",
+            "timestamp_epoch_seconds",
+            "bucket_hour_epoch_seconds",
+            "bucket_day_epoch_seconds",
+            "message_count",
+            "bytes_stored",
+            "query_count",
+            "embedding_count",
+            "embedding_anomaly_count",
+            "ingress_latency_ms_p95",
+            "egress_latency_ms_p95",
+            "active_sessions",
+            "sequence",
+        ]
+    );
+
+    let rollup_descriptor = data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
+        DataLayerPgM7TimescaleOwnerRollupRequest {
+            requester_did: "kamn:did:agent:agent-1".to_owned(),
+            query: DataLayerM7BillingQuery {
+                requester_owner_did: "kamn:did:owner:owner-1".to_owned(),
+                owner_did: "kamn:did:owner:owner-1".to_owned(),
+            },
+            bucket_window_seconds: 86_400,
+            limit: Some(30),
+        },
+        config,
+    )
+    .expect("valid billing rollup request should project Timescale rollup descriptor");
+    assert_eq!(
+        rollup_descriptor.kind,
+        DataLayerPgOperationKind::QueryTelemetryOwnerRollup
+    );
+    assert!(
+        rollup_descriptor
+            .sql
+            .contains("time_bucket(INTERVAL '1 day'"),
+        "daily rollup descriptor should use deterministic 1-day time_bucket interval"
+    );
+    assert_eq!(rollup_descriptor.bind_markers, vec!["owner_did", "limit"]);
+}
+
+#[test]
+fn spec_c10_m7_timescale_projection_fails_closed_for_extension_and_invalid_bucket_window() {
+    let record = fixture_m7_telemetry_record();
+    let disabled_config = DataLayerPgM7TimescaleConfig::new(false, "telemetry_points")
+        .expect("disabled Timescale config should still construct");
+
+    let extension_error = data_layer_pg_project_m7_timescale_ingest_operation(
+        &record,
+        "kamn:did:agent:agent-1",
+        disabled_config,
+    )
+    .expect_err("disabled Timescale extension should fail closed");
+    match extension_error {
+        DataLayerPgRepositoryBridgeError::TimescaleExtensionUnavailable { reason_code } => {
+            assert_eq!(
+                reason_code,
+                DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE
+            );
+        }
+        other => panic!("unexpected Timescale extension error variant: {other:?}"),
+    }
+
+    let enabled_config = DataLayerPgM7TimescaleConfig::new(true, "telemetry_points")
+        .expect("enabled Timescale config should construct");
+    let invalid_window_error = data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
+        DataLayerPgM7TimescaleOwnerRollupRequest {
+            requester_did: "kamn:did:agent:agent-1".to_owned(),
+            query: DataLayerM7BillingQuery {
+                requester_owner_did: "kamn:did:owner:owner-1".to_owned(),
+                owner_did: "kamn:did:owner:owner-1".to_owned(),
+            },
+            bucket_window_seconds: 777,
+            limit: Some(30),
+        },
+        enabled_config,
+    )
+    .expect_err("invalid bucket window should fail closed");
+    match invalid_window_error {
+        DataLayerPgRepositoryBridgeError::InvalidTimescaleBucketWindow {
+            reason_code,
+            bucket_window_seconds,
+        } => {
+            assert_eq!(
+                reason_code,
+                DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE
+            );
+            assert_eq!(bucket_window_seconds, 777);
+        }
+        other => panic!("unexpected invalid-bucket-window error variant: {other:?}"),
     }
 }

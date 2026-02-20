@@ -9,8 +9,9 @@ use std::fmt;
 use crate::{
     data_layer_m2_default_rls_policies, AgentDid, DataLayerM0EnvelopeRecord,
     DataLayerM5EmbeddingRecord, DataLayerM5SemanticQuery, DataLayerM6GraphEdgeRecord,
-    DataLayerM6GraphEdgeRelation, DataLayerM6TrustPropagationQuery, KamnDid,
-    DATA_LAYER_M2_REQUESTER_DID_SETTING,
+    DataLayerM6GraphEdgeRelation, DataLayerM6TrustPropagationQuery, DataLayerM7BillingQuery,
+    DataLayerM7TelemetryPointRecord, KamnDid, DATA_LAYER_M2_REQUESTER_DID_SETTING,
+    DATA_LAYER_M7_DAILY_BUCKET_SECONDS, DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
 };
 
 /// Stable reason marker for invalid requester DID session inputs.
@@ -30,10 +31,17 @@ pub const DATA_LAYER_PG_AGE_EXTENSION_UNAVAILABLE_REASON_CODE: &str =
 /// Stable reason marker for unsupported AGE relation projection.
 pub const DATA_LAYER_PG_AGE_RELATION_UNSUPPORTED_REASON_CODE: &str =
     "data_layer_pg_age_relation_unsupported";
+/// Stable reason marker for Timescale extension unavailability.
+pub const DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE: &str =
+    "data_layer_pg_timescale_extension_unavailable";
+/// Stable reason marker for invalid Timescale bucket window inputs.
+pub const DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE: &str =
+    "data_layer_pg_timescale_invalid_bucket_window";
 
 const DATA_LAYER_PG_MAX_BLIND_INDEX_SEARCH_LIMIT: u32 = 200;
 const DATA_LAYER_PG_MAX_VECTOR_SEARCH_LIMIT: usize = 200;
 const DATA_LAYER_PG_MAX_AGE_QUERY_LIMIT: usize = 200;
+const DATA_LAYER_PG_MAX_TIMESCALE_QUERY_LIMIT: usize = 200;
 
 /// Deterministic operation kind projected by the bridge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +68,10 @@ pub enum DataLayerPgOperationKind {
     UpsertGraphEdge,
     /// Query M6 trust-propagation rows via AGE/openCypher descriptor.
     QueryGraphTrustPropagation,
+    /// Insert one M7 telemetry row for Timescale-backed ingest paths.
+    InsertTelemetryPoint,
+    /// Query one owner-scoped telemetry rollup via Timescale query paths.
+    QueryTelemetryOwnerRollup,
 }
 
 /// Requester session metadata projected into SQL execution context.
@@ -172,6 +184,47 @@ pub struct DataLayerPgM6AgeTrustQueryRequest {
     pub query: DataLayerM6TrustPropagationQuery,
 }
 
+/// Deterministic Timescale capability configuration for M7 bridge projections.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgM7TimescaleConfig {
+    /// Whether Timescale extension surface is available.
+    pub extension_enabled: bool,
+    /// Telemetry hypertable name.
+    pub hypertable_name: String,
+}
+
+impl DataLayerPgM7TimescaleConfig {
+    /// Creates deterministic Timescale configuration.
+    pub fn new(
+        extension_enabled: bool,
+        hypertable_name: impl Into<String>,
+    ) -> Result<Self, DataLayerPgRepositoryBridgeError> {
+        let hypertable_name = hypertable_name.into();
+        if hypertable_name.trim().is_empty() {
+            return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+                "timescale_hypertable_name",
+            ));
+        }
+        Ok(Self {
+            extension_enabled,
+            hypertable_name,
+        })
+    }
+}
+
+/// M7 owner rollup query request projected into Timescale SQL descriptors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DataLayerPgM7TimescaleOwnerRollupRequest {
+    /// Requester DID for RLS/session scope projection.
+    pub requester_did: String,
+    /// Owner-scoped billing/rollup query from M7 contracts.
+    pub query: DataLayerM7BillingQuery,
+    /// Rollup bucket window in seconds.
+    pub bucket_window_seconds: u64,
+    /// Optional max rows to return.
+    pub limit: Option<usize>,
+}
+
 /// RLS SQL statement descriptor projected from M2 templates.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataLayerPgRlsStatement {
@@ -239,6 +292,18 @@ pub enum DataLayerPgRepositoryBridgeError {
         /// Relation marker that failed validation.
         relation_marker: &'static str,
     },
+    /// Timescale extension is unavailable for requested projection.
+    TimescaleExtensionUnavailable {
+        /// Stable reason marker.
+        reason_code: &'static str,
+    },
+    /// Timescale bucket window input is invalid.
+    InvalidTimescaleBucketWindow {
+        /// Stable reason marker.
+        reason_code: &'static str,
+        /// Invalid bucket window in seconds.
+        bucket_window_seconds: u64,
+    },
 }
 
 impl fmt::Display for DataLayerPgRepositoryBridgeError {
@@ -288,6 +353,16 @@ impl fmt::Display for DataLayerPgRepositoryBridgeError {
             } => write!(
                 formatter,
                 "age relation unsupported: {reason_code} ({relation_marker})"
+            ),
+            Self::TimescaleExtensionUnavailable { reason_code } => {
+                write!(formatter, "timescale extension unavailable: {reason_code}")
+            }
+            Self::InvalidTimescaleBucketWindow {
+                reason_code,
+                bucket_window_seconds,
+            } => write!(
+                formatter,
+                "timescale bucket window invalid: {reason_code} ({bucket_window_seconds})"
             ),
         }
     }
@@ -547,6 +622,114 @@ pub fn data_layer_pg_project_m6_age_trust_query_operation(
     })
 }
 
+/// Projects a deterministic M7 Timescale telemetry-ingest SQL operation descriptor.
+pub fn data_layer_pg_project_m7_timescale_ingest_operation(
+    record: &DataLayerM7TelemetryPointRecord,
+    requester_did: &str,
+    config: DataLayerPgM7TimescaleConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_timescale_config(&config)?;
+    validate_owner_did(record.owner_did.as_str())?;
+    validate_non_empty(record.agent_did.as_str(), "agent_did")?;
+    if record.timestamp_epoch_seconds == 0 {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+            "timestamp_epoch_seconds",
+        ));
+    }
+    let expected_hour_bucket = record.timestamp_epoch_seconds
+        - (record.timestamp_epoch_seconds % DATA_LAYER_M7_HOURLY_BUCKET_SECONDS);
+    let expected_day_bucket = record.timestamp_epoch_seconds
+        - (record.timestamp_epoch_seconds % DATA_LAYER_M7_DAILY_BUCKET_SECONDS);
+    if record.bucket_hour_epoch_seconds != expected_hour_bucket {
+        return Err(
+            DataLayerPgRepositoryBridgeError::InvalidTimescaleBucketWindow {
+                reason_code: DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
+                bucket_window_seconds: DATA_LAYER_M7_HOURLY_BUCKET_SECONDS,
+            },
+        );
+    }
+    if record.bucket_day_epoch_seconds != expected_day_bucket {
+        return Err(
+            DataLayerPgRepositoryBridgeError::InvalidTimescaleBucketWindow {
+                reason_code: DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
+                bucket_window_seconds: DATA_LAYER_M7_DAILY_BUCKET_SECONDS,
+            },
+        );
+    }
+    let session = build_requester_session(requester_did)?;
+
+    let sql = format!(
+        "INSERT INTO {} (owner_did, agent_did, observed_at, bucket_hour_epoch_seconds, bucket_day_epoch_seconds, message_count, bytes_stored, query_count, embedding_count, embedding_anomaly_count, ingress_latency_ms_p95, egress_latency_ms_p95, active_sessions, sequence) VALUES ($1, $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);",
+        config.hypertable_name
+    );
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::InsertTelemetryPoint,
+        sql,
+        bind_markers: vec![
+            "owner_did",
+            "agent_did",
+            "timestamp_epoch_seconds",
+            "bucket_hour_epoch_seconds",
+            "bucket_day_epoch_seconds",
+            "message_count",
+            "bytes_stored",
+            "query_count",
+            "embedding_count",
+            "embedding_anomaly_count",
+            "ingress_latency_ms_p95",
+            "egress_latency_ms_p95",
+            "active_sessions",
+            "sequence",
+        ],
+        session,
+    })
+}
+
+/// Projects a deterministic M7 Timescale owner-rollup SQL operation descriptor.
+pub fn data_layer_pg_project_m7_timescale_owner_rollup_query_operation(
+    request: DataLayerPgM7TimescaleOwnerRollupRequest,
+    config: DataLayerPgM7TimescaleConfig,
+) -> Result<DataLayerPgSqlOperation, DataLayerPgRepositoryBridgeError> {
+    validate_timescale_config(&config)?;
+    validate_owner_did(request.query.owner_did.as_str())?;
+    validate_owner_did(request.query.requester_owner_did.as_str())?;
+    let interval_marker = match request.bucket_window_seconds {
+        DATA_LAYER_M7_HOURLY_BUCKET_SECONDS => "1 hour",
+        DATA_LAYER_M7_DAILY_BUCKET_SECONDS => "1 day",
+        other => {
+            return Err(
+                DataLayerPgRepositoryBridgeError::InvalidTimescaleBucketWindow {
+                    reason_code: DATA_LAYER_PG_TIMESCALE_INVALID_BUCKET_WINDOW_REASON_CODE,
+                    bucket_window_seconds: other,
+                },
+            )
+        }
+    };
+    let limit = request
+        .limit
+        .unwrap_or(DATA_LAYER_PG_MAX_TIMESCALE_QUERY_LIMIT);
+    if limit == 0 || limit > DATA_LAYER_PG_MAX_TIMESCALE_QUERY_LIMIT {
+        return Err(DataLayerPgRepositoryBridgeError::InvalidSearchLimit {
+            requested: limit as u32,
+            max_allowed: DATA_LAYER_PG_MAX_TIMESCALE_QUERY_LIMIT as u32,
+        });
+    }
+    let session = build_requester_session(request.requester_did.as_str())?;
+
+    let sql = format!(
+        "SELECT time_bucket(INTERVAL '{}', observed_at) AS bucket_start, SUM(message_count) AS message_count_total, SUM(bytes_stored) AS bytes_stored_total, SUM(query_count) AS query_count_total, SUM(embedding_count) AS embedding_count_total FROM {} WHERE owner_did = $1 GROUP BY bucket_start ORDER BY bucket_start DESC LIMIT $2;",
+        interval_marker, config.hypertable_name
+    );
+
+    Ok(DataLayerPgSqlOperation {
+        kind: DataLayerPgOperationKind::QueryTelemetryOwnerRollup,
+        sql,
+        bind_markers: vec!["owner_did", "limit"],
+        session,
+    })
+}
+
 /// Projects default M2 RLS templates into deterministic SQL statement descriptors.
 pub fn data_layer_pg_project_default_rls_statements() -> Vec<DataLayerPgRlsStatement> {
     let mut policies = data_layer_m2_default_rls_policies();
@@ -649,6 +832,24 @@ fn validate_age_config(
     if config.graph_name.trim().is_empty() {
         return Err(DataLayerPgRepositoryBridgeError::EmptyField(
             "age_graph_name",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_timescale_config(
+    config: &DataLayerPgM7TimescaleConfig,
+) -> Result<(), DataLayerPgRepositoryBridgeError> {
+    if !config.extension_enabled {
+        return Err(
+            DataLayerPgRepositoryBridgeError::TimescaleExtensionUnavailable {
+                reason_code: DATA_LAYER_PG_TIMESCALE_EXTENSION_UNAVAILABLE_REASON_CODE,
+            },
+        );
+    }
+    if config.hypertable_name.trim().is_empty() {
+        return Err(DataLayerPgRepositoryBridgeError::EmptyField(
+            "timescale_hypertable_name",
         ));
     }
     Ok(())
