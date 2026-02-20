@@ -1562,6 +1562,12 @@
       "args_prefix": [],
       "passthrough": true
     },
+    "scripts/runtime/run_sqlite_crash_restart_local_heavy_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/sqlite_crash_restart_local_heavy_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/runtime/validate_api_compatibility_matrix_local_heavy_live.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/api_compatibility_matrix_local_heavy_live_contract.py",
