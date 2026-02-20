@@ -13,7 +13,8 @@
 - Completed execution-adapter task: `#5259`
 - Completed execution-adapter completion task: `#5261`
 - Completed Phase-2 operational pipeline task: `#5263`
-- Current Phase-3 scheduling/persistence task: `#5265`
+- Completed Phase-3 scheduling/persistence task: `#5265`
+- Current Phase-3 orchestration task: `#5267`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -22,8 +23,9 @@ Current phase status:
 - Phase 1 live sqlx execution adapter + migration runner: Implemented in `#5259` (merged)
 - Phase 1 blind-index search execution + default RLS statement application: Implemented in `#5261` (merged)
 - Phase 2 envelope+blind-index operational pipeline: Implemented in `#5263` (merged)
-- Phase 3 scheduler threshold + merkle lifecycle persistence: Implemented in `#5265` (pending merge)
-- Phases 3-6: Planned with dependency order captured in `#5250`..`#5254`
+- Phase 3 scheduler threshold + merkle lifecycle persistence: Implemented in `#5265` (merged)
+- Phase 3 anchoring orchestrator tick + persistence-plan projection: Implemented in `#5267` (pending merge)
+- Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
 

@@ -3,9 +3,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use kamn_core::{
     data_layer_m3_compute_blind_index, data_layer_pg_collect_migration_files,
-    DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerPgBlindIndexSearchRequest,
+    DataLayerM0EnvelopeRecord, DataLayerM0WrappedKey, DataLayerM1AnchoringOrchestrator,
+    DataLayerM1AnchoringTickOutcome, DataLayerM1BatchSchedulerPolicy,
+    DataLayerM1PendingBatchMessage, DataLayerPgBlindIndexSearchRequest,
     DataLayerPgExecutionAdapter, DataLayerPgExecutionAdapterConfig,
-    DataLayerPgExecutionAdapterError, DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
+    DataLayerPgExecutionAdapterError, InMemoryKolmeRuntimeCommitClient,
+    DATA_LAYER_PG_EXECUTION_INVALID_DATABASE_URL_REASON_CODE,
 };
 
 fn live_postgres_url() -> Option<String> {
@@ -32,6 +35,18 @@ fn uuid_from_u128(seed: u128) -> String {
         &hex[16..20],
         &hex[20..32]
     )
+}
+
+fn pending_message(
+    message_id: &str,
+    content_hash: &str,
+    created_at_unix_seconds: u64,
+) -> DataLayerM1PendingBatchMessage {
+    DataLayerM1PendingBatchMessage {
+        message_id: message_id.to_owned(),
+        content_hash: content_hash.to_owned(),
+        created_at_unix_seconds,
+    }
 }
 
 fn fixture_record(message_id: String) -> DataLayerM0EnvelopeRecord {
@@ -385,5 +400,119 @@ fn spec_c04_merkle_batch_lifecycle_fails_closed_for_invalid_payloads() {
             ),
             "invalid block height should map to fail-closed payload error"
         );
+    });
+}
+
+#[test]
+fn spec_c03_live_orchestrator_plan_applies_via_adapter_lifecycle_methods() {
+    let Some(database_url) = live_postgres_url() else {
+        return;
+    };
+
+    let runtime = runtime();
+    runtime.block_on(async move {
+        let adapter = DataLayerPgExecutionAdapter::connect(DataLayerPgExecutionAdapterConfig {
+            database_url,
+            max_connections: 4,
+        })
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+
+        adapter
+            .apply_migrations()
+            .await
+            .expect("migrations should apply before execution");
+
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let message_id = uuid_from_u128(suffix + 200);
+        let record = fixture_record(message_id.clone());
+
+        adapter
+            .execute_insert_message(&record, "kamn:did:owner:owner-1", "kamn:did:agent:agent-1")
+            .await
+            .expect("insert should succeed");
+
+        let client = InMemoryKolmeRuntimeCommitClient::new("kolme-memory")
+            .expect("in-memory client should initialize");
+        let policy =
+            DataLayerM1BatchSchedulerPolicy::new(1, 60).expect("policy should be constructible");
+        let mut orchestrator = DataLayerM1AnchoringOrchestrator::new(
+            client,
+            "kamn:did:agent:orchestrator-live-c03",
+            "merkle-anchor-root",
+            policy,
+        )
+        .expect("orchestrator should initialize");
+
+        let now = 1_900_000_000u64;
+        let outcome = orchestrator
+            .plan_tick(
+                &[pending_message(&message_id, &record.content_hash, now - 5)],
+                now,
+                1_900_000_000,
+                1_900_000_010,
+                None,
+            )
+            .expect("orchestrator tick should evaluate");
+
+        let DataLayerM1AnchoringTickOutcome::Planned {
+            persistence_plan, ..
+        } = outcome
+        else {
+            panic!("expected planned outcome");
+        };
+
+        let created = adapter
+            .execute_create_merkle_batch(
+                &persistence_plan.batch_id,
+                &persistence_plan.merkle_root,
+                persistence_plan.leaf_count,
+                persistence_plan.scheduled_at_unix_seconds,
+            )
+            .await
+            .expect("batch creation should succeed");
+        assert_eq!(created, 1);
+
+        let mut assigned_total = 0u64;
+        for assignment in &persistence_plan.assignments {
+            assigned_total += adapter
+                .execute_assign_message_to_merkle_batch(
+                    &assignment.message_id,
+                    &persistence_plan.batch_id,
+                    assignment.leaf_index,
+                )
+                .await
+                .expect("assignment should succeed");
+        }
+        assert_eq!(assigned_total, persistence_plan.assignments.len() as u64);
+
+        let submission = persistence_plan
+            .submission
+            .as_ref()
+            .expect("planned outcome should include submission metadata");
+        let submitted = adapter
+            .execute_mark_merkle_batch_submitted(
+                &persistence_plan.batch_id,
+                &submission.kolme_tx_hash,
+                submission.submitted_at_unix_seconds,
+            )
+            .await
+            .expect("submission persistence should succeed");
+        assert_eq!(submitted, 1);
+
+        if let Some(confirmation) = persistence_plan.confirmation.as_ref() {
+            let confirmed = adapter
+                .execute_mark_merkle_batch_confirmed(
+                    &persistence_plan.batch_id,
+                    confirmation.kolme_block_height,
+                    confirmation.confirmed_at_unix_seconds,
+                )
+                .await
+                .expect("confirmation persistence should succeed");
+            assert_eq!(confirmed, 1);
+        }
     });
 }

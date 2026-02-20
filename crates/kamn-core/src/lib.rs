@@ -48,6 +48,8 @@ pub mod data_layer_m10_partition_archival;
 pub mod data_layer_m11_closure_evidence;
 /// M11 hardening contracts for security/chaos/performance matrix and operator readiness synthesis.
 pub mod data_layer_m11_hardening_readiness;
+/// M1 orchestrator contracts for scheduler + anchoring + persistence-plan projection.
+pub mod data_layer_m1_anchoring_orchestrator;
 /// M1 scheduler contracts for deterministic count/window trigger evaluation.
 pub mod data_layer_m1_batch_scheduler;
 /// M2 access-gateway contracts for DID authn/authz, RLS templates, and audit chains.
@@ -324,6 +326,16 @@ pub use data_layer_m11_hardening_readiness::{
     DATA_LAYER_M11_BLOCK_CRITICAL_FAILURE_REASON_CODE,
     DATA_LAYER_M11_BLOCK_REQUIRED_INCOMPLETE_REASON_CODE,
     DATA_LAYER_M11_INVALID_TRANSITION_REASON_CODE, DATA_LAYER_M11_READINESS_GO_REASON_CODE,
+};
+pub use data_layer_m1_anchoring_orchestrator::{
+    DataLayerM1AnchoringConfirmationMetadata, DataLayerM1AnchoringMessageAssignment,
+    DataLayerM1AnchoringOrchestrator, DataLayerM1AnchoringOrchestratorError,
+    DataLayerM1AnchoringPersistencePlan, DataLayerM1AnchoringSubmissionMetadata,
+    DataLayerM1AnchoringTickOutcome,
+    DATA_LAYER_M1_ANCHORING_CONFIRMATION_HINT_REQUIRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_DEFERRED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_PLANNED_REASON_CODE,
+    DATA_LAYER_M1_ANCHORING_TICK_REJECTED_REASON_CODE,
 };
 pub use data_layer_m1_batch_scheduler::{
     evaluate_data_layer_m1_batch_trigger, DataLayerM1BatchSchedulerError,
