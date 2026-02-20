@@ -1,0 +1,59 @@
+{
+  "schema_version": "kamn.ci.performance-hot-path-matrix.v1",
+  "fixtures": [
+    {
+      "profile": "prd-13.2-ci-runtime-smoke",
+      "workload": "runtime",
+      "lane": "smoke",
+      "latency_p50_ms": 92,
+      "latency_p99_ms": 360,
+      "throughput_tps": 11250,
+      "availability_pct": 99.93
+    },
+    {
+      "profile": "prd-13.2-ci-runtime-deep",
+      "workload": "runtime",
+      "lane": "deep",
+      "latency_p50_ms": 88,
+      "latency_p99_ms": 340,
+      "throughput_tps": 11900,
+      "availability_pct": 99.95
+    },
+    {
+      "profile": "prd-13.2-ci-signing-smoke",
+      "workload": "signing",
+      "lane": "smoke",
+      "latency_p50_ms": 58,
+      "latency_p99_ms": 245,
+      "throughput_tps": 15100,
+      "availability_pct": 99.97
+    },
+    {
+      "profile": "prd-13.2-ci-signing-deep",
+      "workload": "signing",
+      "lane": "deep",
+      "latency_p50_ms": 55,
+      "latency_p99_ms": 220,
+      "throughput_tps": 15450,
+      "availability_pct": 99.98
+    },
+    {
+      "profile": "prd-13.2-ci-transport-smoke",
+      "workload": "transport",
+      "lane": "smoke",
+      "latency_p50_ms": 128,
+      "latency_p99_ms": 470,
+      "throughput_tps": 9600,
+      "availability_pct": 99.86
+    },
+    {
+      "profile": "prd-13.2-ci-transport-deep",
+      "workload": "transport",
+      "lane": "deep",
+      "latency_p50_ms": 118,
+      "latency_p99_ms": 430,
+      "throughput_tps": 10150,
+      "availability_pct": 99.9
+    }
+  ]
+}

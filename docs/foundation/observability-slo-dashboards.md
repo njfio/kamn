@@ -236,6 +236,25 @@ Runtime budget controls:
 - `KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS`
 - `KAMN_POST_CUTOVER_SLO_DEEP_LOCAL_ONLY`
 
+Performance smoke fixture matrix (Issue #4000):
+
+- Fixture file:
+  - `fixtures/ci/performance_hot_path_fixture_matrix.json`
+- Generator command:
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --workload runtime --fixture-file fixtures/ci/performance_hot_path_fixture_matrix.json --output-json /tmp/perf-runtime-smoke.json`
+
+Fixture-to-SLO mapping:
+
+| Workload | Scope | Primary SLO signals |
+|---|---|---|
+| `runtime` | queue/orchestration hot path | `latency_p50_ms`, `latency_p99_ms`, `throughput_tps`, `availability_pct` |
+| `signing` | signer/policy hot path | `latency_p50_ms`, `latency_p99_ms`, `throughput_tps`, `availability_pct` |
+| `transport` | ingress/transport hot path | `latency_p50_ms`, `latency_p99_ms`, `throughput_tps`, `availability_pct` |
+
+Regression policy:
+
+- fixture schema and workload matrix drift must fail closed (`Regression: #4000`).
+
 Required reason-key markers:
 
 - `slo_alert_reason_codes:GO:v1`
