@@ -18,7 +18,8 @@
 - Completed Phase-3 follow-up policy task: `#5269`
 - Completed Phase-3 finality-reconciliation task: `#5271`
 - Completed Phase-4 pgvector adapter task: `#5273`
-- Current Phase-4 AGE adapter task: `#5275`
+- Completed Phase-4 AGE adapter task: `#5275`
+- Current Phase-4 Timescale adapter task: `#5277`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -32,7 +33,8 @@ Current phase status:
 - Phase 3 follow-up retry/confirmation policy projection: Implemented in `#5269` (merged)
 - Phase 3 finality-observation reconciliation projection: Implemented in `#5271` (merged)
 - Phase 4 pgvector adapter projection contracts: Implemented in `#5273` (merged)
-- Phase 4 AGE adapter projection contracts: In progress in `#5275`
+- Phase 4 AGE adapter projection contracts: Implemented in `#5275` (merged)
+- Phase 4 Timescale adapter projection contracts: In progress in `#5277`
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---
