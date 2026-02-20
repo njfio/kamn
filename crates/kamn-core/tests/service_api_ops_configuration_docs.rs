@@ -215,6 +215,28 @@ fn service_api_ops_configuration_contains_phase6_scheduler_runtime_checkpoint_ma
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_runtime_evidence_bundle_markers() {
+    assert!(DOC.contains("## Phase-6 Runtime Evidence Bundle Projection Contracts (Issue #5297)"));
+    assert!(DOC.contains("phase6_runtime_evidence_bundle_status=verified"));
+    assert!(DOC.contains(
+        "phase6_runtime_evidence_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-runtime-evidence-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_runtime_evidence_reason_codes_csv=m10_phase6_runtime_evidence_applied,m10_phase6_runtime_evidence_deferred,m10_phase6_runtime_evidence_input_invalid"
+    ));
+    assert!(DOC.contains(
+        "phase6_runtime_evidence_bundle_contract=cycle_report+runtime_state->canonical_evidence_bundle;applied_requires_execution_and_budget_payload;deferred_requires_empty_execution_payload"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c33_phase6_runtime_evidence_bundle_projects_applied_cycle_with_deterministic_artifacts -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c35_phase6_runtime_evidence_bundle_fails_closed_when_applied_payload_is_incomplete -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5297"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")

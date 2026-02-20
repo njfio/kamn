@@ -446,6 +446,30 @@ Regression marker:
 
 - `Regression: #5295`
 
+## Phase-6 Runtime Evidence Bundle Projection Contracts (Issue #5297)
+
+Phase-6 scheduler execution now projects a canonical runtime evidence bundle combining one
+scheduler-cycle report with the persisted runtime checkpoint state.
+
+Deterministic runtime evidence markers:
+
+- `phase6_runtime_evidence_bundle_status=verified`
+- `phase6_runtime_evidence_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-runtime-evidence-reason-taxonomy.v1`
+- `phase6_runtime_evidence_reason_codes_csv=m10_phase6_runtime_evidence_applied,m10_phase6_runtime_evidence_deferred,m10_phase6_runtime_evidence_input_invalid`
+- `phase6_runtime_evidence_bundle_contract=cycle_report+runtime_state->canonical_evidence_bundle;applied_requires_execution_and_budget_payload;deferred_requires_empty_execution_payload`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c33_phase6_runtime_evidence_bundle_projects_applied_cycle_with_deterministic_artifacts -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c34_phase6_runtime_evidence_bundle_projects_deferred_cycle_with_empty_artifacts -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c35_phase6_runtime_evidence_bundle_fails_closed_when_applied_payload_is_incomplete -- --exact`
+- `cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c36_phase6_runtime_evidence_bundle_fails_closed_when_deferred_payload_contains_execution_data -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_phase6_runtime_evidence_bundle_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5297`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper

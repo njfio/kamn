@@ -3,18 +3,22 @@ use kamn_core::{
     data_layer_m10_evaluate_phase6_scheduler_trigger,
     data_layer_m10_execute_phase6_orchestration_tick,
     data_layer_m10_execute_phase6_scheduler_cycle, data_layer_m10_format_partition_name,
-    data_layer_m10_project_archival_retry_decision, DataLayerM10ArchivalFailureClass,
-    DataLayerM10ArchivalRecoveryAction, DataLayerM10ArchivalRetryPolicy,
-    DataLayerM10ArchiveDueRequest, DataLayerM10ComplianceShredProjectionReport,
-    DataLayerM10ComplianceShredProjectionRequest, DataLayerM10PartitionLifecycleError,
-    DataLayerM10PartitionLifecycleRegistry, DataLayerM10PartitionRecordInput,
-    DataLayerM10PartitionStatus, DataLayerM10Phase6ExecutionBudgetDecision,
-    DataLayerM10Phase6ExecutionTickBudget, DataLayerM10Phase6ExecutionTickRequest,
+    data_layer_m10_project_archival_retry_decision,
+    data_layer_m10_project_phase6_runtime_evidence_bundle, DataLayerM10ArchivalFailureClass,
+    DataLayerM10ArchivalIndexEntry, DataLayerM10ArchivalRecoveryAction,
+    DataLayerM10ArchivalRetryPolicy, DataLayerM10ArchiveDueRequest,
+    DataLayerM10ComplianceShredProjectionReport, DataLayerM10ComplianceShredProjectionRequest,
+    DataLayerM10PartitionLifecycleError, DataLayerM10PartitionLifecycleRegistry,
+    DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus,
+    DataLayerM10Phase6ExecutionBudgetDecision, DataLayerM10Phase6ExecutionTickBudget,
+    DataLayerM10Phase6ExecutionTickBudgetReport, DataLayerM10Phase6ExecutionTickReport,
+    DataLayerM10Phase6ExecutionTickRequest, DataLayerM10Phase6RuntimeEvidenceBundle,
+    DataLayerM10Phase6RuntimeEvidenceInput, DataLayerM10Phase6SchedulerCycleReport,
     DataLayerM10Phase6SchedulerCycleRequest, DataLayerM10Phase6SchedulerPolicy,
-    DataLayerM10Phase6SchedulerRuntime, DataLayerM10Phase6SchedulerSignal,
-    DataLayerM10Phase6SchedulerTriggerDecision, DataLayerM8ComplianceRegistry,
-    DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest, DataLayerM8MessageRecordInput,
-    DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
+    DataLayerM10Phase6SchedulerRuntime, DataLayerM10Phase6SchedulerRuntimeState,
+    DataLayerM10Phase6SchedulerSignal, DataLayerM10Phase6SchedulerTriggerDecision,
+    DataLayerM8ComplianceRegistry, DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest,
+    DataLayerM8MessageRecordInput, DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
     DATA_LAYER_M10_ARCHIVAL_FAILURE_PERMANENT_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_ATTEMPT_INVALID_REASON_CODE,
     DATA_LAYER_M10_ARCHIVAL_RETRY_EXHAUSTED_REASON_CODE,
@@ -36,6 +40,9 @@ use kamn_core::{
     DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
     DATA_LAYER_M10_PHASE6_EXECUTION_LEGAL_HOLD_ACTIVE_REASON_CODE,
     DATA_LAYER_M10_PHASE6_EXECUTION_PROJECTION_INPUT_INVALID_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_APPLIED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_DEFERRED_REASON_CODE,
+    DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
     DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
     DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
     DATA_LAYER_M10_PHASE6_SCHEDULER_POLICY_INVALID_REASON_CODE,
@@ -131,6 +138,24 @@ fn phase6_scheduler_policy(
     DataLayerM10Phase6SchedulerPolicy {
         due_candidate_trigger_threshold,
         max_tick_interval_seconds,
+    }
+}
+
+fn phase6_runtime_state(
+    total_cycles: u64,
+    executed_cycles: u64,
+    deferred_cycles: u64,
+    fail_closed_cycles: u64,
+    last_reason_code: &'static str,
+) -> DataLayerM10Phase6SchedulerRuntimeState {
+    DataLayerM10Phase6SchedulerRuntimeState {
+        last_successful_tick_epoch_seconds: Some(1_700_000_000),
+        last_observed_now_epoch_seconds: Some(1_700_000_010),
+        total_cycles,
+        executed_cycles,
+        deferred_cycles,
+        fail_closed_cycles,
+        last_reason_code,
     }
 }
 
@@ -1583,4 +1608,203 @@ fn spec_c32_phase6_scheduler_runtime_clock_regression_fails_closed_and_preserves
         state.last_reason_code,
         DATA_LAYER_M10_PHASE6_SCHEDULER_SIGNAL_INVALID_REASON_CODE
     );
+}
+
+#[test]
+fn spec_c33_phase6_runtime_evidence_bundle_projects_applied_cycle_with_deterministic_artifacts() {
+    let evidence_input = DataLayerM10Phase6RuntimeEvidenceInput {
+        owner_did: "kamn:did:owner:phase6-evidence-alpha".to_owned(),
+        cycle_report: DataLayerM10Phase6SchedulerCycleReport {
+            trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DUE_THRESHOLD_REASON_CODE,
+                due_candidate_count: 2,
+                elapsed_since_last_tick_seconds: 120,
+            },
+            execution_report: Some(DataLayerM10Phase6ExecutionTickReport {
+                owner_did: "kamn:did:owner:phase6-evidence-alpha".to_owned(),
+                due_candidate_count: 2,
+                shredded_message_ids: vec!["message-a".to_owned(), "message-b".to_owned()],
+                projection_reports: Vec::new(),
+                archived_entries: vec![
+                    DataLayerM10ArchivalIndexEntry {
+                        partition_month_id: 202402,
+                        partition_name: "messages_2024_02".to_owned(),
+                        archived_object_uri:
+                            "s3://kamn-archive/messages/messages_2024_02.parquet.zst".to_owned(),
+                        archive_format_marker: DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+                        checksum_marker: "sha256:messages_2024_02:202402".to_owned(),
+                        lifecycle_status: DataLayerM10PartitionStatus::Archived,
+                    },
+                    DataLayerM10ArchivalIndexEntry {
+                        partition_month_id: 202401,
+                        partition_name: "messages_2024_01".to_owned(),
+                        archived_object_uri:
+                            "s3://kamn-archive/messages/messages_2024_01.parquet.zst".to_owned(),
+                        archive_format_marker: DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+                        checksum_marker: "sha256:messages_2024_01:202401".to_owned(),
+                        lifecycle_status: DataLayerM10PartitionStatus::Archived,
+                    },
+                ],
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+            }),
+            budget_report: Some(DataLayerM10Phase6ExecutionTickBudgetReport {
+                decision: DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget,
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
+                due_candidate_count: 2,
+                shredded_message_count: 2,
+                projection_report_count: 0,
+                archived_entry_count: 2,
+            }),
+            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
+        },
+        runtime_state: phase6_runtime_state(
+            7,
+            4,
+            2,
+            1,
+            DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
+        ),
+    };
+    let evidence: DataLayerM10Phase6RuntimeEvidenceBundle =
+        data_layer_m10_project_phase6_runtime_evidence_bundle(evidence_input)
+            .expect("applied evidence projection should succeed");
+    assert_eq!(
+        evidence.reason_code,
+        DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_APPLIED_REASON_CODE
+    );
+    assert_eq!(
+        evidence.archived_partition_names,
+        vec!["messages_2024_01".to_owned(), "messages_2024_02".to_owned()]
+    );
+    assert_eq!(
+        evidence.archived_object_uris,
+        vec![
+            "s3://kamn-archive/messages/messages_2024_01.parquet.zst".to_owned(),
+            "s3://kamn-archive/messages/messages_2024_02.parquet.zst".to_owned(),
+        ]
+    );
+    assert_eq!(
+        evidence.budget_reason_code,
+        Some("m10_phase6_execution_budget_within_limit")
+    );
+    assert_eq!(evidence.runtime_total_cycles, 7);
+}
+
+#[test]
+fn spec_c34_phase6_runtime_evidence_bundle_projects_deferred_cycle_with_empty_artifacts() {
+    let evidence_input = DataLayerM10Phase6RuntimeEvidenceInput {
+        owner_did: "kamn:did:owner:phase6-evidence-beta".to_owned(),
+        cycle_report: DataLayerM10Phase6SchedulerCycleReport {
+            trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DEFERRED_REASON_CODE,
+                due_candidate_count: 1,
+                elapsed_since_last_tick_seconds: 59,
+            },
+            execution_report: None,
+            budget_report: None,
+            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
+        },
+        runtime_state: DataLayerM10Phase6SchedulerRuntimeState {
+            last_successful_tick_epoch_seconds: None,
+            last_observed_now_epoch_seconds: Some(1_700_000_000),
+            total_cycles: 3,
+            executed_cycles: 1,
+            deferred_cycles: 2,
+            fail_closed_cycles: 0,
+            last_reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
+        },
+    };
+    let evidence = data_layer_m10_project_phase6_runtime_evidence_bundle(evidence_input)
+        .expect("deferred evidence projection should succeed");
+    assert_eq!(
+        evidence.reason_code,
+        DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_DEFERRED_REASON_CODE
+    );
+    assert_eq!(evidence.budget_reason_code, None);
+    assert_eq!(evidence.due_candidate_count, 1);
+    assert!(evidence.archived_partition_names.is_empty());
+    assert!(evidence.archived_object_uris.is_empty());
+}
+
+#[test]
+fn spec_c35_phase6_runtime_evidence_bundle_fails_closed_when_applied_payload_is_incomplete() {
+    let evidence_input = DataLayerM10Phase6RuntimeEvidenceInput {
+        owner_did: "kamn:did:owner:phase6-evidence-gamma".to_owned(),
+        cycle_report: DataLayerM10Phase6SchedulerCycleReport {
+            trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision::Triggered {
+                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DUE_THRESHOLD_REASON_CODE,
+                due_candidate_count: 1,
+                elapsed_since_last_tick_seconds: 100,
+            },
+            execution_report: None,
+            budget_report: None,
+            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
+        },
+        runtime_state: phase6_runtime_state(
+            2,
+            1,
+            1,
+            0,
+            DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_APPLIED_REASON_CODE,
+        ),
+    };
+    let invalid = data_layer_m10_project_phase6_runtime_evidence_bundle(evidence_input);
+    assert!(matches!(
+        invalid,
+        Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                field: "cycle_report",
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+            }
+        )
+    ));
+}
+
+#[test]
+fn spec_c36_phase6_runtime_evidence_bundle_fails_closed_when_deferred_payload_contains_execution_data(
+) {
+    let evidence_input = DataLayerM10Phase6RuntimeEvidenceInput {
+        owner_did: "kamn:did:owner:phase6-evidence-delta".to_owned(),
+        cycle_report: DataLayerM10Phase6SchedulerCycleReport {
+            trigger_decision: DataLayerM10Phase6SchedulerTriggerDecision::Deferred {
+                reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_TRIGGER_DEFERRED_REASON_CODE,
+                due_candidate_count: 0,
+                elapsed_since_last_tick_seconds: 10,
+            },
+            execution_report: Some(DataLayerM10Phase6ExecutionTickReport {
+                owner_did: "kamn:did:owner:phase6-evidence-delta".to_owned(),
+                due_candidate_count: 0,
+                shredded_message_ids: Vec::new(),
+                projection_reports: Vec::new(),
+                archived_entries: Vec::new(),
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_APPLIED_REASON_CODE,
+            }),
+            budget_report: Some(DataLayerM10Phase6ExecutionTickBudgetReport {
+                decision: DataLayerM10Phase6ExecutionBudgetDecision::WithinBudget,
+                reason_code: DATA_LAYER_M10_PHASE6_EXECUTION_BUDGET_WITHIN_LIMIT_REASON_CODE,
+                due_candidate_count: 0,
+                shredded_message_count: 0,
+                projection_report_count: 0,
+                archived_entry_count: 0,
+            }),
+            reason_code: DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
+        },
+        runtime_state: phase6_runtime_state(
+            5,
+            2,
+            2,
+            1,
+            DATA_LAYER_M10_PHASE6_SCHEDULER_CYCLE_DEFERRED_REASON_CODE,
+        ),
+    };
+    let invalid = data_layer_m10_project_phase6_runtime_evidence_bundle(evidence_input);
+    assert!(matches!(
+        invalid,
+        Err(
+            DataLayerM10PartitionLifecycleError::InvalidPhase6RuntimeEvidenceInput {
+                field: "cycle_report",
+                reason_code: DATA_LAYER_M10_PHASE6_RUNTIME_EVIDENCE_INPUT_INVALID_REASON_CODE,
+            }
+        )
+    ));
 }

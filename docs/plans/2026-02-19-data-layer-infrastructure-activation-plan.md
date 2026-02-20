@@ -34,7 +34,8 @@
 - Task (completed): `#5289` — add Phase-6 retention+archival execution tick orchestration contracts
 - Task (completed): `#5291` — add Phase-6 execution-tick budget guardrail contracts
 - Task (completed): `#5293` — add Phase-6 scheduler-cycle trigger and guarded execution contracts
-- Task (current wave): `#5295` — add stateful Phase-6 scheduler runtime checkpoint contracts
+- Task (completed): `#5295` — add stateful Phase-6 scheduler runtime checkpoint contracts
+- Task (current wave): `#5297` — add Phase-6 runtime evidence bundle projection contracts
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -66,7 +67,8 @@
 - `#5289`: merged to main (Phase-6 retention+archival execution tick orchestration contracts).
 - `#5291`: merged to main (Phase-6 execution-tick budget guardrail contracts).
 - `#5293`: merged to main (Phase-6 scheduler-cycle trigger and guarded execution contracts).
-- `#5295`: in progress in this wave (stateful Phase-6 scheduler runtime checkpoint contracts).
+- `#5295`: merged to main (stateful Phase-6 scheduler runtime checkpoint contracts).
+- `#5297`: in progress in this wave (Phase-6 runtime evidence bundle projection contracts).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail
