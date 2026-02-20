@@ -800,3 +800,652 @@ mod block_pipeline_docs {
         ));
     }
 }
+
+mod a2a_mcp_interop_docs {
+    const INTEROP: &str = include_str!("../../../docs/foundation/a2a-mcp-interoperability.md");
+
+    #[test]
+    fn interop_spec_contains_message_type_mapping() {
+        assert!(INTEROP.contains("## Message Type Mapping"));
+        assert!(INTEROP.contains("| KAMN Envelope Header | A2A Concept | MCP Concept | Notes |"));
+        assert!(INTEROP
+            .contains("| Request | task.invoke | tool_call | Deterministic request dispatch. |"));
+        assert!(INTEROP.contains(
+            "| Response | task.result | tool_result | Deterministic completion response. |"
+        ));
+        assert!(INTEROP
+            .contains("| Event | event.notify | notification | Non-blocking external signal. |"));
+    }
+
+    #[test]
+    fn interop_spec_contains_task_lifecycle_mapping() {
+        assert!(INTEROP.contains("## Task Lifecycle Mapping"));
+        assert!(
+            INTEROP.contains("| KAMN Task State | A2A Task State | MCP-Oriented Interpretation |")
+        );
+        assert!(INTEROP.contains("| Submitted | pending | Awaiting execution slot. |"));
+        assert!(INTEROP.contains("| InProgress | running | Active execution in progress. |"));
+        assert!(INTEROP.contains("| Completed | succeeded | Terminal success state. |"));
+        assert!(INTEROP.contains("| Failed | failed | Terminal failure state. |"));
+    }
+
+    #[test]
+    fn interop_spec_contains_sdk_examples_and_fallback_rules() {
+        assert!(INTEROP.contains("## Deterministic SDK Examples"));
+        assert!(INTEROP.contains("Rust SDK mapping example"));
+        assert!(INTEROP.contains("Python SDK mapping example"));
+        assert!(INTEROP.contains("TypeScript SDK mapping example"));
+        assert!(INTEROP.contains("## Limitations and Fallback Behavior"));
+        assert!(INTEROP.contains("Unknown external type maps to ManualReview."));
+        assert!(
+            INTEROP.contains("Lossy mapping paths must emit interoperability warning metadata.")
+        );
+    }
+
+    #[test]
+    fn regression_requires_ambiguous_mapping_manual_review_rule() {
+        // Regression: #177
+        assert!(INTEROP.contains("Ambiguous mapping decision: ManualReview."));
+    }
+
+    #[test]
+    fn interop_spec_contains_a2a_mcp_conformance_harness_commands() {
+        assert!(INTEROP.contains("## A2A/MCP Conformance Harness Evidence Contract (Issue #893)"));
+        assert!(INTEROP.contains("run_a2a_mcp_conformance_harness.py"));
+        assert!(INTEROP.contains("a2a_mcp_conformance_policy_contract.py"));
+        assert!(INTEROP.contains("check_a2a_mcp_conformance_policy.sh"));
+        assert!(INTEROP.contains("run_a2a_mcp_conformance_contract_lane.sh"));
+        assert!(INTEROP.contains("a2a_mcp_conformance_reason_codes:GO:v1"));
+    }
+
+    #[test]
+    fn regression_requires_a2a_mcp_conformance_schema_drift_fail_closed_policy() {
+        // Regression: #893
+        assert!(INTEROP.contains("Regression: #893"));
+    }
+}
+
+mod key_lifecycle_audit_trails_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/key-lifecycle-audit-trails.md");
+
+    #[test]
+    fn doc_contains_audit_record_schema_and_verification_rules() {
+        assert!(DOC.contains("## Scope Delivered"));
+        assert!(DOC.contains("KeyLifecycleAuditRecord"));
+        assert!(DOC.contains("KeyLifecycle::audit_records()"));
+        assert!(DOC.contains("KeyLifecycle::verify_audit_records(...)"));
+        assert!(DOC.contains("KeyLifecycleAuditError"));
+    }
+
+    #[test]
+    fn doc_contains_tamper_evident_chain_requirements() {
+        assert!(DOC.contains("## Tamper-Evident Rules"));
+        assert!(DOC.contains("genesis marker `GENESIS`"));
+        assert!(DOC.contains("Sequence IDs must be contiguous and start at `1`."));
+        assert!(DOC.contains("Verification fails when sequence continuity, chain links, or record hashes are inconsistent."));
+    }
+
+    #[test]
+    fn regression_requires_chain_link_mismatch_detection_rule() {
+        // Regression: #158
+        assert!(DOC.contains("chain links"));
+    }
+
+    #[test]
+    fn doc_contains_lifecycle_operator_binding_audit_evidence_contract() {
+        assert!(
+            DOC.contains("## DID Lifecycle Operator-Binding Audit Evidence Contract (Issue #890)")
+        );
+        assert!(DOC.contains("lifecycle_operator_binding_contract.py"));
+        assert!(DOC.contains("generate_lifecycle_operator_binding_evidence_bundle.sh"));
+        assert!(DOC.contains("check_lifecycle_operator_binding_policy.sh"));
+        assert!(DOC.contains("run_lifecycle_operator_binding_contract_lane.sh"));
+        assert!(DOC.contains("did_lifecycle_operator_binding_reason_codes:GO:v1"));
+    }
+
+    #[test]
+    fn regression_doc_marks_missing_keys_or_decision_drift_fail_closed_policy() {
+        // Regression: #890
+        assert!(DOC.contains("Regression: #890"));
+    }
+
+    #[test]
+    fn doc_contains_secure_provider_key_lifecycle_evidence_contract() {
+        assert!(DOC
+            .contains("## Secure-Provider Key Rotation/Revocation Evidence Contract (Issue #988)"));
+        assert!(DOC.contains("secure_provider_key_lifecycle_contract.py"));
+        assert!(DOC.contains("generate_secure_provider_key_lifecycle_evidence_bundle.sh"));
+        assert!(DOC.contains("check_secure_provider_key_lifecycle_policy.sh"));
+        assert!(DOC.contains("run_secure_provider_key_lifecycle_contract_lane.sh"));
+        assert!(DOC.contains("secure_provider_key_lifecycle_reason_codes:GO:v1"));
+    }
+
+    #[test]
+    fn regression_doc_marks_secure_provider_lifecycle_fail_closed_policy() {
+        // Regression: #988
+        assert!(DOC.contains("Regression: #988"));
+    }
+}
+
+mod didcomm_compatibility_profile_docs {
+    const PROFILE: &str =
+        include_str!("../../../docs/foundation/didcomm-v2-compatibility-profile.md");
+
+    #[test]
+    fn profile_contains_field_level_mapping_table() {
+        assert!(PROFILE.contains("## Field-Level Mapping"));
+        assert!(
+            PROFILE.contains("| KAMN Canonical Field | DIDComm v2 Field | Compatibility Rule |")
+        );
+        assert!(PROFILE.contains("| envelope.id | id | Preserve as-is. |"));
+        assert!(PROFILE.contains("| envelope.from | from | Preserve as DID string. |"));
+        assert!(PROFILE.contains("| envelope.to[] | to[] | Preserve recipient DID list order. |"));
+        assert!(PROFILE.contains("| body.message | body | Serialize as JSON body payload. |"));
+    }
+
+    #[test]
+    fn profile_contains_crypto_and_key_handling_expectations() {
+        assert!(PROFILE.contains("## Crypto and Key Handling Expectations"));
+        assert!(PROFILE.contains(
+            "Ed25519 verification methods remain authoritative for signature validation."
+        ));
+        assert!(PROFILE.contains("X25519 key agreement references must map to recipient key IDs."));
+        assert!(PROFILE
+            .contains("Unsupported algorithm negotiation results in compatibility rejection."));
+    }
+
+    #[test]
+    fn profile_contains_deterministic_test_vectors() {
+        assert!(PROFILE.contains("## Deterministic Compatibility Vectors"));
+        assert!(PROFILE
+            .contains("Vector-S1: canonical request envelope maps to DIDComm plaintext message."));
+        assert!(PROFILE
+            .contains("Vector-S2: canonical response envelope maps to DIDComm signed response."));
+        assert!(PROFILE.contains("Vector-F1: missing recipient key reference is rejected."));
+        assert!(PROFILE.contains("Vector-F2: unsupported attachment mapping is rejected."));
+    }
+
+    #[test]
+    fn regression_requires_unsupported_attachment_rejection_rule() {
+        // Regression: #179
+        assert!(PROFILE.contains("Unsupported attachment translation decision: reject."));
+    }
+
+    #[test]
+    fn profile_contains_didcomm_envelope_replay_contract_lane_commands() {
+        assert!(
+            PROFILE.contains("## DIDComm Envelope Compatibility Replay Contract Lane (Issue #892)")
+        );
+        assert!(PROFILE.contains("run_didcomm_envelope_compatibility_replay.py"));
+        assert!(PROFILE.contains("didcomm_envelope_compatibility_policy_contract.py"));
+        assert!(PROFILE.contains("check_didcomm_envelope_compatibility_policy.sh"));
+        assert!(PROFILE.contains("run_didcomm_envelope_compatibility_contract_lane.sh"));
+        assert!(PROFILE.contains("didcomm_envelope_compatibility_reason_codes:GO:v1"));
+    }
+
+    #[test]
+    fn regression_requires_didcomm_envelope_schema_signature_drift_fail_closed_policy() {
+        // Regression: #892
+        assert!(PROFILE.contains("Regression: #892"));
+    }
+}
+
+mod task_escrow_suite_discovery_parallel_contract {
+    const ROOT_SUITE: &str = include_str!("task_escrow_proptest_invariants.rs");
+    const TASK_DOMAIN_SUITE: &str = include_str!("task_escrow_proptest_invariants/task_domain.rs");
+    const ESCROW_DOMAIN_SUITE: &str =
+        include_str!("task_escrow_proptest_invariants/escrow_domain.rs");
+    const SHARED_SUITE: &str = include_str!("task_escrow_proptest_invariants/shared.rs");
+
+    #[test]
+    fn regression_task_escrow_suite_discovery_markers_remain_stable() {
+        assert!(ROOT_SUITE.contains("#[path = \"task_escrow_proptest_invariants/shared.rs\"]"));
+        assert!(ROOT_SUITE.contains("mod shared;"));
+        assert!(ROOT_SUITE.contains("#[path = \"task_escrow_proptest_invariants/task_domain.rs\"]"));
+        assert!(ROOT_SUITE.contains("mod task_domain;"));
+        assert!(
+            ROOT_SUITE.contains("#[path = \"task_escrow_proptest_invariants/escrow_domain.rs\"]")
+        );
+        assert!(ROOT_SUITE.contains("mod escrow_domain;"));
+
+        assert!(TASK_DOMAIN_SUITE
+            .contains("fn functional_task_lifecycle_proptest_sequence_invariants_hold"));
+        assert!(TASK_DOMAIN_SUITE.contains(
+            "fn functional_task_lifecycle_proptest_transition_evidence_is_legal_and_stable"
+        ));
+        assert!(TASK_DOMAIN_SUITE
+            .contains("fn integration_task_lifecycle_proptest_restore_roundtrip_is_stable"));
+
+        assert!(ESCROW_DOMAIN_SUITE
+            .contains("fn integration_escrow_proptest_transition_evidence_preserves_invariants"));
+        assert!(ESCROW_DOMAIN_SUITE
+            .contains("fn integration_escrow_proptest_conserves_amounts_and_status_projections"));
+    }
+
+    #[test]
+    fn regression_task_escrow_suite_parallel_boundaries_are_bounded_and_isolated() {
+        assert!(SHARED_SUITE.contains("pub const TASK_CASES: u32 = 192;"));
+        assert!(SHARED_SUITE.contains("pub const ESCROW_CASES: u32 = 192;"));
+        assert!(SHARED_SUITE.contains("pub const MAX_SEQUENCE_LEN: usize = 32;"));
+        assert!(SHARED_SUITE
+            .contains("pub const TASK_SEED_ENV_KEY: &str = \"KAMN_PROPTEST_TASK_ESCROW_SEED\";"));
+        assert!(SHARED_SUITE
+            .contains("pub const ESCROW_SEED_ENV_KEY: &str = \"KAMN_PROPTEST_ESCROW_SEED\";"));
+    }
+}
+
+mod task_payment_workflow_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/task-payment-workflow.md");
+
+    #[test]
+    fn doc_contains_payment_offer_confirm_models_and_workflow_contract() {
+        assert!(DOC.contains("## Scope Delivered"));
+        assert!(DOC.contains("PaymentOffer"));
+        assert!(DOC.contains("PaymentConfirm"));
+        assert!(DOC.contains("TaskPaymentWorkflow"));
+        assert!(DOC.contains("TaskPaymentError"));
+    }
+
+    #[test]
+    fn doc_contains_completion_and_escrow_validation_rules() {
+        assert!(DOC.contains("## Deterministic Validation Rules"));
+        assert!(DOC.contains("target task in `Completed` state."));
+        assert!(DOC.contains("`payer_did` equal to task requester DID."));
+        assert!(DOC.contains("`payee_did` equal to task assignee DID."));
+        assert!(DOC.contains("offered amount less than or equal to escrow remaining balance."));
+        assert!(DOC.contains("single-use confirmation (duplicates are rejected)."));
+        assert!(DOC.contains("current_unix >= timeout_unix"));
+        assert!(DOC.contains("## Escrow Release Behavior"));
+        assert!(DOC.contains("EscrowLifecycle::refund_after_timeout(current_unix, timeout_unix)"));
+    }
+
+    #[test]
+    fn regression_requires_duplicate_confirm_rejection_rule() {
+        // Regression: #216
+        assert!(DOC.contains("duplicates are rejected"));
+    }
+
+    #[test]
+    fn regression_requires_premature_timeout_refund_rejection_rule() {
+        // Regression: #542
+        assert!(
+            DOC.contains("premature timeout refund attempts are rejected (`Regression: #542`).")
+        );
+    }
+
+    #[test]
+    fn regression_requires_participant_binding_rules() {
+        // Regression: #558
+        assert!(DOC.contains("`payer_did` equal to task requester DID."));
+        assert!(DOC.contains("`payee_did` equal to task assignee DID."));
+    }
+
+    #[test]
+    fn doc_contains_settlement_evidence_schema_and_checker_contract() {
+        assert!(DOC.contains("## Settlement Evidence Schema and Policy Checks"));
+        assert!(DOC.contains("generate_settlement_reconciliation_evidence_bundle.sh"));
+        assert!(DOC.contains("check_settlement_reconciliation_evidence_policy.sh"));
+        assert!(DOC.contains("settlement_reconciliation_reason_codes:GO:v1"));
+        assert!(DOC.contains("settlement_reconciliation_reason_codes:NO-GO:v1"));
+    }
+
+    #[test]
+    fn regression_requires_settlement_evidence_schema_drift_fail_closed_rule() {
+        // Regression: #906
+        assert!(
+            DOC.contains("settlement evidence schema drift must fail closed (`Regression: #906`).")
+        );
+    }
+}
+
+mod task_operations_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/task-operations.md");
+
+    #[test]
+    fn doc_contains_task_operation_core_types_and_commands() {
+        assert!(DOC.contains("## Core Types"));
+        assert!(DOC.contains("TaskOperationEngine"));
+        assert!(DOC.contains("SwarmTaskDraft"));
+        assert!(DOC.contains("## Command Behavior"));
+        assert!(DOC.contains("submit(task_id, requester, description)"));
+        assert!(DOC.contains("request_input(task_id, actor, reason)"));
+    }
+
+    #[test]
+    fn doc_contains_snapshot_persistence_and_restore_contract_rules() {
+        assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
+        assert!(DOC.contains("export_snapshot()"));
+        assert!(DOC.contains("restore_snapshot(snapshot)"));
+        assert!(DOC.contains("TaskOperationSnapshotStore"));
+        assert!(DOC.contains("recover_latest_and_repair()"));
+        assert!(DOC.contains("TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION"));
+    }
+
+    #[test]
+    fn doc_contains_fast_and_cost_effective_validation_lane_commands() {
+        assert!(DOC.contains("## Fast and Cost-Effective Validation"));
+        assert!(DOC.contains("cargo test -p kamn-core --lib task_operations::tests::"));
+        assert!(DOC.contains("cargo test -p kamn-core --test task_operations"));
+        assert!(DOC.contains("cargo test -p kamn-core --test task_operation_snapshot"));
+        assert!(DOC.contains("cargo test -p kamn-core --test task_operations_docs"));
+        assert!(DOC.contains("bash scripts/task/run_task_operation_snapshot_contract_lane.sh"));
+        assert!(DOC.contains(
+            "cargo test -p kamn-core --lib task_operations::tests::performance_task_operation_snapshot_store_deep_lane_stress -- --ignored"
+        ));
+        assert!(DOC.contains("bash scripts/task/run_task_operation_snapshot_deep_lane.sh"));
+        assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
+    }
+
+    #[test]
+    fn regression_requires_task_snapshot_restore_guard_rules() {
+        // Regression: #617
+        assert!(DOC.contains("duplicate task IDs on restore are rejected (`Regression: #617`)"));
+        assert!(DOC.contains("malformed snapshot payloads are rejected (`Regression: #617`)"));
+        assert!(DOC.contains(
+            "dependency-completion tampering remains rejected during restore (`Regression: #502`)"
+        ));
+    }
+
+    #[test]
+    fn doc_contains_federated_delegation_settlement_contract() {
+        assert!(DOC.contains("## Federated Delegation Settlement Evidence Contract"));
+        assert!(DOC.contains("generate_federated_delegation_settlement_evidence_bundle.sh"));
+        assert!(DOC.contains("check_federated_delegation_settlement_policy.sh"));
+        assert!(DOC.contains("run_federated_delegation_settlement_contract_lane.sh"));
+        assert!(DOC.contains("run_federated_delegation_settlement_deep_lane.sh"));
+        assert!(DOC.contains("run_federated_delegation_settlement_matrix.py"));
+        assert!(DOC.contains("fixtures/federated_task_delegation/partition_replay_cases.json"));
+    }
+
+    #[test]
+    fn regression_requires_federated_delegation_settlement_guard_marker() {
+        // Regression: #734
+        assert!(DOC.contains(
+            "settlement reference drift, replay attempts, and tampered final decisions force `NO-GO` (`Regression: #734`)."
+        ));
+    }
+}
+
+mod did_registry_transactions_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/did-registry-transactions.md");
+
+    #[test]
+    fn doc_contains_retry_classification_contract() {
+        assert!(DOC.contains("idempotency_key_for_register"));
+        assert!(DOC.contains("submit_registration_via_chain_adapter"));
+        assert!(DOC.contains("register_with_retry_guard"));
+        assert!(DOC.contains("NewSubmission"));
+        assert!(DOC.contains("RetryableInFlight"));
+        assert!(DOC.contains("FinalizedNoRetry"));
+        assert!(DOC.contains("ConflictNoRetry"));
+    }
+
+    #[test]
+    fn doc_contains_finality_safety_rules() {
+        assert!(DOC.contains("Submitted(receipt)"));
+        assert!(DOC.contains("Duplicate(receipt)"));
+        assert!(DOC.contains("Rejected { reason }"));
+        assert!(DOC.contains("FinalizedNoOp"));
+        assert!(DOC.contains("InMemoryDidRegistrationChainAdapter"));
+        assert!(DOC.contains("record_register_finality"));
+        assert!(DOC.contains("StaleFinalityUpdate"));
+        assert!(DOC.contains("ConflictingFinalityUpdate"));
+        assert!(DOC.contains("UnknownSubmissionIdempotencyKey"));
+    }
+
+    #[test]
+    fn regression_doc_marks_stale_duplicate_conflict_guard() {
+        // Regression: #678
+        assert!(DOC.contains("Regression: #678"));
+    }
+
+    #[test]
+    fn doc_contains_lifecycle_mutation_transaction_contracts() {
+        assert!(DOC.contains("DidLifecycleMutationRequest"));
+        assert!(DOC.contains("apply_lifecycle_mutation"));
+        assert!(DOC.contains("submit_lifecycle_mutation_via_chain_adapter"));
+        assert!(DOC.contains("KolmeDidLifecycleChainAdapter"));
+        assert!(DOC.contains("record_lifecycle_finality"));
+        assert!(DOC.contains("did_lifecycle_mutation_allowed"));
+        assert!(DOC.contains("did_lifecycle_mutation_nonce_replay"));
+        assert!(DOC.contains("did_lifecycle_mutation_unauthorized_actor"));
+        assert!(DOC.contains("did_chain_adapter_submit_failed"));
+    }
+
+    #[test]
+    fn regression_doc_marks_lifecycle_mutation_fail_closed_guard() {
+        // Regression: #889
+        assert!(DOC.contains("Regression: #889"));
+    }
+
+    #[test]
+    fn regression_doc_marks_lifecycle_chain_submission_conflict_guard() {
+        // Regression: #2936
+        assert!(DOC.contains("Regression: #2936"));
+    }
+
+    #[test]
+    fn regression_doc_marks_registration_payload_integrity_and_duplicate_drift_guards() {
+        // Regression: #4418
+        assert!(DOC.contains("Regression: #4418"));
+        assert!(DOC.contains(
+            "did_registration_reason_taxonomy_version=kamn.kolme.did-registration-reason-taxonomy.v1"
+        ));
+        assert!(DOC.contains("did_registration_reason_codes_csv=did_registry_document_did_mismatch,did_registry_submission_key_conflict"));
+    }
+}
+
+mod kolme_integration_roadmap_docs {
+    const ROADMAP: &str = include_str!("../../../docs/planning/kolme-integration-roadmap.md");
+
+    #[test]
+    fn roadmap_contains_version_and_runtime_commit_contract_lane_commands() {
+        assert!(ROADMAP.contains("validate_version_compatibility.py"));
+        assert!(ROADMAP.contains("generate_fork_compatibility_evidence.py"));
+        assert!(ROADMAP.contains("check_fork_compatibility_policy.py"));
+        assert!(ROADMAP.contains("run_version_compatibility_contract_lane.sh"));
+        assert!(ROADMAP.contains("run_runtime_commit_contract_lane.sh"));
+        assert!(ROADMAP.contains("docs/foundation/kolme-runtime-commit-client.md"));
+        assert!(ROADMAP.contains("check_runtime_commit_replay_policy.py"));
+        assert!(ROADMAP.contains("run_runtime_commit_replay_tamper_matrix.py"));
+        assert!(ROADMAP.contains("run_runtime_commit_replay_contract_lane.sh"));
+        assert!(ROADMAP.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json --phase contract"));
+        assert!(ROADMAP.contains("kolme_runtime_commit_fork_finality_resolver"));
+        assert!(ROADMAP.contains("run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json --phase contract"));
+        assert!(ROADMAP.contains("unit_runtime_commit_signed_translation_rejects_message_mismatch"));
+        assert!(
+            ROADMAP.contains("integration_kolme_fork_signed_envelope_submit_maps_txhash_response")
+        );
+        assert!(ROADMAP.contains("integration_http_transport_fetch_next_nonce_query_and_parse"));
+        assert!(ROADMAP
+            .contains("integration_http_transport_submit_broadcast_request_put_and_parse_txhash"));
+        assert!(ROADMAP.contains(
+            "regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response"
+        ));
+        assert!(ROADMAP.contains("check_nonce_broadcast_parity_policy.py"));
+        assert!(ROADMAP.contains("run_nonce_broadcast_parity_matrix.py"));
+        assert!(ROADMAP.contains("run_nonce_broadcast_parity_contract_lane.sh"));
+        assert!(ROADMAP.contains("run_notifications_consumer_contract_lane.sh"));
+        assert!(ROADMAP.contains("run_block_fallback_reconciliation_contract_lane.sh"));
+        assert!(ROADMAP.contains("kolme_runtime_commit_notifications"));
+        assert!(ROADMAP.contains("kolme_runtime_commit_block_fallback"));
+        assert!(ROADMAP.contains("fixtures/kolme_compatibility/fork_compatibility_cases.json"));
+        assert!(ROADMAP.contains("fixtures/kolme_compatibility/lane_migration_matrix.json"));
+        assert!(ROADMAP.contains("check_lane_migration_matrix_policy.py"));
+        assert!(ROADMAP.contains("fixtures/kolme_commit/runtime_commit_request_cases.txt"));
+        assert!(ROADMAP.contains("fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"));
+        assert!(ROADMAP.contains("fixtures/kolme_commit/nonce_broadcast_parity_cases.json"));
+        assert!(ROADMAP.contains("fixtures/kolme_commit/local_live_api_conformance_matrix.json"));
+        assert!(ROADMAP.contains("--cargo-profile portable"));
+        assert!(ROADMAP.contains("--matrix-cargo-profile portable"));
+    }
+
+    #[test]
+    fn roadmap_local_validation_includes_lane_migration_matrix_policy_test() {
+        assert!(ROADMAP.contains("bash scripts/kolme/test_check_lane_migration_matrix_policy.sh"));
+    }
+
+    #[test]
+    fn regression_guards_include_legacy_and_runtime_commit_markers() {
+        assert!(ROADMAP.contains("`Regression: #775`"));
+        assert!(ROADMAP.contains("`Regression: #825`"));
+        assert!(ROADMAP.contains("`Regression: #826`"));
+        assert!(ROADMAP.contains("`Regression: #827`"));
+        assert!(ROADMAP.contains("`Regression: #979`"));
+        assert!(ROADMAP.contains("`Regression: #980`"));
+        assert!(ROADMAP.contains("`Regression: #1502`"));
+        assert!(ROADMAP.contains("`Regression: #1503`"));
+        assert!(ROADMAP.contains("`Regression: #1504`"));
+        assert!(ROADMAP.contains("`Regression: #1506`"));
+        assert!(ROADMAP.contains("`Regression: #1401`"));
+        assert!(ROADMAP.contains("`Regression: #1402`"));
+        assert!(ROADMAP.contains("`Regression: #1462`"));
+        assert!(ROADMAP.contains("`Regression: #1463`"));
+        assert!(ROADMAP.contains("`Regression: #1464`"));
+        assert!(ROADMAP.contains("`Regression: #1533`"));
+        assert!(ROADMAP.contains("`Regression: #1659`"));
+    }
+}
+
+mod escrow_lifecycle_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/escrow-lifecycle.md");
+
+    #[test]
+    fn doc_contains_escrow_lifecycle_scope_and_transitions() {
+        assert!(DOC.contains("# Escrow Lifecycle State Machine"));
+        assert!(DOC.contains("EscrowLifecycle"));
+        assert!(DOC.contains("Disputed -> Resolved"));
+    }
+
+    #[test]
+    fn doc_contains_settlement_reconciliation_evidence_contract() {
+        assert!(DOC.contains("## Settlement Reconciliation Evidence Contract"));
+        assert!(DOC.contains("generate_settlement_reconciliation_evidence_bundle.sh"));
+        assert!(DOC.contains("check_settlement_reconciliation_evidence_policy.sh"));
+        assert!(DOC.contains("run_settlement_reconciliation_contract_lane.sh"));
+        assert!(DOC.contains("run_settlement_reconciliation_deep_lane.sh"));
+        assert!(DOC.contains("--ledger-reference-id"));
+    }
+
+    #[test]
+    fn doc_contains_chain_receipt_finality_adapter_contract() {
+        assert!(DOC.contains("## Chain Receipt Finality Adapter Contract"));
+        assert!(DOC.contains("EscrowReceiptFinality::{Final, Pending, Failed}"));
+        assert!(DOC.contains("reconcile_receipt_finality(receipt_id, finality, action)"));
+        assert!(DOC.contains("EscrowSettlementOutcome::{Settled, Pending, Rejected}"));
+        assert!(DOC.contains("EscrowReceiptFinality::parse(...)"));
+    }
+
+    #[test]
+    fn doc_contains_transition_evidence_reason_code_contract() {
+        assert!(DOC.contains("## Transition Evidence and Reason-Code Contract (Issue #903)"));
+        assert!(DOC.contains("apply_transition_with_evidence"));
+        assert!(DOC.contains("EscrowTransitionEvidence"));
+        assert!(DOC.contains("escrow_transition_allowed"));
+        assert!(DOC.contains("escrow_transition_invalid"));
+        assert!(DOC.contains("escrow_settlement_finalized"));
+    }
+
+    #[test]
+    fn doc_contains_timeout_finality_race_matrix_contract() {
+        assert!(DOC.contains("## Timeout/Finality Race Matrix Evidence"));
+        assert!(DOC.contains("run_settlement_reconciliation_race_matrix.py"));
+        assert!(DOC.contains("fixtures/escrow_reconciliation/finality_race_cases.json"));
+    }
+
+    #[test]
+    fn regression_requires_missing_receipt_evidence_guard_marker() {
+        // Regression: #678
+        assert!(DOC.contains(
+            "missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).",
+        ));
+    }
+
+    #[test]
+    fn regression_requires_ledger_reference_guard_marker() {
+        // Regression: #717
+        assert!(DOC.contains(
+            "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).",
+        ));
+    }
+
+    #[test]
+    fn regression_requires_transition_reason_code_guard_marker() {
+        // Regression: #903
+        assert!(DOC.contains(
+            "transition reason-code drift and illegal transition acceptance fail closed (`Regression: #903`).",
+        ));
+    }
+}
+
+mod reputation_signal_routing_docs {
+    const DOC: &str = include_str!("../../../docs/foundation/reputation-signal-routing.md");
+
+    #[test]
+    fn doc_contains_signal_integration_model() {
+        assert!(DOC.contains("## Signal Integration Model"));
+        assert!(DOC.contains("endorsements"));
+        assert!(DOC.contains("disputes"));
+        assert!(DOC.contains("verified capabilities"));
+        assert!(DOC.contains("rank_agents_for_routing"));
+        assert!(DOC.contains("rank_listings_by_reputation"));
+    }
+
+    #[test]
+    fn doc_contains_error_handling_and_tiebreak_rules() {
+        assert!(DOC.contains("## Validation and Error Handling"));
+        assert!(DOC.contains("Invalid candidate DID"));
+        assert!(DOC.contains("Missing reputation records"));
+        assert!(DOC.contains("deterministic tie-break uses agent DID lexical order"));
+    }
+
+    #[test]
+    fn doc_contains_fast_and_cost_effective_validation_lane() {
+        assert!(DOC.contains("## Fast and Cost-Effective Validation"));
+        assert!(DOC.contains("cargo test -p kamn-core --test reputation_signal_routing"));
+        assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
+    }
+
+    #[test]
+    fn doc_contains_dispute_evidence_contract() {
+        assert!(DOC.contains("## Dispute Evidence Contract"));
+        assert!(DOC.contains("generate_reputation_dispute_evidence_bundle.sh"));
+        assert!(DOC.contains("check_reputation_dispute_policy.sh"));
+        assert!(DOC.contains("reputation_dispute_contract.py"));
+        assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
+        assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
+        assert!(DOC.contains("run_reputation_dispute_matrix.py"));
+        assert!(DOC.contains("fixtures/reputation_dispute/replay_cases.json"));
+    }
+
+    #[test]
+    fn doc_contains_signal_quarantine_evidence_contract() {
+        assert!(DOC.contains("## Signal Quarantine Evidence Contract"));
+        assert!(DOC.contains("generate_reputation_signal_quarantine_evidence_bundle.sh"));
+        assert!(DOC.contains("check_reputation_signal_quarantine_policy.sh"));
+        assert!(DOC.contains("run_reputation_signal_quarantine_contract_lane.sh"));
+        assert!(DOC.contains("reputation_signal_quarantine_contract.py"));
+    }
+
+    #[test]
+    fn regression_requires_did_tiebreak_rule() {
+        // Regression: #211
+        assert!(DOC.contains("Tie scores are resolved by DID lexical order."));
+    }
+
+    #[test]
+    fn regression_requires_signal_quarantine_guard_marker() {
+        // Regression: #935
+        assert!(DOC.contains(
+            "tampered reason keys/reason codes and ingestion-action mismatches force `NO-GO` (`Regression: #935`)."
+        ));
+    }
+
+    #[test]
+    fn regression_requires_reputation_dispute_evidence_guard_marker() {
+        // Regression: #730
+        assert!(DOC.contains(
+            "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
+        ));
+    }
+}
