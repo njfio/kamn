@@ -21,8 +21,12 @@ use axum::{
     Extension, Router,
 };
 use kamn_core::{
-    signature_matches_supported_profile_for_fields, AgentDid, AntiSpamConfig, AntiSpamDecision,
-    AntiSpamEngine, AntiSpamRejection,
+    data_layer_m9_gateway_project_presence_event, signature_matches_supported_profile_for_fields,
+    AgentDid, AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
+    DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
+    DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
+    DataLayerM9RealtimeDeliveryRegistry, DATA_LAYER_M9_OWNER_SCOPE_DENIED_REASON_CODE,
+    DATA_LAYER_M9_PRESENCE_VISIBILITY_DENIED_REASON_CODE,
 };
 #[cfg(test)]
 use serde::de::DeserializeOwned;
@@ -99,6 +103,29 @@ const REASON_CODE_WS_UPGRADE_HEADER_INVALID: &str = "service_api_ws_upgrade_head
 const REASON_CODE_WS_CONNECTION_HEADER_INVALID: &str = "service_api_ws_connection_header_invalid";
 const REASON_CODE_WS_KEY_HEADER_EMPTY: &str = "service_api_ws_key_header_empty";
 const REASON_CODE_WS_VERSION_HEADER_INVALID: &str = "service_api_ws_version_header_invalid";
+const REASON_CODE_WS_EVENTS_MODE_INVALID: &str = "service_api_ws_events_mode_invalid";
+const REASON_CODE_WS_PRESENCE_OWNER_DID_HEADER_MISSING: &str =
+    "service_api_ws_presence_owner_did_header_missing";
+const REASON_CODE_WS_PRESENCE_TARGET_AGENT_DID_HEADER_MISSING: &str =
+    "service_api_ws_presence_target_agent_did_header_missing";
+const REASON_CODE_WS_PRESENCE_REQUESTER_AGENT_DID_HEADER_MISSING: &str =
+    "service_api_ws_presence_requester_agent_did_header_missing";
+const REASON_CODE_WS_PRESENCE_CONNECTED_SINCE_INVALID: &str =
+    "service_api_ws_presence_connected_since_invalid";
+const REASON_CODE_WS_PRESENCE_LAST_HEARTBEAT_INVALID: &str =
+    "service_api_ws_presence_last_heartbeat_invalid";
+const REASON_CODE_WS_PRESENCE_CAPABILITIES_INVALID: &str =
+    "service_api_ws_presence_capabilities_invalid";
+const REASON_CODE_WS_PRESENCE_PROJECTION_INVALID: &str =
+    "service_api_ws_presence_projection_invalid";
+const REQUEST_WS_EVENTS_MODE_HEADER: &str = "x-kamn-events-mode";
+const REQUEST_WS_PRESENCE_OWNER_DID_HEADER: &str = "x-kamn-presence-owner-did";
+const REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER: &str = "x-kamn-presence-target-owner-did";
+const REQUEST_WS_PRESENCE_TARGET_AGENT_DID_HEADER: &str = "x-kamn-presence-target-agent-did";
+const REQUEST_WS_PRESENCE_GATEWAY_NODE_HEADER: &str = "x-kamn-presence-gateway-node";
+const REQUEST_WS_PRESENCE_CONNECTED_SINCE_HEADER: &str = "x-kamn-presence-connected-since";
+const REQUEST_WS_PRESENCE_LAST_HEARTBEAT_HEADER: &str = "x-kamn-presence-last-heartbeat";
+const REQUEST_WS_PRESENCE_CAPABILITIES_HEADER: &str = "x-kamn-presence-capabilities";
 const LIFECYCLE_REJECTION_CLASS_ASYNC_LIMITER: &str = "async-lifecycle-limiter";
 const LIFECYCLE_REJECTION_CLASS_SENDER_ADMISSION: &str = "sender-admission-limiter";
 const LIFECYCLE_REJECTION_CLASS_ASYNC_ENGINE: &str = "async-lifecycle-engine";
@@ -573,8 +600,21 @@ fn validate_websocket_route_requirements(
     websocket::validate_websocket_route_requirements(is_websocket_route, headers)
 }
 
-fn websocket_upgrade_response(upgrade: WebSocketUpgrade, snapshot: ServiceApiSnapshot) -> Response {
-    websocket::websocket_upgrade_response(upgrade, snapshot)
+fn websocket_upgrade_response(upgrade: WebSocketUpgrade, event_payload: String) -> Response {
+    websocket::websocket_upgrade_response(upgrade, event_payload)
+}
+
+fn project_websocket_event_payload(
+    snapshot: &ServiceApiSnapshot,
+    headers: &BTreeMap<String, String>,
+) -> Result<String, ServiceApiReasonedError> {
+    websocket::project_websocket_event_payload(snapshot, headers)
+}
+
+fn project_websocket_error_response(
+    error: &ServiceApiReasonedError,
+) -> (StatusCode, &'static str, &'static str) {
+    websocket::project_websocket_error_response(error)
 }
 
 fn contract_response(response: ServiceApiEndpointResponse) -> Response {

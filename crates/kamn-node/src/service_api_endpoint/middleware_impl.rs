@@ -318,11 +318,29 @@ pub(super) async fn handle_service_api_websocket_route(
     upgrade: WebSocketUpgrade,
 ) -> Response {
     let _ = context.correlation_id.as_str();
-    let mut response = super::websocket_upgrade_response(upgrade, state.snapshot.clone());
-    response
-        .extensions_mut()
-        .insert(ServiceApiRequestOutcome("websocket-upgrade"));
-    response
+    match super::project_websocket_event_payload(&state.snapshot, &context.parsed_request.headers) {
+        Ok(event_payload) => {
+            let mut response = super::websocket_upgrade_response(upgrade, event_payload);
+            response
+                .extensions_mut()
+                .insert(ServiceApiRequestOutcome("websocket-upgrade"));
+            response
+        }
+        Err(error) => {
+            let (status_code, error_label, outcome) =
+                super::project_websocket_error_response(&error);
+            let mut response = super::json_error_response(
+                status_code,
+                error_label,
+                error.reason_code,
+                error.message.as_str(),
+            );
+            response
+                .extensions_mut()
+                .insert(ServiceApiRequestOutcome(outcome));
+            response
+        }
+    }
 }
 
 pub(super) fn route_requires_auth(method: &str, path: &str) -> bool {
