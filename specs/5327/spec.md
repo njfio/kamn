@@ -18,7 +18,7 @@ R45 reports doc-contract suites stalled at 122+ files using `include_str!()`-cen
 ## Scope
 In scope:
 - Consolidate selected small doc-contract files into a shared harness container file under `crates/kamn-core/tests/`.
-- Retire migrated standalone files after content is preserved in harness modules.
+- Retire migrated `include_str!` standalone implementations after content is preserved in harness modules; keep thin compatibility wrappers where needed for stable lane command-surface and ratio-policy compliance.
 
 Out of scope:
 - Rewriting large doc-contract suites.

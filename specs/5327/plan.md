@@ -3,12 +3,12 @@
 ## Approach
 1. Select 24 low-LOC kamn-core doc-contract files for consolidation.
 2. Generate one harness file `docs_contract_wave3_harness.rs` with module-wrapped migrated content (preserves test names and assertions).
-3. Remove migrated standalone files after content is in harness.
+3. Remove migrated `include_str!` standalone implementations after content is in harness; reintroduce thin compatibility wrappers only where command-surface/ratio-policy compatibility is required.
 4. Validate include_str file-count target and run focused test/clippy suite.
 
 ## Affected Modules
 - `crates/kamn-core/tests/docs_contract_wave3_harness.rs` (new)
-- 24 retired files under `crates/kamn-core/tests/` (migrated into harness)
+- 35 migrated `include_str!` standalone suites, with 20 thin wrapper targets retained under `crates/kamn-core/tests/` for compatibility
 - `specs/5327/{spec.md,plan.md,tasks.md}`
 
 ## Risks and Mitigations
