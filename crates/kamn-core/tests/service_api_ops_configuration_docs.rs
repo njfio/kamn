@@ -117,6 +117,28 @@ fn service_api_ops_configuration_contains_phase6_archival_retry_policy_markers()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_phase6_execution_tick_orchestration_markers() {
+    assert!(DOC.contains("## Phase-6 Retention+Archival Execution Tick Contracts (Issue #5289)"));
+    assert!(DOC.contains("phase6_execution_tick_status=verified"));
+    assert!(DOC.contains(
+        "phase6_execution_tick_reason_taxonomy_version=kamn.runtime.data-layer-m10-phase6-execution-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_execution_tick_reason_codes_csv=m10_phase6_execution_applied,m10_phase6_execution_owner_scope_denied,m10_phase6_execution_legal_hold_active,m10_phase6_execution_input_invalid,m10_phase6_execution_projection_input_invalid,m10_phase6_execution_projection_failed"
+    ));
+    assert!(DOC.contains(
+        "phase6_execution_tick_contract=retention_due_lookup->crypto_shred->partition_projection->archive_due"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c16_phase6_orchestration_tick_executes_retention_shred_projection_and_archive -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test data_layer_m10_partition_archival spec_c19_phase6_orchestration_tick_fails_closed_on_legal_hold_and_empty_projection_entries -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5289"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
