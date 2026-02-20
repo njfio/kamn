@@ -71,6 +71,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5297` — Task: add Phase-6 runtime evidence bundle projection contracts
   - `#5299` — Task: wire Phase-6 retention scheduler runtime into kamn-node daemon tick
   - `#5301` — Task: add deterministic convergence evidence projection and promotion markers
+  - `#5303` — Task: finalize R27.45 activation tracker statuses after #5301 merge
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage

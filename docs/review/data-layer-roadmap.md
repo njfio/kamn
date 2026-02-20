@@ -31,7 +31,8 @@
 - Completed Phase-6 scheduler runtime checkpoint contract task: `#5295`
 - Completed Phase-6 runtime evidence bundle projection contract task: `#5297`
 - Completed Phase-6 daemon runtime integration contract task: `#5299`
-- Current convergence promotion-marker contract task: `#5301`
+- Completed convergence promotion-marker contract task: `#5301`
+- Completed tracker status closeout task: `#5303`
 - Activation plan: `docs/plans/2026-02-19-data-layer-infrastructure-activation-plan.md`
 
 Current phase status:
@@ -58,7 +59,7 @@ Current phase status:
 - Phase 6 scheduler runtime checkpoint contracts: Implemented in `#5295` (merged)
 - Phase 6 runtime evidence bundle projection contracts: Implemented in `#5297` (merged)
 - Phase 6 daemon runtime wiring contracts: Implemented in `#5299` (merged)
-- Cross-cutting convergence promotion-marker contracts: In progress in `#5301`
+- Cross-cutting convergence promotion-marker contracts: Implemented in `#5301` (merged)
 - Phases 4-6: Planned with dependency order captured in `#5251`..`#5254`
 
 ---

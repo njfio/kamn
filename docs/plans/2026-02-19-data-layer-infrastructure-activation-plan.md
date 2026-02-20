@@ -37,7 +37,8 @@
 - Task (completed): `#5295` — add stateful Phase-6 scheduler runtime checkpoint contracts
 - Task (completed): `#5297` — add Phase-6 runtime evidence bundle projection contracts
 - Task (completed): `#5299` — wire Phase-6 retention scheduler runtime into kamn-node daemon tick
-- Task (current wave): `#5301` — add deterministic convergence evidence projection and promotion markers
+- Task (completed): `#5301` — add deterministic convergence evidence projection and promotion markers
+- Task (completed): `#5303` — finalize R27.45 tracker status closeout markers
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -72,8 +73,9 @@
 - `#5295`: merged to main (stateful Phase-6 scheduler runtime checkpoint contracts).
 - `#5297`: merged to main (Phase-6 runtime evidence bundle projection contracts).
 - `#5299`: merged to main (Phase-6 daemon runtime integration wiring).
-- `#5301`: in progress in this wave (cross-cutting convergence evidence projection markers).
-- Remaining stories: planned, blocked on phase order dependencies.
+- `#5301`: merged to main (cross-cutting convergence evidence projection markers).
+- `#5303`: merged to main (tracker closeout status synchronization for merged #5301).
+- Remaining stories: none in milestone `R27.45`; all tracked stories are closed.
 
 ## Shell-Surface Guardrail
 - This plan adds no new shell/python/workflow/template surface.
