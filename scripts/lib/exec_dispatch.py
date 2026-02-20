@@ -53,6 +53,15 @@ def count_lines(path: Path) -> int:
         return sum(1 for _ in handle)
 
 
+def expand_args_prefix(args_prefix: list[str], *, repo_root: Path) -> list[str]:
+    """Expand supported registry tokens in args_prefix."""
+    root = str(repo_root)
+    return [
+        item.replace("${KAMN_ROOT}", root).replace("${ROOT_DIR}", root)
+        for item in args_prefix
+    ]
+
+
 def is_declarative_policy_migration_v1_candidate(
     *,
     wrapper_rel: str,
@@ -151,6 +160,11 @@ def main(argv: list[str]) -> int:
     if forward_args and forward_args[0] == "--":
         forward_args = forward_args[1:]
 
+    expanded_args_prefix = expand_args_prefix(
+        args_prefix,
+        repo_root=repo_root,
+    )
+
     if is_declarative_policy_migration_v1_candidate(
         wrapper_rel=wrapper_rel,
         interpreter=interpreter,
@@ -166,15 +180,15 @@ def main(argv: list[str]) -> int:
             "--legacy-target",
             str(target_abs),
         ]
-        for prefix_arg in args_prefix:
-            command.extend(("--legacy-args-prefix", prefix_arg))
+        for prefix_arg in expanded_args_prefix:
+            command.append(f"--legacy-args-prefix={prefix_arg}")
         if passthrough:
             command.append("--")
             command.extend(forward_args)
         os.execvp(command[0], command)
         return 0
 
-    command: list[str] = [interpreter, str(target_abs), *args_prefix]
+    command: list[str] = [interpreter, str(target_abs), *expanded_args_prefix]
     if passthrough:
         command.extend(forward_args)
 

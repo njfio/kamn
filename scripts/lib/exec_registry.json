@@ -97,11 +97,27 @@
       ],
       "passthrough": true
     },
+    "scripts/ci/check_daemon_os_signal_stress_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_daemon_os_signal_stress_policy.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/ci/check_fast_gate_budget_delta_threshold.sh": {
       "interpreter": "python3",
       "target": "scripts/ci/fast_gate_budget_delta.py",
       "args_prefix": [
         "check"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_ignored_test_inventory_drift.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/ignored_test_inventory.py",
+      "args_prefix": [
+        "check",
+        "--repo-root",
+        "${KAMN_ROOT}"
       ],
       "passthrough": true
     },
@@ -121,6 +137,30 @@
       "interpreter": "python3",
       "target": "scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.py",
       "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_kolme_test_harness_loc_soft_budget.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/check_test_harness_loc_soft_budget.sh",
+      "args_prefix": [
+        "--budget-file",
+        "${KAMN_ROOT}/.ci/kolme-test-harness-loc-soft-budget.env",
+        "--baseline-file",
+        "${KAMN_ROOT}/.ci/kolme-test-harness-loc-baseline.env",
+        "--trend-threshold-file",
+        "${KAMN_ROOT}/.ci/kolme-test-harness-loc-trend-thresholds.env"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_kolme_wrapper_budget_trend.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/kolme_wrapper_inventory_baseline.py",
+      "args_prefix": [
+        "check",
+        "--trend-mode",
+        "--threshold-file",
+        "${KAMN_ROOT}/.ci/kolme-wrapper-budget-trend-thresholds.json"
+      ],
       "passthrough": true
     },
     "scripts/ci/check_kolme_wrapper_inventory_baseline.sh": {
@@ -161,6 +201,31 @@
       "args_prefix": [],
       "passthrough": true
     },
+    "scripts/ci/check_shell_surface_threshold_ratchet.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/check_shell_surface_threshold_ratchet.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/check_stale_script_references.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/stale_script_reference_detector.py",
+      "args_prefix": [
+        "--repo-root",
+        "${KAMN_ROOT}"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/check_superseded_script_deletion_manifest.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/superseded_script_inventory.py",
+      "args_prefix": [
+        "check",
+        "--repo-root",
+        "${KAMN_ROOT}"
+      ],
+      "passthrough": true
+    },
     "scripts/ci/check_test_harness_loc_soft_budget.sh": {
       "interpreter": "python3",
       "target": "scripts/ci/check_test_harness_loc_soft_budget.py",
@@ -175,6 +240,25 @@
       ],
       "passthrough": true
     },
+    "scripts/ci/generate_ignored_test_inventory_baseline.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/ignored_test_inventory.py",
+      "args_prefix": [
+        "generate",
+        "--repo-root",
+        "${KAMN_ROOT}"
+      ],
+      "passthrough": true
+    },
+    "scripts/ci/generate_kolme_test_harness_loc_report.sh": {
+      "interpreter": "bash",
+      "target": "scripts/ci/generate_test_harness_loc_report.sh",
+      "args_prefix": [
+        "--scripts-root",
+        "${KAMN_ROOT}/scripts/kolme"
+      ],
+      "passthrough": true
+    },
     "scripts/ci/generate_kolme_wrapper_inventory_baseline.sh": {
       "interpreter": "python3",
       "target": "scripts/ci/kolme_wrapper_inventory_baseline.py",
@@ -183,9 +267,25 @@
       ],
       "passthrough": true
     },
+    "scripts/ci/generate_superseded_script_inventory.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/superseded_script_inventory.py",
+      "args_prefix": [
+        "generate",
+        "--repo-root",
+        "${KAMN_ROOT}"
+      ],
+      "passthrough": true
+    },
     "scripts/ci/generate_test_harness_loc_report.sh": {
       "interpreter": "python3",
       "target": "scripts/ci/generate_test_harness_loc_report.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/ci/test_check_daemon_os_signal_stress_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/ci/test_check_daemon_os_signal_stress_policy.py",
       "args_prefix": [],
       "passthrough": true
     },
