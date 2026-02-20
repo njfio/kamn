@@ -29,6 +29,17 @@ const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_ORDER_CSV: &str =
     "lane_id,leg_a_reason,leg_a_taxonomy,leg_b_reason,leg_b_taxonomy";
 const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER: char = '|';
 const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_COUNT: usize = 5;
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology.v1";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_IDS_CSV: &str =
+    "same_host_parallel,distributed_label_parallel";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_CONTRACT: &str =
+    "topology_labels_must_preserve_sorted_lane_reason_taxonomy_fingerprints_under_repeated_runs";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_ORDER_CSV: &str =
+    "topology_id,host_a,host_b,lane_fingerprint_bundle";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER: char = '#';
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_BUNDLE_DELIMITER: char = ';';
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT: usize = 4;
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -92,6 +103,14 @@ struct LivePostgresRolePairProfile {
     leg_b_profile_id: &'static str,
     leg_b_args: Vec<String>,
     expected_reason_code: &'static str,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct LivePostgresParallelLaneTopologyProfile {
+    topology_id: &'static str,
+    host_a: &'static str,
+    host_b: &'static str,
+    lanes: Vec<LivePostgresRolePairProfile>,
 }
 
 fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
@@ -211,6 +230,41 @@ fn assert_parallel_lane_fingerprint_schema(fingerprint: &str, expected_lane_ids:
     );
 }
 
+fn format_parallel_lane_topology_fingerprint(
+    topology_id: &str,
+    host_a: &str,
+    host_b: &str,
+    lane_fingerprints: Vec<String>,
+) -> String {
+    format!(
+        "{}{}{}{}{}{}{}",
+        topology_id,
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER,
+        host_a,
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER,
+        host_b,
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER,
+        lane_fingerprints
+            .join(&LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_BUNDLE_DELIMITER.to_string())
+    )
+}
+
+fn parse_parallel_lane_topology_fingerprint_fields(fingerprint: &str) -> Vec<&str> {
+    fingerprint
+        .split(LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER)
+        .collect::<Vec<_>>()
+}
+
+fn parse_parallel_lane_topology_bundle_fields(bundle: &str) -> Vec<&str> {
+    if bundle.is_empty() {
+        Vec::new()
+    } else {
+        bundle
+            .split(LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_BUNDLE_DELIMITER)
+            .collect::<Vec<_>>()
+    }
+}
+
 fn run_parallel_lane_set_fingerprints(lanes: Vec<LivePostgresRolePairProfile>) -> Vec<String> {
     let mut fingerprints = Vec::with_capacity(lanes.len());
     for lane in lanes {
@@ -244,6 +298,31 @@ fn run_parallel_lane_set_fingerprints(lanes: Vec<LivePostgresRolePairProfile>) -
     }
     fingerprints.sort();
     fingerprints
+}
+
+fn run_parallel_lane_topology_fingerprints(
+    topology_profiles: Vec<LivePostgresParallelLaneTopologyProfile>,
+) -> Vec<String> {
+    let mut topology_fingerprints = Vec::with_capacity(topology_profiles.len());
+    for topology_profile in topology_profiles {
+        let expected_lane_ids = topology_profile
+            .lanes
+            .iter()
+            .map(|lane| lane.pair_id)
+            .collect::<Vec<_>>();
+        let lane_fingerprints = run_parallel_lane_set_fingerprints(topology_profile.lanes);
+        for lane_fingerprint in &lane_fingerprints {
+            assert_parallel_lane_fingerprint_schema(lane_fingerprint, &expected_lane_ids);
+        }
+        topology_fingerprints.push(format_parallel_lane_topology_fingerprint(
+            topology_profile.topology_id,
+            topology_profile.host_a,
+            topology_profile.host_b,
+            lane_fingerprints,
+        ));
+    }
+    topology_fingerprints.sort();
+    topology_fingerprints
 }
 
 fn permute_role_pair_lanes(
@@ -681,6 +760,24 @@ fn project_live_postgres_asymmetric_parallel_lanes() -> Vec<LivePostgresRolePair
                 Some(("3", "2", "4")),
             ),
             expected_reason_code: LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE,
+        },
+    ]
+}
+
+fn project_live_postgres_parallel_lane_topology_profiles(
+) -> Vec<LivePostgresParallelLaneTopologyProfile> {
+    vec![
+        LivePostgresParallelLaneTopologyProfile {
+            topology_id: "same_host_parallel",
+            host_a: "node_alpha",
+            host_b: "node_alpha",
+            lanes: project_live_postgres_parallel_role_pair_lanes(),
+        },
+        LivePostgresParallelLaneTopologyProfile {
+            topology_id: "distributed_label_parallel",
+            host_a: "node_alpha",
+            host_b: "node_beta",
+            lanes: project_live_postgres_asymmetric_parallel_lanes(),
         },
     ]
 }
@@ -2517,6 +2614,185 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
     assert_eq!(asymmetric_first.len(), asymmetric_lane_ids.len());
     for fingerprint in &asymmetric_first {
         assert_parallel_lane_fingerprint_schema(fingerprint, &asymmetric_lane_ids);
+    }
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_scope_contract_is_canonical(
+) {
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_SCHEMA_VERSION,
+        "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology.v1"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_IDS_CSV,
+        ["same_host_parallel", "distributed_label_parallel"].join(",")
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_CONTRACT,
+        "topology_labels_must_preserve_sorted_lane_reason_taxonomy_fingerprints_under_repeated_runs"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_ORDER_CSV,
+        ["topology_id", "host_a", "host_b", "lane_fingerprint_bundle"].join(",")
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER,
+        '#'
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_BUNDLE_DELIMITER,
+        ';'
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT,
+        4
+    );
+
+    let sample_lane_fingerprint = format_parallel_lane_fingerprint(
+        "processor_listener_parallel_applied",
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+    );
+    let topology_fingerprint = format_parallel_lane_topology_fingerprint(
+        "same_host_parallel",
+        "node_alpha",
+        "node_alpha",
+        vec![sample_lane_fingerprint.clone()],
+    );
+    assert_eq!(
+        topology_fingerprint,
+        "same_host_parallel#node_alpha#node_alpha#processor_listener_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1"
+    );
+    let fields = parse_parallel_lane_topology_fingerprint_fields(&topology_fingerprint);
+    assert_eq!(
+        fields.len(),
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT
+    );
+    assert_eq!(fields[0], "same_host_parallel");
+    assert_eq!(fields[1], "node_alpha");
+    assert_eq!(fields[2], "node_alpha");
+    let lane_bundle = parse_parallel_lane_topology_bundle_fields(fields[3]);
+    assert_eq!(lane_bundle, vec![sample_lane_fingerprint.as_str()]);
+    assert_parallel_lane_fingerprint_schema(
+        lane_bundle[0],
+        &["processor_listener_parallel_applied"],
+    );
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let first = run_parallel_lane_topology_fingerprints(
+        project_live_postgres_parallel_lane_topology_profiles(),
+    );
+    let second = run_parallel_lane_topology_fingerprints(
+        project_live_postgres_parallel_lane_topology_profiles(),
+    );
+    assert_eq!(
+        first, second,
+        "topology-labeled parallel lane fingerprints should remain stable across repeated runs"
+    );
+    assert_eq!(first.len(), 2);
+
+    for fingerprint in &first {
+        let fields = parse_parallel_lane_topology_fingerprint_fields(fingerprint);
+        assert_eq!(
+            fields.len(),
+            LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT,
+            "topology fingerprint should keep canonical field count"
+        );
+        assert!(
+            ["same_host_parallel", "distributed_label_parallel"].contains(&fields[0]),
+            "topology id should remain canonical"
+        );
+        assert!(
+            !fields[1].is_empty(),
+            "host A label should remain non-empty"
+        );
+        assert!(
+            !fields[2].is_empty(),
+            "host B label should remain non-empty"
+        );
+
+        let lane_bundle = parse_parallel_lane_topology_bundle_fields(fields[3]);
+        assert!(
+            !lane_bundle.is_empty(),
+            "topology fingerprint should include at least one lane fingerprint"
+        );
+        match fields[0] {
+            "same_host_parallel" => {
+                assert_eq!(fields[1], "node_alpha");
+                assert_eq!(fields[2], "node_alpha");
+                assert_eq!(
+                    lane_bundle.len(),
+                    project_live_postgres_parallel_role_pair_lanes().len()
+                );
+                let lane_ids = project_live_postgres_parallel_role_pair_lanes()
+                    .iter()
+                    .map(|lane| lane.pair_id)
+                    .collect::<Vec<_>>();
+                for lane_fingerprint in lane_bundle {
+                    assert_parallel_lane_fingerprint_schema(lane_fingerprint, &lane_ids);
+                }
+            }
+            "distributed_label_parallel" => {
+                assert_eq!(fields[1], "node_alpha");
+                assert_eq!(fields[2], "node_beta");
+                assert_eq!(
+                    lane_bundle.len(),
+                    project_live_postgres_asymmetric_parallel_lanes().len()
+                );
+                let lane_ids = project_live_postgres_asymmetric_parallel_lanes()
+                    .iter()
+                    .map(|lane| lane.pair_id)
+                    .collect::<Vec<_>>();
+                for lane_fingerprint in lane_bundle {
+                    assert_parallel_lane_fingerprint_schema(lane_fingerprint, &lane_ids);
+                }
+            }
+            _ => panic!("unexpected topology id {}", fields[0]),
+        }
     }
 }
 
