@@ -1,7 +1,7 @@
 # Issue #4016 Spec
 
 - Title: Subtask: add partial-write fault injection regressions and atomic-commit boundary assertions
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-10-durability-crash-recovery-and-state-consistency-hardening/index.md
