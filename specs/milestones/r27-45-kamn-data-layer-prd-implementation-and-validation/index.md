@@ -52,6 +52,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5259` — Task: implement sqlx-backed PostgreSQL execution adapter and migration runner
   - `#5261` — Task: extend PostgreSQL execution adapter with RLS policy application and blind-index search execution
   - `#5263` — Task: implement Phase-2 envelope+blind-index operational pipeline and persist blind indexes in adapter inserts
+  - `#5265` — Task: implement M1 batch scheduler thresholds and merkle-batch persistence execution path
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage

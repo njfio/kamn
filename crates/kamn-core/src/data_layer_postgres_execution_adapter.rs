@@ -36,6 +36,9 @@ pub const DATA_LAYER_PG_EXECUTION_SESSION_FAILED_REASON_CODE: &str =
     "data_layer_pg_execution_session_failed";
 /// Stable reason marker for default RLS statement application failures.
 const DATA_LAYER_PG_EXECUTION_RLS_FAILED_REASON_CODE: &str = "data_layer_pg_execution_rls_failed";
+/// Stable reason marker for invalid merkle-batch payload inputs.
+const DATA_LAYER_PG_EXECUTION_MERKLE_BATCH_PAYLOAD_FAILED_REASON_CODE: &str =
+    "data_layer_pg_execution_invalid_merkle_batch_payload";
 
 const DATA_LAYER_PG_MIGRATIONS_DIR: &str = "migrations";
 
@@ -424,6 +427,187 @@ impl DataLayerPgExecutionAdapter {
             .collect()
     }
 
+    /// Persists one merkle-batch row in scheduled status.
+    pub async fn execute_create_merkle_batch(
+        &self,
+        batch_id: &str,
+        root_hash: &str,
+        leaf_count: i32,
+        scheduled_at_unix_seconds: i64,
+    ) -> Result<u64, DataLayerPgExecutionAdapterError> {
+        data_layer_pg_validate_uuid_text(batch_id, "batch_id")?;
+        data_layer_pg_validate_non_empty_text(root_hash, "root_hash")?;
+        if leaf_count <= 0 {
+            return Err(
+                DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                    field: "leaf_count",
+                    detail: "must be greater than zero".to_owned(),
+                },
+            );
+        }
+        data_layer_pg_validate_positive_unix_timestamp(
+            scheduled_at_unix_seconds,
+            "scheduled_at_unix_seconds",
+        )?;
+
+        let mut tx = self
+            .begin_transaction(DataLayerPgOperationKind::InsertMerkleBatch)
+            .await?;
+        let execution = sqlx::query(
+            "INSERT INTO merkle_batches (batch_id, root_hash, leaf_count, status, scheduled_at) VALUES ($1::uuid, $2, $3, 'scheduled', to_timestamp($4));",
+        )
+        .bind(batch_id)
+        .bind(root_hash)
+        .bind(leaf_count)
+        .bind(scheduled_at_unix_seconds)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+            operation: DataLayerPgOperationKind::InsertMerkleBatch,
+            reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+            detail: error.to_string(),
+        })?;
+        tx.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                operation: DataLayerPgOperationKind::InsertMerkleBatch,
+                reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+        Ok(execution.rows_affected())
+    }
+
+    /// Assigns one message row to a merkle batch and leaf index.
+    pub async fn execute_assign_message_to_merkle_batch(
+        &self,
+        message_id: &str,
+        batch_id: &str,
+        merkle_leaf_index: i32,
+    ) -> Result<u64, DataLayerPgExecutionAdapterError> {
+        data_layer_pg_validate_uuid_text(message_id, "message_id")?;
+        data_layer_pg_validate_uuid_text(batch_id, "batch_id")?;
+        if merkle_leaf_index < 0 {
+            return Err(
+                DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                    field: "merkle_leaf_index",
+                    detail: "must be greater than or equal to zero".to_owned(),
+                },
+            );
+        }
+
+        let mut tx = self
+            .begin_transaction(DataLayerPgOperationKind::AssignMessageMerkleBatch)
+            .await?;
+        let execution = sqlx::query(
+            "UPDATE messages SET merkle_batch_id = $1::uuid, merkle_leaf_index = $2 WHERE message_id = $3::uuid;",
+        )
+        .bind(batch_id)
+        .bind(merkle_leaf_index)
+        .bind(message_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+            operation: DataLayerPgOperationKind::AssignMessageMerkleBatch,
+            reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+            detail: error.to_string(),
+        })?;
+        tx.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                operation: DataLayerPgOperationKind::AssignMessageMerkleBatch,
+                reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+        Ok(execution.rows_affected())
+    }
+
+    /// Marks a merkle batch as submitted and persists provider transaction metadata.
+    pub async fn execute_mark_merkle_batch_submitted(
+        &self,
+        batch_id: &str,
+        kolme_tx_hash: &str,
+        submitted_at_unix_seconds: i64,
+    ) -> Result<u64, DataLayerPgExecutionAdapterError> {
+        data_layer_pg_validate_uuid_text(batch_id, "batch_id")?;
+        data_layer_pg_validate_non_empty_text(kolme_tx_hash, "kolme_tx_hash")?;
+        data_layer_pg_validate_positive_unix_timestamp(
+            submitted_at_unix_seconds,
+            "submitted_at_unix_seconds",
+        )?;
+
+        let mut tx = self
+            .begin_transaction(DataLayerPgOperationKind::MarkMerkleBatchSubmitted)
+            .await?;
+        let execution = sqlx::query(
+            "UPDATE merkle_batches SET status = 'submitted', kolme_tx_hash = $2, submitted_at = to_timestamp($3) WHERE batch_id = $1::uuid;",
+        )
+        .bind(batch_id)
+        .bind(kolme_tx_hash)
+        .bind(submitted_at_unix_seconds)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+            operation: DataLayerPgOperationKind::MarkMerkleBatchSubmitted,
+            reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+            detail: error.to_string(),
+        })?;
+        tx.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                operation: DataLayerPgOperationKind::MarkMerkleBatchSubmitted,
+                reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+        Ok(execution.rows_affected())
+    }
+
+    /// Marks a merkle batch as confirmed and persists finality metadata.
+    pub async fn execute_mark_merkle_batch_confirmed(
+        &self,
+        batch_id: &str,
+        kolme_block_height: i64,
+        confirmed_at_unix_seconds: i64,
+    ) -> Result<u64, DataLayerPgExecutionAdapterError> {
+        data_layer_pg_validate_uuid_text(batch_id, "batch_id")?;
+        if kolme_block_height < 0 {
+            return Err(
+                DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                    field: "kolme_block_height",
+                    detail: "must be greater than or equal to zero".to_owned(),
+                },
+            );
+        }
+        data_layer_pg_validate_positive_unix_timestamp(
+            confirmed_at_unix_seconds,
+            "confirmed_at_unix_seconds",
+        )?;
+
+        let mut tx = self
+            .begin_transaction(DataLayerPgOperationKind::MarkMerkleBatchConfirmed)
+            .await?;
+        let execution = sqlx::query(
+            "UPDATE merkle_batches SET status = 'confirmed', kolme_block_height = $2, confirmed_at = to_timestamp($3) WHERE batch_id = $1::uuid;",
+        )
+        .bind(batch_id)
+        .bind(kolme_block_height)
+        .bind(confirmed_at_unix_seconds)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+            operation: DataLayerPgOperationKind::MarkMerkleBatchConfirmed,
+            reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+            detail: error.to_string(),
+        })?;
+        tx.commit().await.map_err(|error| {
+            DataLayerPgExecutionAdapterError::SqlExecutionFailed {
+                operation: DataLayerPgOperationKind::MarkMerkleBatchConfirmed,
+                reason_code: DATA_LAYER_PG_EXECUTION_SQL_FAILED_REASON_CODE,
+                detail: format!("commit failed: {error}"),
+            }
+        })?;
+        Ok(execution.rows_affected())
+    }
+
     /// Applies default M2 RLS policy statements in deterministic projection order.
     pub async fn apply_default_rls_statements(
         &self,
@@ -680,6 +864,68 @@ fn data_layer_pg_escape_json(value: &str) -> String {
     escaped
 }
 
+fn data_layer_pg_validate_non_empty_text(
+    value: &str,
+    field: &'static str,
+) -> Result<(), DataLayerPgExecutionAdapterError> {
+    if value.trim().is_empty() {
+        return Err(
+            DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                field,
+                detail: "must not be empty".to_owned(),
+            },
+        );
+    }
+    Ok(())
+}
+
+fn data_layer_pg_validate_positive_unix_timestamp(
+    value: i64,
+    field: &'static str,
+) -> Result<(), DataLayerPgExecutionAdapterError> {
+    if value <= 0 {
+        return Err(
+            DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+                field,
+                detail: "must be greater than zero".to_owned(),
+            },
+        );
+    }
+    Ok(())
+}
+
+fn data_layer_pg_validate_uuid_text(
+    value: &str,
+    field: &'static str,
+) -> Result<(), DataLayerPgExecutionAdapterError> {
+    if data_layer_pg_is_uuid_text(value) {
+        return Ok(());
+    }
+    Err(
+        DataLayerPgExecutionAdapterError::InvalidMerkleBatchPayload {
+            field,
+            detail: format!(
+                "{} ({})",
+                "must be a canonical UUID string",
+                DATA_LAYER_PG_EXECUTION_MERKLE_BATCH_PAYLOAD_FAILED_REASON_CODE
+            ),
+        },
+    )
+}
+
+fn data_layer_pg_is_uuid_text(value: &str) -> bool {
+    if value.len() != 36 {
+        return false;
+    }
+    value.chars().enumerate().all(|(index, character)| {
+        if matches!(index, 8 | 13 | 18 | 23) {
+            character == '-'
+        } else {
+            character.is_ascii_hexdigit()
+        }
+    })
+}
+
 fn data_layer_pg_decode_blind_index_search_row(
     row: sqlx::postgres::PgRow,
 ) -> Result<DataLayerPgBlindIndexSearchRow, DataLayerPgExecutionAdapterError> {
@@ -777,6 +1023,13 @@ pub enum DataLayerPgExecutionAdapterError {
         /// Fail-closed detail.
         detail: String,
     },
+    /// Merkle-batch payload failed fail-closed validation.
+    InvalidMerkleBatchPayload {
+        /// Field-name carrying invalid merkle-batch payload data.
+        field: &'static str,
+        /// Fail-closed detail.
+        detail: String,
+    },
     /// Row decoding failed.
     DecodeFailed {
         /// Field that failed to decode.
@@ -834,6 +1087,12 @@ impl fmt::Display for DataLayerPgExecutionAdapterError {
                 write!(
                     formatter,
                     "invalid blind-index payload for {field}: {detail}"
+                )
+            }
+            Self::InvalidMerkleBatchPayload { field, detail } => {
+                write!(
+                    formatter,
+                    "invalid merkle-batch payload for {field}: {detail}"
                 )
             }
             Self::DecodeFailed { field, detail } => {
