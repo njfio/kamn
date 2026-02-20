@@ -1041,6 +1041,27 @@ Regression marker:
 
 - `Regression: #5368`
 
+### Parallel Lane Topology Host-Pair Directionality Contracts (Issue #5370)
+
+The live-postgres matrix contracts now codify host-pair directionality semantics so host-pair
+extraction remains non-commutative (`host_a->host_b`) and fails closed on reversed pairs.
+
+Deterministic host-pair directionality markers:
+
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-pair-directionality.v1`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_extraction_rule=host_a_to_host_b_arrow_notation_non_commutative`
+- `phase6_live_postgres_daemon_runtime_parallel_lane_topology_host_pair_directionality_forbidden_reverse_pairs_csv=node_beta->node_alpha`
+
+Validation commands:
+
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_pair_directionality_contract_is_canonical -- --exact`
+- `cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_pair_directionality_is_stable -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_lane_topology_host_pair_directionality_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5370`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
