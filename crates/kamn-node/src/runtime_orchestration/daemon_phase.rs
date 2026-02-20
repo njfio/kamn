@@ -5,6 +5,19 @@ const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
 const DAEMON_PHASE6_RUNTIME_REASON_CODES_CSV: &str =
     "m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred,m10_phase6_scheduler_signal_invalid,m10_phase6_execution_budget_due_candidates_exceeded";
+const DAEMON_CONVERGENCE_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.convergence.reason-taxonomy.v1";
+const DAEMON_CONVERGENCE_REASON_CODES_CSV: &str =
+    "convergence_promotion_gate_go,convergence_schema_drift_detected,convergence_error_path_drift_detected,convergence_concurrency_drift_detected,convergence_performance_budget_exceeded,convergence_cost_budget_exceeded";
+const DAEMON_CONVERGENCE_DECISION_GO: &str = "go";
+const DAEMON_CONVERGENCE_DECISION_NO_GO: &str = "no_go";
+const DAEMON_CONVERGENCE_REASON_GO: &str = "convergence_promotion_gate_go";
+const DAEMON_CONVERGENCE_REASON_SCHEMA_DRIFT: &str = "convergence_schema_drift_detected";
+const DAEMON_CONVERGENCE_REASON_ERROR_PATH_DRIFT: &str = "convergence_error_path_drift_detected";
+const DAEMON_CONVERGENCE_REASON_CONCURRENCY_DRIFT: &str = "convergence_concurrency_drift_detected";
+const DAEMON_CONVERGENCE_REASON_PERFORMANCE_BUDGET: &str =
+    "convergence_performance_budget_exceeded";
+const DAEMON_CONVERGENCE_REASON_COST_BUDGET: &str = "convergence_cost_budget_exceeded";
 
 struct DaemonPhase6RuntimeProjection {
     reason_code: &'static str,
@@ -12,6 +25,24 @@ struct DaemonPhase6RuntimeProjection {
     executed_cycles: u64,
     deferred_cycles: u64,
     fail_closed_cycles: u64,
+}
+
+struct DaemonConvergenceInput {
+    schema_gate_passed: bool,
+    error_path_gate_passed: bool,
+    concurrency_gate_passed: bool,
+    performance_budget_gate_passed: bool,
+    cost_budget_gate_passed: bool,
+}
+
+struct DaemonConvergenceProjection {
+    decision: &'static str,
+    reason_code: &'static str,
+    schema_gate_passed: bool,
+    error_path_gate_passed: bool,
+    concurrency_gate_passed: bool,
+    performance_budget_gate_passed: bool,
+    cost_budget_gate_passed: bool,
 }
 
 fn daemon_lifecycle_event_as_str(event: PeerLifecycleEvent) -> &'static str {
@@ -210,6 +241,49 @@ fn execute_daemon_phase6_runtime_projection(
     })
 }
 
+fn execute_daemon_convergence_projection(
+    input: DaemonConvergenceInput,
+) -> DaemonConvergenceProjection {
+    let (decision, reason_code) = if !input.schema_gate_passed {
+        (
+            DAEMON_CONVERGENCE_DECISION_NO_GO,
+            DAEMON_CONVERGENCE_REASON_SCHEMA_DRIFT,
+        )
+    } else if !input.error_path_gate_passed {
+        (
+            DAEMON_CONVERGENCE_DECISION_NO_GO,
+            DAEMON_CONVERGENCE_REASON_ERROR_PATH_DRIFT,
+        )
+    } else if !input.concurrency_gate_passed {
+        (
+            DAEMON_CONVERGENCE_DECISION_NO_GO,
+            DAEMON_CONVERGENCE_REASON_CONCURRENCY_DRIFT,
+        )
+    } else if !input.performance_budget_gate_passed {
+        (
+            DAEMON_CONVERGENCE_DECISION_NO_GO,
+            DAEMON_CONVERGENCE_REASON_PERFORMANCE_BUDGET,
+        )
+    } else if !input.cost_budget_gate_passed {
+        (
+            DAEMON_CONVERGENCE_DECISION_NO_GO,
+            DAEMON_CONVERGENCE_REASON_COST_BUDGET,
+        )
+    } else {
+        (DAEMON_CONVERGENCE_DECISION_GO, DAEMON_CONVERGENCE_REASON_GO)
+    };
+
+    DaemonConvergenceProjection {
+        decision,
+        reason_code,
+        schema_gate_passed: input.schema_gate_passed,
+        error_path_gate_passed: input.error_path_gate_passed,
+        concurrency_gate_passed: input.concurrency_gate_passed,
+        performance_budget_gate_passed: input.performance_budget_gate_passed,
+        cost_budget_gate_passed: input.cost_budget_gate_passed,
+    }
+}
+
 #[cfg(test)]
 pub(crate) fn execute_daemon_phase6_runtime_projection_for_test(
     max_ticks: u64,
@@ -224,6 +298,24 @@ pub(crate) fn execute_daemon_phase6_runtime_projection_for_test(
         regressed_now_epoch_seconds,
     )?;
     Ok((projection.reason_code, projection.fail_closed_cycles))
+}
+
+#[cfg(test)]
+pub(crate) fn execute_daemon_convergence_projection_for_test(
+    schema_gate_passed: bool,
+    error_path_gate_passed: bool,
+    concurrency_gate_passed: bool,
+    performance_budget_gate_passed: bool,
+    cost_budget_gate_passed: bool,
+) -> (&'static str, &'static str) {
+    let projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
+        schema_gate_passed,
+        error_path_gate_passed,
+        concurrency_gate_passed,
+        performance_budget_gate_passed,
+        cost_budget_gate_passed,
+    });
+    (projection.decision, projection.reason_code)
 }
 
 pub(super) fn execute_daemon_runtime(
@@ -339,6 +431,45 @@ pub(super) fn execute_daemon_runtime(
     let phase6_executed_cycles_label = phase6_projection.executed_cycles.to_string();
     let phase6_deferred_cycles_label = phase6_projection.deferred_cycles.to_string();
     let phase6_fail_closed_cycles_label = phase6_projection.fail_closed_cycles.to_string();
+    let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
+        schema_gate_passed: phase6_projection.total_cycles > 0
+            && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
+        error_path_gate_passed: phase6_projection.fail_closed_cycles == 0,
+        concurrency_gate_passed: phase6_projection.total_cycles
+            == phase6_projection
+                .executed_cycles
+                .saturating_add(phase6_projection.deferred_cycles)
+                .saturating_add(phase6_projection.fail_closed_cycles),
+        performance_budget_gate_passed: daemon_observability.reason_code
+            != "daemon_shutdown_timeout",
+        cost_budget_gate_passed: max_ticks <= 10_000 && tick_interval_ms <= 5_000,
+    });
+    let convergence_schema_gate_passed = if convergence_projection.schema_gate_passed {
+        "true"
+    } else {
+        "false"
+    };
+    let convergence_error_path_gate_passed = if convergence_projection.error_path_gate_passed {
+        "true"
+    } else {
+        "false"
+    };
+    let convergence_concurrency_gate_passed = if convergence_projection.concurrency_gate_passed {
+        "true"
+    } else {
+        "false"
+    };
+    let convergence_performance_budget_gate_passed =
+        if convergence_projection.performance_budget_gate_passed {
+            "true"
+        } else {
+            "false"
+        };
+    let convergence_cost_budget_gate_passed = if convergence_projection.cost_budget_gate_passed {
+        "true"
+    } else {
+        "false"
+    };
     log_info(
         "node.runtime.daemon.execute.complete",
         &[
@@ -379,6 +510,39 @@ pub(super) fn execute_daemon_runtime(
                 "phase6_fail_closed_cycles",
                 phase6_fail_closed_cycles_label.as_str(),
             ),
+            (
+                "convergence_reason_taxonomy_version",
+                DAEMON_CONVERGENCE_REASON_TAXONOMY_VERSION,
+            ),
+            (
+                "convergence_reason_codes_csv",
+                DAEMON_CONVERGENCE_REASON_CODES_CSV,
+            ),
+            ("convergence_decision", convergence_projection.decision),
+            (
+                "convergence_reason_code",
+                convergence_projection.reason_code,
+            ),
+            (
+                "convergence_schema_gate_passed",
+                convergence_schema_gate_passed,
+            ),
+            (
+                "convergence_error_path_gate_passed",
+                convergence_error_path_gate_passed,
+            ),
+            (
+                "convergence_concurrency_gate_passed",
+                convergence_concurrency_gate_passed,
+            ),
+            (
+                "convergence_performance_budget_gate_passed",
+                convergence_performance_budget_gate_passed,
+            ),
+            (
+                "convergence_cost_budget_gate_passed",
+                convergence_cost_budget_gate_passed,
+            ),
             ("execution_id", execution_id),
         ],
     )?;
@@ -410,5 +574,15 @@ pub(super) fn execute_daemon_runtime(
         phase6_runtime_executed_cycles: phase6_projection.executed_cycles,
         phase6_runtime_deferred_cycles: phase6_projection.deferred_cycles,
         phase6_runtime_fail_closed_cycles: phase6_projection.fail_closed_cycles,
+        convergence_reason_taxonomy_version: DAEMON_CONVERGENCE_REASON_TAXONOMY_VERSION.to_owned(),
+        convergence_reason_codes_csv: DAEMON_CONVERGENCE_REASON_CODES_CSV.to_owned(),
+        convergence_decision: convergence_projection.decision.to_owned(),
+        convergence_reason_code: convergence_projection.reason_code.to_owned(),
+        convergence_schema_gate_passed: convergence_projection.schema_gate_passed,
+        convergence_error_path_gate_passed: convergence_projection.error_path_gate_passed,
+        convergence_concurrency_gate_passed: convergence_projection.concurrency_gate_passed,
+        convergence_performance_budget_gate_passed: convergence_projection
+            .performance_budget_gate_passed,
+        convergence_cost_budget_gate_passed: convergence_projection.cost_budget_gate_passed,
     })
 }

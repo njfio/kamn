@@ -199,6 +199,11 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("daemon timeout execution should succeed");
     assert_eq!(report.runtime_mode, "daemon");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"daemon_convergence_decision\":\"no_go\""));
+    assert!(rendered.contains(
+        "\"daemon_convergence_reason_code\":\"convergence_performance_budget_exceeded\""
+    ));
 
     let complete_line = captured_logs
         .iter()
@@ -231,6 +236,14 @@ pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeou
     assert_eq!(
         extract_json_string_field(complete_line, "shutdown_snapshot_flush_status").as_deref(),
         Some("snapshot-flush-timeout")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "convergence_decision").as_deref(),
+        Some("no_go")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "convergence_reason_code").as_deref(),
+        Some("convergence_performance_budget_exceeded")
     );
 }
 
@@ -606,6 +619,13 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     ));
     assert!(rendered
         .contains("\"daemon_phase6_runtime_reason_code\":\"m10_phase6_scheduler_cycle_applied\""));
+    assert!(rendered.contains(
+        "\"daemon_convergence_reason_taxonomy_version\":\"kamn.runtime.daemon.convergence.reason-taxonomy.v1\""
+    ));
+    assert!(rendered.contains("\"daemon_convergence_decision\":\"go\""));
+    assert!(
+        rendered.contains("\"daemon_convergence_reason_code\":\"convergence_promotion_gate_go\"")
+    );
     let complete_line = captured_logs
         .iter()
         .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
@@ -621,6 +641,18 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert!(
         extract_json_string_field(complete_line, "phase6_reason_code").as_deref()
             == Some("m10_phase6_scheduler_cycle_applied")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "convergence_reason_taxonomy_version").as_deref(),
+        Some("kamn.runtime.daemon.convergence.reason-taxonomy.v1")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "convergence_decision").as_deref(),
+        Some("go")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "convergence_reason_code").as_deref(),
+        Some("convergence_promotion_gate_go")
     );
 }
 
@@ -684,4 +716,19 @@ fn regression_daemon_phase6_runtime_projection_fail_closed_reason_is_stable_on_c
         "clock-regression path must remain fail-closed with stable reason marker"
     );
     assert_eq!(fail_closed_cycles, 1);
+}
+
+#[test]
+fn regression_daemon_convergence_projection_fail_closed_reason_is_stable() {
+    // Regression: #5301
+    let first =
+        crate::execute_daemon_convergence_projection_for_test(true, true, true, false, true);
+    let second =
+        crate::execute_daemon_convergence_projection_for_test(true, true, true, false, true);
+    assert_eq!(
+        first, second,
+        "convergence projection must remain deterministic"
+    );
+    assert_eq!(first.0, "no_go");
+    assert_eq!(first.1, "convergence_performance_budget_exceeded");
 }

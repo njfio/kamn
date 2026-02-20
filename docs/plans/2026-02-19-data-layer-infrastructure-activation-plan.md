@@ -36,7 +36,8 @@
 - Task (completed): `#5293` — add Phase-6 scheduler-cycle trigger and guarded execution contracts
 - Task (completed): `#5295` — add stateful Phase-6 scheduler runtime checkpoint contracts
 - Task (completed): `#5297` — add Phase-6 runtime evidence bundle projection contracts
-- Task (current wave): `#5299` — wire Phase-6 retention scheduler runtime into kamn-node daemon tick
+- Task (completed): `#5299` — wire Phase-6 retention scheduler runtime into kamn-node daemon tick
+- Task (current wave): `#5301` — add deterministic convergence evidence projection and promotion markers
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -70,7 +71,8 @@
 - `#5293`: merged to main (Phase-6 scheduler-cycle trigger and guarded execution contracts).
 - `#5295`: merged to main (stateful Phase-6 scheduler runtime checkpoint contracts).
 - `#5297`: merged to main (Phase-6 runtime evidence bundle projection contracts).
-- `#5299`: in progress in this wave (Phase-6 daemon runtime integration wiring).
+- `#5299`: merged to main (Phase-6 daemon runtime integration wiring).
+- `#5301`: in progress in this wave (cross-cutting convergence evidence projection markers).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail

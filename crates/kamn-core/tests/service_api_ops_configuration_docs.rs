@@ -259,6 +259,28 @@ fn service_api_ops_configuration_contains_phase6_daemon_runtime_integration_mark
 }
 
 #[test]
+fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
+    assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
+    assert!(DOC.contains("convergence_promotion_contract_status=verified"));
+    assert!(DOC.contains(
+        "convergence_reason_taxonomy_version=kamn.runtime.daemon.convergence.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "convergence_reason_codes_csv=convergence_promotion_gate_go,convergence_schema_drift_detected,convergence_error_path_drift_detected,convergence_concurrency_drift_detected,convergence_performance_budget_exceeded,convergence_cost_budget_exceeded"
+    ));
+    assert!(DOC.contains(
+        "convergence_promotion_contract=schema+error_path+concurrency+performance+cost->decision;any_failed_gate=no_go"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_daemon_convergence_projection_fail_closed_reason_is_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::regression_runtime_daemon_shutdown_timeout_emits_structured_timeout_drain_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5301"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
