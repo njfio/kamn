@@ -577,7 +577,7 @@ pub(crate) fn sign_kolme_live_managed_external_message(
 #[cfg(test)]
 mod tests {
     use std::env;
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::Mutex;
 
     use kamn_core::{KolmeRuntimeCommitRequest, SignerProviderHandshakeMatrix};
 
@@ -590,8 +590,7 @@ mod tests {
         "secure:aws-kms:role-operator/key-live-ops-primary";
 
     fn managed_backend_env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+        crate::signer_test_env_lock()
     }
 
     struct EnvVarGuard {
@@ -685,6 +684,17 @@ mod tests {
         assert_eq!(
             output.provenance_marker.signer_public_key_hex,
             managed_pubkey
+        );
+    }
+
+    #[test]
+    fn regression_managed_backend_env_lock_aliases_shared_signer_lock() {
+        // Regression: #5336
+        let managed_lock = managed_backend_env_lock() as *const Mutex<()>;
+        let shared_lock = crate::signer_test_env_lock() as *const Mutex<()>;
+        assert_eq!(
+            managed_lock, shared_lock,
+            "managed backend tests must share signer env lock domain"
         );
     }
 }
