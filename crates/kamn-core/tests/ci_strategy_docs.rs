@@ -3,6 +3,8 @@ const OPS_DOC: &str = include_str!("../../../docs/ops/configuration.md");
 const FAIRNESS_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/starvation_fairness_fixture_matrix.txt");
 const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
+const SERVICE_API_ENDPOINT_SOURCE: &str =
+    include_str!("../../kamn-node/src/service_api_endpoint.rs");
 const OVERLOAD_RUNNER_SOURCE: &str =
     include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
 
@@ -12,6 +14,13 @@ const FAIRNESS_REASON_CODES_CSV: &str =
 const OVERLOAD_REASON_TAXONOMY_VERSION: &str =
     "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1";
 const OVERLOAD_REASON_CODES_CSV: &str = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success";
+const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-auth-reason-taxonomy.v1";
+const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
+const SERVICE_API_REQUEST_PATH_AUTHZ_PUBLIC_ROUTES_CSV: &str = "GET:/healthz,GET:/metrics";
+const SERVICE_API_REQUEST_PATH_AUTHZ_PROTECTED_ROUTES_CSV: &str = "POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws";
+const SERVICE_API_REQUEST_PATH_AUTHZ_MISSING_HEADER_REASON_CODE: &str =
+    "service_api_auth_sender_did_header_missing";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -19,6 +28,12 @@ fn fairness_reason_codes() -> Vec<&'static str> {
 
 fn overload_reason_codes() -> Vec<&'static str> {
     OVERLOAD_REASON_CODES_CSV.split(',').collect()
+}
+
+fn service_api_request_path_authz_reason_codes() -> Vec<&'static str> {
+    SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV
+        .split(',')
+        .collect()
 }
 
 #[test]
@@ -1520,6 +1535,101 @@ fn doc_contains_quota_policy_checker_taxonomy_contract_markers() {
     assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_checker_contract"));
     assert!(DOC.contains("cargo test -p kamn-core --test quota_policy_fixture_parser_contract"));
     assert!(DOC.contains("Regression: #4091"));
+}
+
+#[test]
+fn doc_contains_service_api_request_path_authz_docs_parity_markers() {
+    assert!(DOC.contains("### Service API Request-Path Authz Matrix and Docs Parity Contract"));
+    assert!(DOC.contains(
+        "service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected"
+    ));
+    assert!(
+        DOC.contains("service_api_request_path_authz_public_routes_csv=GET:/healthz,GET:/metrics")
+    );
+    assert!(DOC.contains("service_api_request_path_authz_protected_routes_csv=POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws"));
+    assert!(DOC.contains(
+        "service_api_request_path_authz_missing_header_reason_code=service_api_auth_sender_did_header_missing"
+    ));
+    assert!(DOC.contains("service_api_request_path_authz_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("service_api_request_path_authz_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("service_api_request_path_authz_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::service_api_endpoint_tests::unit_service_api_route_authz_matrix_matches_protected_and_public_paths -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_request_path_authz_docs_parity_matches_source_taxonomy -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_request_path_authz_remediation_markers_cover_reason_codes -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4057"));
+}
+
+#[test]
+fn doc_enforces_service_api_request_path_authz_docs_parity_matches_source_taxonomy() {
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains("pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str ="));
+    assert!(SERVICE_API_ENDPOINT_SOURCE
+        .contains(SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION));
+    assert!(SERVICE_API_ENDPOINT_SOURCE.contains(SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV));
+
+    assert!(DOC.contains(&format!(
+        "service_api_request_path_authz_reason_taxonomy_version={SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_request_path_authz_reason_codes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_request_path_authz_public_routes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_PUBLIC_ROUTES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_request_path_authz_protected_routes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_PROTECTED_ROUTES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "service_api_request_path_authz_missing_header_reason_code={SERVICE_API_REQUEST_PATH_AUTHZ_MISSING_HEADER_REASON_CODE}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_request_path_authz_reason_taxonomy_version={SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_request_path_authz_reason_codes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_request_path_authz_public_routes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_PUBLIC_ROUTES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_request_path_authz_protected_routes_csv={SERVICE_API_REQUEST_PATH_AUTHZ_PROTECTED_ROUTES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "service_api_request_path_authz_missing_header_reason_code={SERVICE_API_REQUEST_PATH_AUTHZ_MISSING_HEADER_REASON_CODE}"
+    )));
+}
+
+#[test]
+fn doc_enforces_service_api_request_path_authz_remediation_markers_cover_reason_codes() {
+    for reason_code in service_api_request_path_authz_reason_codes() {
+        assert!(
+            DOC.contains(&format!(
+                "service_api_request_path_authz_remediation.{reason_code}="
+            )),
+            "missing request-path authz remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&format!(
+                "service_api_request_path_authz_remediation.{reason_code}="
+            )),
+            "ops docs missing request-path authz remediation marker for {reason_code}"
+        );
+    }
 }
 
 #[test]

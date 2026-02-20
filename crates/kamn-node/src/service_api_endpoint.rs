@@ -95,6 +95,11 @@ const REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING: &str = "service_api_auth_signat
 const REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED: &str =
     "service_api_auth_signature_verification_failed";
 const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_nonce_detected";
+#[cfg(test)]
+pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-auth-reason-taxonomy.v1";
+#[cfg(test)]
+pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
@@ -478,7 +483,7 @@ async fn handle_service_api_websocket_route(
     middleware_impl::handle_service_api_websocket_route(State(state), Extension(context), upgrade)
         .await
 }
-fn route_requires_auth(method: &str, path: &str) -> bool {
+pub(crate) fn route_requires_auth(method: &str, path: &str) -> bool {
     middleware_impl::route_requires_auth(method, path)
 }
 

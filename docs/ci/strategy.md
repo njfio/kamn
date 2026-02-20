@@ -4671,9 +4671,38 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_quota_policy_checker_taxonomy_contract_markers -- --exact`
 - Fail-closed policy:
   - unknown scopes, non-positive windows, non-positive limits, and exceeded limits must reject deterministically.
-  - checker taxonomy must remain a superset of fixture taxonomy reason codes.
-  - docs marker drift fails the docs-contract target.
+- checker taxonomy must remain a superset of fixture taxonomy reason codes.
+- docs marker drift fails the docs-contract target.
 - Regression: #4091
+
+### Service API Request-Path Authz Matrix and Docs Parity Contract
+- `service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1`
+- `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
+- `service_api_request_path_authz_public_routes_csv=GET:/healthz,GET:/metrics`
+- `service_api_request_path_authz_protected_routes_csv=POST:/v1/messages/send,POST:/v1/channels/create,POST:/v1/tasks/create,GET:/v1/messages/{message_id},GET:/v1/channels/{channel_id}/messages,GET:/v1/tasks/{task_id},GET:/v1/agents/{agent_did},GET:/v1/events/ws`
+- `service_api_request_path_authz_missing_header_reason_code=service_api_auth_sender_did_header_missing`
+- `service_api_request_path_authz_ops_doc_path=docs/ops/configuration.md`
+- `service_api_request_path_authz_strategy_doc_path=docs/ci/strategy.md`
+- `service_api_request_path_authz_remediation_map_version=v1`
+- `service_api_request_path_authz_remediation.service_api_auth_sender_did_header_missing=add x-kamn-sender-did header with a valid kamn DID before calling protected routes`
+- `service_api_request_path_authz_remediation.service_api_auth_sender_did_invalid=fix sender DID to kamn:did:<scope>:<id> format`
+- `service_api_request_path_authz_remediation.service_api_auth_nonce_header_missing=add x-kamn-request-nonce header with a positive integer`
+- `service_api_request_path_authz_remediation.service_api_auth_nonce_invalid=use a base-10 u64 nonce value in x-kamn-request-nonce`
+- `service_api_request_path_authz_remediation.service_api_auth_nonce_non_positive=increment nonce to a value greater than zero`
+- `service_api_request_path_authz_remediation.service_api_auth_signature_header_missing=add x-kamn-request-signature over sender_did+nonce+state_hash+body`
+- `service_api_request_path_authz_remediation.service_api_auth_signature_verification_failed=recompute signature with the supported profile and current state hash`
+- `service_api_request_path_authz_remediation.service_api_auth_replay_nonce_detected=use a fresh nonce per sender DID and avoid replaying accepted envelopes`
+- Guard commands:
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::unit_service_api_route_authz_matrix_matches_protected_and_public_paths -- --exact`
+  - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_service_api_request_path_authz_docs_parity_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_request_path_authz_docs_parity_matches_source_taxonomy -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_service_api_request_path_authz_remediation_markers_cover_reason_codes -- --exact`
+- Fail-closed policy:
+  - protected-route matrix rows without auth headers reject with `401` and `service_api_auth_sender_did_header_missing`.
+  - source taxonomy, strategy docs, and ops docs markers must remain synchronized.
+  - each auth reason code must have deterministic remediation markers in strategy and ops docs.
+- Regression: #4057
 
 ### Fairness Docs Parity and Remediation Contract
 - `fairness_docs_parity_reason_taxonomy_version=kamn.runtime.fairness-policy-reason-taxonomy.v1`

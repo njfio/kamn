@@ -4,6 +4,7 @@ use crate::service_api_endpoint::{
     ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection,
     ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
 };
 use kamn_core::baseline_signature_for_fields;
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
@@ -72,6 +73,93 @@ struct ServiceApiErrorEnvelope {
     error: String,
     reason_code: String,
     message: String,
+}
+
+const SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE: &str =
+    "service_api_auth_sender_did_header_missing";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceApiRouteAuthzMatrixRow {
+    method: &'static str,
+    path: &'static str,
+    body: &'static str,
+    requires_auth: bool,
+    expected_status_without_auth: &'static str,
+}
+
+fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
+    vec![
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/healthz",
+            body: "",
+            requires_auth: false,
+            expected_status_without_auth: "HTTP/1.1 200 OK",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/metrics",
+            body: "",
+            requires_auth: false,
+            expected_status_without_auth: "HTTP/1.1 200 OK",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/messages/send",
+            body: "{\"message\":\"matrix-message\"}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/channels/create",
+            body: "{\"name\":\"matrix-channel\"}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/tasks/create",
+            body: "{\"task\":\"matrix-task\"}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/messages/msg-matrix",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/channels/channel-matrix/messages",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/tasks/task-matrix",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/agents/kamn:did:agent:matrix",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/events/ws",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+    ]
 }
 
 #[derive(Debug)]
@@ -1126,6 +1214,111 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     assert!(metrics_response
         .body
         .contains("kamn_service_api_observability_health{health=\"healthy\"} 1"));
+}
+
+#[test]
+fn unit_service_api_route_authz_matrix_matches_protected_and_public_paths() {
+    assert_eq!(
+        SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
+        "kamn.runtime.service-api-auth-reason-taxonomy.v1"
+    );
+    assert!(SERVICE_API_AUTH_REASON_CODES_CSV.contains(SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE));
+    for row in service_api_route_authz_matrix_rows() {
+        assert_eq!(
+            crate::service_api_endpoint::route_requires_auth(row.method, row.path),
+            row.requires_auth,
+            "route authz matrix drift for {} {}",
+            row.method,
+            row.path
+        );
+    }
+}
+
+#[test]
+fn integration_service_api_endpoint_route_authz_matrix_rejects_protected_paths_without_headers() {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct ObservedRouteOutcome {
+        method: String,
+        path: String,
+        status_line: String,
+        reason_code: Option<String>,
+    }
+
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34074".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let matrix_rows = service_api_route_authz_matrix_rows();
+    let rounds = 2_u64;
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: rounds * matrix_rows.len() as u64,
+        idle_timeout_ms: 2_500,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let mut baseline_outcomes: Option<Vec<ObservedRouteOutcome>> = None;
+    for _round in 0..rounds {
+        let mut outcomes = Vec::with_capacity(matrix_rows.len());
+        for row in &matrix_rows {
+            let response = send_http_request(bind_addr.as_str(), row.method, row.path, row.body);
+            assert!(
+                response.contains(row.expected_status_without_auth),
+                "unexpected authz matrix status for {} {}: expected {}, response={response}",
+                row.method,
+                row.path,
+                row.expected_status_without_auth
+            );
+            let reason_code = if row.requires_auth {
+                let payload = parse_error_envelope_from_http_response(response.as_str());
+                assert_eq!(payload.error, "unauthorized");
+                assert_eq!(
+                    payload.reason_code,
+                    SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE
+                );
+                Some(payload.reason_code)
+            } else {
+                None
+            };
+            outcomes.push(ObservedRouteOutcome {
+                method: row.method.to_owned(),
+                path: row.path.to_owned(),
+                status_line: row.expected_status_without_auth.to_owned(),
+                reason_code,
+            });
+        }
+        if let Some(baseline) = baseline_outcomes.as_ref() {
+            assert_eq!(
+                outcomes, *baseline,
+                "route authz outcomes must remain deterministic across rounds"
+            );
+        } else {
+            baseline_outcomes = Some(outcomes);
+        }
+    }
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after route authz matrix validation"
+    );
 }
 
 #[test]
