@@ -36,6 +36,9 @@ pub const DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE: &str =
 /// Stable reason marker when M8 projection resolves that partition is fully shredded.
 pub const DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE: &str =
     "m10_partition_compliance_shred_complete";
+/// Stable reason marker when M8 projection resolves that legal hold still blocks archival.
+pub const DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE: &str =
+    "m10_partition_compliance_legal_hold_active";
 /// Stable reason marker for owner-scope projection denials.
 pub const DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE: &str =
     "m10_partition_compliance_owner_scope_denied";
@@ -244,16 +247,22 @@ impl DataLayerM10PartitionLifecycleRegistry {
 
         let total_partition_messages = message_ids.len();
         let mut shredded_partition_messages = 0usize;
+        let mut legal_hold_active_messages = 0usize;
         for message_id in &message_ids {
             let message = compliance_registry
                 .message_for_owner(owner_did.as_str(), message_id.as_str())
                 .map_err(map_m8_projection_error_to_m10)?;
+            if message.legal_hold_active {
+                legal_hold_active_messages += 1;
+            }
             if message.shredded_at_epoch_seconds.is_some() {
                 shredded_partition_messages += 1;
             }
         }
         let all_messages_shredded = shredded_partition_messages == total_partition_messages;
-        let reason_code = if all_messages_shredded {
+        let reason_code = if legal_hold_active_messages > 0 {
+            DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE
+        } else if all_messages_shredded {
             DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE
         } else {
             DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_FALSE_REASON_CODE

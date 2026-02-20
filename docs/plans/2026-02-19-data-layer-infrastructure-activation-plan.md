@@ -28,7 +28,8 @@
 - Task (completed): `#5277` — implement M7 Timescale adapter projection and fail-closed telemetry-extension contracts
 - Task (completed): `#5279` — implement M9 realtime gateway bridge projection and fail-closed presence-scope contracts
 - Task (completed): `#5281` — integrate service-api websocket presence route with M9 gateway bridge contracts
-- Task (current wave): `#5283` — validate realtime backpressure guardrails and finalize presence gateway ops docs
+- Task (completed): `#5283` — validate realtime backpressure guardrails and finalize presence gateway ops docs
+- Task (current wave): `#5285` — start Phase-6 retention-to-archival gate execution contracts
 
 ## Phase Plan
 1. Phase 1 (PostgreSQL foundation): execute `#5248` with `#5255` bootstrap first, then repository + live RLS wiring.
@@ -54,7 +55,8 @@
 - `#5277`: merged to main (Phase-4 Timescale adapter projection contracts).
 - `#5279`: merged to main (Phase-5 realtime gateway bridge projection contracts).
 - `#5281`: merged to main (Phase-5 websocket presence-route integration with gateway bridge contracts).
-- `#5283`: in progress in this wave (Phase-5 guardrail validation + realtime ops-doc closure).
+- `#5283`: merged to main (Phase-5 guardrail validation + realtime ops-doc closure).
+- `#5285`: in progress in this wave (Phase-6 retention-to-archival gate execution kickoff).
 - Remaining stories: planned, blocked on phase order dependencies.
 
 ## Shell-Surface Guardrail

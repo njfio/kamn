@@ -3,8 +3,10 @@ use kamn_core::{
     DataLayerM10ComplianceShredProjectionReport, DataLayerM10ComplianceShredProjectionRequest,
     DataLayerM10PartitionLifecycleError, DataLayerM10PartitionLifecycleRegistry,
     DataLayerM10PartitionRecordInput, DataLayerM10PartitionStatus, DataLayerM8ComplianceRegistry,
-    DataLayerM8CryptoShredRequest, DataLayerM8MessageRecordInput, DataLayerM8RetentionClass,
-    DataLayerM8WrappedCekInput, DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+    DataLayerM8CryptoShredRequest, DataLayerM8LegalHoldRequest, DataLayerM8MessageRecordInput,
+    DataLayerM8RetentionClass, DataLayerM8WrappedCekInput,
+    DATA_LAYER_M10_ARCHIVE_FORMAT_PARQUET_ZSTD,
+    DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_LOOKUP_FAILED_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
     DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE,
@@ -361,4 +363,147 @@ fn spec_c09_partition_projection_denies_non_equivalent_owner_dids() {
             reason_code: DATA_LAYER_M10_COMPLIANCE_OWNER_SCOPE_DENIED_REASON_CODE,
         })
     ));
+}
+
+#[test]
+fn spec_c10_partition_projection_marks_legal_hold_as_archival_denied_reason() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .expect("message one should register");
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .expect("message two should register");
+
+    m8_registry
+        .set_legal_hold(DataLayerM8LegalHoldRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-2".to_owned(),
+            legal_hold_active: true,
+        })
+        .expect("legal hold should apply");
+    m8_registry
+        .crypto_shred(DataLayerM8CryptoShredRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-1".to_owned(),
+            shredded_at_epoch_seconds: 1_708_560_200,
+        })
+        .expect("first message should shred");
+
+    let projection = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("projection should succeed");
+    assert_eq!(
+        projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE
+    );
+    assert!(!projection.all_messages_shredded);
+    assert_eq!(projection.shredded_partition_messages, 1);
+    assert_eq!(
+        projection.projection_reason_code,
+        DATA_LAYER_M10_COMPLIANCE_PROJECTION_APPLIED_REASON_CODE
+    );
+}
+
+#[test]
+fn spec_c11_partition_archival_remains_blocked_until_legal_hold_is_released_and_shred_completes() {
+    let owner_did = "kamn:did:owner:alpha";
+    let mut m10_registry = DataLayerM10PartitionLifecycleRegistry::new();
+    m10_registry
+        .register_partition(partition_input(202401, false))
+        .expect("partition should register");
+
+    let mut m8_registry = DataLayerM8ComplianceRegistry::new();
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-1", 1_708_560_100))
+        .expect("message one should register");
+    m8_registry
+        .register_message(m8_message_input(owner_did, "m10-m8-msg-2", 1_708_560_110))
+        .expect("message two should register");
+
+    m8_registry
+        .set_legal_hold(DataLayerM8LegalHoldRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-2".to_owned(),
+            legal_hold_active: true,
+        })
+        .expect("legal hold should apply");
+    m8_registry
+        .crypto_shred(DataLayerM8CryptoShredRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-1".to_owned(),
+            shredded_at_epoch_seconds: 1_708_560_200,
+        })
+        .expect("first message should shred");
+
+    let hold_projection = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("hold projection should succeed");
+    assert_eq!(
+        hold_projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_LEGAL_HOLD_ACTIVE_REASON_CODE
+    );
+    let blocked_archive = m10_registry
+        .archive_due_partitions(DataLayerM10ArchiveDueRequest {
+            now_month_id: 202602,
+            active_retention_months: 1,
+            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        })
+        .expect("archive due should succeed");
+    assert!(blocked_archive.is_empty());
+
+    m8_registry
+        .set_legal_hold(DataLayerM8LegalHoldRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-2".to_owned(),
+            legal_hold_active: false,
+        })
+        .expect("legal hold release should apply");
+    m8_registry
+        .crypto_shred(DataLayerM8CryptoShredRequest {
+            requester_owner_did: owner_did.to_owned(),
+            owner_did: owner_did.to_owned(),
+            message_id: "m10-m8-msg-2".to_owned(),
+            shredded_at_epoch_seconds: 1_708_560_220,
+        })
+        .expect("second message should shred after hold release");
+
+    let final_projection = m10_registry
+        .project_partition_shred_completeness_from_m8(
+            &m8_registry,
+            project_request(owner_did, 202401, vec!["m10-m8-msg-1", "m10-m8-msg-2"]),
+        )
+        .expect("final projection should succeed");
+    assert_eq!(
+        final_projection.reason_code,
+        DATA_LAYER_M10_COMPLIANCE_SHRED_COMPLETENESS_TRUE_REASON_CODE
+    );
+    assert!(final_projection.all_messages_shredded);
+
+    let archived = m10_registry
+        .archive_due_partitions(DataLayerM10ArchiveDueRequest {
+            now_month_id: 202602,
+            active_retention_months: 1,
+            object_storage_prefix: "s3://kamn-archive/messages".to_owned(),
+        })
+        .expect("archive due should succeed");
+    assert_eq!(archived.len(), 1);
+    assert_eq!(archived[0].partition_name, "messages_2024_01");
 }
