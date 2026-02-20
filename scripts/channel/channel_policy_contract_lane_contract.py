@@ -45,8 +45,24 @@ def main(argv: list[str]) -> int:
     commands = (
         ["cargo", "test", "-p", "kamn-core", "--lib", "channel_policies::tests::"],
         ["cargo", "test", "-p", "kamn-core", "--test", "channel_permissions_retention"],
-        ["cargo", "test", "-p", "kamn-core", "--test", "channel_permissions_retention_docs"],
-        ["cargo", "test", "-p", "kamn-core", "--test", "channel_models_and_permissions_docs"],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "channel_permissions_retention_docs::",
+        ],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "channel_models_and_permissions_docs::",
+        ],
         ["bash", str(retention_lane)],
     )
     for command in commands:

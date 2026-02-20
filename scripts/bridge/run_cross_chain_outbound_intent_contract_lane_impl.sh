@@ -35,7 +35,7 @@ fi
 
 cargo test -p kamn-core --test cross_chain_bridge -- outbound_rejects_unauthorized_approver --exact >/dev/null
 cargo test -p kamn-core --test cross_chain_receipt_finality >/dev/null
-cargo test -p kamn-core --test cross_chain_bridge_adapters_docs >/dev/null
+cargo test -p kamn-core --test docs_contract_wave3_harness cross_chain_bridge_adapters_docs:: >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 120 ]; then

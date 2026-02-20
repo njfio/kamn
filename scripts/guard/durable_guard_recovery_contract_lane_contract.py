@@ -158,8 +158,24 @@ def main(argv: list[str]) -> int:
             "durable_guard_snapshot_store",
             "performance_bundle_contract_lane_budget",
         ],
-        ["cargo", "test", "-p", "kamn-core", "--test", "message_delivery_guards_docs"],
-        ["cargo", "test", "-p", "kamn-core", "--test", "channel_permissions_retention_docs"],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "message_delivery_guards_docs::",
+        ],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "channel_permissions_retention_docs::",
+        ],
         ["cargo", "test", "-p", "kamn-core", "--test", "release_gonogo_checklist_docs"],
     ]
 

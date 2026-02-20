@@ -82,7 +82,15 @@ def main(argv: list[str]) -> int:
 
     cargo_commands = (
         ["cargo", "test", "-p", "kamn-core", "--test", "token_config"],
-        ["cargo", "test", "-p", "kamn-core", "--test", "token_config_docs"],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "docs_contract_wave3_harness",
+            "token_config_docs::",
+        ],
         ["cargo", "test", "-p", "kamn-core", "--test", "release_gonogo_checklist_docs"],
     )
     for command in cargo_commands:

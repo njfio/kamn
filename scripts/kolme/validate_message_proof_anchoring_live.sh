@@ -101,9 +101,7 @@ docs_output_file="$TMP_DIR/message-proof-anchoring-docs-validation.out"
 set +e
 (
   cd "$ROOT_DIR"
-  cargo test -p kamn-core --test message_proof_anchoring_docs -- \
-    regression_doc_marks_conflicting_idempotency_fail_closed_guard \
-    regression_doc_marks_mismatch_tamper_reason_taxonomy_and_ci_boundary_contracts
+  cargo test -p kamn-core --test docs_contract_wave3_harness message_proof_anchoring_docs::
 ) >"$docs_output_file" 2>&1
 docs_code=$?
 set -e
