@@ -1,7 +1,7 @@
 # Issue #4015 Spec
 
 - Title: Subtask: define journal-wal schema fixtures and commit-boundary marker contracts
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-10-durability-crash-recovery-and-state-consistency-hardening/index.md
