@@ -123,6 +123,12 @@ const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FIN
     "same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->listener_approver_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+listener_approver_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1,distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->listener_approver_asymmetric_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+listener_approver_asymmetric_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_asymmetric_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1+processor_listener_asymmetric_parallel_deferred|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_deferred|kamn.runtime.daemon.phase6.reason-taxonomy.v1";
 const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_BUNDLE_COHERENCE_CONTRACT: &str =
     "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_bundle_rows_must_remain_stable_under_repeated_runs_and_permutations";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-coherence.v1";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_ROWS_CSV: &str =
+    "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea";
+const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_CONTRACT: &str =
+    "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_must_remain_stable_under_repeated_runs_and_permutations";
 const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_ORDER_CSV: &str =
     "topology_id,host_a,host_b,lane_fingerprint_bundle";
 const LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_DELIMITER: char = '#';
@@ -604,6 +610,48 @@ fn extract_parallel_lane_topology_lane_fingerprint_bundle(topology_fingerprint: 
         .join(&LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_LANE_FINGERPRINT_BUNDLE_DELIMITER.to_string())
 }
 
+fn deterministic_fnv1a64_hex(input: &str) -> String {
+    const FNV_OFFSET_BASIS_64: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME_64: u64 = 0x100000001b3;
+    let mut hash = FNV_OFFSET_BASIS_64;
+    for byte in input.bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(FNV_PRIME_64);
+    }
+    format!("{hash:016x}")
+}
+
+fn extract_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_row(
+    topology_fingerprint: &str,
+) -> String {
+    let fields = parse_parallel_lane_topology_fingerprint_fields(topology_fingerprint);
+    assert_eq!(
+        fields.len(),
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_FINGERPRINT_FIELD_COUNT,
+        "topology fingerprint should keep canonical field count for topology-id host-mode-host-pair-lane-set-lane-fingerprint-hash coherence extraction"
+    );
+    let host_mode = if fields[1] == fields[2] {
+        "same_host"
+    } else {
+        "distributed_label"
+    };
+    let lane_set = match fields[0] {
+        "same_host_parallel" => "symmetric_parallel",
+        "distributed_label_parallel" => "asymmetric_parallel",
+        _ => panic!(
+            "unknown topology id {} for host-mode-host-pair-lane-set-lane-fingerprint-hash coherence extraction",
+            fields[0]
+        ),
+    };
+    let lane_fingerprint_bundle =
+        extract_parallel_lane_topology_lane_fingerprint_bundle(topology_fingerprint);
+    let lane_fingerprint_hash = deterministic_fnv1a64_hex(&lane_fingerprint_bundle);
+    format!(
+        "{}->{}->{}->{}->{}->{}",
+        fields[0], host_mode, fields[1], fields[2], lane_set, lane_fingerprint_hash
+    )
+}
+
 fn extract_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_bundle_row(
     topology_fingerprint: &str,
 ) -> String {
@@ -863,6 +911,21 @@ fn collect_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerpri
         .iter()
         .map(|fingerprint| {
             extract_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_bundle_row(
+                fingerprint,
+            )
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    rows
+}
+
+fn collect_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows(
+    topology_profiles: Vec<LivePostgresParallelLaneTopologyProfile>,
+) -> Vec<String> {
+    let mut rows = run_parallel_lane_topology_fingerprints(topology_profiles)
+        .iter()
+        .map(|fingerprint| {
+            extract_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_row(
                 fingerprint,
             )
         })
@@ -4987,6 +5050,119 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
         assert_eq!(
             baseline_rows, permuted_rows,
             "topology-id to host-mode-host-pair-lane-set-lane-fingerprint-bundle rows should remain stable under permutation {permutation}"
+        );
+    }
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_coherence_contract_is_canonical(
+) {
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_SCHEMA_VERSION,
+        "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-topology-host-mode-host-pair-lane-set-lane-fingerprint-hash-coherence.v1"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_ROWS_CSV,
+        "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e,same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_CONTRACT,
+        "topology_id_to_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows_must_remain_stable_under_repeated_runs_and_permutations"
+    );
+
+    let sample_lane_fingerprint = format_parallel_lane_fingerprint(
+        "processor_listener_asymmetric_parallel_applied",
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+    );
+    let topology_fingerprint = format_parallel_lane_topology_fingerprint(
+        "distributed_label_parallel",
+        "node_alpha",
+        "node_beta",
+        vec![sample_lane_fingerprint],
+    );
+    assert_eq!(
+        extract_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_row(
+            &topology_fingerprint
+        ),
+        "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->218fd301449431fd"
+    );
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_coherence_is_stable(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let permutation_ids = ["baseline", "reverse", "rotate_left_1"];
+    let baseline_rows =
+        collect_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows(
+            permute_parallel_lane_topology_profiles(
+                project_live_postgres_parallel_lane_topology_profiles(),
+                permutation_ids[0],
+            ),
+        );
+    assert_eq!(
+        baseline_rows,
+        vec![
+            "distributed_label_parallel->distributed_label->node_alpha->node_beta->asymmetric_parallel->18ce08940c67c38e",
+            "same_host_parallel->same_host->node_alpha->node_alpha->symmetric_parallel->37e351d41d1e30ea"
+        ]
+    );
+    assert_eq!(
+        baseline_rows.join(","),
+        LIVE_POSTGRES_PARALLEL_LANE_TOPOLOGY_HOST_MODE_HOST_PAIR_LANE_SET_LANE_FINGERPRINT_HASH_COHERENCE_ROWS_CSV
+    );
+
+    for permutation in permutation_ids.iter().skip(1) {
+        let permuted_rows =
+            collect_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_rows(
+                permute_parallel_lane_topology_profiles(
+                    project_live_postgres_parallel_lane_topology_profiles(),
+                    permutation,
+                ),
+            );
+        assert_eq!(
+            baseline_rows, permuted_rows,
+            "topology-id to host-mode-host-pair-lane-set-lane-fingerprint-hash rows should remain stable under permutation {permutation}"
         );
     }
 }
