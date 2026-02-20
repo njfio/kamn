@@ -1714,6 +1714,33 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Regression coverage:
   - `Regression: #4014`
 
+## SQLite Crash-Restart Local-Heavy Policy Checker Contract
+- Entry commands:
+  - `bash scripts/runtime/run_sqlite_crash_restart_local_heavy_lane.sh --profile combined --mode dry-run --ci-fast-gate PASS --max-seconds 240 --output-json /tmp/sqlite-crash-restart-local-heavy-lane-report.json`
+  - `bash scripts/runtime/check_sqlite_crash_restart_local_heavy_policy.sh --report-file /tmp/sqlite-crash-restart-local-heavy-lane-report.json --expected-final-decision GO --ci-fast-gate PASS --runbook-file docs/deploy/kolme_devnet_ops.md --strategy-doc docs/ci/strategy.md --output-json /tmp/sqlite-crash-restart-local-heavy-policy-report.json`
+  - `bash scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - checker consumes dry-run crash-restart artifacts only.
+  - runbook/docs parity checks are file-content assertions only.
+  - checker runtime is bounded and low-cost for fast-gate usage.
+- Deterministic checker markers:
+  - `sqlite_crash_restart_local_heavy_policy_reason_taxonomy_version=kamn.runtime.sqlite-crash-restart-local-heavy-policy-reason-taxonomy.v1`
+  - `sqlite_crash_restart_local_heavy_policy_reason_codes_csv=sqlite_crash_restart_policy_required_field_missing,sqlite_crash_restart_policy_marker_mismatch,sqlite_crash_restart_policy_reason_taxonomy_mismatch,sqlite_crash_restart_policy_profile_contract_mismatch,sqlite_crash_restart_policy_runbook_marker_parity_mismatch,sqlite_crash_restart_policy_strategy_marker_parity_mismatch,ci_fast_gate_failed,sqlite_crash_restart_policy_expected_decision_mismatch,sqlite_crash_restart_policy_violation`
+  - `sqlite_crash_restart_local_heavy_policy_runbook_path=docs/deploy/kolme_devnet_ops.md`
+  - `sqlite_crash_restart_local_heavy_policy_strategy_doc_path=docs/ci/strategy.md`
+- Fail-closed drift reasons:
+  - `sqlite_crash_restart_policy_marker_mismatch`
+  - `sqlite_crash_restart_policy_profile_contract_mismatch`
+  - `sqlite_crash_restart_policy_runbook_marker_parity_mismatch`
+  - `sqlite_crash_restart_policy_strategy_marker_parity_mismatch`
+  - `ci_fast_gate_failed`
+  - `sqlite_crash_restart_policy_expected_decision_mismatch`
+- Regression coverage:
+  - `Regression: #4018`
+
 ## Runtime Service API Graceful-Shutdown Drain Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json`
