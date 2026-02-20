@@ -91,6 +91,23 @@ extract_metric() {
   printf '%s' "$value"
 }
 
+extract_string_marker() {
+  local key="$1"
+  local value
+  value="$(
+    grep -Eo "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]+\"" "$REPORT_JSON" \
+      | head -n 1 \
+      | sed -E 's/^[^:]+:[[:space:]]*\"([^\"]+)\"$/\1/'
+  )"
+
+  if [ -z "$value" ]; then
+    echo "missing required baseline marker: ${key}" >&2
+    exit 2
+  fi
+
+  printf '%s' "$value"
+}
+
 metric_lt() {
   local observed="$1"
   local threshold="$2"
@@ -107,6 +124,16 @@ LATENCY_P50="$(extract_metric latency_p50_ms)"
 LATENCY_P99="$(extract_metric latency_p99_ms)"
 THROUGHPUT="$(extract_metric throughput_tps)"
 AVAILABILITY="$(extract_metric availability_pct)"
+BASELINE_PROVENANCE_ARTIFACT_VERSION="$(extract_string_marker baseline_provenance_artifact_version)"
+BASELINE_PROVENANCE_SOURCE_COMMIT="$(extract_string_marker baseline_provenance_source_commit)"
+BASELINE_PROVENANCE_SOURCE_RUN_ID="$(extract_string_marker baseline_provenance_source_run_id)"
+BASELINE_PROVENANCE_GENERATED_AT_UTC="$(extract_string_marker baseline_provenance_generated_at_utc)"
+BASELINE_PROVENANCE_GENERATOR="$(extract_string_marker baseline_provenance_generator)"
+DRIFT_THRESHOLD_SEED_ID="$(extract_string_marker drift_threshold_seed_id)"
+DRIFT_THRESHOLD_SEED_MAX_P50="$(extract_metric drift_threshold_seed_max_latency_p50_ms)"
+DRIFT_THRESHOLD_SEED_MAX_P99="$(extract_metric drift_threshold_seed_max_latency_p99_ms)"
+DRIFT_THRESHOLD_SEED_MIN_THROUGHPUT="$(extract_metric drift_threshold_seed_min_throughput_tps)"
+DRIFT_THRESHOLD_SEED_MIN_AVAILABILITY="$(extract_metric drift_threshold_seed_min_availability_pct)"
 
 failures=()
 
@@ -126,9 +153,29 @@ if ! metric_gte "$AVAILABILITY" "$MIN_AVAILABILITY"; then
   failures+=("availability_pct<${MIN_AVAILABILITY}")
 fi
 
+if ! metric_lt 0 "$DRIFT_THRESHOLD_SEED_MAX_P50"; then
+  failures+=("drift_threshold_seed_max_latency_p50_ms<=0")
+fi
+
+if ! metric_lt 0 "$DRIFT_THRESHOLD_SEED_MAX_P99"; then
+  failures+=("drift_threshold_seed_max_latency_p99_ms<=0")
+fi
+
+if ! metric_lt 0 "$DRIFT_THRESHOLD_SEED_MIN_THROUGHPUT"; then
+  failures+=("drift_threshold_seed_min_throughput_tps<=0")
+fi
+
+if ! metric_gte "$DRIFT_THRESHOLD_SEED_MIN_AVAILABILITY" 0; then
+  failures+=("drift_threshold_seed_min_availability_pct<0")
+fi
+
+if ! metric_lt "$DRIFT_THRESHOLD_SEED_MIN_AVAILABILITY" 101; then
+  failures+=("drift_threshold_seed_min_availability_pct>100")
+fi
+
 if [ "${#failures[@]}" -gt 0 ]; then
   echo "status=fail; lane=${LANE}; failures=$(IFS=,; echo "${failures[*]}")"
   exit 1
 fi
 
-echo "status=pass; lane=${LANE}; latency_p50_ms=${LATENCY_P50}; latency_p99_ms=${LATENCY_P99}; throughput_tps=${THROUGHPUT}; availability_pct=${AVAILABILITY}"
+echo "status=pass; lane=${LANE}; latency_p50_ms=${LATENCY_P50}; latency_p99_ms=${LATENCY_P99}; throughput_tps=${THROUGHPUT}; availability_pct=${AVAILABILITY}; baseline_version=${BASELINE_PROVENANCE_ARTIFACT_VERSION}; baseline_commit=${BASELINE_PROVENANCE_SOURCE_COMMIT}; baseline_run_id=${BASELINE_PROVENANCE_SOURCE_RUN_ID}; baseline_generated_at_utc=${BASELINE_PROVENANCE_GENERATED_AT_UTC}; baseline_generator=${BASELINE_PROVENANCE_GENERATOR}; drift_threshold_seed_id=${DRIFT_THRESHOLD_SEED_ID}"
