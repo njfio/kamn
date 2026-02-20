@@ -1,7 +1,7 @@
 # Issue #4017 Spec
 
 - Title: Subtask: implement crash-restart local-heavy lane runner with deterministic recovery artifacts
-- Status: Reviewed
+- Status: Implemented
 - Type: subtask
 - Priority: P1
 - Milestone: specs/milestones/r27-10-durability-crash-recovery-and-state-consistency-hardening/index.md
