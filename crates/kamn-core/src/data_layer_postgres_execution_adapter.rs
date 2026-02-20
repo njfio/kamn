@@ -4,6 +4,7 @@
 //! `data_layer_postgres_repository_bridge` and applies migration artifacts from
 //! `crates/kamn-core/migrations`.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
@@ -224,6 +225,24 @@ impl DataLayerPgExecutionAdapter {
         owner_did: &str,
         requester_did: &str,
     ) -> Result<u64, DataLayerPgExecutionAdapterError> {
+        let empty_blind_indexes = BTreeMap::new();
+        self.execute_insert_message_with_blind_indexes(
+            record,
+            owner_did,
+            requester_did,
+            &empty_blind_indexes,
+        )
+        .await
+    }
+
+    /// Executes one message insert descriptor with a caller-supplied blind-index token map.
+    pub async fn execute_insert_message_with_blind_indexes(
+        &self,
+        record: &DataLayerM0EnvelopeRecord,
+        owner_did: &str,
+        requester_did: &str,
+        blind_indexes: &BTreeMap<String, String>,
+    ) -> Result<u64, DataLayerPgExecutionAdapterError> {
         let descriptor =
             data_layer_pg_project_insert_message_operation(record, owner_did, requester_did)
                 .map_err(
@@ -244,6 +263,7 @@ impl DataLayerPgExecutionAdapter {
                 detail: format!("envelope_nonce conversion failed: {error}"),
             }
         })?;
+        let blind_indexes_json = data_layer_pg_encode_blind_indexes_json(blind_indexes)?;
 
         debug!(
             operation = "insert_message",
@@ -270,7 +290,7 @@ impl DataLayerPgExecutionAdapter {
             .bind(envelope_nonce)
             .bind(record.content_hash.as_str())
             .bind(record.hash_chain_prev.as_str())
-            .bind("{}")
+            .bind(blind_indexes_json.as_str())
             .bind(record.message_type.as_str())
             .execute(&mut *tx)
             .await
@@ -607,6 +627,59 @@ fn data_layer_pg_decode_stored_message(
     })
 }
 
+fn data_layer_pg_encode_blind_indexes_json(
+    blind_indexes: &BTreeMap<String, String>,
+) -> Result<String, DataLayerPgExecutionAdapterError> {
+    if blind_indexes.is_empty() {
+        return Ok("{}".to_owned());
+    }
+
+    let mut json = String::from("{");
+    for (index, (field_name, token)) in blind_indexes.iter().enumerate() {
+        if field_name.trim().is_empty() {
+            return Err(
+                DataLayerPgExecutionAdapterError::InvalidBlindIndexesPayload {
+                    field: "blind_index_field_name",
+                    detail: "field name must not be empty".to_owned(),
+                },
+            );
+        }
+        if token.trim().is_empty() {
+            return Err(
+                DataLayerPgExecutionAdapterError::InvalidBlindIndexesPayload {
+                    field: "blind_index_token",
+                    detail: format!("token for field {field_name} must not be empty"),
+                },
+            );
+        }
+        if index > 0 {
+            json.push(',');
+        }
+        json.push('"');
+        json.push_str(data_layer_pg_escape_json(field_name.as_str()).as_str());
+        json.push_str("\":\"");
+        json.push_str(data_layer_pg_escape_json(token.as_str()).as_str());
+        json.push('"');
+    }
+    json.push('}');
+    Ok(json)
+}
+
+fn data_layer_pg_escape_json(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for character in value.chars() {
+        match character {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(character),
+        }
+    }
+    escaped
+}
+
 fn data_layer_pg_decode_blind_index_search_row(
     row: sqlx::postgres::PgRow,
 ) -> Result<DataLayerPgBlindIndexSearchRow, DataLayerPgExecutionAdapterError> {
@@ -697,6 +770,13 @@ pub enum DataLayerPgExecutionAdapterError {
         /// SQL execution detail.
         detail: String,
     },
+    /// Blind-index JSON payload failed fail-closed validation.
+    InvalidBlindIndexesPayload {
+        /// Field-name carrying invalid blind-index payload data.
+        field: &'static str,
+        /// Fail-closed detail.
+        detail: String,
+    },
     /// Row decoding failed.
     DecodeFailed {
         /// Field that failed to decode.
@@ -750,6 +830,12 @@ impl fmt::Display for DataLayerPgExecutionAdapterError {
                 formatter,
                 "RLS statement application failed: {reason_code} ({detail})"
             ),
+            Self::InvalidBlindIndexesPayload { field, detail } => {
+                write!(
+                    formatter,
+                    "invalid blind-index payload for {field}: {detail}"
+                )
+            }
             Self::DecodeFailed { field, detail } => {
                 write!(formatter, "decode failed for {field}: {detail}")
             }
