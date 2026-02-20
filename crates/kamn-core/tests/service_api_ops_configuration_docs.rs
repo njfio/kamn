@@ -645,6 +645,28 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_pe
 }
 
 #[test]
+fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_fingerprint_schema_markers(
+) {
+    assert!(DOC.contains("### Parallel Lane Fingerprint Schema Contracts (Issue #5362)"));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_fingerprint_schema_version=kamn.runtime.daemon.phase6-live-postgres.parallel-lane-fingerprint.v1"
+    ));
+    assert!(DOC.contains(
+        "phase6_live_postgres_daemon_runtime_parallel_lane_fingerprint_field_order_csv=lane_id,leg_a_reason,leg_a_taxonomy,leg_b_reason,leg_b_taxonomy"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_fingerprint_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_parallel_fingerprint_schema_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5362"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));

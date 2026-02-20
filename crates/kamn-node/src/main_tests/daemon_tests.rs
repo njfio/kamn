@@ -23,6 +23,12 @@ const LIVE_POSTGRES_MATRIX_PERMUTATION_IDS_CSV: &str =
     "baseline,reverse,rotate_left_1,interleaved_even_then_odd";
 const LIVE_POSTGRES_MATRIX_ORDER_INVARIANCE_LANE_SETS_CSV: &str =
     "symmetric_parallel,asymmetric_parallel";
+const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-fingerprint.v1";
+const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_ORDER_CSV: &str =
+    "lane_id,leg_a_reason,leg_a_taxonomy,leg_b_reason,leg_b_taxonomy";
+const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER: char = '|';
+const LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_COUNT: usize = 5;
 const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str = "env_unset,env_set_no_shutdown,env_set_shutdown";
@@ -143,6 +149,68 @@ fn run_parallel_phase6_projections(
     (leg_a_projection, leg_b_projection)
 }
 
+fn format_parallel_lane_fingerprint(
+    lane_id: &str,
+    leg_a_projection: &LivePostgresPhase6Projection,
+    leg_b_projection: &LivePostgresPhase6Projection,
+) -> String {
+    format!(
+        "{}{}{}{}{}{}{}{}{}",
+        lane_id,
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER,
+        leg_a_projection.reason_code.as_str(),
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER,
+        leg_a_projection.reason_taxonomy_version.as_str(),
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER,
+        leg_b_projection.reason_code.as_str(),
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER,
+        leg_b_projection.reason_taxonomy_version.as_str()
+    )
+}
+
+fn parse_parallel_lane_fingerprint_fields(fingerprint: &str) -> Vec<&str> {
+    fingerprint
+        .split(LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER)
+        .collect::<Vec<_>>()
+}
+
+fn assert_parallel_lane_fingerprint_schema(fingerprint: &str, expected_lane_ids: &[&str]) {
+    let fields = parse_parallel_lane_fingerprint_fields(fingerprint);
+    assert_eq!(
+        fields.len(),
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_COUNT,
+        "fingerprint should contain the canonical number of schema fields"
+    );
+    assert!(
+        expected_lane_ids
+            .iter()
+            .any(|lane_id| *lane_id == fields[0]),
+        "fingerprint lane id {} should be one of {:?}",
+        fields[0],
+        expected_lane_ids
+    );
+    assert!(
+        [
+            LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE,
+            LIVE_POSTGRES_MATRIX_PHASE6_DEFERRED_REASON_CODE
+        ]
+        .contains(&fields[1]),
+        "fingerprint leg A reason should remain in the canonical reason taxonomy set"
+    );
+    assert_eq!(
+        fields[1], fields[3],
+        "parallel lane fingerprint should keep leg A and leg B reason codes aligned"
+    );
+    assert_eq!(
+        fields[2], LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+        "fingerprint leg A taxonomy should remain canonical"
+    );
+    assert_eq!(
+        fields[4], LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION,
+        "fingerprint leg B taxonomy should remain canonical"
+    );
+}
+
 fn run_parallel_lane_set_fingerprints(lanes: Vec<LivePostgresRolePairProfile>) -> Vec<String> {
     let mut fingerprints = Vec::with_capacity(lanes.len());
     for lane in lanes {
@@ -168,13 +236,10 @@ fn run_parallel_lane_set_fingerprints(lanes: Vec<LivePostgresRolePairProfile>) -
             "lane {} leg B taxonomy should remain stable",
             lane.pair_id
         );
-        fingerprints.push(format!(
-            "{}|{}|{}|{}|{}",
+        fingerprints.push(format_parallel_lane_fingerprint(
             lane.pair_id,
-            leg_a_projection.reason_code,
-            leg_a_projection.reason_taxonomy_version,
-            leg_b_projection.reason_code,
-            leg_b_projection.reason_taxonomy_version
+            &leg_a_projection,
+            &leg_b_projection,
         ));
     }
     fingerprints.sort();
@@ -2341,6 +2406,117 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
             asymmetric_baseline, permuted,
             "asymmetric parallel lane fingerprints should remain invariant to permutation {permutation}"
         );
+    }
+}
+
+#[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_fingerprint_contract_is_canonical(
+) {
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_SCHEMA_VERSION,
+        "kamn.runtime.daemon.phase6-live-postgres.parallel-lane-fingerprint.v1"
+    );
+    assert_eq!(
+        LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_ORDER_CSV,
+        [
+            "lane_id",
+            "leg_a_reason",
+            "leg_a_taxonomy",
+            "leg_b_reason",
+            "leg_b_taxonomy"
+        ]
+        .join(",")
+    );
+    assert_eq!(LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_DELIMITER, '|');
+    assert_eq!(LIVE_POSTGRES_PARALLEL_LANE_FINGERPRINT_FIELD_COUNT, 5);
+
+    let fingerprint = format_parallel_lane_fingerprint(
+        "processor_listener_parallel_applied",
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+        &LivePostgresPhase6Projection {
+            reason_code: LIVE_POSTGRES_MATRIX_PHASE6_APPLIED_REASON_CODE.to_owned(),
+            reason_taxonomy_version: LIVE_POSTGRES_DAEMON_REASON_TAXONOMY_VERSION.to_owned(),
+        },
+    );
+    assert_eq!(
+        fingerprint,
+        "processor_listener_parallel_applied|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1|m10_phase6_scheduler_cycle_applied|kamn.runtime.daemon.phase6.reason-taxonomy.v1"
+    );
+    assert_parallel_lane_fingerprint_schema(&fingerprint, &["processor_listener_parallel_applied"]);
+}
+
+#[test]
+fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable(
+) {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    let Some(database_url) = maybe_database_url else {
+        assert_eq!(gate_reason_code, LIVE_POSTGRES_ENV_UNSET_REASON_CODE);
+        return;
+    };
+    assert_eq!(
+        gate_reason_code,
+        LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+    );
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime should be constructible for live postgres validation");
+    runtime.block_on(async move {
+        let adapter = kamn_core::DataLayerPgExecutionAdapter::connect(
+            kamn_core::DataLayerPgExecutionAdapterConfig {
+                database_url,
+                max_connections: 4,
+            },
+        )
+        .await
+        .expect("live postgres connection should succeed when test URL is provided");
+        adapter
+            .apply_migrations()
+            .await
+            .expect("live postgres migrations should apply for validation slice");
+    });
+
+    let symmetric_lane_ids = project_live_postgres_parallel_role_pair_lanes()
+        .iter()
+        .map(|lane| lane.pair_id)
+        .collect::<Vec<_>>();
+    let symmetric_first =
+        run_parallel_lane_set_fingerprints(project_live_postgres_parallel_role_pair_lanes());
+    let symmetric_second =
+        run_parallel_lane_set_fingerprints(project_live_postgres_parallel_role_pair_lanes());
+    assert_eq!(
+        symmetric_first, symmetric_second,
+        "symmetric parallel lane fingerprints should remain stable across repeated runs"
+    );
+    assert_eq!(symmetric_first.len(), symmetric_lane_ids.len());
+    for fingerprint in &symmetric_first {
+        assert_parallel_lane_fingerprint_schema(fingerprint, &symmetric_lane_ids);
+    }
+
+    let asymmetric_lane_ids = project_live_postgres_asymmetric_parallel_lanes()
+        .iter()
+        .map(|lane| lane.pair_id)
+        .collect::<Vec<_>>();
+    let asymmetric_first =
+        run_parallel_lane_set_fingerprints(project_live_postgres_asymmetric_parallel_lanes());
+    let asymmetric_second =
+        run_parallel_lane_set_fingerprints(project_live_postgres_asymmetric_parallel_lanes());
+    assert_eq!(
+        asymmetric_first, asymmetric_second,
+        "asymmetric parallel lane fingerprints should remain stable across repeated runs"
+    );
+    assert_eq!(asymmetric_first.len(), asymmetric_lane_ids.len());
+    for fingerprint in &asymmetric_first {
+        assert_parallel_lane_fingerprint_schema(fingerprint, &asymmetric_lane_ids);
     }
 }
 
