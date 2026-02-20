@@ -1236,6 +1236,14 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_request_response_schema_compatibility_live_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/request_response_schema_compatibility_live_contract.py",
+      "args_prefix": [
+        "check-policy"
+      ],
+      "passthrough": true
+    },
     "scripts/runtime/check_runtime_observability_endpoint_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/runtime_observability_endpoint_live_contract.py",
@@ -1549,6 +1557,22 @@
       "target": "scripts/runtime/local_signal_secret_hygiene_live_contract.py",
       "args_prefix": [
         "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_request_response_schema_compatibility_live.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/request_response_schema_compatibility_live_contract.py",
+      "args_prefix": [
+        "run-lane"
+      ],
+      "passthrough": true
+    },
+    "scripts/runtime/validate_request_response_schema_compatibility_live_contract_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/request_response_schema_compatibility_live_contract.py",
+      "args_prefix": [
+        "run-contract-lane"
       ],
       "passthrough": true
     },
