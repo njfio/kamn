@@ -10,9 +10,9 @@
 - Capture recent `branch-cleanup` workflow run evidence.
 - Update `docs/review/gaps-and-issues-r45.md` status narrative and priority summary markers to reflect measured post-cleanup state.
 
-3. Docs-contract wave-4 tranche:
+3. Docs-contract wave-4 tranches:
 - Add `crates/kamn-core/tests/docs_contract_wave4_harness.rs`.
-- Migrate 11 low-coupling include_str suites into harness modules with assertion parity.
+- Migrate tranche A (11) + tranche B (10) low-coupling include_str suites into harness modules with assertion parity.
 - Remove migrated per-doc files.
 - Re-measure include_str file count and verify harness tests.
 

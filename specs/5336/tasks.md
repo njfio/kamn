@@ -8,6 +8,7 @@
 - [x] T5 (Conformance): verify include_str count reduction and run wave-4 harness tests.
 - [x] T6 (Governance): capture branch cleanup evidence and update R45 review status/priority markers.
 - [x] T7 (Quality): run fmt, targeted clippy, and touched test suites.
+- [x] T8 (Structural): execute wave-4 tranche B and migrate 10 additional low-coupling suites to drive include_str count below 70.
 
 ## Dependency Notes
 - T2 depends on T1 red evidence.

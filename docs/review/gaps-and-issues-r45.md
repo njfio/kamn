@@ -14,7 +14,7 @@ Six gaps were identified in R45. All six are now resolved after the R46 follow-u
 | Flaky signer env guard test | Fully stabilized by lock-domain unification across managed-backend and signer tests | #5322, #5323, #5336 |
 | data_layer_m10 monolith (2,001 lines) | Decomposed into root (560) + 5 submodules | #5325 |
 | data_layer_postgres_execution_adapter (1,114 lines) | Decomposed into root (704) + 4 submodules | #5328 |
-| Doc-contract consolidation (122 files) | Wave 4 tranche A: harness migration reduced include_str suite-file count to 79 | #5327, #5336 |
+| Doc-contract consolidation (122 files) | Wave 4 tranche A+B: harness migration reduced include_str suite-file count to 69 | #5327, #5336 |
 | Branch re-accumulation (134) | Manual cleanup wave executed; remote branch count now 54 | #5183, #5336 |
 | Ignored tests (12) | Formal audit with explicit dispositions | #5329 |
 
@@ -38,16 +38,16 @@ Stable since R39 (7 consecutive reviews). All 12 ignored tests received formal d
 
 The inventory is now deliberately managed. Periodic re-evaluation recommended every 5 reviews.
 
-### 1.3 Doc-Contract Test Files (79, -43 from R45)
+### 1.3 Doc-Contract Test Files (69, -53 from R45)
 
-Down from 122 to 79 through wave 3 + wave 4 tranche A harness consolidation (#5327, #5336). The wave 4 tranche migrated 11 low-coupling suites into `docs_contract_wave4_harness.rs` with compatibility placeholders kept for stable test-target names.
+Down from 122 to 69 through wave 3 + wave 4 tranche A+B harness consolidation (#5327, #5336). Wave 4 migrated 21 low-coupling suites into `docs_contract_wave4_harness.rs` with compatibility placeholders kept for stable test-target names.
 
 Distribution:
-- ~64 in `crates/kamn-core/tests/`
-- ~13 in `crates/kamn-node/tests/`
+- ~51 in `crates/kamn-core/tests/`
+- ~16 in `crates/kamn-node/tests/`
 - ~2 in `crates/kamn-sdk/tests/`
 
-**Recommendation:** Continue harness migration. Target <70 by R49.
+**Status:** `<70` target achieved in R46 follow-up.
 
 ### 1.4 Public API Surface Ratchet Gate
 
@@ -230,10 +230,10 @@ This establishes infrastructure for deterministic performance regression detecti
 |----------|-------|----------|--------|--------|
 | ~~Medium~~ | ~~data_layer_m10 monolith~~ | ~~kamn-core/src/~~ | ~~Medium~~ | **RESOLVED R46** |
 | ~~Medium~~ | ~~data_layer_pg_adapter monolith~~ | ~~kamn-core/src/~~ | ~~Medium~~ | **RESOLVED R46** |
-| ~~Medium~~ | ~~Doc-contract consolidation (122)~~ | ~~crates/*/tests/~~ | ~~Large~~ | **79 (-43) wave 3+4A** |
+| ~~Medium~~ | ~~Doc-contract consolidation (122)~~ | ~~crates/*/tests/~~ | ~~Large~~ | **69 (-53) wave 3+4A+4B** |
 | ~~Medium~~ | ~~Branch re-accumulation (145)~~ | ~~Remote branches~~ | ~~Small~~ | **RESOLVED (54 branches)** |
 | ~~Medium~~ | ~~Signer env guard flake~~ | ~~main_tests/signer_tests.rs:1521~~ | ~~Small~~ | **RESOLVED (#5336)** |
-| Medium | Doc-contract wave 4 (remaining tranche) | 79 remaining test files | Medium | In progress (post-4A) |
+| ~~Medium~~ | ~~Doc-contract wave 4 (remaining tranche)~~ | ~~69 remaining test files~~ | ~~Medium~~ | **RESOLVED (<70 achieved)** |
 | Low | Shell LOC reduction | 120,958 lines | Ongoing | Improving (-596 this cycle) |
 | Info | Spec-to-module ratio (7.3:1) | 653 specs / 90 modules | Ongoing | Growing |
 | Info | Ignored tests (12, audited) | 2 test files | Periodic audit | Stable 7 cycles |
