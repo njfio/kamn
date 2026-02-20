@@ -62,6 +62,7 @@ Execution milestone for `docs/planning/kamn-data-layer-prd.docx.md` covering ful
   - `#5279` — Task: implement M9 realtime gateway bridge projection and fail-closed presence-scope contracts
   - `#5281` — Task: integrate service-api websocket presence route with M9 gateway bridge contracts
   - `#5283` — Task: validate realtime backpressure guardrails and finalize presence gateway ops docs
+  - `#5285` — Task: start Phase-6 retention-to-archival gate execution contracts
 - Subtasks:
   - `#5029` — Subtask: M0 conformance matrix for envelope crypto, append-only, and hash-chain invariants
   - `#5030` — Subtask: M1 deterministic merkle proof and Kolme anchoring failure-matrix coverage

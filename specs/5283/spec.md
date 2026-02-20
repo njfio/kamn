@@ -1,7 +1,7 @@
 # Issue #5283 Spec
 
 - Title: Task: validate realtime backpressure guardrails and finalize presence gateway ops docs
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 - Milestone: specs/milestones/r27-45-kamn-data-layer-prd-implementation-and-validation/index.md
 
