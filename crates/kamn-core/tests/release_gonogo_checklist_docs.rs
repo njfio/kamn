@@ -869,6 +869,11 @@ fn checklist_contains_gonogo_promotion_convergence_reason_mapping_gate() {
         "promotion_decision_reason_codes_csv=release_manifest_missing_required_artifact,release_manifest_success_marker_mismatch,gate_required_artifact_status_mismatch,gate_decision_fault_injection_triggered,runtime_budget_exceeded,gate_policy_unknown_reason_code,gate_policy_native_libp2p_provider_marker_mismatch,gate_policy_libp2p_fallback_marker_blocklist_mismatch,gate_policy_libp2p_fallback_markers_detected,gate_policy_native_libp2p_provider_marker_contract_status_mismatch"
     ));
     assert!(CHECKLIST.contains("promotion_decision_reason_code=none|<reason>"));
+    assert!(CHECKLIST.contains(
+        "go_no_go_required_artifact_ids_csv=go_no_go_evidence,rollback_readiness,dr_readiness,local_full_stack_integration,local_full_runtime_convergence,transport_fault_matrix,cross_store_replay_consistency"
+    ));
+    assert!(CHECKLIST.contains("cross_store_replay_consistency_status=dry_run_pending|verified"));
+    assert!(CHECKLIST.contains("cross_store_replay_consistency_policy_status=verified"));
     assert!(CHECKLIST.contains("release_manifest_missing_required_artifact"));
     assert!(CHECKLIST.contains("release_manifest_success_marker_mismatch"));
     assert!(CHECKLIST.contains("Regression: #4200"));

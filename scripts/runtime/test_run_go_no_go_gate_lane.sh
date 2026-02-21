@@ -184,6 +184,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^transport_fault_matrix_status=dry_
   echo "expected go/no-go gate lane dry-run transport fault-matrix status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^cross_store_replay_consistency_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run cross-store replay consistency status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^policy_evaluator_status=verified$'; then
   echo "expected go/no-go gate lane policy evaluator status marker" >&2
   exit 1
@@ -359,6 +363,8 @@ if payload.get("local_full_runtime_convergence_status") != "dry_run_pending":
     raise SystemExit("expected local_full_runtime_convergence_status=dry_run_pending")
 if payload.get("transport_fault_matrix_status") != "dry_run_pending":
     raise SystemExit("expected transport_fault_matrix_status=dry_run_pending")
+if payload.get("cross_store_replay_consistency_status") != "dry_run_pending":
+    raise SystemExit("expected cross_store_replay_consistency_status=dry_run_pending")
 if payload.get("policy_evaluator_status") != "verified":
     raise SystemExit("expected policy_evaluator_status=verified")
 if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-manifest.v1":
@@ -397,8 +403,8 @@ if payload.get("native_libp2p_provider_marker_contract_status") != "verified":
         "expected native_libp2p_provider_marker_contract_status=verified in dry-run go/no-go gate report"
     )
 inventory = payload.get("artifact_inventory")
-if not isinstance(inventory, list) or len(inventory) != 6:
-    raise SystemExit("expected deterministic artifact inventory list with six required entries")
+if not isinstance(inventory, list) or len(inventory) != 7:
+    raise SystemExit("expected deterministic artifact inventory list with seven required entries")
 required_ids = payload.get("required_artifact_ids")
 if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
     [
@@ -408,10 +414,11 @@ if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
         "local_full_stack_integration",
         "local_full_runtime_convergence",
         "transport_fault_matrix",
+        "cross_store_replay_consistency",
     ]
 ):
     raise SystemExit(
-        "expected required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, and transport_fault_matrix"
+        "expected required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, transport_fault_matrix, and cross_store_replay_consistency"
     )
 for entry in inventory:
     if not isinstance(entry, dict):
@@ -478,6 +485,10 @@ if ! printf '%s\n' "$run_mode_output" | grep -q '^local_full_runtime_convergence
 fi
 if ! printf '%s\n' "$run_mode_output" | grep -q '^transport_fault_matrix_status=verified$'; then
   echo "expected go/no-go gate lane run-mode transport fault-matrix status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^cross_store_replay_consistency_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode cross-store replay consistency status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1$'; then
@@ -607,6 +618,8 @@ if payload.get("local_full_runtime_convergence_status") != "verified":
     raise SystemExit("expected local_full_runtime_convergence_status=verified in run-mode go/no-go gate report")
 if payload.get("transport_fault_matrix_status") != "verified":
     raise SystemExit("expected transport_fault_matrix_status=verified in run-mode go/no-go gate report")
+if payload.get("cross_store_replay_consistency_status") != "verified":
+    raise SystemExit("expected cross_store_replay_consistency_status=verified in run-mode go/no-go gate report")
 if payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
     raise SystemExit("expected combined_reason_taxonomy_version marker in run-mode go/no-go gate report")
 if payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
@@ -647,10 +660,11 @@ if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
         "local_full_stack_integration",
         "local_full_runtime_convergence",
         "transport_fault_matrix",
+        "cross_store_replay_consistency",
     ]
 ):
     raise SystemExit(
-        "expected run-mode required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, and transport_fault_matrix"
+        "expected run-mode required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, transport_fault_matrix, and cross_store_replay_consistency"
     )
 PY
 

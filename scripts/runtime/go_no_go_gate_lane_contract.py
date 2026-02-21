@@ -73,6 +73,7 @@ REQUIRED_ARTIFACT_IDS = (
     "local_full_stack_integration",
     "local_full_runtime_convergence",
     "transport_fault_matrix",
+    "cross_store_replay_consistency",
 )
 ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
     "go_no_go_evidence": {
@@ -131,6 +132,15 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
         ],
         "success_marker": "block_reconciliation_partition_rejoin_policy_status=verified",
         "failure_label": "transport fault-matrix lane failed unexpectedly",
+    },
+    "cross_store_replay_consistency": {
+        "expected_lane": "runtime.validate_cross_store_replay_consistency_contract_lane",
+        "command": [
+            "bash",
+            str(ROOT_DIR / "scripts/runtime/validate_cross_store_replay_consistency_contract_lane.sh"),
+        ],
+        "success_marker": "cross_store_replay_consistency_policy_status=verified",
+        "failure_label": "cross-store replay consistency lane failed unexpectedly",
     },
 }
 
@@ -713,6 +723,7 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     local_full_stack_integration_status = "verified" if lane_mode == "run" else "dry_run_pending"
     local_full_runtime_convergence_status = "verified" if lane_mode == "run" else "dry_run_pending"
     transport_fault_matrix_status = "verified" if lane_mode == "run" else "dry_run_pending"
+    cross_store_replay_consistency_status = "verified" if lane_mode == "run" else "dry_run_pending"
     if fault_profile == "readiness_marker_missing":
         go_no_go_evidence_status = ""
     readiness_markers = {
@@ -722,6 +733,7 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "local_full_stack_integration_status": local_full_stack_integration_status,
         "local_full_runtime_convergence_status": local_full_runtime_convergence_status,
         "transport_fault_matrix_status": transport_fault_matrix_status,
+        "cross_store_replay_consistency_status": cross_store_replay_consistency_status,
     }
     policy_outcome, final_decision, status, evaluator_reason_codes = _evaluate_go_no_go_policy(
         artifact_inventory,
@@ -787,6 +799,7 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "local_full_stack_integration_status": local_full_stack_integration_status,
         "local_full_runtime_convergence_status": local_full_runtime_convergence_status,
         "transport_fault_matrix_status": transport_fault_matrix_status,
+        "cross_store_replay_consistency_status": cross_store_replay_consistency_status,
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
@@ -840,6 +853,7 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"local_full_stack_integration_status={local_full_stack_integration_status}")
     print(f"local_full_runtime_convergence_status={local_full_runtime_convergence_status}")
     print(f"transport_fault_matrix_status={transport_fault_matrix_status}")
+    print(f"cross_store_replay_consistency_status={cross_store_replay_consistency_status}")
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
