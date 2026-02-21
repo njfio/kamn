@@ -1996,14 +1996,27 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - `dependency_ci_smoke_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1`
 - `dependency_ci_smoke_fixture_path=fixtures/ci/dependency_ci_smoke_advisory_fixture_matrix.txt`
 - `dependency_ci_smoke_threshold_max_severity=moderate`
+- `dependency_ci_smoke_checker_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1`
+- `dependency_ci_smoke_checker_reason_codes_csv=dependency_advisory_input_empty,dependency_advisory_severity_unknown,dependency_advisory_threshold_exceeded`
+- `dependency_ci_smoke_checker_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1`
+- `dependency_ci_smoke_checker_fixture_path=fixtures/ci/dependency_ci_smoke_advisory_fixture_matrix.txt`
+- `dependency_ci_smoke_checker_threshold_max_severity=moderate`
+- `dependency_ci_smoke_checker_remediation.dependency_advisory_input_empty=provide at least one advisory record from the CI smoke advisory feed before evaluating thresholds`
+- `dependency_ci_smoke_checker_remediation.dependency_advisory_severity_unknown=normalize advisory severity to low|moderate|high|critical before evaluation`
+- `dependency_ci_smoke_checker_remediation.dependency_advisory_threshold_exceeded=reduce dependency advisory severity exposure or update approved threshold with review evidence`
 - Guard commands:
+  - `cargo test -p kamn-core --test dependency_ci_smoke_checker_contract`
   - `cargo test -p kamn-core --test dependency_ci_smoke_advisory_fixture_parser_contract`
   - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_ci_smoke_checker_threshold_parity_markers -- --exact`
 - Fail-closed policy:
+  - empty advisory inputs reject deterministically with `dependency_advisory_input_empty`.
   - unknown severities reject deterministically with `dependency_advisory_severity_unknown`.
   - severities above threshold reject deterministically with `dependency_advisory_threshold_exceeded`.
+  - checker taxonomy must remain a superset of fixture taxonomy reason codes.
   - docs marker drift fails the docs-contract target.
 - Regression: #4030
+- Regression: #4031
 
 ## Kolme Live Retry Coverage
 - Runtime commit submit/finality retry behavior must remain deterministic and bounded.
