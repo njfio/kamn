@@ -649,6 +649,37 @@ Regression marker:
 
 - `Regression: #4079`
 
+## Dependency Local-Heavy Deep Scan Lane Artifact Contract (Issue #4032)
+
+Deterministic dependency local-heavy deep-scan runner markers:
+
+- `dependency_local_heavy_deep_scan_lane_schema_version=kamn.runtime.dependency-local-heavy-deep-scan-lane-report.v1`
+- `dependency_local_heavy_deep_scan_artifact_schema_version=kamn.runtime.dependency-local-heavy-deep-scan-artifact-schema.v1`
+- `dependency_local_heavy_deep_scan_fixture_schema_version=kamn.ci.dependency-local-heavy-deep-scan-fixture-matrix.v1`
+- `dependency_local_heavy_deep_scan_reason_taxonomy_version=kamn.runtime.dependency-local-heavy-deep-scan-reason-taxonomy.v1`
+- `dependency_local_heavy_deep_scan_reason_codes_csv=dependency_local_heavy_deep_scan_profile_threshold_exceeded,dependency_local_heavy_deep_scan_runtime_budget_exceeded`
+- `dependency_local_heavy_deep_scan_required_profiles_csv=baseline,injected-risk`
+
+Profile projection contracts:
+
+- `profile=baseline -> status=pass + final_decision=GO + profile_status=verified + critical_count=0 + high_count=0`
+- `profile=injected-risk -> status=fail + final_decision=NO-GO + profile_status=failed + critical_count=1 + high_count=2`
+
+Boundary contracts:
+
+- run-mode execution remains local-heavy and requires explicit opt-in (`KAMN_DEPENDENCY_LOCAL_HEAVY_DEEP_SCAN_OPT_IN=1`).
+- run-mode execution requires `--ci-fast-gate FAIL`; ci-smoke paths remain dry-run only.
+
+Validation commands:
+
+- `bash scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh --profile baseline --mode dry-run --max-seconds 180 --output-json /tmp/dependency-local-heavy-deep-scan-baseline.json`
+- `bash scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh --profile injected-risk --mode dry-run --max-seconds 180 --output-json /tmp/dependency-local-heavy-deep-scan-injected-risk.json`
+- `cargo test -p kamn-core --test dependency_local_heavy_deep_scan_lane_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4032`
+
 ## Tamper-Evident Lifecycle Artifact Integrity Contract (Issue #4081)
 
 Deterministic lifecycle artifact integrity markers:
