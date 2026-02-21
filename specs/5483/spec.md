@@ -1,6 +1,6 @@
 # Issue #5483 Spec - Daemon Topology Contract Test Decomposition
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5483
 - Parent: #3812
 - Milestone: R50.7 Daemon topology contract test decomposition
