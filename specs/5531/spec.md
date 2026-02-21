@@ -1,6 +1,6 @@
 # Issue #5531 Spec - Service API Scope-Policy Fixture Metadata Parity Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5531
 - Parent: #3812
 - Milestone: R50.31 Service API scope-policy fixture metadata parity metrics exposure
