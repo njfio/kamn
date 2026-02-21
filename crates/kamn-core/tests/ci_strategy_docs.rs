@@ -1331,6 +1331,31 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
 }
 
 #[test]
+fn doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers() {
+    assert!(DOC.contains("## Dependency CI Smoke Advisory Fixture Contract"));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_reason_codes_csv=dependency_advisory_severity_unknown,dependency_advisory_threshold_exceeded"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_fixture_path=fixtures/ci/dependency_ci_smoke_advisory_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("dependency_ci_smoke_threshold_max_severity=moderate"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test dependency_ci_smoke_advisory_fixture_parser_contract"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4030"));
+}
+
+#[test]
 fn doc_contains_anti_flake_rerun_policy_reason_taxonomy_markers() {
     assert!(DOC.contains(
         "anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1"
