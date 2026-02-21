@@ -1,6 +1,6 @@
 # Issue #5469 Spec - R49 Gaps-and-Issues Review Artifact Publication
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5469
 - Parent: #5449
 - Milestone: R49.3 Review artifact publication and baseline refresh
