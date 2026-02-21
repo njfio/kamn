@@ -22,7 +22,32 @@ const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION: &str =
     "kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1";
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX: &str =
     "main_tests::daemon_tests::";
-const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT: usize = 6;
+const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS: [(&str, &str); 6] = [
+    (
+        "b01_runtime_matrix_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs",
+    ),
+    (
+        "b02_parallel_lane_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable",
+    ),
+    (
+        "b03_topology_mapping_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable",
+    ),
+    (
+        "b04_topology_coherence_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable",
+    ),
+    (
+        "b05_fingerprint_stability_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable",
+    ),
+    (
+        "b06_multi_host_execution_bundle",
+        "integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable",
+    ),
+];
 
 struct DaemonPhase6RuntimeProjection {
     reason_code: &'static str,
@@ -289,6 +314,31 @@ fn execute_daemon_convergence_projection(
     }
 }
 
+fn project_live_postgres_multi_host_execution_bundle_selector_rows() -> Vec<String> {
+    DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS
+        .iter()
+        .map(|(row_id, row_suffix)| {
+            format!(
+                "{row_id}->{DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX}{row_suffix}"
+            )
+        })
+        .collect()
+}
+
+fn daemon_live_postgres_multi_host_execution_bundle_row_count() -> usize {
+    DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS.len()
+}
+
+#[cfg(test)]
+pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_for_test() -> Vec<String> {
+    project_live_postgres_multi_host_execution_bundle_selector_rows()
+}
+
+#[cfg(test)]
+pub(crate) fn live_postgres_multi_host_execution_bundle_row_count_for_test() -> usize {
+    daemon_live_postgres_multi_host_execution_bundle_row_count()
+}
+
 #[cfg(test)]
 pub(crate) fn execute_daemon_phase6_runtime_projection_for_test(
     max_ticks: u64,
@@ -436,8 +486,10 @@ pub(super) fn execute_daemon_runtime(
     let phase6_executed_cycles_label = phase6_projection.executed_cycles.to_string();
     let phase6_deferred_cycles_label = phase6_projection.deferred_cycles.to_string();
     let phase6_fail_closed_cycles_label = phase6_projection.fail_closed_cycles.to_string();
+    let multi_host_execution_bundle_row_count =
+        daemon_live_postgres_multi_host_execution_bundle_row_count();
     let multi_host_execution_bundle_row_count_label =
-        DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT.to_string();
+        multi_host_execution_bundle_row_count.to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -607,7 +659,6 @@ pub(super) fn execute_daemon_runtime(
             DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION.to_owned(),
         live_postgres_multi_host_execution_bundle_selector_prefix:
             DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX.to_owned(),
-        live_postgres_multi_host_execution_bundle_row_count:
-            DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT,
+        live_postgres_multi_host_execution_bundle_row_count: multi_host_execution_bundle_row_count,
     })
 }
