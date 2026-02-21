@@ -1356,6 +1356,31 @@ fn doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_cod
 }
 
 #[test]
+fn doc_contains_sbom_provenance_artifact_generator_contract_markers() {
+    assert!(DOC.contains("## SBOM-Provenance Artifact Generator Contract (Issue #4036)"));
+    assert!(DOC.contains(
+        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json"
+    ));
+    assert!(DOC.contains("kamn.runtime.sbom-provenance-artifact-report.v1"));
+    assert!(DOC.contains("kamn.runtime.sbom-provenance-artifact-schema.v1"));
+    assert!(DOC.contains("kamn.ci.sbom-provenance-artifact-fixture-matrix.v1"));
+    assert!(DOC.contains("kamn.runtime.sbom-provenance-artifact-reason-taxonomy.v1"));
+    assert!(DOC.contains(
+        "sbom_provenance_reason_codes_csv=sbom_provenance_profile_contract_violation,sbom_provenance_runtime_budget_exceeded"
+    ));
+    assert!(DOC.contains("sbom_schema_version=spdx-2.3"));
+    assert!(DOC.contains("provenance_schema_version=slsa-v1"));
+    assert!(DOC.contains("release_manifest_required_artifact_id=sbom_provenance"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4036"));
+}
+
+#[test]
 fn doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers() {
     assert!(DOC.contains("## Dependency CI Smoke Advisory Fixture Contract"));
     assert!(DOC.contains(

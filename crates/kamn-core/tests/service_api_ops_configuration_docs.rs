@@ -57,6 +57,39 @@ fn service_api_ops_configuration_contains_dependency_license_metadata_governance
 }
 
 #[test]
+fn service_api_ops_configuration_contains_sbom_provenance_artifact_generator_markers() {
+    assert!(DOC.contains("## SBOM-Provenance Artifact Generator Contract (Issue #4036)"));
+    assert!(DOC.contains(
+        "sbom_provenance_lane_schema_version=kamn.runtime.sbom-provenance-artifact-report.v1"
+    ));
+    assert!(DOC.contains(
+        "sbom_provenance_artifact_schema_version=kamn.runtime.sbom-provenance-artifact-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "sbom_provenance_fixture_schema_version=kamn.ci.sbom-provenance-artifact-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "sbom_provenance_reason_taxonomy_version=kamn.runtime.sbom-provenance-artifact-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "sbom_provenance_reason_codes_csv=sbom_provenance_profile_contract_violation,sbom_provenance_runtime_budget_exceeded"
+    ));
+    assert!(DOC.contains("sbom_schema_version=spdx-2.3"));
+    assert!(DOC.contains("provenance_schema_version=slsa-v1"));
+    assert!(DOC.contains("release_manifest_required_artifact_id=sbom_provenance"));
+    assert!(DOC.contains(
+        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4036"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
     assert!(DOC.contains("## Async API Backpressure Failure Modes (Issue #4315)"));
     assert!(DOC.contains(
