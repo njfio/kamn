@@ -2,6 +2,8 @@ const DOC: &str = include_str!("../../../docs/ci/strategy.md");
 const OPS_DOC: &str = include_str!("../../../docs/ops/configuration.md");
 const FAIRNESS_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/starvation_fairness_fixture_matrix.txt");
+const DELETION_FIXTURE: &str =
+    include_str!("../../../fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt");
 const FAIRNESS_POLICY_SOURCE: &str = include_str!("../src/fairness_policy.rs");
 const SERVICE_API_ENDPOINT_SOURCE: &str =
     include_str!("../../kamn-node/src/service_api_endpoint.rs");
@@ -17,6 +19,10 @@ const OVERLOAD_RUNNER_SOURCE: &str =
 const FAIRNESS_REASON_TAXONOMY_VERSION: &str = "kamn.runtime.fairness-policy-reason-taxonomy.v1";
 const FAIRNESS_REASON_CODES_CSV: &str =
     "fairness_scope_unknown,fairness_window_non_positive,fairness_max_gap_non_positive,fairness_weighted_share_exceeds_gap";
+const DELETION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.deletion-proof-checker-reason-taxonomy.v1";
+const DELETION_REASON_CODES_CSV: &str =
+    "deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch";
 const OVERLOAD_REASON_TAXONOMY_VERSION: &str =
     "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1";
 const OVERLOAD_REASON_CODES_CSV: &str = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success";
@@ -72,6 +78,10 @@ const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_miss
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
+}
+
+fn deletion_reason_codes() -> Vec<&'static str> {
+    DELETION_REASON_CODES_CSV.split(',').collect()
 }
 
 fn overload_reason_codes() -> Vec<&'static str> {
@@ -2338,6 +2348,95 @@ fn doc_enforces_fairness_docs_parity_requires_remediation_marker_for_each_reason
         assert!(
             DOC.contains(&format!("fairness_docs_parity_remediation.{reason_code}=")),
             "missing fairness remediation marker for {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_contains_deletion_docs_parity_and_remediation_markers() {
+    assert!(DOC.contains("### Deletion Docs/Runbook Parity and Remediation Contract"));
+    assert!(DOC.contains(
+        "deletion_docs_parity_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "deletion_docs_parity_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch"
+    ));
+    assert!(DOC.contains(
+        "deletion_docs_parity_fixture_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "deletion_docs_parity_fixture_path=fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("deletion_docs_parity_ops_doc_path=docs/ops/configuration.md"));
+    assert!(DOC.contains("deletion_docs_parity_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains("deletion_docs_parity_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_deletion_docs_parity_and_remediation_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_matches_ops_docs_and_fixture_metadata -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_reason_codes_non_empty -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4078"));
+}
+
+#[test]
+fn doc_enforces_deletion_docs_parity_matches_ops_docs_and_fixture_metadata() {
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_docs_parity_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "deletion_docs_parity_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
+
+    assert!(DELETION_FIXTURE
+        .contains("deletion_proof_fixture_matrix_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1"));
+    assert!(DELETION_FIXTURE.contains(&format!(
+        "deletion_proof_reason_taxonomy_version={DELETION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DELETION_FIXTURE.contains(&format!(
+        "deletion_proof_reason_codes_csv={DELETION_REASON_CODES_CSV}"
+    )));
+}
+
+#[test]
+fn doc_enforces_deletion_docs_parity_requires_remediation_marker_for_each_reason_code() {
+    for reason_code in deletion_reason_codes() {
+        assert!(
+            DOC.contains(&format!("deletion_docs_parity_remediation.{reason_code}=")),
+            "missing deletion docs-parity remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&format!("deletion_docs_parity_remediation.{reason_code}=")),
+            "ops docs missing deletion docs-parity remediation marker for {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_enforces_deletion_docs_parity_reason_codes_non_empty() {
+    for reason_code in deletion_reason_codes() {
+        assert!(
+            !reason_code.trim().is_empty(),
+            "deletion reason code entries must stay non-empty"
         );
     }
 }

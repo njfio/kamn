@@ -1641,6 +1641,16 @@ Deterministic fail-closed deletion-proof reasons:
 - `deletion_proof_status_invalid`
 - `deletion_proof_hash_mismatch`
 
+Docs/runbook parity and remediation markers:
+
+- `deletion_docs_parity_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1`
+- `deletion_docs_parity_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch`
+- `deletion_docs_parity_remediation_map_version=v1`
+- `deletion_docs_parity_remediation.deletion_proof_subject_missing=populate subject_id in deletion proof artifacts before evaluation`
+- `deletion_docs_parity_remediation.deletion_proof_tombstone_missing=write tombstone hash before declaring deletion proof valid`
+- `deletion_docs_parity_remediation.deletion_proof_status_invalid=set proof_status=deleted before running checker contracts`
+- `deletion_docs_parity_remediation.deletion_proof_hash_mismatch=regenerate tombstone hash to match expected deletion artifact digest`
+
 Validation command:
 
 - `cargo test -p kamn-core --test deletion_proof_artifact_checker_contract`
