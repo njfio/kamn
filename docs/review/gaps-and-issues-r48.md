@@ -153,6 +153,35 @@ R48: 5 feat / 26 governance (0.19:1). Improved from R47's 0.00:1 but still gover
 - governance_activity_commit_ratio=0.8387
 - feature_activity_commit_ratio=0.1613
 
+### 5.4 Coherence Contract Batching Carry-Forward Policy
+
+Carry forward the R45 coherence batching policy contract so future topology/coherence expansions remain bundled instead of one issue per dimension.
+
+Deterministic carry-forward markers:
+
+- `coherence_contract_batching_policy_schema_version=kamn.review.coherence-contract-batching-policy.v1`
+- `coherence_contract_batching_dimension_baseline=28`
+- `coherence_contract_batching_issue_baseline=28`
+- `coherence_contract_batching_target_bundle_count_min=5`
+- `coherence_contract_batching_target_bundle_count_max=8`
+- `coherence_contract_batching_target_issue_cap=8`
+- `coherence_contract_batching_expected_issue_reduction=20`
+
+### 5.5 Spec-Volume Guardrail Policy
+
+R48 remains open on spec-volume growth; guardrail markers provide deterministic trend tracking and target posture for follow-up cycles.
+
+Deterministic spec-volume markers:
+
+- `spec_volume_guardrail_policy_schema_version=kamn.review.spec-volume-guardrail-policy.v1`
+- `spec_volume_guardrail_baseline_spec_directory_count=700`
+- `spec_volume_guardrail_baseline_module_count=91`
+- `spec_volume_guardrail_baseline_spec_to_module_ratio=7.7`
+- `spec_volume_guardrail_target_spec_to_module_ratio_max=7.7`
+- `spec_volume_guardrail_target_status=monitor`
+- `spec_volume_guardrail_evidence_command_spec_dirs=find specs -maxdepth 1 -mindepth 1 -type d | wc -l`
+- `spec_volume_guardrail_evidence_command_module_exports=rg "^pub mod " crates/kamn-core/src/lib.rs | wc -l`
+
 ---
 
 ## 6. Branch Hygiene — RESOLVED
