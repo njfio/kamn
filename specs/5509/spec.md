@@ -1,6 +1,6 @@
 # Issue #5509 Spec - R50 Governance-Feature Activity Rebalancing Contracts
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5509
 - Parent: #5469
 - Milestone: R50.20 Governance-feature activity rebalancing contracts
