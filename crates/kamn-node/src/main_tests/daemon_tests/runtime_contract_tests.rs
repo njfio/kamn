@@ -692,11 +692,30 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert!(selector_rows
         .iter()
         .all(|row| row.contains(LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX)));
+    let selector_rows_fingerprint = extract_json_string_field(
+        complete_line,
+        "multi_host_execution_bundle_selector_rows_fingerprint",
+    )
+    .expect("daemon runtime completion log should include selector rows fingerprint marker");
+    assert_eq!(
+        selector_rows_fingerprint,
+        crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test()
+    );
 }
 
 #[test]
 fn functional_runtime_daemon_live_postgres_selector_bundle_validation_contract_is_deterministic() {
     let canonical_rows = crate::live_postgres_multi_host_execution_bundle_selector_rows_for_test();
+    let canonical_fingerprint =
+        crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test();
+    assert_eq!(
+        canonical_fingerprint,
+        deterministic_fnv1a64_hex(LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS_CSV)
+    );
+    assert_eq!(
+        canonical_fingerprint,
+        crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test()
+    );
     assert_eq!(
         crate::validate_live_postgres_selector_bundle_for_test(canonical_rows.as_slice(), 6),
         Ok(())
