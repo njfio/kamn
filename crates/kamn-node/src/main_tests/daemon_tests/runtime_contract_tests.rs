@@ -601,6 +601,8 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     let report = report_result.expect("daemon execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     let rendered_text = render_bootstrap_report(&report, OutputMode::text());
+    let expected_selector_rows_fingerprint =
+        crate::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test();
     assert!(rendered.contains(
         "\"daemon_phase6_runtime_reason_taxonomy_version\":\"kamn.runtime.daemon.phase6.reason-taxonomy.v1\""
     ));
@@ -622,6 +624,12 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert!(rendered.contains(
         "\"daemon_live_postgres_multi_host_execution_bundle_row_count\":6"
     ));
+    assert!(rendered.contains(
+        format!(
+            "\"daemon_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint\":\"{expected_selector_rows_fingerprint}\""
+        )
+        .as_str()
+    ));
     assert!(rendered_text.contains(
         "daemon_live_postgres_multi_host_execution_bundle_schema_version: kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1"
     ));
@@ -631,6 +639,12 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert!(
         rendered_text.contains("daemon_live_postgres_multi_host_execution_bundle_row_count: 6")
     );
+    assert!(rendered_text.contains(
+        format!(
+            "daemon_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: {expected_selector_rows_fingerprint}"
+        )
+        .as_str()
+    ));
     let complete_line = captured_logs
         .iter()
         .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
