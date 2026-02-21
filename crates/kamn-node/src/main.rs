@@ -64,7 +64,8 @@ pub(crate) use runtime_orchestration::{
     live_postgres_multi_host_execution_bundle_selector_rows_for_test,
     resolve_kolme_live_allow_local_signer_testing_override,
     select_runtime_transport_profile_for_runtime_mode, should_use_os_signal_shutdown,
-    validate_full_supervisor_stop_contract, validate_shutdown_checkpoint_reconciliation,
+    validate_full_supervisor_stop_contract, validate_live_postgres_selector_bundle_for_test,
+    validate_shutdown_checkpoint_reconciliation,
 };
 #[cfg(test)]
 pub(crate) use service_api_endpoint::render_service_api_endpoint_response;
