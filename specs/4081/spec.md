@@ -1,6 +1,6 @@
 # Issue #4081 Spec — Tamper-Evident Lifecycle Artifact Generator and Integrity Verification Helpers
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #4081
 - Parent: #4074
 - Milestone: R27.14 Data lifecycle, retention, and privacy control hardening
