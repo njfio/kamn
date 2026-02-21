@@ -1,6 +1,6 @@
 # Issue #5515 Spec - Spec Status Normalization for Merged Telemetry Task
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5515
 - Parent: #3812
 - Milestone: R50.23 Spec status normalization for merged telemetry task
