@@ -21,6 +21,7 @@ use axum::{
     Extension, Router,
 };
 use kamn_core::{
+    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
     data_layer_m9_gateway_project_presence_event, signature_matches_supported_profile_for_fields,
     AgentDid, AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
     DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
@@ -168,6 +169,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) role: String,
     pub(crate) chain_id: String,
     pub(crate) chain_version: String,
+    pub(crate) cross_store_replay_reason_taxonomy_version: String,
+    pub(crate) cross_store_replay_reason_code_count: usize,
     pub(crate) observability_source: String,
     pub(crate) observability_latency_p50_ms: u64,
     pub(crate) observability_latency_p99_ms: u64,
@@ -403,11 +406,19 @@ pub(crate) struct ServiceApiLifecycleRejectionProjection {
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
     let observability = resolve_service_api_observability(report);
+    let cross_store_replay_reason_taxonomy_version =
+        cross_store_replay_reason_taxonomy_version().to_owned();
+    let cross_store_replay_reason_code_count = cross_store_replay_reason_codes_csv()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     ServiceApiSnapshot {
         runtime_mode: report.runtime_mode.clone(),
         role: report.role.clone(),
         chain_id: report.chain_id.clone(),
         chain_version: report.chain_version.clone(),
+        cross_store_replay_reason_taxonomy_version,
+        cross_store_replay_reason_code_count,
         observability_source: observability.source,
         observability_latency_p50_ms: observability.latency_p50_ms,
         observability_latency_p99_ms: observability.latency_p99_ms,
