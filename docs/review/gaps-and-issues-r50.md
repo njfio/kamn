@@ -156,6 +156,8 @@ Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at mi
 
 R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
 
+Governance-feature rebalancing contract active (R50.20) targeting >=0.25 feature ratio (>=8 of 31 commits) by r53.
+
 ### 5.3 Governance-Feature Activity Ratio Markers (R50)
 
 - governance_feature_activity_ratio_schema_version=kamn.review.governance-feature-activity-ratio.v1
@@ -200,6 +202,21 @@ R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
 - `r50_review_doc_contract_consolidation_target_release=r53`
 - `r50_review_doc_contract_consolidation_status=active`
 
+### 5.7 Governance-Feature Activity Rebalancing Plan Markers (R50.20)
+
+- `r50_review_governance_feature_rebalancing_schema_version=kamn.review.governance-feature-rebalancing-plan.v1`
+- `r50_review_governance_feature_rebalancing_baseline_governance_commits=28`
+- `r50_review_governance_feature_rebalancing_baseline_feature_commits=3`
+- `r50_review_governance_feature_rebalancing_baseline_total_commits=31`
+- `r50_review_governance_feature_rebalancing_target_feature_commit_ratio_min=0.25`
+- `r50_review_governance_feature_rebalancing_target_governance_commit_ratio_max=0.75`
+- `r50_review_governance_feature_rebalancing_target_feature_commit_min=8`
+- `r50_review_governance_feature_rebalancing_required_feature_commit_delta=5`
+- `r50_review_governance_feature_rebalancing_governance_commit_cap_for_ratio_target=23`
+- `r50_review_governance_feature_rebalancing_issue_cap_per_release=3`
+- `r50_review_governance_feature_rebalancing_target_release=r53`
+- `r50_review_governance_feature_rebalancing_status=active`
+
 ---
 
 ## 6. Branch Hygiene — STABLE
@@ -230,7 +247,7 @@ No new modules this cycle.
 | Medium | Self-referential governance loop | Review artifact reconciliation | Process contracts | **Mitigation implemented (R50.17), monitor adherence** |
 | Medium | Spec volume (750, 8.2:1) | 750 dirs / 92 modules | Remediation contracts | **R50.18 active: 3 tranches, min 14 reductions each** |
 | Medium | Doc-contract tests (82) | Stable this cycle | Consolidation contracts | **R50.19 active: 2 tranches, min 4 reductions each toward <=74** |
-| Low | Governance ratio (0.11:1) | 3 feat / 28 gov | Monitor | Worst since R47 |
+| Low | Governance ratio (0.11:1) | 3 feat / 28 gov | Rebalancing contracts | **R50.20 active: >=0.25 feature ratio target by r53** |
 | Info | Ignored tests (12) | Due R54 | Periodic | Stable |
 | Info | Branches (51) | Stable | None | Healthy |
 | Info | Prod files >1K (12) | Stable | None | Unchanged |
