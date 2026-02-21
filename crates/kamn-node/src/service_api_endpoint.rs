@@ -188,6 +188,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_fixture_row_count: usize,
     pub(crate) scope_policy_fixture_allow_row_count: usize,
     pub(crate) scope_policy_fixture_deny_row_count: usize,
+    pub(crate) scope_policy_fixture_unique_route_count: usize,
+    pub(crate) scope_policy_fixture_unique_scope_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
     pub(crate) route_authz_matrix_schema_version: String,
@@ -436,6 +438,8 @@ struct ServiceApiScopePolicyFixtureProjection {
     row_count: usize,
     allow_row_count: usize,
     deny_row_count: usize,
+    unique_route_count: usize,
+    unique_scope_count: usize,
 }
 
 fn parse_service_api_scope_policy_fixture_counts(
@@ -447,8 +451,12 @@ fn parse_service_api_scope_policy_fixture_counts(
         row_count: 0,
         allow_row_count: 0,
         deny_row_count: 0,
+        unique_route_count: 0,
+        unique_scope_count: 0,
     };
     let mut reason_codes_csv = String::new();
+    let mut unique_routes = BTreeSet::new();
+    let mut unique_scopes = BTreeSet::new();
     for line in fixture.lines().map(str::trim) {
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -480,6 +488,8 @@ fn parse_service_api_scope_policy_fixture_counts(
         } else if expected == "deny" {
             projection.deny_row_count += 1;
         }
+        unique_routes.insert((method.to_owned(), path.to_owned()));
+        unique_scopes.insert(scope.to_owned());
     }
     projection.reason_code_count = reason_codes_csv
         .split(',')
@@ -495,6 +505,8 @@ fn parse_service_api_scope_policy_fixture_counts(
             .filter(|value| !value.is_empty())
             .count();
     }
+    projection.unique_route_count = unique_routes.len();
+    projection.unique_scope_count = unique_scopes.len();
     projection
 }
 
@@ -550,6 +562,8 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         scope_policy_fixture_row_count: scope_policy_fixture_projection.row_count,
         scope_policy_fixture_allow_row_count: scope_policy_fixture_projection.allow_row_count,
         scope_policy_fixture_deny_row_count: scope_policy_fixture_projection.deny_row_count,
+        scope_policy_fixture_unique_route_count: scope_policy_fixture_projection.unique_route_count,
+        scope_policy_fixture_unique_scope_count: scope_policy_fixture_projection.unique_scope_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
         route_authz_matrix_schema_version,
