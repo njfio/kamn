@@ -1,6 +1,6 @@
 # Issue #5451 Spec - Publish R42 Gaps/Issues Review Artifact
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5451
 - Parent: #3812
 - Milestone: R27 Program: operational hardening and live validation
