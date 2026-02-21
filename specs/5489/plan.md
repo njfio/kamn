@@ -2,9 +2,9 @@
 
 ## Approach
 1. Capture pre-cleanup branch count and merged branch candidates.
-2. Select two merged codex branches (excluding `main`) for deletion.
-3. Delete selected branches via `git push origin --delete`.
-4. Capture post-cleanup branch count and evidence.
+2. Delete merged codex branches (excluding `main`) only when candidate set is non-empty.
+3. Capture post-cleanup branch count and evidence.
+4. If candidate set is empty, record deferred/blocked outcome and keep safety constraints unchanged.
 
 ## Affected Modules
 - `specs/milestones/r50-10-branch-hygiene-merged-only-cleanup-wave/index.md`
@@ -22,3 +22,4 @@
 - `git branch -r --merged origin/main`
 - `git push origin --delete <branch>`
 - `git ls-remote --heads origin | wc -l`
+- `specs/5489/evidence.md` records command set, counts, and candidate outcome
