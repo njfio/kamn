@@ -1,6 +1,6 @@
 # Issue #5463 Spec - Coherence Batching and Spec-Volume Guardrail Baselines
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5463
 - Parent: #5449
 - Milestone: R48.1 Spec-volume and coherence batching mitigation
