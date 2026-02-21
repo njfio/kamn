@@ -674,6 +674,24 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
             .as_deref(),
         Some("6")
     );
+    let selector_rows_csv = extract_json_string_field(
+        complete_line,
+        "multi_host_execution_bundle_selector_rows_csv",
+    )
+    .expect("daemon runtime completion log should include selector rows csv marker");
+    assert_eq!(
+        selector_rows_csv,
+        LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS_CSV
+    );
+    let selector_rows = selector_rows_csv
+        .split(',')
+        .map(str::trim)
+        .filter(|row| !row.is_empty())
+        .collect::<Vec<_>>();
+    assert_eq!(selector_rows.len(), 6);
+    assert!(selector_rows
+        .iter()
+        .all(|row| row.contains(LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX)));
 }
 
 #[test]

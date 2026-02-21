@@ -314,7 +314,6 @@ fn execute_daemon_convergence_projection(
     }
 }
 
-#[cfg(test)]
 fn project_live_postgres_multi_host_execution_bundle_selector_rows() -> Vec<String> {
     DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS
         .iter()
@@ -491,6 +490,8 @@ pub(super) fn execute_daemon_runtime(
         daemon_live_postgres_multi_host_execution_bundle_row_count();
     let multi_host_execution_bundle_row_count_label =
         multi_host_execution_bundle_row_count.to_string();
+    let multi_host_execution_bundle_selector_rows_csv =
+        project_live_postgres_multi_host_execution_bundle_selector_rows().join(",");
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -614,6 +615,10 @@ pub(super) fn execute_daemon_runtime(
             (
                 "multi_host_execution_bundle_row_count",
                 multi_host_execution_bundle_row_count_label.as_str(),
+            ),
+            (
+                "multi_host_execution_bundle_selector_rows_csv",
+                multi_host_execution_bundle_selector_rows_csv.as_str(),
             ),
             ("execution_id", execution_id),
         ],
