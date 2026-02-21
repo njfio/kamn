@@ -1,7 +1,7 @@
 # R27 Empty-Milestone Closure Wave (2026-02-21)
 
 ## Context
-Issue: `#5453`  
+Issue: `#5453`
 Execution timestamp (UTC): `2026-02-21T10:41:15Z`
 
 Goal: close stale open milestones that had zero open issues to remove tracker-state drift.
@@ -27,7 +27,7 @@ Output snapshot:
 | 45 | R27.11 Dependency, license, and supply-chain governance hardening | 0 | 16 | open |
 | 48 | R27.14 Data lifecycle, retention, and privacy control hardening | 0 | 15 | open |
 
-Wave targets (eligible): `33, 43, 45, 48`  
+Wave targets (eligible): `33, 43, 45, 48`
 Skipped (ineligible): `44` (open_issues=`1`)
 
 ## Closure Commands
