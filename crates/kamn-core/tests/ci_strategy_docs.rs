@@ -1790,6 +1790,43 @@ fn doc_enforces_local_heavy_redaction_policy_checker_reason_codes_have_determini
 }
 
 #[test]
+fn doc_contains_dependency_local_heavy_deep_scan_policy_checker_contract() {
+    assert!(DOC.contains("## Dependency Local-Heavy Deep Scan Policy Checker Contract"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_dependency_local_heavy_deep_scan_policy.sh --report-file /tmp/dependency-local-heavy-deep-scan-baseline.json --expected-final-decision GO --ci-fast-gate PASS --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --ci-tools-file scripts/ci/test_ci_tools.sh --workflow-file .github/workflows/ci-fast-gate.yml --output-json /tmp/dependency-local-heavy-deep-scan-policy-report.json"
+    ));
+    assert!(
+        DOC.contains("bash scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh")
+    );
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_reason_taxonomy_version=kamn.runtime.dependency-local-heavy-deep-scan-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_reason_codes_csv=dependency_local_heavy_deep_scan_policy_required_field_missing,dependency_local_heavy_deep_scan_policy_marker_mismatch,dependency_local_heavy_deep_scan_policy_reason_taxonomy_mismatch,dependency_local_heavy_deep_scan_policy_profile_contract_mismatch,dependency_local_heavy_deep_scan_policy_docs_marker_parity_mismatch,dependency_local_heavy_deep_scan_policy_ci_dry_run_selector_drift,dependency_local_heavy_deep_scan_policy_ci_dry_run_workflow_drift,ci_fast_gate_failed,dependency_local_heavy_deep_scan_policy_expected_decision_mismatch,dependency_local_heavy_deep_scan_policy_violation"
+    ));
+    assert!(DOC
+        .contains("dependency_local_heavy_deep_scan_policy_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_ops_doc_path=docs/ops/configuration.md"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_runner_report_schema_version=kamn.runtime.dependency-local-heavy-deep-scan-lane-report.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_runner_reason_taxonomy_version=kamn.runtime.dependency-local-heavy-deep-scan-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_ci_dry_run_required_entry=bash \"$ROOT_DIR/scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh\""
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_ci_dry_run_forbidden_entry=bash \"$ROOT_DIR/scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh\" --profile baseline --mode run"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_policy_workflow_forbidden_entry=bash scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh --profile baseline --mode run"
+    ));
+}
+
+#[test]
 fn doc_contains_failover_drift_ci_smoke_convergence_governance() {
     assert!(DOC.contains("### Failover Drift CI smoke convergence governance"));
     assert!(DOC.contains("python3 scripts/ci/check_failover_drift_ci_smoke_convergence.py"));

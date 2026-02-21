@@ -1266,6 +1266,12 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_dependency_local_heavy_deep_scan_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/dependency_local_heavy_deep_scan_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/runtime/check_live_network_partition_reconnect_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/live_network_partition_reconnect_contract.py",
