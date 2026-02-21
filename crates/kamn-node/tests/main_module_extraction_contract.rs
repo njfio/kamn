@@ -357,9 +357,19 @@ fn main_module_extraction_contract_daemon_tests_decomposition_shell_markers_rema
         .count();
 
     assert!(
+        daemon_tests_rs.contains(
+            "daemon_tests structural budget shell phase3; route runtime/matrix/topology contracts"
+        ),
+        "daemon_tests.rs should carry explicit phase3 decomposition drift guard marker"
+    );
+    assert!(
+        daemon_tests_rs.contains("include!(\"daemon_tests/runtime_contract_tests.rs\");"),
+        "daemon_tests.rs should route runtime contract tests through include fragment"
+    );
+    assert!(
         daemon_tests_rs
-            .contains("daemon_tests structural budget shell phase2; route topology contracts"),
-        "daemon_tests.rs should carry explicit phase2 decomposition drift guard marker"
+            .contains("include!(\"daemon_tests/live_postgres_matrix_contract_tests.rs\");"),
+        "daemon_tests.rs should route live-postgres matrix contract tests through include fragment"
     );
     assert!(
         daemon_tests_rs
@@ -373,11 +383,21 @@ fn main_module_extraction_contract_daemon_tests_decomposition_shell_markers_rema
         "daemon_tests.rs should not keep inline topology contract test bodies after phase2 extraction"
     );
     assert!(
-        daemon_tests_lines <= 2200,
-        "daemon_tests.rs should remain within phase2 bounded shell target (<=2200 lines)"
+        !daemon_tests_rs.contains("fn functional_runtime_daemon_emits_structured_transition_markers("),
+        "daemon_tests.rs should not keep inline runtime contract test bodies after phase3 extraction"
     );
     assert!(
-        include_decl_count >= 1,
+        !daemon_tests_rs.contains(
+            "fn functional_runtime_daemon_live_postgres_validation_slice_matrix_projection_contract_is_canonical("
+        ),
+        "daemon_tests.rs should not keep inline live-postgres matrix contract test bodies after phase3 extraction"
+    );
+    assert!(
+        daemon_tests_lines <= 300,
+        "daemon_tests.rs should remain within phase3 bounded shell target (<=300 lines)"
+    );
+    assert!(
+        include_decl_count >= 3,
         "daemon_tests.rs should keep include-based decomposition entries"
     );
 }
