@@ -619,6 +619,36 @@ Regression marker:
 
 - `Regression: #4004`
 
+## Local-Heavy Redaction Validation Lane Artifact Contract (Issue #4079)
+
+Deterministic local-heavy redaction runner markers:
+
+- `local_heavy_redaction_validation_lane_schema_version=kamn.runtime.local-heavy-redaction-validation-lane-report.v1`
+- `local_heavy_redaction_validation_artifact_schema_version=kamn.runtime.local-heavy-redaction-validation-artifact-schema.v1`
+- `local_heavy_redaction_validation_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-reason-taxonomy.v1`
+- `local_heavy_redaction_validation_reason_codes_csv=local_heavy_redaction_sensitive_pattern_detected,local_heavy_redaction_runtime_budget_exceeded`
+- `local_heavy_redaction_validation_required_profiles_csv=baseline,injected-leak`
+
+Profile projection contracts:
+
+- `profile=baseline -> status=pass + final_decision=GO + profile_status=verified + leak_marker_status=clear`
+- `profile=injected-leak -> status=fail + final_decision=NO-GO + profile_status=failed + leak_marker_status=detected`
+
+Deterministic leak markers:
+
+- `profile=baseline -> leak_detection_count=0 + leaked_pattern_ids_csv=none`
+- `profile=injected-leak -> leak_detection_count=3 + leaked_pattern_ids_csv=raw_signer_secret,pii_email,pii_phone`
+
+Validation commands:
+
+- `bash scripts/runtime/run_local_heavy_redaction_validation_lane.sh --profile baseline --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-redaction-validation-baseline.json`
+- `bash scripts/runtime/run_local_heavy_redaction_validation_lane.sh --profile injected-leak --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-redaction-validation-injected-leak.json`
+- `cargo test -p kamn-core --test local_heavy_redaction_validation_lane_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4079`
+
 ## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)
 
 Phase-5 realtime gateway integration requires deterministic presence-mode websocket contracts and
