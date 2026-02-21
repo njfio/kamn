@@ -7,6 +7,10 @@ use crate::service_api_endpoint::{
     SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
+    SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT,
+    SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT,
+    SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION,
+    SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT,
     SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION, SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV,
     SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION, SERVICE_API_WEBSOCKET_REASON_CODES_CSV,
     SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION,
@@ -799,6 +803,22 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION
     )));
     assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_total_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_public_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_protected_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT
+    )));
+    assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
         SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
     )));
@@ -1073,6 +1093,22 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION
     )));
     assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_total_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_public_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_protected_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT
+    )));
+    assert!(metrics_response.contains(&format!(
         "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
         SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
     )));
@@ -1197,6 +1233,22 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_schema_info{{version=\"{}\"}} 1",
         SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_total_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_public_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_route_authz_matrix_protected_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
@@ -1568,6 +1620,22 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_schema_info{{version=\"{}\"}} 1",
         SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_total_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_public_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_route_authz_matrix_protected_route_count {}",
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
