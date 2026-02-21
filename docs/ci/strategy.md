@@ -4334,6 +4334,27 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
   - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --workload runtime --fixture-file fixtures/ci/performance_hot_path_fixture_matrix.json --output-json /tmp/performance-smoke-report.json`
   - `bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json /tmp/performance-smoke-report.json --profile-file .ci/performance-targets.env`
 
+## Performance CI Smoke Threshold Governance Contract
+- Entry commands:
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --workload runtime --output-json /tmp/performance-smoke-report.json`
+  - `bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json /tmp/performance-smoke-report.json --profile-file .ci/performance-targets.env --ci-tools-file scripts/ci/test_ci_tools.sh --workflow-file .github/workflows/ci-fast-gate.yml --max-seconds 120`
+  - `cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture`
+- Deterministic checker markers:
+  - `performance_ci_smoke_reason_taxonomy_version=kamn.ci.performance-ci-smoke-threshold-reason-taxonomy.v1`
+  - `performance_ci_smoke_reason_codes_csv=performance_ci_smoke_argument_invalid,performance_ci_smoke_threshold_contract_violation,performance_ci_smoke_report_contract_violation,performance_ci_smoke_latency_p50_threshold_exceeded,performance_ci_smoke_latency_p99_threshold_exceeded,performance_ci_smoke_throughput_threshold_below_minimum,performance_ci_smoke_availability_threshold_below_minimum,performance_ci_smoke_selector_missing_checker_entry,performance_ci_smoke_selector_forbidden_entry_present,performance_ci_smoke_workflow_missing_checker_step,performance_ci_smoke_workflow_forbidden_entry_present,performance_ci_smoke_runtime_budget_exceeded`
+  - `performance_ci_smoke_reason_codes_value=none|<csv>`
+  - `performance_ci_smoke_max_seconds=120`
+- Selector and workflow exclusion markers:
+  - `performance_ci_smoke_fast_mode_required_entry=cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture`
+  - `performance_ci_smoke_fast_mode_forbidden_entry=bash "$ROOT_DIR/scripts/ci/check_performance_thresholds.sh" --lane deep`
+  - `performance_ci_smoke_workflow_required_entry=bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json performance-smoke-report.json --profile-file .ci/performance-targets.env`
+  - `performance_ci_smoke_workflow_forbidden_entry=bash scripts/ci/check_performance_thresholds.sh --lane deep`
+- Cost controls:
+  - checker reads existing smoke report + profile inputs and selector/workflow files only.
+  - deep-lane threshold checks remain excluded from ci-fast-gate.
+- Regression coverage:
+  - `Regression: #4002`
+
 ## PR CI Impact Declaration
 When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.ci/*`), PR description must explicitly declare CI impact.
 
