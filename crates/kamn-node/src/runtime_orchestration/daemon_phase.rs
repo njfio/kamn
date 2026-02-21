@@ -18,6 +18,11 @@ const DAEMON_CONVERGENCE_REASON_CONCURRENCY_DRIFT: &str = "convergence_concurren
 const DAEMON_CONVERGENCE_REASON_PERFORMANCE_BUDGET: &str =
     "convergence_performance_budget_exceeded";
 const DAEMON_CONVERGENCE_REASON_COST_BUDGET: &str = "convergence_cost_budget_exceeded";
+const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1";
+const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX: &str =
+    "main_tests::daemon_tests::";
+const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT: usize = 6;
 
 struct DaemonPhase6RuntimeProjection {
     reason_code: &'static str,
@@ -431,6 +436,8 @@ pub(super) fn execute_daemon_runtime(
     let phase6_executed_cycles_label = phase6_projection.executed_cycles.to_string();
     let phase6_deferred_cycles_label = phase6_projection.deferred_cycles.to_string();
     let phase6_fail_closed_cycles_label = phase6_projection.fail_closed_cycles.to_string();
+    let multi_host_execution_bundle_row_count_label =
+        DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT.to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -543,6 +550,18 @@ pub(super) fn execute_daemon_runtime(
                 "convergence_cost_budget_gate_passed",
                 convergence_cost_budget_gate_passed,
             ),
+            (
+                "multi_host_execution_bundle_schema_version",
+                DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION,
+            ),
+            (
+                "multi_host_execution_bundle_selector_prefix",
+                DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX,
+            ),
+            (
+                "multi_host_execution_bundle_row_count",
+                multi_host_execution_bundle_row_count_label.as_str(),
+            ),
             ("execution_id", execution_id),
         ],
     )?;
@@ -584,5 +603,11 @@ pub(super) fn execute_daemon_runtime(
         convergence_performance_budget_gate_passed: convergence_projection
             .performance_budget_gate_passed,
         convergence_cost_budget_gate_passed: convergence_projection.cost_budget_gate_passed,
+        live_postgres_multi_host_execution_bundle_schema_version:
+            DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION.to_owned(),
+        live_postgres_multi_host_execution_bundle_selector_prefix:
+            DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX.to_owned(),
+        live_postgres_multi_host_execution_bundle_row_count:
+            DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_ROW_COUNT,
     })
 }
