@@ -171,6 +171,20 @@ R46 commit activity: 3 feat / 25 governance (0.12:1). This is a deliberate conso
 - governance_activity_commit_ratio=0.8929
 - feature_activity_commit_ratio=0.1071
 
+### 5.4 Coherence Contract Batching Policy
+
+Future topology/coherence hardening tranches should be delivered in bounded bundles instead of one issue per coherence dimension. Historical R46 topology hardening used 28 dimensions; forward planning target is 5–8 bundled issues for equivalent scope, with hard cap 8.
+
+Deterministic policy markers:
+
+- `coherence_contract_batching_policy_schema_version=kamn.review.coherence-contract-batching-policy.v1`
+- `coherence_contract_batching_dimension_baseline=28`
+- `coherence_contract_batching_issue_baseline=28`
+- `coherence_contract_batching_target_bundle_count_min=5`
+- `coherence_contract_batching_target_bundle_count_max=8`
+- `coherence_contract_batching_target_issue_cap=8`
+- `coherence_contract_batching_expected_issue_reduction=20`
+
 ---
 
 ## 6. Branch Hygiene — RESOLVED (R46 follow-up)
