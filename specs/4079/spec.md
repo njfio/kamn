@@ -1,6 +1,6 @@
 # Issue #4079 Spec — Local-Heavy Redaction Validation Runner and Deterministic Artifact Schema
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #4079
 - Parent: #4073
 - Milestone: R27.14 Data lifecycle, retention, and privacy control hardening
