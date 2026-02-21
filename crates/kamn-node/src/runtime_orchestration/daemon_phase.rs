@@ -314,6 +314,7 @@ fn execute_daemon_convergence_projection(
     }
 }
 
+#[cfg(test)]
 fn project_live_postgres_multi_host_execution_bundle_selector_rows() -> Vec<String> {
     DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS
         .iter()
