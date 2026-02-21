@@ -1785,6 +1785,26 @@ fn doc_contains_quota_policy_checker_taxonomy_contract_markers() {
 }
 
 #[test]
+fn doc_contains_retention_policy_checker_taxonomy_contract_markers() {
+    assert!(DOC.contains("### Retention Policy Checker Taxonomy Contract"));
+    assert!(DOC.contains(
+        "retention_policy_checker_reason_taxonomy_version=kamn.runtime.retention-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_checker_reason_codes_csv=retention_domain_unknown,retention_window_non_positive,retention_record_expired"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_checker_fixture_schema_version=kamn.runtime.retention-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_checker_fixture_path=fixtures/runtime/retention_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("cargo test -p kamn-core --test retention_policy_checker_contract"));
+    assert!(DOC.contains("cargo test -p kamn-core --test retention_policy_fixture_parser_contract"));
+    assert!(DOC.contains("Regression: #4076"));
+}
+
+#[test]
 fn doc_contains_service_api_request_path_authz_docs_parity_markers() {
     assert!(DOC.contains("### Service API Request-Path Authz Matrix and Docs Parity Contract"));
     assert!(DOC.contains(

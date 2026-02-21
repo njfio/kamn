@@ -779,8 +779,11 @@ pub use reputation_state::{
     ScoreSnapshot, DEFAULT_TRUST_SCORE, MAX_TRUST_SCORE,
 };
 pub use retention_engine::{
-    RetentionClass, RetentionDomain, RetentionEnginePolicy, RetentionEvaluation,
-    RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
+    evaluate_retention_policy, retention_policy_reason_codes_csv,
+    retention_policy_reason_taxonomy_version, RetentionClass, RetentionDomain,
+    RetentionEnginePolicy, RetentionEvaluation, RetentionPolicyCheckerInput,
+    RetentionPolicyDecision, RetentionPolicyEngine, RetentionPolicyError,
+    RetentionPolicyViolationReason, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
     build_runtime_wiring, build_runtime_wiring_with_transport_profile, libp2p_feature_gate_name,

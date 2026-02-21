@@ -3,6 +3,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Deterministic retention checker reason taxonomy version marker.
+pub const RETENTION_POLICY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.retention-policy-reason-taxonomy.v1";
+/// Deterministic retention checker reason code marker list.
+pub const RETENTION_POLICY_REASON_CODES_CSV: &str =
+    "retention_domain_unknown,retention_window_non_positive,retention_record_expired";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Logical domain used to select retention rules for a record.
 pub enum RetentionDomain {
@@ -61,6 +68,81 @@ pub struct RetentionStatus {
 pub struct RetentionEvaluation {
     /// Record IDs that expired during this evaluation cycle.
     pub expired_ids: Vec<String>,
+}
+
+/// Input payload for deterministic retention-policy checker evaluation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RetentionPolicyCheckerInput {
+    /// Domain class being evaluated.
+    pub domain: String,
+    /// Configured retention window in seconds.
+    pub window_seconds: u64,
+    /// Observed age of the record in seconds.
+    pub record_age_seconds: u64,
+}
+
+/// Deterministic fail-closed reason emitted by retention checker evaluation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetentionPolicyViolationReason {
+    /// Domain class is unknown and cannot be evaluated safely.
+    DomainUnknown,
+    /// Retention window is invalid (`<= 0`) and cannot be evaluated safely.
+    WindowNonPositive,
+    /// Record age exceeded configured window and the record is expired.
+    RecordExpired,
+}
+
+impl RetentionPolicyViolationReason {
+    /// Returns the deterministic reason-code marker.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DomainUnknown => "retention_domain_unknown",
+            Self::WindowNonPositive => "retention_window_non_positive",
+            Self::RecordExpired => "retention_record_expired",
+        }
+    }
+}
+
+/// Deterministic decision emitted by retention policy checker evaluation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetentionPolicyDecision {
+    /// Input satisfied retention policy constraints.
+    Allow,
+    /// Input violated retention policy constraints and is rejected fail closed.
+    Reject {
+        /// Deterministic fail-closed violation reason.
+        reason: RetentionPolicyViolationReason,
+    },
+}
+
+/// Returns the deterministic retention policy reason taxonomy version marker.
+pub fn retention_policy_reason_taxonomy_version() -> &'static str {
+    RETENTION_POLICY_REASON_TAXONOMY_VERSION
+}
+
+/// Returns the deterministic retention policy reason-code marker list.
+pub fn retention_policy_reason_codes_csv() -> &'static str {
+    RETENTION_POLICY_REASON_CODES_CSV
+}
+
+/// Evaluates a retention-policy checker input and returns a deterministic fail-closed decision.
+pub fn evaluate_retention_policy(input: &RetentionPolicyCheckerInput) -> RetentionPolicyDecision {
+    if parse_retention_domain_label(&input.domain).is_none() {
+        return RetentionPolicyDecision::Reject {
+            reason: RetentionPolicyViolationReason::DomainUnknown,
+        };
+    }
+    if input.window_seconds == 0 {
+        return RetentionPolicyDecision::Reject {
+            reason: RetentionPolicyViolationReason::WindowNonPositive,
+        };
+    }
+    if input.record_age_seconds > input.window_seconds {
+        return RetentionPolicyDecision::Reject {
+            reason: RetentionPolicyViolationReason::RecordExpired,
+        };
+    }
+    RetentionPolicyDecision::Allow
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -191,6 +273,16 @@ fn validate_non_empty(field: &'static str, value: &str) -> Result<(), RetentionP
         return Err(RetentionPolicyError::EmptyField(field));
     }
     Ok(())
+}
+
+fn parse_retention_domain_label(value: &str) -> Option<RetentionDomain> {
+    match value {
+        "messages" => Some(RetentionDomain::Messages),
+        "tasks" => Some(RetentionDomain::Tasks),
+        "escrows" => Some(RetentionDomain::Escrows),
+        "reputation" => Some(RetentionDomain::Reputation),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
