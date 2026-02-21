@@ -1,6 +1,6 @@
 # Issue #5460 Spec - Cross-store Go/No-go Lane Rust Harness Migration
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #5460
 - Parent: #5459
 - Milestone: R28.1 Cross-store replay production go/no-go integration
