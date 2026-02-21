@@ -765,5 +765,7 @@ pub(super) fn execute_daemon_runtime(
         live_postgres_multi_host_execution_bundle_selector_prefix:
             DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX.to_owned(),
         live_postgres_multi_host_execution_bundle_row_count: multi_host_execution_bundle_row_count,
+        live_postgres_multi_host_execution_bundle_selector_rows_fingerprint:
+            multi_host_execution_bundle_selector_rows_fingerprint,
     })
 }
