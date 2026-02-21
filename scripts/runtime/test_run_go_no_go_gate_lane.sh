@@ -92,10 +92,6 @@ if [ ! -f "$RELEASE_MANIFEST_FILE" ]; then
   echo "expected release evidence manifest file for go/no-go gate lane" >&2
   exit 1
 fi
-if [ -e "$ROOT_DIR/scripts/runtime/validate_cross_store_replay_consistency_contract_lane.sh" ]; then
-  echo "expected deprecated cross-store replay shell wrapper to be removed" >&2
-  exit 1
-fi
 
 python3 - "$ROOT_DIR" <<'PY'
 import importlib.util
@@ -109,19 +105,8 @@ module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-cross_store_registry = module.ARTIFACT_LANE_REGISTRY.get("cross_store_replay_consistency")
-if not isinstance(cross_store_registry, dict):
-    raise SystemExit("expected cross-store replay artifact registry entry")
-cross_store_command = cross_store_registry.get("command")
-if cross_store_command != [
-    "cargo",
-    "run",
-    "-p",
-    "kamn-core",
-    "--bin",
-    "cross_store_replay_consistency_contract_lane",
-    "--",
-]:
+cross_store_command = module.ARTIFACT_LANE_REGISTRY.get("cross_store_replay_consistency", {}).get("command")
+if cross_store_command != ["cargo", "run", "-p", "kamn-core", "--bin", "cross_store_replay_consistency_contract_lane", "--"]:
     raise SystemExit("expected cross-store replay artifact to execute via Rust harness cargo run command")
 
 artifact_inventory = [
