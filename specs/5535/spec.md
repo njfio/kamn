@@ -1,6 +1,6 @@
 # Issue #5535 Spec - Service API Scope-Policy Fixture Shape-Cardinality Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5535
 - Parent: #3812
 - Milestone: R50.33 Service API scope-policy fixture shape-cardinality metrics exposure
