@@ -1,6 +1,6 @@
 # Issue #5485 Spec - R49 Artifact Post-Publication Revalidation Refresh
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5485
 - Parent: #3812
 - Milestone: R50.8 R49 review artifact post-publication baseline revalidation
