@@ -1522,6 +1522,29 @@ Regression marker:
 
 - `Regression: #5402, #5418, #5420`
 
+### Multi-Host Daemon Live-Postgres Batched Coherence Bundle Map (Issue #5422)
+
+Remaining multi-host coherence expansion is grouped into bounded bundle classes to avoid one-issue-per-dimension fan-out while preserving deterministic contract coverage.
+
+Deterministic bundle markers:
+
+- `daemon_live_postgres_coherence_bundle_b01=runtime_matrix_bundle`
+- `daemon_live_postgres_coherence_bundle_b02=parallel_lane_bundle`
+- `daemon_live_postgres_coherence_bundle_b03=topology_mapping_bundle`
+- `daemon_live_postgres_coherence_bundle_b04=topology_coherence_bundle`
+- `daemon_live_postgres_coherence_bundle_b05=fingerprint_stability_bundle`
+- `daemon_live_postgres_coherence_bundle_b06=multi_host_execution_bundle`
+- `daemon_live_postgres_coherence_bundle_issue_floor=5`
+- `daemon_live_postgres_coherence_bundle_issue_ceiling=8`
+
+Validation commands:
+
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_multi_host_batched_coherence_bundle_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #5422`
+
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
 Daemon runtime report output now projects deterministic convergence promotion markers that summarize
