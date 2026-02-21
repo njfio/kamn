@@ -368,6 +368,36 @@ fn service_api_ops_configuration_contains_local_heavy_redaction_validation_lane_
 }
 
 #[test]
+fn service_api_ops_configuration_contains_lifecycle_artifact_integrity_markers() {
+    assert!(DOC.contains("## Tamper-Evident Lifecycle Artifact Integrity Contract (Issue #4081)"));
+    assert!(DOC.contains(
+        "lifecycle_artifact_integrity_schema_version=kamn.runtime.lifecycle-artifact-integrity-evidence.v1"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_artifact_integrity_artifact_schema_version=kamn.runtime.lifecycle-artifact-integrity-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_artifact_integrity_reason_taxonomy_version=kamn.runtime.lifecycle-artifact-integrity-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_artifact_integrity_reason_codes_csv=lifecycle_artifact_required_field_missing,lifecycle_artifact_marker_mismatch,lifecycle_artifact_hash_mismatch,lifecycle_artifact_reason_taxonomy_mismatch,lifecycle_artifact_reason_codes_csv_mismatch,lifecycle_artifact_expected_decision_mismatch"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_artifact_integrity_hash_fields_csv=payload_hash_sha256,integrity_hash_sha256,provenance_hash_sha256"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/generate_lifecycle_artifact_integrity_evidence_bundle.sh --output-file /tmp/lifecycle-artifact-integrity-baseline.json --artifact-id lifecycle-artifact-baseline --lifecycle-stage retention --profile baseline --record-count 42 --ci-fast-gate PASS"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_lifecycle_artifact_integrity_evidence_bundle.sh --bundle-file /tmp/lifecycle-artifact-integrity-baseline.json --expected-final-decision GO"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test lifecycle_artifact_integrity_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4081"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"
