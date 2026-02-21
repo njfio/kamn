@@ -60,6 +60,15 @@ reason_codes=none
 - R49 periodic ignored-test re-evaluation completed via `#5465` with baseline-aligned inventory.
 - R49 completed-milestone closure hygiene wave completed via `#5467` with closures verified for `#94-#97`.
 
+## Governance-Feature Activity Ratio Markers (R49)
+
+- governance_feature_activity_ratio_schema_version=kamn.review.governance-feature-activity-ratio.v1
+- governance_activity_commit_count=3
+- feature_activity_commit_count=0
+- activity_total_commit_count=3
+- governance_activity_commit_ratio=1.0000
+- feature_activity_commit_ratio=0.0000
+
 ## Deterministic Markers
 
 - `r49_review_artifact_schema_version=kamn.review.gaps-and-issues-r49.v1`
