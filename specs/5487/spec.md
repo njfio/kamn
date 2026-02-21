@@ -1,6 +1,6 @@
 # Issue #5487 Spec - R49 Artifact Residual Consistency Reconciliation
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5487
 - Parent: #3812
 - Milestone: R50.9 R49 review artifact consistency reconciliation
