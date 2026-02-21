@@ -33,6 +33,8 @@ Held flat at 82 in R50 after the +12 jump in R49. Monitor for continued growth.
 
 Consolidation trajectory: 122 (pre-wave) → 68 (R46 post-wave) → 70 (R48) → 82 (R49) → 82 (R50).
 
+Doc-contract consolidation contract active (R50.19) with 2 tranches at minimum 4 reductions each toward <=74 files.
+
 ### 1.4 Public API Surface Ratchet Gate
 
 No new modules this cycle. Gate functioning as designed.
@@ -186,6 +188,18 @@ R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
 - `r50_review_spec_volume_remediation_target_release=r53`
 - `r50_review_spec_volume_remediation_status=active`
 
+### 5.6 Doc-Contract Consolidation Guardrail Markers (R50.19)
+
+- `r50_review_doc_contract_consolidation_schema_version=kamn.review.doc-contract-suite-consolidation-plan.v1`
+- `r50_review_doc_contract_consolidation_baseline_test_file_count=82`
+- `r50_review_doc_contract_consolidation_target_test_file_cap=74`
+- `r50_review_doc_contract_consolidation_required_reduction=8`
+- `r50_review_doc_contract_consolidation_tranche_count=2`
+- `r50_review_doc_contract_consolidation_min_reduction_per_tranche=4`
+- `r50_review_doc_contract_consolidation_issue_cap_per_tranche=2`
+- `r50_review_doc_contract_consolidation_target_release=r53`
+- `r50_review_doc_contract_consolidation_status=active`
+
 ---
 
 ## 6. Branch Hygiene — STABLE
@@ -215,7 +229,7 @@ No new modules this cycle.
 |----------|-------|----------|--------|--------|
 | Medium | Self-referential governance loop | Review artifact reconciliation | Process contracts | **Mitigation implemented (R50.17), monitor adherence** |
 | Medium | Spec volume (750, 8.2:1) | 750 dirs / 92 modules | Remediation contracts | **R50.18 active: 3 tranches, min 14 reductions each** |
-| Medium | Doc-contract tests (82) | Stable this cycle | Monitor | Consolidation eroding |
+| Medium | Doc-contract tests (82) | Stable this cycle | Consolidation contracts | **R50.19 active: 2 tranches, min 4 reductions each toward <=74** |
 | Low | Governance ratio (0.11:1) | 3 feat / 28 gov | Monitor | Worst since R47 |
 | Info | Ignored tests (12) | Due R54 | Periodic | Stable |
 | Info | Branches (51) | Stable | None | Healthy |
