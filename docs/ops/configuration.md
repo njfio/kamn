@@ -715,6 +715,39 @@ Regression marker:
 
 - `Regression: #4032`
 
+## SBOM-Provenance Artifact Generator Contract (Issue #4036)
+
+Deterministic SBOM/provenance generator markers:
+
+- `sbom_provenance_lane_schema_version=kamn.runtime.sbom-provenance-artifact-report.v1`
+- `sbom_provenance_artifact_schema_version=kamn.runtime.sbom-provenance-artifact-schema.v1`
+- `sbom_provenance_fixture_schema_version=kamn.ci.sbom-provenance-artifact-fixture-matrix.v1`
+- `sbom_provenance_reason_taxonomy_version=kamn.runtime.sbom-provenance-artifact-reason-taxonomy.v1`
+- `sbom_provenance_reason_codes_csv=sbom_provenance_profile_contract_violation,sbom_provenance_runtime_budget_exceeded`
+- `sbom_schema_version=spdx-2.3`
+- `provenance_schema_version=slsa-v1`
+- `release_manifest_required_artifact_id=sbom_provenance`
+
+Profile projection contracts:
+
+- `profile=baseline -> status=pass + final_decision=GO + reason_code=none + release_manifest_ready_status=verified`
+- `profile=injected-drift -> status=fail + final_decision=NO-GO + reason_code=sbom_provenance_profile_contract_violation + release_manifest_ready_status=violation`
+
+Boundary contracts:
+
+- run mode is local-only and requires explicit opt-in (`KAMN_SBOM_PROVENANCE_GENERATOR_OPT_IN=1`).
+- run mode requires `--ci-fast-gate FAIL`; CI smoke paths remain dry-run only.
+
+Validation commands:
+
+- `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
+- `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
+- `cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4036`
+
 ## Tamper-Evident Lifecycle Artifact Integrity Contract (Issue #4081)
 
 Deterministic lifecycle artifact integrity markers:

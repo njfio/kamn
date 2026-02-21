@@ -4761,6 +4761,26 @@ Fast-mode CI tooling regression coverage includes:
 - Makefile command/execution parity checks (covered by `shell_test_surface_migration_wave2`)
 - Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 
+## SBOM-Provenance Artifact Generator Contract (Issue #4036)
+- Entry commands:
+  - `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
+  - `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
+  - `cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture`
+- Deterministic generator markers:
+  - `sbom_provenance_lane_schema_version=kamn.runtime.sbom-provenance-artifact-report.v1`
+  - `sbom_provenance_artifact_schema_version=kamn.runtime.sbom-provenance-artifact-schema.v1`
+  - `sbom_provenance_fixture_schema_version=kamn.ci.sbom-provenance-artifact-fixture-matrix.v1`
+  - `sbom_provenance_reason_taxonomy_version=kamn.runtime.sbom-provenance-artifact-reason-taxonomy.v1`
+  - `sbom_provenance_reason_codes_csv=sbom_provenance_profile_contract_violation,sbom_provenance_runtime_budget_exceeded`
+  - `sbom_schema_version=spdx-2.3`
+  - `provenance_schema_version=slsa-v1`
+  - `release_manifest_required_artifact_id=sbom_provenance`
+- Boundary contracts:
+  - run mode is local-only and requires explicit `KAMN_SBOM_PROVENANCE_GENERATOR_OPT_IN=1`.
+  - run mode requires `--ci-fast-gate FAIL`; ci-smoke coverage remains dry-run only.
+- Regression coverage:
+  - `Regression: #4036`
+
 ## Release Evidence Manifest Schema
 The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - manifest file: `scripts/runtime/release_evidence_manifest.json`
