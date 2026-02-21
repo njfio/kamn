@@ -8,6 +8,7 @@ import datetime as dt
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -136,8 +137,13 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
     "cross_store_replay_consistency": {
         "expected_lane": "runtime.validate_cross_store_replay_consistency_contract_lane",
         "command": [
-            "bash",
-            str(ROOT_DIR / "scripts/runtime/validate_cross_store_replay_consistency_contract_lane.sh"),
+            "cargo",
+            "run",
+            "-p",
+            "kamn-core",
+            "--bin",
+            "cross_store_replay_consistency_contract_lane",
+            "--",
         ],
         "success_marker": "cross_store_replay_consistency_policy_status=verified",
         "failure_label": "cross-store replay consistency lane failed unexpectedly",
@@ -148,6 +154,23 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
 def _ensure_executable(path: Path, label: str) -> None:
     if not path.is_file() or not os.access(path, os.X_OK):
         fail(f"expected {label} to be executable")
+
+
+def _ensure_command_invocable(command: list[str], artifact_id: str) -> None:
+    if not command:
+        fail(f"release_manifest_command_invalid:{artifact_id}")
+    launcher = command[0].strip()
+    if not launcher:
+        fail(f"release_manifest_command_invalid:{artifact_id}")
+    launcher_path = Path(launcher)
+    if launcher_path.is_absolute() or launcher.startswith(".") or "/" in launcher:
+        _ensure_executable(launcher_path, f"{artifact_id} lane launcher")
+    elif shutil.which(launcher) is None:
+        fail(f"release_manifest_command_not_found:{artifact_id}:{launcher}")
+    if launcher == "bash":
+        if len(command) < 2:
+            fail(f"release_manifest_command_invalid:{artifact_id}")
+        _ensure_executable(Path(command[1]), f"{artifact_id} lane command")
 
 
 def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -527,11 +550,11 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         if lane_mode == "run":
             registry_entry = ARTIFACT_LANE_REGISTRY[artifact_id]
             lane_command = registry_entry["command"]
-            if not isinstance(lane_command, list) or len(lane_command) < 2:
+            if not isinstance(lane_command, list) or not lane_command:
                 fail(f"release_manifest_command_invalid:{artifact_id}")
-            lane_path = Path(str(lane_command[1]))
-            _ensure_executable(lane_path, f"{artifact_id} lane command")
-            run_result = _run_command([str(part) for part in lane_command])
+            lane_command_parts = [str(part) for part in lane_command]
+            _ensure_command_invocable(lane_command_parts, artifact_id)
+            run_result = _run_command(lane_command_parts)
             if run_result.returncode != 0:
                 detail = (
                     run_result.stderr
