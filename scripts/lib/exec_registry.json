@@ -1288,6 +1288,14 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_lifecycle_artifact_integrity_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/lifecycle_artifact_integrity_contract.py",
+      "args_prefix": [
+        "check"
+      ],
+      "passthrough": true
+    },
     "scripts/runtime/check_local_full_runtime_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/local_full_runtime_live_contract.py",
@@ -1512,6 +1520,14 @@
       "interpreter": "python3",
       "target": "scripts/runtime/live_network_pilot_artifact_summary_contract.py",
       "args_prefix": [],
+      "passthrough": true
+    },
+    "scripts/runtime/generate_lifecycle_artifact_integrity_evidence_bundle.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/lifecycle_artifact_integrity_contract.py",
+      "args_prefix": [
+        "generate"
+      ],
       "passthrough": true
     },
     "scripts/runtime/generate_processor_proof_admission_evidence_bundle.sh": {
