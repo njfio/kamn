@@ -2,6 +2,7 @@
 
 **As of:** R49 review artifact publication, issue `#5469` (2026-02-21)
 **Post-publication revalidation:** issue `#5485` (2026-02-21)
+**Post-publication branch-count reconciliation:** issue `#5491` (2026-02-21)
 
 ---
 
@@ -54,6 +55,13 @@ Ignored-test drift checker summary:
 status=pass
 ignored_test_count=12
 reason_codes=none
+```
+
+Post-publication branch-count reconciliation provenance:
+
+```text
+issue=5491
+scope=branch_remote_head_count_marker_update_to_51
 ```
 
 ## Post-Publication Revalidation Snapshot (R50.8)
@@ -130,6 +138,7 @@ reason_codes=none
 - `r49_review_milestone_closure_wave_issue=5467`
 - `r49_review_post_publication_revalidation_date=2026-02-21`
 - `r49_review_post_publication_issue=5485`
+- `r49_review_post_publication_branch_count_reconciliation_issue=5491`
 - `r49_review_post_publication_branch_remote_head_count=51`
 - `r49_review_post_publication_open_issue_count=0`
 - `r49_review_post_publication_open_milestone_count=0`
