@@ -111,6 +111,11 @@ pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION: &str =
 pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV: &str = "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid";
 pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION: &str =
+    "kamn.runtime.service-api-route-authz-matrix.v1";
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 10;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 8;
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
@@ -178,6 +183,10 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_reason_code_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
+    pub(crate) route_authz_matrix_schema_version: String,
+    pub(crate) route_authz_matrix_total_route_count: usize,
+    pub(crate) route_authz_matrix_public_route_count: usize,
+    pub(crate) route_authz_matrix_protected_route_count: usize,
     pub(crate) websocket_reason_taxonomy_version: String,
     pub(crate) websocket_reason_code_count: usize,
     pub(crate) observability_source: String,
@@ -438,6 +447,8 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let route_authz_matrix_schema_version =
+        SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION.to_owned();
     let websocket_reason_taxonomy_version =
         SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION.to_owned();
     let websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
@@ -457,6 +468,11 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         scope_policy_reason_code_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
+        route_authz_matrix_schema_version,
+        route_authz_matrix_total_route_count: SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT,
+        route_authz_matrix_public_route_count: SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT,
+        route_authz_matrix_protected_route_count:
+            SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT,
         websocket_reason_taxonomy_version,
         websocket_reason_code_count,
         observability_source: observability.source,
