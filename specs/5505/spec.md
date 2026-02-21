@@ -1,6 +1,6 @@
 # Issue #5505 Spec - R50 Spec-Volume Guardrail Remediation Contracts
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5505
 - Parent: #5469
 - Milestone: R50.18 Spec-volume guardrail remediation contracts
