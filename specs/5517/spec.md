@@ -1,6 +1,6 @@
 # Issue #5517 Spec - Spec Status Normalization for Merged Issue 5515
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5517
 - Parent: #5515
 - Milestone: R50.24 Spec status normalization for merged issue 5515
