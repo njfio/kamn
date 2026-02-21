@@ -292,6 +292,39 @@ fn service_api_ops_configuration_contains_sqlite_crash_restart_local_heavy_lane_
 }
 
 #[test]
+fn service_api_ops_configuration_contains_local_heavy_capacity_load_lane_markers() {
+    assert!(DOC.contains("## Local-Heavy Capacity/Load Lane Artifact Contract (Issue #4004)"));
+    assert!(DOC.contains(
+        "local_heavy_capacity_load_lane_schema_version=kamn.runtime.local-heavy-capacity-load-lane-report.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_capacity_load_artifact_schema_version=kamn.runtime.local-heavy-capacity-load-artifact-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_capacity_load_reason_taxonomy_version=kamn.runtime.local-heavy-capacity-load-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_capacity_load_reason_codes_csv=local_heavy_capacity_load_profile_threshold_breach,local_heavy_capacity_load_runtime_budget_exceeded"
+    ));
+    assert!(DOC.contains("local_heavy_capacity_load_required_profiles_csv=baseline,fault"));
+    assert!(DOC
+        .contains("profile=baseline -> status=pass + final_decision=GO + profile_status=verified"));
+    assert!(
+        DOC.contains("profile=fault -> status=fail + final_decision=NO-GO + profile_status=failed")
+    );
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_local_heavy_capacity_load_lane.sh --profile baseline --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-capacity-load-baseline.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_local_heavy_capacity_load_lane.sh --profile fault --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-capacity-load-fault.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test local_heavy_capacity_load_lane_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4004"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"
