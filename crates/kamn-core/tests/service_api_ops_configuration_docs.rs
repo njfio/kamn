@@ -1454,6 +1454,34 @@ fn service_api_ops_configuration_contains_retention_policy_fixture_matrix_contro
 }
 
 #[test]
+fn service_api_ops_configuration_contains_deletion_proof_artifact_fixture_controls() {
+    assert!(DOC.contains(
+        "## Deletion-Proof Artifact Fixture Set and Checker Behavior Contracts (Issue #4077)"
+    ));
+    assert!(DOC.contains(
+        "deletion_proof_fixture_matrix_path=fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "deletion_proof_fixture_matrix_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "deletion_proof_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "deletion_proof_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch"
+    ));
+    assert!(DOC.contains(
+        "deletion_proof_fixture_columns=case_id|subject_id|tombstone_hash|expected_hash|proof_status|expected_status|expected_reason_code"
+    ));
+    assert!(DOC.contains("deletion_proof_subject_missing"));
+    assert!(DOC.contains("deletion_proof_tombstone_missing"));
+    assert!(DOC.contains("deletion_proof_status_invalid"));
+    assert!(DOC.contains("deletion_proof_hash_mismatch"));
+    assert!(DOC.contains("cargo test -p kamn-core --test deletion_proof_artifact_checker_contract"));
+    assert!(DOC.contains("Regression: #4077"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
