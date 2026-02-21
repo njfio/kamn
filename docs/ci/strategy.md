@@ -2028,7 +2028,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - root policy marker mismatch against expected SPDX fails closed with `license_policy_marker_mismatch`.
   - local-heavy execution without `--local-heavy-opt-in` fails closed with `metadata_governance_local_heavy_opt_in_required`.
   - ci-smoke mode keeps low-cost profile and excludes local-heavy-only execution paths.
+- Deterministic remediation markers:
+  - `metadata_governance_remediation_map_version=v1`
+  - `metadata_governance_remediation.expected_license_empty=provide a non-empty SPDX identifier via --expected-license`
+  - `metadata_governance_remediation.no_crate_manifests_found=add crate Cargo.toml files under crates/* or pass explicit --manifest paths`
+  - `metadata_governance_remediation.license_policy_file_not_found=restore root LICENSE path or pass a valid --license-policy-file path`
+  - `metadata_governance_remediation.license_policy_marker_mismatch=realign root LICENSE policy markers to the expected SPDX policy text`
+  - `metadata_governance_remediation.manifest_not_found=restore missing Cargo.toml manifest path or remove stale --manifest entries`
+  - `metadata_governance_remediation.manifest_invalid_toml=repair malformed Cargo.toml syntax before rerunning checker`
+  - `metadata_governance_remediation.package_section_missing=add [package] section to the Cargo.toml manifest`
+  - `metadata_governance_remediation.license_missing=add package.license field with approved SPDX value`
+  - `metadata_governance_remediation.license_mismatch=set package.license to the approved workspace SPDX value`
+  - `metadata_governance_remediation.metadata_governance_local_heavy_opt_in_required=rerun local-heavy profile with --local-heavy-opt-in`
+- Guard commands:
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes -- --exact`
+- Fail-closed docs parity policy:
+  - each dependency-license reason code must include deterministic remediation markers in strategy and ops docs.
 - Regression: #4034
+- Regression: #4035
 
 ## Dependency CI Smoke Advisory Fixture Contract
 - `dependency_ci_smoke_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1`
