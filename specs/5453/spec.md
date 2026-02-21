@@ -1,6 +1,6 @@
 # Issue #5453 Spec - R27 Empty-Milestone Closure Wave
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5453
 - Parent: #3812
 - Milestone: R27.10 Durability, crash-recovery, and state-consistency hardening
