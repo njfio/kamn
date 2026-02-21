@@ -100,15 +100,11 @@ const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_no
 const REASON_CODE_AUTH_SCOPE_HEADER_MISSING: &str = "service_api_auth_scope_header_missing";
 const REASON_CODE_AUTH_SCOPE_INVALID: &str = "service_api_auth_scope_invalid";
 const REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH: &str = "service_api_auth_scope_route_mismatch";
-#[cfg(test)]
 pub(crate) const SERVICE_API_AUTH_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
-#[cfg(test)]
 pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
-#[cfg(test)]
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-reason-taxonomy.v1";
-#[cfg(test)]
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str = "service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch";
 #[cfg(test)]
 pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
@@ -171,6 +167,10 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) chain_version: String,
     pub(crate) cross_store_replay_reason_taxonomy_version: String,
     pub(crate) cross_store_replay_reason_code_count: usize,
+    pub(crate) auth_reason_taxonomy_version: String,
+    pub(crate) auth_reason_code_count: usize,
+    pub(crate) scope_policy_reason_taxonomy_version: String,
+    pub(crate) scope_policy_reason_code_count: usize,
     pub(crate) observability_source: String,
     pub(crate) observability_latency_p50_ms: u64,
     pub(crate) observability_latency_p99_ms: u64,
@@ -412,6 +412,17 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let auth_reason_taxonomy_version = SERVICE_API_AUTH_REASON_TAXONOMY_VERSION.to_owned();
+    let auth_reason_code_count = SERVICE_API_AUTH_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
+    let scope_policy_reason_taxonomy_version =
+        SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION.to_owned();
+    let scope_policy_reason_code_count = SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     ServiceApiSnapshot {
         runtime_mode: report.runtime_mode.clone(),
         role: report.role.clone(),
@@ -419,6 +430,10 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         chain_version: report.chain_version.clone(),
         cross_store_replay_reason_taxonomy_version,
         cross_store_replay_reason_code_count,
+        auth_reason_taxonomy_version,
+        auth_reason_code_count,
+        scope_policy_reason_taxonomy_version,
+        scope_policy_reason_code_count,
         observability_source: observability.source,
         observability_latency_p50_ms: observability.latency_p50_ms,
         observability_latency_p99_ms: observability.latency_p99_ms,

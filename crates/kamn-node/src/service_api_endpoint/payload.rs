@@ -27,13 +27,17 @@ pub(super) fn render_service_api_endpoint_response(
             0
         };
         let metrics = format!(
-            "kamn_service_api_health{{runtime_mode=\"{}\"}} 1\nkamn_service_api_role{{role=\"{}\"}} 1\nkamn_service_api_chain_info{{chain_id=\"{}\",chain_version=\"{}\"}} 1\nkamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1\nkamn_service_api_cross_store_replay_reason_code_count {}\nkamn_service_api_observability_latency_p50_ms {}\nkamn_service_api_observability_latency_p99_ms {}\nkamn_service_api_observability_throughput_tps {}\nkamn_service_api_observability_error_rate_bps {}\nkamn_service_api_observability_availability_bps {}\nkamn_service_api_observability_alert_count {}\nkamn_service_api_observability_source{{source=\"{}\"}} 1\nkamn_service_api_observability_health{{health=\"{}\"}} {}\n",
+            "kamn_service_api_health{{runtime_mode=\"{}\"}} 1\nkamn_service_api_role{{role=\"{}\"}} 1\nkamn_service_api_chain_info{{chain_id=\"{}\",chain_version=\"{}\"}} 1\nkamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1\nkamn_service_api_cross_store_replay_reason_code_count {}\nkamn_service_api_auth_reason_taxonomy_info{{version=\"{}\"}} 1\nkamn_service_api_auth_reason_code_count {}\nkamn_service_api_scope_policy_reason_taxonomy_info{{version=\"{}\"}} 1\nkamn_service_api_scope_policy_reason_code_count {}\nkamn_service_api_observability_latency_p50_ms {}\nkamn_service_api_observability_latency_p99_ms {}\nkamn_service_api_observability_throughput_tps {}\nkamn_service_api_observability_error_rate_bps {}\nkamn_service_api_observability_availability_bps {}\nkamn_service_api_observability_alert_count {}\nkamn_service_api_observability_source{{source=\"{}\"}} 1\nkamn_service_api_observability_health{{health=\"{}\"}} {}\n",
             escape_metrics_label(snapshot.runtime_mode.as_str()),
             escape_metrics_label(snapshot.role.as_str()),
             escape_metrics_label(snapshot.chain_id.as_str()),
             escape_metrics_label(snapshot.chain_version.as_str()),
             escape_metrics_label(snapshot.cross_store_replay_reason_taxonomy_version.as_str()),
             snapshot.cross_store_replay_reason_code_count,
+            escape_metrics_label(snapshot.auth_reason_taxonomy_version.as_str()),
+            snapshot.auth_reason_code_count,
+            escape_metrics_label(snapshot.scope_policy_reason_taxonomy_version.as_str()),
+            snapshot.scope_policy_reason_code_count,
             snapshot.observability_latency_p50_ms,
             snapshot.observability_latency_p99_ms,
             snapshot.observability_throughput_tps,
