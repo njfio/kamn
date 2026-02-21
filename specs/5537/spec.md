@@ -1,6 +1,6 @@
 # Issue #5537 Spec - Service API Scope-Policy Fixture Allow/Deny Scope Coverage Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5537
 - Parent: #3812
 - Milestone: R50.34 Service API scope-policy fixture allow/deny scope coverage metrics exposure
