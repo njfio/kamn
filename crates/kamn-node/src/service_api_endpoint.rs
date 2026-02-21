@@ -135,6 +135,9 @@ const REASON_CODE_WS_PRESENCE_CAPABILITIES_INVALID: &str =
     "service_api_ws_presence_capabilities_invalid";
 const REASON_CODE_WS_PRESENCE_PROJECTION_INVALID: &str =
     "service_api_ws_presence_projection_invalid";
+pub(crate) const SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-websocket-reason-taxonomy.v1";
+pub(crate) const SERVICE_API_WEBSOCKET_REASON_CODES_CSV: &str = "service_api_ws_upgrade_header_missing,service_api_ws_connection_header_missing,service_api_ws_key_header_missing,service_api_ws_version_header_missing,service_api_ws_upgrade_header_invalid,service_api_ws_connection_header_invalid,service_api_ws_key_header_empty,service_api_ws_version_header_invalid,service_api_ws_events_mode_invalid,service_api_ws_presence_owner_did_header_missing,service_api_ws_presence_target_agent_did_header_missing,service_api_ws_presence_requester_agent_did_header_missing,service_api_ws_presence_connected_since_invalid,service_api_ws_presence_last_heartbeat_invalid,service_api_ws_presence_capabilities_invalid,service_api_ws_presence_projection_invalid";
 const REQUEST_WS_EVENTS_MODE_HEADER: &str = "x-kamn-events-mode";
 const REQUEST_WS_PRESENCE_OWNER_DID_HEADER: &str = "x-kamn-presence-owner-did";
 const REQUEST_WS_PRESENCE_TARGET_OWNER_DID_HEADER: &str = "x-kamn-presence-target-owner-did";
@@ -176,6 +179,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_reason_code_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
+    pub(crate) websocket_reason_taxonomy_version: String,
+    pub(crate) websocket_reason_code_count: usize,
     pub(crate) observability_source: String,
     pub(crate) observability_latency_p50_ms: u64,
     pub(crate) observability_latency_p99_ms: u64,
@@ -434,6 +439,12 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let websocket_reason_taxonomy_version =
+        SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION.to_owned();
+    let websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     ServiceApiSnapshot {
         runtime_mode: report.runtime_mode.clone(),
         role: report.role.clone(),
@@ -447,6 +458,8 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         scope_policy_reason_code_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
+        websocket_reason_taxonomy_version,
+        websocket_reason_code_count,
         observability_source: observability.source,
         observability_latency_p50_ms: observability.latency_p50_ms,
         observability_latency_p99_ms: observability.latency_p99_ms,

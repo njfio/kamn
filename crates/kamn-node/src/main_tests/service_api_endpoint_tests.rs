@@ -8,7 +8,8 @@ use crate::service_api_endpoint::{
     SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
     SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION, SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV,
-    SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION,
+    SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION, SERVICE_API_WEBSOCKET_REASON_CODES_CSV,
+    SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION,
 };
 use kamn_core::{
     baseline_signature_for_fields, cross_store_replay_reason_codes_csv,
@@ -763,6 +764,10 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     let expected_lifecycle_rejection_reason_code_count =
         SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
             .split(',')
@@ -788,6 +793,13 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_reason_code_count {expected_scope_reason_code_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
+        SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_websocket_reason_code_count {expected_websocket_reason_code_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_taxonomy_info{{version=\"{}\"}} 1",
@@ -1022,6 +1034,10 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     let expected_lifecycle_rejection_reason_code_count =
         SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
             .split(',')
@@ -1047,6 +1063,13 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_reason_code_count {expected_scope_reason_code_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
+        SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_websocket_reason_code_count {expected_websocket_reason_code_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_taxonomy_info{{version=\"{}\"}} 1",
@@ -1133,6 +1156,10 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     let expected_lifecycle_rejection_reason_code_count =
         SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
             .split(',')
@@ -1158,6 +1185,13 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_reason_code_count {expected_scope_reason_code_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
+        SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_websocket_reason_code_count {expected_websocket_reason_code_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_taxonomy_info{{version=\"{}\"}} 1",
@@ -1489,6 +1523,10 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     let expected_lifecycle_rejection_reason_code_count =
         SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
             .split(',')
@@ -1514,6 +1552,13 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_reason_code_count {expected_scope_reason_code_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_websocket_reason_taxonomy_info{{version=\"{}\"}} 1",
+        SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_websocket_reason_code_count {expected_websocket_reason_code_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_taxonomy_info{{version=\"{}\"}} 1",
