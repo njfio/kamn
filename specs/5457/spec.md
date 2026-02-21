@@ -1,6 +1,6 @@
 # Issue #5457 Spec - Branch Hygiene Refresh Wave
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5457
 - Parent: #3812
 - Milestone: None
