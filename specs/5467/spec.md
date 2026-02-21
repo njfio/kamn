@@ -1,6 +1,6 @@
 # Issue #5467 Spec - Completed Milestone Closure Hygiene Wave
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5467
 - Parent: #5449
 - Milestone: R49.2 Completed-milestone closure hygiene wave
