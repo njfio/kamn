@@ -10,3 +10,4 @@ use live_postgres_fixtures::*;
 include!("daemon_tests/runtime_contract_tests.rs");
 include!("daemon_tests/live_postgres_matrix_contract_tests.rs");
 include!("daemon_tests/live_postgres_topology_contract_tests.rs");
+include!("daemon_tests/live_postgres_distributed_execution_contract_tests.rs");

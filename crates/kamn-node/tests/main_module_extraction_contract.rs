@@ -377,6 +377,12 @@ fn main_module_extraction_contract_daemon_tests_decomposition_shell_markers_rema
         "daemon_tests.rs should route topology-heavy contract tests through include fragment"
     );
     assert!(
+        daemon_tests_rs.contains(
+            "include!(\"daemon_tests/live_postgres_distributed_execution_contract_tests.rs\");"
+        ),
+        "daemon_tests.rs should route distributed execution contract tests through include fragment"
+    );
+    assert!(
         !daemon_tests_rs.contains(
             "fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_scope_contract_is_canonical("
         ),
@@ -397,7 +403,7 @@ fn main_module_extraction_contract_daemon_tests_decomposition_shell_markers_rema
         "daemon_tests.rs should remain within phase3 bounded shell target (<=300 lines)"
     );
     assert!(
-        include_decl_count >= 3,
+        include_decl_count >= 4,
         "daemon_tests.rs should keep include-based decomposition entries"
     );
 }

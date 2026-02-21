@@ -1368,6 +1368,45 @@ fn service_api_ops_configuration_contains_multi_host_batched_coherence_bundle_ma
 }
 
 #[test]
+fn service_api_ops_configuration_contains_multi_host_distributed_execution_bundle_markers() {
+    assert!(DOC.contains("### Multi-Host Distributed Execution Lane Contracts (Issue #5422)"));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_reason_taxonomy_version=kamn.runtime.daemon.phase6-live-postgres.multi-host-execution.reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_prerequisite_env_keys_csv=KAMN_TEST_POSTGRES_URL|DATABASE_URL,KAMN_TEST_LIVE_POSTGRES_DISTRIBUTED_HOSTS"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_prerequisite_reason_codes_csv=live_postgres_multi_host_prerequisites_ready,live_postgres_multi_host_prerequisites_missing,live_postgres_multi_host_host_pair_invalid"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_bundle_selector_prefix=main_tests::daemon_tests::"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_bundle_selector_rows_csv=b01_runtime_matrix_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs,b02_parallel_lane_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable,b03_topology_mapping_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable,b04_topology_coherence_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable,b05_fingerprint_stability_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable,b06_multi_host_execution_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_projection_digest_fnv1a64_hex=25b9729eaeb44fe9"
+    ));
+    assert!(DOC.contains(
+        "daemon_live_postgres_multi_host_execution_contract=prerequisite_gate->distributed_label_projection->fingerprint_digest_stability"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_multi_host_execution_prerequisite_guard_contract_is_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::functional_runtime_daemon_live_postgres_validation_slice_multi_host_execution_bundle_selector_rows_are_canonical -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node --bin kamn-node main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_multi_host_distributed_execution_bundle_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5422"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
