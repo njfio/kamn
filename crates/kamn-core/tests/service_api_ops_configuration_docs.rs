@@ -1318,12 +1318,17 @@ fn service_api_ops_configuration_contains_live_postgres_daemon_runtime_matrix_pa
 #[test]
 fn service_api_ops_configuration_contains_daemon_tests_live_postgres_fixture_decomposition_markers()
 {
-    assert!(DOC
-        .contains("### Daemon Tests Live-Postgres Fixture Decomposition Contracts (Issue #5402)"));
+    assert!(DOC.contains(
+        "### Daemon Tests Live-Postgres Fixture Decomposition Contracts (Issue #5402, #5418)"
+    ));
     assert!(DOC.contains(
         "daemon_tests_live_postgres_fixture_module_path=crates/kamn-node/src/main_tests/daemon_tests/live_postgres_fixtures.rs"
     ));
     assert!(DOC.contains("daemon_tests_live_postgres_fixture_phase1_target_max_lines=4300"));
+    assert!(DOC.contains(
+        "daemon_tests_live_postgres_fixture_phase2_module_path=crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_contract_tests.rs"
+    ));
+    assert!(DOC.contains("daemon_tests_live_postgres_fixture_phase2_target_max_lines=2200"));
     assert!(DOC.contains(
         "daemon_tests_live_postgres_fixture_test_path_contract=main_tests::daemon_tests::path_prefix_must_remain_stable_after_fixture_extraction"
     ));
@@ -1333,7 +1338,7 @@ fn service_api_ops_configuration_contains_daemon_tests_live_postgres_fixture_dec
     assert!(DOC.contains(
         "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_daemon_tests_live_postgres_fixture_decomposition_markers -- --exact"
     ));
-    assert!(DOC.contains("Regression: #5402"));
+    assert!(DOC.contains("Regression: #5402, #5418"));
 }
 
 #[test]
