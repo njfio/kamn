@@ -154,12 +154,12 @@ R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
 
 ### 5.3 Governance-Feature Activity Ratio Markers (R50)
 
-- `governance_feature_activity_ratio_schema_version=kamn.review.governance-feature-activity-ratio.v1`
-- `governance_activity_commit_count=28`
-- `feature_activity_commit_count=3`
-- `activity_total_commit_count=31`
-- `governance_activity_commit_ratio=0.9032`
-- `feature_activity_commit_ratio=0.0968`
+- governance_feature_activity_ratio_schema_version=kamn.review.governance-feature-activity-ratio.v1
+- governance_activity_commit_count=28
+- feature_activity_commit_count=3
+- activity_total_commit_count=31
+- governance_activity_commit_ratio=0.9032
+- feature_activity_commit_ratio=0.0968
 
 ### 5.4 Spec-Volume Guardrail Markers (R50)
 
