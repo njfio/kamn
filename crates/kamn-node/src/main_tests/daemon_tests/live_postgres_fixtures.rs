@@ -155,6 +155,22 @@ pub(super) const LIVE_POSTGRES_MATRIX_REASON_CODES_CSV: &str =
     "live_postgres_env_unset,m10_phase6_scheduler_cycle_applied,m10_phase6_scheduler_cycle_deferred";
 pub(super) const LIVE_POSTGRES_MATRIX_SCENARIOS_CSV: &str =
     "env_unset,env_set_no_shutdown,env_set_shutdown";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.daemon.phase6-live-postgres.multi-host-execution.reason-taxonomy.v1";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_READY_REASON_CODE: &str =
+    "live_postgres_multi_host_prerequisites_ready";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITES_MISSING_REASON_CODE: &str =
+    "live_postgres_multi_host_prerequisites_missing";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_HOST_PAIR_INVALID_REASON_CODE: &str =
+    "live_postgres_multi_host_host_pair_invalid";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITE_ENV_KEYS_CSV: &str =
+    "KAMN_TEST_POSTGRES_URL|DATABASE_URL,KAMN_TEST_LIVE_POSTGRES_DISTRIBUTED_HOSTS";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITE_REASON_CODES_CSV: &str =
+    "live_postgres_multi_host_prerequisites_ready,live_postgres_multi_host_prerequisites_missing,live_postgres_multi_host_host_pair_invalid";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX: &str =
+    "main_tests::daemon_tests::";
+pub(super) const LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS_CSV: &str =
+    "b01_runtime_matrix_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs,b02_parallel_lane_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable,b03_topology_mapping_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable,b04_topology_coherence_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable,b05_fingerprint_stability_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable,b06_multi_host_execution_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable";
 
 pub(super) fn parse_args_with_clean_daemon_env(
     args: Vec<String>,
@@ -225,6 +241,136 @@ pub(super) struct LivePostgresParallelLaneTopologyProfile {
     pub(super) host_a: &'static str,
     pub(super) host_b: &'static str,
     pub(super) lanes: Vec<LivePostgresRolePairProfile>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct LivePostgresMultiHostPrerequisiteDecision {
+    pub(super) reason_code: &'static str,
+    pub(super) reason_taxonomy_version: &'static str,
+    pub(super) host_pair_csv: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct LivePostgresMultiHostExecutionProjection {
+    pub(super) reason_code: &'static str,
+    pub(super) reason_taxonomy_version: &'static str,
+    pub(super) host_pair_csv: String,
+    pub(super) distributed_topology_fingerprint: String,
+    pub(super) fingerprint_hash_order_normalization_digest_hex: String,
+}
+
+fn parse_live_postgres_distributed_host_pair(raw: &str) -> Option<(String, String)> {
+    let hosts = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    if hosts.len() != 2 || hosts[0] == hosts[1] {
+        return None;
+    }
+    Some((hosts[0].clone(), hosts[1].clone()))
+}
+
+pub(super) fn resolve_live_postgres_multi_host_prerequisite_decision(
+) -> LivePostgresMultiHostPrerequisiteDecision {
+    let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
+    if gate_reason_code != LIVE_POSTGRES_ADAPTER_CONNECTED_REASON_CODE
+        || maybe_database_url.is_none()
+    {
+        return LivePostgresMultiHostPrerequisiteDecision {
+            reason_code: LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITES_MISSING_REASON_CODE,
+            reason_taxonomy_version: LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION,
+            host_pair_csv: None,
+        };
+    }
+
+    let raw_host_pair = std::env::var("KAMN_TEST_LIVE_POSTGRES_DISTRIBUTED_HOSTS")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty());
+    let Some(raw_host_pair) = raw_host_pair else {
+        return LivePostgresMultiHostPrerequisiteDecision {
+            reason_code: LIVE_POSTGRES_MULTI_HOST_EXECUTION_PREREQUISITES_MISSING_REASON_CODE,
+            reason_taxonomy_version: LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION,
+            host_pair_csv: None,
+        };
+    };
+
+    let Some((host_a, host_b)) = parse_live_postgres_distributed_host_pair(&raw_host_pair) else {
+        return LivePostgresMultiHostPrerequisiteDecision {
+            reason_code: LIVE_POSTGRES_MULTI_HOST_EXECUTION_HOST_PAIR_INVALID_REASON_CODE,
+            reason_taxonomy_version: LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION,
+            host_pair_csv: None,
+        };
+    };
+
+    LivePostgresMultiHostPrerequisiteDecision {
+        reason_code: LIVE_POSTGRES_MULTI_HOST_EXECUTION_READY_REASON_CODE,
+        reason_taxonomy_version: LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION,
+        host_pair_csv: Some(format!("{host_a},{host_b}")),
+    }
+}
+
+pub(super) fn project_live_postgres_multi_host_execution_bundle_selector_rows() -> Vec<String> {
+    vec![
+        format!(
+            "b01_runtime_matrix_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+        format!(
+            "b02_parallel_lane_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+        format!(
+            "b03_topology_mapping_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+        format!(
+            "b04_topology_coherence_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+        format!(
+            "b05_fingerprint_stability_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+        format!(
+            "b06_multi_host_execution_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable",
+            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
+        ),
+    ]
+}
+
+pub(super) fn run_live_postgres_multi_host_execution_bundle_projection(
+) -> Result<LivePostgresMultiHostExecutionProjection, LivePostgresMultiHostPrerequisiteDecision> {
+    let prerequisite_decision = resolve_live_postgres_multi_host_prerequisite_decision();
+    if prerequisite_decision.reason_code != LIVE_POSTGRES_MULTI_HOST_EXECUTION_READY_REASON_CODE {
+        return Err(prerequisite_decision);
+    }
+
+    let host_pair_csv = prerequisite_decision
+        .host_pair_csv
+        .clone()
+        .expect("ready multi-host prerequisite decision should include host pair csv");
+    let topology_fingerprints = run_parallel_lane_topology_fingerprints(
+        project_live_postgres_parallel_lane_topology_profiles(),
+    );
+    let distributed_topology_fingerprint = topology_fingerprints
+        .iter()
+        .find(|fingerprint| fingerprint.starts_with("distributed_label_parallel#"))
+        .cloned()
+        .expect("distributed topology fingerprint should be present in multi-host projection");
+    let (_, fingerprint_hash_order_normalization_digest_hex) =
+        project_parallel_lane_topology_id_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest(
+            project_live_postgres_parallel_lane_topology_profiles(),
+        );
+    Ok(LivePostgresMultiHostExecutionProjection {
+        reason_code: LIVE_POSTGRES_MULTI_HOST_EXECUTION_READY_REASON_CODE,
+        reason_taxonomy_version: LIVE_POSTGRES_MULTI_HOST_EXECUTION_REASON_TAXONOMY_VERSION,
+        host_pair_csv,
+        distributed_topology_fingerprint,
+        fingerprint_hash_order_normalization_digest_hex,
+    })
 }
 
 pub(super) fn project_live_postgres_matrix_rows() -> Vec<LivePostgresMatrixRow> {
