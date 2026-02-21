@@ -61,6 +61,7 @@ pub(crate) use runtime_orchestration::{
     execute_daemon_convergence_projection_for_test,
     execute_daemon_phase6_runtime_projection_for_test,
     live_postgres_multi_host_execution_bundle_row_count_for_test,
+    live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test,
     live_postgres_multi_host_execution_bundle_selector_rows_for_test,
     resolve_kolme_live_allow_local_signer_testing_override,
     select_runtime_transport_profile_for_runtime_mode, should_use_os_signal_shutdown,

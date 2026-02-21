@@ -10,6 +10,8 @@ use daemon_phase::execute_daemon_runtime;
 #[cfg(test)]
 pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_row_count_for_test;
 #[cfg(test)]
+pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test;
+#[cfg(test)]
 pub(crate) use daemon_phase::live_postgres_multi_host_execution_bundle_selector_rows_for_test;
 #[cfg(test)]
 pub(crate) use daemon_phase::validate_live_postgres_selector_bundle_for_test;
