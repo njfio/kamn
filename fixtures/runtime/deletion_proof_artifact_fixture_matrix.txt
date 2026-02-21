@@ -1,0 +1,11 @@
+# Deterministic deletion-proof artifact fixture matrix for issue #4077.
+deletion_proof_fixture_matrix_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1
+deletion_proof_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1
+deletion_proof_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch
+columns=case_id|subject_id|tombstone_hash|expected_hash|proof_status|expected_status|expected_reason_code
+valid_message_deletion_proof|msg-1|hash-msg-1|hash-msg-1|deleted|pass|none
+valid_task_deletion_proof|task-1|hash-task-1|hash-task-1|deleted|pass|none
+invalid_subject_missing||hash-msg-2|hash-msg-2|deleted|fail|deletion_proof_subject_missing
+invalid_tombstone_missing|msg-3||hash-msg-3|deleted|fail|deletion_proof_tombstone_missing
+invalid_status|msg-4|hash-msg-4|hash-msg-4|active|fail|deletion_proof_status_invalid
+invalid_hash_mismatch|msg-5|hash-msg-5-old|hash-msg-5-new|deleted|fail|deletion_proof_hash_mismatch

@@ -1621,6 +1621,34 @@ Regression marker:
 
 - `Regression: #4075`
 
+## Deletion-Proof Artifact Fixture Set and Checker Behavior Contracts (Issue #4077)
+
+Deletion-governance evidence requires deterministic fixture coverage so proof-validation behavior
+fails closed for malformed or tampered deletion proofs.
+
+Deterministic fixture markers:
+
+- `deletion_proof_fixture_matrix_path=fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt`
+- `deletion_proof_fixture_matrix_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1`
+- `deletion_proof_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1`
+- `deletion_proof_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch`
+- `deletion_proof_fixture_columns=case_id|subject_id|tombstone_hash|expected_hash|proof_status|expected_status|expected_reason_code`
+
+Deterministic fail-closed deletion-proof reasons:
+
+- `deletion_proof_subject_missing`
+- `deletion_proof_tombstone_missing`
+- `deletion_proof_status_invalid`
+- `deletion_proof_hash_mismatch`
+
+Validation command:
+
+- `cargo test -p kamn-core --test deletion_proof_artifact_checker_contract`
+
+Regression marker:
+
+- `Regression: #4077`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
