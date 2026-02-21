@@ -190,6 +190,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_fixture_deny_row_count: usize,
     pub(crate) scope_policy_fixture_unique_route_count: usize,
     pub(crate) scope_policy_fixture_unique_scope_count: usize,
+    pub(crate) scope_policy_fixture_unique_method_count: usize,
+    pub(crate) scope_policy_fixture_unique_expected_outcome_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
     pub(crate) route_authz_matrix_schema_version: String,
@@ -440,6 +442,8 @@ struct ServiceApiScopePolicyFixtureProjection {
     deny_row_count: usize,
     unique_route_count: usize,
     unique_scope_count: usize,
+    unique_method_count: usize,
+    unique_expected_outcome_count: usize,
 }
 
 fn parse_service_api_scope_policy_fixture_counts(
@@ -453,10 +457,14 @@ fn parse_service_api_scope_policy_fixture_counts(
         deny_row_count: 0,
         unique_route_count: 0,
         unique_scope_count: 0,
+        unique_method_count: 0,
+        unique_expected_outcome_count: 0,
     };
     let mut reason_codes_csv = String::new();
     let mut unique_routes = BTreeSet::new();
     let mut unique_scopes = BTreeSet::new();
+    let mut unique_methods = BTreeSet::new();
+    let mut unique_expected_outcomes = BTreeSet::new();
     for line in fixture.lines().map(str::trim) {
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -490,6 +498,8 @@ fn parse_service_api_scope_policy_fixture_counts(
         }
         unique_routes.insert((method.to_owned(), path.to_owned()));
         unique_scopes.insert(scope.to_owned());
+        unique_methods.insert(method.to_owned());
+        unique_expected_outcomes.insert(expected.to_owned());
     }
     projection.reason_code_count = reason_codes_csv
         .split(',')
@@ -507,6 +517,8 @@ fn parse_service_api_scope_policy_fixture_counts(
     }
     projection.unique_route_count = unique_routes.len();
     projection.unique_scope_count = unique_scopes.len();
+    projection.unique_method_count = unique_methods.len();
+    projection.unique_expected_outcome_count = unique_expected_outcomes.len();
     projection
 }
 
@@ -564,6 +576,10 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         scope_policy_fixture_deny_row_count: scope_policy_fixture_projection.deny_row_count,
         scope_policy_fixture_unique_route_count: scope_policy_fixture_projection.unique_route_count,
         scope_policy_fixture_unique_scope_count: scope_policy_fixture_projection.unique_scope_count,
+        scope_policy_fixture_unique_method_count: scope_policy_fixture_projection
+            .unique_method_count,
+        scope_policy_fixture_unique_expected_outcome_count: scope_policy_fixture_projection
+            .unique_expected_outcome_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
         route_authz_matrix_schema_version,
