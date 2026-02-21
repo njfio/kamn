@@ -1,6 +1,6 @@
 # Issue #5521 Spec - Service API Lifecycle Rejection Taxonomy Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5521
 - Parent: #3812
 - Milestone: R50.26 Service API lifecycle rejection taxonomy metrics exposure
