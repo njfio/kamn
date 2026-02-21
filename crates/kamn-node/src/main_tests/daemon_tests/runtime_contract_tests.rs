@@ -695,6 +695,36 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
 }
 
 #[test]
+fn functional_runtime_daemon_live_postgres_selector_bundle_validation_contract_is_deterministic() {
+    let canonical_rows = crate::live_postgres_multi_host_execution_bundle_selector_rows_for_test();
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(canonical_rows.as_slice(), 6),
+        Ok(())
+    );
+
+    let mut duplicate_rows = canonical_rows.clone();
+    duplicate_rows.push(canonical_rows[0].clone());
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(duplicate_rows.as_slice(), 7),
+        Err("live_postgres_selector_bundle_duplicate_rows")
+    );
+
+    let prefix_violation_rows = vec![
+        "b01_runtime_matrix_bundle->invalid_prefix::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs"
+            .to_owned(),
+    ];
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(prefix_violation_rows.as_slice(), 1),
+        Err("live_postgres_selector_bundle_prefix_violation")
+    );
+
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(canonical_rows.as_slice(), 999),
+        Err("live_postgres_selector_bundle_row_count_mismatch")
+    );
+}
+
+#[test]
 fn functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutdown_signals_are_present(
 ) {
     let _lock = log_env_lock()

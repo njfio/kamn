@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
@@ -22,6 +22,12 @@ const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SCHEMA_VERSION: &str =
     "kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1";
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX: &str =
     "main_tests::daemon_tests::";
+const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_DUPLICATE_ROWS_REASON_CODE: &str =
+    "live_postgres_selector_bundle_duplicate_rows";
+const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_PREFIX_VIOLATION_REASON_CODE: &str =
+    "live_postgres_selector_bundle_prefix_violation";
+const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE: &str =
+    "live_postgres_selector_bundle_row_count_mismatch";
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS: [(&str, &str); 6] = [
     (
         "b01_runtime_matrix_bundle",
@@ -329,6 +335,27 @@ fn daemon_live_postgres_multi_host_execution_bundle_row_count() -> usize {
     DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS.len()
 }
 
+fn validate_live_postgres_selector_bundle(
+    rows: &[String],
+    expected_row_count: usize,
+) -> Result<(), &'static str> {
+    if rows.len() != expected_row_count {
+        return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE);
+    }
+
+    let mut dedupe = BTreeSet::new();
+    for row in rows {
+        if !dedupe.insert(row.as_str()) {
+            return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_DUPLICATE_ROWS_REASON_CODE);
+        }
+        if !row.contains(DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX) {
+            return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_PREFIX_VIOLATION_REASON_CODE);
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_for_test() -> Vec<String> {
     project_live_postgres_multi_host_execution_bundle_selector_rows()
@@ -337,6 +364,14 @@ pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_for_test()
 #[cfg(test)]
 pub(crate) fn live_postgres_multi_host_execution_bundle_row_count_for_test() -> usize {
     daemon_live_postgres_multi_host_execution_bundle_row_count()
+}
+
+#[cfg(test)]
+pub(crate) fn validate_live_postgres_selector_bundle_for_test(
+    rows: &[String],
+    expected_row_count: usize,
+) -> Result<(), &'static str> {
+    validate_live_postgres_selector_bundle(rows, expected_row_count)
 }
 
 #[cfg(test)]
@@ -490,8 +525,18 @@ pub(super) fn execute_daemon_runtime(
         daemon_live_postgres_multi_host_execution_bundle_row_count();
     let multi_host_execution_bundle_row_count_label =
         multi_host_execution_bundle_row_count.to_string();
+    let multi_host_execution_bundle_selector_rows =
+        project_live_postgres_multi_host_execution_bundle_selector_rows();
+    if let Err(reason_code) = validate_live_postgres_selector_bundle(
+        multi_host_execution_bundle_selector_rows.as_slice(),
+        multi_host_execution_bundle_row_count,
+    ) {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "live_postgres_selector_bundle_validation_failed:{reason_code}"
+        )));
+    }
     let multi_host_execution_bundle_selector_rows_csv =
-        project_live_postgres_multi_host_execution_bundle_selector_rows().join(",");
+        multi_host_execution_bundle_selector_rows.join(",");
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
