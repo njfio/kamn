@@ -106,6 +106,9 @@ pub(crate) const SERVICE_API_AUTH_REASON_CODES_CSV: &str = "service_api_auth_sen
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-reason-taxonomy.v1";
 pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str = "service_api_auth_scope_header_missing,service_api_auth_scope_invalid,service_api_auth_scope_route_mismatch";
+pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.service-api-lifecycle-rejection-reason-taxonomy.v1";
+pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV: &str = "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid";
 #[cfg(test)]
 pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
@@ -171,6 +174,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) auth_reason_code_count: usize,
     pub(crate) scope_policy_reason_taxonomy_version: String,
     pub(crate) scope_policy_reason_code_count: usize,
+    pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
+    pub(crate) lifecycle_rejection_reason_code_count: usize,
     pub(crate) observability_source: String,
     pub(crate) observability_latency_p50_ms: u64,
     pub(crate) observability_latency_p99_ms: u64,
@@ -423,6 +428,12 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         .split(',')
         .filter(|value| !value.is_empty())
         .count();
+    let lifecycle_rejection_reason_taxonomy_version =
+        SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION.to_owned();
+    let lifecycle_rejection_reason_code_count = SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
     ServiceApiSnapshot {
         runtime_mode: report.runtime_mode.clone(),
         role: report.role.clone(),
@@ -434,6 +445,8 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         auth_reason_code_count,
         scope_policy_reason_taxonomy_version,
         scope_policy_reason_code_count,
+        lifecycle_rejection_reason_taxonomy_version,
+        lifecycle_rejection_reason_code_count,
         observability_source: observability.source,
         observability_latency_p50_ms: observability.latency_p50_ms,
         observability_latency_p99_ms: observability.latency_p99_ms,
