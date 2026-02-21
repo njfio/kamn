@@ -1,6 +1,6 @@
 # Issue #5503 Spec - R50 Governance-Loop Mitigation Contracts
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5503
 - Parent: #5469
 - Milestone: R50.17 Governance-loop mitigation contracts for review artifacts
