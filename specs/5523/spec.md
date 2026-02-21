@@ -1,6 +1,6 @@
 # Issue #5523 Spec - Service API Websocket Reason Taxonomy Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5523
 - Parent: #3812
 - Milestone: R50.27 Service API websocket reason taxonomy metrics exposure
