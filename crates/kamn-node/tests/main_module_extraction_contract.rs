@@ -346,3 +346,38 @@ fn main_module_extraction_contract_runtime_tests_decomposition_shell_markers_rem
         "runtime_tests.rs should route tests through focused include fragments"
     );
 }
+
+#[test]
+fn main_module_extraction_contract_daemon_tests_decomposition_shell_markers_remain_stable() {
+    let daemon_tests_rs = read_repo_file("src/main_tests/daemon_tests.rs");
+    let daemon_tests_lines = daemon_tests_rs.lines().count();
+    let include_decl_count = daemon_tests_rs
+        .lines()
+        .filter(|line| line.trim_start().starts_with("include!(\"daemon_tests/"))
+        .count();
+
+    assert!(
+        daemon_tests_rs
+            .contains("daemon_tests structural budget shell phase2; route topology contracts"),
+        "daemon_tests.rs should carry explicit phase2 decomposition drift guard marker"
+    );
+    assert!(
+        daemon_tests_rs
+            .contains("include!(\"daemon_tests/live_postgres_topology_contract_tests.rs\");"),
+        "daemon_tests.rs should route topology-heavy contract tests through include fragment"
+    );
+    assert!(
+        !daemon_tests_rs.contains(
+            "fn functional_runtime_daemon_live_postgres_validation_slice_parallel_lane_topology_scope_contract_is_canonical("
+        ),
+        "daemon_tests.rs should not keep inline topology contract test bodies after phase2 extraction"
+    );
+    assert!(
+        daemon_tests_lines <= 2200,
+        "daemon_tests.rs should remain within phase2 bounded shell target (<=2200 lines)"
+    );
+    assert!(
+        include_decl_count >= 1,
+        "daemon_tests.rs should keep include-based decomposition entries"
+    );
+}
