@@ -1,6 +1,6 @@
 # Issue #5459 Spec - Cross-store Replay Required Artifact Integration
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #5459
 - Parent: #3333
 - Milestone: R28.1 Cross-store replay production go/no-go integration
