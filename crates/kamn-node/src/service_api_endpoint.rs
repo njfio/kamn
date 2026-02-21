@@ -109,7 +109,6 @@ pub(crate) const SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV: &str = "service_api_
 pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-lifecycle-rejection-reason-taxonomy.v1";
 pub(crate) const SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV: &str = "service_api_ingress_concurrency_limit_exceeded,service_api_ingress_rate_limit_exceeded,service_api_ingress_sender_rate_limit_exceeded,service_api_ingress_sender_suspended,service_api_ingress_sender_duplicate_message_id,service_api_ingress_sender_insufficient_deposit,service_api_ingress_anti_spam_engine_invalid";
-#[cfg(test)]
 pub(crate) const SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-scope-policy-fixture-matrix.v1";
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
