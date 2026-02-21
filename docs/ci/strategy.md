@@ -5078,6 +5078,29 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - each fairness reason code must have a deterministic remediation marker in this document.
 - Regression: #4093
 
+### Deletion Docs/Runbook Parity and Remediation Contract
+- `deletion_docs_parity_reason_taxonomy_version=kamn.runtime.deletion-proof-checker-reason-taxonomy.v1`
+- `deletion_docs_parity_reason_codes_csv=deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch`
+- `deletion_docs_parity_fixture_schema_version=kamn.runtime.deletion-proof-fixture-matrix.v1`
+- `deletion_docs_parity_fixture_path=fixtures/runtime/deletion_proof_artifact_fixture_matrix.txt`
+- `deletion_docs_parity_ops_doc_path=docs/ops/configuration.md`
+- `deletion_docs_parity_strategy_doc_path=docs/ci/strategy.md`
+- `deletion_docs_parity_remediation_map_version=v1`
+- `deletion_docs_parity_remediation.deletion_proof_subject_missing=populate subject_id in deletion proof artifacts before evaluation`
+- `deletion_docs_parity_remediation.deletion_proof_tombstone_missing=write tombstone hash before declaring deletion proof valid`
+- `deletion_docs_parity_remediation.deletion_proof_status_invalid=set proof_status=deleted before running checker contracts`
+- `deletion_docs_parity_remediation.deletion_proof_hash_mismatch=regenerate tombstone hash to match expected deletion artifact digest`
+- Guard commands:
+  - `cargo test -p kamn-core --test deletion_proof_artifact_checker_contract`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_deletion_docs_parity_and_remediation_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_matches_ops_docs_and_fixture_metadata -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_requires_remediation_marker_for_each_reason_code -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_deletion_docs_parity_reason_codes_non_empty -- --exact`
+- Fail-closed policy:
+  - checker taxonomy, fixture metadata, strategy markers, and ops markers must remain synchronized.
+  - each deletion-proof reason code must include deterministic remediation markers in strategy and ops docs.
+- Regression: #4078
+
 ### Overload Docs/Runbook and Go-No-Go Marker Parity Contract
 - `overload_docs_parity_reason_taxonomy_version=kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1`
 - `overload_docs_parity_reason_codes_csv=runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success`
