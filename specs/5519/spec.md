@@ -1,6 +1,6 @@
 # Issue #5519 Spec - Service API Auth and Scope Taxonomy Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5519
 - Parent: #3812
 - Milestone: R50.25 Service API auth and scope taxonomy metrics exposure
