@@ -8,7 +8,7 @@
 5. Run targeted tests plus fmt/clippy verification gates.
 
 ## Affected Modules
-- `scripts/ci/sbom_provenance_artifact_generator_contract.py` (new)
+- `scripts/deploy/sbom_provenance_artifact_generator_contract.py` (new)
 - `fixtures/ci/sbom_provenance_artifact_fixture_matrix.txt` (new)
 - `crates/kamn-core/tests/sbom_provenance_artifact_generator_contract.rs` (new)
 - `crates/kamn-core/tests/ci_strategy_docs.rs`

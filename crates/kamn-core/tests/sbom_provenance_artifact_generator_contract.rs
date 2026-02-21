@@ -106,7 +106,7 @@ fn run_generator(
         {
             let mut command = Command::new("python3");
             command
-                .arg("scripts/ci/sbom_provenance_artifact_generator_contract.py")
+                .arg("scripts/deploy/sbom_provenance_artifact_generator_contract.py")
                 .arg("--profile")
                 .arg(profile)
                 .arg("--mode")
