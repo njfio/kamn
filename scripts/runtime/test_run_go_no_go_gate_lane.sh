@@ -105,6 +105,9 @@ module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
+if module.ARTIFACT_LANE_REGISTRY.get("cross_store_replay_consistency", {}).get("command") != ["cargo", "run", "-p", "kamn-core", "--bin", "cross_store_replay_consistency_contract_lane", "--"]:
+    raise SystemExit("expected cross-store replay artifact to execute via Rust harness cargo run command")
+
 artifact_inventory = [
     {"artifact_id": "go_no_go_evidence", "status": "dry_run_pending"},
 ]

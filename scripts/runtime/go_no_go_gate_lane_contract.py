@@ -8,6 +8,7 @@ import datetime as dt
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -135,10 +136,7 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
     },
     "cross_store_replay_consistency": {
         "expected_lane": "runtime.validate_cross_store_replay_consistency_contract_lane",
-        "command": [
-            "bash",
-            str(ROOT_DIR / "scripts/runtime/validate_cross_store_replay_consistency_contract_lane.sh"),
-        ],
+        "command": ["cargo", "run", "-p", "kamn-core", "--bin", "cross_store_replay_consistency_contract_lane", "--"],
         "success_marker": "cross_store_replay_consistency_policy_status=verified",
         "failure_label": "cross-store replay consistency lane failed unexpectedly",
     },
@@ -148,7 +146,6 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
 def _ensure_executable(path: Path, label: str) -> None:
     if not path.is_file() or not os.access(path, os.X_OK):
         fail(f"expected {label} to be executable")
-
 
 def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -527,11 +524,22 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         if lane_mode == "run":
             registry_entry = ARTIFACT_LANE_REGISTRY[artifact_id]
             lane_command = registry_entry["command"]
-            if not isinstance(lane_command, list) or len(lane_command) < 2:
+            if not isinstance(lane_command, list) or not lane_command:
                 fail(f"release_manifest_command_invalid:{artifact_id}")
-            lane_path = Path(str(lane_command[1]))
-            _ensure_executable(lane_path, f"{artifact_id} lane command")
-            run_result = _run_command([str(part) for part in lane_command])
+            lane_command_parts = [str(part) for part in lane_command]
+            lane_launcher = lane_command_parts[0].strip()
+            if not lane_launcher:
+                fail(f"release_manifest_command_invalid:{artifact_id}")
+            launcher_path = Path(lane_launcher)
+            if lane_launcher == "bash":
+                if len(lane_command_parts) < 2:
+                    fail(f"release_manifest_command_invalid:{artifact_id}")
+                _ensure_executable(Path(lane_command_parts[1]), f"{artifact_id} lane command")
+            elif launcher_path.is_absolute() or lane_launcher.startswith(".") or "/" in lane_launcher:
+                _ensure_executable(launcher_path, f"{artifact_id} lane launcher")
+            elif shutil.which(lane_launcher) is None:
+                fail(f"release_manifest_command_not_found:{artifact_id}:{lane_launcher}")
+            run_result = _run_command(lane_command_parts)
             if run_result.returncode != 0:
                 detail = (
                     run_result.stderr
