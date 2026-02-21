@@ -1,6 +1,6 @@
 # Issue #5475 Spec - Runtime Selector Bundle Integrity Guard
 
-- Status: Draft
+- Status: Implemented
 - Issue: #5475
 - Parent: #3812
 - Milestone: R50.3 Live-postgres selector bundle integrity guard
