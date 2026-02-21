@@ -112,6 +112,7 @@ struct CheckerRunInputs<'a> {
     profile_file: &'a Path,
     ci_tools_file: &'a Path,
     workflow_file: &'a Path,
+    strategy_doc: &'a Path,
     max_seconds: &'a str,
 }
 
@@ -131,6 +132,8 @@ fn run_checker(inputs: CheckerRunInputs<'_>) -> Output {
                 .arg(inputs.ci_tools_file)
                 .arg("--workflow-file")
                 .arg(inputs.workflow_file)
+                .arg("--strategy-doc")
+                .arg(inputs.strategy_doc)
                 .arg("--max-seconds")
                 .arg(inputs.max_seconds);
             command
@@ -149,6 +152,7 @@ fn unit_performance_ci_smoke_checker_accepts_valid_smoke_report() {
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_success(&checker_output, "performance ci smoke checker baseline");
@@ -174,6 +178,14 @@ fn unit_performance_ci_smoke_checker_accepts_valid_smoke_report() {
         text.contains("performance_ci_smoke_workflow_status=verified"),
         "workflow contract status must remain verified"
     );
+    assert!(
+        text.contains("performance_ci_smoke_docs_status=verified"),
+        "docs marker contract status must remain verified"
+    );
+    assert!(
+        text.contains("performance_ci_smoke_docs_remediation_status=verified"),
+        "docs remediation contract status must remain verified"
+    );
 }
 
 #[test]
@@ -196,6 +208,7 @@ fn functional_performance_ci_smoke_checker_rejects_threshold_breach() {
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_failure(
@@ -227,6 +240,7 @@ fn integration_performance_ci_smoke_checker_detects_selector_and_workflow_drift(
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: &selector_drift_file,
         workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_failure(
@@ -251,6 +265,7 @@ fn integration_performance_ci_smoke_checker_detects_selector_and_workflow_drift(
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         workflow_file: &workflow_drift_file,
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_failure(
@@ -261,6 +276,31 @@ fn integration_performance_ci_smoke_checker_detects_selector_and_workflow_drift(
         output_text(&workflow_output)
             .contains("performance_ci_smoke_workflow_forbidden_entry_present"),
         "workflow drift must fail closed with deterministic workflow reason"
+    );
+
+    let docs_marker_drift_file = tmp.path().join("strategy-marker-drift.md");
+    let docs_marker_text = load_text(&repo_path("docs/ci/strategy.md")).replacen(
+        "performance_ci_smoke_workflow_forbidden_entry=bash scripts/ci/check_performance_thresholds.sh --lane deep",
+        "performance_ci_smoke_workflow_forbidden_entry=drifted-marker",
+        1,
+    );
+    write_text(&docs_marker_drift_file, &docs_marker_text);
+
+    let docs_marker_output = run_checker(CheckerRunInputs {
+        report_file: &report,
+        profile_file: Path::new(".ci/performance-targets.env"),
+        ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
+        workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: &docs_marker_drift_file,
+        max_seconds: "120",
+    });
+    assert_failure(
+        &docs_marker_output,
+        "performance ci smoke checker docs marker drift fixture",
+    );
+    assert!(
+        output_text(&docs_marker_output).contains("performance_ci_smoke_docs_marker_parity_drift"),
+        "docs marker drift must fail closed with deterministic docs parity reason"
     );
 }
 
@@ -286,6 +326,7 @@ fn regression_performance_ci_smoke_checker_rejects_report_contract_drift() {
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_failure(
@@ -295,6 +336,38 @@ fn regression_performance_ci_smoke_checker_rejects_report_contract_drift() {
     assert!(
         output_text(&checker_output).contains("performance_ci_smoke_report_contract_violation"),
         "report marker drift must fail closed with report contract reason"
+    );
+}
+
+#[test]
+fn regression_performance_ci_smoke_checker_rejects_docs_remediation_drift() {
+    let tmp = TempDir::new("performance-ci-smoke-regression-remediation");
+    let report = generate_runtime_smoke_report(&tmp);
+
+    let docs_remediation_drift_file = tmp.path().join("strategy-missing-remediation.md");
+    let docs_remediation_text = load_text(&repo_path("docs/ci/strategy.md")).replacen(
+        "performance_ci_smoke_remediation.performance_ci_smoke_runtime_budget_exceeded=reduce checker/report overhead or raise max-seconds with explicit review evidence",
+        "",
+        1,
+    );
+    write_text(&docs_remediation_drift_file, &docs_remediation_text);
+
+    let checker_output = run_checker(CheckerRunInputs {
+        report_file: &report,
+        profile_file: Path::new(".ci/performance-targets.env"),
+        ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
+        workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: &docs_remediation_drift_file,
+        max_seconds: "120",
+    });
+    assert_failure(
+        &checker_output,
+        "performance ci smoke checker with docs remediation drift",
+    );
+    assert!(
+        output_text(&checker_output)
+            .contains("performance_ci_smoke_docs_remediation_marker_missing"),
+        "missing docs remediation marker must fail closed with deterministic reason"
     );
 }
 
@@ -309,6 +382,7 @@ fn performance_performance_ci_smoke_checker_stays_within_budget() {
         profile_file: Path::new(".ci/performance-targets.env"),
         ci_tools_file: Path::new("scripts/ci/test_ci_tools.sh"),
         workflow_file: Path::new(".github/workflows/ci-fast-gate.yml"),
+        strategy_doc: Path::new("docs/ci/strategy.md"),
         max_seconds: "120",
     });
     assert_success(

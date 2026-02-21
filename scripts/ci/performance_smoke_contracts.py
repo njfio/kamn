@@ -17,6 +17,7 @@ DEFAULT_FIXTURE_FILE = REPO_ROOT / "fixtures/ci/performance_hot_path_fixture_mat
 DEFAULT_PROFILE_FILE = REPO_ROOT / ".ci/performance-targets.env"
 DEFAULT_CI_TOOLS_FILE = REPO_ROOT / "scripts/ci/test_ci_tools.sh"
 DEFAULT_WORKFLOW_FILE = REPO_ROOT / ".github/workflows/ci-fast-gate.yml"
+DEFAULT_STRATEGY_DOC = REPO_ROOT / "docs/ci/strategy.md"
 FIXTURE_SCHEMA_VERSION = "kamn.ci.performance-hot-path-matrix.v1"
 REPORT_SCHEMA_VERSION = "kamn.ci.performance-ci-smoke-governance-report.v1"
 REASON_TAXONOMY_VERSION = "kamn.ci.performance-ci-smoke-threshold-reason-taxonomy.v1"
@@ -32,6 +33,8 @@ REASON_CODES_CSV = (
     "performance_ci_smoke_selector_forbidden_entry_present,"
     "performance_ci_smoke_workflow_missing_checker_step,"
     "performance_ci_smoke_workflow_forbidden_entry_present,"
+    "performance_ci_smoke_docs_marker_parity_drift,"
+    "performance_ci_smoke_docs_remediation_marker_missing,"
     "performance_ci_smoke_runtime_budget_exceeded"
 )
 REASON_CODES_ORDER = tuple(REASON_CODES_CSV.split(","))
@@ -46,7 +49,7 @@ WORKFLOW_REQUIRED_ENTRY = (
     "bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json "
     "performance-smoke-report.json --profile-file .ci/performance-targets.env"
 )
-WORKFLOW_FORBIDDEN_ENTRY = "check_performance_thresholds.sh --lane deep"
+WORKFLOW_FORBIDDEN_ENTRY = "bash scripts/ci/check_performance_thresholds.sh --lane deep"
 
 
 class ContractError(RuntimeError):
@@ -92,7 +95,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "Check report against profile thresholds and selector/workflow contracts. "
             "Usage: check --report-json <path> [--profile-file <path>] "
             "[--lane <smoke|deep>] [--ci-tools-file <path>] [--workflow-file <path>] "
-            "[--max-seconds <int>]"
+            "[--strategy-doc <path>] [--max-seconds <int>]"
         ),
     )
     check.add_argument("--report-json", required=True)
@@ -100,6 +103,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     check.add_argument("--lane", default="smoke")
     check.add_argument("--ci-tools-file", default=str(DEFAULT_CI_TOOLS_FILE))
     check.add_argument("--workflow-file", default=str(DEFAULT_WORKFLOW_FILE))
+    check.add_argument("--strategy-doc", default=str(DEFAULT_STRATEGY_DOC))
     check.add_argument("--max-seconds", default=str(DEFAULT_MAX_SECONDS))
 
     return parser.parse_args(argv)
@@ -307,18 +311,51 @@ def has_non_empty_string_marker(report: dict[str, Any], key: str) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def doc_required_markers() -> tuple[list[str], tuple[str, ...]]:
+    markers = [
+        "## Performance CI Smoke Threshold Governance Contract",
+        (
+            "bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json "
+            "/tmp/performance-smoke-report.json --profile-file .ci/performance-targets.env "
+            "--ci-tools-file scripts/ci/test_ci_tools.sh --workflow-file "
+            ".github/workflows/ci-fast-gate.yml --strategy-doc docs/ci/strategy.md "
+            "--max-seconds 120"
+        ),
+        (
+            "cargo test -p kamn-core --test performance_ci_smoke_governance_contract "
+            "-- --nocapture"
+        ),
+        f"performance_ci_smoke_reason_taxonomy_version={REASON_TAXONOMY_VERSION}",
+        f"performance_ci_smoke_reason_codes_csv={REASON_CODES_CSV}",
+        "performance_ci_smoke_reason_codes_value=none|<csv>",
+        "performance_ci_smoke_max_seconds=120",
+        "performance_ci_smoke_docs_status=verified|violation",
+        "performance_ci_smoke_docs_remediation_status=verified|violation",
+        "performance_ci_smoke_remediation_map_version=v1",
+        f"performance_ci_smoke_fast_mode_required_entry={CI_TOOLS_REQUIRED_ENTRY}",
+        f"performance_ci_smoke_fast_mode_forbidden_entry={CI_TOOLS_FORBIDDEN_ENTRY}",
+        f"performance_ci_smoke_workflow_required_entry={WORKFLOW_REQUIRED_ENTRY}",
+        f"performance_ci_smoke_workflow_forbidden_entry={WORKFLOW_FORBIDDEN_ENTRY}",
+        "Regression: #4002, #4003",
+    ]
+    return markers, REASON_CODES_ORDER
+
+
 def check_report(args: argparse.Namespace) -> int:
     started = time.monotonic()
     report_path = Path(args.report_json)
     profile_path = Path(args.profile_file)
     ci_tools_path = Path(args.ci_tools_file)
     workflow_path = Path(args.workflow_file)
+    strategy_doc_path = Path(args.strategy_doc)
     lane = args.lane
 
     threshold_status = "verified"
     report_status = "verified"
     selector_status = "verified"
     workflow_status = "verified"
+    docs_status = "verified"
+    docs_remediation_status = "verified"
     raw_reason_codes: list[str] = []
 
     max_seconds = try_parse_positive_int(args.max_seconds)
@@ -500,6 +537,30 @@ def check_report(args: argparse.Namespace) -> int:
             add_reason(raw_reason_codes, "performance_ci_smoke_workflow_missing_checker_step")
             workflow_status = "violation"
 
+    if strategy_doc_path.is_file():
+        try:
+            strategy_text = strategy_doc_path.read_text(encoding="utf-8")
+            required_markers, reason_codes = doc_required_markers()
+            if any(marker not in strategy_text for marker in required_markers):
+                add_reason(raw_reason_codes, "performance_ci_smoke_docs_marker_parity_drift")
+                docs_status = "violation"
+            for reason_code in reason_codes:
+                if f"performance_ci_smoke_remediation.{reason_code}=" not in strategy_text:
+                    add_reason(
+                        raw_reason_codes,
+                        "performance_ci_smoke_docs_remediation_marker_missing",
+                    )
+                    docs_remediation_status = "violation"
+                    break
+        except Exception:
+            add_reason(raw_reason_codes, "performance_ci_smoke_docs_marker_parity_drift")
+            docs_status = "violation"
+            docs_remediation_status = "violation"
+    else:
+        add_reason(raw_reason_codes, "performance_ci_smoke_docs_marker_parity_drift")
+        docs_status = "violation"
+        docs_remediation_status = "violation"
+
     elapsed_seconds = int(time.monotonic() - started)
     if elapsed_seconds > max_seconds:
         add_reason(raw_reason_codes, "performance_ci_smoke_runtime_budget_exceeded")
@@ -524,6 +585,8 @@ def check_report(args: argparse.Namespace) -> int:
         "performance_ci_smoke_report_status": report_status,
         "performance_ci_smoke_selector_status": selector_status,
         "performance_ci_smoke_workflow_status": workflow_status,
+        "performance_ci_smoke_docs_status": docs_status,
+        "performance_ci_smoke_docs_remediation_status": docs_remediation_status,
         "performance_ci_smoke_max_seconds": max_seconds,
         "performance_ci_smoke_elapsed_seconds": elapsed_seconds,
         "inputs": {
@@ -531,6 +594,7 @@ def check_report(args: argparse.Namespace) -> int:
             "profile_file": str(profile_path),
             "ci_tools_file": str(ci_tools_path),
             "workflow_file": str(workflow_path),
+            "strategy_doc": str(strategy_doc_path),
         },
     }
 
@@ -561,6 +625,8 @@ def check_report(args: argparse.Namespace) -> int:
     print(f"performance_ci_smoke_report_status={report_status}")
     print(f"performance_ci_smoke_selector_status={selector_status}")
     print(f"performance_ci_smoke_workflow_status={workflow_status}")
+    print(f"performance_ci_smoke_docs_status={docs_status}")
+    print(f"performance_ci_smoke_docs_remediation_status={docs_remediation_status}")
     print(f"performance_ci_smoke_max_seconds={max_seconds}")
     print(f"performance_ci_smoke_elapsed_seconds={elapsed_seconds}")
 

@@ -27,6 +27,8 @@ grep -q '^performance_ci_smoke_reason_taxonomy_version=kamn.ci.performance-ci-sm
 grep -q '^performance_ci_smoke_reason_codes_value=none$' "$TMP_DIR/check-pass.out"
 grep -q '^performance_ci_smoke_selector_status=verified$' "$TMP_DIR/check-pass.out"
 grep -q '^performance_ci_smoke_workflow_status=verified$' "$TMP_DIR/check-pass.out"
+grep -q '^performance_ci_smoke_docs_status=verified$' "$TMP_DIR/check-pass.out"
+grep -q '^performance_ci_smoke_docs_remediation_status=verified$' "$TMP_DIR/check-pass.out"
 
 # Functional: threshold breach fails closed with deterministic reason code.
 BREACHED_REPORT="$TMP_DIR/runtime-smoke-breached.json"
@@ -114,5 +116,59 @@ if bash "$CHECK_SCRIPT" \
   exit 1
 fi
 grep -q '^performance_ci_smoke_reason_codes_value=.*performance_ci_smoke_workflow_forbidden_entry_present' "$TMP_DIR/check-workflow-drift.out"
+
+# Integration: docs marker block drift is detected deterministically.
+DRIFTED_STRATEGY_DOC="$TMP_DIR/strategy-marker-drift.md"
+cp "$ROOT_DIR/docs/ci/strategy.md" "$DRIFTED_STRATEGY_DOC"
+python3 - "$DRIFTED_STRATEGY_DOC" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "performance_ci_smoke_workflow_forbidden_entry=bash scripts/ci/check_performance_thresholds.sh --lane deep",
+    "performance_ci_smoke_workflow_forbidden_entry=drifted-marker",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+if bash "$CHECK_SCRIPT" \
+  --lane smoke \
+  --report-json "$RUNTIME_REPORT" \
+  --strategy-doc "$DRIFTED_STRATEGY_DOC" >"$TMP_DIR/check-doc-marker-drift.out" 2>&1; then
+  echo "expected checker to fail when strategy-doc markers drift" >&2
+  exit 1
+fi
+grep -q '^performance_ci_smoke_reason_codes_value=.*performance_ci_smoke_docs_marker_parity_drift' "$TMP_DIR/check-doc-marker-drift.out"
+grep -q '^performance_ci_smoke_docs_status=violation$' "$TMP_DIR/check-doc-marker-drift.out"
+
+# Regression: missing remediation mapping fails closed deterministically.
+MISSING_REMEDIATION_DOC="$TMP_DIR/strategy-missing-remediation.md"
+cp "$ROOT_DIR/docs/ci/strategy.md" "$MISSING_REMEDIATION_DOC"
+python3 - "$MISSING_REMEDIATION_DOC" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "performance_ci_smoke_remediation.performance_ci_smoke_runtime_budget_exceeded=reduce checker/report overhead or raise max-seconds with explicit review evidence",
+    "",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+if bash "$CHECK_SCRIPT" \
+  --lane smoke \
+  --report-json "$RUNTIME_REPORT" \
+  --strategy-doc "$MISSING_REMEDIATION_DOC" >"$TMP_DIR/check-doc-remediation-missing.out" 2>&1; then
+  echo "expected checker to fail when strategy-doc remediation marker is missing" >&2
+  exit 1
+fi
+grep -q '^performance_ci_smoke_reason_codes_value=.*performance_ci_smoke_docs_remediation_marker_missing' "$TMP_DIR/check-doc-remediation-missing.out"
+grep -q '^performance_ci_smoke_docs_remediation_status=violation$' "$TMP_DIR/check-doc-remediation-missing.out"
 
 echo "performance threshold checker tests passed."

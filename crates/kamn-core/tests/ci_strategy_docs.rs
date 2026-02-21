@@ -20,6 +20,10 @@ const FAIRNESS_REASON_CODES_CSV: &str =
 const OVERLOAD_REASON_TAXONOMY_VERSION: &str =
     "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1";
 const OVERLOAD_REASON_CODES_CSV: &str = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success";
+const PERFORMANCE_CI_SMOKE_REASON_TAXONOMY_VERSION: &str =
+    "kamn.ci.performance-ci-smoke-threshold-reason-taxonomy.v1";
+const PERFORMANCE_CI_SMOKE_REASON_CODES_CSV: &str =
+    "performance_ci_smoke_argument_invalid,performance_ci_smoke_threshold_contract_violation,performance_ci_smoke_report_contract_violation,performance_ci_smoke_latency_p50_threshold_exceeded,performance_ci_smoke_latency_p99_threshold_exceeded,performance_ci_smoke_throughput_threshold_below_minimum,performance_ci_smoke_availability_threshold_below_minimum,performance_ci_smoke_selector_missing_checker_entry,performance_ci_smoke_selector_forbidden_entry_present,performance_ci_smoke_workflow_missing_checker_step,performance_ci_smoke_workflow_forbidden_entry_present,performance_ci_smoke_docs_marker_parity_drift,performance_ci_smoke_docs_remediation_marker_missing,performance_ci_smoke_runtime_budget_exceeded";
 const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.service-api-auth-reason-taxonomy.v1";
 const SERVICE_API_REQUEST_PATH_AUTHZ_REASON_CODES_CSV: &str = "service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected";
@@ -72,6 +76,10 @@ fn fairness_reason_codes() -> Vec<&'static str> {
 
 fn overload_reason_codes() -> Vec<&'static str> {
     OVERLOAD_REASON_CODES_CSV.split(',').collect()
+}
+
+fn performance_ci_smoke_reason_codes() -> Vec<&'static str> {
+    PERFORMANCE_CI_SMOKE_REASON_CODES_CSV.split(',').collect()
 }
 
 fn service_api_request_path_authz_reason_codes() -> Vec<&'static str> {
@@ -2519,4 +2527,38 @@ fn doc_contains_performance_baseline_provenance_contract_markers() {
     assert!(DOC.contains("missing required baseline marker: baseline_provenance_artifact_version"));
     assert!(DOC.contains("bash scripts/ci/test_generate_performance_smoke_report.sh"));
     assert!(DOC.contains("bash scripts/ci/test_check_performance_thresholds.sh"));
+}
+
+#[test]
+fn doc_contains_performance_ci_smoke_docs_parity_and_remediation_markers() {
+    assert!(DOC.contains("## Performance CI Smoke Threshold Governance Contract"));
+    assert!(DOC.contains(
+        "bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json /tmp/performance-smoke-report.json --profile-file .ci/performance-targets.env --ci-tools-file scripts/ci/test_ci_tools.sh --workflow-file .github/workflows/ci-fast-gate.yml --strategy-doc docs/ci/strategy.md --max-seconds 120"
+    ));
+    assert!(DOC.contains(&format!(
+        "performance_ci_smoke_reason_taxonomy_version={PERFORMANCE_CI_SMOKE_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "performance_ci_smoke_reason_codes_csv={PERFORMANCE_CI_SMOKE_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains("performance_ci_smoke_docs_status=verified|violation"));
+    assert!(DOC.contains("performance_ci_smoke_docs_remediation_status=verified|violation"));
+    assert!(DOC.contains("performance_ci_smoke_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_performance_ci_smoke_docs_parity_and_remediation_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_performance_ci_smoke_docs_remediation_markers_cover_reason_codes -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4002, #4003"));
+}
+
+#[test]
+fn doc_enforces_performance_ci_smoke_docs_remediation_markers_cover_reason_codes() {
+    for reason_code in performance_ci_smoke_reason_codes() {
+        assert!(
+            DOC.contains(&format!("performance_ci_smoke_remediation.{reason_code}=")),
+            "missing performance-ci-smoke remediation marker for {reason_code}"
+        );
+    }
 }
