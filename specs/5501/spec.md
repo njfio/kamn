@@ -1,6 +1,6 @@
 # Issue #5501 Spec - R49 Post-Publication Feature Provenance Markers
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5501
 - Parent: #5469
 - Milestone: R50.16 R49 production-feature provenance parity refresh
