@@ -346,6 +346,23 @@ fn daemon_live_postgres_multi_host_execution_bundle_row_ids() -> BTreeSet<&'stat
         .collect()
 }
 
+fn deterministic_fnv1a64_hex(input: &str) -> String {
+    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001b3;
+    let mut hash = FNV_OFFSET_BASIS;
+    for byte in input.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{hash:016x}")
+}
+
+fn project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
+    rows: &[String],
+) -> String {
+    deterministic_fnv1a64_hex(&rows.join(","))
+}
+
 fn validate_live_postgres_selector_bundle(
     rows: &[String],
     expected_row_count: usize,
@@ -386,6 +403,13 @@ pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_for_test()
 #[cfg(test)]
 pub(crate) fn live_postgres_multi_host_execution_bundle_row_count_for_test() -> usize {
     daemon_live_postgres_multi_host_execution_bundle_row_count()
+}
+
+#[cfg(test)]
+pub(crate) fn live_postgres_multi_host_execution_bundle_selector_rows_fingerprint_for_test(
+) -> String {
+    let rows = project_live_postgres_multi_host_execution_bundle_selector_rows();
+    project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(rows.as_slice())
 }
 
 #[cfg(test)]
@@ -559,6 +583,10 @@ pub(super) fn execute_daemon_runtime(
     }
     let multi_host_execution_bundle_selector_rows_csv =
         multi_host_execution_bundle_selector_rows.join(",");
+    let multi_host_execution_bundle_selector_rows_fingerprint =
+        project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
+            multi_host_execution_bundle_selector_rows.as_slice(),
+        );
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -686,6 +714,10 @@ pub(super) fn execute_daemon_runtime(
             (
                 "multi_host_execution_bundle_selector_rows_csv",
                 multi_host_execution_bundle_selector_rows_csv.as_str(),
+            ),
+            (
+                "multi_host_execution_bundle_selector_rows_fingerprint",
+                multi_host_execution_bundle_selector_rows_fingerprint.as_str(),
             ),
             ("execution_id", execution_id),
         ],
