@@ -8,7 +8,10 @@ use crate::service_api_endpoint::{
     SERVICE_API_SCOPE_POLICY_FIXTURE_SCHEMA_VERSION, SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV,
     SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION,
 };
-use kamn_core::baseline_signature_for_fields;
+use kamn_core::{
+    baseline_signature_for_fields, cross_store_replay_reason_codes_csv,
+    cross_store_replay_reason_taxonomy_version,
+};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use serde::Deserialize;
 use serde_json::Value;
@@ -746,6 +749,17 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     assert!(metrics_response
         .body
         .contains("kamn_service_api_observability_health{health=\"unknown\"} 0"));
+    let expected_reason_code_count = cross_store_replay_reason_codes_csv()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1",
+        cross_store_replay_reason_taxonomy_version()
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_code_count {expected_reason_code_count}"
+    )));
     assert!(
         metrics_response
             .body
@@ -960,6 +974,17 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(send_response.contains("\"message_id\":\"msg-local-"));
     assert!(health_response.contains("HTTP/1.1 200 OK"));
     assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    let expected_reason_code_count = cross_store_replay_reason_codes_csv()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1",
+        cross_store_replay_reason_taxonomy_version()
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_code_count {expected_reason_code_count}"
+    )));
     assert!(
         metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
     );
@@ -1026,6 +1051,17 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     assert!(health_response.contains("HTTP/1.1 200 OK"));
     assert!(health_response.contains("\"status\":\"ok\""));
     assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    let expected_reason_code_count = cross_store_replay_reason_codes_csv()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1",
+        cross_store_replay_reason_taxonomy_version()
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_code_count {expected_reason_code_count}"
+    )));
     assert!(
         metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
     );
@@ -1337,6 +1373,17 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     assert!(metrics_response
         .body
         .contains("kamn_service_api_observability_health{health=\"healthy\"} 1"));
+    let expected_reason_code_count = cross_store_replay_reason_codes_csv()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .count();
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_taxonomy_info{{version=\"{}\"}} 1",
+        cross_store_replay_reason_taxonomy_version()
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_cross_store_replay_reason_code_count {expected_reason_code_count}"
+    )));
 }
 
 #[test]
