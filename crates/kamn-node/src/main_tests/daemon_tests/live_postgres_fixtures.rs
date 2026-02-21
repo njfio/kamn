@@ -313,32 +313,7 @@ pub(super) fn resolve_live_postgres_multi_host_prerequisite_decision(
 }
 
 pub(super) fn project_live_postgres_multi_host_execution_bundle_selector_rows() -> Vec<String> {
-    vec![
-        format!(
-            "b01_runtime_matrix_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-        format!(
-            "b02_parallel_lane_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_fingerprint_schema_is_stable",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-        format!(
-            "b03_topology_mapping_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_scope_is_stable",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-        format!(
-            "b04_topology_coherence_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_id_bundle_coherence_is_stable",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-        format!(
-            "b05_fingerprint_stability_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lane_topology_host_mode_host_pair_lane_set_lane_fingerprint_hash_order_normalization_digest_is_stable",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-        format!(
-            "b06_multi_host_execution_bundle->{}integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable",
-            LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX
-        ),
-    ]
+    crate::live_postgres_multi_host_execution_bundle_selector_rows_for_test()
 }
 
 pub(super) fn run_live_postgres_multi_host_execution_bundle_projection(

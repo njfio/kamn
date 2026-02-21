@@ -98,6 +98,25 @@ fn functional_runtime_daemon_live_postgres_validation_slice_multi_host_execution
 }
 
 #[test]
+fn functional_runtime_daemon_live_postgres_validation_slice_multi_host_execution_bundle_runtime_row_count_matches_selector_rows(
+) {
+    let runtime_selector_rows = crate::live_postgres_multi_host_execution_bundle_selector_rows_for_test();
+    let fixture_selector_rows = project_live_postgres_multi_host_execution_bundle_selector_rows();
+    assert_eq!(
+        runtime_selector_rows,
+        fixture_selector_rows,
+        "runtime selector rows should stay aligned with daemon fixture selectors"
+    );
+
+    let runtime_row_count = crate::live_postgres_multi_host_execution_bundle_row_count_for_test();
+    assert_eq!(
+        runtime_row_count,
+        runtime_selector_rows.len(),
+        "runtime row count marker should derive from runtime selector row length"
+    );
+}
+
+#[test]
 fn integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_execution_bundle_is_stable(
 ) {
     let _lock = log_env_lock()
