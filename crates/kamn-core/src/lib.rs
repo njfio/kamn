@@ -82,6 +82,8 @@ pub mod data_layer_postgres_repository_bridge;
 pub mod data_layer_prd_critical_scenario_conformance;
 /// Shell-neutral orchestration and shell/rust ratio-budget policy contracts.
 pub mod data_layer_shell_neutral_policy;
+/// Dependency CI smoke advisory-threshold policy checker contracts.
+pub mod dependency_ci_smoke_policy;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 /// DID registry lifecycle and chain-submission finality contracts.
@@ -604,6 +606,11 @@ pub use data_layer_shell_neutral_policy::{
     DATA_LAYER_SHELL_NEUTRAL_POLICY_BLOCK_SHELL_DELTA_REASON_CODE,
     DATA_LAYER_SHELL_NEUTRAL_POLICY_VERIFIED_REASON_CODE,
     DATA_LAYER_SHELL_NEUTRAL_POLICY_WARN_RATIO_REASON_CODE,
+};
+pub use dependency_ci_smoke_policy::{
+    dependency_ci_smoke_reason_codes_csv, dependency_ci_smoke_reason_taxonomy_version,
+    evaluate_dependency_ci_smoke_policy, DependencyAdvisoryRecord, DependencyCiSmokeDecision,
+    DependencyCiSmokePolicyInput, DependencyCiSmokeViolationReason,
 };
 pub use did::{
     canonical_did_document, canonical_service_endpoint,

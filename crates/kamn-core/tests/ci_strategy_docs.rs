@@ -1356,6 +1356,37 @@ fn doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers() {
 }
 
 #[test]
+fn doc_contains_dependency_ci_smoke_checker_threshold_parity_markers() {
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_reason_codes_csv=dependency_advisory_input_empty,dependency_advisory_severity_unknown,dependency_advisory_threshold_exceeded"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_fixture_path=fixtures/ci/dependency_ci_smoke_advisory_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains("dependency_ci_smoke_checker_threshold_max_severity=moderate"));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_remediation.dependency_advisory_input_empty=provide at least one advisory record from the CI smoke advisory feed before evaluating thresholds"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_remediation.dependency_advisory_severity_unknown=normalize advisory severity to low|moderate|high|critical before evaluation"
+    ));
+    assert!(DOC.contains(
+        "dependency_ci_smoke_checker_remediation.dependency_advisory_threshold_exceeded=reduce dependency advisory severity exposure or update approved threshold with review evidence"
+    ));
+    assert!(DOC.contains("cargo test -p kamn-core --test dependency_ci_smoke_checker_contract"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_ci_smoke_checker_threshold_parity_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4031"));
+}
+
+#[test]
 fn doc_contains_anti_flake_rerun_policy_reason_taxonomy_markers() {
     assert!(DOC.contains(
         "anti_flake_policy_reason_taxonomy_version=kamn.ci.anti-flake-policy-reason-taxonomy.v1"
