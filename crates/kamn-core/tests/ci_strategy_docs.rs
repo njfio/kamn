@@ -1313,7 +1313,7 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
         "metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1"
     ));
     assert!(DOC.contains(
-        "metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required"
+        "metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,license_policy_file_not_found,license_policy_marker_mismatch,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required"
     ));
     assert!(DOC.contains("metadata_governance_reason_codes_value=none|<csv>"));
     assert!(DOC.contains(
@@ -1323,10 +1323,10 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
     assert!(DOC.contains("ci_smoke_lane_cost_profile=low|not-applicable"));
     assert!(DOC.contains("local_heavy_lane_execution_mode=not_requested|opt_in|blocked"));
     assert!(DOC.contains(
-        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile ci-smoke"
+        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --license-policy-file LICENSE --lane-profile ci-smoke"
     ));
     assert!(DOC.contains(
-        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --lane-profile local-heavy --local-heavy-opt-in"
+        "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --license-policy-file LICENSE --lane-profile local-heavy --local-heavy-opt-in"
     ));
 }
 

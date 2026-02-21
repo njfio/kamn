@@ -42,6 +42,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
   cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
   cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
+  bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
@@ -198,6 +199,7 @@ cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --noca
 cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
 cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
 cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
+bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"

@@ -9,7 +9,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 test_harness_require_executable "$CHECKER" "expected workspace license policy checker to be executable"
 
-pass_output="$(python3 "$CHECKER" --workspace-root "$ROOT_DIR" --expected-license "Apache-2.0")"
+pass_output="$(
+  python3 "$CHECKER" \
+    --workspace-root "$ROOT_DIR" \
+    --expected-license "Apache-2.0" \
+    --license-policy-file "$ROOT_DIR/LICENSE"
+)"
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1$'; then
   echo "expected deterministic reason taxonomy marker on pass output" >&2
   exit 1
@@ -39,6 +44,43 @@ if ! printf '%s\n' "$pass_output" | grep -q '^local_heavy_lane_execution_mode=no
   exit 1
 fi
 
+ROOT_POLICY_MISMATCH_LICENSE="$TMP_DIR/LICENSE.mismatch"
+cp "$ROOT_DIR/LICENSE" "$ROOT_POLICY_MISMATCH_LICENSE"
+python3 - "$ROOT_POLICY_MISMATCH_LICENSE" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = re.sub(r"Version 2\.0, January 2004", "Version 1.0, January 2000", text, count=1)
+path.write_text(text, encoding="utf-8")
+PY
+
+if python3 "$CHECKER" \
+  --workspace-root "$ROOT_DIR" \
+  --expected-license "Apache-2.0" \
+  --license-policy-file "$ROOT_POLICY_MISMATCH_LICENSE" \
+  >"$TMP_DIR/policy-mismatch.out" \
+  2>"$TMP_DIR/policy-mismatch.err"
+then
+  echo "expected workspace license policy checker to fail on root policy marker drift" >&2
+  cat "$TMP_DIR/policy-mismatch.out" >&2 || true
+  cat "$TMP_DIR/policy-mismatch.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -q "license_policy_marker_mismatch" "$TMP_DIR/policy-mismatch.err"; then
+  echo "expected license_policy_marker_mismatch reason in checker stderr output" >&2
+  cat "$TMP_DIR/policy-mismatch.err" >&2 || true
+  exit 1
+fi
+if ! grep -q '^reason_codes_csv=license_policy_marker_mismatch$' "$TMP_DIR/policy-mismatch.out"; then
+  echo "expected deterministic license_policy_marker_mismatch reason code marker in checker stdout output" >&2
+  cat "$TMP_DIR/policy-mismatch.out" >&2 || true
+  exit 1
+fi
+
 MISMATCH_MANIFEST="$TMP_DIR/mismatch.Cargo.toml"
 cp "$ROOT_DIR/crates/kamn-core/Cargo.toml" "$MISMATCH_MANIFEST"
 python3 - "$MISMATCH_MANIFEST" <<'PY'
@@ -52,7 +94,7 @@ text = re.sub(r'^license\s*=\s*".*"$', 'license = "MIT"', text, flags=re.MULTILI
 path.write_text(text, encoding="utf-8")
 PY
 
-if python3 "$CHECKER" --manifest "$MISMATCH_MANIFEST" --expected-license "Apache-2.0" >"$TMP_DIR/mismatch.out" 2>"$TMP_DIR/mismatch.err"; then
+if python3 "$CHECKER" --manifest "$MISMATCH_MANIFEST" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" >"$TMP_DIR/mismatch.out" 2>"$TMP_DIR/mismatch.err"; then
   echo "expected workspace license policy checker to fail on mismatched license field" >&2
   cat "$TMP_DIR/mismatch.out" >&2 || true
   cat "$TMP_DIR/mismatch.err" >&2 || true
@@ -88,7 +130,7 @@ text = re.sub(r'^license\s*=\s*".*"$\n?', '', text, flags=re.MULTILINE)
 path.write_text(text, encoding="utf-8")
 PY
 
-if python3 "$CHECKER" --manifest "$MISSING_MANIFEST" --expected-license "Apache-2.0" >"$TMP_DIR/missing.out" 2>"$TMP_DIR/missing.err"; then
+if python3 "$CHECKER" --manifest "$MISSING_MANIFEST" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" >"$TMP_DIR/missing.out" 2>"$TMP_DIR/missing.err"; then
   echo "expected workspace license policy checker to fail on missing license field" >&2
   cat "$TMP_DIR/missing.out" >&2 || true
   cat "$TMP_DIR/missing.err" >&2 || true
@@ -112,7 +154,7 @@ cat >"$MALFORMED_MANIFEST" <<'EOF'
 name = "broken"
 EOF
 
-if python3 "$CHECKER" --manifest "$MALFORMED_MANIFEST" --expected-license "Apache-2.0" >"$TMP_DIR/malformed.out" 2>"$TMP_DIR/malformed.err"; then
+if python3 "$CHECKER" --manifest "$MALFORMED_MANIFEST" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" >"$TMP_DIR/malformed.out" 2>"$TMP_DIR/malformed.err"; then
   echo "expected workspace license policy checker to fail on malformed Cargo manifest" >&2
   cat "$TMP_DIR/malformed.out" >&2 || true
   cat "$TMP_DIR/malformed.err" >&2 || true
@@ -143,7 +185,7 @@ text = re.sub(r'^\[package\]\n', '', text, count=1, flags=re.MULTILINE)
 path.write_text(text, encoding="utf-8")
 PY
 
-if python3 "$CHECKER" --manifest "$PACKAGE_MISSING_MANIFEST" --expected-license "Apache-2.0" >"$TMP_DIR/package-missing.out" 2>"$TMP_DIR/package-missing.err"; then
+if python3 "$CHECKER" --manifest "$PACKAGE_MISSING_MANIFEST" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" >"$TMP_DIR/package-missing.out" 2>"$TMP_DIR/package-missing.err"; then
   echo "expected workspace license policy checker to fail when package section is missing" >&2
   cat "$TMP_DIR/package-missing.out" >&2 || true
   cat "$TMP_DIR/package-missing.err" >&2 || true
@@ -162,7 +204,7 @@ if ! grep -q '^reason_codes_csv=package_section_missing$' "$TMP_DIR/package-miss
 fi
 
 MISSING_PATH_MANIFEST="$TMP_DIR/does-not-exist.Cargo.toml"
-if python3 "$CHECKER" --manifest "$MISSING_PATH_MANIFEST" --expected-license "Apache-2.0" >"$TMP_DIR/manifest-not-found.out" 2>"$TMP_DIR/manifest-not-found.err"; then
+if python3 "$CHECKER" --manifest "$MISSING_PATH_MANIFEST" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" >"$TMP_DIR/manifest-not-found.out" 2>"$TMP_DIR/manifest-not-found.err"; then
   echo "expected workspace license policy checker to fail on missing manifest path" >&2
   cat "$TMP_DIR/manifest-not-found.out" >&2 || true
   cat "$TMP_DIR/manifest-not-found.err" >&2 || true
@@ -180,7 +222,26 @@ if ! grep -q '^reason_codes_csv=manifest_not_found$' "$TMP_DIR/manifest-not-foun
   exit 1
 fi
 
-if python3 "$CHECKER" --workspace-root "$ROOT_DIR" --expected-license "Apache-2.0" --lane-profile local-heavy >"$TMP_DIR/local-heavy-no-opt-in.out" 2>"$TMP_DIR/local-heavy-no-opt-in.err"; then
+MISSING_POLICY_FILE="$TMP_DIR/does-not-exist.LICENSE"
+if python3 "$CHECKER" --workspace-root "$ROOT_DIR" --expected-license "Apache-2.0" --license-policy-file "$MISSING_POLICY_FILE" >"$TMP_DIR/policy-not-found.out" 2>"$TMP_DIR/policy-not-found.err"; then
+  echo "expected workspace license policy checker to fail when root policy file path is missing" >&2
+  cat "$TMP_DIR/policy-not-found.out" >&2 || true
+  cat "$TMP_DIR/policy-not-found.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -q "license_policy_file_not_found" "$TMP_DIR/policy-not-found.err"; then
+  echo "expected license_policy_file_not_found reason in checker stderr output" >&2
+  cat "$TMP_DIR/policy-not-found.err" >&2 || true
+  exit 1
+fi
+if ! grep -q '^reason_codes_csv=license_policy_file_not_found$' "$TMP_DIR/policy-not-found.out"; then
+  echo "expected deterministic license_policy_file_not_found reason code marker in checker stdout output" >&2
+  cat "$TMP_DIR/policy-not-found.out" >&2 || true
+  exit 1
+fi
+
+if python3 "$CHECKER" --workspace-root "$ROOT_DIR" --expected-license "Apache-2.0" --license-policy-file "$ROOT_DIR/LICENSE" --lane-profile local-heavy >"$TMP_DIR/local-heavy-no-opt-in.out" 2>"$TMP_DIR/local-heavy-no-opt-in.err"; then
   echo "expected workspace license policy checker to fail when local-heavy mode is not explicitly opted in" >&2
   cat "$TMP_DIR/local-heavy-no-opt-in.out" >&2 || true
   cat "$TMP_DIR/local-heavy-no-opt-in.err" >&2 || true
@@ -212,6 +273,7 @@ local_heavy_opt_in_output="$(
   python3 "$CHECKER" \
     --workspace-root "$ROOT_DIR" \
     --expected-license "Apache-2.0" \
+    --license-policy-file "$ROOT_DIR/LICENSE" \
     --lane-profile local-heavy \
     --local-heavy-opt-in
 )"

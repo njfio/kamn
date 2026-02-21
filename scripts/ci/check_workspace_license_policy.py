@@ -10,12 +10,15 @@ import tomllib
 from pathlib import Path
 
 DEFAULT_LICENSE = "Apache-2.0"
+DEFAULT_LICENSE_POLICY_FILE = "LICENSE"
 DEFAULT_MANIFEST_GLOBS = ("crates/*/Cargo.toml",)
 SCHEMA_VERSION = "kamn.ci.dependency-license-metadata-governance-report.v1"
 REASON_TAXONOMY_VERSION = "kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1"
 KNOWN_REASON_CODE_ORDER = (
     "expected_license_empty",
     "no_crate_manifests_found",
+    "license_policy_file_not_found",
+    "license_policy_marker_mismatch",
     "manifest_not_found",
     "manifest_invalid_toml",
     "package_section_missing",
@@ -24,13 +27,18 @@ KNOWN_REASON_CODE_ORDER = (
     "metadata_governance_local_heavy_opt_in_required",
 )
 METADATA_MISMATCH_REASON_CODES = {
+    "license_policy_marker_mismatch",
     "manifest_not_found",
     "manifest_invalid_toml",
     "package_section_missing",
     "license_missing",
     "license_mismatch",
 }
-CONFIGURATION_REASON_CODES = {"expected_license_empty", "no_crate_manifests_found"}
+CONFIGURATION_REASON_CODES = {
+    "expected_license_empty",
+    "no_crate_manifests_found",
+    "license_policy_file_not_found",
+}
 BOUNDARY_REASON_CODES = {"metadata_governance_local_heavy_opt_in_required"}
 
 
@@ -47,6 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--expected-license",
         default=DEFAULT_LICENSE,
         help="Expected SPDX license identifier.",
+    )
+    parser.add_argument(
+        "--license-policy-file",
+        default=DEFAULT_LICENSE_POLICY_FILE,
+        help="Root license policy file path expected to match --expected-license policy markers.",
     )
     parser.add_argument(
         "--manifest",
@@ -116,6 +129,31 @@ def check_manifest(manifest_path: Path, expected_license: str) -> list[str]:
     return []
 
 
+def expected_policy_markers(expected_license: str) -> tuple[str, ...]:
+    if expected_license == "Apache-2.0":
+        return ("Apache License", "Version 2.0, January 2004")
+    return (expected_license,)
+
+
+def check_license_policy_file(license_policy_file: Path, expected_license: str) -> list[str]:
+    if not license_policy_file.is_file():
+        return [f"license_policy_file_not_found:{license_policy_file}"]
+
+    try:
+        policy_text = license_policy_file.read_text(encoding="utf-8")
+    except OSError:
+        return [f"license_policy_file_not_found:{license_policy_file}"]
+    missing_markers = [
+        marker for marker in expected_policy_markers(expected_license) if marker not in policy_text
+    ]
+    if missing_markers:
+        return [
+            "license_policy_marker_mismatch:"
+            f"{license_policy_file}:expected={expected_license}:missing_marker={missing_markers[0]}"
+        ]
+    return []
+
+
 def sort_reason_codes(reason_codes: set[str]) -> list[str]:
     order_index = {code: idx for idx, code in enumerate(KNOWN_REASON_CODE_ORDER)}
     return sorted(reason_codes, key=lambda code: (order_index.get(code, len(order_index)), code))
@@ -145,6 +183,7 @@ def main() -> int:
     reason_codes: set[str] = set()
 
     expected_license = args.expected_license.strip()
+    license_policy_file = Path(args.license_policy_file).resolve()
     if not expected_license:
         failures.append("expected license must be non-empty")
         reason_codes.add("expected_license_empty")
@@ -170,6 +209,11 @@ def main() -> int:
         local_heavy_mode = "not_requested"
 
     if expected_license:
+        policy_failures = check_license_policy_file(license_policy_file, expected_license)
+        failures.extend(policy_failures)
+        for failure in policy_failures:
+            reason_codes.add(failure.split(":", 1)[0])
+
         for manifest in manifests:
             manifest_failures = check_manifest(manifest, expected_license)
             failures.extend(manifest_failures)
@@ -195,6 +239,7 @@ def main() -> int:
         "ci_smoke_local_heavy_boundary_status": ci_boundary_status,
         "ci_smoke_lane_cost_profile": ci_smoke_cost_profile,
         "local_heavy_lane_execution_mode": local_heavy_mode,
+        "license_policy_file": str(license_policy_file),
         "manifest_count": len(manifests),
         "violation_count": len(failures),
         "violations": failures,
