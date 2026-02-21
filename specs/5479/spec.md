@@ -1,6 +1,6 @@
 # Issue #5479 Spec - Selector-Bundle Fingerprint Telemetry Integration
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5479
 - Parent: #3812
 - Milestone: R50.5 Live-postgres selector-bundle fingerprint integration
