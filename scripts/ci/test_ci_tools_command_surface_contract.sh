@@ -154,6 +154,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"'
