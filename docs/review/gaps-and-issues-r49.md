@@ -1,6 +1,7 @@
 # KAMN Gaps and Issues Report
 
 **As of:** R49 review artifact publication, issue `#5469` (2026-02-21)
+**Post-publication revalidation:** issue `#5485` (2026-02-21)
 
 ---
 
@@ -11,6 +12,8 @@
 - Remote branch heads: `50`
 - Ignored-test drift checker: `pass` (`ignored_test_count=12`, `reason_codes=none`)
 - Completed milestone closure wave: milestones `#94`, `#95`, `#96`, `#97` are closed
+
+Publication snapshot values above remain historical to R49.3 artifact publication time.
 
 ## Deterministic Baseline Evidence Commands
 
@@ -53,6 +56,50 @@ ignored_test_count=12
 reason_codes=none
 ```
 
+## Post-Publication Revalidation Snapshot (R50.8)
+
+- Open issues: `0`
+- Open milestones: `0`
+- Remote branch heads: `52`
+- Ignored-test drift checker: `pass` (`ignored_test_count=12`, `reason_codes=none`)
+
+## Deterministic Revalidation Evidence Commands
+
+```bash
+gh issue list --repo njfio/kamn --state open --limit 200
+gh api repos/njfio/kamn/milestones?state=open --paginate --jq 'length'
+git ls-remote --heads origin | wc -l
+bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --metadata-file fixtures/ci/ignored_test_inventory_metadata.json --promotion-criteria-file fixtures/ci/ignored_test_promotion_criteria.json --output-json /tmp/ignored-test-inventory-drift-report-r49-revalidate.json
+```
+
+## Revalidation Captured Outputs
+
+Open issues:
+
+```text
+(none)
+```
+
+Open milestones count:
+
+```text
+0
+```
+
+Remote branch heads:
+
+```text
+52
+```
+
+Ignored-test drift checker summary:
+
+```text
+status=pass
+ignored_test_count=12
+reason_codes=none
+```
+
 ## Status Highlights
 
 - R47 top-priority structural concern (`daemon_tests.rs` monolith) remains resolved.
@@ -81,3 +128,9 @@ reason_codes=none
 - `r49_review_ignored_test_periodic_review_issue=5465`
 - `r49_review_milestone_closure_wave_closed_ids_csv=94,95,96,97`
 - `r49_review_milestone_closure_wave_issue=5467`
+- `r49_review_post_publication_revalidation_date=2026-02-21`
+- `r49_review_post_publication_issue=5485`
+- `r49_review_post_publication_branch_remote_head_count=52`
+- `r49_review_post_publication_open_issue_count=0`
+- `r49_review_post_publication_open_milestone_count=0`
+- `r49_review_post_publication_ignored_test_inventory_count=12`

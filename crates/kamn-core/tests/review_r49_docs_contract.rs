@@ -27,17 +27,39 @@ fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_ignored_test_inventory_count=12"));
     assert!(DOC.contains("r49_review_ignored_test_periodic_review_status=completed"));
     assert!(DOC.contains("r49_review_milestone_closure_wave_closed_ids_csv=94,95,96,97"));
+    assert!(DOC.contains("r49_review_post_publication_revalidation_date=2026-02-21"));
+    assert!(DOC.contains("r49_review_post_publication_issue=5485"));
+    assert!(DOC.contains("r49_review_post_publication_branch_remote_head_count=52"));
+    assert!(DOC.contains("r49_review_post_publication_open_issue_count=0"));
+    assert!(DOC.contains("r49_review_post_publication_open_milestone_count=0"));
+    assert!(DOC.contains("r49_review_post_publication_ignored_test_inventory_count=12"));
 }
 
 #[test]
 fn integration_r49_review_marker_consistency() {
-    let open_issue_count = parse_marker_usize("r49_review_baseline_open_issue_count");
-    let open_milestone_count = parse_marker_usize("r49_review_baseline_open_milestone_count");
-    let ignored_count = parse_marker_usize("r49_review_ignored_test_inventory_count");
-    let branch_count = parse_marker_usize("r49_review_baseline_branch_remote_head_count");
+    let baseline_open_issue_count = parse_marker_usize("r49_review_baseline_open_issue_count");
+    let baseline_open_milestone_count =
+        parse_marker_usize("r49_review_baseline_open_milestone_count");
+    let baseline_ignored_count = parse_marker_usize("r49_review_ignored_test_inventory_count");
+    let baseline_branch_count = parse_marker_usize("r49_review_baseline_branch_remote_head_count");
+    let post_open_issue_count = parse_marker_usize("r49_review_post_publication_open_issue_count");
+    let post_open_milestone_count =
+        parse_marker_usize("r49_review_post_publication_open_milestone_count");
+    let post_ignored_count =
+        parse_marker_usize("r49_review_post_publication_ignored_test_inventory_count");
+    let post_branch_count =
+        parse_marker_usize("r49_review_post_publication_branch_remote_head_count");
 
-    assert_eq!(open_issue_count, 1);
-    assert_eq!(open_milestone_count, 1);
-    assert_eq!(ignored_count, 12);
-    assert!(branch_count >= 1);
+    assert_eq!(baseline_open_issue_count, 1);
+    assert_eq!(baseline_open_milestone_count, 1);
+    assert_eq!(baseline_ignored_count, 12);
+    assert_eq!(baseline_branch_count, 50);
+
+    assert_eq!(post_open_issue_count, 0);
+    assert_eq!(post_open_milestone_count, 0);
+    assert_eq!(post_ignored_count, 12);
+    assert_eq!(post_branch_count, 52);
+
+    assert!(post_open_issue_count <= baseline_open_issue_count);
+    assert!(post_open_milestone_count <= baseline_open_milestone_count);
 }
