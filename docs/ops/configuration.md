@@ -740,13 +740,37 @@ Boundary contracts:
 
 Validation commands:
 
-- `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
-- `python3 scripts/deploy/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
+- `cargo run -p kamn-core --bin sbom_provenance_artifact_generator_contract -- --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
+- `cargo run -p kamn-core --bin sbom_provenance_artifact_generator_contract -- --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
 - `cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture`
 
 Regression marker:
 
 - `Regression: #4036`
+
+## SBOM-Provenance Release Go-No-Go Checker Contract (Issue #4037)
+
+Deterministic checker markers:
+
+- `sbom_provenance_release_gonogo_checker_schema_version=kamn.runtime.sbom-provenance-release-gonogo-checker-report.v1`
+- `sbom_provenance_release_gonogo_checker_reason_taxonomy_version=kamn.runtime.sbom-provenance-release-gonogo-checker-reason-taxonomy.v1`
+- `sbom_provenance_release_gonogo_checker_reason_codes_csv=sbom_provenance_artifact_marker_missing,sbom_provenance_artifact_marker_invalid,sbom_provenance_artifact_decision_not_go,sbom_provenance_docs_parity_marker_missing,sbom_provenance_runtime_budget_exceeded`
+- `sbom_provenance_release_gonogo_required_artifact_markers_csv=schema_version,artifact_schema_version,fixture_schema_version,reason_taxonomy_version,release_manifest_required_artifact_id,status,final_decision,reason_code`
+- `sbom_provenance_release_gonogo_docs_parity_required_markers_csv=sbom_provenance_release_gonogo_checker_schema_version,sbom_provenance_release_gonogo_checker_reason_taxonomy_version,sbom_provenance_release_gonogo_checker_reason_codes_csv,sbom_provenance_release_gonogo_required_artifact_markers_csv`
+
+Policy outcomes:
+
+- baseline artifact + docs parity => `status=pass`, `final_decision=GO`, `reason_code=none`
+- missing/invalid artifact marker or docs parity marker drift => `status=fail`, `final_decision=NO-GO`, deterministic reason code
+
+Validation commands:
+
+- `python3 scripts/deploy/sbom_provenance_release_gonogo_checker_contract.py --artifact-json /tmp/sbom-provenance-baseline.json --ci-strategy-doc docs/ci/strategy.md --ops-configuration-doc docs/ops/configuration.md --max-seconds 120 --output-json /tmp/sbom-provenance-release-gonogo-checker.json`
+- `cargo test -p kamn-core --test sbom_provenance_release_gonogo_checker_contract -- --nocapture`
+
+Regression marker:
+
+- `Regression: #4037`
 
 ## Tamper-Evident Lifecycle Artifact Integrity Contract (Issue #4081)
 
