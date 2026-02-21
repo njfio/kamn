@@ -812,6 +812,18 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
+    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "allow")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
+    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "deny")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
     let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
         .split(',')
         .filter(|value| !value.is_empty())
@@ -873,6 +885,12 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_expected_outcome_count {expected_scope_policy_fixture_unique_expected_outcome_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_scope_count {expected_scope_policy_fixture_unique_allow_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
@@ -1174,6 +1192,18 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
+    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "allow")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
+    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "deny")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
     let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
         .split(',')
         .filter(|value| !value.is_empty())
@@ -1235,6 +1265,12 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_expected_outcome_count {expected_scope_policy_fixture_unique_expected_outcome_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_scope_count {expected_scope_policy_fixture_unique_allow_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
@@ -1388,6 +1424,18 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
+    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "allow")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
+    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "deny")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
     let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
         .split(',')
         .filter(|value| !value.is_empty())
@@ -1449,6 +1497,12 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_expected_outcome_count {expected_scope_policy_fixture_unique_expected_outcome_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_scope_count {expected_scope_policy_fixture_unique_allow_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
@@ -1847,6 +1901,18 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
+    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "allow")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
+    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .iter()
+        .filter(|row| row.expected == "deny")
+        .map(|row| row.scope.as_str())
+        .collect::<BTreeSet<_>>()
+        .len();
     let expected_websocket_reason_code_count = SERVICE_API_WEBSOCKET_REASON_CODES_CSV
         .split(',')
         .filter(|value| !value.is_empty())
@@ -1908,6 +1974,12 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_expected_outcome_count {expected_scope_policy_fixture_unique_expected_outcome_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_scope_count {expected_scope_policy_fixture_unique_allow_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_route_authz_matrix_schema_info{{version=\"{}\"}} 1",
