@@ -1,6 +1,6 @@
 # KAMN Gaps and Issues Report
 
-**As of:** R46 review follow-up, issue `#5336` (2026-02-20)
+**As of:** R47 review follow-up, issue `#5424` (2026-02-21)
 **Rust LOC:** 166,664 | **Tests:** 3,104 passed, 0 failed, 12 ignored | **Shell LOC:** 120,958
 
 ---
@@ -15,7 +15,7 @@ Six gaps were identified in R45. All six are now resolved after the R46 follow-u
 | data_layer_m10 monolith (2,001 lines) | Decomposed into root (560) + 5 submodules | #5325 |
 | data_layer_postgres_execution_adapter (1,114 lines) | Decomposed into root (704) + 4 submodules | #5328 |
 | Doc-contract consolidation (122 files) | Wave 4 tranche A+B: harness migration reduced include_str suite-file count to 69 | #5327, #5336 |
-| Branch re-accumulation (134) | Manual cleanup wave executed; remote branch count now 54 | #5183, #5336 |
+| Branch re-accumulation (134) | Manual cleanup waves executed; remote branch count now 50 | #5183, #5336, #5424 |
 | Ignored tests (12) | Formal audit with explicit dispositions | #5329 |
 
 ---
@@ -183,6 +183,23 @@ Total trajectory: 126 (R42) → 78 (R43) → 91 (R44) → 134 (R45) → 145 (R46
 
 **Resolution status:** closed (target <100 exceeded).
 
+### 6.2 Branch Hygiene Refresh Wave (Issue #5424)
+
+Merged-only cleanup wave completed on 2026-02-21 using deterministic merged-to-main criteria.
+
+Deterministic refresh markers:
+
+- `branch_hygiene_refresh_issue=5424`
+- `branch_hygiene_refresh_strategy=merged_only`
+- `branch_hygiene_refresh_evidence_command_pre=git ls-remote --heads origin | wc -l`
+- `branch_hygiene_refresh_evidence_command_candidates=git branch -r --merged origin/main`
+- `branch_hygiene_refresh_evidence_command_post=git ls-remote --heads origin | wc -l`
+- `branch_hygiene_remote_branch_count_pre_cleanup=70`
+- `branch_hygiene_remote_branch_count_deleted=20`
+- `branch_hygiene_remote_branch_count_post_cleanup=50`
+
+Wave trajectory extension: 126 (R42) → 78 (R43) → 91 (R44) → 134 (R45) → 145 (R46) → 54 (R46 follow-up) → 50 (R47 follow-up #5424).
+
 ---
 
 ## 7. Architecture
@@ -231,7 +248,7 @@ This establishes infrastructure for deterministic performance regression detecti
 | ~~Medium~~ | ~~data_layer_m10 monolith~~ | ~~kamn-core/src/~~ | ~~Medium~~ | **RESOLVED R46** |
 | ~~Medium~~ | ~~data_layer_pg_adapter monolith~~ | ~~kamn-core/src/~~ | ~~Medium~~ | **RESOLVED R46** |
 | ~~Medium~~ | ~~Doc-contract consolidation (122)~~ | ~~crates/*/tests/~~ | ~~Large~~ | **69 (-53) wave 3+4A+4B** |
-| ~~Medium~~ | ~~Branch re-accumulation (145)~~ | ~~Remote branches~~ | ~~Small~~ | **RESOLVED (54 branches)** |
+| ~~Medium~~ | ~~Branch re-accumulation (145)~~ | ~~Remote branches~~ | ~~Small~~ | **RESOLVED (50 branches)** |
 | ~~Medium~~ | ~~Signer env guard flake~~ | ~~main_tests/signer_tests.rs:1521~~ | ~~Small~~ | **RESOLVED (#5336)** |
 | ~~Medium~~ | ~~Doc-contract wave 4 (remaining tranche)~~ | ~~69 remaining test files~~ | ~~Medium~~ | **RESOLVED (<70 achieved)** |
 | Low | Shell LOC reduction | 120,958 lines | Ongoing | Improving (-596 this cycle) |
