@@ -1429,6 +1429,31 @@ fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts
 }
 
 #[test]
+fn service_api_ops_configuration_contains_retention_policy_fixture_matrix_controls() {
+    assert!(DOC
+        .contains("## Retention Policy Fixture Matrix and Parser Helper Contracts (Issue #4075)"));
+    assert!(DOC.contains(
+        "retention_policy_fixture_matrix_path=fixtures/runtime/retention_policy_fixture_matrix.txt"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_fixture_matrix_schema_version=kamn.runtime.retention-policy-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_reason_taxonomy_version=kamn.runtime.retention-policy-fixture-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_reason_codes_csv=retention_domain_unknown,retention_window_non_positive"
+    ));
+    assert!(DOC.contains(
+        "retention_policy_fixture_columns=case_id|domain|max_age_seconds|expected_status|expected_reason_code"
+    ));
+    assert!(DOC.contains("retention_domain_unknown"));
+    assert!(DOC.contains("retention_window_non_positive"));
+    assert!(DOC.contains("cargo test -p kamn-core --test retention_policy_fixture_parser_contract"));
+    assert!(DOC.contains("Regression: #4075"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_quota_policy_fixture_matrix_controls() {
     assert!(
         DOC.contains("## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)")
