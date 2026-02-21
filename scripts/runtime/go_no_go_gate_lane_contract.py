@@ -147,7 +147,6 @@ def _ensure_executable(path: Path, label: str) -> None:
     if not path.is_file() or not os.access(path, os.X_OK):
         fail(f"expected {label} to be executable")
 
-
 def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
