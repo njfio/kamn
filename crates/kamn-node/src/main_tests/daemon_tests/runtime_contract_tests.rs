@@ -600,6 +600,7 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("daemon execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
+    let rendered_text = render_bootstrap_report(&report, OutputMode::text());
     assert!(rendered.contains(
         "\"daemon_phase6_runtime_reason_taxonomy_version\":\"kamn.runtime.daemon.phase6.reason-taxonomy.v1\""
     ));
@@ -611,6 +612,24 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert!(rendered.contains("\"daemon_convergence_decision\":\"go\""));
     assert!(
         rendered.contains("\"daemon_convergence_reason_code\":\"convergence_promotion_gate_go\"")
+    );
+    assert!(rendered.contains(
+        "\"daemon_live_postgres_multi_host_execution_bundle_schema_version\":\"kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1\""
+    ));
+    assert!(rendered.contains(
+        "\"daemon_live_postgres_multi_host_execution_bundle_selector_prefix\":\"main_tests::daemon_tests::\""
+    ));
+    assert!(rendered.contains(
+        "\"daemon_live_postgres_multi_host_execution_bundle_row_count\":6"
+    ));
+    assert!(rendered_text.contains(
+        "daemon_live_postgres_multi_host_execution_bundle_schema_version: kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1"
+    ));
+    assert!(rendered_text.contains(
+        "daemon_live_postgres_multi_host_execution_bundle_selector_prefix: main_tests::daemon_tests::"
+    ));
+    assert!(
+        rendered_text.contains("daemon_live_postgres_multi_host_execution_bundle_row_count: 6")
     );
     let complete_line = captured_logs
         .iter()
@@ -639,6 +658,21 @@ fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_o
     assert_eq!(
         extract_json_string_field(complete_line, "convergence_reason_code").as_deref(),
         Some("convergence_promotion_gate_go")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "multi_host_execution_bundle_schema_version")
+            .as_deref(),
+        Some("kamn.runtime.daemon.phase6-live-postgres.multi-host-execution-bundle.v1")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "multi_host_execution_bundle_selector_prefix")
+            .as_deref(),
+        Some("main_tests::daemon_tests::")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "multi_host_execution_bundle_row_count")
+            .as_deref(),
+        Some("6")
     );
 }
 

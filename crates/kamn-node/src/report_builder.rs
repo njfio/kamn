@@ -132,6 +132,21 @@ pub(crate) fn build_bootstrap_report(
     let daemon_convergence_cost_budget_gate_passed = daemon
         .as_ref()
         .map(|daemon| daemon.convergence_cost_budget_gate_passed);
+    let daemon_live_postgres_multi_host_execution_bundle_schema_version =
+        daemon.as_ref().map(|daemon| {
+            daemon
+                .live_postgres_multi_host_execution_bundle_schema_version
+                .clone()
+        });
+    let daemon_live_postgres_multi_host_execution_bundle_selector_prefix =
+        daemon.as_ref().map(|daemon| {
+            daemon
+                .live_postgres_multi_host_execution_bundle_selector_prefix
+                .clone()
+        });
+    let daemon_live_postgres_multi_host_execution_bundle_row_count = daemon
+        .as_ref()
+        .map(|daemon| daemon.live_postgres_multi_host_execution_bundle_row_count);
     let kolme_live_provider_client_contract = kolme_live
         .as_ref()
         .map(|execution| execution.provider_client_contract.clone());
@@ -237,6 +252,9 @@ pub(crate) fn build_bootstrap_report(
         daemon_convergence_concurrency_gate_passed,
         daemon_convergence_performance_budget_gate_passed,
         daemon_convergence_cost_budget_gate_passed,
+        daemon_live_postgres_multi_host_execution_bundle_schema_version,
+        daemon_live_postgres_multi_host_execution_bundle_selector_prefix,
+        daemon_live_postgres_multi_host_execution_bundle_row_count,
         kolme_live_provider_client_contract,
         kolme_live_base_url,
         kolme_live_provider_hint,
