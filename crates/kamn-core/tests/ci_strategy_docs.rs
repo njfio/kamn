@@ -15,6 +15,8 @@ const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_CONTRACT_SOURCE: &str =
     include_str!("../../../scripts/runtime/request_response_schema_compatibility_live_contract.py");
 const OVERLOAD_RUNNER_SOURCE: &str =
     include_str!("../../../scripts/ci/run_daemon_os_signal_stress_matrix.sh");
+const LOCAL_HEAVY_REDACTION_RUNNER_SOURCE: &str =
+    include_str!("../../../scripts/runtime/local_heavy_redaction_validation_lane_contract.py");
 
 const FAIRNESS_REASON_TAXONOMY_VERSION: &str = "kamn.runtime.fairness-policy-reason-taxonomy.v1";
 const FAIRNESS_REASON_CODES_CSV: &str =
@@ -23,6 +25,14 @@ const DELETION_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.deletion-proof-checker-reason-taxonomy.v1";
 const DELETION_REASON_CODES_CSV: &str =
     "deletion_proof_subject_missing,deletion_proof_tombstone_missing,deletion_proof_status_invalid,deletion_proof_hash_mismatch";
+const LOCAL_HEAVY_REDACTION_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.local-heavy-redaction-validation-reason-taxonomy.v1";
+const LOCAL_HEAVY_REDACTION_REASON_CODES_CSV: &str =
+    "local_heavy_redaction_sensitive_pattern_detected,local_heavy_redaction_runtime_budget_exceeded";
+const LOCAL_HEAVY_REDACTION_POLICY_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.local-heavy-redaction-validation-policy-reason-taxonomy.v1";
+const LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV: &str =
+    "redaction_policy_required_field_missing,redaction_policy_marker_mismatch,redaction_policy_reason_taxonomy_mismatch,redaction_policy_profile_contract_mismatch,redaction_policy_docs_marker_parity_mismatch,ci_fast_gate_failed,redaction_policy_expected_decision_mismatch,redaction_policy_violation";
 const OVERLOAD_REASON_TAXONOMY_VERSION: &str =
     "kamn.ci.daemon-os-signal-stress-matrix-reason-taxonomy.v1";
 const OVERLOAD_REASON_CODES_CSV: &str = "runtime_budget_exceeded,matrix_failure_threshold_exceeded,quarantine_registry_missing,quarantine_reference_present_without_followup,matrix_failures_within_threshold,stable_success_with_quarantine_followup,stable_success";
@@ -82,6 +92,12 @@ fn fairness_reason_codes() -> Vec<&'static str> {
 
 fn deletion_reason_codes() -> Vec<&'static str> {
     DELETION_REASON_CODES_CSV.split(',').collect()
+}
+
+fn local_heavy_redaction_policy_reason_codes() -> Vec<&'static str> {
+    LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV
+        .split(',')
+        .collect()
 }
 
 fn overload_reason_codes() -> Vec<&'static str> {
@@ -1580,6 +1596,86 @@ fn doc_contains_sqlite_crash_restart_local_heavy_policy_checker_contract() {
     assert!(DOC.contains("sqlite_crash_restart_policy_runbook_marker_parity_mismatch"));
     assert!(DOC.contains("sqlite_crash_restart_policy_strategy_marker_parity_mismatch"));
     assert!(DOC.contains("Regression: #4018"));
+}
+
+#[test]
+fn doc_contains_local_heavy_redaction_validation_policy_checker_contract() {
+    assert!(DOC.contains("## Local-Heavy Redaction Validation Policy Checker Contract"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_local_heavy_redaction_validation_policy.sh --report-file /tmp/local-heavy-redaction-validation-baseline.json --expected-final-decision GO --ci-fast-gate PASS --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --output-json /tmp/local-heavy-redaction-validation-policy-report.json"
+    ));
+    assert!(
+        DOC.contains("bash scripts/runtime/test_check_local_heavy_redaction_validation_policy.sh")
+    );
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_policy_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-policy-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_policy_reason_codes_csv=redaction_policy_required_field_missing,redaction_policy_marker_mismatch,redaction_policy_reason_taxonomy_mismatch,redaction_policy_profile_contract_mismatch,redaction_policy_docs_marker_parity_mismatch,ci_fast_gate_failed,redaction_policy_expected_decision_mismatch,redaction_policy_violation"
+    ));
+    assert!(DOC
+        .contains("local_heavy_redaction_validation_policy_strategy_doc_path=docs/ci/strategy.md"));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_policy_ops_doc_path=docs/ops/configuration.md"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_policy_runner_report_schema_version=kamn.runtime.local-heavy-redaction-validation-lane-report.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_policy_runner_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains("redaction_policy_docs_marker_parity_mismatch"));
+    assert!(DOC.contains("Regression: #4080"));
+}
+
+#[test]
+fn doc_enforces_local_heavy_redaction_policy_checker_docs_parity_matches_runner_and_ops_markers() {
+    assert!(DOC.contains(&format!(
+        "local_heavy_redaction_validation_policy_reason_taxonomy_version={LOCAL_HEAVY_REDACTION_POLICY_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "local_heavy_redaction_validation_policy_reason_codes_csv={LOCAL_HEAVY_REDACTION_POLICY_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(&format!(
+        "local_heavy_redaction_validation_policy_runner_reason_taxonomy_version={LOCAL_HEAVY_REDACTION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "local_heavy_redaction_validation_policy_runner_reason_codes_csv={LOCAL_HEAVY_REDACTION_REASON_CODES_CSV}"
+    )));
+
+    assert!(OPS_DOC.contains(&format!(
+        "local_heavy_redaction_validation_reason_taxonomy_version={LOCAL_HEAVY_REDACTION_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(OPS_DOC.contains(&format!(
+        "local_heavy_redaction_validation_reason_codes_csv={LOCAL_HEAVY_REDACTION_REASON_CODES_CSV}"
+    )));
+    assert!(OPS_DOC
+        .contains("local_heavy_redaction_validation_required_profiles_csv=baseline,injected-leak"));
+
+    assert!(LOCAL_HEAVY_REDACTION_RUNNER_SOURCE.contains(
+        "RUN_SCHEMA_VERSION = \"kamn.runtime.local-heavy-redaction-validation-lane-report.v1\""
+    ));
+    assert!(LOCAL_HEAVY_REDACTION_RUNNER_SOURCE.contains(&format!(
+        "REASON_TAXONOMY_VERSION = \"{LOCAL_HEAVY_REDACTION_REASON_TAXONOMY_VERSION}\""
+    )));
+    assert!(LOCAL_HEAVY_REDACTION_RUNNER_SOURCE.contains("REASON_CODES_CSV = ("));
+    for reason_code in LOCAL_HEAVY_REDACTION_REASON_CODES_CSV.split(',') {
+        assert!(
+            LOCAL_HEAVY_REDACTION_RUNNER_SOURCE.contains(reason_code),
+            "runner source missing redaction reason marker {reason_code}"
+        );
+    }
+}
+
+#[test]
+fn doc_enforces_local_heavy_redaction_policy_checker_reason_codes_have_deterministic_marker_coverage(
+) {
+    for reason_code in local_heavy_redaction_policy_reason_codes() {
+        assert!(
+            DOC.contains(reason_code),
+            "ci strategy docs missing redaction policy reason marker {reason_code}"
+        );
+    }
 }
 
 #[test]
