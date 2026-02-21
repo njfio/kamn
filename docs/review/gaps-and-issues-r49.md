@@ -114,6 +114,7 @@ reason_codes=none
 - Branch hygiene remains controlled at `50` remote heads (post-publication revalidation snapshot).
 - R49 periodic ignored-test re-evaluation completed via `#5465` with baseline-aligned inventory.
 - R49 completed-milestone closure hygiene wave completed via `#5467` with closures verified for `#94-#97`.
+- Post-publication production feature delivery is reconciled via issue `#5499` and PR `#5500`.
 
 ## Governance-Feature Activity Ratio Markers (R49)
 
@@ -138,6 +139,8 @@ reason_codes=none
 - `r49_review_milestone_closure_wave_issue=5467`
 - `r49_review_post_publication_revalidation_date=2026-02-21`
 - `r49_review_post_publication_issue=5485`
+- `r49_review_post_publication_feature_issue=5499`
+- `r49_review_post_publication_feature_pr=5500`
 - `r49_review_post_publication_branch_count_reconciliation_issue=5495`
 - `r49_review_post_publication_branch_remote_head_count=50`
 - `r49_review_post_publication_open_issue_count=0`
