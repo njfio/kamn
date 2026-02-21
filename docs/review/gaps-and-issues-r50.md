@@ -148,6 +148,8 @@ All 10 new spec directories are from governance reconciliation. Zero from new ca
 
 Growth trajectory: 7.7 (R48) → 8.0 (R49) → **8.2** (R50).
 
+Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio.
+
 ### 5.2 Governance-Feature Activity Ratio
 
 R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
@@ -169,6 +171,20 @@ R50: 3 feat / 28 governance (0.11:1). Worst since R47's 0.00:1.
 - `spec_volume_guardrail_baseline_spec_to_module_ratio=8.2`
 - `spec_volume_guardrail_target_spec_to_module_ratio_max=7.7`
 - `spec_volume_guardrail_target_status=breached`
+
+### 5.5 Spec-Volume Remediation Plan Markers (R50.18)
+
+- `r50_review_spec_volume_remediation_schema_version=kamn.review.spec-volume-remediation-plan.v1`
+- `r50_review_spec_volume_remediation_baseline_spec_dirs=750`
+- `r50_review_spec_volume_remediation_module_count=92`
+- `r50_review_spec_volume_remediation_target_ratio_max=7.7`
+- `r50_review_spec_volume_remediation_target_spec_dir_max=708`
+- `r50_review_spec_volume_remediation_required_reduction=42`
+- `r50_review_spec_volume_remediation_tranche_count=3`
+- `r50_review_spec_volume_remediation_min_reduction_per_tranche=14`
+- `r50_review_spec_volume_remediation_issue_cap_per_tranche=2`
+- `r50_review_spec_volume_remediation_target_release=r53`
+- `r50_review_spec_volume_remediation_status=active`
 
 ---
 
@@ -198,7 +214,7 @@ No new modules this cycle.
 | Priority | Issue | Location | Effort | Status |
 |----------|-------|----------|--------|--------|
 | Medium | Self-referential governance loop | Review artifact reconciliation | Process contracts | **Mitigation implemented (R50.17), monitor adherence** |
-| Medium | Spec volume (750, 8.2:1) | 750 dirs / 92 modules | Ongoing | **Exceeded guardrail by 0.5** |
+| Medium | Spec volume (750, 8.2:1) | 750 dirs / 92 modules | Remediation contracts | **R50.18 active: 3 tranches, min 14 reductions each** |
 | Medium | Doc-contract tests (82) | Stable this cycle | Monitor | Consolidation eroding |
 | Low | Governance ratio (0.11:1) | 3 feat / 28 gov | Monitor | Worst since R47 |
 | Info | Ignored tests (12) | Due R54 | Periodic | Stable |
