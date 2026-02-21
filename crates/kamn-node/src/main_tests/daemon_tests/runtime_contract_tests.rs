@@ -718,6 +718,24 @@ fn functional_runtime_daemon_live_postgres_selector_bundle_validation_contract_i
         Err("live_postgres_selector_bundle_prefix_violation")
     );
 
+    let row_format_violation_rows = vec!["b01_runtime_matrix_bundle".to_owned()];
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(
+            row_format_violation_rows.as_slice(),
+            1
+        ),
+        Err("live_postgres_selector_bundle_row_format_violation")
+    );
+
+    let row_id_violation_rows = vec![
+        "b99_unknown_bundle->main_tests::daemon_tests::integration_runtime_daemon_phase6_live_postgres_validation_slice_matrix_reasons_are_stable_across_repeated_runs"
+            .to_owned(),
+    ];
+    assert_eq!(
+        crate::validate_live_postgres_selector_bundle_for_test(row_id_violation_rows.as_slice(), 1),
+        Err("live_postgres_selector_bundle_row_id_violation")
+    );
+
     assert_eq!(
         crate::validate_live_postgres_selector_bundle_for_test(canonical_rows.as_slice(), 999),
         Err("live_postgres_selector_bundle_row_count_mismatch")
