@@ -1497,7 +1497,7 @@ Regression marker:
 
 - `Regression: #5400`
 
-### Daemon Tests Live-Postgres Fixture Decomposition Contracts (Issue #5402, #5418)
+### Daemon Tests Live-Postgres Fixture Decomposition Contracts (Issue #5402, #5418, #5420)
 
 Daemon test decomposition phase-1 extracts live-postgres fixture/topology/hash helpers into a dedicated
 submodule while preserving existing `main_tests::daemon_tests::...` command paths for operator-run validation checks.
@@ -1508,6 +1508,9 @@ Deterministic decomposition markers:
 - `daemon_tests_live_postgres_fixture_phase1_target_max_lines=4300`
 - `daemon_tests_live_postgres_fixture_phase2_module_path=crates/kamn-node/src/main_tests/daemon_tests/live_postgres_topology_contract_tests.rs`
 - `daemon_tests_live_postgres_fixture_phase2_target_max_lines=2200`
+- `daemon_tests_live_postgres_fixture_phase3_runtime_module_path=crates/kamn-node/src/main_tests/daemon_tests/runtime_contract_tests.rs`
+- `daemon_tests_live_postgres_fixture_phase3_matrix_module_path=crates/kamn-node/src/main_tests/daemon_tests/live_postgres_matrix_contract_tests.rs`
+- `daemon_tests_live_postgres_fixture_phase3_root_target_max_lines=300`
 - `daemon_tests_live_postgres_fixture_test_path_contract=main_tests::daemon_tests::path_prefix_must_remain_stable_after_fixture_extraction`
 
 Validation commands:
@@ -1517,7 +1520,7 @@ Validation commands:
 
 Regression marker:
 
-- `Regression: #5402, #5418`
+- `Regression: #5402, #5418, #5420`
 
 ## Convergence Promotion Marker Contracts (Issue #5301)
 
