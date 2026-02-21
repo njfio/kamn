@@ -368,6 +368,46 @@ fn service_api_ops_configuration_contains_local_heavy_redaction_validation_lane_
 }
 
 #[test]
+fn service_api_ops_configuration_contains_dependency_local_heavy_deep_scan_lane_markers() {
+    assert!(
+        DOC.contains("## Dependency Local-Heavy Deep Scan Lane Artifact Contract (Issue #4032)")
+    );
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_lane_schema_version=kamn.runtime.dependency-local-heavy-deep-scan-lane-report.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_artifact_schema_version=kamn.runtime.dependency-local-heavy-deep-scan-artifact-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_fixture_schema_version=kamn.ci.dependency-local-heavy-deep-scan-fixture-matrix.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_reason_taxonomy_version=kamn.runtime.dependency-local-heavy-deep-scan-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "dependency_local_heavy_deep_scan_reason_codes_csv=dependency_local_heavy_deep_scan_profile_threshold_exceeded,dependency_local_heavy_deep_scan_runtime_budget_exceeded"
+    ));
+    assert!(DOC
+        .contains("dependency_local_heavy_deep_scan_required_profiles_csv=baseline,injected-risk"));
+    assert!(DOC.contains(
+        "profile=baseline -> status=pass + final_decision=GO + profile_status=verified + critical_count=0 + high_count=0"
+    ));
+    assert!(DOC.contains(
+        "profile=injected-risk -> status=fail + final_decision=NO-GO + profile_status=failed + critical_count=1 + high_count=2"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh --profile baseline --mode dry-run --max-seconds 180 --output-json /tmp/dependency-local-heavy-deep-scan-baseline.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh --profile injected-risk --mode dry-run --max-seconds 180 --output-json /tmp/dependency-local-heavy-deep-scan-injected-risk.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test dependency_local_heavy_deep_scan_lane_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4032"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_lifecycle_artifact_integrity_markers() {
     assert!(DOC.contains("## Tamper-Evident Lifecycle Artifact Integrity Contract (Issue #4081)"));
     assert!(DOC.contains(

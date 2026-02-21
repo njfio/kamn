@@ -1,0 +1,10 @@
+# Deterministic local-heavy deep dependency scan fixture matrix for issue #4032.
+dependency_local_heavy_deep_scan_fixture_schema_version=kamn.ci.dependency-local-heavy-deep-scan-fixture-matrix.v1
+dependency_local_heavy_deep_scan_reason_taxonomy_version=kamn.runtime.dependency-local-heavy-deep-scan-reason-taxonomy.v1
+dependency_local_heavy_deep_scan_reason_codes_csv=dependency_local_heavy_deep_scan_profile_threshold_exceeded,dependency_local_heavy_deep_scan_runtime_budget_exceeded
+dependency_local_heavy_deep_scan_threshold_max_critical=0
+dependency_local_heavy_deep_scan_threshold_max_high=0
+dependency_local_heavy_deep_scan_required_profiles_csv=baseline,injected-risk
+columns=profile|advisory_total|critical_count|high_count|moderate_count|low_count|unknown_count|expected_status|expected_reason_code
+baseline|6|0|0|2|4|0|pass|none
+injected-risk|7|1|2|2|2|0|fail|dependency_local_heavy_deep_scan_profile_threshold_exceeded

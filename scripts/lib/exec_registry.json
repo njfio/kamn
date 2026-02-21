@@ -1546,6 +1546,12 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/run_dependency_local_heavy_deep_scan_lane.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/dependency_local_heavy_deep_scan_lane_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/runtime/run_go_no_go_gate_lane_impl.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/go_no_go_gate_lane_contract.py",
