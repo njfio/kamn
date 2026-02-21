@@ -1,6 +1,6 @@
 # Issue #5533 Spec - Service API Scope-Policy Fixture Coverage Cardinality Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5533
 - Parent: #3812
 - Milestone: R50.32 Service API scope-policy fixture coverage cardinality metrics exposure
