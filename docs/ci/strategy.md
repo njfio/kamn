@@ -4767,6 +4767,35 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_audit_integrity_dry_run_governance_markers -- --exact`
 - Regression coverage: `Regression: #4059`
 
+### Lifecycle Artifact CI Dry-Run Governance Contract
+- CI-safe lifecycle/go-no-go governance composition commands:
+  - `bash scripts/runtime/generate_lifecycle_artifact_integrity_evidence_bundle.sh --output-file /tmp/lifecycle-artifact-integrity-baseline.json --artifact-id lifecycle-artifact-baseline --lifecycle-stage retention --profile baseline --record-count 42 --ci-fast-gate PASS`
+  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  - `python3 scripts/ci/check_lifecycle_ci_dry_run_governance.py --lifecycle-artifact-bundle-file /tmp/lifecycle-artifact-integrity-baseline.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json --threshold-file fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/lifecycle-ci-dry-run-governance-report.json`
+- Rust contract coverage:
+  - `cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture`
+- Deterministic checker marker contract:
+  - `lifecycle_ci_dry_run_reason_taxonomy_version=kamn.ci.lifecycle-ci-dry-run-governance-reason-taxonomy.v1`
+  - `lifecycle_ci_dry_run_reason_codes_csv=lifecycle_ci_dry_run_argument_invalid,lifecycle_ci_dry_run_threshold_contract_violation,lifecycle_ci_dry_run_report_contract_violation,lifecycle_ci_dry_run_lifecycle_marker_parity_drift,lifecycle_ci_dry_run_go_no_go_marker_parity_drift,lifecycle_ci_dry_run_runtime_budget_exceeded,lifecycle_ci_dry_run_fast_mode_selector_drift,lifecycle_ci_dry_run_workflow_exclusion_drift,lifecycle_ci_dry_run_docs_marker_parity_drift,lifecycle_ci_dry_run_docs_remediation_marker_missing`
+  - `lifecycle_ci_dry_run_threshold_fixture_path=fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env`
+  - `lifecycle_ci_dry_run_max_seconds=120`
+  - `lifecycle_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture`
+  - `lifecycle_ci_dry_run_fast_mode_forbidden_entry=bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" --mode run`
+  - `lifecycle_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run`
+  - `lifecycle_ci_dry_run_remediation_map_version=v1`
+- Deterministic remediation markers:
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_argument_invalid=invoke checker with required lifecycle/go-no-go report arguments and valid file paths`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_threshold_contract_violation=restore lifecycle dry-run threshold fixture keys and value formats`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_report_contract_violation=regenerate lifecycle bundle and go/no-go dry-run report using contract commands`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_lifecycle_marker_parity_drift=regenerate lifecycle artifact bundle and restore deterministic schema/hash/final-decision markers`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_go_no_go_marker_parity_drift=rerun go-no-go dry-run lane and restore required schema/taxonomy/lane marker parity`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_runtime_budget_exceeded=reduce checker/report overhead or adjust approved max-seconds threshold with review evidence`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_fast_mode_selector_drift=restore required lifecycle governance test entry and remove forbidden go-no-go run-mode entry from ci-tools fast mode`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_workflow_exclusion_drift=remove forbidden go-no-go run-mode command from ci-fast-gate workflow`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_docs_marker_parity_drift=realign docs/ci/strategy.md and docs/ops/configuration.md lifecycle governance marker blocks with checker contracts`
+  - `lifecycle_ci_dry_run_remediation.lifecycle_ci_dry_run_docs_remediation_marker_missing=add missing lifecycle governance remediation entry for each declared reason code`
+- Regression coverage: `Regression: #4082`
+
 ### Incident go/no-go convergence and boundary governance
 - CI smoke contract-lane execution remains low-cost and bounded:
   - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json --phase contract --max-seconds 120`
