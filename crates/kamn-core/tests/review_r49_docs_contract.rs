@@ -29,6 +29,8 @@ fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_milestone_closure_wave_closed_ids_csv=94,95,96,97"));
     assert!(DOC.contains("r49_review_post_publication_revalidation_date=2026-02-21"));
     assert!(DOC.contains("r49_review_post_publication_issue=5485"));
+    assert!(DOC.contains("r49_review_post_publication_feature_issue=5499"));
+    assert!(DOC.contains("r49_review_post_publication_feature_pr=5500"));
     assert!(DOC.contains("r49_review_post_publication_branch_count_reconciliation_issue=5495"));
     assert!(DOC.contains("r49_review_post_publication_branch_remote_head_count=50"));
     assert!(DOC.contains("r49_review_post_publication_open_issue_count=0"));
@@ -37,6 +39,11 @@ fn functional_r49_review_markers_present() {
     assert!(
         DOC.contains(
             "Branch hygiene remains controlled at `50` remote heads (post-publication revalidation snapshot)."
+        )
+    );
+    assert!(
+        DOC.contains(
+            "Post-publication production feature delivery is reconciled via issue `#5499` and PR `#5500`."
         )
     );
 }
@@ -53,6 +60,8 @@ fn integration_r49_review_marker_consistency() {
         parse_marker_usize("r49_review_post_publication_open_milestone_count");
     let post_ignored_count =
         parse_marker_usize("r49_review_post_publication_ignored_test_inventory_count");
+    let post_feature_issue = parse_marker_usize("r49_review_post_publication_feature_issue");
+    let post_feature_pr = parse_marker_usize("r49_review_post_publication_feature_pr");
     let post_branch_reconciliation_issue =
         parse_marker_usize("r49_review_post_publication_branch_count_reconciliation_issue");
     let post_branch_count =
@@ -66,6 +75,8 @@ fn integration_r49_review_marker_consistency() {
     assert_eq!(post_open_issue_count, 0);
     assert_eq!(post_open_milestone_count, 0);
     assert_eq!(post_ignored_count, 12);
+    assert_eq!(post_feature_issue, 5499);
+    assert_eq!(post_feature_pr, 5500);
     assert_eq!(post_branch_reconciliation_issue, 5495);
     assert_eq!(post_branch_count, 50);
 
