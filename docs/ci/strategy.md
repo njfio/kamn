@@ -1990,6 +1990,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local-heavy execution without `--local-heavy-opt-in` fails closed with `metadata_governance_local_heavy_opt_in_required`.
   - ci-smoke mode keeps low-cost profile and excludes local-heavy-only execution paths.
 
+## Dependency CI Smoke Advisory Fixture Contract
+- `dependency_ci_smoke_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1`
+- `dependency_ci_smoke_reason_codes_csv=dependency_advisory_severity_unknown,dependency_advisory_threshold_exceeded`
+- `dependency_ci_smoke_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1`
+- `dependency_ci_smoke_fixture_path=fixtures/ci/dependency_ci_smoke_advisory_fixture_matrix.txt`
+- `dependency_ci_smoke_threshold_max_severity=moderate`
+- Guard commands:
+  - `cargo test -p kamn-core --test dependency_ci_smoke_advisory_fixture_parser_contract`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_dependency_ci_smoke_advisory_fixture_contract_markers -- --exact`
+- Fail-closed policy:
+  - unknown severities reject deterministically with `dependency_advisory_severity_unknown`.
+  - severities above threshold reject deterministically with `dependency_advisory_threshold_exceeded`.
+  - docs marker drift fails the docs-contract target.
+- Regression: #4030
+
 ## Kolme Live Retry Coverage
 - Runtime commit submit/finality retry behavior must remain deterministic and bounded.
 - Fast-gate coverage commands:

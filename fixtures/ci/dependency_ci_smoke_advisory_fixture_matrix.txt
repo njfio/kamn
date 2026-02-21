@@ -1,0 +1,11 @@
+# Deterministic dependency advisory fixture matrix for issue #4030.
+dependency_ci_smoke_advisory_fixture_schema_version=kamn.ci.dependency-ci-smoke-advisory-fixture-matrix.v1
+dependency_ci_smoke_reason_taxonomy_version=kamn.ci.dependency-ci-smoke-reason-taxonomy.v1
+dependency_ci_smoke_reason_codes_csv=dependency_advisory_severity_unknown,dependency_advisory_threshold_exceeded
+dependency_ci_smoke_threshold_max_severity=moderate
+columns=case_id|package|advisory_id|severity|expected_status|expected_reason_code
+advisory_low_pass|openssl-sys|RUSTSEC-2026-0001|low|pass|none
+advisory_moderate_pass|webpki-roots|RUSTSEC-2026-0002|moderate|pass|none
+advisory_high_fail|rustls|RUSTSEC-2026-0003|high|fail|dependency_advisory_threshold_exceeded
+advisory_critical_fail|ring|RUSTSEC-2026-0004|critical|fail|dependency_advisory_threshold_exceeded
+advisory_unknown_fail|custom-crate|RUSTSEC-2026-0005|unknown|fail|dependency_advisory_severity_unknown
