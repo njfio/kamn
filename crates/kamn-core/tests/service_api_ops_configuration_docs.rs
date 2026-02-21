@@ -398,6 +398,55 @@ fn service_api_ops_configuration_contains_lifecycle_artifact_integrity_markers()
 }
 
 #[test]
+fn service_api_ops_configuration_contains_lifecycle_ci_dry_run_governance_markers() {
+    assert!(DOC.contains("## Lifecycle Artifact CI Dry-Run Governance Contract (Issue #4082)"));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_reason_taxonomy_version=kamn.ci.lifecycle-ci-dry-run-governance-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_reason_codes_csv=lifecycle_ci_dry_run_argument_invalid,lifecycle_ci_dry_run_threshold_contract_violation,lifecycle_ci_dry_run_report_contract_violation,lifecycle_ci_dry_run_lifecycle_marker_parity_drift,lifecycle_ci_dry_run_go_no_go_marker_parity_drift,lifecycle_ci_dry_run_runtime_budget_exceeded,lifecycle_ci_dry_run_fast_mode_selector_drift,lifecycle_ci_dry_run_workflow_exclusion_drift,lifecycle_ci_dry_run_docs_marker_parity_drift,lifecycle_ci_dry_run_docs_remediation_marker_missing"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_threshold_fixture_path=fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env"
+    ));
+    assert!(DOC.contains("lifecycle_ci_dry_run_max_seconds=120"));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_fast_mode_forbidden_entry=bash \"$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh\" --mode run"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_lifecycle_ci_dry_run_governance.py --lifecycle-artifact-bundle-file /tmp/lifecycle-artifact-integrity-baseline.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json --threshold-file fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/lifecycle-ci-dry-run-governance-report.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("lifecycle_ci_dry_run_remediation_map_version=v1"));
+    for reason_code in [
+        "lifecycle_ci_dry_run_argument_invalid",
+        "lifecycle_ci_dry_run_threshold_contract_violation",
+        "lifecycle_ci_dry_run_report_contract_violation",
+        "lifecycle_ci_dry_run_lifecycle_marker_parity_drift",
+        "lifecycle_ci_dry_run_go_no_go_marker_parity_drift",
+        "lifecycle_ci_dry_run_runtime_budget_exceeded",
+        "lifecycle_ci_dry_run_fast_mode_selector_drift",
+        "lifecycle_ci_dry_run_workflow_exclusion_drift",
+        "lifecycle_ci_dry_run_docs_marker_parity_drift",
+        "lifecycle_ci_dry_run_docs_remediation_marker_missing",
+    ] {
+        assert!(
+            DOC.contains(&format!("lifecycle_ci_dry_run_remediation.{reason_code}=")),
+            "missing ops remediation marker for reason code {reason_code}"
+        );
+    }
+    assert!(DOC.contains("Regression: #4082"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"

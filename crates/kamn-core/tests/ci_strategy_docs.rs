@@ -85,6 +85,9 @@ const REQUEST_RESPONSE_SCHEMA_COMPATIBILITY_REQUIRED_ROW_IDS_CSV: &str =
 const AUDIT_INTEGRITY_REASON_TAXONOMY_VERSION: &str =
     "kamn.release.gonogo-audit-integrity-convergence-reason-taxonomy.v1";
 const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_missing,gonogo_audit_integrity_invalid_json,gonogo_audit_integrity_schema_mismatch,gonogo_audit_integrity_status_not_ok,gonogo_audit_integrity_final_decision_not_go,gonogo_audit_integrity_policy_status_not_verified,gonogo_audit_integrity_reason_taxonomy_version_mismatch,gonogo_audit_integrity_reason_codes_csv_mismatch,gonogo_audit_integrity_freshness_window_exceeded";
+const LIFECYCLE_CI_DRY_RUN_REASON_TAXONOMY_VERSION: &str =
+    "kamn.ci.lifecycle-ci-dry-run-governance-reason-taxonomy.v1";
+const LIFECYCLE_CI_DRY_RUN_REASON_CODES_CSV: &str = "lifecycle_ci_dry_run_argument_invalid,lifecycle_ci_dry_run_threshold_contract_violation,lifecycle_ci_dry_run_report_contract_violation,lifecycle_ci_dry_run_lifecycle_marker_parity_drift,lifecycle_ci_dry_run_go_no_go_marker_parity_drift,lifecycle_ci_dry_run_runtime_budget_exceeded,lifecycle_ci_dry_run_fast_mode_selector_drift,lifecycle_ci_dry_run_workflow_exclusion_drift,lifecycle_ci_dry_run_docs_marker_parity_drift,lifecycle_ci_dry_run_docs_remediation_marker_missing";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -138,6 +141,10 @@ fn request_response_schema_compatibility_reason_codes() -> Vec<&'static str> {
 
 fn audit_integrity_reason_codes() -> Vec<&'static str> {
     AUDIT_INTEGRITY_REASON_CODES_CSV.split(',').collect()
+}
+
+fn lifecycle_ci_dry_run_reason_codes() -> Vec<&'static str> {
+    LIFECYCLE_CI_DRY_RUN_REASON_CODES_CSV.split(',').collect()
 }
 
 #[test]
@@ -1455,6 +1462,54 @@ fn doc_contains_audit_integrity_dry_run_governance_markers() {
         );
     }
     assert!(DOC.contains("Regression: #4059"));
+}
+
+#[test]
+fn doc_contains_lifecycle_ci_dry_run_governance_markers() {
+    assert!(DOC.contains("### Lifecycle Artifact CI Dry-Run Governance Contract"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/generate_lifecycle_artifact_integrity_evidence_bundle.sh --output-file /tmp/lifecycle-artifact-integrity-baseline.json --artifact-id lifecycle-artifact-baseline --lifecycle-stage retention --profile baseline --record-count 42 --ci-fast-gate PASS"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json"
+    ));
+    assert!(DOC.contains(
+        "python3 scripts/ci/check_lifecycle_ci_dry_run_governance.py --lifecycle-artifact-bundle-file /tmp/lifecycle-artifact-integrity-baseline.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json --threshold-file fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --workflow-file .github/workflows/ci-fast-gate.yml --ci-tools-file scripts/ci/test_ci_tools.sh --output-json /tmp/lifecycle-ci-dry-run-governance-report.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains(&format!(
+        "lifecycle_ci_dry_run_reason_taxonomy_version={LIFECYCLE_CI_DRY_RUN_REASON_TAXONOMY_VERSION}"
+    )));
+    assert!(DOC.contains(&format!(
+        "lifecycle_ci_dry_run_reason_codes_csv={LIFECYCLE_CI_DRY_RUN_REASON_CODES_CSV}"
+    )));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_threshold_fixture_path=fixtures/ci/lifecycle_ci_dry_run_governance_thresholds.env"
+    ));
+    assert!(DOC.contains("lifecycle_ci_dry_run_max_seconds=120"));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_fast_mode_required_entry=cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_fast_mode_forbidden_entry=bash \"$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh\" --mode run"
+    ));
+    assert!(DOC.contains(
+        "lifecycle_ci_dry_run_workflow_forbidden_entry=bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run"
+    ));
+    assert!(DOC.contains("lifecycle_ci_dry_run_remediation_map_version=v1"));
+    for reason_code in lifecycle_ci_dry_run_reason_codes() {
+        assert!(
+            DOC.contains(reason_code),
+            "missing lifecycle ci dry-run reason marker {reason_code}"
+        );
+        assert!(
+            DOC.contains(&format!("lifecycle_ci_dry_run_remediation.{reason_code}=")),
+            "missing lifecycle ci dry-run remediation marker {reason_code}"
+        );
+    }
+    assert!(DOC.contains("Regression: #4082"));
 }
 
 #[test]
