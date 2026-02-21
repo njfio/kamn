@@ -33,6 +33,11 @@ fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_post_publication_open_issue_count=0"));
     assert!(DOC.contains("r49_review_post_publication_open_milestone_count=0"));
     assert!(DOC.contains("r49_review_post_publication_ignored_test_inventory_count=12"));
+    assert!(
+        DOC.contains(
+            "Branch hygiene remains controlled at `52` remote heads (post-publication revalidation snapshot)."
+        )
+    );
 }
 
 #[test]

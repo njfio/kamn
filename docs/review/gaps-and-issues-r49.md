@@ -103,7 +103,7 @@ reason_codes=none
 ## Status Highlights
 
 - R47 top-priority structural concern (`daemon_tests.rs` monolith) remains resolved.
-- Branch hygiene remains controlled at `50` remote heads.
+- Branch hygiene remains controlled at `52` remote heads (post-publication revalidation snapshot).
 - R49 periodic ignored-test re-evaluation completed via `#5465` with baseline-aligned inventory.
 - R49 completed-milestone closure hygiene wave completed via `#5467` with closures verified for `#94-#97`.
 
