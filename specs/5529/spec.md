@@ -1,6 +1,6 @@
 # Issue #5529 Spec - Service API Scope-Policy Fixture Row-Count Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5529
 - Parent: #3812
 - Milestone: R50.30 Service API scope-policy fixture row-count metrics exposure
