@@ -461,7 +461,12 @@ fn spec_c03_performance_threshold_checker_contract() {
     let fail_text = output_text(&fail_output);
     assert_contains_all(
         &fail_text,
-        &["status=fail", "latency_p50_ms", "throughput_tps"],
+        &[
+            "status=fail",
+            "performance_ci_smoke_reason_codes_value=",
+            "performance_ci_smoke_latency_p50_threshold_exceeded",
+            "performance_ci_smoke_throughput_threshold_below_minimum",
+        ],
         "performance threshold fail markers",
     );
 
@@ -482,8 +487,8 @@ fn spec_c03_performance_threshold_checker_contract() {
     );
     assert_failure(&invalid_output, "performance threshold invalid-schema case");
     assert!(
-        output_text(&invalid_output).contains("missing required metric"),
-        "invalid-schema case must emit missing required metric marker"
+        output_text(&invalid_output).contains("performance_ci_smoke_report_contract_violation"),
+        "invalid-schema case must emit deterministic report-contract violation reason"
     );
 }
 
