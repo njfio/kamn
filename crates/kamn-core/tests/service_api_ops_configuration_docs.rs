@@ -21,6 +21,42 @@ fn service_api_ops_configuration_contains_signer_secret_zeroization_controls() {
 }
 
 #[test]
+fn service_api_ops_configuration_contains_dependency_license_metadata_governance_remediation_markers(
+) {
+    assert!(DOC.contains(
+        "## Dependency-License Metadata Governance CI/Local Boundary Contract (Issue #4035)"
+    ));
+    assert!(DOC.contains(
+        "metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,license_policy_file_not_found,license_policy_marker_mismatch,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required"
+    ));
+    assert!(DOC.contains("metadata_governance_remediation_map_version=v1"));
+    for reason_code in [
+        "expected_license_empty",
+        "no_crate_manifests_found",
+        "license_policy_file_not_found",
+        "license_policy_marker_mismatch",
+        "manifest_not_found",
+        "manifest_invalid_toml",
+        "package_section_missing",
+        "license_missing",
+        "license_mismatch",
+        "metadata_governance_local_heavy_opt_in_required",
+    ] {
+        assert!(
+            DOC.contains(&format!("metadata_governance_remediation.{reason_code}=")),
+            "missing ops dependency-license remediation marker for reason code {reason_code}"
+        );
+    }
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #4035"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_async_backpressure_failure_modes() {
     assert!(DOC.contains("## Async API Backpressure Failure Modes (Issue #4315)"));
     assert!(DOC.contains(

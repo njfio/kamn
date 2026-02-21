@@ -88,6 +88,7 @@ const AUDIT_INTEGRITY_REASON_CODES_CSV: &str = "gonogo_audit_integrity_file_miss
 const LIFECYCLE_CI_DRY_RUN_REASON_TAXONOMY_VERSION: &str =
     "kamn.ci.lifecycle-ci-dry-run-governance-reason-taxonomy.v1";
 const LIFECYCLE_CI_DRY_RUN_REASON_CODES_CSV: &str = "lifecycle_ci_dry_run_argument_invalid,lifecycle_ci_dry_run_threshold_contract_violation,lifecycle_ci_dry_run_report_contract_violation,lifecycle_ci_dry_run_lifecycle_marker_parity_drift,lifecycle_ci_dry_run_go_no_go_marker_parity_drift,lifecycle_ci_dry_run_runtime_budget_exceeded,lifecycle_ci_dry_run_fast_mode_selector_drift,lifecycle_ci_dry_run_workflow_exclusion_drift,lifecycle_ci_dry_run_docs_marker_parity_drift,lifecycle_ci_dry_run_docs_remediation_marker_missing";
+const DEPENDENCY_LICENSE_METADATA_GOVERNANCE_REASON_CODES_CSV: &str = "expected_license_empty,no_crate_manifests_found,license_policy_file_not_found,license_policy_marker_mismatch,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required";
 
 fn fairness_reason_codes() -> Vec<&'static str> {
     FAIRNESS_REASON_CODES_CSV.split(',').collect()
@@ -145,6 +146,12 @@ fn audit_integrity_reason_codes() -> Vec<&'static str> {
 
 fn lifecycle_ci_dry_run_reason_codes() -> Vec<&'static str> {
     LIFECYCLE_CI_DRY_RUN_REASON_CODES_CSV.split(',').collect()
+}
+
+fn dependency_license_metadata_governance_reason_codes() -> Vec<&'static str> {
+    DEPENDENCY_LICENSE_METADATA_GOVERNANCE_REASON_CODES_CSV
+        .split(',')
+        .collect()
 }
 
 #[test]
@@ -1312,9 +1319,9 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
     assert!(DOC.contains(
         "metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1"
     ));
-    assert!(DOC.contains(
-        "metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,license_policy_file_not_found,license_policy_marker_mismatch,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required"
-    ));
+    assert!(DOC.contains(&format!(
+        "metadata_governance_reason_codes_csv={DEPENDENCY_LICENSE_METADATA_GOVERNANCE_REASON_CODES_CSV}"
+    )));
     assert!(DOC.contains("metadata_governance_reason_codes_value=none|<csv>"));
     assert!(DOC.contains(
         "metadata_governance_reason_class=stable|metadata_mismatch|configuration|boundary|mixed"
@@ -1328,6 +1335,24 @@ fn doc_contains_dependency_license_metadata_governance_taxonomy_and_boundary_mar
     assert!(DOC.contains(
         "python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --license-policy-file LICENSE --lane-profile local-heavy --local-heavy-opt-in"
     ));
+}
+
+#[test]
+fn doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes() {
+    assert!(DOC.contains("metadata_governance_remediation_map_version=v1"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test ci_strategy_docs doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes -- --exact"
+    ));
+    for reason_code in dependency_license_metadata_governance_reason_codes() {
+        assert!(
+            DOC.contains(&format!("metadata_governance_remediation.{reason_code}=")),
+            "missing dependency-license remediation marker for {reason_code}"
+        );
+        assert!(
+            OPS_DOC.contains(&format!("metadata_governance_remediation.{reason_code}=")),
+            "ops docs missing dependency-license remediation marker for {reason_code}"
+        );
+    }
 }
 
 #[test]

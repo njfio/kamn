@@ -133,6 +133,45 @@ fn regression_workspace_license_policy_checker_rejects_missing_policy_file() {
 }
 
 #[test]
+fn regression_workspace_license_policy_checker_reports_deterministic_multi_reason_mismatch_markers()
+{
+    let root = repo_root();
+    let tmp = root.join("target/tmp/workspace-license-policy-regression");
+    let _ = fs::remove_dir_all(&tmp);
+    fs::create_dir_all(&tmp).expect("failed to create temporary fixture directory");
+
+    let mismatch_manifest = tmp.join("mismatch.Cargo.toml");
+    let baseline_manifest = fs::read_to_string(root.join("crates/kamn-core/Cargo.toml"))
+        .expect("failed to read baseline manifest");
+    let mismatch_manifest_text =
+        baseline_manifest.replacen("license = \"Apache-2.0\"", "license = \"MIT\"", 1);
+    assert_ne!(
+        baseline_manifest, mismatch_manifest_text,
+        "manifest fixture mutation must change content"
+    );
+    write_text(&mismatch_manifest, &mismatch_manifest_text);
+
+    let missing_policy_file = tmp.join("missing.LICENSE");
+    let output = run_checker(&[
+        "--expected-license",
+        "Apache-2.0",
+        "--manifest",
+        mismatch_manifest.to_string_lossy().as_ref(),
+        "--license-policy-file",
+        missing_policy_file.to_string_lossy().as_ref(),
+    ]);
+    assert_failure(
+        &output,
+        "workspace license checker with missing policy file + manifest mismatch",
+    );
+    let text = output_text(&output);
+    assert!(text.contains("license_policy_file_not_found"));
+    assert!(text.contains("license_mismatch"));
+    assert!(text.contains("reason_codes_csv=license_policy_file_not_found,license_mismatch"));
+    assert!(text.contains("reason_class=mixed"));
+}
+
+#[test]
 fn performance_workspace_license_policy_checker_stays_within_budget() {
     let started = Instant::now();
     let output = run_checker(&[

@@ -22,6 +22,41 @@ The migration contract is validated by:
 
 - `bash scripts/lib/test_json_write_helper_migration_contract.sh`
 
+## Dependency-License Metadata Governance CI/Local Boundary Contract (Issue #4035)
+
+Deterministic metadata-governance taxonomy markers:
+
+- `metadata_governance_reason_taxonomy_version=kamn.ci.dependency-license-metadata-governance-reason-taxonomy.v1`
+- `metadata_governance_reason_codes_csv=expected_license_empty,no_crate_manifests_found,license_policy_file_not_found,license_policy_marker_mismatch,manifest_not_found,manifest_invalid_toml,package_section_missing,license_missing,license_mismatch,metadata_governance_local_heavy_opt_in_required`
+- `metadata_governance_reason_codes_value=none|<csv>`
+- `metadata_governance_reason_class=stable|metadata_mismatch|configuration|boundary|mixed`
+
+Deterministic remediation markers:
+
+- `metadata_governance_remediation_map_version=v1`
+- `metadata_governance_remediation.expected_license_empty=provide a non-empty SPDX identifier via --expected-license`
+- `metadata_governance_remediation.no_crate_manifests_found=add crate Cargo.toml files under crates/* or pass explicit --manifest paths`
+- `metadata_governance_remediation.license_policy_file_not_found=restore root LICENSE path or pass a valid --license-policy-file path`
+- `metadata_governance_remediation.license_policy_marker_mismatch=realign root LICENSE policy markers to the expected SPDX policy text`
+- `metadata_governance_remediation.manifest_not_found=restore missing Cargo.toml manifest path or remove stale --manifest entries`
+- `metadata_governance_remediation.manifest_invalid_toml=repair malformed Cargo.toml syntax before rerunning checker`
+- `metadata_governance_remediation.package_section_missing=add [package] section to the Cargo.toml manifest`
+- `metadata_governance_remediation.license_missing=add package.license field with approved SPDX value`
+- `metadata_governance_remediation.license_mismatch=set package.license to the approved workspace SPDX value`
+- `metadata_governance_remediation.metadata_governance_local_heavy_opt_in_required=rerun local-heavy profile with --local-heavy-opt-in`
+
+Validation commands:
+
+- `python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --license-policy-file LICENSE --lane-profile ci-smoke`
+- `python3 scripts/ci/check_workspace_license_policy.py --workspace-root . --expected-license Apache-2.0 --license-policy-file LICENSE --lane-profile local-heavy --local-heavy-opt-in`
+- `bash scripts/ci/test_check_workspace_license_policy.sh`
+- `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_dependency_license_metadata_remediation_markers_cover_reason_codes -- --exact`
+- `cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_dependency_license_metadata_governance_remediation_markers -- --exact`
+
+Regression marker:
+
+- `Regression: #4035`
+
 ## Precedence
 
 `kamn-node` resolves settings in this order (low to high):
