@@ -31,6 +31,11 @@
       "artifact_id": "transport_fault_matrix",
       "expected_lane": "runtime.validate_block_reconciliation_partition_rejoin_live_contract_lane",
       "expected_success_marker": "block_reconciliation_partition_rejoin_policy_status=verified"
+    },
+    {
+      "artifact_id": "cross_store_replay_consistency",
+      "expected_lane": "runtime.validate_cross_store_replay_consistency_contract_lane",
+      "expected_success_marker": "cross_store_replay_consistency_policy_status=verified"
     }
   ]
 }
