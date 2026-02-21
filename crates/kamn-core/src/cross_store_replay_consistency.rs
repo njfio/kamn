@@ -20,6 +20,16 @@ pub enum CrossStoreReplayConsistencyStatus {
     Divergent,
 }
 
+impl CrossStoreReplayConsistencyStatus {
+    /// Returns deterministic policy marker for contract-lane reporting.
+    pub fn policy_status_marker(self) -> &'static str {
+        match self {
+            Self::Consistent => "verified",
+            Self::Divergent => "violated",
+        }
+    }
+}
+
 /// Deterministic divergence classes for replay consistency failures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CrossStoreReplayDivergenceClass {
@@ -212,6 +222,11 @@ impl CrossStoreReplayConsistencyReport {
     pub fn consistency_fingerprint(&self) -> &str {
         self.consistency_fingerprint.as_str()
     }
+
+    /// Returns deterministic policy status marker for contract-lane outputs.
+    pub fn policy_status_marker(&self) -> &'static str {
+        self.status.policy_status_marker()
+    }
 }
 
 /// Returns deterministic cross-store replay reason taxonomy marker.
@@ -386,9 +401,14 @@ fn render_opt<T: ToString>(value: Option<T>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        evaluate_cross_store_replay_consistency, ChannelStore, MessageLifecycleStore,
+        RuntimeSnapshot, TaskOperationEngine,
+    };
+
     use super::{
         cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
-        render_opt, CROSS_STORE_REPLAY_REASON_TAXONOMY_VERSION,
+        render_opt, CrossStoreReplayConsistencyStatus, CROSS_STORE_REPLAY_REASON_TAXONOMY_VERSION,
     };
 
     #[test]
@@ -408,5 +428,68 @@ mod tests {
     #[test]
     fn unit_cross_store_replay_render_opt_outputs_none_for_missing_values() {
         assert_eq!(render_opt::<u64>(None), "none");
+    }
+
+    #[test]
+    fn unit_cross_store_replay_status_policy_marker_is_verified_for_consistent() {
+        assert_eq!(
+            CrossStoreReplayConsistencyStatus::Consistent.policy_status_marker(),
+            "verified"
+        );
+    }
+
+    #[test]
+    fn unit_cross_store_replay_status_policy_marker_is_violated_for_divergent() {
+        assert_eq!(
+            CrossStoreReplayConsistencyStatus::Divergent.policy_status_marker(),
+            "violated"
+        );
+    }
+
+    #[test]
+    fn integration_cross_store_replay_report_policy_marker_is_violated_for_divergent_report() {
+        let report = evaluate_cross_store_replay_consistency(None, None, None, None);
+        assert_eq!(report.policy_status_marker(), "violated");
+    }
+
+    #[test]
+    fn integration_cross_store_replay_report_policy_marker_is_verified_for_consistent_report() {
+        let runtime_snapshot =
+            RuntimeSnapshot::with_cursor(6, "state-6", 6).expect("runtime snapshot should build");
+        let mut channel_store = ChannelStore::new();
+        channel_store
+            .create_direct(
+                "channel-alpha",
+                "kamn:did:agent:sender-a",
+                "kamn:did:agent:recipient-a",
+            )
+            .expect("channel snapshot setup should pass");
+        let mut message_store = MessageLifecycleStore::new();
+        message_store
+            .register(
+                "message-alpha",
+                "kamn:did:agent:sender-a",
+                vec!["kamn:did:agent:recipient-a".to_owned()],
+                "2026-02-20T00:00:00Z",
+                "2026-02-20T00:10:00Z",
+            )
+            .expect("message snapshot setup should pass");
+        let mut task_engine = TaskOperationEngine::new();
+        task_engine
+            .submit(
+                "task-alpha",
+                "kamn:did:agent:requester-a",
+                "replay consistency checker fixture task",
+            )
+            .expect("task snapshot setup should pass");
+
+        let report = evaluate_cross_store_replay_consistency(
+            Some(runtime_snapshot),
+            Some(channel_store.export_snapshot()),
+            Some(message_store.export_snapshot()),
+            Some(task_engine.export_snapshot()),
+        );
+
+        assert_eq!(report.policy_status_marker(), "verified");
     }
 }

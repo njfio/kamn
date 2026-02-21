@@ -1,8 +1,8 @@
 use kamn_core::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
     evaluate_cross_store_replay_consistency, ChannelSnapshot, ChannelStore,
-    CrossStoreReplayConsistencyStatus, MessageLifecycleSnapshot, MessageLifecycleStore,
-    RuntimeSnapshot, TaskOperationEngine, TaskOperationSnapshot,
+    MessageLifecycleSnapshot, MessageLifecycleStore, RuntimeSnapshot, TaskOperationEngine,
+    TaskOperationSnapshot,
 };
 
 fn build_channel_snapshot() -> Result<ChannelSnapshot, String> {
@@ -57,9 +57,24 @@ fn run() -> Result<(), String> {
         Some(task_snapshot),
     );
 
-    if report.status() != CrossStoreReplayConsistencyStatus::Consistent {
+    if report.policy_status_marker() != "verified" {
         return Err(format!(
-            "cross-store replay consistency failed unexpectedly: {}",
+            "cross-store replay consistency policy marker drifted: status={:?} marker={}",
+            report.status(),
+            report.policy_status_marker()
+        ));
+    }
+    if report.status().policy_status_marker() != report.policy_status_marker() {
+        return Err(format!(
+            "cross-store replay consistency policy marker mismatch: status={:?} marker={}",
+            report.status(),
+            report.policy_status_marker()
+        ));
+    }
+    if report.status().policy_status_marker() == "violated" {
+        return Err(format!(
+            "cross-store replay consistency failed unexpectedly: marker={} reason={}",
+            report.policy_status_marker(),
             report.reason_code()
         ));
     }
@@ -70,7 +85,10 @@ fn run() -> Result<(), String> {
         ));
     }
 
-    println!("cross_store_replay_consistency_policy_status=verified");
+    println!(
+        "cross_store_replay_consistency_policy_status={}",
+        report.policy_status_marker()
+    );
     println!("cross_store_replay_consistency_contract_lane_status=verified");
     println!(
         "cross_store_replay_reason_taxonomy_version={}",
