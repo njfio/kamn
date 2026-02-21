@@ -1,6 +1,6 @@
 # Issue #5477 Spec - Selector Row-Format and Row-ID Validation Hardening
 
-- Status: Draft
+- Status: Implemented
 - Issue: #5477
 - Parent: #3812
 - Milestone: R50.4 Live-postgres selector row-format contract hardening
