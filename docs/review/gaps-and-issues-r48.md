@@ -27,7 +27,15 @@ Stable across R47 and R48. Zero reproductions of the flake.
 
 ### 1.2 Ignored Tests (12 total, audited)
 
-Stable since R39 (9 consecutive reviews). Formally audited with explicit dispositions (#5329). Next re-evaluation due at R44+5 = R49.
+Stable since R39 (9 consecutive reviews). Formally audited with explicit dispositions (#5329).
+
+R49 periodic re-evaluation completed via #5465 with no inventory drift (`12` baseline-aligned entries, `reason_codes=none`).
+
+Deterministic carry-forward markers:
+- `ignored_test_periodic_review_cycle=R49`
+- `ignored_test_periodic_review_status=completed`
+- `ignored_test_periodic_review_issue=5465`
+- `ignored_test_periodic_review_next_due_cycle=R54`
 
 ### 1.3 Doc-Contract Test Files (70, +2 from R47)
 
