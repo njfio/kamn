@@ -1,6 +1,6 @@
 # Issue #5473 Spec - Live-Postgres Selector Row Runtime Telemetry Marker
 
-- Status: Draft
+- Status: Implemented
 - Issue: #5473
 - Parent: #3812
 - Milestone: R50.2 Live-postgres selector row telemetry integration
