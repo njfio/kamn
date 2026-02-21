@@ -66,3 +66,33 @@ Verified closed in this wave:
 | 43 | R27.9 Throughput capacity and performance regression hardening | 0 | 17 | closed |
 | 45 | R27.11 Dependency, license, and supply-chain governance hardening | 0 | 16 | closed |
 | 48 | R27.14 Data lifecycle, retention, and privacy control hardening | 0 | 15 | closed |
+
+## Residual Addendum (Issue #5455)
+Execution timestamp (UTC): `2026-02-21T10:44:16Z`
+
+Context: milestone `44` remained open after the first wave due to transient counter state. A follow-up closure was executed with the same zero-open rule.
+
+Corrective sequencing note:
+- Milestone `44` initially showed `open_issues=1` because follow-up issue `#5455` itself was assigned to milestone `44`.
+- The milestone was reopened, `#5455` milestone assignment was removed, and closure was re-run only after `open_issues=0` was confirmed.
+
+Pre-close verification for residual step:
+
+| Number | Title | open_issues | closed_issues | state |
+|---|---|---:|---:|---|
+| 44 | R27.10 Durability, crash-recovery, and state-consistency hardening | 0 | 17 | open |
+
+Residual closure command:
+
+```bash
+gh api -X PATCH repos/njfio/kamn/milestones/44 -f state=closed
+```
+
+Post-close verification for residual step:
+
+| Number | Title | open_issues | closed_issues | state |
+|---|---|---:|---:|---|
+| 44 | R27.10 Durability, crash-recovery, and state-consistency hardening | 0 | 17 | closed |
+
+Final open milestone inventory:
+- none

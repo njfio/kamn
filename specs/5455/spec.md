@@ -1,6 +1,6 @@
 # Issue #5455 Spec - Close Residual Empty Milestone #44
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5455
 - Parent: #3812
 - Milestone: R27.10 Durability, crash-recovery, and state-consistency hardening
