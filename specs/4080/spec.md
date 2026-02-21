@@ -1,6 +1,6 @@
 # Issue #4080 Spec — Redaction Leak-Detection Policy Checker and Taxonomy/Docs Drift Guards
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #4080
 - Parent: #4073
 - Milestone: R27.14 Data lifecycle, retention, and privacy control hardening
