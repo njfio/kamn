@@ -26,6 +26,10 @@ const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_DUPLICATE_ROWS_REASON_CODE: &str =
     "live_postgres_selector_bundle_duplicate_rows";
 const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_PREFIX_VIOLATION_REASON_CODE: &str =
     "live_postgres_selector_bundle_prefix_violation";
+const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_FORMAT_VIOLATION_REASON_CODE: &str =
+    "live_postgres_selector_bundle_row_format_violation";
+const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_ID_VIOLATION_REASON_CODE: &str =
+    "live_postgres_selector_bundle_row_id_violation";
 const DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE: &str =
     "live_postgres_selector_bundle_row_count_mismatch";
 const DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS: [(&str, &str); 6] = [
@@ -335,6 +339,13 @@ fn daemon_live_postgres_multi_host_execution_bundle_row_count() -> usize {
     DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS.len()
 }
 
+fn daemon_live_postgres_multi_host_execution_bundle_row_ids() -> BTreeSet<&'static str> {
+    DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_ROWS
+        .iter()
+        .map(|(row_id, _)| *row_id)
+        .collect()
+}
+
 fn validate_live_postgres_selector_bundle(
     rows: &[String],
     expected_row_count: usize,
@@ -343,12 +354,23 @@ fn validate_live_postgres_selector_bundle(
         return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_COUNT_MISMATCH_REASON_CODE);
     }
 
+    let canonical_row_ids = daemon_live_postgres_multi_host_execution_bundle_row_ids();
     let mut dedupe = BTreeSet::new();
     for row in rows {
         if !dedupe.insert(row.as_str()) {
             return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_DUPLICATE_ROWS_REASON_CODE);
         }
-        if !row.contains(DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX) {
+
+        let Some((row_id, selector)) = row.split_once("->") else {
+            return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_FORMAT_VIOLATION_REASON_CODE);
+        };
+        if row_id.is_empty() || selector.is_empty() || selector.contains("->") {
+            return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_FORMAT_VIOLATION_REASON_CODE);
+        }
+        if !canonical_row_ids.contains(row_id) {
+            return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_ROW_ID_VIOLATION_REASON_CODE);
+        }
+        if !selector.starts_with(DAEMON_LIVE_POSTGRES_MULTI_HOST_EXECUTION_BUNDLE_SELECTOR_PREFIX) {
             return Err(DAEMON_LIVE_POSTGRES_SELECTOR_BUNDLE_PREFIX_VIOLATION_REASON_CODE);
         }
     }
