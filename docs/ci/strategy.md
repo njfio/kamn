@@ -1777,6 +1777,40 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Regression coverage:
   - `Regression: #4018`
 
+## Local-Heavy Redaction Validation Policy Checker Contract
+- Entry commands:
+  - `bash scripts/runtime/run_local_heavy_redaction_validation_lane.sh --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/local-heavy-redaction-validation-baseline.json`
+  - `bash scripts/runtime/check_local_heavy_redaction_validation_policy.sh --report-file /tmp/local-heavy-redaction-validation-baseline.json --expected-final-decision GO --ci-fast-gate PASS --strategy-doc docs/ci/strategy.md --ops-doc docs/ops/configuration.md --output-json /tmp/local-heavy-redaction-validation-policy-report.json`
+  - `bash scripts/runtime/test_check_local_heavy_redaction_validation_policy.sh`
+  - `cargo test -p kamn-core --test local_heavy_redaction_validation_policy_contract -- --nocapture`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_local_heavy_redaction_validation_policy_checker_contract -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_local_heavy_redaction_policy_checker_docs_parity_matches_runner_and_ops_markers -- --exact`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_enforces_local_heavy_redaction_policy_checker_reason_codes_have_deterministic_marker_coverage -- --exact`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - checker reads deterministic lane JSON plus docs marker blocks only.
+  - no local-heavy run-mode execution is required for policy checker pass/fail verification.
+  - checker runtime remains bounded and low-cost for fast-gate use.
+- Deterministic checker markers:
+  - `local_heavy_redaction_validation_policy_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-policy-reason-taxonomy.v1`
+  - `local_heavy_redaction_validation_policy_reason_codes_csv=redaction_policy_required_field_missing,redaction_policy_marker_mismatch,redaction_policy_reason_taxonomy_mismatch,redaction_policy_profile_contract_mismatch,redaction_policy_docs_marker_parity_mismatch,ci_fast_gate_failed,redaction_policy_expected_decision_mismatch,redaction_policy_violation`
+  - `local_heavy_redaction_validation_policy_strategy_doc_path=docs/ci/strategy.md`
+  - `local_heavy_redaction_validation_policy_ops_doc_path=docs/ops/configuration.md`
+  - `local_heavy_redaction_validation_policy_runner_report_schema_version=kamn.runtime.local-heavy-redaction-validation-lane-report.v1`
+  - `local_heavy_redaction_validation_policy_runner_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-reason-taxonomy.v1`
+  - `local_heavy_redaction_validation_policy_runner_reason_codes_csv=local_heavy_redaction_sensitive_pattern_detected,local_heavy_redaction_runtime_budget_exceeded`
+- Fail-closed drift reasons:
+  - `redaction_policy_marker_mismatch`
+  - `redaction_policy_reason_taxonomy_mismatch`
+  - `redaction_policy_profile_contract_mismatch`
+  - `redaction_policy_docs_marker_parity_mismatch`
+  - `ci_fast_gate_failed`
+  - `redaction_policy_expected_decision_mismatch`
+- Regression coverage:
+  - `Regression: #4080`
+
 ## Runtime Service API Graceful-Shutdown Drain Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh --mode dry-run --output-json /tmp/service-api-graceful-shutdown-drain-live-summary.json`

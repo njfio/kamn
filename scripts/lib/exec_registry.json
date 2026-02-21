@@ -1304,6 +1304,12 @@
       ],
       "passthrough": true
     },
+    "scripts/runtime/check_local_heavy_redaction_validation_policy.sh": {
+      "interpreter": "python3",
+      "target": "scripts/runtime/local_heavy_redaction_validation_policy_contract.py",
+      "args_prefix": [],
+      "passthrough": true
+    },
     "scripts/runtime/check_local_metrics_scrape_live_policy.sh": {
       "interpreter": "python3",
       "target": "scripts/runtime/local_metrics_scrape_live_contract.py",
