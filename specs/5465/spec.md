@@ -1,6 +1,6 @@
 # Issue #5465 Spec - R49 Ignored-Test Periodic Re-Evaluation
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5465
 - Parent: #5449
 - Milestone: R49.1 Ignored-test periodic re-evaluation
