@@ -1,6 +1,7 @@
 mod auth;
 mod middleware_impl;
 mod payload;
+mod scope_fixture;
 mod server;
 mod websocket;
 
@@ -190,6 +191,8 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_fixture_deny_row_count: usize,
     pub(crate) scope_policy_fixture_unique_route_count: usize,
     pub(crate) scope_policy_fixture_unique_scope_count: usize,
+    pub(crate) scope_policy_fixture_unique_method_count: usize,
+    pub(crate) scope_policy_fixture_unique_expected_outcome_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
     pub(crate) route_authz_matrix_schema_version: String,
@@ -431,85 +434,6 @@ pub(crate) struct ServiceApiLifecycleRejectionProjection {
     pub(crate) outcome: &'static str,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ServiceApiScopePolicyFixtureProjection {
-    reason_taxonomy_version: String,
-    reason_code_count: usize,
-    row_count: usize,
-    allow_row_count: usize,
-    deny_row_count: usize,
-    unique_route_count: usize,
-    unique_scope_count: usize,
-}
-
-fn parse_service_api_scope_policy_fixture_counts(
-    fixture: &str,
-) -> ServiceApiScopePolicyFixtureProjection {
-    let mut projection = ServiceApiScopePolicyFixtureProjection {
-        reason_taxonomy_version: String::new(),
-        reason_code_count: 0,
-        row_count: 0,
-        allow_row_count: 0,
-        deny_row_count: 0,
-        unique_route_count: 0,
-        unique_scope_count: 0,
-    };
-    let mut reason_codes_csv = String::new();
-    let mut unique_routes = BTreeSet::new();
-    let mut unique_scopes = BTreeSet::new();
-    for line in fixture.lines().map(str::trim) {
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        if let Some((key, value)) = line.split_once('=') {
-            let key = key.trim();
-            let value = value.trim();
-            if key == "scope_policy_reason_taxonomy_version" {
-                projection.reason_taxonomy_version = value.to_owned();
-            } else if key == "scope_policy_reason_codes_csv" {
-                reason_codes_csv = value.to_owned();
-            }
-            continue;
-        }
-        let Some(payload) = line.strip_prefix("row|") else {
-            continue;
-        };
-        let mut parts = payload.split('|');
-        let method = parts.next().unwrap_or_default().trim();
-        let path = parts.next().unwrap_or_default().trim();
-        let scope = parts.next().unwrap_or_default().trim();
-        let expected = parts.next().unwrap_or_default().trim();
-        if method.is_empty() || path.is_empty() || scope.is_empty() || expected.is_empty() {
-            continue;
-        }
-        projection.row_count += 1;
-        if expected == "allow" {
-            projection.allow_row_count += 1;
-        } else if expected == "deny" {
-            projection.deny_row_count += 1;
-        }
-        unique_routes.insert((method.to_owned(), path.to_owned()));
-        unique_scopes.insert(scope.to_owned());
-    }
-    projection.reason_code_count = reason_codes_csv
-        .split(',')
-        .filter(|value| !value.trim().is_empty())
-        .count();
-    if projection.reason_taxonomy_version.is_empty() {
-        projection.reason_taxonomy_version =
-            SERVICE_API_SCOPE_POLICY_REASON_TAXONOMY_VERSION.to_owned();
-    }
-    if projection.reason_code_count == 0 {
-        projection.reason_code_count = SERVICE_API_SCOPE_POLICY_REASON_CODES_CSV
-            .split(',')
-            .filter(|value| !value.is_empty())
-            .count();
-    }
-    projection.unique_route_count = unique_routes.len();
-    projection.unique_scope_count = unique_scopes.len();
-    projection
-}
-
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
     let observability = resolve_service_api_observability(report);
     let cross_store_replay_reason_taxonomy_version =
@@ -530,7 +454,9 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         .filter(|value| !value.is_empty())
         .count();
     let scope_policy_fixture_projection =
-        parse_service_api_scope_policy_fixture_counts(SERVICE_API_SCOPE_POLICY_FIXTURE);
+        scope_fixture::parse_service_api_scope_policy_fixture_projection(
+            SERVICE_API_SCOPE_POLICY_FIXTURE,
+        );
     let lifecycle_rejection_reason_taxonomy_version =
         SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION.to_owned();
     let lifecycle_rejection_reason_code_count = SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV
@@ -564,6 +490,10 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
         scope_policy_fixture_deny_row_count: scope_policy_fixture_projection.deny_row_count,
         scope_policy_fixture_unique_route_count: scope_policy_fixture_projection.unique_route_count,
         scope_policy_fixture_unique_scope_count: scope_policy_fixture_projection.unique_scope_count,
+        scope_policy_fixture_unique_method_count: scope_policy_fixture_projection
+            .unique_method_count,
+        scope_policy_fixture_unique_expected_outcome_count: scope_policy_fixture_projection
+            .unique_expected_outcome_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
         route_authz_matrix_schema_version,
