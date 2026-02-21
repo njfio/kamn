@@ -1,6 +1,6 @@
 # Issue #5471 Spec - Live-Postgres Runtime Bundle Selector Integration
 
-- Status: Draft
+- Status: Implemented
 - Issue: #5471
 - Parent: #3812
 - Milestone: R50.1 Live-postgres runtime bundle integration
