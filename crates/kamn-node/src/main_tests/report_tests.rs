@@ -50,6 +50,7 @@ fn functional_json_render_is_deterministic() {
         daemon_live_postgres_multi_host_execution_bundle_schema_version: None,
         daemon_live_postgres_multi_host_execution_bundle_selector_prefix: None,
         daemon_live_postgres_multi_host_execution_bundle_row_count: None,
+        daemon_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: None,
         kolme_live_provider_client_contract: None,
         kolme_live_base_url: None,
         kolme_live_provider_hint: None,

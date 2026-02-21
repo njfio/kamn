@@ -431,6 +431,7 @@ struct DaemonExecution {
     live_postgres_multi_host_execution_bundle_schema_version: String,
     live_postgres_multi_host_execution_bundle_selector_prefix: String,
     live_postgres_multi_host_execution_bundle_row_count: usize,
+    live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -526,6 +527,7 @@ struct NodeBootstrapReport {
     daemon_live_postgres_multi_host_execution_bundle_schema_version: Option<String>,
     daemon_live_postgres_multi_host_execution_bundle_selector_prefix: Option<String>,
     daemon_live_postgres_multi_host_execution_bundle_row_count: Option<usize>,
+    daemon_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint: Option<String>,
     kolme_live_provider_client_contract: Option<String>,
     kolme_live_base_url: Option<String>,
     kolme_live_provider_hint: Option<String>,
