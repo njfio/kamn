@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,38 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE_FILE = REPO_ROOT / "fixtures/ci/performance_hot_path_fixture_matrix.json"
 DEFAULT_PROFILE_FILE = REPO_ROOT / ".ci/performance-targets.env"
+DEFAULT_CI_TOOLS_FILE = REPO_ROOT / "scripts/ci/test_ci_tools.sh"
+DEFAULT_WORKFLOW_FILE = REPO_ROOT / ".github/workflows/ci-fast-gate.yml"
 FIXTURE_SCHEMA_VERSION = "kamn.ci.performance-hot-path-matrix.v1"
+REPORT_SCHEMA_VERSION = "kamn.ci.performance-ci-smoke-governance-report.v1"
+REASON_TAXONOMY_VERSION = "kamn.ci.performance-ci-smoke-threshold-reason-taxonomy.v1"
+REASON_CODES_CSV = (
+    "performance_ci_smoke_argument_invalid,"
+    "performance_ci_smoke_threshold_contract_violation,"
+    "performance_ci_smoke_report_contract_violation,"
+    "performance_ci_smoke_latency_p50_threshold_exceeded,"
+    "performance_ci_smoke_latency_p99_threshold_exceeded,"
+    "performance_ci_smoke_throughput_threshold_below_minimum,"
+    "performance_ci_smoke_availability_threshold_below_minimum,"
+    "performance_ci_smoke_selector_missing_checker_entry,"
+    "performance_ci_smoke_selector_forbidden_entry_present,"
+    "performance_ci_smoke_workflow_missing_checker_step,"
+    "performance_ci_smoke_workflow_forbidden_entry_present,"
+    "performance_ci_smoke_runtime_budget_exceeded"
+)
+REASON_CODES_ORDER = tuple(REASON_CODES_CSV.split(","))
+DEFAULT_MAX_SECONDS = 120
+CI_TOOLS_REQUIRED_ENTRY = (
+    'cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture'
+)
+CI_TOOLS_FORBIDDEN_ENTRY = (
+    'bash "$ROOT_DIR/scripts/ci/check_performance_thresholds.sh" --lane deep'
+)
+WORKFLOW_REQUIRED_ENTRY = (
+    "bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json "
+    "performance-smoke-report.json --profile-file .ci/performance-targets.env"
+)
+WORKFLOW_FORBIDDEN_ENTRY = "check_performance_thresholds.sh --lane deep"
 
 
 class ContractError(RuntimeError):
@@ -56,14 +89,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     check = subparsers.add_parser(
         "check",
         help=(
-            "Check report against profile thresholds. "
+            "Check report against profile thresholds and selector/workflow contracts. "
             "Usage: check --report-json <path> [--profile-file <path>] "
-            "[--lane <smoke|deep>]"
+            "[--lane <smoke|deep>] [--ci-tools-file <path>] [--workflow-file <path>] "
+            "[--max-seconds <int>]"
         ),
     )
     check.add_argument("--report-json", required=True)
     check.add_argument("--profile-file", default=str(DEFAULT_PROFILE_FILE))
     check.add_argument("--lane", default="smoke")
+    check.add_argument("--ci-tools-file", default=str(DEFAULT_CI_TOOLS_FILE))
+    check.add_argument("--workflow-file", default=str(DEFAULT_WORKFLOW_FILE))
+    check.add_argument("--max-seconds", default=str(DEFAULT_MAX_SECONDS))
 
     return parser.parse_args(argv)
 
@@ -227,31 +264,89 @@ def parse_env_file(path: Path) -> dict[str, str]:
     return values
 
 
-def extract_metric(report: dict[str, Any], key: str) -> float:
-    value = report.get(key)
-    if not is_number(value):
-        fail(f"missing required metric: {key}")
-    return float(value)
+def try_parse_positive_int(raw_value: str) -> int | None:
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
 
 
-def extract_string_marker(report: dict[str, Any], key: str) -> str:
+def extract_fast_mode_block(text: str) -> str:
+    match = re.search(
+        r'if \[ "\$\{KAMN_CI_TOOLS_FAST_MODE:-false\}" = "true" \]; then(?P<body>.*?)\n\s*echo "Fast-mode CI tool regression tests passed\."\n\s*exit 0\nfi',
+        text,
+        flags=re.DOTALL,
+    )
+    return "" if not match else match.group("body")
+
+
+def normalize_reason_codes(reason_codes: list[str]) -> list[str]:
+    observed = set(reason_codes)
+    return [code for code in REASON_CODES_ORDER if code in observed]
+
+
+def reason_codes_value(reason_codes: list[str]) -> str:
+    return "none" if not reason_codes else ",".join(reason_codes)
+
+
+def add_reason(reason_codes: list[str], reason_code: str) -> None:
+    if reason_code not in reason_codes:
+        reason_codes.append(reason_code)
+
+
+def is_valid_report_metric(report: dict[str, Any], key: str) -> bool:
     value = report.get(key)
-    if not isinstance(value, str) or not value:
-        fail(f"missing required baseline marker: {key}")
-    return value
+    return is_number(value)
+
+
+def has_non_empty_string_marker(report: dict[str, Any], key: str) -> bool:
+    value = report.get(key)
+    return isinstance(value, str) and bool(value.strip())
 
 
 def check_report(args: argparse.Namespace) -> int:
+    started = time.monotonic()
     report_path = Path(args.report_json)
     profile_path = Path(args.profile_file)
+    ci_tools_path = Path(args.ci_tools_file)
+    workflow_path = Path(args.workflow_file)
     lane = args.lane
 
-    if not report_path.is_file():
-        fail(f"report file not found: {report_path}")
-    if not profile_path.is_file():
-        fail(f"profile file not found: {profile_path}")
+    threshold_status = "verified"
+    report_status = "verified"
+    selector_status = "verified"
+    workflow_status = "verified"
+    raw_reason_codes: list[str] = []
 
-    profile_values = parse_env_file(profile_path)
+    max_seconds = try_parse_positive_int(args.max_seconds)
+    if max_seconds is None:
+        max_seconds = DEFAULT_MAX_SECONDS
+        add_reason(raw_reason_codes, "performance_ci_smoke_argument_invalid")
+
+    if not report_path.is_file():
+        add_reason(raw_reason_codes, "performance_ci_smoke_argument_invalid")
+        report_status = "violation"
+    if not profile_path.is_file():
+        add_reason(raw_reason_codes, "performance_ci_smoke_argument_invalid")
+        threshold_status = "violation"
+    if not ci_tools_path.is_file():
+        add_reason(raw_reason_codes, "performance_ci_smoke_argument_invalid")
+        selector_status = "violation"
+    if not workflow_path.is_file():
+        add_reason(raw_reason_codes, "performance_ci_smoke_argument_invalid")
+        workflow_status = "violation"
+
+    profile_values: dict[str, str] = {}
+    if profile_path.is_file():
+        try:
+            profile_values = parse_env_file(profile_path)
+        except Exception:
+            add_reason(raw_reason_codes, "performance_ci_smoke_threshold_contract_violation")
+            threshold_status = "violation"
+
     if lane == "smoke":
         threshold_keys = {
             "max_p50": "PERF_SMOKE_MAX_LATENCY_P50_MS",
@@ -267,80 +362,221 @@ def check_report(args: argparse.Namespace) -> int:
             "min_availability": "PERF_DEEP_MIN_AVAILABILITY_PCT",
         }
     else:
-        fail(f"Unsupported lane: {lane}")
+        threshold_keys = {}
+        add_reason(raw_reason_codes, "performance_ci_smoke_threshold_contract_violation")
+        threshold_status = "violation"
 
-    raw_thresholds: dict[str, str] = {}
     thresholds: dict[str, float] = {}
     for alias, key in threshold_keys.items():
         raw_value = profile_values.get(key)
         if raw_value is None:
-            fail(f"missing profile threshold: {key}")
+            add_reason(raw_reason_codes, "performance_ci_smoke_threshold_contract_violation")
+            threshold_status = "violation"
+            continue
         try:
             thresholds[alias] = float(raw_value)
         except ValueError:
-            fail(f"invalid numeric threshold: {key}")
-        raw_thresholds[alias] = raw_value
+            add_reason(raw_reason_codes, "performance_ci_smoke_threshold_contract_violation")
+            threshold_status = "violation"
 
-    report = load_json(report_path, parse_error_prefix="failed to parse report JSON")
-    if not isinstance(report, dict):
-        fail("report JSON must be an object")
+    report: dict[str, Any] | None = None
+    if report_path.is_file():
+        try:
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("report JSON must be an object")
+            report = payload
+        except Exception:
+            add_reason(raw_reason_codes, "performance_ci_smoke_report_contract_violation")
+            report_status = "violation"
 
-    latency_p50 = extract_metric(report, "latency_p50_ms")
-    latency_p99 = extract_metric(report, "latency_p99_ms")
-    throughput = extract_metric(report, "throughput_tps")
-    availability = extract_metric(report, "availability_pct")
-    baseline_version = extract_string_marker(report, "baseline_provenance_artifact_version")
-    baseline_commit = extract_string_marker(report, "baseline_provenance_source_commit")
-    baseline_run_id = extract_string_marker(report, "baseline_provenance_source_run_id")
-    baseline_generated = extract_string_marker(report, "baseline_provenance_generated_at_utc")
-    baseline_generator = extract_string_marker(report, "baseline_provenance_generator")
-    drift_seed_id = extract_string_marker(report, "drift_threshold_seed_id")
-    drift_seed_max_p50 = extract_metric(report, "drift_threshold_seed_max_latency_p50_ms")
-    drift_seed_max_p99 = extract_metric(report, "drift_threshold_seed_max_latency_p99_ms")
-    drift_seed_min_throughput = extract_metric(report, "drift_threshold_seed_min_throughput_tps")
-    drift_seed_min_availability = extract_metric(
-        report,
-        "drift_threshold_seed_min_availability_pct",
-    )
+    latency_p50 = 0.0
+    latency_p99 = 0.0
+    throughput = 0.0
+    availability = 0.0
+    baseline_version = ""
+    baseline_commit = ""
+    baseline_run_id = ""
+    baseline_generated = ""
+    baseline_generator = ""
+    drift_seed_id = ""
+    metrics_ready = False
 
-    failures: list[str] = []
-    if not (latency_p50 < thresholds["max_p50"]):
-        failures.append(f"latency_p50_ms>={raw_thresholds['max_p50']}")
-    if not (latency_p99 < thresholds["max_p99"]):
-        failures.append(f"latency_p99_ms>={raw_thresholds['max_p99']}")
-    if not (throughput >= thresholds["min_throughput"]):
-        failures.append(f"throughput_tps<{raw_thresholds['min_throughput']}")
-    if not (availability >= thresholds["min_availability"]):
-        failures.append(f"availability_pct<{raw_thresholds['min_availability']}")
-    if not (0 < drift_seed_max_p50):
-        failures.append("drift_threshold_seed_max_latency_p50_ms<=0")
-    if not (0 < drift_seed_max_p99):
-        failures.append("drift_threshold_seed_max_latency_p99_ms<=0")
-    if not (0 < drift_seed_min_throughput):
-        failures.append("drift_threshold_seed_min_throughput_tps<=0")
-    if not (drift_seed_min_availability >= 0):
-        failures.append("drift_threshold_seed_min_availability_pct<0")
-    if not (drift_seed_min_availability < 101):
-        failures.append("drift_threshold_seed_min_availability_pct>100")
+    if report is not None:
+        required_metric_fields = (
+            "latency_p50_ms",
+            "latency_p99_ms",
+            "throughput_tps",
+            "availability_pct",
+            "drift_threshold_seed_max_latency_p50_ms",
+            "drift_threshold_seed_max_latency_p99_ms",
+            "drift_threshold_seed_min_throughput_tps",
+            "drift_threshold_seed_min_availability_pct",
+        )
+        required_string_fields = (
+            "baseline_provenance_artifact_version",
+            "baseline_provenance_source_commit",
+            "baseline_provenance_source_run_id",
+            "baseline_provenance_generated_at_utc",
+            "baseline_provenance_generator",
+            "drift_threshold_seed_id",
+        )
 
-    if failures:
-        print(f"status=fail; lane={lane}; failures={','.join(failures)}")
-        return 1
+        metrics_ok = all(is_valid_report_metric(report, field) for field in required_metric_fields)
+        strings_ok = all(
+            has_non_empty_string_marker(report, field) for field in required_string_fields
+        )
+        if not metrics_ok or not strings_ok:
+            add_reason(raw_reason_codes, "performance_ci_smoke_report_contract_violation")
+            report_status = "violation"
+        else:
+            latency_p50 = float(report["latency_p50_ms"])
+            latency_p99 = float(report["latency_p99_ms"])
+            throughput = float(report["throughput_tps"])
+            availability = float(report["availability_pct"])
+            baseline_version = str(report["baseline_provenance_artifact_version"])
+            baseline_commit = str(report["baseline_provenance_source_commit"])
+            baseline_run_id = str(report["baseline_provenance_source_run_id"])
+            baseline_generated = str(report["baseline_provenance_generated_at_utc"])
+            baseline_generator = str(report["baseline_provenance_generator"])
+            drift_seed_id = str(report["drift_threshold_seed_id"])
 
-    print(
-        f"status=pass; lane={lane}; "
-        f"latency_p50_ms={format_number(latency_p50)}; "
-        f"latency_p99_ms={format_number(latency_p99)}; "
-        f"throughput_tps={format_number(throughput)}; "
-        f"availability_pct={format_number(availability)}; "
-        f"baseline_version={baseline_version}; "
-        f"baseline_commit={baseline_commit}; "
-        f"baseline_run_id={baseline_run_id}; "
-        f"baseline_generated_at_utc={baseline_generated}; "
-        f"baseline_generator={baseline_generator}; "
-        f"drift_threshold_seed_id={drift_seed_id}"
-    )
-    return 0
+            drift_seed_max_p50 = float(report["drift_threshold_seed_max_latency_p50_ms"])
+            drift_seed_max_p99 = float(report["drift_threshold_seed_max_latency_p99_ms"])
+            drift_seed_min_throughput = float(report["drift_threshold_seed_min_throughput_tps"])
+            drift_seed_min_availability = float(report["drift_threshold_seed_min_availability_pct"])
+
+            if drift_seed_max_p50 <= 0 or drift_seed_max_p99 <= 0:
+                add_reason(raw_reason_codes, "performance_ci_smoke_report_contract_violation")
+                report_status = "violation"
+            if drift_seed_min_throughput <= 0:
+                add_reason(raw_reason_codes, "performance_ci_smoke_report_contract_violation")
+                report_status = "violation"
+            if drift_seed_min_availability < 0 or drift_seed_min_availability > 100:
+                add_reason(raw_reason_codes, "performance_ci_smoke_report_contract_violation")
+                report_status = "violation"
+
+            metrics_ready = True
+
+    if metrics_ready and {"max_p50", "max_p99", "min_throughput", "min_availability"} <= set(
+        thresholds
+    ):
+        if not (latency_p50 < thresholds["max_p50"]):
+            add_reason(raw_reason_codes, "performance_ci_smoke_latency_p50_threshold_exceeded")
+        if not (latency_p99 < thresholds["max_p99"]):
+            add_reason(raw_reason_codes, "performance_ci_smoke_latency_p99_threshold_exceeded")
+        if not (throughput >= thresholds["min_throughput"]):
+            add_reason(raw_reason_codes, "performance_ci_smoke_throughput_threshold_below_minimum")
+        if not (availability >= thresholds["min_availability"]):
+            add_reason(
+                raw_reason_codes,
+                "performance_ci_smoke_availability_threshold_below_minimum",
+            )
+
+    if ci_tools_path.is_file():
+        try:
+            ci_tools_text = ci_tools_path.read_text(encoding="utf-8")
+            fast_mode_block = extract_fast_mode_block(ci_tools_text)
+            if not fast_mode_block or CI_TOOLS_REQUIRED_ENTRY not in fast_mode_block:
+                add_reason(raw_reason_codes, "performance_ci_smoke_selector_missing_checker_entry")
+                selector_status = "violation"
+            if CI_TOOLS_FORBIDDEN_ENTRY in fast_mode_block:
+                add_reason(raw_reason_codes, "performance_ci_smoke_selector_forbidden_entry_present")
+                selector_status = "violation"
+        except Exception:
+            add_reason(raw_reason_codes, "performance_ci_smoke_selector_missing_checker_entry")
+            selector_status = "violation"
+
+    if workflow_path.is_file():
+        try:
+            workflow_text = workflow_path.read_text(encoding="utf-8")
+            if WORKFLOW_REQUIRED_ENTRY not in workflow_text:
+                add_reason(raw_reason_codes, "performance_ci_smoke_workflow_missing_checker_step")
+                workflow_status = "violation"
+            if WORKFLOW_FORBIDDEN_ENTRY in workflow_text:
+                add_reason(raw_reason_codes, "performance_ci_smoke_workflow_forbidden_entry_present")
+                workflow_status = "violation"
+        except Exception:
+            add_reason(raw_reason_codes, "performance_ci_smoke_workflow_missing_checker_step")
+            workflow_status = "violation"
+
+    elapsed_seconds = int(time.monotonic() - started)
+    if elapsed_seconds > max_seconds:
+        add_reason(raw_reason_codes, "performance_ci_smoke_runtime_budget_exceeded")
+
+    normalized_reasons = normalize_reason_codes(raw_reason_codes)
+    reason_value = reason_codes_value(normalized_reasons)
+    status = "pass" if not normalized_reasons else "fail"
+    final_decision = "GO" if status == "pass" else "NO-GO"
+    contract_status = "verified" if status == "pass" else "violation"
+
+    payload = {
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "status": status,
+        "final_decision": final_decision,
+        "lane": lane,
+        "reason_taxonomy_version": REASON_TAXONOMY_VERSION,
+        "reason_codes_csv": REASON_CODES_CSV,
+        "reason_codes": normalized_reasons,
+        "reason_codes_value": reason_value,
+        "performance_ci_smoke_contract_status": contract_status,
+        "performance_ci_smoke_threshold_status": threshold_status,
+        "performance_ci_smoke_report_status": report_status,
+        "performance_ci_smoke_selector_status": selector_status,
+        "performance_ci_smoke_workflow_status": workflow_status,
+        "performance_ci_smoke_max_seconds": max_seconds,
+        "performance_ci_smoke_elapsed_seconds": elapsed_seconds,
+        "inputs": {
+            "report_json": str(report_path),
+            "profile_file": str(profile_path),
+            "ci_tools_file": str(ci_tools_path),
+            "workflow_file": str(workflow_path),
+        },
+    }
+
+    if metrics_ready:
+        payload.update(
+            {
+                "latency_p50_ms": latency_p50,
+                "latency_p99_ms": latency_p99,
+                "throughput_tps": throughput,
+                "availability_pct": availability,
+                "baseline_version": baseline_version,
+                "baseline_commit": baseline_commit,
+                "baseline_run_id": baseline_run_id,
+                "baseline_generated_at_utc": baseline_generated,
+                "baseline_generator": baseline_generator,
+                "drift_threshold_seed_id": drift_seed_id,
+            }
+        )
+
+    print(f"status={status}")
+    print(f"final_decision={final_decision}")
+    print(f"lane={lane}")
+    print(f"performance_ci_smoke_reason_taxonomy_version={REASON_TAXONOMY_VERSION}")
+    print(f"performance_ci_smoke_reason_codes_csv={REASON_CODES_CSV}")
+    print(f"performance_ci_smoke_reason_codes_value={reason_value}")
+    print(f"performance_ci_smoke_contract_status={contract_status}")
+    print(f"performance_ci_smoke_threshold_status={threshold_status}")
+    print(f"performance_ci_smoke_report_status={report_status}")
+    print(f"performance_ci_smoke_selector_status={selector_status}")
+    print(f"performance_ci_smoke_workflow_status={workflow_status}")
+    print(f"performance_ci_smoke_max_seconds={max_seconds}")
+    print(f"performance_ci_smoke_elapsed_seconds={elapsed_seconds}")
+
+    if status == "pass" and metrics_ready:
+        print(f"latency_p50_ms={format_number(latency_p50)}")
+        print(f"latency_p99_ms={format_number(latency_p99)}")
+        print(f"throughput_tps={format_number(throughput)}")
+        print(f"availability_pct={format_number(availability)}")
+        print(f"baseline_version={baseline_version}")
+        print(f"baseline_commit={baseline_commit}")
+        print(f"baseline_run_id={baseline_run_id}")
+        print(f"baseline_generated_at_utc={baseline_generated}")
+        print(f"baseline_generator={baseline_generator}")
+        print(f"drift_threshold_seed_id={drift_seed_id}")
+
+    return 0 if status == "pass" else 1
 
 
 def main(argv: list[str]) -> int:
