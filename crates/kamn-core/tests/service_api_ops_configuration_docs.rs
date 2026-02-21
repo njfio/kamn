@@ -325,6 +325,49 @@ fn service_api_ops_configuration_contains_local_heavy_capacity_load_lane_markers
 }
 
 #[test]
+fn service_api_ops_configuration_contains_local_heavy_redaction_validation_lane_markers() {
+    assert!(
+        DOC.contains("## Local-Heavy Redaction Validation Lane Artifact Contract (Issue #4079)")
+    );
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_lane_schema_version=kamn.runtime.local-heavy-redaction-validation-lane-report.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_artifact_schema_version=kamn.runtime.local-heavy-redaction-validation-artifact-schema.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_reason_taxonomy_version=kamn.runtime.local-heavy-redaction-validation-reason-taxonomy.v1"
+    ));
+    assert!(DOC.contains(
+        "local_heavy_redaction_validation_reason_codes_csv=local_heavy_redaction_sensitive_pattern_detected,local_heavy_redaction_runtime_budget_exceeded"
+    ));
+    assert!(DOC
+        .contains("local_heavy_redaction_validation_required_profiles_csv=baseline,injected-leak"));
+    assert!(DOC.contains(
+        "profile=baseline -> status=pass + final_decision=GO + profile_status=verified + leak_marker_status=clear"
+    ));
+    assert!(DOC.contains(
+        "profile=injected-leak -> status=fail + final_decision=NO-GO + profile_status=failed + leak_marker_status=detected"
+    ));
+    assert!(
+        DOC.contains("profile=baseline -> leak_detection_count=0 + leaked_pattern_ids_csv=none")
+    );
+    assert!(DOC.contains(
+        "profile=injected-leak -> leak_detection_count=3 + leaked_pattern_ids_csv=raw_signer_secret,pii_email,pii_phone"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_local_heavy_redaction_validation_lane.sh --profile baseline --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-redaction-validation-baseline.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_local_heavy_redaction_validation_lane.sh --profile injected-leak --mode dry-run --max-seconds 120 --output-json /tmp/local-heavy-redaction-validation-injected-leak.json"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test local_heavy_redaction_validation_lane_contract -- --nocapture"
+    ));
+    assert!(DOC.contains("Regression: #4079"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_realtime_presence_mode_and_guardrail_markers() {
     assert!(DOC.contains(
         "## Realtime Presence Mode Gateway and Guardrail Contracts (Issues #5279, #5281, #5283)"
