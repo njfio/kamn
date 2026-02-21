@@ -1,0 +1,10 @@
+# Deterministic retention policy fixture matrix for issue #4075.
+retention_policy_fixture_matrix_schema_version=kamn.runtime.retention-policy-fixture-matrix.v1
+retention_policy_reason_taxonomy_version=kamn.runtime.retention-policy-fixture-reason-taxonomy.v1
+retention_policy_reason_codes_csv=retention_domain_unknown,retention_window_non_positive
+columns=case_id|domain|max_age_seconds|expected_status|expected_reason_code
+valid_messages_window|messages|300|pass|none
+valid_tasks_window|tasks|600|pass|none
+valid_escrows_window|escrows|1200|pass|none
+invalid_domain|unknown_scope|300|fail|retention_domain_unknown
+invalid_window|messages|0|fail|retention_window_non_positive

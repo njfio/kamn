@@ -1595,6 +1595,32 @@ Regression marker:
 
 - `Regression: #5301`
 
+## Retention Policy Fixture Matrix and Parser Helper Contracts (Issue #4075)
+
+Retention policy enforcement requires deterministic fixture coverage so parser-helper contracts
+remain fail closed before checker taxonomy expansion in follow-up tasks.
+
+Deterministic fixture markers:
+
+- `retention_policy_fixture_matrix_path=fixtures/runtime/retention_policy_fixture_matrix.txt`
+- `retention_policy_fixture_matrix_schema_version=kamn.runtime.retention-policy-fixture-matrix.v1`
+- `retention_policy_reason_taxonomy_version=kamn.runtime.retention-policy-fixture-reason-taxonomy.v1`
+- `retention_policy_reason_codes_csv=retention_domain_unknown,retention_window_non_positive`
+- `retention_policy_fixture_columns=case_id|domain|max_age_seconds|expected_status|expected_reason_code`
+
+Deterministic fail-closed fixture reasons:
+
+- `retention_domain_unknown`
+- `retention_window_non_positive`
+
+Validation command:
+
+- `cargo test -p kamn-core --test retention_policy_fixture_parser_contract`
+
+Regression marker:
+
+- `Regression: #4075`
+
 ## Quota Policy Fixture Matrix and Parser Helper Contracts (Issue #4090)
 
 Per-scope quota checker development relies on a deterministic fixture matrix so parser/helper
