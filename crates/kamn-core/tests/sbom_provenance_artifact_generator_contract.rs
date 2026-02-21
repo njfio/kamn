@@ -102,11 +102,16 @@ fn run_generator(
     output_file: &Path,
     with_local_opt_in: bool,
 ) -> Output {
+    let generator_executable =
+        option_env!("CARGO_BIN_EXE_sbom_provenance_artifact_generator_contract")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                repo_root().join("target/debug/sbom_provenance_artifact_generator_contract")
+            });
     run_command(
         {
-            let mut command = Command::new("python3");
+            let mut command = Command::new(generator_executable);
             command
-                .arg("scripts/deploy/sbom_provenance_artifact_generator_contract.py")
                 .arg("--profile")
                 .arg(profile)
                 .arg("--mode")
