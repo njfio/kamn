@@ -29,13 +29,13 @@ fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_milestone_closure_wave_closed_ids_csv=94,95,96,97"));
     assert!(DOC.contains("r49_review_post_publication_revalidation_date=2026-02-21"));
     assert!(DOC.contains("r49_review_post_publication_issue=5485"));
-    assert!(DOC.contains("r49_review_post_publication_branch_remote_head_count=52"));
+    assert!(DOC.contains("r49_review_post_publication_branch_remote_head_count=51"));
     assert!(DOC.contains("r49_review_post_publication_open_issue_count=0"));
     assert!(DOC.contains("r49_review_post_publication_open_milestone_count=0"));
     assert!(DOC.contains("r49_review_post_publication_ignored_test_inventory_count=12"));
     assert!(
         DOC.contains(
-            "Branch hygiene remains controlled at `52` remote heads (post-publication revalidation snapshot)."
+            "Branch hygiene remains controlled at `51` remote heads (post-publication revalidation snapshot)."
         )
     );
 }
@@ -63,7 +63,7 @@ fn integration_r49_review_marker_consistency() {
     assert_eq!(post_open_issue_count, 0);
     assert_eq!(post_open_milestone_count, 0);
     assert_eq!(post_ignored_count, 12);
-    assert_eq!(post_branch_count, 52);
+    assert_eq!(post_branch_count, 51);
 
     assert!(post_open_issue_count <= baseline_open_issue_count);
     assert!(post_open_milestone_count <= baseline_open_milestone_count);

@@ -60,7 +60,7 @@ reason_codes=none
 
 - Open issues: `0`
 - Open milestones: `0`
-- Remote branch heads: `52`
+- Remote branch heads: `51`
 - Ignored-test drift checker: `pass` (`ignored_test_count=12`, `reason_codes=none`)
 
 ## Deterministic Revalidation Evidence Commands
@@ -89,7 +89,7 @@ Open milestones count:
 Remote branch heads:
 
 ```text
-52
+51
 ```
 
 Ignored-test drift checker summary:
@@ -103,7 +103,7 @@ reason_codes=none
 ## Status Highlights
 
 - R47 top-priority structural concern (`daemon_tests.rs` monolith) remains resolved.
-- Branch hygiene remains controlled at `52` remote heads (post-publication revalidation snapshot).
+- Branch hygiene remains controlled at `51` remote heads (post-publication revalidation snapshot).
 - R49 periodic ignored-test re-evaluation completed via `#5465` with baseline-aligned inventory.
 - R49 completed-milestone closure hygiene wave completed via `#5467` with closures verified for `#94-#97`.
 
@@ -130,7 +130,7 @@ reason_codes=none
 - `r49_review_milestone_closure_wave_issue=5467`
 - `r49_review_post_publication_revalidation_date=2026-02-21`
 - `r49_review_post_publication_issue=5485`
-- `r49_review_post_publication_branch_remote_head_count=52`
+- `r49_review_post_publication_branch_remote_head_count=51`
 - `r49_review_post_publication_open_issue_count=0`
 - `r49_review_post_publication_open_milestone_count=0`
 - `r49_review_post_publication_ignored_test_inventory_count=12`
