@@ -1,6 +1,6 @@
 # Issue #5527 Spec - Service API Route-Authz Matrix Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented (agent-authored; human review requested in PR)
 - Issue: #5527
 - Parent: #3812
 - Milestone: R50.29 Service API route-authz matrix metrics exposure
