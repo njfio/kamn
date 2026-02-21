@@ -4987,6 +4987,21 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - docs marker drift fails the docs-contract target.
 - Regression: #4091
 
+### Retention Policy Checker Taxonomy Contract
+- `retention_policy_checker_reason_taxonomy_version=kamn.runtime.retention-policy-reason-taxonomy.v1`
+- `retention_policy_checker_reason_codes_csv=retention_domain_unknown,retention_window_non_positive,retention_record_expired`
+- `retention_policy_checker_fixture_schema_version=kamn.runtime.retention-policy-fixture-matrix.v1`
+- `retention_policy_checker_fixture_path=fixtures/runtime/retention_policy_fixture_matrix.txt`
+- Guard commands:
+  - `cargo test -p kamn-core --test retention_policy_checker_contract`
+  - `cargo test -p kamn-core --test retention_policy_fixture_parser_contract`
+  - `cargo test -p kamn-core --test ci_strategy_docs doc_contains_retention_policy_checker_taxonomy_contract_markers -- --exact`
+- Fail-closed policy:
+  - unknown domains, non-positive windows, and expired records must reject deterministically.
+- checker taxonomy must remain a superset of fixture taxonomy reason codes.
+- docs marker drift fails the docs-contract target.
+- Regression: #4076
+
 ### Service API Request-Path Authz Matrix and Docs Parity Contract
 - `service_api_request_path_authz_reason_taxonomy_version=kamn.runtime.service-api-auth-reason-taxonomy.v1`
 - `service_api_request_path_authz_reason_codes_csv=service_api_auth_sender_did_header_missing,service_api_auth_sender_did_invalid,service_api_auth_nonce_header_missing,service_api_auth_nonce_invalid,service_api_auth_nonce_non_positive,service_api_auth_signature_header_missing,service_api_auth_signature_verification_failed,service_api_auth_replay_nonce_detected`
