@@ -740,8 +740,8 @@ Boundary contracts:
 
 Validation commands:
 
-- `python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
-- `python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
+- `python3 scripts/ci/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json`
+- `python3 scripts/ci/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json`
 - `cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture`
 
 Regression marker:

@@ -78,10 +78,10 @@ fn service_api_ops_configuration_contains_sbom_provenance_artifact_generator_mar
     assert!(DOC.contains("provenance_schema_version=slsa-v1"));
     assert!(DOC.contains("release_manifest_required_artifact_id=sbom_provenance"));
     assert!(DOC.contains(
-        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json"
+        "python3 scripts/ci/sbom_provenance_artifact_generator_contract.py --profile baseline --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-baseline.json"
     ));
     assert!(DOC.contains(
-        "python3 scripts/runtime/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json"
+        "python3 scripts/ci/sbom_provenance_artifact_generator_contract.py --profile injected-drift --mode dry-run --ci-fast-gate PASS --max-seconds 120 --output-json /tmp/sbom-provenance-injected-drift.json"
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test sbom_provenance_artifact_generator_contract -- --nocapture"
