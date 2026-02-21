@@ -1,6 +1,6 @@
 # Issue #5513 Spec - Service API Cross-Store Replay Metrics Exposure
 
-- Status: Accepted
+- Status: Implemented
 - Issue: #5513
 - Parent: #3812
 - Milestone: R50.22 Service API cross-store replay telemetry exposure
