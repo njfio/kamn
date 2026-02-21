@@ -1349,6 +1349,25 @@ fn service_api_ops_configuration_contains_daemon_tests_live_postgres_fixture_dec
 }
 
 #[test]
+fn service_api_ops_configuration_contains_multi_host_batched_coherence_bundle_markers() {
+    assert!(DOC.contains(
+        "### Multi-Host Daemon Live-Postgres Batched Coherence Bundle Map (Issue #5422)"
+    ));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b01=runtime_matrix_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b02=parallel_lane_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b03=topology_mapping_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b04=topology_coherence_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b05=fingerprint_stability_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_b06=multi_host_execution_bundle"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_issue_ceiling=8"));
+    assert!(DOC.contains("daemon_live_postgres_coherence_bundle_issue_floor=5"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test service_api_ops_configuration_docs service_api_ops_configuration_contains_multi_host_batched_coherence_bundle_markers -- --exact"
+    ));
+    assert!(DOC.contains("Regression: #5422"));
+}
+
+#[test]
 fn service_api_ops_configuration_contains_convergence_promotion_marker_contracts() {
     assert!(DOC.contains("## Convergence Promotion Marker Contracts (Issue #5301)"));
     assert!(DOC.contains("convergence_promotion_contract_status=verified"));
