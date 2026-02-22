@@ -26,9 +26,9 @@ pub use live::{LiveTransportConfig, LiveTransportKamnClient};
 pub use memory::InMemoryKamnClient;
 /// Re-exported service API client primitives.
 pub use service::{
-    service_signature_for_fields, ServiceAgentProfile, ServiceApiClient, ServiceChannelReceipt,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth,
-    ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
+    service_signature_for_fields, ServiceAgentProfile, ServiceApiClient, ServiceChannelMessages,
+    ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus,
+    ServiceRequestAuth, ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
 };
 /// Re-exported TCP relay adapter and envelope helpers.
 pub use tcp::{

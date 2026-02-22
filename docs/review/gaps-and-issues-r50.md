@@ -233,7 +233,7 @@ Governance-feature rebalancing contract active (R50.20) targeting >=0.25 feature
 - `r50_review_spec_volume_non_regression_ratio_max=9.2`
 - `r50_review_spec_volume_non_regression_spec_dir_max=840`
 
-Spec-volume non-regression ratchet remains locked to current baseline while remediation contracts are active.
+Spec-volume non-regression ratchet remains locked to the refreshed baseline while remediation contracts are active.
 
 ### 5.9 Doc-Contract Test-File Non-Regression Ratchet Markers (R50.42)
 

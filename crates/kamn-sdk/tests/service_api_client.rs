@@ -339,6 +339,19 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                         channel_id
                     );
                     write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "GET"
+                    && path.starts_with("/v1/channels/")
+                    && path.ends_with("/messages")
+                {
+                    let channel_id = path
+                        .trim_start_matches("/v1/channels/")
+                        .trim_end_matches("/messages")
+                        .trim_end_matches('/');
+                    let payload = format!(
+                        "{{\"channel_id\":\"{}\",\"messages\":[\"msg-local-a\",\"msg-local-b\"]}}",
+                        channel_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "POST" && path == "/v1/tasks/create" {
                     let task_id = format!("task-local-{:016x}", deterministic_tag(body.as_bytes()));
                     let payload =
@@ -529,5 +542,32 @@ fn regression_service_api_client_rejects_replayed_nonce() {
     assert!(
         server_result.is_ok(),
         "test service contract server should satisfy replay request budget"
+    );
+}
+
+#[test]
+fn spec_c01_service_api_client_lists_channel_messages_through_route_contract() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 1));
+    wait_for_server_ready(bind_addr.as_str());
+
+    let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
+        .expect("client should connect");
+    let sender = AgentDid::parse("kamn:did:agent:sdk-list").expect("sender did should parse");
+
+    let messages = client
+        .list_channel_messages("channel-local-123", &auth(&sender, 1, ""))
+        .expect("list channel messages should succeed");
+    assert_eq!(messages.channel_id, "channel-local-123");
+    assert_eq!(
+        messages.messages,
+        vec!["msg-local-a".to_owned(), "msg-local-b".to_owned()]
+    );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
     );
 }

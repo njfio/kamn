@@ -202,6 +202,15 @@ pub struct ServiceChannelReceipt {
     pub status: String,
 }
 
+/// Parsed response for `GET /v1/channels/{id}/messages`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceChannelMessages {
+    /// Channel identifier.
+    pub channel_id: String,
+    /// Message identifiers observed in the channel.
+    pub messages: Vec<String>,
+}
+
 /// Parsed response for `POST /v1/tasks/create`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceTaskReceipt {
@@ -324,6 +333,27 @@ impl ServiceApiClient {
         Ok(ServiceChannelReceipt {
             channel_id: json_string_field(response.body.as_str(), "channel_id")?,
             status: json_string_field(response.body.as_str(), "status")?,
+        })
+    }
+
+    /// Lists channel messages through `GET /v1/channels/{id}/messages`.
+    pub fn list_channel_messages(
+        &self,
+        channel_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceChannelMessages, SdkError> {
+        if channel_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "channel_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/channels/{channel_id}/messages");
+        let response = self.request("GET", route.as_str(), "", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceChannelMessages {
+            channel_id: json_string_field(response.body.as_str(), "channel_id")?,
+            messages: json_string_array_field(response.body.as_str(), "messages")?,
         })
     }
 
@@ -750,4 +780,35 @@ fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
     let rest = &payload[start..];
     let end = rest.find('"')?;
     Some(rest[..end].to_owned())
+}
+
+fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkError> {
+    let marker = format!("\"{key}\":[");
+    let start = payload
+        .find(marker.as_str())
+        .map(|index| index + marker.len())
+        .ok_or(SdkError::TransportFailure(
+            "service response missing required field",
+        ))?;
+    let rest = &payload[start..];
+    let end = rest.find(']').ok_or(SdkError::TransportFailure(
+        "service response array field was not terminated",
+    ))?;
+    let raw_items = rest[..end].trim();
+    if raw_items.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    raw_items
+        .split(',')
+        .map(|item| {
+            let trimmed = item.trim();
+            if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
+                return Err(SdkError::TransportFailure(
+                    "service response array item was malformed",
+                ));
+            }
+            Ok(trimmed[1..trimmed.len() - 1].to_owned())
+        })
+        .collect()
 }

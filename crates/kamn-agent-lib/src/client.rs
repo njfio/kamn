@@ -1,8 +1,8 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
     service_signature_for_fields, AgentDid, ServiceAgentProfile, ServiceApiClient,
-    ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus,
-    ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
 };
 
 const DEFAULT_CHAIN_ID: &str = "kamn-agent-lib";
@@ -93,6 +93,15 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceChannelReceipt, AgentLibError> {
         Ok(self.inner.create_channel(payload, auth)?)
+    }
+
+    /// Lists channel messages via `GET /v1/channels/{id}/messages`.
+    pub fn list_channel_messages(
+        &self,
+        channel_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceChannelMessages, AgentLibError> {
+        Ok(self.inner.list_channel_messages(channel_id, auth)?)
     }
 
     /// Creates a task via `POST /v1/tasks/create`.
