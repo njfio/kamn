@@ -19,7 +19,10 @@ fn spec_c05_cli_exposes_required_phase2_subcommands() {
 
     for (command, expected_kind) in cases {
         let parsed = parse_cli_args(["kamn-cli", command]).expect("parse");
-        assert_eq!(parsed.command, expected_kind, "command mismatch for {command}");
+        assert_eq!(
+            parsed.command, expected_kind,
+            "command mismatch for {command}"
+        );
     }
 }
 
