@@ -3,11 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 247
+- archived_issue_count: 246
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3871 | Subtask: add failed-handshake and backoff scenario harness for recovery matrix lanes | 2026-02-18 | `specs/archive/3871` | `specs/3871/ARCHIVED.md` |
 | 3872 | Subtask: add lifecycle reason-code parity checker and recovery regression tests | 2026-02-18 | `specs/archive/3872` | `specs/3872/ARCHIVED.md` |
 | 3873 | Task: integrate libp2p recovery evidence into release go-no-go policy contracts | 2026-02-18 | `specs/archive/3873` | `specs/3873/ARCHIVED.md` |
 | 3874 | Subtask: add go-no-go marker checks for recovery artifact freshness and status | 2026-02-18 | `specs/archive/3874` | `specs/3874/ARCHIVED.md` |

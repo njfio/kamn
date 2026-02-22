@@ -276,3 +276,103 @@ fn integration_r52_post_publication_spec_volume_reduction_markers_are_consistent
         "pre/post evidence commands should remain identical for direct count comparison"
     );
 }
+
+#[test]
+fn functional_r52_post_publication_spec_volume_guardrail_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_spec_volume_guardrail_reconciliation_schema_version=kamn.review.spec-volume-guardrail-post-publication-reconciliation.v1"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_guardrail_snapshot_spec_dir_count=<integer>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_spec_volume_guardrail_post_publication_spec_dir_count=<integer>"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_guardrail_post_publication_ratio=<float>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_guardrail_target_ratio_max=<float>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_spec_volume_guardrail_post_publication_status=<within_guardrail|breached>"
+    ));
+
+    assert!(DOC_R52.contains(
+        "r52_review_post_publication_spec_volume_guardrail_reconciliation_schema_version=kamn.review.spec-volume-guardrail-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC_R52.contains("r52_review_spec_volume_guardrail_snapshot_spec_dir_count=845"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_guardrail_snapshot_module_count=92"));
+    assert!(
+        DOC_R52.contains("r52_review_spec_volume_guardrail_post_publication_spec_dir_count=693")
+    );
+    assert!(DOC_R52.contains("r52_review_spec_volume_guardrail_post_publication_module_count=92"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_guardrail_post_publication_ratio=7.5"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_guardrail_target_ratio_max=7.7"));
+    assert!(DOC_R52
+        .contains("r52_review_spec_volume_guardrail_post_publication_status=within_guardrail"));
+    assert!(DOC_R52.contains("spec_volume_guardrail_target_status=severely_breached"));
+}
+
+#[test]
+fn integration_r52_post_publication_spec_volume_guardrail_reconciliation_markers_are_consistent() {
+    let snapshot_spec_dir_count = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_snapshot_spec_dir_count",
+    );
+    let snapshot_module_count = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_snapshot_module_count",
+    );
+    let post_publication_spec_dir_count = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_post_publication_spec_dir_count",
+    );
+    let post_publication_module_count = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_post_publication_module_count",
+    );
+    let post_publication_ratio = parse_marker_f64(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_post_publication_ratio",
+    );
+    let target_ratio_max =
+        parse_marker_f64(DOC_R52, "r52_review_spec_volume_guardrail_target_ratio_max");
+    let post_publication_status = parse_marker_text(
+        DOC_R52,
+        "r52_review_spec_volume_guardrail_post_publication_status",
+    );
+
+    assert_eq!(
+        snapshot_spec_dir_count, 845,
+        "snapshot spec-dir marker should remain fixed"
+    );
+    assert_eq!(
+        snapshot_module_count, 92,
+        "snapshot module-count marker should remain fixed"
+    );
+    assert_eq!(
+        post_publication_spec_dir_count, 693,
+        "post-publication spec-dir marker should remain fixed"
+    );
+    assert_eq!(
+        post_publication_module_count, 92,
+        "post-publication module-count marker should remain fixed"
+    );
+    assert!(
+        post_publication_spec_dir_count <= snapshot_spec_dir_count,
+        "post-publication spec-dir count should not exceed snapshot baseline"
+    );
+    assert!(
+        post_publication_ratio <= target_ratio_max,
+        "post-publication ratio must remain within guardrail max"
+    );
+    assert_eq!(
+        post_publication_status, "within_guardrail",
+        "post-publication guardrail status should remain within_guardrail"
+    );
+
+    let computed_ratio =
+        post_publication_spec_dir_count as f64 / post_publication_module_count as f64;
+    assert!(
+        (computed_ratio - post_publication_ratio).abs() <= 0.05,
+        "post-publication ratio marker should match counts with one-decimal precision"
+    );
+}
