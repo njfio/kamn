@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 289
+- archived_issue_count: 275
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3825 | Subtask: add runbook marker definitions for signal intake, drain completion, and timeout fail-closed reasons | 2026-02-18 | `specs/archive/3825` | `specs/3825/ARCHIVED.md` |
-| 3826 | Subtask: enforce shutdown runbook docs-contract tests with fail-closed drift reasons | 2026-02-18 | `specs/archive/3826` | `specs/3826/ARCHIVED.md` |
-| 3827 | Task: integrate shutdown evidence requirements into release go/no-go gate | 2026-02-18 | `specs/archive/3827` | `specs/3827/ARCHIVED.md` |
-| 3828 | Subtask: add go/no-go policy markers for shutdown artifact freshness and contract status | 2026-02-18 | `specs/archive/3828` | `specs/3828/ARCHIVED.md` |
-| 3829 | Subtask: add release checklist template entries for shutdown validation evidence | 2026-02-18 | `specs/archive/3829` | `specs/3829/ARCHIVED.md` |
-| 3830 | Story: extract runtime orchestration phases into focused modules with behavior parity | 2026-02-18 | `specs/archive/3830` | `specs/3830/ARCHIVED.md` |
-| 3831 | Task: extract transport and peer coordination phases from runtime.rs | 2026-02-18 | `specs/archive/3831` | `specs/3831/ARCHIVED.md` |
-| 3832 | Subtask: move transport coordination and reconciliation logic to runtime_transport_phase module | 2026-02-18 | `specs/archive/3832` | `specs/3832/ARCHIVED.md` |
-| 3833 | Subtask: move peer lifecycle and queue coordination logic to runtime_peer_phase module | 2026-02-18 | `specs/archive/3833` | `specs/3833/ARCHIVED.md` |
-| 3834 | Task: extract snapshot and recovery orchestration modules with fail-closed tests | 2026-02-18 | `specs/archive/3834` | `specs/3834/ARCHIVED.md` |
-| 3835 | Subtask: move snapshot read/write and restore orchestration to runtime_snapshot_phase module | 2026-02-18 | `specs/archive/3835` | `specs/3835/ARCHIVED.md` |
-| 3836 | Subtask: add module-local tests for snapshot/recovery fail-closed scenarios | 2026-02-18 | `specs/archive/3836` | `specs/3836/ARCHIVED.md` |
-| 3837 | Story: enforce runtime module ownership contracts and anti-regrowth budget governance | 2026-02-18 | `specs/archive/3837` | `specs/3837/ARCHIVED.md` |
-| 3838 | Task: update runtime ownership docs and add module-boundary contract tests | 2026-02-18 | `specs/archive/3838` | `specs/3838/ARCHIVED.md` |
 | 3839 | Subtask: add module-boundary ownership markers to runtime architecture docs | 2026-02-18 | `specs/archive/3839` | `specs/3839/ARCHIVED.md` |
 | 3840 | Subtask: add docs-contract tests for runtime module ownership marker parity | 2026-02-18 | `specs/archive/3840` | `specs/3840/ARCHIVED.md` |
 | 3841 | Task: enforce runtime.rs line-count trend budget policy and threshold telemetry | 2026-02-18 | `specs/archive/3841` | `specs/3841/ARCHIVED.md` |

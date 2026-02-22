@@ -110,10 +110,10 @@ fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(DOC_R50.contains(
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=732"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=719"));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_ratio_max=8.0"));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=732"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_ratio_max=7.9"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=719"));
     assert!(DOC_R50.contains(
         "Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio."
     ));
@@ -224,9 +224,9 @@ fn functional_r52_post_publication_spec_volume_reduction_markers_present() {
     assert!(DOC_R52.contains(
         "r52_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1"
     ));
-    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_pre_count=746"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_pre_count=733"));
     assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_deleted_count=14"));
-    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_post_count=732"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_post_count=719"));
     assert!(DOC_R52
         .contains("r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l"));
     assert!(DOC_R52.contains(
@@ -257,17 +257,20 @@ fn integration_r52_post_publication_spec_volume_reduction_markers_are_consistent
         "r52_review_spec_volume_reduction_evidence_command_post",
     );
 
-    assert_eq!(pre, 746, "tranche-9 pre-count marker should remain fixed");
+    assert_eq!(pre, 733, "tranche-10 pre-count marker should remain fixed");
     assert_eq!(
         deleted, 14,
-        "tranche-9 deleted-count marker should remain fixed"
+        "tranche-10 deleted-count marker should remain fixed"
     );
     assert_eq!(
         pre.saturating_sub(post),
         deleted,
         "pre/post delta should equal deleted marker count"
     );
-    assert_eq!(post, 732, "tranche-9 post-count marker should remain fixed");
+    assert_eq!(
+        post, 719,
+        "tranche-10 post-count marker should remain fixed"
+    );
     assert_eq!(
         pre_command, post_command,
         "pre/post evidence commands should remain identical for direct count comparison"
