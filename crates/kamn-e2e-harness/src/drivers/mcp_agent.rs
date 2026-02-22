@@ -229,6 +229,11 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
         env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
     let create_task_payload = env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
+    let create_agent_name = format!("{agent_name}-s04-create");
+    let fund_agent_name = format!("{agent_name}-s04-fund");
+    let accept_agent_name = format!("{agent_name}-s04-accept");
+    let complete_agent_name = format!("{agent_name}-s04-complete");
+    let release_agent_name = format!("{agent_name}-s04-release");
 
     let create_arguments = format!(
         "{{\"payload\":\"{}\"}}",
@@ -237,7 +242,7 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let create_response = run_live_s04_mcp_tool_call(
         binary.as_str(),
         endpoint.as_str(),
-        agent_name.as_str(),
+        create_agent_name.as_str(),
         key_file.as_str(),
         "probe-create-task",
         "create_task",
@@ -263,7 +268,7 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let fund_response = run_live_s04_mcp_tool_call(
         binary.as_str(),
         endpoint.as_str(),
-        agent_name.as_str(),
+        fund_agent_name.as_str(),
         key_file.as_str(),
         "probe-fund-escrow",
         "fund_escrow",
@@ -284,7 +289,7 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let accept_response = run_live_s04_mcp_tool_call(
         binary.as_str(),
         endpoint.as_str(),
-        agent_name.as_str(),
+        accept_agent_name.as_str(),
         key_file.as_str(),
         "probe-accept-task",
         "accept_task",
@@ -305,7 +310,7 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let complete_response = run_live_s04_mcp_tool_call(
         binary.as_str(),
         endpoint.as_str(),
-        agent_name.as_str(),
+        complete_agent_name.as_str(),
         key_file.as_str(),
         "probe-complete-task",
         "complete_task",
@@ -326,7 +331,7 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     let release_response = run_live_s04_mcp_tool_call(
         binary.as_str(),
         endpoint.as_str(),
-        agent_name.as_str(),
+        release_agent_name.as_str(),
         key_file.as_str(),
         "probe-release-escrow",
         "release_escrow",
@@ -699,6 +704,8 @@ mod tests {
             .permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(script_path, permissions).expect("script fixture should be executable");
+        // Allow the filesystem/loader state to settle before immediate exec from test probes.
+        std::thread::sleep(std::time::Duration::from_millis(5));
     }
 
     fn write_mcp_tool_response_script(

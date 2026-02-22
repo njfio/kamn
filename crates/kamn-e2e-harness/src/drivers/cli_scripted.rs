@@ -7,6 +7,7 @@ use std::sync::Arc;
 const CLI_SCRIPTED_LIVE_ENV: &str = "KAMN_E2E_CLI_SCRIPTED_LIVE";
 const CLI_BINARY_ENV: &str = "KAMN_E2E_CLI_BINARY";
 const DEFAULT_CLI_BINARY: &str = "kamn-cli";
+const DEFAULT_S04_AGENT_NAME: &str = "kamn-e2e-cli-s04";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"cli-scripted-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
@@ -165,10 +166,17 @@ fn run_live_s01_cli_health_probe() -> Result<(), String> {
 fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
     let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
     let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S04_AGENT_NAME.to_owned());
     let create_task_payload = env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
+    let create_agent_name = format!("{base_agent_name}-create");
+    let fund_agent_name = format!("{base_agent_name}-fund");
+    let accept_agent_name = format!("{base_agent_name}-accept");
+    let complete_agent_name = format!("{base_agent_name}-complete");
+    let release_agent_name = format!("{base_agent_name}-release");
 
-    let create_output = run_cli_command_capture_stdout(
+    let create_output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary.as_str(),
         &[
             "create-task",
@@ -179,6 +187,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
             create_task_payload.as_str(),
         ],
         "cli live s04 create-task",
+        create_agent_name.as_str(),
     )?;
     let task_id = parse_text_output_field(create_output.as_str(), "task_id")
         .ok_or_else(|| {
@@ -193,7 +202,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
         "{{\"task_id\":\"{}\",\"amount\":{}}}",
         task_id, DEFAULT_S04_ESCROW_AMOUNT
     );
-    let fund_output = run_cli_command_capture_stdout(
+    let fund_output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary.as_str(),
         &[
             "fund-escrow",
@@ -204,6 +213,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
             fund_payload.as_str(),
         ],
         "cli live s04 fund-escrow",
+        fund_agent_name.as_str(),
     )?;
     let escrow_id = parse_text_output_field(fund_output.as_str(), "escrow_id")
         .ok_or_else(|| {
@@ -214,7 +224,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
         return Err("cli live s04 fund-escrow returned empty escrow_id".to_owned());
     }
 
-    let accept_output = run_cli_command_capture_stdout(
+    let accept_output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary.as_str(),
         &[
             "accept-task",
@@ -225,6 +235,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
             task_id.as_str(),
         ],
         "cli live s04 accept-task",
+        accept_agent_name.as_str(),
     )?;
     let accept_state =
         parse_text_output_field(accept_output.as_str(), "state").ok_or_else(|| {
@@ -234,7 +245,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
         return Err("cli live s04 accept-task returned empty state".to_owned());
     }
 
-    let complete_output = run_cli_command_capture_stdout(
+    let complete_output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary.as_str(),
         &[
             "complete-task",
@@ -245,6 +256,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
             task_id.as_str(),
         ],
         "cli live s04 complete-task",
+        complete_agent_name.as_str(),
     )?;
     let complete_state =
         parse_text_output_field(complete_output.as_str(), "state").ok_or_else(|| {
@@ -254,7 +266,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
         return Err("cli live s04 complete-task returned empty state".to_owned());
     }
 
-    let release_output = run_cli_command_capture_stdout(
+    let release_output = run_cli_command_capture_stdout_with_agent_name(
         cli_binary.as_str(),
         &[
             "release-escrow",
@@ -265,6 +277,7 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
             escrow_id.as_str(),
         ],
         "cli live s04 release-escrow",
+        release_agent_name.as_str(),
     )?;
     let release_state =
         parse_text_output_field(release_output.as_str(), "state").ok_or_else(|| {
@@ -351,11 +364,39 @@ fn run_cli_command_capture_stdout(
     args: &[&str],
     step: &str,
 ) -> Result<String, String> {
-    let output = Command::new(cli_binary)
+    run_cli_command_capture_stdout_with_optional_agent_name(cli_binary, args, step, None)
+}
+
+fn run_cli_command_capture_stdout_with_agent_name(
+    cli_binary: &str,
+    args: &[&str],
+    step: &str,
+    agent_name: &str,
+) -> Result<String, String> {
+    run_cli_command_capture_stdout_with_optional_agent_name(
+        cli_binary,
+        args,
+        step,
+        Some(agent_name),
+    )
+}
+
+fn run_cli_command_capture_stdout_with_optional_agent_name(
+    cli_binary: &str,
+    args: &[&str],
+    step: &str,
+    agent_name: Option<&str>,
+) -> Result<String, String> {
+    let mut command = Command::new(cli_binary);
+    command
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    if let Some(agent_name) = agent_name {
+        command.env("KAMN_AGENT_NAME", agent_name);
+    }
+    let output = command
         .output()
         .map_err(|error| format!("{step} failed to spawn: {error}"))?;
 
