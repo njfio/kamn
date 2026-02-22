@@ -248,6 +248,16 @@ fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, 
     Ok(block_hash_pairs)
 }
 
+fn extract_kolme_anchor_finality_value(artifact_json: &str) -> Option<String> {
+    let normalized = strip_json_whitespace(artifact_json);
+    let anchor_marker = "\"kolme_anchor\":{";
+    let anchor_start = normalized.find(anchor_marker)? + anchor_marker.len();
+    let anchor_relative_end = normalized[anchor_start..].find('}')?;
+    let anchor_end = anchor_start + anchor_relative_end;
+    let anchor_fragment = &normalized[anchor_start..anchor_end];
+    extract_json_string_marker(anchor_fragment, "\"finality\":\"")
+}
+
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
     let mut entries = std::fs::read_dir(dir)
         .map_err(|error| {
@@ -331,6 +341,20 @@ pub fn validate_evidence_verification_blocks(
                 ));
             }
         }
+        let finality = extract_kolme_anchor_finality_value(&artifact_json)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "evidence artifact missing _verification.kolme_anchor.finality: {}",
+                    artifact_path.display()
+                )
+            })?;
+        if finality != "FINAL" {
+            return Err(format!(
+                "evidence artifact invalid _verification.kolme_anchor.finality value: {}",
+                artifact_path.display()
+            ));
+        }
     }
     Ok(())
 }
@@ -405,7 +429,11 @@ pub fn generate_verification_report_json(manifest_json: &str) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_verification_report_json, verify_chain_dump, verify_manifest};
+    use super::{
+        generate_verification_report_json, validate_evidence_verification_blocks,
+        verify_chain_dump, verify_manifest,
+    };
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn unit_verify_manifest_rejects_missing_schema_marker() {
@@ -450,5 +478,33 @@ mod tests {
         )
         .expect_err("genesis anchor mismatch should fail");
         assert!(err.contains("chain dump genesis anchor mismatch at block index 0"));
+    }
+
+    #[test]
+    fn unit_validate_evidence_verification_blocks_rejects_non_final_finality_value() {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic for tests")
+            .as_nanos();
+        let evidence_dir = std::env::temp_dir().join(format!(
+            "kamn-e2e-finality-value-{}-{}",
+            std::process::id(),
+            unique_suffix
+        ));
+        std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+            .expect("evidence directory should be created");
+        std::fs::write(
+            evidence_dir
+                .join("s01-agent-discovery")
+                .join("alice_registration.json"),
+            r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"sha256:abc123","captured_at":"2026-02-21T14:31:05Z","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"sha256:def456","block_height":42,"finality":"SOFT"}}}"#,
+        )
+        .expect("artifact should be written");
+
+        let err = validate_evidence_verification_blocks(&evidence_dir, &[])
+            .expect_err("non-final finality value should fail");
+        assert!(err.contains("evidence artifact invalid _verification.kolme_anchor.finality value"));
+
+        let _ = std::fs::remove_dir_all(&evidence_dir);
     }
 }
