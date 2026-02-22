@@ -689,3 +689,38 @@ fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
         "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode mcp-tau\""
     ));
 }
+
+#[test]
+fn spec_c41_run_output_contains_spawn_execution_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"spawn_execution\":"));
+    assert!(output.contains("\"postgres\""));
+    assert!(output.contains("\"kolme\""));
+    assert!(output.contains("\"kamn_processor\""));
+    assert!(output.contains("\"kamn_listener\""));
+    assert!(output.contains("\"kamn_approver\""));
+    assert!(output.contains("\"timeline_ref\""));
+    assert!(output.contains("\"result\""));
+}
+
+#[test]
+fn spec_c42_spawn_execution_markers_are_deterministic_and_status_coherent() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"spawn_execution\":{\"postgres\":{\"status\":\"PASS\",\"timeline_ref\":\"step-1\",\"result\":\"started\"},\"kolme\":{\"status\":\"PASS\",\"timeline_ref\":\"step-2\",\"result\":\"started\"},\"kamn_processor\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_listener\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_approver\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"}}"
+    ));
+}
