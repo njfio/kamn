@@ -135,6 +135,23 @@ fn deterministic_tag(payload: &[u8]) -> u64 {
     acc
 }
 
+fn extract_task_id(body: &str) -> String {
+    let marker = "\"task_id\":\"";
+    let Some(start) = body.find(marker) else {
+        return "task-unknown".to_owned();
+    };
+    let value_start = start + marker.len();
+    let remainder = &body[value_start..];
+    let Some(end) = remainder.find('"') else {
+        return "task-unknown".to_owned();
+    };
+    let task_id = &remainder[..end];
+    if task_id.trim().is_empty() {
+        return "task-unknown".to_owned();
+    }
+    task_id.to_owned()
+}
+
 fn write_websocket_upgrade_response(stream: &mut TcpStream) -> Result<(), String> {
     let handshake = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: kamn-test-accept\r\nX-KAMN-WebSocket-Contract: v1\r\n\r\n";
     stream
@@ -344,6 +361,46 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     let payload =
                         format!("{{\"task_id\":\"{}\",\"state\":\"submitted\"}}", task_id);
                     write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/tasks/")
+                    && path.ends_with("/accept")
+                {
+                    let task_id = path
+                        .trim_start_matches("/v1/tasks/")
+                        .trim_end_matches("/accept");
+                    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"accepted\"}}", task_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/tasks/")
+                    && path.ends_with("/complete")
+                {
+                    let task_id = path
+                        .trim_start_matches("/v1/tasks/")
+                        .trim_end_matches("/complete");
+                    let payload =
+                        format!("{{\"task_id\":\"{}\",\"state\":\"completed\"}}", task_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/escrow/fund" {
+                    let escrow_id =
+                        format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
+                    let payload = format!(
+                        "{{\"escrow_id\":\"{}\",\"task_id\":\"{}\",\"status\":\"funded\"}}",
+                        escrow_id,
+                        extract_task_id(body.as_str())
+                    );
+                    write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/escrow/")
+                    && path.ends_with("/release")
+                {
+                    let escrow_id = path
+                        .trim_start_matches("/v1/escrow/")
+                        .trim_end_matches("/release");
+                    let payload = format!(
+                        "{{\"escrow_id\":\"{}\",\"status\":\"released\"}}",
+                        escrow_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET" && path.starts_with("/v1/tasks/") {
                     let task_id = path.trim_start_matches("/v1/tasks/");
                     let payload =
@@ -401,7 +458,7 @@ fn unit_service_api_client_rejects_invalid_endpoint_scheme() {
 fn functional_service_api_client_executes_signed_http_route_contracts() {
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 8));
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 12));
     wait_for_server_ready(bind_addr.as_str());
 
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
@@ -438,8 +495,40 @@ fn functional_service_api_client_executes_signed_http_route_contracts() {
         .expect("get task should succeed");
     assert_eq!(task_status.state, "submitted");
 
+    let task_accept = client
+        .accept_task(task_response.task_id.as_str(), &auth(&sender, 6, ""))
+        .expect("accept task should succeed");
+    assert_eq!(task_accept.task_id, task_response.task_id);
+    assert_eq!(task_accept.state, "accepted");
+
+    let task_complete = client
+        .complete_task(task_response.task_id.as_str(), &auth(&sender, 7, ""))
+        .expect("complete task should succeed");
+    assert_eq!(task_complete.task_id, task_response.task_id);
+    assert_eq!(task_complete.state, "completed");
+
+    let fund_payload = format!(
+        "{{\"task_id\":\"{}\",\"amount\":42}}",
+        task_response.task_id.as_str()
+    );
+    let fund_receipt = client
+        .fund_escrow(
+            fund_payload.as_str(),
+            &auth(&sender, 8, fund_payload.as_str()),
+        )
+        .expect("fund escrow should succeed");
+    assert!(fund_receipt.escrow_id.starts_with("escrow-local-"));
+    assert_eq!(fund_receipt.task_id, task_response.task_id);
+    assert_eq!(fund_receipt.status, "funded");
+
+    let release_receipt = client
+        .release_escrow(fund_receipt.escrow_id.as_str(), &auth(&sender, 9, ""))
+        .expect("release escrow should succeed");
+    assert_eq!(release_receipt.escrow_id, fund_receipt.escrow_id);
+    assert_eq!(release_receipt.status, "released");
+
     let profile = client
-        .get_agent_profile(sender.as_str(), &auth(&sender, 6, ""))
+        .get_agent_profile(sender.as_str(), &auth(&sender, 10, ""))
         .expect("agent profile should resolve");
     assert_eq!(profile.did, sender.as_str());
     assert_eq!(profile.reputation_score, 500);

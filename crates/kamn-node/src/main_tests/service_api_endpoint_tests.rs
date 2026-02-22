@@ -1,11 +1,12 @@
 use super::*;
 use crate::service_api_endpoint::{
     parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
-    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection,
-    ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
-    DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
-    SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
-    SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
+    ServiceApiChannelCreateBody, ServiceApiEscrowFundBody, ServiceApiEscrowReleaseBody,
+    ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody,
+    ServiceApiTaskAcceptBody, ServiceApiTaskCompleteBody, ServiceApiTaskCreateBody,
+    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND, SERVICE_API_AUTH_REASON_CODES_CSV,
+    SERVICE_API_AUTH_REASON_TAXONOMY_VERSION, SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_TAXONOMY_VERSION,
     SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT,
     SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT,
@@ -145,6 +146,34 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
             expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
         },
         ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/tasks/task-matrix/accept",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/tasks/task-matrix/complete",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/escrow/fund",
+            body: "{\"task_id\":\"task-matrix\",\"amount\":42}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/escrow/escrow-matrix/release",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
             method: "GET",
             path: "/v1/messages/msg-matrix",
             body: "",
@@ -233,6 +262,14 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
+            "tasks:write"
+        }
+        ("POST", "/v1/escrow/fund") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/escrow/") && path.ends_with("/release") => {
+            "tasks:write"
+        }
         ("GET", "/v1/events/ws") => "events:read",
         ("GET", _) if path.starts_with("/v1/messages/") && path != "/v1/messages/send" => {
             "messages:read"
@@ -737,6 +774,34 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         render_service_api_endpoint_response(&snapshot, "GET", "/v1/tasks/task-1", "");
     assert_eq!(task_response.status_code, 200);
 
+    let task_accept_response =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-1/accept", "");
+    assert_eq!(task_accept_response.status_code, 200);
+    assert!(task_accept_response.body.contains("\"state\":\"accepted\""));
+
+    let task_complete_response =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-1/complete", "");
+    assert_eq!(task_complete_response.status_code, 200);
+    assert!(task_complete_response
+        .body
+        .contains("\"state\":\"completed\""));
+
+    let escrow_fund_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/escrow/fund",
+        "{\"task_id\":\"task-1\",\"amount\":42}",
+    );
+    assert_eq!(escrow_fund_response.status_code, 201);
+    assert!(escrow_fund_response.body.contains("\"status\":\"funded\""));
+
+    let escrow_release_response =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/escrow/escrow-1/release", "");
+    assert_eq!(escrow_release_response.status_code, 200);
+    assert!(escrow_release_response
+        .body
+        .contains("\"status\":\"released\""));
+
     let agent_response = render_service_api_endpoint_response(
         &snapshot,
         "GET",
@@ -1088,6 +1153,46 @@ fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
     let task_payload: ServiceApiTaskCreateBody =
         parse_service_api_payload(task.body.as_str()).expect("task payload should deserialize");
     assert_eq!(task_payload.state, "submitted");
+
+    let task_accept =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-123/accept", "");
+    let task_accept_payload: ServiceApiTaskAcceptBody =
+        parse_service_api_payload(task_accept.body.as_str())
+            .expect("task accept payload should deserialize");
+    assert_eq!(task_accept_payload.task_id, "task-123");
+    assert_eq!(task_accept_payload.state, "accepted");
+
+    let task_complete =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-123/complete", "");
+    let task_complete_payload: ServiceApiTaskCompleteBody =
+        parse_service_api_payload(task_complete.body.as_str())
+            .expect("task complete payload should deserialize");
+    assert_eq!(task_complete_payload.task_id, "task-123");
+    assert_eq!(task_complete_payload.state, "completed");
+
+    let escrow_fund = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/escrow/fund",
+        "{\"task_id\":\"task-123\",\"amount\":8}",
+    );
+    let escrow_fund_payload: ServiceApiEscrowFundBody =
+        parse_service_api_payload(escrow_fund.body.as_str())
+            .expect("escrow fund payload should deserialize");
+    assert_eq!(escrow_fund_payload.status, "funded");
+    assert_eq!(escrow_fund_payload.task_id, "task-123");
+
+    let escrow_release = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/escrow/escrow-123/release",
+        "",
+    );
+    let escrow_release_payload: ServiceApiEscrowReleaseBody =
+        parse_service_api_payload(escrow_release.body.as_str())
+            .expect("escrow release payload should deserialize");
+    assert_eq!(escrow_release_payload.status, "released");
+    assert_eq!(escrow_release_payload.escrow_id, "escrow-123");
 
     let agent = render_service_api_endpoint_response(
         &snapshot,

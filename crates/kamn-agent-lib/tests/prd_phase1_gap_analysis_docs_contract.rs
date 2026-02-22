@@ -11,3 +11,11 @@ fn spec_c07_phase1_gap_analysis_markers_present() {
     assert!(DOC.contains("phase1_status_after=implemented"));
     assert!(DOC.contains("phase1_blockers_remaining=0"));
 }
+
+#[test]
+fn spec_c08_phase1_task_escrow_stub_replacement_markers_present() {
+    assert!(DOC.contains("phase1_task_escrow_stub_ops_remaining_before=4"));
+    assert!(DOC.contains("phase1_task_escrow_stub_ops_remaining_after=0"));
+    assert!(DOC.contains("phase1_task_escrow_route_expansion_status=implemented"));
+    assert!(DOC.contains("phase1_agent_lib_stub_replacement_status=implemented"));
+}
