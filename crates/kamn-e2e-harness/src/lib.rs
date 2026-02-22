@@ -134,6 +134,12 @@ pub struct LifecycleSummary {
     pub step_totals: LifecycleStatusTotals,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ScenarioExecutionResult {
+    id: String,
+    status: PhaseResultStatus,
+}
+
 impl ExecutionMode {
     /// Returns canonical execution-mode label.
     pub fn as_str(self) -> &'static str {
@@ -434,8 +440,16 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     }
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
     let phases = all_orchestration_phases();
-    let fail_path_marker = config.evidence_dir.contains("fail-path");
-    let phase_results = build_phase_results(phases.as_slice(), mode, fail_path_marker);
+    let infra_fail_path_marker = config.evidence_dir.contains("fail-path");
+    let scenario_fail_path_marker = config.evidence_dir.contains("scenario-fail");
+    let scenario_results =
+        execute_selected_scenarios(mode, selected.as_slice(), scenario_fail_path_marker)?;
+    let phase_results = build_phase_results(
+        phases.as_slice(),
+        mode,
+        infra_fail_path_marker,
+        scenario_results.as_slice(),
+    );
     let agent_binary_json = config
         .agent_binary
         .as_deref()
@@ -535,6 +549,17 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         .map(|item| format!("\"{}\"", item.id))
         .collect::<Vec<_>>()
         .join(",");
+    let scenario_results_json = scenario_results
+        .iter()
+        .map(|result| {
+            format!(
+                "{{\"id\":\"{}\",\"status\":\"{}\"}}",
+                escape_json(result.id.as_str()),
+                result.status.as_str()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
     let phase_labels = phases
         .iter()
         .map(|phase| format!("\"{}\"", phase.as_str()))
@@ -584,7 +609,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
@@ -603,12 +628,56 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         live_validation_json,
         selected.len(),
         scenario_ids,
+        scenario_results_json,
         phases.len(),
         phase_labels,
         phase_results_json,
         phase_totals_json,
         step_totals_json
     ))
+}
+
+fn execute_selected_scenarios(
+    mode: ExecutionMode,
+    selected: &[scenarios::ScenarioDefinition],
+    force_first_fail: bool,
+) -> Result<Vec<ScenarioExecutionResult>, String> {
+    let driver = driver_for_mode(mode)?;
+    selected
+        .iter()
+        .enumerate()
+        .map(|(index, scenario)| {
+            let driver_result = driver.execute(scenario.id);
+            let status = if force_first_fail && index == 0 {
+                PhaseResultStatus::Fail
+            } else {
+                normalize_driver_status(driver_result.status)?
+            };
+            Ok(ScenarioExecutionResult {
+                id: scenario.id.to_owned(),
+                status,
+            })
+        })
+        .collect()
+}
+
+fn driver_for_mode(mode: ExecutionMode) -> Result<Box<dyn drivers::HarnessDriver>, String> {
+    match mode {
+        ExecutionMode::SdkDirect => Ok(Box::new(drivers::sdk_direct::SdkDirectDriver)),
+        ExecutionMode::CliScripted => Ok(Box::new(drivers::cli_scripted::CliScriptedDriver)),
+        ExecutionMode::McpTau | ExecutionMode::McpAny => {
+            Ok(Box::new(drivers::mcp_agent::McpAgentDriver::new(mode)?))
+        }
+    }
+}
+
+fn normalize_driver_status(value: &str) -> Result<PhaseResultStatus, String> {
+    match value.trim().to_ascii_uppercase().as_str() {
+        "PASS" => Ok(PhaseResultStatus::Pass),
+        "FAIL" => Ok(PhaseResultStatus::Fail),
+        "SKIP" => Ok(PhaseResultStatus::Skip),
+        other => Err(format!("unsupported driver execution status: {other}")),
+    }
 }
 
 fn ensure_external_execution_preflight(
@@ -716,31 +785,29 @@ fn build_phase_results(
     phases: &[OrchestrationPhase],
     mode: ExecutionMode,
     fail_path_marker: bool,
+    scenario_results: &[ScenarioExecutionResult],
 ) -> Vec<OrchestrationPhaseResult> {
     let started_at = "1970-01-01T00:00:00Z";
     let completed_at = "1970-01-01T00:00:01Z";
     phases
         .iter()
         .map(|phase| {
-            let steps = phase_step_records(*phase, mode, fail_path_marker);
-            let status = phase_status_for_steps(*phase, steps.as_slice());
-            let details = phase_details(*phase, status);
+            let steps = phase_step_records(*phase, mode, fail_path_marker, scenario_results);
+            let status = phase_status_for_steps(steps.as_slice());
+            let details = phase_details(*phase, status, scenario_results);
             OrchestrationPhaseResult {
                 phase: *phase,
                 status,
                 started_at: started_at.to_owned(),
                 completed_at: completed_at.to_owned(),
-                details: details.to_owned(),
+                details,
                 steps,
             }
         })
         .collect()
 }
 
-fn phase_status_for_steps(
-    phase: OrchestrationPhase,
-    steps: &[OrchestrationStepRecord],
-) -> PhaseResultStatus {
+fn phase_status_for_steps(steps: &[OrchestrationStepRecord]) -> PhaseResultStatus {
     if steps
         .iter()
         .any(|step| step.status == PhaseResultStatus::Fail)
@@ -753,24 +820,36 @@ fn phase_status_for_steps(
     {
         return PhaseResultStatus::Skip;
     }
-    match phase {
-        OrchestrationPhase::ScenarioRun
-        | OrchestrationPhase::Evidence
-        | OrchestrationPhase::Teardown => PhaseResultStatus::Skip,
-        OrchestrationPhase::InfraUp | OrchestrationPhase::AgentDeploy => PhaseResultStatus::Pass,
-    }
+    PhaseResultStatus::Pass
 }
 
-fn phase_details(phase: OrchestrationPhase, status: PhaseResultStatus) -> &'static str {
+fn phase_details(
+    phase: OrchestrationPhase,
+    status: PhaseResultStatus,
+    scenario_results: &[ScenarioExecutionResult],
+) -> String {
     match (phase, status) {
         (OrchestrationPhase::InfraUp, PhaseResultStatus::Fail) => {
-            "deterministic fail-path marker for infra startup"
+            "deterministic fail-path marker for infra startup".to_owned()
         }
-        (OrchestrationPhase::InfraUp, _) => "deterministic placeholder for infra startup",
-        (OrchestrationPhase::AgentDeploy, _) => "deterministic placeholder for agent deploy",
-        (OrchestrationPhase::ScenarioRun, _) => "deterministic placeholder for scenario execution",
-        (OrchestrationPhase::Evidence, _) => "deterministic placeholder for evidence finalize",
-        (OrchestrationPhase::Teardown, _) => "deterministic placeholder for teardown",
+        (OrchestrationPhase::InfraUp, _) => {
+            "deterministic placeholder for infra startup".to_owned()
+        }
+        (OrchestrationPhase::AgentDeploy, _) => {
+            "deterministic placeholder for agent deploy".to_owned()
+        }
+        (OrchestrationPhase::ScenarioRun, _) => {
+            let totals =
+                status_totals_from_iter(scenario_results.iter().map(|result| result.status));
+            format!(
+                "deterministic scenario execution summary: executed={} pass={} fail={} skip={}",
+                totals.total, totals.pass, totals.fail, totals.skip
+            )
+        }
+        (OrchestrationPhase::Evidence, _) => {
+            "deterministic placeholder for evidence finalize".to_owned()
+        }
+        (OrchestrationPhase::Teardown, _) => "deterministic placeholder for teardown".to_owned(),
     }
 }
 
@@ -778,6 +857,7 @@ fn phase_step_records(
     phase: OrchestrationPhase,
     mode: ExecutionMode,
     fail_path_marker: bool,
+    scenario_results: &[ScenarioExecutionResult],
 ) -> Vec<OrchestrationStepRecord> {
     let pass = PhaseResultStatus::Pass;
     match phase {
@@ -885,11 +965,25 @@ fn phase_step_records(
                 detail: "deterministic placeholder: infra evidence recorded".to_owned(),
             },
         ],
-        OrchestrationPhase::ScenarioRun => vec![OrchestrationStepRecord {
-            step: "Aggregate results".to_owned(),
-            status: PhaseResultStatus::Skip,
-            detail: "deterministic placeholder: scenario execution skipped".to_owned(),
-        }],
+        OrchestrationPhase::ScenarioRun => {
+            let totals =
+                status_totals_from_iter(scenario_results.iter().map(|result| result.status));
+            let status = if totals.fail > 0 {
+                PhaseResultStatus::Fail
+            } else if totals.pass > 0 {
+                PhaseResultStatus::Pass
+            } else {
+                PhaseResultStatus::Skip
+            };
+            vec![OrchestrationStepRecord {
+                step: "Execute selected scenarios via mode driver".to_owned(),
+                status,
+                detail: format!(
+                    "executed={} pass={} fail={} skip={}",
+                    totals.total, totals.pass, totals.fail, totals.skip
+                ),
+            }]
+        }
         OrchestrationPhase::Evidence => vec![OrchestrationStepRecord {
             step: "Write manifest.json".to_owned(),
             status: PhaseResultStatus::Skip,
