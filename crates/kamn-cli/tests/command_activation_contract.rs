@@ -119,6 +119,18 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         200,
                         r#"{"message_id":"msg-cli","status":"created"}"#,
                     )?;
+                } else if method == "GET" && path == "/v1/tasks/task-cli" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"task_id":"task-cli","state":"submitted"}"#,
+                    )?;
+                } else if method == "GET" && path == "/v1/agents/kamn:did:agent:alice" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"did":"kamn:did:agent:alice","reputation_score":777}"#,
+                    )?;
                 } else if method == "POST" && path == "/v1/tasks/create" {
                     write_http_response(
                         &mut stream,
@@ -426,6 +438,66 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
         (CommandKind::CreateChannel, "create_channel_payload"),
         (CommandKind::QueryMessage, "query_message_id"),
         (CommandKind::CreateTask, "create_task_payload"),
+    ] {
+        let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
+            .expect_err("missing required arg should fail");
+        assert!(
+            matches!(error, AgentLibError::InvalidInput { .. }),
+            "missing arg for {label} should be invalid input: {error}"
+        );
+    }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c07_cli_query_task_and_profile_commands_execute_and_validate_args() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 2));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+
+    let query_task_output = dispatch(&parsed(
+        CommandKind::QueryTask,
+        endpoint.as_str(),
+        &["task-cli"],
+    ))
+    .expect("query-task should succeed");
+    assert!(
+        query_task_output.text.contains("task_id=task-cli"),
+        "query-task output should include task id: {query_task_output:?}"
+    );
+    assert!(
+        query_task_output.text.contains("state=submitted"),
+        "query-task output should include state projection: {query_task_output:?}"
+    );
+
+    let query_profile_output = dispatch(&parsed(
+        CommandKind::QueryAgentProfile,
+        endpoint.as_str(),
+        &["kamn:did:agent:alice"],
+    ))
+    .expect("query-agent-profile should succeed");
+    assert!(
+        query_profile_output
+            .text
+            .contains("did=kamn:did:agent:alice"),
+        "query-agent-profile output should include did: {query_profile_output:?}"
+    );
+    assert!(
+        query_profile_output.text.contains("reputation_score=777"),
+        "query-agent-profile output should include reputation_score: {query_profile_output:?}"
+    );
+
+    for (command, label) in [
+        (CommandKind::QueryTask, "query_task_id"),
+        (CommandKind::QueryAgentProfile, "query_agent_profile_did"),
     ] {
         let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
             .expect_err("missing required arg should fail");

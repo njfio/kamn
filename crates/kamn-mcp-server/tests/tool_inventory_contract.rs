@@ -1,13 +1,15 @@
 use kamn_mcp_server::tools::{build_tool_registry, MCP_TOOL_NAMES};
 
 #[test]
-fn spec_c03_mcp_tool_registry_contains_required_12_tools() {
+fn spec_c03_mcp_tool_registry_contains_required_14_tools() {
     let required = [
         "register",
         "send_message",
         "create_channel",
         "list_messages",
         "query_message",
+        "query_task",
+        "query_agent_profile",
         "create_task",
         "accept_task",
         "complete_task",
@@ -37,4 +39,27 @@ fn spec_c04_mcp_tool_registry_has_deterministic_schema_descriptors() {
         assert_eq!(tool.input_schema, "kamn.mcp.input.v1");
         assert_eq!(tool.output_schema, "kamn.mcp.output.v1");
     }
+}
+
+#[test]
+fn spec_c05_mcp_query_tool_descriptors_match_contract_descriptions() {
+    let registry = build_tool_registry();
+
+    let query_task = registry
+        .iter()
+        .find(|tool| tool.name == "query_task")
+        .expect("query_task descriptor should exist");
+    assert_eq!(
+        query_task.description, "Query one task",
+        "query_task descriptor should keep canonical contract description",
+    );
+
+    let query_agent_profile = registry
+        .iter()
+        .find(|tool| tool.name == "query_agent_profile")
+        .expect("query_agent_profile descriptor should exist");
+    assert_eq!(
+        query_agent_profile.description, "Query one agent profile",
+        "query_agent_profile descriptor should keep canonical contract description",
+    );
 }

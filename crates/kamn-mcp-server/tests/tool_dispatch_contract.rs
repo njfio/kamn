@@ -31,6 +31,17 @@ impl McpToolBackend for TestBackend {
         ))
     }
 
+    fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"submitted"}}"#,
+            task_id
+        ))
+    }
+
+    fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
+        Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"task_id":"task-{}"}}"#, payload.len()))
     }
@@ -230,6 +241,8 @@ fn spec_c06_mcp_dispatch_rejects_malformed_task_and_escrow_requests() {
         r#"{"id":"req-10","tool":"complete_task"}"#,
         r#"{"id":"req-11","tool":"fund_escrow"}"#,
         r#"{"id":"req-12","tool":"release_escrow"}"#,
+        r#"{"id":"req-15","tool":"query_task"}"#,
+        r#"{"id":"req-16","tool":"query_agent_profile"}"#,
     ] {
         let response = dispatch_tool_request_json(&backend, request)
             .expect("dispatcher should return structured invalid-request envelope");
@@ -242,4 +255,45 @@ fn spec_c06_mcp_dispatch_rejects_malformed_task_and_escrow_requests() {
             "response should encode invalid_request kind: {response}"
         );
     }
+}
+
+#[test]
+fn spec_c07_mcp_dispatch_executes_query_task_and_query_agent_profile_tools() {
+    let backend = TestBackend;
+
+    let task_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-13","tool":"query_task","task_id":"task-1"}"#,
+    )
+    .expect("query_task should dispatch successfully");
+    assert!(
+        task_response.contains(r#""ok":true"#),
+        "query_task response should mark success: {task_response}"
+    );
+    assert!(
+        task_response.contains(r#""tool":"query_task""#),
+        "query_task response should preserve tool marker: {task_response}"
+    );
+    assert!(
+        task_response.contains(r#""state":"submitted""#),
+        "query_task response should include state projection: {task_response}"
+    );
+
+    let profile_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-14","tool":"query_agent_profile","did":"kamn:did:agent:alice"}"#,
+    )
+    .expect("query_agent_profile should dispatch successfully");
+    assert!(
+        profile_response.contains(r#""ok":true"#),
+        "query_agent_profile response should mark success: {profile_response}"
+    );
+    assert!(
+        profile_response.contains(r#""tool":"query_agent_profile""#),
+        "query_agent_profile response should preserve tool marker: {profile_response}"
+    );
+    assert!(
+        profile_response.contains(r#""reputation_score":777"#),
+        "query_agent_profile response should include reputation score: {profile_response}"
+    );
 }

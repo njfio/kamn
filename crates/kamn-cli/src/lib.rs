@@ -38,6 +38,10 @@ pub enum CommandKind {
     ListMessages,
     /// Query one message.
     QueryMessage,
+    /// Query one task.
+    QueryTask,
+    /// Query one agent profile.
+    QueryAgentProfile,
     /// Create one task.
     CreateTask,
     /// Accept one task.
@@ -62,6 +66,8 @@ impl CommandKind {
             "create-channel" => Ok(Self::CreateChannel),
             "list-messages" => Ok(Self::ListMessages),
             "query-message" => Ok(Self::QueryMessage),
+            "query-task" => Ok(Self::QueryTask),
+            "query-agent-profile" => Ok(Self::QueryAgentProfile),
             "create-task" => Ok(Self::CreateTask),
             "accept-task" => Ok(Self::AcceptTask),
             "complete-task" => Ok(Self::CompleteTask),
@@ -173,6 +179,8 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
         CommandKind::CreateChannel => commands::create_channel::execute(parsed),
         CommandKind::ListMessages => commands::list_messages::execute(parsed),
         CommandKind::QueryMessage => commands::query_message::execute(parsed),
+        CommandKind::QueryTask => commands::query_task::execute(parsed),
+        CommandKind::QueryAgentProfile => commands::query_agent_profile::execute(parsed),
         CommandKind::CreateTask => commands::create_task::execute(parsed),
         CommandKind::AcceptTask => commands::accept_task::execute(parsed),
         CommandKind::CompleteTask => commands::complete_task::execute(parsed),

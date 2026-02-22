@@ -12,6 +12,10 @@ pub trait McpToolBackend {
     fn list_messages(&self, channel_id: &str) -> Result<String, AgentLibError>;
     /// Queries one message status by identifier.
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one task status by identifier.
+    fn query_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one agent profile by DID.
+    fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError>;
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Accepts one task by identifier.
@@ -82,6 +86,24 @@ impl McpToolBackend for KamnAgentHandle {
             r#"{{"message_id":"{}","status":"{}"}}"#,
             escape_json(status.message_id.as_str()),
             escape_json(status.status.as_str()),
+        ))
+    }
+
+    fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::query_task(self, task_id)?;
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"{}"}}"#,
+            escape_json(status.task_id.as_str()),
+            escape_json(status.state.as_str()),
+        ))
+    }
+
+    fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
+        let profile = KamnAgentHandle::query_agent_profile(self, did)?;
+        Ok(format!(
+            r#"{{"did":"{}","reputation_score":{}}}"#,
+            escape_json(profile.did.as_str()),
+            profile.reputation_score,
         ))
     }
 
@@ -191,6 +213,20 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
         }
         "query_message" => {
             backend.query_message(required_string_arg(request_json, "message_id")?.as_str())
+        }
+        "query_task" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_task(task_id.as_str())
+        }
+        "query_agent_profile" => {
+            let did = match required_string_arg(request_json, "did") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_agent_profile(did.as_str())
         }
         "create_task" => {
             backend.create_task(required_string_arg(request_json, "payload")?.as_str())
