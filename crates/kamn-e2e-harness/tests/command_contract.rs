@@ -1019,3 +1019,59 @@ fn spec_c56_runtime_lifecycle_execution_markers_pass_when_external_enabled() {
 
     let _ = std::fs::remove_file(kolme_binary);
 }
+
+#[test]
+fn spec_c57_run_output_contains_runtime_validation_execution_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"runtime_validation_execution\":"));
+    assert!(output.contains("\"requested\""));
+    assert!(output.contains("\"orchestration_contract\""));
+    assert!(output.contains("\"lifecycle_contract\""));
+    assert!(output.contains("\"live_validation_contract\""));
+    assert!(output.contains("\"evidence_contract\""));
+    assert!(output.contains("\"overall\""));
+}
+
+#[test]
+fn spec_c58_runtime_validation_execution_markers_skip_when_external_disabled() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"runtime_validation_execution\":{\"requested\":false,\"orchestration_contract\":\"SKIP\",\"lifecycle_contract\":\"SKIP\",\"live_validation_contract\":\"SKIP\",\"evidence_contract\":\"SKIP\",\"overall\":\"SKIP\"}"
+    ));
+}
+
+#[test]
+fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
+    let kolme_binary = temp_path("kolme-node");
+    std::fs::write(&kolme_binary, "stub").expect("kolme binary placeholder should be created");
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"runtime_validation_execution\":{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"PASS\",\"evidence_contract\":\"PASS\",\"overall\":\"PASS\"}"
+    ));
+
+    let _ = std::fs::remove_file(kolme_binary);
+}
