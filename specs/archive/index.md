@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 317
+- archived_issue_count: 303
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3654 | `Subtask: extract signer_policy with deterministic quorum and profile checks` | 2026-02-18 | `specs/archive/3654` | `specs/3654/ARCHIVED.md` |
-| 3658 | `Subtask: add observability-over-TLS integration checks and local-heavy lane` | 2026-02-18 | `specs/archive/3658` | `specs/3658/ARCHIVED.md` |
-| 3765 | `Subtask: wire TLS go-no-go lane into release gate with deterministic reason taxonomy` | 2026-02-18 | `specs/archive/3765` | `specs/3765/ARCHIVED.md` |
-| 3766 | `Subtask: add signer migration parity matrix and legacy-behavior diff guard` | 2026-02-18 | `specs/archive/3766` | `specs/3766/ARCHIVED.md` |
-| 3797 | Subtask: land deterministic flaky root-cause fix with stress regression coverage | 2026-02-18 | `specs/archive/3797` | `specs/3797/ARCHIVED.md` |
-| 3798 | Subtask: add CI-compatible flaky capture lane with deterministic summary markers | 2026-02-18 | `specs/archive/3798` | `specs/3798/ARCHIVED.md` |
-| 3800 | Subtask: implement deterministic flaky reproducer matrix and artifact schema | 2026-02-18 | `specs/archive/3800` | `specs/3800/ARCHIVED.md` |
-| 3801 | Subtask: implement anti-flake merge-gate evaluator and reason taxonomy | 2026-02-18 | `specs/archive/3801` | `specs/3801/ARCHIVED.md` |
-| 3802 | Subtask: remove stale flaky quarantine entries and enforce metadata policy | 2026-02-18 | `specs/archive/3802` | `specs/3802/ARCHIVED.md` |
-| 3804 | Subtask: add anti-flake merge evidence report and docs-contract guards | 2026-02-18 | `specs/archive/3804` | `specs/3804/ARCHIVED.md` |
-| 3805 | `Subtask: add observability TLS negative-matrix fail-closed coverage` | 2026-02-18 | `specs/archive/3805` | `specs/3805/ARCHIVED.md` |
-| 3806 | `Subtask: extend TLS rollout/rollback runbook checkpoint contracts` | 2026-02-18 | `specs/archive/3806` | `specs/3806/ARCHIVED.md` |
-| 3807 | `Subtask: add signer_policy reason-taxonomy drift and docs parity contracts` | 2026-02-18 | `specs/archive/3807` | `specs/3807/ARCHIVED.md` |
-| 3808 | `Subtask: add signer extraction threshold and ownership budget guards` | 2026-02-18 | `specs/archive/3808` | `specs/3808/ARCHIVED.md` |
 | 3809 | `Subtask: expand unified API-observability compatibility matrix and parity markers` | 2026-02-18 | `specs/archive/3809` | `specs/3809/ARCHIVED.md` |
 | 3811 | `Subtask: enforce signer_adapter API boundary and re-export drift contracts` | 2026-02-18 | `specs/archive/3811` | `specs/3811/ARCHIVED.md` |
 | 3813 | Epic: R27.1 harden runtime operations with real signal handling and lifecycle drain guarantees | 2026-02-18 | `specs/archive/3813` | `specs/3813/ARCHIVED.md` |
