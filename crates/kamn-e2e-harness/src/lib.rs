@@ -1258,11 +1258,7 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
     })?;
     verify::validate_evidence_verification_blocks(
         evidence_dir_path,
-        &[
-            manifest_path.as_path(),
-            kolme_chain_dump_path,
-            output_path,
-        ],
+        &[manifest_path.as_path(), kolme_chain_dump_path, output_path],
     )?;
     let report_json = verify::generate_verification_report_json(manifest_json.as_str())?;
     if let Some(parent) = output_path.parent() {

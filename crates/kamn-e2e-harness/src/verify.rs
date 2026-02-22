@@ -134,9 +134,19 @@ pub fn verify_manifest(manifest_json: &str) -> Result<(), String> {
 
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
     let mut entries = std::fs::read_dir(dir)
-        .map_err(|error| format!("failed to read evidence directory {}: {error}", dir.display()))?
+        .map_err(|error| {
+            format!(
+                "failed to read evidence directory {}: {error}",
+                dir.display()
+            )
+        })?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| format!("failed to read evidence directory {}: {error}", dir.display()))?;
+        .map_err(|error| {
+            format!(
+                "failed to read evidence directory {}: {error}",
+                dir.display()
+            )
+        })?;
     entries.sort_by_key(|entry| entry.path());
     for entry in entries {
         let path = entry.path();
@@ -165,7 +175,10 @@ pub fn validate_evidence_verification_blocks(
     artifacts.sort();
 
     for artifact_path in artifacts {
-        if excluded_paths.iter().any(|excluded| artifact_path == *excluded) {
+        if excluded_paths
+            .iter()
+            .any(|excluded| artifact_path == *excluded)
+        {
             continue;
         }
         let artifact_json = std::fs::read_to_string(artifact_path.as_path()).map_err(|error| {
