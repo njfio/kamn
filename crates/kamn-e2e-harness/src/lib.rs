@@ -445,12 +445,12 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         "{{\"kolme_binary\":\"{}\",\"agent_binary\":{},\"agent_binary_required\":{},\"external_execution_enabled\":{}}}",
         escape_json(config.kolme_binary.as_str()),
         agent_binary_json,
-        if config.external_execution {
+        if agent_binary_required {
             "true"
         } else {
             "false"
         },
-        if agent_binary_required {
+        if config.external_execution {
             "true"
         } else {
             "false"
