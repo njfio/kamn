@@ -3,8 +3,8 @@
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
 - Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702
-- Active issue(s): #5704, #5705, #5706
-- Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability and green-main quality gates.
+- Active issue(s): #5708
+- Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
 ## Delivery Slices
 1. External execution preflight executable diagnostics for `kolme_binary` and MCP `agent_binary`. (Completed)
@@ -17,5 +17,6 @@
 8. Opt-in live CLI-scripted S-01 driver execution using `kamn-cli health` command probe. (Completed)
 9. Opt-in live MCP-agent S-01 driver execution using `kamn-mcp-server` command probe. (Completed)
 10. Upgrade MCP-agent S-01 probe to framed JSON-RPC initialize + tools/call health flow. (Completed)
-11. Align `kamn-cli` default/output contract with PRD JSON semantics. (In Progress)
-12. Restore R52 review marker and pre-merge workspace-test quality gates. (In Progress)
+11. Align `kamn-cli` default/output contract with PRD JSON semantics. (Completed)
+12. Restore R52 review marker and pre-merge workspace-test quality gates. (Completed)
+13. Reconcile R52 branch-hygiene drift with merged-only cleanup and deterministic markers. (In Progress)

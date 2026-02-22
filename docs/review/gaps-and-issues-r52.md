@@ -205,6 +205,24 @@ Trajectory: 174 (R47) → 55 (R48) → 51 (R49) → 51 (R50) → 61 (R51) → **
 
 Branch hygiene prune (#5686) ran during R52 but was offset by new feature PRs. Trend continues upward from the R49/R50 stability point.
 
+### 6.2 Post-Publication Branch Cleanup Reconciliation (Issue #5708)
+
+Post-publication reconciliation executed a merged-only codex issue branch cleanup wave against
+`origin/main` using deterministic pre/candidate/post evidence commands.
+
+Result: no merged `origin/codex/issue-*` candidates remained to delete at execution time, and
+remote head inventory stayed stable at `61`, which is lower than the R52 baseline snapshot `67`.
+
+- r52_review_post_publication_branch_cleanup_schema_version=kamn.review.branch-hygiene-post-publication-cleanup.v1
+- r52_review_branch_remote_head_count_baseline_snapshot=67
+- r52_review_branch_remote_head_count_pre_cleanup=61
+- r52_review_branch_remote_head_count_deleted=0
+- r52_review_branch_remote_head_count_post_cleanup=61
+- r52_review_branch_cleanup_strategy=merged_only_codex_issue_branches
+- r52_review_branch_cleanup_evidence_command_pre=git ls-remote --heads origin | wc -l
+- r52_review_branch_cleanup_evidence_command_candidates=git branch -r --merged origin/main | rg '^origin/codex/issue-'
+- r52_review_branch_cleanup_evidence_command_post=git ls-remote --heads origin | wc -l
+
 ---
 
 ## 7. Architecture
