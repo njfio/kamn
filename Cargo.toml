@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "crates/kamn-agent-lib",
   "crates/kamn-core",
   "crates/kamn-kolme",
   "crates/kamn-sdk",
