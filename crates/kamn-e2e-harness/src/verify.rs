@@ -164,7 +164,10 @@ pub fn verify_chain_dump(chain_dump_json: &str) -> Result<(), String> {
 }
 
 fn strip_json_whitespace(value: &str) -> String {
-    value.chars().filter(|character| !character.is_whitespace()).collect()
+    value
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect()
 }
 
 fn extract_json_string_marker(fragment: &str, marker: &str) -> Option<String> {
@@ -209,12 +212,15 @@ fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, 
                 }
                 depth -= 1;
                 if depth == 0 {
-                    let start =
-                        block_start.ok_or_else(|| "chain dump blocks payload malformed".to_owned())?;
+                    let start = block_start
+                        .ok_or_else(|| "chain dump blocks payload malformed".to_owned())?;
                     let block_fragment = &blocks_payload[start..=index];
-                    let block_hash = extract_json_string_marker(block_fragment, "\"block_hash\":\"")
-                        .filter(|value| !value.is_empty())
-                        .ok_or_else(|| "chain dump block missing block_hash marker".to_owned())?;
+                    let block_hash =
+                        extract_json_string_marker(block_fragment, "\"block_hash\":\"")
+                            .filter(|value| !value.is_empty())
+                            .ok_or_else(|| {
+                                "chain dump block missing block_hash marker".to_owned()
+                            })?;
                     let previous_block_hash =
                         extract_json_string_marker(block_fragment, "\"previous_block_hash\":\"")
                             .filter(|value| !value.is_empty())
