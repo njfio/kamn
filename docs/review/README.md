@@ -83,3 +83,21 @@ Contract invariants:
 - non_regression_baseline_test_file_count <= non_regression_max_test_file_count
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_doc_contract_consolidation_docs_contract.rs`.
+
+## Governance-Feature Activity Non-Regression Ratchet Contract (R50+)
+
+R50+ review artifacts must include governance-feature activity ratio non-regression bounds while
+rebalancing remediation is active.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 50`:
+
+- `r<release>_review_governance_feature_non_regression_schema_version=kamn.review.governance-feature-non-regression-ratchet.v1`
+- `r<release>_review_governance_feature_non_regression_governance_ratio_max=<float>`
+- `r<release>_review_governance_feature_non_regression_feature_ratio_min=<float>`
+
+Contract invariants:
+
+- current governance_activity_commit_ratio <= non_regression_governance_ratio_max
+- current feature_activity_commit_ratio >= non_regression_feature_ratio_min
+
+This schema is enforced by `crates/kamn-core/tests/review_r50_governance_feature_rebalancing_docs_contract.rs`.
