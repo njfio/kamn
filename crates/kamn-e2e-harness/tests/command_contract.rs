@@ -1471,3 +1471,58 @@ fn spec_c77_live_validation_status_and_completed_checks_reflect_failure_path() {
         "\"live_validation\":{\"expected_checks\":4,\"completed_checks\":3,\"status\":\"FAIL\"}"
     ));
 }
+
+#[test]
+fn spec_c78_run_output_contains_evidence_contract_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"evidence_contract\":"));
+    assert!(output.contains("\"expected_artifacts\""));
+    assert!(output.contains("\"recorded_artifacts\""));
+    assert!(output.contains("\"status\""));
+}
+
+#[test]
+fn spec_c79_live_execution_evidence_status_matches_evidence_contract_status() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"evidence_contract\":{\"expected_artifacts\":4,\"recorded_artifacts\":4,\"status\":\"PASS\"}"
+    ));
+    assert!(output.contains(
+        "\"live_execution\":{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"PASS\",\"overall_status\":\"PASS\"}"
+    ));
+}
+
+#[test]
+fn spec_c80_evidence_fail_path_sets_evidence_status_and_overall_fail() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence-fail".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"evidence_contract\":{\"expected_artifacts\":4,\"recorded_artifacts\":3,\"status\":\"FAIL\"}"
+    ));
+    assert!(output.contains(
+        "\"live_execution\":{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"FAIL\",\"overall_status\":\"FAIL\"}"
+    ));
+}
