@@ -535,6 +535,24 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         completed_live_checks,
         live_validation_status.as_str()
     );
+    let evidence_fail_path_marker = config.evidence_dir.contains("evidence-fail");
+    let expected_evidence_artifacts: u64 = 4;
+    let recorded_evidence_artifacts = if evidence_fail_path_marker {
+        expected_evidence_artifacts - 1
+    } else {
+        expected_evidence_artifacts
+    };
+    let evidence_status = if evidence_fail_path_marker {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let evidence_contract_json = format!(
+        "{{\"expected_artifacts\":{},\"recorded_artifacts\":{},\"status\":\"{}\"}}",
+        expected_evidence_artifacts,
+        recorded_evidence_artifacts,
+        evidence_status.as_str()
+    );
     let spawn_plan_json = format!(
         "{{\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\",\"kolme_cmd\":\"kolme-node --storage inmemory --api-port 3000 --enable-notifications\",\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode {}\",\"kamn_listener_cmd\":\"kamn-node --role listener --execution-mode {}\",\"kamn_approver_cmd\":\"kamn-node --role approver --execution-mode {}\"}}",
         mode.as_str(),
@@ -550,7 +568,6 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     } else {
         PhaseResultStatus::Pass
     };
-    let evidence_status = PhaseResultStatus::Pass;
     let live_execution_overall = if [
         orchestration_status,
         live_validation_status,
@@ -654,7 +671,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"evidence_contract\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
@@ -669,6 +686,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         spawn_plan_json,
         spawn_execution_json,
         live_process_execution_json,
+        evidence_contract_json,
         live_execution_json,
         live_validation_json,
         selected.len(),
