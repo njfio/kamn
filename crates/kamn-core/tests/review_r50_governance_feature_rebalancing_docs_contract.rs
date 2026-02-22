@@ -1,4 +1,5 @@
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
+const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_usize(marker_key: &str) -> usize {
     let needle = format!("{marker_key}=");
@@ -36,6 +37,24 @@ fn parse_marker_f64(marker_key: &str) -> f64 {
 
 #[test]
 fn functional_r50_governance_feature_rebalancing_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_governance_feature_non_regression_schema_version=kamn.review.governance-feature-non-regression-ratchet.v1"
+    ));
+    assert!(
+        REVIEW_MARKER_README
+            .contains("r<release>_review_governance_feature_non_regression_governance_ratio_max=<float>")
+    );
+    assert!(
+        REVIEW_MARKER_README
+            .contains("r<release>_review_governance_feature_non_regression_feature_ratio_min=<float>")
+    );
+    assert!(
+        REVIEW_MARKER_README.contains("current governance_activity_commit_ratio <= non_regression_governance_ratio_max")
+    );
+    assert!(
+        REVIEW_MARKER_README.contains("current feature_activity_commit_ratio >= non_regression_feature_ratio_min")
+    );
+
     assert!(DOC.contains(
         "r50_review_governance_feature_rebalancing_schema_version=kamn.review.governance-feature-rebalancing-plan.v1"
     ));
@@ -60,6 +79,11 @@ fn functional_r50_governance_feature_rebalancing_markers_present() {
     assert!(DOC.contains("r50_review_governance_feature_rebalancing_issue_cap_per_release=3"));
     assert!(DOC.contains("r50_review_governance_feature_rebalancing_target_release=r53"));
     assert!(DOC.contains("r50_review_governance_feature_rebalancing_status=active"));
+    assert!(DOC.contains(
+        "r50_review_governance_feature_non_regression_schema_version=kamn.review.governance-feature-non-regression-ratchet.v1"
+    ));
+    assert!(DOC.contains("r50_review_governance_feature_non_regression_governance_ratio_max=0.9032"));
+    assert!(DOC.contains("r50_review_governance_feature_non_regression_feature_ratio_min=0.0968"));
     assert!(DOC.contains(
         "Governance-feature rebalancing contract active (R50.20) targeting >=0.25 feature ratio (>=8 of 31 commits) by r53."
     ));
@@ -90,6 +114,13 @@ fn integration_r50_governance_feature_rebalancing_markers_are_consistent() {
     );
     let issue_cap_per_release =
         parse_marker_usize("r50_review_governance_feature_rebalancing_issue_cap_per_release");
+    let current_governance_ratio = parse_marker_f64("governance_activity_commit_ratio");
+    let current_feature_ratio = parse_marker_f64("feature_activity_commit_ratio");
+    let non_regression_governance_ratio_max = parse_marker_f64(
+        "r50_review_governance_feature_non_regression_governance_ratio_max",
+    );
+    let non_regression_feature_ratio_min =
+        parse_marker_f64("r50_review_governance_feature_non_regression_feature_ratio_min");
 
     assert_eq!(baseline_governance + baseline_feature, baseline_total);
     assert!((target_feature_ratio_min + target_governance_ratio_max - 1.0).abs() <= 0.001);
@@ -112,5 +143,13 @@ fn integration_r50_governance_feature_rebalancing_markers_are_consistent() {
     assert!(
         issue_cap_per_release <= 3,
         "issue cap per release must stay bounded"
+    );
+    assert!(
+        current_governance_ratio <= non_regression_governance_ratio_max + 0.0001,
+        "current governance ratio must not exceed non-regression max"
+    );
+    assert!(
+        current_feature_ratio + 0.0001 >= non_regression_feature_ratio_min,
+        "current feature ratio must not drop below non-regression minimum"
     );
 }
