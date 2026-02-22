@@ -2,8 +2,8 @@
 
 - Milestone: `R51 E2E Live Testing PRD Full Delivery`
 - Epic: #5557
-- Completed issue(s): #5558, #5560, #5562, #5564, #5566, #5568, #5570, #5572
-- Active issue(s): #5574
+- Completed issue(s): #5558, #5560, #5562, #5564, #5566, #5568, #5570, #5572, #5574
+- Active issue(s): #5576
 - Scope: deliver `docs/prd/e2e-live-testing-prd.md` architecture and scenario contracts through spec-driven, issue-driven, TDD implementation slices.
 
 ## Delivery Slices
@@ -15,5 +15,6 @@
 6. Phase-4c orchestration phase-state contracts in run output. (Completed)
 7. Phase-4d phase-result contract scaffolds in run output. (Completed)
 8. Phase-4e lifecycle step-record contracts in run output. (Completed)
-9. Phase-4f mode-aware lifecycle population contracts. (Active)
-10. Phase-4g live integration + CI hardening. (Pending)
+9. Phase-4f mode-aware lifecycle population contracts. (Completed)
+10. Phase-4g lifecycle summary aggregation contracts. (Active)
+11. Phase-4h live integration + CI hardening. (Pending)
