@@ -1,6 +1,6 @@
 # Issue #5547 Spec - Service API Scope-Policy Fixture Method Overlap and Exclusive Coverage Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Issue: #5547
 - Parent: #3812
 - Milestone: R50.39 Service API scope-policy fixture method overlap and exclusive coverage metrics exposure
