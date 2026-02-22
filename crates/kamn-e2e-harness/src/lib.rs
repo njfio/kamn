@@ -32,6 +32,34 @@ pub enum ExecutionMode {
     McpAny,
 }
 
+/// Canonical orchestration phases from PRD section 11.2.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OrchestrationPhase {
+    /// Phase 1: infrastructure startup.
+    InfraUp,
+    /// Phase 2: per-agent deployment/bootstrap.
+    AgentDeploy,
+    /// Phase 3: scenario execution.
+    ScenarioRun,
+    /// Phase 4: evidence finalization.
+    Evidence,
+    /// Phase 5: teardown and archival.
+    Teardown,
+}
+
+impl OrchestrationPhase {
+    /// Returns canonical phase marker label.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InfraUp => "INFRA_UP",
+            Self::AgentDeploy => "AGENT_DEPLOY",
+            Self::ScenarioRun => "SCENARIO_RUN",
+            Self::Evidence => "EVIDENCE",
+            Self::Teardown => "TEARDOWN",
+        }
+    }
+}
+
 impl ExecutionMode {
     /// Returns canonical execution-mode label.
     pub fn as_str(self) -> &'static str {
@@ -62,6 +90,17 @@ pub fn all_execution_modes() -> Vec<ExecutionMode> {
         ExecutionMode::CliScripted,
         ExecutionMode::McpTau,
         ExecutionMode::McpAny,
+    ]
+}
+
+/// Returns canonical orchestration phase inventory.
+pub fn all_orchestration_phases() -> Vec<OrchestrationPhase> {
+    vec![
+        OrchestrationPhase::InfraUp,
+        OrchestrationPhase::AgentDeploy,
+        OrchestrationPhase::ScenarioRun,
+        OrchestrationPhase::Evidence,
+        OrchestrationPhase::Teardown,
     ]
 }
 
@@ -260,17 +299,25 @@ fn escape_json(value: &str) -> String {
 pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String> {
     let mode = ExecutionMode::parse(config.mode.as_str())?;
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
+    let phases = all_orchestration_phases();
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
         .collect::<Vec<_>>()
         .join(",");
+    let phase_labels = phases
+        .iter()
+        .map(|phase| format!("\"{}\"", phase.as_str()))
+        .collect::<Vec<_>>()
+        .join(",");
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}]}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}]}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         selected.len(),
-        scenario_ids
+        scenario_ids,
+        phases.len(),
+        phase_labels
     ))
 }
 
@@ -322,7 +369,7 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
 
 #[cfg(test)]
 mod tests {
-    use super::{all_execution_modes, ExecutionMode};
+    use super::{all_execution_modes, all_orchestration_phases, ExecutionMode};
 
     #[test]
     fn unit_execution_mode_parse_roundtrip() {
@@ -330,5 +377,23 @@ mod tests {
             let parsed = ExecutionMode::parse(mode.as_str()).expect("mode should parse");
             assert_eq!(parsed, mode);
         }
+    }
+
+    #[test]
+    fn unit_orchestration_phase_inventory_is_canonical() {
+        let labels: Vec<&str> = all_orchestration_phases()
+            .iter()
+            .map(|phase| phase.as_str())
+            .collect();
+        assert_eq!(
+            labels,
+            vec![
+                "INFRA_UP",
+                "AGENT_DEPLOY",
+                "SCENARIO_RUN",
+                "EVIDENCE",
+                "TEARDOWN"
+            ]
+        );
     }
 }
