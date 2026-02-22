@@ -91,6 +91,26 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Code-Quality Status Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication code-quality status reconciliation markers to record
+resolved quality-gate posture while preserving historical baseline wording in Section 4.2.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_code_quality_status_reconciliation_schema_version=kamn.review.code-quality-status-post-publication-reconciliation.v1`
+- `r<release>_review_code_quality_snapshot_status=<text>`
+- `r<release>_review_code_quality_post_publication_workspace_gate_status=<pass|fail>`
+- `r<release>_review_code_quality_post_publication_cli_compile_status=<resolved|unresolved>`
+- `r<release>_review_code_quality_snapshot_rows_preserved=<true|false>`
+
+Contract invariants:
+
+- Workspace/CLI post-publication code-quality statuses must align with post-publication quality-gate reconciliation markers
+- Baseline Section 4.2 text remains unchanged; reconciliation markers are additive
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Post-Publication Branch-Hygiene Status Reconciliation Contract (R52+)
 
 R52+ review artifacts may add post-publication branch-hygiene status reconciliation markers to
