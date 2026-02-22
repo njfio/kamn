@@ -36,3 +36,17 @@ This research artifact captures the phase-1 (`kamn-agent-lib`) gap baseline and 
 - `phase2_kamn_cli_status=pending`
 - `phase3_kamn_e2e_harness_status=pending`
 - `phase4_ci_integration_status=pending`
+
+## Extended in #5674
+- Added service/SDK/agent-lib support for previously stubbed task + escrow operations:
+  - `POST /v1/tasks/{id}/accept`
+  - `POST /v1/tasks/{id}/complete`
+  - `POST /v1/escrow/fund`
+  - `POST /v1/escrow/{id}/release`
+- Replaced `KamnAgentHandle` stubs for `accept_task`, `complete_task`, `fund_escrow`, and `release_escrow` with SDK-backed implementations.
+
+## Status Markers (After #5674)
+- `phase1_task_escrow_stub_ops_remaining_before=4`
+- `phase1_task_escrow_stub_ops_remaining_after=0`
+- `phase1_task_escrow_route_expansion_status=implemented`
+- `phase1_agent_lib_stub_replacement_status=implemented`
