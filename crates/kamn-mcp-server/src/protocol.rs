@@ -173,6 +173,7 @@ fn build_dispatch_payload(id_token: &str, tool_name: &str, request_json: &str) -
         "payload",
         "channel_id",
         "message_id",
+        "did",
         "task_id",
         "escrow_id",
         "tx_hash",

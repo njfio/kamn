@@ -73,7 +73,7 @@ KAMN protocol complexity (DID formats, signature schemes, envelope construction,
                │  kamn-mcp-server     │  │  kamn-cli           │
                │  (MCP tool server)   │  │  (command-line)     │
                │                      │  │                     │
-               │  12 MCP tools:       │  │  12 subcommands:    │
+               │  14 MCP tools:       │  │  14 subcommands:    │
                │    kamn_register     │  │    register          │
                │    kamn_send_message │  │    send-message      │
                │    kamn_create_chan  │  │    create-channel    │
@@ -83,6 +83,8 @@ KAMN protocol complexity (DID formats, signature schemes, envelope construction,
                │    kamn_fund_escrow  │  │    fund-escrow       │
                │    kamn_release_esc  │  │    release-escrow    │
                │    kamn_query_msg    │  │    query-message     │
+               │    kamn_query_task   │  │    query-task        │
+               │    kamn_query_agent_profile││    query-agent-profile│
                │    kamn_list_msgs    │  │    list-messages     │
                │    kamn_verify_proof │  │    verify-proof      │
                │    kamn_health       │  │    health             │
@@ -289,6 +291,8 @@ Or with environment-based identity:
 | `create_channel` | Implemented | Dispatches through `KamnAgentHandle::create_channel`. |
 | `list_messages` | Implemented | Backed by `GET /v1/channels/{id}/messages` via `kamn-sdk` + `kamn-agent-lib`. |
 | `query_message` | Implemented | Dispatches through `KamnAgentHandle::query_message`. |
+| `query_task` | Implemented | Dispatches through `KamnAgentHandle::query_task`. |
+| `query_agent_profile` | Implemented | Dispatches through `KamnAgentHandle::query_agent_profile`. |
 | `create_task` | Implemented | Dispatches through `KamnAgentHandle::create_task`. |
 | `health` | Implemented | Dispatches through `KamnAgentHandle::health`. |
 | `accept_task` | Implemented | Dispatches through `KamnAgentHandle::accept_task` with deterministic task-id argument validation. |
@@ -298,8 +302,8 @@ Or with environment-based identity:
 | `verify_proof` | Implemented | Dispatches through `KamnAgentHandle::verify_proof` with deterministic invalid-request handling for malformed payload fields. |
 
 Current `kamn-cli` activation status for the same supported surface:
-- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `create-task`, `verify-proof`, `health`
-- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `create-task`, `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`, `verify-proof`, `health`
+- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `query-task`, `query-agent-profile`, `create-task`, `verify-proof`, `health`
+- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `query-task`, `query-agent-profile`, `create-task`, `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`, `verify-proof`, `health`
 
 **MCP Tool Definitions:**
 
@@ -365,7 +369,7 @@ fn register_tools(server: &mut McpServer, agent_handle: Arc<KamnAgentHandle>) {
         handler: /* ... */
     });
 
-    // ... remaining 10 tools follow same pattern
+    // ... remaining 13 tools follow same pattern
 }
 ```
 
@@ -378,6 +382,8 @@ fn register_tools(server: &mut McpServer, agent_handle: Arc<KamnAgentHandle>) {
 | `kamn_create_channel` | Create direct or group channel | `channel_type`, `members` | `name` |
 | `kamn_list_messages` | List messages in a channel | `channel_id` | `limit`, `offset` |
 | `kamn_query_message` | Get message status + proof status | `message_id` | — |
+| `kamn_query_task` | Get task lifecycle state | `task_id` | — |
+| `kamn_query_agent_profile` | Get agent profile + reputation | `did` | — |
 | `kamn_create_task` | Create a task with optional escrow | `description`, `criteria` | `escrow_amount`, `deadline` |
 | `kamn_accept_task` | Accept a pending task | `task_id` | — |
 | `kamn_complete_task` | Submit completion evidence | `task_id`, `evidence` | — |
@@ -1225,7 +1231,7 @@ crates/
     Cargo.toml
     src/
       main.rs                        # CLI args + MCP server bootstrap
-      tools.rs                       # 12 MCP tool registrations
+      tools.rs                       # 14 MCP tool registrations
       config.rs                      # Agent identity + endpoint config
 
   kamn-cli/                          # Command-line interface binary
@@ -1238,6 +1244,8 @@ crates/
         create_channel.rs
         list_messages.rs
         query_message.rs
+        query_task.rs
+        query_agent_profile.rs
         create_task.rs
         accept_task.rs
         complete_task.rs
@@ -1301,9 +1309,9 @@ Thin wrappers over `kamn-agent-lib`. Can be developed in parallel.
 | Task | Deliverable | Effort |
 |------|------------|--------|
 | `kamn-mcp-server` binary scaffold | CLI args, MCP stdio transport, config | M |
-| 12 MCP tool definitions with JSON schemas | All tools registered and documented | L |
+| 14 MCP tool definitions with JSON schemas | All tools registered and documented | L |
 | MCP integration tests (tool call → KAMN API → response) | End-to-end MCP validation | M |
-| `kamn-cli` binary scaffold | Clap CLI with 12 subcommands | M |
+| `kamn-cli` binary scaffold | Clap CLI with 14 subcommands | M |
 | CLI JSON + text output modes | `--format json` / `--format text` | S |
 | CLI environment variable support | `KAMN_ENDPOINT`, `KAMN_AGENT_DID`, etc. | S |
 | Agent skill definition (`docs/skills/kamn-agent.md`) | Portable prompt for any LLM | S |

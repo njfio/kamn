@@ -31,6 +31,17 @@ impl McpToolBackend for ProtocolBackend {
         ))
     }
 
+    fn query_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"submitted"}}"#,
+            task_id
+        ))
+    }
+
+    fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError> {
+        Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(
             r#"{{"task_id":"task-{}","state":"created"}}"#,
@@ -155,6 +166,14 @@ fn spec_c02_mcp_tools_list_framed_tool_inventory_contract() {
         body.contains(r#""name":"verify_proof""#),
         "tools/list should include verify_proof tool: {body}",
     );
+    assert!(
+        body.contains(r#""name":"query_task""#),
+        "tools/list should include query_task tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"query_agent_profile""#),
+        "tools/list should include query_agent_profile tool: {body}",
+    );
 }
 
 #[test]
@@ -208,6 +227,45 @@ fn spec_c05_mcp_invalid_params_error_contract() {
     assert!(
         body.contains(r#""code":-32602"#),
         "malformed tools/call should map to invalid params code: {body}",
+    );
+}
+
+#[test]
+fn spec_c07_mcp_tools_call_query_task_and_profile_dispatch_contract() {
+    let backend = ProtocolBackend;
+
+    let query_task_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-7","method":"tools/call","params":{"name":"query_task","arguments":{"task_id":"task-1"}}}"#,
+    );
+    let query_task_responses =
+        process_stdio_input(&backend, query_task_request.as_str()).expect("input should parse");
+    let query_task_body = parse_framed_json(query_task_responses[0].as_str());
+    assert!(
+        query_task_body.contains(r#""jsonrpc":"2.0""#),
+        "query_task should return JSON-RPC response: {query_task_body}",
+    );
+    assert!(
+        query_task_body.contains(r#""tool":"query_task""#),
+        "query_task payload should preserve tool marker: {query_task_body}",
+    );
+    assert!(
+        query_task_body.contains(r#""state":"submitted""#),
+        "query_task payload should include state projection: {query_task_body}",
+    );
+
+    let query_profile_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-8","method":"tools/call","params":{"name":"query_agent_profile","arguments":{"did":"kamn:did:agent:alice"}}}"#,
+    );
+    let query_profile_responses =
+        process_stdio_input(&backend, query_profile_request.as_str()).expect("input should parse");
+    let query_profile_body = parse_framed_json(query_profile_responses[0].as_str());
+    assert!(
+        query_profile_body.contains(r#""tool":"query_agent_profile""#),
+        "query_agent_profile payload should preserve tool marker: {query_profile_body}",
+    );
+    assert!(
+        query_profile_body.contains(r#""reputation_score":777"#),
+        "query_agent_profile payload should include reputation score: {query_profile_body}",
     );
 }
 

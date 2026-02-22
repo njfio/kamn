@@ -18,8 +18,12 @@ pub mod fund_escrow;
 pub mod health;
 /// `list-messages` command module.
 pub mod list_messages;
+/// `query-agent-profile` command module.
+pub mod query_agent_profile;
 /// `query-message` command module.
 pub mod query_message;
+/// `query-task` command module.
+pub mod query_task;
 /// `register` command module.
 pub mod register;
 /// `release-escrow` command module.

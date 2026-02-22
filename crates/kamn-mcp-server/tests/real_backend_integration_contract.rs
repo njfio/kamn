@@ -100,6 +100,18 @@ fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Re
                         200,
                         r#"{"channel_id":"channel-contract-1","messages":["msg-a","msg-b"]}"#,
                     )?;
+                } else if method == "GET" && path == "/v1/tasks/task-contract-1" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"task_id":"task-contract-1","state":"submitted"}"#,
+                    )?;
+                } else if method == "GET" && path == "/v1/agents/kamn:did:agent:alice" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"did":"kamn:did:agent:alice","reputation_score":42}"#,
+                    )?;
                 } else {
                     write_http_response(
                         &mut stream,
@@ -247,4 +259,56 @@ fn spec_c04_real_backend_dispatch_invalid_request_contract() {
     assert!(response.contains(r#""ok":false"#));
     assert!(response.contains(r#""kind":"invalid_request""#));
     assert!(response.contains("missing required field: channel_id"));
+}
+
+#[test]
+fn spec_c05_real_backend_dispatch_query_task_contract() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
+    wait_for_server_ready();
+
+    let backend = real_backend(bind_addr.as_str());
+    let response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-5","tool":"query_task","task_id":"task-contract-1"}"#,
+    )
+    .expect("query_task dispatch should succeed");
+
+    assert!(response.contains(r#""ok":true"#));
+    assert!(response.contains(r#""tool":"query_task""#));
+    assert!(response.contains(r#""task_id":"task-contract-1""#));
+    assert!(response.contains(r#""state":"submitted""#));
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "service fixture should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c06_real_backend_dispatch_query_agent_profile_contract() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 1));
+    wait_for_server_ready();
+
+    let backend = real_backend(bind_addr.as_str());
+    let response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-6","tool":"query_agent_profile","did":"kamn:did:agent:alice"}"#,
+    )
+    .expect("query_agent_profile dispatch should succeed");
+
+    assert!(response.contains(r#""ok":true"#));
+    assert!(response.contains(r#""tool":"query_agent_profile""#));
+    assert!(response.contains(r#""did":"kamn:did:agent:alice""#));
+    assert!(response.contains(r#""reputation_score":42"#));
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "service fixture should satisfy request budget"
+    );
 }
