@@ -1,4 +1,6 @@
 use std::path::PathBuf;
+#[cfg(unix)]
+use std::{fs, os::unix::fs::PermissionsExt};
 
 use kamn_e2e_harness::{
     all_orchestration_phases, all_phase_result_statuses, execute_run_contract,
@@ -13,6 +15,28 @@ fn temp_path(name: &str) -> PathBuf {
         .expect("clock should be monotonic")
         .as_nanos();
     std::env::temp_dir().join(format!("kamn-e2e-harness-{pid}-{nanos}-{name}"))
+}
+
+fn write_stub_binary(path: &PathBuf) {
+    std::fs::write(path, "#!/bin/sh\nexit 0\n").expect("stub binary should be created");
+}
+
+#[cfg(unix)]
+fn set_executable(path: &PathBuf) {
+    let mut permissions = fs::metadata(path)
+        .expect("binary metadata should exist")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("binary should become executable");
+}
+
+#[cfg(unix)]
+fn set_non_executable(path: &PathBuf) {
+    let mut permissions = fs::metadata(path)
+        .expect("binary metadata should exist")
+        .permissions();
+    permissions.set_mode(0o644);
+    fs::set_permissions(path, permissions).expect("binary should become non-executable");
 }
 
 #[test]
@@ -944,7 +968,9 @@ fn spec_c52_runtime_orchestration_markers_skip_when_external_disabled() {
 #[test]
 fn spec_c53_runtime_orchestration_markers_pass_when_external_enabled() {
     let kolme_binary = temp_path("kolme-node");
-    std::fs::write(&kolme_binary, "stub").expect("kolme binary placeholder should be created");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
         kolme_binary: kolme_binary.display().to_string(),
@@ -1003,7 +1029,9 @@ fn spec_c55_runtime_lifecycle_execution_markers_skip_when_external_disabled() {
 #[test]
 fn spec_c56_runtime_lifecycle_execution_markers_pass_when_external_enabled() {
     let kolme_binary = temp_path("kolme-node");
-    std::fs::write(&kolme_binary, "stub").expect("kolme binary placeholder should be created");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
         kolme_binary: kolme_binary.display().to_string(),
@@ -1059,7 +1087,9 @@ fn spec_c58_runtime_validation_execution_markers_skip_when_external_disabled() {
 #[test]
 fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
     let kolme_binary = temp_path("kolme-node");
-    std::fs::write(&kolme_binary, "stub").expect("kolme binary placeholder should be created");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
         kolme_binary: kolme_binary.display().to_string(),
@@ -1074,4 +1104,79 @@ fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
     ));
 
     let _ = std::fs::remove_file(kolme_binary);
+}
+
+#[test]
+fn spec_c60_external_execution_non_executable_kolme_binary_returns_deterministic_error() {
+    let kolme_binary = temp_path("kolme-node-non-exec");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_non_executable(&kolme_binary);
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let err = execute_run_contract(&config)
+        .expect_err("non-executable kolme binary should fail deterministic preflight");
+    assert!(err.contains("external execution preflight failed"));
+    assert!(err.contains("kolme binary is not executable"));
+    let _ = std::fs::remove_file(kolme_binary);
+}
+
+#[test]
+fn spec_c61_external_execution_non_executable_agent_binary_returns_deterministic_error() {
+    let kolme_binary = temp_path("kolme-node-exec");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
+
+    let agent_binary = temp_path("agent-node-non-exec");
+    write_stub_binary(&agent_binary);
+    #[cfg(unix)]
+    set_non_executable(&agent_binary);
+
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: Some(agent_binary.display().to_string()),
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let err = execute_run_contract(&config)
+        .expect_err("non-executable agent binary should fail deterministic preflight");
+    assert!(err.contains("external execution preflight failed"));
+    assert!(err.contains("agent binary is not executable"));
+    let _ = std::fs::remove_file(kolme_binary);
+    let _ = std::fs::remove_file(agent_binary);
+}
+
+#[test]
+fn spec_c62_external_execution_executable_binaries_pass_preflight() {
+    let kolme_binary = temp_path("kolme-node-exec-pass");
+    write_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
+
+    let agent_binary = temp_path("agent-node-exec-pass");
+    write_stub_binary(&agent_binary);
+    #[cfg(unix)]
+    set_executable(&agent_binary);
+
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: Some(agent_binary.display().to_string()),
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("executable binaries should pass preflight");
+    assert!(output.contains("\"runtime_external_execution\":{\"requested\":true"));
+    let _ = std::fs::remove_file(kolme_binary);
+    let _ = std::fs::remove_file(agent_binary);
 }
