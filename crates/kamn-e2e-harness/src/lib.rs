@@ -640,6 +640,11 @@ fn ensure_binary_path_is_executable(path: &str, label: &str) -> Result<(), Strin
             "external execution preflight failed: {label} binary not found: {path}"
         ));
     }
+    if !binary_path.is_file() {
+        return Err(format!(
+            "external execution preflight failed: {label} binary path is not a file: {path}"
+        ));
+    }
     ensure_binary_executable(binary_path, label)
 }
 
