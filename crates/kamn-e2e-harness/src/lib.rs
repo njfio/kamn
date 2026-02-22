@@ -409,7 +409,13 @@ fn escape_json(value: &str) -> String {
 pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String> {
     let mode = ExecutionMode::parse(config.mode.as_str())?;
     let agent_binary_required = matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny);
-    if agent_binary_required && config.agent_binary.is_none() {
+    if agent_binary_required
+        && config
+            .agent_binary
+            .as_deref()
+            .map(|value| value.trim().is_empty())
+            .unwrap_or(true)
+    {
         return Err("missing required agent binary for MCP modes".to_owned());
     }
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
@@ -430,6 +436,39 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         } else {
             "false"
         }
+    );
+    let kolme_binary_status = if config.kolme_binary.trim().is_empty() {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let agent_binary_status = if agent_binary_required {
+        PhaseResultStatus::Pass
+    } else {
+        PhaseResultStatus::Skip
+    };
+    let scenario_selection_status = if selected.is_empty() {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let overall_status = if [
+        kolme_binary_status,
+        agent_binary_status,
+        scenario_selection_status,
+    ]
+    .contains(&PhaseResultStatus::Fail)
+    {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let runtime_readiness_json = format!(
+        "{{\"kolme_binary\":\"{}\",\"agent_binary\":\"{}\",\"scenario_selection\":\"{}\",\"overall\":\"{}\"}}",
+        kolme_binary_status.as_str(),
+        agent_binary_status.as_str(),
+        scenario_selection_status.as_str(),
+        overall_status.as_str()
     );
     let scenario_ids = selected
         .iter()
@@ -485,10 +524,11 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_readiness\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
+        runtime_readiness_json,
         selected.len(),
         scenario_ids,
         phases.len(),
