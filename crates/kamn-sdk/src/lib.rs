@@ -27,8 +27,9 @@ pub use memory::InMemoryKamnClient;
 /// Re-exported service API client primitives.
 pub use service::{
     service_signature_for_fields, ServiceAgentProfile, ServiceApiClient, ServiceChannelReceipt,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth,
-    ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceEscrowFundReceipt, ServiceEscrowReleaseReceipt, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceRouteEvent,
+    ServiceTaskReceipt, ServiceTaskStatus,
 };
 /// Re-exported TCP relay adapter and envelope helpers.
 pub use tcp::{

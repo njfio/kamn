@@ -14,8 +14,9 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceAgentProfile, ServiceChannelReceipt, ServiceEscrowFundReceipt,
+    ServiceEscrowReleaseReceipt, ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus,
+    ServiceTaskReceipt, ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -169,32 +170,43 @@ impl KamnAgentHandle {
         self.kolme_client.verify_proof(message_id, receipt)
     }
 
-    /// Placeholder for task acceptance route not yet exposed by current SDK service client.
-    pub fn accept_task(&self, _task_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "accept_task requires service route support not present in phase-1",
-        ))
+    /// Accepts a task through the service API.
+    pub fn accept_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "")?;
+        self.service_client.accept_task(task_id, &auth)
     }
 
-    /// Placeholder for task completion route not yet exposed by current SDK service client.
-    pub fn complete_task(&self, _task_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "complete_task requires service route support not present in phase-1",
-        ))
+    /// Completes a task through the service API.
+    pub fn complete_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "")?;
+        self.service_client.complete_task(task_id, &auth)
     }
 
-    /// Placeholder for escrow funding route not yet exposed by current SDK service client.
-    pub fn fund_escrow(&self, _payload: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "fund_escrow requires service route support not present in phase-1",
-        ))
+    /// Funds escrow through the service API.
+    pub fn fund_escrow(&self, payload: &str) -> Result<ServiceEscrowFundReceipt, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, payload)?;
+        self.service_client.fund_escrow(payload, &auth)
     }
 
-    /// Placeholder for escrow release route not yet exposed by current SDK service client.
-    pub fn release_escrow(&self, _escrow_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "release_escrow requires service route support not present in phase-1",
-        ))
+    /// Releases escrow through the service API.
+    pub fn release_escrow(
+        &self,
+        escrow_id: &str,
+    ) -> Result<ServiceEscrowReleaseReceipt, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "")?;
+        self.service_client.release_escrow(escrow_id, &auth)
     }
 
     /// Placeholder for channel message listing route not yet exposed by current SDK service client.
@@ -218,7 +230,7 @@ mod tests {
     use super::{AgentIdentity, AgentLibError, KamnAgentHandle};
 
     #[test]
-    fn unit_kamn_agent_handle_reports_unsupported_operations_explicitly() {
+    fn unit_kamn_agent_handle_task_and_escrow_ops_use_sdk_validation_contracts() {
         let identity = AgentIdentity::from_agent_name("alice").expect("identity");
         let handle = KamnAgentHandle::with_identity(
             "http://localhost:8080",
@@ -227,9 +239,40 @@ mod tests {
         )
         .expect("handle");
 
-        let error = handle
-            .accept_task("task-1")
-            .expect_err("accept_task should be unsupported in phase-1");
-        assert!(matches!(error, AgentLibError::UnsupportedOperation(_)));
+        let accept_error = handle
+            .accept_task("")
+            .expect_err("accept_task empty task_id should fail validation");
+        assert!(matches!(accept_error, AgentLibError::Sdk(_)));
+        assert!(!matches!(
+            accept_error,
+            AgentLibError::UnsupportedOperation(_)
+        ));
+
+        let complete_error = handle
+            .complete_task("")
+            .expect_err("complete_task empty task_id should fail validation");
+        assert!(matches!(complete_error, AgentLibError::Sdk(_)));
+        assert!(!matches!(
+            complete_error,
+            AgentLibError::UnsupportedOperation(_)
+        ));
+
+        let fund_error = handle
+            .fund_escrow("{\"task_id\":\"task-1\",\"amount\":1}")
+            .expect_err("fund_escrow should route through sdk transport");
+        assert!(matches!(fund_error, AgentLibError::Sdk(_)));
+        assert!(!matches!(
+            fund_error,
+            AgentLibError::UnsupportedOperation(_)
+        ));
+
+        let release_error = handle
+            .release_escrow("")
+            .expect_err("release_escrow empty id should fail validation");
+        assert!(matches!(release_error, AgentLibError::Sdk(_)));
+        assert!(!matches!(
+            release_error,
+            AgentLibError::UnsupportedOperation(_)
+        ));
     }
 }
