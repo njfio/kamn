@@ -18,7 +18,7 @@ fn temp_path(name: &str) -> PathBuf {
 }
 
 fn valid_chain_dump_json() -> &'static str {
-    r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[]}"#
+    r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"block_hash":"sha256:block-0","previous_block_hash":"GENESIS"},{"height":1,"block_hash":"sha256:block-1","previous_block_hash":"sha256:block-0"}]}"#
 }
 
 fn write_stub_binary(path: &PathBuf) {
@@ -1976,6 +1976,100 @@ fn spec_c97_verify_command_rejects_chain_dump_missing_blocks_marker() {
     };
     let err = execute_verify_contract(&config).expect_err("verify should fail for missing marker");
     assert!(err.contains("chain dump missing blocks marker"));
+
+    let _ = std::fs::remove_file(output_path);
+    let _ = std::fs::remove_file(chain_dump_path);
+    let _ = std::fs::remove_file(evidence_dir.join("manifest.json"));
+    let _ = std::fs::remove_dir(evidence_dir);
+}
+
+#[test]
+fn spec_c98_verify_command_rejects_chain_dump_block_missing_block_hash_marker() {
+    let evidence_dir = temp_path("evidence-missing-block-hash-marker");
+    let output_path = temp_path("report-missing-block-hash-marker.json");
+    let chain_dump_path = temp_path("kolme_chain_dump_missing_block_hash_marker.json");
+    std::fs::create_dir_all(&evidence_dir).expect("evidence dir should be created");
+    std::fs::write(
+        evidence_dir.join("manifest.json"),
+        r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kolme_version":"0.x.y","kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#,
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        &chain_dump_path,
+        r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"previous_block_hash":"GENESIS"}]}"#,
+    )
+    .expect("chain dump should be written");
+
+    let config = VerifyCommandConfig {
+        evidence_dir: evidence_dir.display().to_string(),
+        kolme_chain_dump: chain_dump_path.display().to_string(),
+        output: output_path.display().to_string(),
+    };
+    let err = execute_verify_contract(&config).expect_err("verify should fail for missing marker");
+    assert!(err.contains("chain dump block missing block_hash marker"));
+
+    let _ = std::fs::remove_file(output_path);
+    let _ = std::fs::remove_file(chain_dump_path);
+    let _ = std::fs::remove_file(evidence_dir.join("manifest.json"));
+    let _ = std::fs::remove_dir(evidence_dir);
+}
+
+#[test]
+fn spec_c99_verify_command_rejects_chain_dump_block_missing_previous_block_hash_marker() {
+    let evidence_dir = temp_path("evidence-missing-previous-block-hash-marker");
+    let output_path = temp_path("report-missing-previous-block-hash-marker.json");
+    let chain_dump_path = temp_path("kolme_chain_dump_missing_previous_block_hash_marker.json");
+    std::fs::create_dir_all(&evidence_dir).expect("evidence dir should be created");
+    std::fs::write(
+        evidence_dir.join("manifest.json"),
+        r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kolme_version":"0.x.y","kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#,
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        &chain_dump_path,
+        r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"block_hash":"sha256:block-0"}]}"#,
+    )
+    .expect("chain dump should be written");
+
+    let config = VerifyCommandConfig {
+        evidence_dir: evidence_dir.display().to_string(),
+        kolme_chain_dump: chain_dump_path.display().to_string(),
+        output: output_path.display().to_string(),
+    };
+    let err = execute_verify_contract(&config).expect_err("verify should fail for missing marker");
+    assert!(err.contains("chain dump block missing previous_block_hash marker"));
+
+    let _ = std::fs::remove_file(output_path);
+    let _ = std::fs::remove_file(chain_dump_path);
+    let _ = std::fs::remove_file(evidence_dir.join("manifest.json"));
+    let _ = std::fs::remove_dir(evidence_dir);
+}
+
+#[test]
+fn spec_c100_verify_command_rejects_chain_dump_hash_continuity_mismatch() {
+    let evidence_dir = temp_path("evidence-chain-hash-continuity-mismatch");
+    let output_path = temp_path("report-chain-hash-continuity-mismatch.json");
+    let chain_dump_path = temp_path("kolme_chain_dump_chain_hash_continuity_mismatch.json");
+    std::fs::create_dir_all(&evidence_dir).expect("evidence dir should be created");
+    std::fs::write(
+        evidence_dir.join("manifest.json"),
+        r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kolme_version":"0.x.y","kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#,
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        &chain_dump_path,
+        r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"block_hash":"sha256:block-0","previous_block_hash":"GENESIS"},{"height":1,"block_hash":"sha256:block-1","previous_block_hash":"sha256:wrong-prior-block"}]}"#,
+    )
+    .expect("chain dump should be written");
+
+    let config = VerifyCommandConfig {
+        evidence_dir: evidence_dir.display().to_string(),
+        kolme_chain_dump: chain_dump_path.display().to_string(),
+        output: output_path.display().to_string(),
+    };
+    let err = execute_verify_contract(&config)
+        .expect_err("verify should fail for chain continuity mismatch");
+    assert!(err.contains("chain dump hash continuity mismatch at block index 1"));
 
     let _ = std::fs::remove_file(output_path);
     let _ = std::fs::remove_file(chain_dump_path);

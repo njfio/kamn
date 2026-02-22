@@ -149,7 +149,99 @@ pub fn verify_chain_dump(chain_dump_json: &str) -> Result<(), String> {
         "\"blocks\":",
         "chain dump missing blocks marker",
     )?;
+    let block_hash_pairs = extract_chain_block_hash_pairs(chain_dump_json)?;
+    for (index, pair) in block_hash_pairs.windows(2).enumerate() {
+        let previous_block_hash = pair[0].0.as_str();
+        let next_previous_hash = pair[1].1.as_str();
+        if next_previous_hash != previous_block_hash {
+            return Err(format!(
+                "chain dump hash continuity mismatch at block index {}",
+                index + 1
+            ));
+        }
+    }
     Ok(())
+}
+
+fn strip_json_whitespace(value: &str) -> String {
+    value
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect()
+}
+
+fn extract_json_string_marker(fragment: &str, marker: &str) -> Option<String> {
+    let start = fragment.find(marker)?;
+    let value_start = start + marker.len();
+    let relative_end = fragment[value_start..].find('"')?;
+    let value_end = value_start + relative_end;
+    Some(fragment[value_start..value_end].to_owned())
+}
+
+fn extract_chain_block_hash_pairs(chain_dump_json: &str) -> Result<Vec<(String, String)>, String> {
+    let normalized = strip_json_whitespace(chain_dump_json);
+    let blocks_marker = "\"blocks\":[";
+    let blocks_start = normalized
+        .find(blocks_marker)
+        .ok_or_else(|| "chain dump missing blocks marker".to_owned())?
+        + blocks_marker.len();
+    let blocks_relative_end = normalized[blocks_start..]
+        .find(']')
+        .ok_or_else(|| "chain dump blocks payload malformed".to_owned())?;
+    let blocks_end = blocks_start + blocks_relative_end;
+    let blocks_payload = &normalized[blocks_start..blocks_end];
+    if blocks_payload.is_empty() {
+        return Err("chain dump blocks array is empty".to_owned());
+    }
+
+    let mut block_hash_pairs = Vec::new();
+    let mut depth = 0usize;
+    let mut block_start = None;
+
+    for (index, character) in blocks_payload.char_indices() {
+        match character {
+            '{' => {
+                if depth == 0 {
+                    block_start = Some(index);
+                }
+                depth = depth.saturating_add(1);
+            }
+            '}' => {
+                if depth == 0 {
+                    return Err("chain dump blocks payload malformed".to_owned());
+                }
+                depth -= 1;
+                if depth == 0 {
+                    let start = block_start
+                        .ok_or_else(|| "chain dump blocks payload malformed".to_owned())?;
+                    let block_fragment = &blocks_payload[start..=index];
+                    let block_hash =
+                        extract_json_string_marker(block_fragment, "\"block_hash\":\"")
+                            .filter(|value| !value.is_empty())
+                            .ok_or_else(|| {
+                                "chain dump block missing block_hash marker".to_owned()
+                            })?;
+                    let previous_block_hash =
+                        extract_json_string_marker(block_fragment, "\"previous_block_hash\":\"")
+                            .filter(|value| !value.is_empty())
+                            .ok_or_else(|| {
+                                "chain dump block missing previous_block_hash marker".to_owned()
+                            })?;
+                    block_hash_pairs.push((block_hash, previous_block_hash));
+                    block_start = None;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if depth != 0 || block_start.is_some() {
+        return Err("chain dump blocks payload malformed".to_owned());
+    }
+    if block_hash_pairs.is_empty() {
+        return Err("chain dump blocks array is empty".to_owned());
+    }
+    Ok(block_hash_pairs)
 }
 
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -309,7 +401,7 @@ pub fn generate_verification_report_json(manifest_json: &str) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_verification_report_json, verify_manifest};
+    use super::{generate_verification_report_json, verify_chain_dump, verify_manifest};
 
     #[test]
     fn unit_verify_manifest_rejects_missing_schema_marker() {
@@ -327,5 +419,23 @@ mod tests {
         assert!(first.contains("\"proof_check\""));
         assert!(first.contains("\"chain_check\""));
         assert!(first.contains("\"content_check\""));
+    }
+
+    #[test]
+    fn unit_verify_chain_dump_rejects_missing_block_hash_marker() {
+        let err = verify_chain_dump(
+            r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"previous_block_hash":"GENESIS"}]}"#,
+        )
+        .expect_err("missing block hash marker should fail");
+        assert!(err.contains("chain dump block missing block_hash marker"));
+    }
+
+    #[test]
+    fn unit_verify_chain_dump_rejects_hash_continuity_mismatch() {
+        let err = verify_chain_dump(
+            r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"block_hash":"sha256:block-0","previous_block_hash":"GENESIS"},{"height":1,"block_hash":"sha256:block-1","previous_block_hash":"sha256:wrong-prior"}]}"#,
+        )
+        .expect_err("chain continuity mismatch should fail");
+        assert!(err.contains("chain dump hash continuity mismatch at block index 1"));
     }
 }
