@@ -79,8 +79,8 @@ fn functional_r50_doc_contract_consolidation_markers_present() {
     assert!(DOC.contains(
         "r50_review_doc_contract_non_regression_schema_version=kamn.review.doc-contract-non-regression-ratchet.v1"
     ));
-    assert!(DOC.contains("r50_review_doc_contract_non_regression_baseline_test_file_count=95"));
-    assert!(DOC.contains("r50_review_doc_contract_non_regression_max_test_file_count=95"));
+    assert!(DOC.contains("r50_review_doc_contract_non_regression_baseline_test_file_count=96"));
+    assert!(DOC.contains("r50_review_doc_contract_non_regression_max_test_file_count=96"));
     assert!(DOC.contains(&format!(
         "r50_review_doc_contract_non_regression_count_formula={NON_REGRESSION_COUNT_FORMULA}"
     )));

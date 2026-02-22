@@ -238,8 +238,8 @@ Spec-volume non-regression ratchet remains locked to the refreshed baseline whil
 ### 5.9 Doc-Contract Test-File Non-Regression Ratchet Markers (R50.42)
 
 - `r50_review_doc_contract_non_regression_schema_version=kamn.review.doc-contract-non-regression-ratchet.v1`
-- `r50_review_doc_contract_non_regression_baseline_test_file_count=95`
-- `r50_review_doc_contract_non_regression_max_test_file_count=95`
+- `r50_review_doc_contract_non_regression_baseline_test_file_count=96`
+- `r50_review_doc_contract_non_regression_max_test_file_count=96`
 - `r50_review_doc_contract_non_regression_count_formula=rg --files crates/kamn-core/tests | rg '_docs\\.rs$|docs_contract' | wc -l`
 
 Doc-contract test-file non-regression ratchet remains locked to current baseline while consolidation remediation is active.
