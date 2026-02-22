@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 359
+- archived_issue_count: 345
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -165,20 +165,6 @@
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
 | 4241 | Issue 4241 | 2026-02-18 | `specs/archive/4241` | `specs/4241/ARCHIVED.md` |
-| 4302 | Issue 4302 | 2026-02-18 | `specs/archive/4302` | `specs/4302/ARCHIVED.md` |
-| 4303 | Issue 4303 | 2026-02-18 | `specs/archive/4303` | `specs/4303/ARCHIVED.md` |
-| 4304 | Issue 4304 | 2026-02-18 | `specs/archive/4304` | `specs/4304/ARCHIVED.md` |
-| 4305 | Issue 4305 | 2026-02-18 | `specs/archive/4305` | `specs/4305/ARCHIVED.md` |
-| 4306 | Issue 4306 | 2026-02-18 | `specs/archive/4306` | `specs/4306/ARCHIVED.md` |
-| 4307 | Issue 4307 | 2026-02-18 | `specs/archive/4307` | `specs/4307/ARCHIVED.md` |
-| 4312 | `Task: enforce http-websocket protocol checker contracts and deterministic session violation reason mapping` | 2026-02-18 | `specs/archive/4312` | `specs/4312/ARCHIVED.md` |
-| 4313 | `Task: implement networked peer transport adapter integrity checks with deterministic retry-timeout governance` | 2026-02-18 | `specs/archive/4313` | `specs/4313/ARCHIVED.md` |
-| 4314 | `Task: implement durable block commit persistence with digest-finality fail-closed validation governance` | 2026-02-18 | `specs/archive/4314` | `specs/4314/ARCHIVED.md` |
-| 4315 | `Subtask: add red tests for async api concurrency limit breaches and fail-closed backpressure behavior` | 2026-02-18 | `specs/archive/4315` | `specs/4315/ARCHIVED.md` |
-| 4316 | `Subtask: implement async lifecycle limiter and deterministic api rejection reason projection` | 2026-02-18 | `specs/archive/4316` | `specs/4316/ARCHIVED.md` |
-| 4317 | `Subtask: add red tests for websocket protocol drift and invalid session-frame rejection` | 2026-02-18 | `specs/archive/4317` | `specs/4317/ARCHIVED.md` |
-| 4318 | `Subtask: implement protocol-session checker reason mapping and docs-contract parity validation` | 2026-02-18 | `specs/archive/4318` | `specs/4318/ARCHIVED.md` |
-| 4319 | `Subtask: add red tests for networked peer integrity drift and retry-timeout misclassification` | 2026-02-18 | `specs/archive/4319` | `specs/4319/ARCHIVED.md` |
 | 4320 | `Subtask: implement peer adapter reason projection and deterministic multi-process validation hooks` | 2026-02-18 | `specs/archive/4320` | `specs/4320/ARCHIVED.md` |
 | 4321 | `Subtask: add red tests for persisted block digest-finality mismatch rejection and tamper detection` | 2026-02-18 | `specs/archive/4321` | `specs/4321/ARCHIVED.md` |
 | 4322 | `Subtask: implement durable commit checker reason mapping with ci smoke and local-heavy boundary enforcement` | 2026-02-18 | `specs/archive/4322` | `specs/4322/ARCHIVED.md` |
