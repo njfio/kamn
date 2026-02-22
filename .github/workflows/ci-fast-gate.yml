@@ -560,3 +560,29 @@ jobs:
           name: ci-budget-fast-gate-delta-${{ github.run_id }}-${{ github.run_attempt }}
           path: ci-budget-fast-gate-delta.json
           if-no-files-found: error
+
+  workspace-premerge-gate:
+    name: Workspace Pre-Merge Gate (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: kamn-rust-ci-v1
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Full workspace pre-merge tests (bounded retry)
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label workspace-premerge-tests \
+            --max-attempts 2 \
+            -- cargo test --workspace --locked --all-features --no-fail-fast

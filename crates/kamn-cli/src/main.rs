@@ -11,8 +11,8 @@ fn main() {
 
     match dispatch(&parsed) {
         Ok(output) => match parsed.output_format {
-            OutputFormat::Json => println!("{{\"status\":\"ok\",\"result\":\"{}\"}}", output),
-            OutputFormat::Text => println!("{output}"),
+            OutputFormat::Json => println!("{}", output.json),
+            OutputFormat::Text => println!("{}", output.text),
         },
         Err(error) => {
             eprintln!("kamn-cli command error: {error}");

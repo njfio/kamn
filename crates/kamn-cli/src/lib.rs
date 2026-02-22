@@ -87,6 +87,22 @@ pub struct ParsedCliArgs {
     pub passthrough: Vec<String>,
 }
 
+/// Deterministic command output projections for JSON and text modes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandOutput {
+    /// Structured JSON projection for machine consumption.
+    pub json: String,
+    /// Human-readable key/value projection.
+    pub text: String,
+}
+
+impl CommandOutput {
+    /// Creates one command output projection.
+    pub fn new(json: String, text: String) -> Self {
+        Self { json, text }
+    }
+}
+
 /// Parses CLI arguments for phase-2 command surface contracts.
 pub fn parse_cli_args<I, S>(args: I) -> Result<ParsedCliArgs, String>
 where
@@ -114,7 +130,7 @@ where
     let command = CommandKind::parse(args[index].as_str())?;
     index += 1;
 
-    let mut output_format = OutputFormat::Text;
+    let mut output_format = OutputFormat::Json;
     let mut endpoint =
         std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_owned());
     let mut passthrough = Vec::new();
@@ -150,7 +166,7 @@ where
 }
 
 /// Dispatches one parsed command to the corresponding phase-2 command module.
-pub fn dispatch(parsed: &ParsedCliArgs) -> Result<String, kamn_agent_lib::AgentLibError> {
+pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib::AgentLibError> {
     match parsed.command {
         CommandKind::Register => commands::register::execute(parsed),
         CommandKind::SendMessage => commands::send_message::execute(parsed),
@@ -176,6 +192,6 @@ mod tests {
         let parsed = parse_cli_args(["kamn-cli", "health", "--endpoint", "http://localhost:8080"])
             .expect("parsed");
         assert_eq!(parsed.endpoint, "http://localhost:8080");
-        assert_eq!(parsed.output_format, OutputFormat::Text);
+        assert_eq!(parsed.output_format, OutputFormat::Json);
     }
 }

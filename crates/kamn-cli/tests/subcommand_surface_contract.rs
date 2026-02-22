@@ -23,6 +23,11 @@ fn spec_c05_cli_exposes_required_phase2_subcommands() {
             parsed.command, expected_kind,
             "command mismatch for {command}"
         );
+        assert_eq!(
+            parsed.output_format,
+            OutputFormat::Json,
+            "default output format should be json for {command}",
+        );
     }
 }
 

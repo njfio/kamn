@@ -1,9 +1,13 @@
 use crate::commands::connect_handle;
-use crate::ParsedCliArgs;
+use crate::commands::{command_output, OutputValue};
+use crate::{CommandOutput, ParsedCliArgs};
 use kamn_agent_lib::AgentLibError;
 
 /// Executes the register command.
-pub fn execute(args: &ParsedCliArgs) -> Result<String, AgentLibError> {
+pub fn execute(args: &ParsedCliArgs) -> Result<CommandOutput, AgentLibError> {
     let handle = connect_handle(args)?;
-    Ok(format!("did={}", handle.identity().did().as_str()))
+    Ok(command_output(vec![(
+        "did",
+        OutputValue::String(handle.identity().did().as_str().to_owned()),
+    )]))
 }
