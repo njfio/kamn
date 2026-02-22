@@ -365,10 +365,10 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
     };
     let normal_output = execute_run_contract(&normal).expect("normal run should render");
     assert!(
-        normal_output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":0,\"skip\":1}")
+        normal_output.contains("\"phase_totals\":{\"total\":5,\"pass\":5,\"fail\":0,\"skip\":0}")
     );
     assert!(
-        normal_output.contains("\"step_totals\":{\"total\":18,\"pass\":15,\"fail\":0,\"skip\":3}")
+        normal_output.contains("\"step_totals\":{\"total\":22,\"pass\":19,\"fail\":0,\"skip\":3}")
     );
 
     let fail = RunCommandConfig {
@@ -380,9 +380,9 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
         scenario_ids: vec!["S-01".to_owned()],
     };
     let fail_output = execute_run_contract(&fail).expect("fail-path run should render");
-    assert!(fail_output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
+    assert!(fail_output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}"));
     assert!(
-        fail_output.contains("\"step_totals\":{\"total\":18,\"pass\":14,\"fail\":1,\"skip\":3}")
+        fail_output.contains("\"step_totals\":{\"total\":22,\"pass\":18,\"fail\":1,\"skip\":3}")
     );
 }
 
@@ -1423,7 +1423,7 @@ fn spec_c74_scenario_run_phase_fails_when_scenario_execution_reports_fail() {
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("\"scenario_results\":[{\"id\":\"S-01\",\"status\":\"FAIL\"},{\"id\":\"S-02\",\"status\":\"PASS\"}]"));
     assert!(output.contains("{\"phase\":\"SCENARIO_RUN\",\"status\":\"FAIL\""));
-    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
+    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}"));
 }
 
 #[test]
@@ -1650,6 +1650,59 @@ fn spec_c86_lifecycle_summary_reflects_evidence_phase_failure_transition() {
         scenario_ids: vec!["S-01".to_owned()],
     };
     let output = execute_run_contract(&config).expect("run output should render");
-    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
-    assert!(output.contains("\"step_totals\":{\"total\":18,\"pass\":14,\"fail\":1,\"skip\":3}"));
+    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":1,\"skip\":0}"));
+    assert!(output.contains("\"step_totals\":{\"total\":22,\"pass\":18,\"fail\":1,\"skip\":3}"));
+}
+
+#[test]
+fn spec_c87_teardown_phase_is_pass_with_prd_step_inventory_in_sdk_mode() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("{\"phase\":\"TEARDOWN\",\"status\":\"PASS\""));
+    assert!(output
+        .contains("{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"SKIP\""));
+    assert!(
+        output.contains("{\"step\":\"Stop KAMN nodes (graceful shutdown)\",\"status\":\"PASS\"")
+    );
+    assert!(output.contains("{\"step\":\"Stop Kolme devnet\",\"status\":\"PASS\""));
+    assert!(output.contains("{\"step\":\"Stop PostgreSQL container\",\"status\":\"PASS\""));
+    assert!(output.contains("{\"step\":\"Archive evidence bundle\",\"status\":\"PASS\""));
+}
+
+#[test]
+fn spec_c88_teardown_phase_marks_mcp_stop_step_pass_in_mcp_mode() {
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("{\"phase\":\"TEARDOWN\",\"status\":\"PASS\""));
+    assert!(output
+        .contains("{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"PASS\""));
+}
+
+#[test]
+fn spec_c89_lifecycle_summary_reflects_teardown_phase_activation_on_normal_path() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":5,\"fail\":0,\"skip\":0}"));
+    assert!(output.contains("\"step_totals\":{\"total\":22,\"pass\":19,\"fail\":0,\"skip\":3}"));
 }
