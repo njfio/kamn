@@ -2,7 +2,7 @@
 
 - Issue: #5640
 - Milestone: R57 E2E Evidence Verification Block Enforcement
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
