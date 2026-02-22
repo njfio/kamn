@@ -1,6 +1,6 @@
 # Issue #5555 Spec - R50 Governance-Feature Activity Non-Regression Ratchet Enforcement
 
-- Status: Reviewed
+- Status: Implemented
 - Issue: #5555
 - Parent: None
 - Milestone: R50.43 Governance-feature activity non-regression ratchet enforcement
