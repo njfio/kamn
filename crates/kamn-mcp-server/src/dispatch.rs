@@ -183,7 +183,11 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
             backend.create_channel(required_string_arg(request_json, "payload")?.as_str())
         }
         "list_messages" => {
-            backend.list_messages(required_string_arg(request_json, "channel_id")?.as_str())
+            let channel_id = match required_string_arg(request_json, "channel_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.list_messages(channel_id.as_str())
         }
         "query_message" => {
             backend.query_message(required_string_arg(request_json, "message_id")?.as_str())
