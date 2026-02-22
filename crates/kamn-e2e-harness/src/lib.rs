@@ -518,6 +518,11 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     } else {
         "{\"postgres\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kolme\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_processor\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_listener\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_approver\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"}}"
     };
+    let runtime_lifecycle_execution_json = if config.external_execution {
+        "{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}"
+    } else {
+        "{\"postgres\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kolme\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_processor\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_listener\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_approver\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"}}"
+    };
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -572,12 +577,13 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
         runtime_external_execution_json,
         runtime_orchestration_json,
+        runtime_lifecycle_execution_json,
         runtime_readiness_json,
         process_runtime_json,
         process_lifecycle_json,
