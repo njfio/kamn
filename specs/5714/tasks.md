@@ -7,4 +7,4 @@
 - [x] T5 (Conformance/GREEN): run `cargo test -p kamn-core --test review_r50_spec_volume_remediation_docs_contract`.
 - [x] T6 (Verify): run archive policy checker command and R52 reconciliation regression suite.
 - [x] T7 (Verify): run `cargo fmt --all --check` and `cargo clippy -p kamn-core --tests -- -D warnings`.
-- [ ] T8 (Closure): mark `specs/5714/spec.md` as `Implemented`, finalize milestone and issue closure markers.
+- [x] T8 (Closure): mark `specs/5714/spec.md` as `Implemented`, finalize milestone and issue closure markers.
