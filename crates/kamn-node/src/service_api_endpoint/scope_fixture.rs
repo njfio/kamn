@@ -14,6 +14,8 @@ pub(super) struct ServiceApiScopePolicyFixtureProjection {
     pub(super) unique_scope_count: usize,
     pub(super) unique_method_count: usize,
     pub(super) unique_expected_outcome_count: usize,
+    pub(super) unique_allow_route_count: usize,
+    pub(super) unique_deny_route_count: usize,
     pub(super) unique_allow_scope_count: usize,
     pub(super) unique_deny_scope_count: usize,
 }
@@ -31,6 +33,8 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_scope_count: 0,
         unique_method_count: 0,
         unique_expected_outcome_count: 0,
+        unique_allow_route_count: 0,
+        unique_deny_route_count: 0,
         unique_allow_scope_count: 0,
         unique_deny_scope_count: 0,
     };
@@ -39,6 +43,8 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
     let mut unique_scopes = BTreeSet::new();
     let mut unique_methods = BTreeSet::new();
     let mut unique_expected_outcomes = BTreeSet::new();
+    let mut unique_allow_routes = BTreeSet::new();
+    let mut unique_deny_routes = BTreeSet::new();
     let mut unique_allow_scopes = BTreeSet::new();
     let mut unique_deny_scopes = BTreeSet::new();
     for line in fixture.lines().map(str::trim) {
@@ -69,9 +75,11 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         projection.row_count += 1;
         if expected == "allow" {
             projection.allow_row_count += 1;
+            unique_allow_routes.insert((method.to_owned(), path.to_owned()));
             unique_allow_scopes.insert(scope.to_owned());
         } else if expected == "deny" {
             projection.deny_row_count += 1;
+            unique_deny_routes.insert((method.to_owned(), path.to_owned()));
             unique_deny_scopes.insert(scope.to_owned());
         }
         unique_routes.insert((method.to_owned(), path.to_owned()));
@@ -97,6 +105,8 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
     projection.unique_scope_count = unique_scopes.len();
     projection.unique_method_count = unique_methods.len();
     projection.unique_expected_outcome_count = unique_expected_outcomes.len();
+    projection.unique_allow_route_count = unique_allow_routes.len();
+    projection.unique_deny_route_count = unique_deny_routes.len();
     projection.unique_allow_scope_count = unique_allow_scopes.len();
     projection.unique_deny_scope_count = unique_deny_scopes.len();
     projection
