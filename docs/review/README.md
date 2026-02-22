@@ -64,3 +64,22 @@ Contract invariants:
 - non_regression_baseline_spec_dirs <= non_regression_spec_dir_max
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
+
+## Doc-Contract Test-File Non-Regression Ratchet Contract (R50+)
+
+R50+ review artifacts must include a non-regression ratchet for doc-contract test-file count while
+doc-contract consolidation remediation is active.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 50`:
+
+- `r<release>_review_doc_contract_non_regression_schema_version=kamn.review.doc-contract-non-regression-ratchet.v1`
+- `r<release>_review_doc_contract_non_regression_baseline_test_file_count=<integer>`
+- `r<release>_review_doc_contract_non_regression_max_test_file_count=<integer>`
+- `r<release>_review_doc_contract_non_regression_count_formula=rg --files crates/kamn-core/tests | rg '_docs\\.rs$|docs_contract' | wc -l`
+
+Contract invariants:
+
+- current doc_contract_test_file_count <= non_regression_max
+- non_regression_baseline_test_file_count <= non_regression_max_test_file_count
+
+This schema is enforced by `crates/kamn-core/tests/review_r50_doc_contract_consolidation_docs_contract.rs`.

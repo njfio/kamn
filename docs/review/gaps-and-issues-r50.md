@@ -228,12 +228,21 @@ Governance-feature rebalancing contract active (R50.20) targeting >=0.25 feature
 ### 5.8 Spec-Volume Non-Regression Ratchet Markers (R50.41)
 
 - `r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1`
-- `r50_review_spec_volume_non_regression_baseline_spec_dirs=777`
+- `r50_review_spec_volume_non_regression_baseline_spec_dirs=778`
 - `r50_review_spec_volume_non_regression_baseline_module_count=92`
 - `r50_review_spec_volume_non_regression_ratio_max=8.5`
-- `r50_review_spec_volume_non_regression_spec_dir_max=777`
+- `r50_review_spec_volume_non_regression_spec_dir_max=778`
 
 Spec-volume non-regression ratchet remains locked to current baseline while remediation contracts are active.
+
+### 5.9 Doc-Contract Test-File Non-Regression Ratchet Markers (R50.42)
+
+- `r50_review_doc_contract_non_regression_schema_version=kamn.review.doc-contract-non-regression-ratchet.v1`
+- `r50_review_doc_contract_non_regression_baseline_test_file_count=94`
+- `r50_review_doc_contract_non_regression_max_test_file_count=94`
+- `r50_review_doc_contract_non_regression_count_formula=rg --files crates/kamn-core/tests | rg '_docs\\.rs$|docs_contract' | wc -l`
+
+Doc-contract test-file non-regression ratchet remains locked to current baseline while consolidation remediation is active.
 
 ---
 
