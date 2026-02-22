@@ -902,3 +902,61 @@ fn spec_c50_external_execution_missing_agent_binary_in_mcp_mode_is_deterministic
         execute_run_contract(&config).expect_err("missing agent binary should fail preflight");
     assert!(err.contains("external execution preflight failed"));
 }
+
+#[test]
+fn spec_c51_run_output_contains_runtime_orchestration_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"runtime_orchestration\":"));
+    assert!(output.contains("\"postgres\""));
+    assert!(output.contains("\"kolme\""));
+    assert!(output.contains("\"kamn_processor\""));
+    assert!(output.contains("\"kamn_listener\""));
+    assert!(output.contains("\"kamn_approver\""));
+    assert!(output.contains("\"requested\""));
+    assert!(output.contains("\"status\""));
+    assert!(output.contains("\"detail\""));
+}
+
+#[test]
+fn spec_c52_runtime_orchestration_markers_skip_when_external_disabled() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"runtime_orchestration\":{\"postgres\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kolme\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_processor\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_listener\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_approver\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"}}"
+    ));
+}
+
+#[test]
+fn spec_c53_runtime_orchestration_markers_pass_when_external_enabled() {
+    let kolme_binary = temp_path("kolme-node");
+    std::fs::write(&kolme_binary, "stub").expect("kolme binary placeholder should be created");
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"runtime_orchestration\":{\"postgres\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kolme\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_processor\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_listener\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_approver\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"}}"
+    ));
+
+    let _ = std::fs::remove_file(kolme_binary);
+}
