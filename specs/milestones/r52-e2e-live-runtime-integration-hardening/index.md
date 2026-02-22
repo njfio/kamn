@@ -2,8 +2,8 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5772
-- Active issue(s): #5774
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5772, #5774
+- Active issue(s): none
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
 ## Delivery Slices
@@ -41,4 +41,4 @@
 32. Codify R52 governance-feature 70/30 next-cycle target with post-publication reconciliation markers and docs-contract coverage. (Completed)
 33. Add R52 feat-labeling post-publication reconciliation markers with docs-contract enforcement. (Completed)
 34. Complete R53 review artifact marker contract coverage across R43+/R50+/R52+ schemas with fail-closed docs-contract validation. (Completed)
-35. Reconcile R50 doc-contract non-regression cap after adding R53 docs-contract lane so workspace quality gate remains green. (In Progress — #5774)
+35. Reconcile R50 doc-contract non-regression cap after adding R53 docs-contract lane so workspace quality gate remains green. (Completed)
