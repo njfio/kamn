@@ -4,6 +4,7 @@ members = [
   "crates/kamn-agent-lib",
   "crates/kamn-cli",
   "crates/kamn-core",
+  "crates/kamn-e2e-harness",
   "crates/kamn-kolme",
   "crates/kamn-mcp-server",
   "crates/kamn-sdk",

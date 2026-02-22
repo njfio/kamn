@@ -1639,6 +1639,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamn-e2e-harness"
+version = "0.1.0"
+dependencies = [
+ "kamn-agent-lib",
+ "kamn-cli",
+ "kamn-mcp-server",
+]
+
+[[package]]
 name = "kamn-kolme"
 version = "0.1.0"
 
