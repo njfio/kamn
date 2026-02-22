@@ -159,6 +159,30 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Feat-Labeling Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication feat-labeling reconciliation markers to encode
+snapshot mislabeling counts/ratio and deterministic status semantics without rewriting the
+historical priority table row.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_feat_labeling_reconciliation_schema_version=kamn.review.feat-labeling-post-publication-reconciliation.v1`
+- `r<release>_review_feat_labeling_snapshot_mislabeled_feat_count=<integer>`
+- `r<release>_review_feat_labeling_snapshot_total_feat_count=<integer>`
+- `r<release>_review_feat_labeling_snapshot_mislabeled_ratio=<float>`
+- `r<release>_review_feat_labeling_recommended_prefixes_csv=<csv>`
+- `r<release>_review_feat_labeling_post_publication_status=<text>`
+- `r<release>_review_feat_labeling_snapshot_rows_preserved=<true|false>`
+
+Contract invariants:
+
+- `r<release>_review_feat_labeling_snapshot_total_feat_count > 0`
+- `r<release>_review_feat_labeling_snapshot_mislabeled_ratio ~= mislabeled_count / total_feat_count`
+- Historical feat-mislabeling priority row remains unchanged; reconciliation markers are additive
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Post-Publication Priority Summary Reconciliation Contract (R52+)
 
 R52+ review artifacts may add post-publication priority-summary reconciliation markers to report

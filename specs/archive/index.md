@@ -3,11 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 241
+- archived_issue_count: 240
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3880 | Subtask: add invalid-profile fail-closed reason taxonomy regression checks | 2026-02-18 | `specs/archive/3880` | `specs/3880/ARCHIVED.md` |
 | 3882 | Subtask: implement native cutover-rollback evidence bundle lane | 2026-02-18 | `specs/archive/3882` | `specs/3882/ARCHIVED.md` |
 | 3883 | Subtask: add policy checker and CI exclusion tests for native cutover lane | 2026-02-18 | `specs/archive/3883` | `specs/3883/ARCHIVED.md` |
 | 3888 | Subtask: add convergence artifact schema and reason-taxonomy policy checker | 2026-02-18 | `specs/archive/3888` | `specs/3888/ARCHIVED.md` |

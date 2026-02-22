@@ -507,3 +507,84 @@ fn integration_r52_post_publication_governance_feature_target_reconciliation_mar
         "historical recommendation row should remain unchanged"
     );
 }
+
+#[test]
+fn functional_r52_post_publication_feat_labeling_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_feat_labeling_reconciliation_schema_version"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.feat-labeling-post-publication-reconciliation.v1"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_snapshot_mislabeled_feat_count=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_snapshot_total_feat_count=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_snapshot_mislabeled_ratio=<float>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_recommended_prefixes_csv=<csv>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_post_publication_status=<text>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_feat_labeling_snapshot_rows_preserved=<true|false>"));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_feat_labeling_reconciliation_schema_version=kamn.review.feat-labeling-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC.contains("r52_review_feat_labeling_snapshot_mislabeled_feat_count=4"));
+    assert!(DOC.contains("r52_review_feat_labeling_snapshot_total_feat_count=15"));
+    assert!(DOC.contains("r52_review_feat_labeling_snapshot_mislabeled_ratio=0.2667"));
+    assert!(DOC.contains("r52_review_feat_labeling_recommended_prefixes_csv=feat,fix,refactor,test,docs,chore,governance"));
+    assert!(DOC.contains(
+        "r52_review_feat_labeling_post_publication_status=policy_captured_not_retroactively_reclassified"
+    ));
+    assert!(DOC.contains("r52_review_feat_labeling_snapshot_rows_preserved=true"));
+}
+
+#[test]
+fn integration_r52_post_publication_feat_labeling_reconciliation_markers_are_consistent() {
+    let schema = parse_marker_value(
+        "r52_review_post_publication_feat_labeling_reconciliation_schema_version",
+    );
+    let mislabeled_feat_count =
+        parse_marker_usize("r52_review_feat_labeling_snapshot_mislabeled_feat_count");
+    let total_feat_count = parse_marker_usize("r52_review_feat_labeling_snapshot_total_feat_count");
+    let mislabeled_ratio = parse_marker_f64("r52_review_feat_labeling_snapshot_mislabeled_ratio");
+    let recommended_prefixes =
+        parse_marker_value("r52_review_feat_labeling_recommended_prefixes_csv");
+    let status = parse_marker_value("r52_review_feat_labeling_post_publication_status");
+    let snapshot_rows_preserved =
+        parse_marker_value("r52_review_feat_labeling_snapshot_rows_preserved");
+
+    assert_eq!(
+        schema, "kamn.review.feat-labeling-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert!(
+        total_feat_count > 0,
+        "total feat snapshot count should remain positive"
+    );
+    let expected_ratio = mislabeled_feat_count as f64 / total_feat_count as f64;
+    assert!(
+        (mislabeled_ratio - expected_ratio).abs() <= 0.0001,
+        "mislabeled feat ratio marker should match count/total ratio"
+    );
+    assert_eq!(
+        status, "policy_captured_not_retroactively_reclassified",
+        "status should remain fixed for policy-capture reconciliation"
+    );
+    assert_eq!(
+        snapshot_rows_preserved, "true",
+        "snapshot row preservation marker should remain true"
+    );
+    assert!(
+        recommended_prefixes == "feat,fix,refactor,test,docs,chore,governance",
+        "recommended prefixes should remain deterministic"
+    );
+    assert!(
+        DOC.contains(
+            "| **Medium** | feat mislabeling (4 of 15) | Convention | Use `chore` or `governance` prefix | **Open** |"
+        ),
+        "historical feat-mislabeling priority row should remain unchanged"
+    );
+}

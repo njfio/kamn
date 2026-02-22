@@ -353,6 +353,19 @@ the historical baseline table rows above unchanged.
 - r52_review_priority_high_spec_volume_guardrail_status_post_publication=within_guardrail
 - r52_review_priority_summary_snapshot_preserved=true
 
+### 8.2 Post-Publication Feat-Labeling Reconciliation Markers (Issue #5768)
+
+Post-publication reconciliation codifies the snapshot mislabeling footprint and deterministic
+status semantics while preserving the historical feat-mislabeling priority row unchanged.
+
+- r52_review_post_publication_feat_labeling_reconciliation_schema_version=kamn.review.feat-labeling-post-publication-reconciliation.v1
+- r52_review_feat_labeling_snapshot_mislabeled_feat_count=4
+- r52_review_feat_labeling_snapshot_total_feat_count=15
+- r52_review_feat_labeling_snapshot_mislabeled_ratio=0.2667
+- r52_review_feat_labeling_recommended_prefixes_csv=feat,fix,refactor,test,docs,chore,governance
+- r52_review_feat_labeling_post_publication_status=policy_captured_not_retroactively_reclassified
+- r52_review_feat_labeling_snapshot_rows_preserved=true
+
 ---
 
 ## 9. Critical Assessment: First Capability Cycle Since R49
