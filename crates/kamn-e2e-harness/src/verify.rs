@@ -132,6 +132,26 @@ pub fn verify_manifest(manifest_json: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Verifies required chain-dump markers used by deterministic `chain_check`.
+pub fn verify_chain_dump(chain_dump_json: &str) -> Result<(), String> {
+    require_marker(
+        chain_dump_json,
+        "\"chain_name\":",
+        "chain dump missing chain_name marker",
+    )?;
+    require_marker(
+        chain_dump_json,
+        "\"chain_version\":",
+        "chain dump missing chain_version marker",
+    )?;
+    require_marker(
+        chain_dump_json,
+        "\"blocks\":",
+        "chain dump missing blocks marker",
+    )?;
+    Ok(())
+}
+
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
     let mut entries = std::fs::read_dir(dir)
         .map_err(|error| {

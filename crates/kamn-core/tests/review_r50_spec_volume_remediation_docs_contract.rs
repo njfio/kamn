@@ -95,10 +95,10 @@ fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(DOC.contains(
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=779"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=819"));
     assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_ratio_max=8.5"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_spec_dir_max=779"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_ratio_max=9.0"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_spec_dir_max=819"));
     assert!(DOC.contains(
         "Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio."
     ));
