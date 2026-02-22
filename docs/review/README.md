@@ -111,6 +111,30 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
 
+## Post-Publication Spec-Volume Reduction Tranche Contract (R52+)
+
+R52+ review artifacts may publish post-publication remediation tranche markers documenting
+deterministic top-level `specs/` directory-count reductions without rewriting as-of snapshot baselines.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1`
+- `r<release>_review_spec_volume_reduction_tranche_pre_count=<integer>`
+- `r<release>_review_spec_volume_reduction_tranche_deleted_count=<integer>`
+- `r<release>_review_spec_volume_reduction_tranche_post_count=<integer>`
+
+Optional evidence markers:
+
+- `r<release>_review_spec_volume_reduction_evidence_command_pre=<command>`
+- `r<release>_review_spec_volume_reduction_evidence_command_post=<command>`
+
+Contract invariants:
+
+- `r<release>_review_spec_volume_reduction_tranche_pre_count - r<release>_review_spec_volume_reduction_tranche_deleted_count = r<release>_review_spec_volume_reduction_tranche_post_count`
+- `r<release>_review_spec_volume_reduction_tranche_post_count <= r<release>_review_spec_volume_reduction_tranche_pre_count`
+
+This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
+
 ## Doc-Contract Test-File Non-Regression Ratchet Contract (R50+)
 
 R50+ review artifacts must include a non-regression ratchet for doc-contract test-file count while
