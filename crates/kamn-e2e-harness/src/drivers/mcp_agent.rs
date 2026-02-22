@@ -14,6 +14,10 @@ const DEFAULT_KAMN_ENDPOINT: &str = "http://localhost:8080";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"mcp-agent-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
+const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
+const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveMcpProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
@@ -24,6 +28,7 @@ pub struct McpAgentDriver {
     live_execution_enabled: bool,
     discovery_probe: Arc<LiveMcpProbe>,
     task_lifecycle_probe: Arc<LiveMcpProbe>,
+    proof_verification_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -49,6 +54,7 @@ impl McpAgentDriver {
             live_execution_enabled_from_env(),
             run_live_s01_mcp_probe,
             run_live_s04_mcp_task_lifecycle_probe,
+            run_live_s06_mcp_proof_verification_probe,
         )
     }
 
@@ -69,20 +75,23 @@ impl McpAgentDriver {
             mode,
             live_execution_enabled,
             discovery_probe: live_probe.clone(),
-            task_lifecycle_probe: live_probe,
+            task_lifecycle_probe: live_probe.clone(),
+            proof_verification_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G>(
+    pub fn with_probes<F, G, H>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         task_lifecycle_probe: G,
+        proof_verification_probe: H,
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
+        H: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -92,6 +101,7 @@ impl McpAgentDriver {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
+            proof_verification_probe: Arc::new(proof_verification_probe),
         })
     }
 }
@@ -122,6 +132,7 @@ impl McpAgentDriver {
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
+            "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
         }
     }
@@ -332,6 +343,74 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let message_id = env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
+        .unwrap_or_else(|_| DEFAULT_S06_MESSAGE_ID.to_owned());
+    let tx_hash =
+        env::var("KAMN_E2E_S06_PROOF_TX_HASH").unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
+    let block_height = env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("mcp live s06 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S06_BLOCK_HEIGHT);
+    let finality =
+        env::var("KAMN_E2E_S06_PROOF_FINALITY").unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
+
+    let proof_arguments = format!(
+        "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
+        escape_json_scalar(message_id.as_str()),
+        escape_json_scalar(tx_hash.as_str()),
+        block_height,
+        escape_json_scalar(finality.as_str()),
+    );
+    let proof_response = run_live_s06_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        agent_name.as_str(),
+        key_file.as_str(),
+        "probe-verify-proof",
+        "verify_proof",
+        proof_arguments.as_str(),
+    )?;
+
+    if !proof_response.contains(r#""verified":true"#) {
+        return Err(format!(
+            "mcp live s06 verify_proof returned verified=false payload: {proof_response}"
+        ));
+    }
+    let proof_finality = json_optional_string_field(proof_response.as_str(), "finality")
+        .ok_or_else(|| {
+            format!("mcp live s06 verify_proof response missing finality field: {proof_response}")
+        })?;
+    if proof_finality.trim() != "FINAL" {
+        return Err(format!(
+            "mcp live s06 verify_proof returned non-final finality: {proof_finality}"
+        ));
+    }
+    let proof_block_height = json_optional_u64_field(proof_response.as_str(), "block_height")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s06 verify_proof response missing block_height field: {proof_response}"
+            )
+        })?;
+    if proof_block_height == 0 {
+        return Err("mcp live s06 verify_proof returned block_height=0".to_owned());
+    }
+
+    Ok(())
+}
+
 fn run_live_s04_mcp_tool_call(
     binary: &str,
     endpoint: &str,
@@ -406,6 +485,27 @@ fn run_live_s04_mcp_tool_call(
     }
 
     Ok(tool_response.clone())
+}
+
+fn run_live_s06_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s06"))
 }
 
 fn build_framed_jsonrpc_request(payload: &str) -> String {
@@ -494,6 +594,20 @@ fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
     Some(rest[..end].to_owned())
 }
 
+fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
+    let marker = format!("\"{key}\":");
+    let start = payload.find(marker.as_str())? + marker.len();
+    let rest = payload.get(start..)?.trim_start();
+    let digits = rest
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect::<String>();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<u64>().ok()
+}
+
 fn escape_json_scalar(input: &str) -> String {
     let mut escaped = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -513,28 +627,27 @@ fn escape_json_scalar(input: &str) -> String {
 mod tests {
     use super::{
         build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
-        live_execution_enabled_from_env, parse_bool_flag, parse_framed_jsonrpc_payloads,
-        run_live_s01_mcp_probe, run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
-        validate_probe_health_response, validate_probe_initialize_response, McpAgentDriver,
-        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
+        parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe,
+        run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
+        run_live_s06_mcp_proof_verification_probe, validate_probe_health_response,
+        validate_probe_initialize_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::PoisonError;
     use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
 
     fn with_env_vars<F>(updates: &[(&str, Option<&str>)], test: F)
     where
         F: FnOnce(),
     {
-        let _guard = env_lock().lock().expect("env lock");
+        let _guard = crate::drivers::test_env_lock()
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         let previous = updates
             .iter()
             .map(|(key, _)| ((*key).to_owned(), env::var_os(key)))
@@ -577,6 +690,38 @@ mod tests {
             .expect("system time should be after unix epoch")
             .as_nanos();
         std::env::temp_dir().join(format!("{stem}-{}-{nonce}.py", std::process::id()))
+    }
+
+    fn write_executable_python_script(script_path: &std::path::Path, source: &str) {
+        fs::write(script_path, source).expect("script fixture should be written");
+        let mut permissions = fs::metadata(script_path)
+            .expect("script metadata should be readable")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(script_path, permissions).expect("script fixture should be executable");
+    }
+
+    fn write_mcp_tool_response_script(
+        script_path: &std::path::Path,
+        request_id: &str,
+        result_payload: &str,
+    ) {
+        let init_payload =
+            r#"{"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}"#;
+        let tool_payload =
+            format!(r#"{{"jsonrpc":"2.0","id":"{request_id}","result":{result_payload}}}"#);
+        let script_source = format!(
+            r#"#!/usr/bin/env python3
+import sys
+init_payload = {init_payload:?}
+tool_payload = {tool_payload:?}
+sys.stdout.write(
+    f"Content-Length: {{len(init_payload)}}\r\n\r\n{{init_payload}}"
+    f"Content-Length: {{len(tool_payload)}}\r\n\r\n{{tool_payload}}"
+)
+"#,
+        );
+        write_executable_python_script(script_path, script_source.as_str());
     }
 
     #[test]
@@ -649,6 +794,61 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s06_mcp_proof_verification_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s06_mcp_proof_verification_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s06_mcp_proof_verification_probe_accepts_success_payload() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s06-success");
+        write_mcp_tool_response_script(
+            &script_path,
+            "probe-verify-proof",
+            r#"{"ok":true,"finality":"FINAL","verified":true,"block_height":42}"#,
+        );
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                run_live_s06_mcp_proof_verification_probe()
+                    .expect("success payload should pass verification probe");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s04_mcp_tool_call_rejects_missing_binary() {
         let error = run_live_s04_mcp_tool_call(
             "/definitely/missing/kamn-mcp-server",
@@ -687,22 +887,7 @@ mod tests {
     #[test]
     fn unit_run_live_s04_mcp_tool_call_accepts_ok_true_payload() {
         let script_path = unique_temp_script_path("kamn-e2e-mcp-tool-call");
-        let script_source = r#"#!/usr/bin/env python3
-import sys
-init_payload = '{"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}'
-tool_payload = '{"jsonrpc":"2.0","id":"probe-request","result":{"ok":true}}'
-sys.stdout.write(
-    f"Content-Length: {len(init_payload)}\r\n\r\n{init_payload}"
-    f"Content-Length: {len(tool_payload)}\r\n\r\n{tool_payload}"
-)
-"#;
-        fs::write(&script_path, script_source).expect("script fixture should be written");
-        let mut permissions = fs::metadata(&script_path)
-            .expect("script metadata should be readable")
-            .permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(&script_path, permissions)
-            .expect("script fixture should be executable");
+        write_mcp_tool_response_script(&script_path, "probe-request", r#"{"ok":true}"#);
 
         let probe_result = run_live_s04_mcp_tool_call(
             script_path
@@ -756,6 +941,13 @@ sys.stdout.write(
             Some("created".to_owned())
         );
         assert_eq!(json_optional_string_field(payload, "missing"), None);
+    }
+
+    #[test]
+    fn unit_json_optional_u64_field_extracts_known_value_and_missing_is_none() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe","result":{"block_height":42,"ok":true}}"#;
+        assert_eq!(json_optional_u64_field(payload, "block_height"), Some(42));
+        assert_eq!(json_optional_u64_field(payload, "missing"), None);
     }
 
     #[test]
@@ -880,6 +1072,19 @@ sys.stdout.write(
         assert_eq!(
             result.status, "fail",
             "live-enabled S-04 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c10_live_s06_driver_path_fails_closed_when_proof_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s06 proof probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-06");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-06 should fail closed on probe error",
         );
     }
 
