@@ -2,7 +2,7 @@
 name = "kamn-cli"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 
 [dependencies]
 kamn-agent-lib = { path = "../kamn-agent-lib" }
