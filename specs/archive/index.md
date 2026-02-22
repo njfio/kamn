@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 261
+- archived_issue_count: 247
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3853 | Subtask: add combined governance budget report generator and schema contract | 2026-02-18 | `specs/archive/3853` | `specs/3853/ARCHIVED.md` |
-| 3854 | Subtask: enforce threshold policy with deterministic fail codes across budget surfaces | 2026-02-18 | `specs/archive/3854` | `specs/3854/ARCHIVED.md` |
-| 3855 | Task: automate live-validation release evidence bundle and milestone closure summary | 2026-02-18 | `specs/archive/3855` | `specs/3855/ARCHIVED.md` |
-| 3856 | Subtask: assemble live validation artifact pack with deterministic schema and taxonomy markers | 2026-02-18 | `specs/archive/3856` | `specs/3856/ARCHIVED.md` |
-| 3857 | Subtask: add milestone closure summary generator and docs-contract synchronization checks | 2026-02-18 | `specs/archive/3857` | `specs/3857/ARCHIVED.md` |
-| 3862 | Epic: R26.1 harden live libp2p network convergence evidence and fault-policy contracts | 2026-02-18 | `specs/archive/3862` | `specs/3862/ARCHIVED.md` |
-| 3863 | Story: expand live libp2p churn-partition convergence matrix and deterministic evidence | 2026-02-18 | `specs/archive/3863` | `specs/3863/ARCHIVED.md` |
-| 3864 | Task: implement multi-profile libp2p convergence lane matrix | 2026-02-18 | `specs/archive/3864` | `specs/3864/ARCHIVED.md` |
-| 3865 | Subtask: add convergence profile fixtures and topology matrix runner wiring | 2026-02-18 | `specs/archive/3865` | `specs/3865/ARCHIVED.md` |
-| 3866 | Task: enforce libp2p convergence policy drift guards and CI cost boundaries | 2026-02-18 | `specs/archive/3866` | `specs/3866/ARCHIVED.md` |
-| 3867 | Subtask: add docs-contract markers for libp2p convergence policy sections | 2026-02-18 | `specs/archive/3867` | `specs/3867/ARCHIVED.md` |
-| 3868 | Subtask: add CI-fast exclusion and threshold checks for local-heavy convergence lanes | 2026-02-18 | `specs/archive/3868` | `specs/3868/ARCHIVED.md` |
-| 3869 | Story: validate libp2p recovery semantics and peer-lifecycle fail-closed behavior | 2026-02-18 | `specs/archive/3869` | `specs/3869/ARCHIVED.md` |
-| 3870 | Task: implement libp2p recovery negative-matrix scenarios and lifecycle parity checks | 2026-02-18 | `specs/archive/3870` | `specs/3870/ARCHIVED.md` |
 | 3871 | Subtask: add failed-handshake and backoff scenario harness for recovery matrix lanes | 2026-02-18 | `specs/archive/3871` | `specs/3871/ARCHIVED.md` |
 | 3872 | Subtask: add lifecycle reason-code parity checker and recovery regression tests | 2026-02-18 | `specs/archive/3872` | `specs/3872/ARCHIVED.md` |
 | 3873 | Task: integrate libp2p recovery evidence into release go-no-go policy contracts | 2026-02-18 | `specs/archive/3873` | `specs/3873/ARCHIVED.md` |
