@@ -1,5 +1,7 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const DOC_R50: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const DOC_R52: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
@@ -13,12 +15,31 @@ fn repo_root() -> PathBuf {
 }
 
 fn current_spec_directory_count() -> usize {
-    let specs_dir = repo_root().join("specs");
-    fs::read_dir(specs_dir)
-        .expect("specs directory should be readable")
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.path().is_dir())
-        .count()
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "specs"])
+        .output()
+        .expect("git should be available for tracked spec-dir discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files specs failed with status {:?}",
+        output.status.code()
+    );
+
+    String::from_utf8(output.stdout)
+        .expect("git ls-files output should be valid UTF-8")
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('/');
+            let root = parts.next()?;
+            if root != "specs" {
+                return None;
+            }
+            let top_level = parts.next()?;
+            Some(top_level.to_string())
+        })
+        .collect::<BTreeSet<_>>()
+        .len()
 }
 
 fn current_module_export_count() -> usize {
@@ -374,5 +395,30 @@ fn integration_r52_post_publication_spec_volume_guardrail_reconciliation_markers
     assert!(
         (computed_ratio - post_publication_ratio).abs() <= 0.05,
         "post-publication ratio marker should match counts with one-decimal precision"
+    );
+}
+
+#[test]
+fn regression_r50_spec_volume_non_regression_ignores_untracked_top_level_specs_dirs() {
+    let specs_dir = repo_root().join("specs");
+    let temp_dir = specs_dir.join(format!(
+        "zz-untracked-spec-dir-contamination-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&temp_dir);
+
+    let baseline = current_spec_directory_count();
+    fs::create_dir_all(&temp_dir).unwrap_or_else(|error| {
+        panic!(
+            "failed creating temp specs dir {}: {error}",
+            temp_dir.display()
+        )
+    });
+    let observed = current_spec_directory_count();
+    let _ = fs::remove_dir_all(&temp_dir);
+
+    assert_eq!(
+        observed, baseline,
+        "spec-dir non-regression count must ignore untracked top-level specs directories"
     );
 }
