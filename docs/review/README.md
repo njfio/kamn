@@ -91,6 +91,28 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Priority Summary Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication priority-summary reconciliation markers to report
+resolved status for historical priority rows while preserving baseline snapshot table text.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_priority_reconciliation_schema_version=kamn.review.priority-summary-post-publication-reconciliation.v1`
+- `r<release>_review_priority_critical_cli_compile_status_post_publication=<resolved|unresolved>`
+- `r<release>_review_priority_medium_activity_ratio_marker_status_post_publication=<resolved|unresolved>`
+- `r<release>_review_priority_high_spec_volume_guardrail_status_post_publication=<within_guardrail|breached>`
+- `r<release>_review_priority_summary_snapshot_preserved=<true|false>`
+
+Contract invariants:
+
+- Priority critical CLI status must align with `r<release>_review_cli_compile_status_post_publication`
+- Priority medium activity-ratio marker status must align with `r<release>_review_activity_ratio_marker_parse_status_post_publication`
+- Priority high spec-volume guardrail status must align with `r<release>_review_spec_volume_guardrail_post_publication_status`
+- Historical priority table rows remain unchanged; reconciliation markers are additive
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Spec-Volume Non-Regression Ratchet Contract (R50+)
 
 R50+ review artifacts must include a non-regression ratchet while spec-volume remediation remains active.
