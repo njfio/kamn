@@ -1240,21 +1240,28 @@ fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>
 
 /// Executes verify-command contract behavior and writes deterministic report JSON.
 pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, String> {
-    if !Path::new(config.kolme_chain_dump.as_str()).is_file() {
+    let evidence_dir_path = Path::new(config.evidence_dir.as_str());
+    let kolme_chain_dump_path = Path::new(config.kolme_chain_dump.as_str());
+    let output_path = Path::new(config.output.as_str());
+    if !kolme_chain_dump_path.is_file() {
         return Err(format!(
             "kolme chain dump file not found: {}",
             config.kolme_chain_dump
         ));
     }
-    let manifest_path = Path::new(config.evidence_dir.as_str()).join("manifest.json");
+    let manifest_path = evidence_dir_path.join("manifest.json");
     let manifest_json = std::fs::read_to_string(&manifest_path).map_err(|error| {
         format!(
             "failed to read evidence manifest {}: {error}",
             manifest_path.display()
         )
     })?;
+    verify::validate_evidence_verification_blocks(
+        evidence_dir_path,
+        &[manifest_path.as_path(), kolme_chain_dump_path, output_path],
+    )?;
     let report_json = verify::generate_verification_report_json(manifest_json.as_str())?;
-    if let Some(parent) = Path::new(config.output.as_str()).parent() {
+    if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
             format!(
                 "failed to create verify output parent {}: {error}",
@@ -1262,10 +1269,10 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
             )
         })?;
     }
-    std::fs::write(config.output.as_str(), report_json.as_bytes()).map_err(|error| {
+    std::fs::write(output_path, report_json.as_bytes()).map_err(|error| {
         format!(
             "failed to write verify output {}: {error}",
-            Path::new(config.output.as_str()).display()
+            output_path.display()
         )
     })?;
     Ok(report_json)

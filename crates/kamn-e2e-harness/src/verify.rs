@@ -1,4 +1,5 @@
 use crate::evidence::MANIFEST_SCHEMA_VERSION;
+use std::path::{Path, PathBuf};
 
 fn require_marker(manifest_json: &str, marker: &str, error: &str) -> Result<(), String> {
     if !manifest_json.contains(marker) {
@@ -128,6 +129,93 @@ pub fn verify_manifest(manifest_json: &str) -> Result<(), String> {
         "\"proofs_verified\":",
         "manifest missing summary.proofs_verified",
     )?;
+    Ok(())
+}
+
+fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
+    let mut entries = std::fs::read_dir(dir)
+        .map_err(|error| {
+            format!(
+                "failed to read evidence directory {}: {error}",
+                dir.display()
+            )
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| {
+            format!(
+                "failed to read evidence directory {}: {error}",
+                dir.display()
+            )
+        })?;
+    entries.sort_by_key(|entry| entry.path());
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_evidence_json_artifacts(path.as_path(), artifacts)?;
+            continue;
+        }
+        let is_json = path.extension().and_then(|value| value.to_str()) == Some("json");
+        if is_json {
+            artifacts.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Verifies PRD section 8.3 `_verification` marker contract on evidence artifacts.
+///
+/// `excluded_paths` should include support JSON files that are not evidence artifacts
+/// (for example: `manifest.json`, chain dump input, and verify output paths).
+pub fn validate_evidence_verification_blocks(
+    evidence_dir: &Path,
+    excluded_paths: &[&Path],
+) -> Result<(), String> {
+    let mut artifacts = Vec::new();
+    collect_evidence_json_artifacts(evidence_dir, &mut artifacts)?;
+    artifacts.sort();
+
+    for artifact_path in artifacts {
+        if excluded_paths
+            .iter()
+            .any(|excluded| artifact_path == *excluded)
+        {
+            continue;
+        }
+        let artifact_json = std::fs::read_to_string(artifact_path.as_path()).map_err(|error| {
+            format!(
+                "failed to read evidence artifact {}: {error}",
+                artifact_path.display()
+            )
+        })?;
+        if !artifact_json.contains("\"_verification\":") {
+            return Err(format!(
+                "evidence artifact missing _verification block: {}",
+                artifact_path.display()
+            ));
+        }
+        let required_markers = [
+            ("_verification.evidence_hash", "\"evidence_hash\":"),
+            ("_verification.captured_at", "\"captured_at\":"),
+            ("_verification.source_node", "\"source_node\":"),
+            ("_verification.agent", "\"agent\":"),
+            ("_verification.kolme_anchor", "\"kolme_anchor\":"),
+            ("_verification.kolme_anchor.tx_hash", "\"tx_hash\":"),
+            (
+                "_verification.kolme_anchor.block_height",
+                "\"block_height\":",
+            ),
+            ("_verification.kolme_anchor.finality", "\"finality\":"),
+        ];
+        for (label, marker) in required_markers {
+            if !artifact_json.contains(marker) {
+                return Err(format!(
+                    "evidence artifact missing {}: {}",
+                    label,
+                    artifact_path.display()
+                ));
+            }
+        }
+    }
     Ok(())
 }
 
