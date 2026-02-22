@@ -258,6 +258,27 @@ fn extract_kolme_anchor_finality_value(artifact_json: &str) -> Option<String> {
     extract_json_string_marker(anchor_fragment, "\"finality\":\"")
 }
 
+fn extract_evidence_hash_value(artifact_json: &str) -> Option<String> {
+    let normalized = strip_json_whitespace(artifact_json);
+    extract_json_string_marker(&normalized, "\"evidence_hash\":\"")
+}
+
+fn extract_kolme_anchor_tx_hash_value(artifact_json: &str) -> Option<String> {
+    let normalized = strip_json_whitespace(artifact_json);
+    let anchor_marker = "\"kolme_anchor\":{";
+    let anchor_start = normalized.find(anchor_marker)? + anchor_marker.len();
+    let anchor_relative_end = normalized[anchor_start..].find('}')?;
+    let anchor_end = anchor_start + anchor_relative_end;
+    let anchor_fragment = &normalized[anchor_start..anchor_end];
+    extract_json_string_marker(anchor_fragment, "\"tx_hash\":\"")
+}
+
+fn is_sha256_value(value: &str) -> bool {
+    value
+        .strip_prefix("sha256:")
+        .is_some_and(|suffix| !suffix.is_empty())
+}
+
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
     let mut entries = std::fs::read_dir(dir)
         .map_err(|error| {
@@ -340,6 +361,34 @@ pub fn validate_evidence_verification_blocks(
                     artifact_path.display()
                 ));
             }
+        }
+        let evidence_hash = extract_evidence_hash_value(&artifact_json)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "evidence artifact missing _verification.evidence_hash: {}",
+                    artifact_path.display()
+                )
+            })?;
+        if !is_sha256_value(&evidence_hash) {
+            return Err(format!(
+                "evidence artifact invalid _verification.evidence_hash format: {}",
+                artifact_path.display()
+            ));
+        }
+        let tx_hash = extract_kolme_anchor_tx_hash_value(&artifact_json)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "evidence artifact missing _verification.kolme_anchor.tx_hash: {}",
+                    artifact_path.display()
+                )
+            })?;
+        if !is_sha256_value(&tx_hash) {
+            return Err(format!(
+                "evidence artifact invalid _verification.kolme_anchor.tx_hash format: {}",
+                artifact_path.display()
+            ));
         }
         let finality = extract_kolme_anchor_finality_value(&artifact_json)
             .filter(|value| !value.is_empty())
@@ -504,6 +553,62 @@ mod tests {
         let err = validate_evidence_verification_blocks(&evidence_dir, &[])
             .expect_err("non-final finality value should fail");
         assert!(err.contains("evidence artifact invalid _verification.kolme_anchor.finality value"));
+
+        let _ = std::fs::remove_dir_all(&evidence_dir);
+    }
+
+    #[test]
+    fn unit_validate_evidence_verification_blocks_rejects_invalid_evidence_hash_format() {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic for tests")
+            .as_nanos();
+        let evidence_dir = std::env::temp_dir().join(format!(
+            "kamn-e2e-evidence-hash-format-{}-{}",
+            std::process::id(),
+            unique_suffix
+        ));
+        std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+            .expect("evidence directory should be created");
+        std::fs::write(
+            evidence_dir
+                .join("s01-agent-discovery")
+                .join("alice_registration.json"),
+            r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"abc123","captured_at":"2026-02-21T14:31:05Z","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"sha256:def456","block_height":42,"finality":"FINAL"}}}"#,
+        )
+        .expect("artifact should be written");
+
+        let err = validate_evidence_verification_blocks(&evidence_dir, &[])
+            .expect_err("invalid evidence hash format should fail");
+        assert!(err.contains("evidence artifact invalid _verification.evidence_hash format"));
+
+        let _ = std::fs::remove_dir_all(&evidence_dir);
+    }
+
+    #[test]
+    fn unit_validate_evidence_verification_blocks_rejects_invalid_anchor_tx_hash_format() {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic for tests")
+            .as_nanos();
+        let evidence_dir = std::env::temp_dir().join(format!(
+            "kamn-e2e-anchor-tx-hash-format-{}-{}",
+            std::process::id(),
+            unique_suffix
+        ));
+        std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+            .expect("evidence directory should be created");
+        std::fs::write(
+            evidence_dir
+                .join("s01-agent-discovery")
+                .join("alice_registration.json"),
+            r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"sha256:abc123","captured_at":"2026-02-21T14:31:05Z","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"def456","block_height":42,"finality":"FINAL"}}}"#,
+        )
+        .expect("artifact should be written");
+
+        let err = validate_evidence_verification_blocks(&evidence_dir, &[])
+            .expect_err("invalid anchor tx hash format should fail");
+        assert!(err.contains("evidence artifact invalid _verification.kolme_anchor.tx_hash format"));
 
         let _ = std::fs::remove_dir_all(&evidence_dir);
     }
