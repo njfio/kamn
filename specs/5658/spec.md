@@ -2,7 +2,7 @@
 
 - Issue: #5658
 - Milestone: R63 E2E Verification Anchor Height Format Contract
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
