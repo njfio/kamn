@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 387
+- archived_issue_count: 373
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -165,20 +165,6 @@
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
 | 4241 | Issue 4241 | 2026-02-18 | `specs/archive/4241` | `specs/4241/ARCHIVED.md` |
-| 4268 | Issue 4268 | 2026-02-18 | `specs/archive/4268` | `specs/4268/ARCHIVED.md` |
-| 4269 | Issue 4269 | 2026-02-18 | `specs/archive/4269` | `specs/4269/ARCHIVED.md` |
-| 4270 | Issue 4270 | 2026-02-18 | `specs/archive/4270` | `specs/4270/ARCHIVED.md` |
-| 4271 | Issue 4271 | 2026-02-18 | `specs/archive/4271` | `specs/4271/ARCHIVED.md` |
-| 4272 | Issue 4272 | 2026-02-18 | `specs/archive/4272` | `specs/4272/ARCHIVED.md` |
-| 4273 | Issue 4273 | 2026-02-18 | `specs/archive/4273` | `specs/4273/ARCHIVED.md` |
-| 4274 | Issue 4274 | 2026-02-18 | `specs/archive/4274` | `specs/4274/ARCHIVED.md` |
-| 4275 | Issue 4275 | 2026-02-18 | `specs/archive/4275` | `specs/4275/ARCHIVED.md` |
-| 4276 | Issue 4276 | 2026-02-18 | `specs/archive/4276` | `specs/4276/ARCHIVED.md` |
-| 4277 | Issue 4277 | 2026-02-18 | `specs/archive/4277` | `specs/4277/ARCHIVED.md` |
-| 4281 | Issue 4281 | 2026-02-18 | `specs/archive/4281` | `specs/4281/ARCHIVED.md` |
-| 4282 | Issue 4282 | 2026-02-18 | `specs/archive/4282` | `specs/4282/ARCHIVED.md` |
-| 4283 | Issue 4283 | 2026-02-18 | `specs/archive/4283` | `specs/4283/ARCHIVED.md` |
-| 4284 | Issue 4284 | 2026-02-18 | `specs/archive/4284` | `specs/4284/ARCHIVED.md` |
 | 4285 | Issue 4285 | 2026-02-18 | `specs/archive/4285` | `specs/4285/ARCHIVED.md` |
 | 4286 | Issue 4286 | 2026-02-18 | `specs/archive/4286` | `specs/4286/ARCHIVED.md` |
 | 4287 | Issue 4287 | 2026-02-18 | `specs/archive/4287` | `specs/4287/ARCHIVED.md` |
