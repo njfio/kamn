@@ -68,6 +68,29 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Quality-Gate Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication quality-gate reconciliation markers to document
+that critical as-of snapshot regressions were fixed later, without rewriting snapshot baselines.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_quality_gate_reconciliation_schema_version=kamn.review.quality-gate-post-publication-reconciliation.v1`
+- `r<release>_review_workspace_quality_gate_status_post_publication=<pass|fail>`
+- `r<release>_review_cli_compile_status_post_publication=<resolved|unresolved>`
+- `r<release>_review_activity_ratio_marker_parse_status_post_publication=<resolved|unresolved>`
+- `r<release>_review_workspace_quality_gate_command_post_publication=cargo test --workspace --locked --all-features --no-fail-fast`
+- `r<release>_review_activity_ratio_marker_parse_command_post_publication=cargo test -p kamn-core --test release_review_activity_ratio_docs_contract`
+
+Contract invariants:
+
+- `r<release>_review_workspace_quality_gate_status_post_publication` must be either `pass` or `fail`
+- `r<release>_review_cli_compile_status_post_publication` must be either `resolved` or `unresolved`
+- `r<release>_review_activity_ratio_marker_parse_status_post_publication` must be either `resolved` or `unresolved`
+- Snapshot header and baseline lines remain historical and are not rewritten by post-publication markers
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Spec-Volume Non-Regression Ratchet Contract (R50+)
 
 R50+ review artifacts must include a non-regression ratchet while spec-volume remediation remains active.
