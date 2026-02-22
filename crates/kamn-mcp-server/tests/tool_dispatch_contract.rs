@@ -35,6 +35,31 @@ impl McpToolBackend for TestBackend {
         Ok(format!(r#"{{"task_id":"task-{}"}}"#, payload.len()))
     }
 
+    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(r#"{{"task_id":"{}","state":"accepted"}}"#, task_id))
+    }
+
+    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"completed"}}"#,
+            task_id
+        ))
+    }
+
+    fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"escrow_id":"escrow-{}","state":"funded"}}"#,
+            payload.len()
+        ))
+    }
+
+    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"escrow_id":"{}","state":"released"}}"#,
+            escrow_id
+        ))
+    }
+
     fn health(&self) -> Result<String, AgentLibError> {
         Ok(r#"{"status":"ok","runtime_mode":"api"}"#.to_owned())
     }
@@ -79,7 +104,7 @@ fn spec_c03_mcp_dispatch_returns_structured_success_for_supported_tool() {
 #[test]
 fn spec_c04_mcp_dispatch_returns_structured_error_for_unsupported_tool() {
     let backend = TestBackend;
-    let response = dispatch_tool_request_json(&backend, r#"{"id":"req-2","tool":"accept_task"}"#)
+    let response = dispatch_tool_request_json(&backend, r#"{"id":"req-2","tool":"unknown_tool"}"#)
         .expect("unsupported operation should still return a structured envelope");
 
     assert!(
@@ -91,7 +116,7 @@ fn spec_c04_mcp_dispatch_returns_structured_error_for_unsupported_tool() {
         "response should encode unsupported kind: {response}"
     );
     assert!(
-        response.contains(r#""tool":"accept_task""#),
+        response.contains(r#""tool":"unknown_tool""#),
         "response should preserve requested tool: {response}"
     );
 }
@@ -136,4 +161,85 @@ fn spec_c02_mcp_dispatch_rejects_malformed_verify_proof_requests() {
         response.contains(r#""kind":"invalid_request""#),
         "response should encode invalid_request kind: {response}"
     );
+}
+
+#[test]
+fn spec_c05_mcp_dispatch_executes_task_and_escrow_tools_with_structured_success() {
+    let backend = TestBackend;
+
+    let accept = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-5","tool":"accept_task","task_id":"task-1"}"#,
+    )
+    .expect("accept_task should dispatch successfully");
+    assert!(
+        accept.contains(r#""ok":true"#),
+        "accept should succeed: {accept}"
+    );
+    assert!(
+        accept.contains(r#""state":"accepted""#),
+        "accept payload should include state: {accept}"
+    );
+
+    let complete = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-6","tool":"complete_task","task_id":"task-1"}"#,
+    )
+    .expect("complete_task should dispatch successfully");
+    assert!(
+        complete.contains(r#""ok":true"#),
+        "complete should succeed: {complete}"
+    );
+    assert!(
+        complete.contains(r#""state":"completed""#),
+        "complete payload should include state: {complete}"
+    );
+
+    let fund = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-7","tool":"fund_escrow","payload":"{\"task_id\":\"task-1\",\"amount\":100}"}"#,
+    )
+    .expect("fund_escrow should dispatch successfully");
+    assert!(fund.contains(r#""ok":true"#), "fund should succeed: {fund}");
+    assert!(
+        fund.contains(r#""state":"funded""#),
+        "fund payload should include state: {fund}"
+    );
+
+    let release = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-8","tool":"release_escrow","escrow_id":"escrow-1"}"#,
+    )
+    .expect("release_escrow should dispatch successfully");
+    assert!(
+        release.contains(r#""ok":true"#),
+        "release should succeed: {release}"
+    );
+    assert!(
+        release.contains(r#""state":"released""#),
+        "release payload should include state: {release}"
+    );
+}
+
+#[test]
+fn spec_c06_mcp_dispatch_rejects_malformed_task_and_escrow_requests() {
+    let backend = TestBackend;
+
+    for request in [
+        r#"{"id":"req-9","tool":"accept_task"}"#,
+        r#"{"id":"req-10","tool":"complete_task"}"#,
+        r#"{"id":"req-11","tool":"fund_escrow"}"#,
+        r#"{"id":"req-12","tool":"release_escrow"}"#,
+    ] {
+        let response = dispatch_tool_request_json(&backend, request)
+            .expect("dispatcher should return structured invalid-request envelope");
+        assert!(
+            response.contains(r#""ok":false"#),
+            "response should mark failure: {response}"
+        );
+        assert!(
+            response.contains(r#""kind":"invalid_request""#),
+            "response should encode invalid_request kind: {response}"
+        );
+    }
 }

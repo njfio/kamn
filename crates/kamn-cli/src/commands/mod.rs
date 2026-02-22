@@ -29,11 +29,6 @@ pub mod send_message;
 /// `verify-proof` command module.
 pub mod verify_proof;
 
-fn unsupported(operation: &'static str, args: &ParsedCliArgs) -> Result<String, AgentLibError> {
-    let _ = (&args.endpoint, args.output_format, args.passthrough.len());
-    Err(AgentLibError::UnsupportedOperation(operation))
-}
-
 pub(crate) fn connect_handle(args: &ParsedCliArgs) -> Result<KamnAgentHandle, AgentLibError> {
     let agent_name =
         std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
