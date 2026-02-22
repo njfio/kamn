@@ -251,6 +251,19 @@ the R52 snapshot baseline lines in sections 5.1 and 5.4 unchanged.
 - r52_review_spec_volume_guardrail_target_ratio_max=7.7
 - r52_review_spec_volume_guardrail_post_publication_status=within_guardrail
 
+### 5.7 Post-Publication Governance-Feature 70/30 Target Reconciliation Markers (Issue #5765)
+
+Post-publication reconciliation codifies the R52 recommendation to budget the next cycle at least
+70/30 feature-vs-governance while preserving historical snapshot ratio rows unchanged.
+
+- r52_review_post_publication_governance_feature_target_reconciliation_schema_version=kamn.review.governance-feature-target-post-publication-reconciliation.v1
+- r52_review_governance_feature_snapshot_governance_ratio=0.9028
+- r52_review_governance_feature_snapshot_feature_ratio=0.0972
+- r52_review_governance_feature_target_governance_ratio_max=0.7000
+- r52_review_governance_feature_target_feature_ratio_min=0.3000
+- r52_review_governance_feature_target_status=target_not_met_snapshot
+- r52_review_governance_feature_snapshot_rows_preserved=true
+
 ---
 
 ## 6. Branch Hygiene — SLIGHTLY WORSENED

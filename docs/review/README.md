@@ -134,6 +134,31 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Governance-Feature Target Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication governance-feature target reconciliation markers to
+encode explicit next-cycle budgeting targets (for example 70/30 feature-vs-governance) while
+preserving historical snapshot ratio rows.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_governance_feature_target_reconciliation_schema_version=kamn.review.governance-feature-target-post-publication-reconciliation.v1`
+- `r<release>_review_governance_feature_snapshot_governance_ratio=<float>`
+- `r<release>_review_governance_feature_snapshot_feature_ratio=<float>`
+- `r<release>_review_governance_feature_target_governance_ratio_max=<float>`
+- `r<release>_review_governance_feature_target_feature_ratio_min=<float>`
+- `r<release>_review_governance_feature_target_status=<text>`
+- `r<release>_review_governance_feature_snapshot_rows_preserved=<true|false>`
+
+Contract invariants:
+
+- Snapshot governance/feature ratios must match existing `governance_activity_commit_ratio` and `feature_activity_commit_ratio` markers
+- `r<release>_review_governance_feature_target_governance_ratio_max + r<release>_review_governance_feature_target_feature_ratio_min ~= 1.0`
+- For a 70/30 recommendation, target ratios must be `0.7000` governance max and `0.3000` feature min
+- Historical recommendation/snapshot rows remain unchanged; reconciliation markers are additive
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Post-Publication Priority Summary Reconciliation Contract (R52+)
 
 R52+ review artifacts may add post-publication priority-summary reconciliation markers to report

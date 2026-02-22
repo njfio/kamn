@@ -22,6 +22,13 @@ fn parse_marker_usize(marker_key: &str) -> usize {
         .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
 }
 
+fn parse_marker_f64(marker_key: &str) -> f64 {
+    let value = parse_marker_value(marker_key);
+    value
+        .parse::<f64>()
+        .unwrap_or_else(|_| panic!("marker {marker_key} should be a float: {value}"))
+}
+
 #[test]
 fn functional_r52_branch_hygiene_reconciliation_markers_present() {
     assert!(REVIEW_MARKER_README
@@ -399,5 +406,104 @@ fn integration_r52_post_publication_code_quality_status_reconciliation_markers_a
             "Despite clean clippy and zero prod panics, **main branch fails to compile fully and has 2 test failures.**"
         ),
         "historical section 4.2 baseline sentence should remain unchanged"
+    );
+}
+
+#[test]
+fn functional_r52_post_publication_governance_feature_target_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_governance_feature_target_reconciliation_schema_version"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.governance-feature-target-post-publication-reconciliation.v1"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_governance_feature_snapshot_governance_ratio=<float>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_governance_feature_snapshot_feature_ratio=<float>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_governance_feature_target_governance_ratio_max=<float>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_governance_feature_target_feature_ratio_min=<float>"));
+    assert!(
+        REVIEW_MARKER_README.contains("r<release>_review_governance_feature_target_status=<text>")
+    );
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_governance_feature_snapshot_rows_preserved=<true|false>"));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_governance_feature_target_reconciliation_schema_version=kamn.review.governance-feature-target-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC.contains("r52_review_governance_feature_snapshot_governance_ratio=0.9028"));
+    assert!(DOC.contains("r52_review_governance_feature_snapshot_feature_ratio=0.0972"));
+    assert!(DOC.contains("r52_review_governance_feature_target_governance_ratio_max=0.7000"));
+    assert!(DOC.contains("r52_review_governance_feature_target_feature_ratio_min=0.3000"));
+    assert!(DOC.contains("r52_review_governance_feature_target_status=target_not_met_snapshot"));
+    assert!(DOC.contains("r52_review_governance_feature_snapshot_rows_preserved=true"));
+}
+
+#[test]
+fn integration_r52_post_publication_governance_feature_target_reconciliation_markers_are_consistent(
+) {
+    let schema = parse_marker_value(
+        "r52_review_post_publication_governance_feature_target_reconciliation_schema_version",
+    );
+    let snapshot_governance_ratio =
+        parse_marker_f64("r52_review_governance_feature_snapshot_governance_ratio");
+    let snapshot_feature_ratio =
+        parse_marker_f64("r52_review_governance_feature_snapshot_feature_ratio");
+    let target_governance_ratio_max =
+        parse_marker_f64("r52_review_governance_feature_target_governance_ratio_max");
+    let target_feature_ratio_min =
+        parse_marker_f64("r52_review_governance_feature_target_feature_ratio_min");
+    let target_status = parse_marker_value("r52_review_governance_feature_target_status");
+    let snapshot_rows_preserved =
+        parse_marker_value("r52_review_governance_feature_snapshot_rows_preserved");
+
+    let activity_governance_ratio = parse_marker_f64("governance_activity_commit_ratio");
+    let activity_feature_ratio = parse_marker_f64("feature_activity_commit_ratio");
+
+    assert_eq!(
+        schema, "kamn.review.governance-feature-target-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert!(
+        (snapshot_governance_ratio - activity_governance_ratio).abs() <= 0.0001,
+        "snapshot governance ratio should match section 5.3 activity ratio marker"
+    );
+    assert!(
+        (snapshot_feature_ratio - activity_feature_ratio).abs() <= 0.0001,
+        "snapshot feature ratio should match section 5.3 activity ratio marker"
+    );
+    assert!(
+        (target_governance_ratio_max + target_feature_ratio_min - 1.0).abs() <= 0.0001,
+        "target governance+feature ratios should sum to 1.0"
+    );
+    assert!(
+        (target_governance_ratio_max - 0.7).abs() <= 0.0001,
+        "target governance ratio max should encode the 70/30 recommendation"
+    );
+    assert!(
+        (target_feature_ratio_min - 0.3).abs() <= 0.0001,
+        "target feature ratio min should encode the 70/30 recommendation"
+    );
+    assert!(
+        snapshot_governance_ratio > target_governance_ratio_max
+            && snapshot_feature_ratio < target_feature_ratio_min,
+        "snapshot ratios should remain below the 70/30 target bounds"
+    );
+    assert_eq!(
+        target_status, "target_not_met_snapshot",
+        "status should report unmet target for snapshot ratios"
+    );
+    assert_eq!(
+        snapshot_rows_preserved, "true",
+        "snapshot row preservation marker should remain true"
+    );
+
+    assert!(
+        DOC.contains(
+            "4. **Budget next cycle 70/30 feature/governance minimum** — R52's 10% genuine feat is better than 0% but still insufficient"
+        ),
+        "historical recommendation row should remain unchanged"
     );
 }
