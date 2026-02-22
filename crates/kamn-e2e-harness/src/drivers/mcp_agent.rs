@@ -126,12 +126,18 @@ fn run_live_s01_mcp_probe() -> Result<(), String> {
         .map_err(|error| format!("mcp live probe failed to spawn: {error}"))?;
 
     if let Some(mut stdin) = child.stdin.take() {
+        let initialize_request = build_framed_jsonrpc_request(
+            r#"{"jsonrpc":"2.0","id":"probe-init","method":"initialize","params":{}}"#,
+        );
+        let health_request = build_framed_jsonrpc_request(
+            r#"{"jsonrpc":"2.0","id":"probe-health","method":"tools/call","params":{"name":"health","arguments":{}}}"#,
+        );
+        let framed_requests = format!("{initialize_request}{health_request}");
         stdin
-            .write_all(br#"{"id":"probe-1","tool":"health"}"#)
-            .map_err(|error| format!("mcp live probe failed to write request: {error}"))?;
-        stdin
-            .write_all(b"\n")
-            .map_err(|error| format!("mcp live probe failed to finalize request: {error}"))?;
+            .write_all(framed_requests.as_bytes())
+            .map_err(|error| {
+                format!("mcp live probe failed to write framed request stream: {error}")
+            })?;
     }
 
     let output = child
@@ -147,23 +153,110 @@ fn run_live_s01_mcp_probe() -> Result<(), String> {
     }
 
     let stdout = String::from_utf8_lossy(output.stdout.as_slice());
-    if stdout.contains(r#""ok":true"#) {
-        return Ok(());
+    let payloads = parse_framed_jsonrpc_payloads(stdout.as_ref())
+        .map_err(|error| format!("mcp live probe invalid framed output: {error}"))?;
+
+    let initialize_response = payloads
+        .iter()
+        .find(|payload| payload.contains(r#""id":"probe-init""#))
+        .ok_or_else(|| "mcp live probe missing initialize response payload".to_owned())?;
+    validate_probe_initialize_response(initialize_response)?;
+
+    let health_response = payloads
+        .iter()
+        .find(|payload| payload.contains(r#""id":"probe-health""#))
+        .ok_or_else(|| "mcp live probe missing health response payload".to_owned())?;
+    validate_probe_health_response(health_response)?;
+    Ok(())
+}
+
+fn build_framed_jsonrpc_request(payload: &str) -> String {
+    format!("Content-Length: {}\r\n\r\n{}", payload.len(), payload)
+}
+
+fn validate_probe_initialize_response(payload: &str) -> Result<(), String> {
+    if !payload.contains(r#""jsonrpc":"2.0""#) {
+        return Err(format!(
+            "mcp live probe initialize response missing jsonrpc marker: {payload}"
+        ));
+    }
+    if !payload.contains(r#""serverInfo""#) {
+        return Err(format!(
+            "mcp live probe initialize response missing serverInfo marker: {payload}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_probe_health_response(payload: &str) -> Result<(), String> {
+    if !payload.contains(r#""ok":true"#) {
+        return Err(format!(
+            "mcp live probe returned non-success health payload: {payload}"
+        ));
+    }
+    Ok(())
+}
+
+fn parse_framed_jsonrpc_payloads(stream: &str) -> Result<Vec<String>, String> {
+    let mut payloads = Vec::new();
+    let mut cursor = 0usize;
+    let bytes = stream.as_bytes();
+
+    loop {
+        while matches!(bytes.get(cursor), Some(b'\r' | b'\n')) {
+            cursor = cursor
+                .checked_add(1)
+                .ok_or_else(|| "framed stream cursor overflow".to_owned())?;
+        }
+        if cursor == bytes.len() {
+            break;
+        }
+
+        let remaining = stream
+            .get(cursor..)
+            .ok_or_else(|| "framed stream cursor out of bounds".to_owned())?;
+        let Some(header_end) = remaining.find("\r\n\r\n") else {
+            return Err("missing framed header terminator".to_owned());
+        };
+        let header = &remaining[..header_end];
+        let length_value = header
+            .lines()
+            .find_map(|line| line.strip_prefix("Content-Length: "))
+            .ok_or_else(|| "missing content-length header".to_owned())?;
+        let content_length = length_value
+            .trim()
+            .parse::<usize>()
+            .map_err(|_| "content-length must be numeric".to_owned())?;
+        let payload_start = cursor
+            .checked_add(header_end)
+            .and_then(|value| value.checked_add(4))
+            .ok_or_else(|| "framed payload start overflow".to_owned())?;
+        let payload_end = payload_start
+            .checked_add(content_length)
+            .ok_or_else(|| "content-length overflows stream cursor".to_owned())?;
+        let payload = stream
+            .get(payload_start..payload_end)
+            .ok_or_else(|| "content-length exceeds available framed payload bytes".to_owned())?;
+
+        payloads.push(payload.to_owned());
+        cursor = payload_end;
     }
 
-    Err(format!(
-        "mcp live probe returned non-success payload: {}",
-        stdout.trim()
-    ))
+    if payloads.is_empty() {
+        return Err("no framed payloads parsed".to_owned());
+    }
+    Ok(payloads)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{env, ExecutionMode};
     use super::{
-        live_execution_enabled_from_env, parse_bool_flag, run_live_s01_mcp_probe, McpAgentDriver,
-        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        build_framed_jsonrpc_request, live_execution_enabled_from_env, parse_bool_flag,
+        parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe, validate_probe_health_response,
+        validate_probe_initialize_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
+    use super::{env, ExecutionMode};
     use std::ffi::OsString;
     use std::sync::{Mutex, OnceLock};
 
@@ -267,5 +360,114 @@ mod tests {
         assert!(debug.contains("McpAgentDriver"));
         assert!(debug.contains("mode"));
         assert!(debug.contains("live_execution_enabled"));
+    }
+
+    #[test]
+    fn spec_c01_build_framed_jsonrpc_request_includes_content_length_and_body() {
+        let request = build_framed_jsonrpc_request(r#"{"jsonrpc":"2.0","id":"req-1"}"#);
+        assert!(
+            request.starts_with("Content-Length: "),
+            "framed request should include content-length prefix: {request}",
+        );
+        assert!(
+            request.contains("\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":\"req-1\"}"),
+            "framed request should include header/body separator + payload: {request}",
+        );
+    }
+
+    #[test]
+    fn spec_c02_parse_framed_jsonrpc_payloads_supports_multiple_frames() {
+        let first = build_framed_jsonrpc_request(r#"{"jsonrpc":"2.0","id":"init"}"#);
+        let second = build_framed_jsonrpc_request(r#"{"jsonrpc":"2.0","id":"health"}"#);
+        let payloads = parse_framed_jsonrpc_payloads(format!("{first}{second}").as_str())
+            .expect("framed payloads should parse");
+        assert_eq!(
+            payloads,
+            vec![
+                r#"{"jsonrpc":"2.0","id":"init"}"#.to_owned(),
+                r#"{"jsonrpc":"2.0","id":"health"}"#.to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn spec_c03_parse_framed_jsonrpc_payloads_rejects_malformed_stream() {
+        let malformed = "Content-Length: 9\r\n\r\n{\"id\":1}";
+        let error = parse_framed_jsonrpc_payloads(malformed)
+            .expect_err("mismatched content-length should fail");
+        assert!(
+            error.contains("content-length"),
+            "error should mention content-length mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn spec_c04_parse_framed_jsonrpc_payloads_accepts_leading_newlines() {
+        let framed = format!(
+            "\n{}",
+            build_framed_jsonrpc_request(r#"{"jsonrpc":"2.0","id":"init"}"#)
+        );
+        let payloads = parse_framed_jsonrpc_payloads(framed.as_str())
+            .expect("leading newline should be skipped");
+        assert_eq!(
+            payloads,
+            vec![r#"{"jsonrpc":"2.0","id":"init"}"#.to_owned()]
+        );
+    }
+
+    #[test]
+    fn spec_c05_parse_framed_jsonrpc_payloads_rejects_newline_only_stream() {
+        let error =
+            parse_framed_jsonrpc_payloads("\n").expect_err("newline-only stream should fail");
+        assert!(
+            error.contains("no framed payloads parsed"),
+            "error should mention missing payloads: {error}",
+        );
+    }
+
+    #[test]
+    fn spec_c06_validate_probe_initialize_response_rejects_missing_jsonrpc_marker() {
+        let payload = r#"{"id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}"#;
+        let error = validate_probe_initialize_response(payload)
+            .expect_err("missing jsonrpc marker should fail");
+        assert!(
+            error.contains("missing jsonrpc marker"),
+            "error should mention jsonrpc marker: {error}",
+        );
+    }
+
+    #[test]
+    fn spec_c07_validate_probe_initialize_response_rejects_missing_server_info_marker() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe-init","result":{}}"#;
+        let error = validate_probe_initialize_response(payload)
+            .expect_err("missing serverInfo marker should fail");
+        assert!(
+            error.contains("missing serverInfo marker"),
+            "error should mention serverInfo marker: {error}",
+        );
+    }
+
+    #[test]
+    fn spec_c08_validate_probe_health_response_rejects_non_success_payload() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":false}}"#;
+        let error =
+            validate_probe_health_response(payload).expect_err("non-success payload should fail");
+        assert!(
+            error.contains("non-success health payload"),
+            "error should mention non-success health payload: {error}",
+        );
+    }
+
+    #[test]
+    fn spec_c09_validate_probe_initialize_response_accepts_required_markers() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn-mcp-server"}}}"#;
+        validate_probe_initialize_response(payload)
+            .expect("required initialize markers should pass");
+    }
+
+    #[test]
+    fn spec_c10_validate_probe_health_response_accepts_success_payload() {
+        let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":true}}"#;
+        validate_probe_health_response(payload).expect("ok=true health payload should pass");
     }
 }
