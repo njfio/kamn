@@ -214,6 +214,18 @@ The 7 genuine feat commits are the most productive capability output since R49, 
 - spec_volume_guardrail_target_spec_to_module_ratio_max=7.7
 - spec_volume_guardrail_target_status=severely_breached
 
+### 5.5 Post-Publication Spec-Volume Reduction Tranche Markers (Issue #5714)
+
+Post-publication tranche-1 removed 14 low-value archived issue-spec pairs (pointer + archive
+payload) and reduced top-level `specs/` directory count from `849` to `835`.
+
+- r52_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1
+- r52_review_spec_volume_reduction_tranche_pre_count=849
+- r52_review_spec_volume_reduction_tranche_deleted_count=14
+- r52_review_spec_volume_reduction_tranche_post_count=835
+- r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
+- r52_review_spec_volume_reduction_evidence_command_post=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
+
 ---
 
 ## 6. Branch Hygiene — SLIGHTLY WORSENED

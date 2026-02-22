@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 415
+- archived_issue_count: 401
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -159,25 +159,11 @@
 | 4185 | implement upgrade lineage verifier and deterministic promotion gate reason mapping | 2026-02-18 | `specs/archive/4185` | `specs/4185/ARCHIVED.md` |
 | 4186 | add ci smoke checker for upgrade compatibility-rehearsal marker drift and heavy-lane exclusions | 2026-02-18 | `specs/archive/4186` | `specs/4186/ARCHIVED.md` |
 | 4187 | update upgrade-governance docs and drift-contract tests for compatibility closure | 2026-02-18 | `specs/archive/4187` | `specs/4187/ARCHIVED.md` |
-| 4195 | Issue 4195 | 2026-02-18 | `specs/archive/4195` | `specs/4195/ARCHIVED.md` |
-| 4196 | Issue 4196 | 2026-02-18 | `specs/archive/4196` | `specs/4196/ARCHIVED.md` |
-| 4197 | Issue 4197 | 2026-02-18 | `specs/archive/4197` | `specs/4197/ARCHIVED.md` |
 | 4198 | Implement harness taxonomy enforcement and runbook marker parity contract checks | 2026-02-18 | `specs/archive/4198` | `specs/4198/ARCHIVED.md` |
 | 4199 | Add red tests for promotion evidence convergence completeness and tamper rejection | 2026-02-18 | `specs/archive/4199` | `specs/4199/ARCHIVED.md` |
 | 4200 | Implement convergence verifier and deterministic promotion decision reason mapping | 2026-02-18 | `specs/archive/4200` | `specs/4200/ARCHIVED.md` |
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
-| 4221 | Issue 4221 | 2026-02-18 | `specs/archive/4221` | `specs/4221/ARCHIVED.md` |
-| 4222 | Issue 4222 | 2026-02-18 | `specs/archive/4222` | `specs/4222/ARCHIVED.md` |
-| 4223 | Issue 4223 | 2026-02-18 | `specs/archive/4223` | `specs/4223/ARCHIVED.md` |
-| 4225 | Issue 4225 | 2026-02-18 | `specs/archive/4225` | `specs/4225/ARCHIVED.md` |
-| 4226 | Issue 4226 | 2026-02-18 | `specs/archive/4226` | `specs/4226/ARCHIVED.md` |
-| 4227 | Issue 4227 | 2026-02-18 | `specs/archive/4227` | `specs/4227/ARCHIVED.md` |
-| 4228 | Issue 4228 | 2026-02-18 | `specs/archive/4228` | `specs/4228/ARCHIVED.md` |
-| 4229 | Issue 4229 | 2026-02-18 | `specs/archive/4229` | `specs/4229/ARCHIVED.md` |
-| 4230 | Issue 4230 | 2026-02-18 | `specs/archive/4230` | `specs/4230/ARCHIVED.md` |
-| 4236 | Issue 4236 | 2026-02-18 | `specs/archive/4236` | `specs/4236/ARCHIVED.md` |
-| 4240 | Issue 4240 | 2026-02-18 | `specs/archive/4240` | `specs/4240/ARCHIVED.md` |
 | 4241 | Issue 4241 | 2026-02-18 | `specs/archive/4241` | `specs/4241/ARCHIVED.md` |
 | 4251 | Issue 4251 | 2026-02-18 | `specs/archive/4251` | `specs/4251/ARCHIVED.md` |
 | 4252 | Issue 4252 | 2026-02-18 | `specs/archive/4252` | `specs/4252/ARCHIVED.md` |

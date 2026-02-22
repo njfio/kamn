@@ -1,7 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
+const DOC_R50: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
+const DOC_R52: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn repo_root() -> PathBuf {
@@ -33,9 +34,9 @@ fn current_module_export_count() -> usize {
         .count()
 }
 
-fn parse_marker_usize(marker_key: &str) -> usize {
+fn parse_marker_usize(doc: &str, marker_key: &str) -> usize {
     let needle = format!("{marker_key}=");
-    let line = DOC
+    let line = doc
         .lines()
         .find(|line| line.contains(needle.as_str()))
         .unwrap_or_else(|| panic!("missing marker {marker_key}"));
@@ -50,9 +51,9 @@ fn parse_marker_usize(marker_key: &str) -> usize {
         .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
 }
 
-fn parse_marker_f64(marker_key: &str) -> f64 {
+fn parse_marker_f64(doc: &str, marker_key: &str) -> f64 {
     let needle = format!("{marker_key}=");
-    let line = DOC
+    let line = doc
         .lines()
         .find(|line| line.contains(needle.as_str()))
         .unwrap_or_else(|| panic!("missing marker {marker_key}"));
@@ -67,6 +68,20 @@ fn parse_marker_f64(marker_key: &str) -> f64 {
         .unwrap_or_else(|_| panic!("marker {marker_key} should be a number: {value}"))
 }
 
+fn parse_marker_text(doc: &str, marker_key: &str) -> String {
+    let needle = format!("{marker_key}=");
+    let line = doc
+        .lines()
+        .find(|line| line.contains(needle.as_str()))
+        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
+    line.split_once(needle.as_str())
+        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
+        .1
+        .trim_matches('`')
+        .trim()
+        .to_string()
+}
+
 #[test]
 fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(REVIEW_MARKER_README.contains("r<release>_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"));
@@ -79,55 +94,76 @@ fn functional_r50_spec_volume_remediation_markers_present() {
         REVIEW_MARKER_README.contains("current spec_to_module_ratio <= non_regression_ratio_max")
     );
 
-    assert!(DOC.contains(
+    assert!(DOC_R50.contains(
         "r50_review_spec_volume_remediation_schema_version=kamn.review.spec-volume-remediation-plan.v1"
     ));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_baseline_spec_dirs=750"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_module_count=92"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_target_ratio_max=7.7"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_target_spec_dir_max=708"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_required_reduction=42"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_tranche_count=3"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_min_reduction_per_tranche=14"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_issue_cap_per_tranche=2"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_target_release=r53"));
-    assert!(DOC.contains("r50_review_spec_volume_remediation_status=active"));
-    assert!(DOC.contains(
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_baseline_spec_dirs=750"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_module_count=92"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_target_ratio_max=7.7"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_target_spec_dir_max=708"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_required_reduction=42"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_tranche_count=3"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_min_reduction_per_tranche=14"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_issue_cap_per_tranche=2"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_target_release=r53"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_remediation_status=active"));
+    assert!(DOC_R50.contains(
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=849"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_ratio_max=9.3"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_spec_dir_max=849"));
-    assert!(DOC.contains(
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=835"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_ratio_max=9.3"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=835"));
+    assert!(DOC_R50.contains(
         "Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio."
     ));
 }
 
 #[test]
 fn integration_r50_spec_volume_remediation_markers_are_consistent() {
-    let baseline_spec_dirs =
-        parse_marker_usize("r50_review_spec_volume_remediation_baseline_spec_dirs");
-    let module_count = parse_marker_usize("r50_review_spec_volume_remediation_module_count");
-    let target_ratio_max = parse_marker_f64("r50_review_spec_volume_remediation_target_ratio_max");
-    let target_spec_dir_max =
-        parse_marker_usize("r50_review_spec_volume_remediation_target_spec_dir_max");
-    let required_reduction =
-        parse_marker_usize("r50_review_spec_volume_remediation_required_reduction");
+    let baseline_spec_dirs = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_baseline_spec_dirs",
+    );
+    let module_count =
+        parse_marker_usize(DOC_R50, "r50_review_spec_volume_remediation_module_count");
+    let target_ratio_max = parse_marker_f64(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_target_ratio_max",
+    );
+    let target_spec_dir_max = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_target_spec_dir_max",
+    );
+    let required_reduction = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_required_reduction",
+    );
 
-    let tranche_count = parse_marker_usize("r50_review_spec_volume_remediation_tranche_count");
-    let min_reduction_per_tranche =
-        parse_marker_usize("r50_review_spec_volume_remediation_min_reduction_per_tranche");
-    let issue_cap_per_tranche =
-        parse_marker_usize("r50_review_spec_volume_remediation_issue_cap_per_tranche");
-    let non_regression_baseline_spec_dirs =
-        parse_marker_usize("r50_review_spec_volume_non_regression_baseline_spec_dirs");
-    let non_regression_baseline_module_count =
-        parse_marker_usize("r50_review_spec_volume_non_regression_baseline_module_count");
+    let tranche_count =
+        parse_marker_usize(DOC_R50, "r50_review_spec_volume_remediation_tranche_count");
+    let min_reduction_per_tranche = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_min_reduction_per_tranche",
+    );
+    let issue_cap_per_tranche = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_remediation_issue_cap_per_tranche",
+    );
+    let non_regression_baseline_spec_dirs = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_non_regression_baseline_spec_dirs",
+    );
+    let non_regression_baseline_module_count = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_non_regression_baseline_module_count",
+    );
     let non_regression_ratio_max =
-        parse_marker_f64("r50_review_spec_volume_non_regression_ratio_max");
-    let non_regression_spec_dir_max =
-        parse_marker_usize("r50_review_spec_volume_non_regression_spec_dir_max");
+        parse_marker_f64(DOC_R50, "r50_review_spec_volume_non_regression_ratio_max");
+    let non_regression_spec_dir_max = parse_marker_usize(
+        DOC_R50,
+        "r50_review_spec_volume_non_regression_spec_dir_max",
+    );
 
     let current_spec_dirs = current_spec_directory_count();
     let current_module_count = current_module_export_count();
@@ -167,5 +203,72 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
     assert!(
         current_ratio <= non_regression_ratio_max,
         "current spec-to-module ratio must not exceed non-regression max"
+    );
+}
+
+#[test]
+fn functional_r52_post_publication_spec_volume_reduction_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_reduction_tranche_pre_count=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_reduction_tranche_deleted_count=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_reduction_tranche_post_count=<integer>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_spec_volume_reduction_tranche_pre_count - r<release>_review_spec_volume_reduction_tranche_deleted_count = r<release>_review_spec_volume_reduction_tranche_post_count"
+    ));
+
+    assert!(DOC_R52.contains(
+        "r52_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1"
+    ));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_pre_count=849"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_deleted_count=14"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_post_count=835"));
+    assert!(DOC_R52
+        .contains("r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l"));
+    assert!(DOC_R52.contains(
+        "r52_review_spec_volume_reduction_evidence_command_post=find specs -mindepth 1 -maxdepth 1 -type d | wc -l"
+    ));
+}
+
+#[test]
+fn integration_r52_post_publication_spec_volume_reduction_markers_are_consistent() {
+    let pre = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_reduction_tranche_pre_count",
+    );
+    let deleted = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_reduction_tranche_deleted_count",
+    );
+    let post = parse_marker_usize(
+        DOC_R52,
+        "r52_review_spec_volume_reduction_tranche_post_count",
+    );
+    let pre_command = parse_marker_text(
+        DOC_R52,
+        "r52_review_spec_volume_reduction_evidence_command_pre",
+    );
+    let post_command = parse_marker_text(
+        DOC_R52,
+        "r52_review_spec_volume_reduction_evidence_command_post",
+    );
+
+    assert_eq!(
+        deleted, 14,
+        "tranche-1 deleted-count marker should remain fixed"
+    );
+    assert_eq!(
+        pre.saturating_sub(post),
+        deleted,
+        "pre/post delta should equal deleted marker count"
+    );
+    assert_eq!(post, 835, "tranche-1 post-count marker should remain fixed");
+    assert_eq!(
+        pre_command, post_command,
+        "pre/post evidence commands should remain identical for direct count comparison"
     );
 }
