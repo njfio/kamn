@@ -1256,11 +1256,18 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
             manifest_path.display()
         )
     })?;
+    let chain_dump_json = std::fs::read_to_string(kolme_chain_dump_path).map_err(|error| {
+        format!(
+            "failed to read chain dump {}: {error}",
+            kolme_chain_dump_path.display()
+        )
+    })?;
     verify::validate_evidence_verification_blocks(
         evidence_dir_path,
         &[manifest_path.as_path(), kolme_chain_dump_path, output_path],
     )?;
     let report_json = verify::generate_verification_report_json(manifest_json.as_str())?;
+    verify::verify_chain_dump(chain_dump_json.as_str())?;
     if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
             format!(
