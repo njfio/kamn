@@ -38,6 +38,12 @@ pub struct ScenarioDefinition {
     pub name: &'static str,
     /// Priority marker.
     pub priority: &'static str,
+    /// Ordered scenario steps.
+    pub steps: &'static [&'static str],
+    /// Scenario verifiable output artifacts.
+    pub verifiable_outputs: &'static [&'static str],
+    /// Scenario pass criteria.
+    pub pass_criteria: &'static [&'static str],
 }
 
 /// Returns the full PRD scenario matrix (`S-01` through `S-15`).

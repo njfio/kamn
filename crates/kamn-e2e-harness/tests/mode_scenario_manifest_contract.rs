@@ -127,3 +127,69 @@ fn spec_c08_verifier_report_contains_deterministic_check_markers() {
     let second = generate_verification_report_json(manifest).expect("json should render");
     assert_eq!(report_json, second);
 }
+
+#[test]
+fn spec_c09_scenario_registry_exposes_non_empty_contract_fields() {
+    let scenarios = all_scenarios();
+    for scenario in scenarios {
+        assert!(
+            !scenario.steps.is_empty(),
+            "scenario {} should include steps",
+            scenario.id
+        );
+        assert!(
+            !scenario.verifiable_outputs.is_empty(),
+            "scenario {} should include verifiable outputs",
+            scenario.id
+        );
+        assert!(
+            !scenario.pass_criteria.is_empty(),
+            "scenario {} should include pass criteria",
+            scenario.id
+        );
+    }
+}
+
+#[test]
+fn spec_c10_p0_scenarios_include_prd_contract_markers() {
+    let scenarios = all_scenarios();
+    let p0 = scenarios
+        .into_iter()
+        .filter(|scenario| scenario.priority == "P0")
+        .collect::<Vec<_>>();
+    assert_eq!(p0.len(), 6);
+
+    let s01 = p0
+        .iter()
+        .find(|scenario| scenario.id == "S-01")
+        .expect("S-01 should exist");
+    assert!(
+        s01.steps
+            .iter()
+            .any(|step| step.contains("register") || step.contains("Register")),
+        "S-01 should include registration step marker"
+    );
+    assert!(
+        s01.verifiable_outputs
+            .iter()
+            .any(|entry| entry.contains("alice_registration.json")),
+        "S-01 should include PRD verifiable output marker"
+    );
+
+    let s04 = p0
+        .iter()
+        .find(|scenario| scenario.id == "S-04")
+        .expect("S-04 should exist");
+    assert!(
+        s04.steps
+            .iter()
+            .any(|step| step.contains("fund_escrow") || step.contains("fund escrow")),
+        "S-04 should include escrow funding step marker"
+    );
+    assert!(
+        s04.pass_criteria
+            .iter()
+            .any(|entry| entry.contains("Pending") && entry.contains("Completed")),
+        "S-04 should include lifecycle pass-criteria marker"
+    );
+}

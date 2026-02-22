@@ -688,6 +688,41 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         })
         .collect::<Vec<_>>()
         .join(",");
+    let scenario_contracts_json = selected
+        .iter()
+        .zip(scenario_results.iter())
+        .map(|(scenario, result)| {
+            let steps_json = scenario
+                .steps
+                .iter()
+                .map(|step| format!("\"{}\"", escape_json(step)))
+                .collect::<Vec<_>>()
+                .join(",");
+            let outputs_json = scenario
+                .verifiable_outputs
+                .iter()
+                .map(|entry| format!("\"{}\"", escape_json(entry)))
+                .collect::<Vec<_>>()
+                .join(",");
+            let pass_criteria_json = scenario
+                .pass_criteria
+                .iter()
+                .map(|entry| format!("\"{}\"", escape_json(entry)))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!(
+                "{{\"id\":\"{}\",\"name\":\"{}\",\"priority\":\"{}\",\"status\":\"{}\",\"steps\":[{}],\"verifiable_outputs\":[{}],\"pass_criteria\":[{}]}}",
+                scenario.id,
+                escape_json(scenario.name),
+                scenario.priority,
+                result.status.as_str(),
+                steps_json,
+                outputs_json,
+                pass_criteria_json
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
     let phase_labels = phases
         .iter()
         .map(|phase| format!("\"{}\"", phase.as_str()))
@@ -737,7 +772,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"mode_execution_contract\":{},\"evidence_contract\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"mode_execution_contract\":{},\"evidence_contract\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"scenario_contracts\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
@@ -759,6 +794,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         selected.len(),
         scenario_ids,
         scenario_results_json,
+        scenario_contracts_json,
         phases.len(),
         phase_labels,
         phase_results_json,

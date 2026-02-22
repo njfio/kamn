@@ -2378,3 +2378,31 @@ fn spec_c108_external_execution_probe_failure_marks_validation_fail() {
 
     let _ = std::fs::remove_file(kolme_binary);
 }
+
+#[test]
+fn spec_c109_run_output_contains_ordered_scenario_contract_projection() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-03".to_owned(), "S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"scenario_contracts\":["));
+    assert!(output.contains("\"steps\":["));
+    assert!(output.contains("\"verifiable_outputs\":["));
+    assert!(output.contains("\"pass_criteria\":["));
+
+    let s03_index = output
+        .find("\"id\":\"S-03\"")
+        .expect("S-03 contract entry should be present");
+    let s01_index = output
+        .find("\"id\":\"S-01\"")
+        .expect("S-01 contract entry should be present");
+    assert!(
+        s03_index < s01_index,
+        "scenario contracts should preserve selected order"
+    );
+}
