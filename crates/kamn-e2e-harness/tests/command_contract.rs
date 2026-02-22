@@ -231,3 +231,48 @@ fn spec_c15_agent_deploy_step_markers_align_with_prd_actions() {
     assert!(output.contains("Register agents via kamn-agent-lib"));
     assert!(output.contains("Record infrastructure evidence"));
 }
+
+#[test]
+fn spec_c16_mcp_steps_are_skipped_in_sdk_direct_mode() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "{\"step\":\"[MCP modes] Spawn kamn-mcp-server per agent with identity\",\"status\":\"SKIP\""
+    ));
+    assert!(
+        output.contains("{\"step\":\"[MCP modes] Verify MCP server health\",\"status\":\"SKIP\"")
+    );
+}
+
+#[test]
+fn spec_c17_mcp_steps_are_pass_in_mcp_tau_mode() {
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "{\"step\":\"[MCP modes] Spawn kamn-mcp-server per agent with identity\",\"status\":\"PASS\""
+    ));
+    assert!(
+        output.contains("{\"step\":\"[MCP modes] Verify MCP server health\",\"status\":\"PASS\"")
+    );
+}
+
+#[test]
+fn spec_c18_fail_path_marks_infra_health_step_and_phase_fail() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/fail-path".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output
+        .contains("{\"step\":\"Verify KAMN Service API health (/healthz)\",\"status\":\"FAIL\""));
+    assert!(output.contains("{\"phase\":\"INFRA_UP\",\"status\":\"FAIL\""));
+}
