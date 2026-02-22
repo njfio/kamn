@@ -2,7 +2,7 @@
 
 - Issue: #5634
 - Milestone: R55 E2E Evidence Step Inventory Parity
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
