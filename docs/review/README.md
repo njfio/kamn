@@ -44,3 +44,23 @@ Contract invariants:
 - `r<release>_review_branch_reconciliation_issue_chain_max = 1`
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_governance_loop_mitigation_docs_contract.rs`.
+
+## Spec-Volume Non-Regression Ratchet Contract (R50+)
+
+R50+ review artifacts must include a non-regression ratchet while spec-volume remediation remains active.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 50`:
+
+- `r<release>_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1`
+- `r<release>_review_spec_volume_non_regression_baseline_spec_dirs=<integer>`
+- `r<release>_review_spec_volume_non_regression_baseline_module_count=<integer>`
+- `r<release>_review_spec_volume_non_regression_ratio_max=<float>`
+- `r<release>_review_spec_volume_non_regression_spec_dir_max=<integer>`
+
+Contract invariants:
+
+- current spec_dir_count <= non_regression_spec_dir_max
+- current spec_to_module_ratio <= non_regression_ratio_max
+- non_regression_baseline_spec_dirs <= non_regression_spec_dir_max
+
+This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
