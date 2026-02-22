@@ -3,7 +3,7 @@
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
 - Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729
-- Active issue(s): None
+- Active issue(s): #5732
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
 ## Delivery Slices
@@ -27,3 +27,4 @@
 18. Execute R52 spec-volume remediation tranche-4 with deterministic 14-directory reduction evidence. (Completed)
 19. Execute R52 spec-volume remediation tranche-5 with deterministic 14-directory reduction evidence. (Completed)
 20. Execute R52 spec-volume remediation tranche-6 with deterministic 14-directory reduction evidence. (Completed)
+21. Execute R52 spec-volume remediation tranche-7 with deterministic 14-directory reduction evidence. (In Progress: #5732)
