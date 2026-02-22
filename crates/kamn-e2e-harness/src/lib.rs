@@ -211,6 +211,8 @@ pub struct RunCommandConfig {
     pub kolme_binary: String,
     /// Agent runtime binary path when required by mode.
     pub agent_binary: Option<String>,
+    /// Enables guarded runtime external execution integration path.
+    pub external_execution: bool,
     /// Evidence output directory.
     pub evidence_dir: String,
     /// Selected scenario IDs.
@@ -297,6 +299,7 @@ where
             let mut mode = None;
             let mut kolme_binary = None;
             let mut agent_binary = None;
+            let mut external_execution = false;
             let mut evidence_dir = None;
             let mut scenarios_csv = None;
             let mut index = 1;
@@ -319,6 +322,11 @@ where
                 if let Some(value) = parsed_agent_binary {
                     agent_binary = Some(value);
                     index = advanced + 1;
+                    continue;
+                }
+                if args[index] == "--enable-external-execution" {
+                    external_execution = true;
+                    index += 1;
                     continue;
                 }
                 let (parsed_evidence, advanced) = parse_flag_value(&args, index, "--evidence-dir")?;
@@ -354,6 +362,7 @@ where
                 mode,
                 kolme_binary,
                 agent_binary,
+                external_execution,
                 evidence_dir,
                 scenario_ids,
             }))
@@ -418,6 +427,9 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     {
         return Err("missing required agent binary for MCP modes".to_owned());
     }
+    if config.external_execution {
+        ensure_external_execution_preflight(config, mode)?;
+    }
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
     let phases = all_orchestration_phases();
     let fail_path_marker = config.evidence_dir.contains("fail-path");
@@ -428,9 +440,14 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         .map(|value| format!("\"{}\"", escape_json(value)))
         .unwrap_or_else(|| "null".to_owned());
     let integration_config_json = format!(
-        "{{\"kolme_binary\":\"{}\",\"agent_binary\":{},\"agent_binary_required\":{}}}",
+        "{{\"kolme_binary\":\"{}\",\"agent_binary\":{},\"agent_binary_required\":{},\"external_execution_enabled\":{}}}",
         escape_json(config.kolme_binary.as_str()),
         agent_binary_json,
+        if config.external_execution {
+            "true"
+        } else {
+            "false"
+        },
         if agent_binary_required {
             "true"
         } else {
@@ -491,6 +508,11 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     let spawn_execution_json = "{\"postgres\":{\"status\":\"PASS\",\"timeline_ref\":\"step-1\",\"result\":\"started\"},\"kolme\":{\"status\":\"PASS\",\"timeline_ref\":\"step-2\",\"result\":\"started\"},\"kamn_processor\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_listener\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_approver\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"}}";
     let live_process_execution_json = "{\"postgres\":{\"state\":\"running\",\"pid\":\"1001\",\"health\":\"PASS\"},\"kolme\":{\"state\":\"running\",\"pid\":\"1002\",\"health\":\"PASS\"},\"kamn_processor\":{\"state\":\"running\",\"pid\":\"2001\",\"health\":\"PASS\"},\"kamn_listener\":{\"state\":\"running\",\"pid\":\"2002\",\"health\":\"PASS\"},\"kamn_approver\":{\"state\":\"running\",\"pid\":\"2003\",\"health\":\"PASS\"}}";
     let live_execution_json = "{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"PASS\",\"overall_status\":\"PASS\"}";
+    let runtime_external_execution_json = if config.external_execution {
+        "{\"requested\":true,\"guard_status\":\"PASS\",\"execution_mode\":\"external-runtime\",\"preflight\":\"ready\"}"
+    } else {
+        "{\"requested\":false,\"guard_status\":\"SKIP\",\"execution_mode\":\"contract-only\",\"preflight\":\"not-requested\"}"
+    };
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -545,10 +567,11 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
+        runtime_external_execution_json,
         runtime_readiness_json,
         process_runtime_json,
         process_lifecycle_json,
@@ -566,6 +589,37 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         phase_totals_json,
         step_totals_json
     ))
+}
+
+fn ensure_external_execution_preflight(
+    config: &RunCommandConfig,
+    mode: ExecutionMode,
+) -> Result<(), String> {
+    if config.kolme_binary.trim().is_empty() {
+        return Err("external execution preflight failed: kolme binary path is empty".to_owned());
+    }
+    if !Path::new(config.kolme_binary.as_str()).exists() {
+        return Err(format!(
+            "external execution preflight failed: kolme binary not found: {}",
+            config.kolme_binary
+        ));
+    }
+    if matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
+        let agent_binary = config.agent_binary.as_deref().ok_or_else(|| {
+            "external execution preflight failed: agent binary missing for MCP modes".to_owned()
+        })?;
+        if agent_binary.trim().is_empty() {
+            return Err(
+                "external execution preflight failed: agent binary path is empty".to_owned(),
+            );
+        }
+        if !Path::new(agent_binary).exists() {
+            return Err(format!(
+                "external execution preflight failed: agent binary not found: {agent_binary}"
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn compute_lifecycle_summary(phase_results: &[OrchestrationPhaseResult]) -> LifecycleSummary {
