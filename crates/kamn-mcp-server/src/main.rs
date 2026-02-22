@@ -1,6 +1,6 @@
 use kamn_mcp_server::config::McpServerConfig;
+use kamn_mcp_server::process_stdio_input;
 use kamn_mcp_server::tools::build_tool_registry;
-use kamn_mcp_server::{dispatch_tool_request_json, invalid_request_response_json};
 use std::io::{self, Read};
 
 fn main() {
@@ -42,11 +42,19 @@ fn main() {
         }
     };
 
-    for line in input.lines().map(str::trim).filter(|line| !line.is_empty()) {
-        let response = match dispatch_tool_request_json(&handle, line) {
-            Ok(response) => response,
-            Err(error) => invalid_request_response_json(error.as_str()),
-        };
-        println!("{response}");
+    let responses = match process_stdio_input(&handle, input.as_str()) {
+        Ok(responses) => responses,
+        Err(error) => {
+            eprintln!("kamn-mcp-server protocol error: {error}");
+            std::process::exit(2);
+        }
+    };
+
+    for response in responses {
+        if response.starts_with("Content-Length: ") {
+            print!("{response}");
+        } else {
+            println!("{response}");
+        }
     }
 }
