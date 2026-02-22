@@ -291,15 +291,15 @@ Or with environment-based identity:
 | `query_message` | Implemented | Dispatches through `KamnAgentHandle::query_message`. |
 | `create_task` | Implemented | Dispatches through `KamnAgentHandle::create_task`. |
 | `health` | Implemented | Dispatches through `KamnAgentHandle::health`. |
-| `accept_task` | Pending MCP dispatch wiring | Service route + `kamn-sdk` + `kamn-agent-lib` support implemented; MCP dispatcher still returns unsupported. |
-| `complete_task` | Pending MCP dispatch wiring | Service route + `kamn-sdk` + `kamn-agent-lib` support implemented; MCP dispatcher still returns unsupported. |
-| `fund_escrow` | Pending MCP dispatch wiring | Service route + `kamn-sdk` + `kamn-agent-lib` support implemented; MCP dispatcher still returns unsupported. |
-| `release_escrow` | Pending MCP dispatch wiring | Service route + `kamn-sdk` + `kamn-agent-lib` support implemented; MCP dispatcher still returns unsupported. |
+| `accept_task` | Implemented | Dispatches through `KamnAgentHandle::accept_task` with deterministic task-id argument validation. |
+| `complete_task` | Implemented | Dispatches through `KamnAgentHandle::complete_task` with deterministic task-id argument validation. |
+| `fund_escrow` | Implemented | Dispatches through `KamnAgentHandle::fund_escrow` with deterministic payload argument validation. |
+| `release_escrow` | Implemented | Dispatches through `KamnAgentHandle::release_escrow` with deterministic escrow-id argument validation. |
 | `verify_proof` | Implemented | Dispatches through `KamnAgentHandle::verify_proof` with deterministic invalid-request handling for malformed payload fields. |
 
 Current `kamn-cli` activation status for the same supported surface:
 - Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `create-task`, `verify-proof`, `health`
-- Pending MCP/CLI wiring: `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`
+- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `create-task`, `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`, `verify-proof`, `health`
 
 **MCP Tool Definitions:**
 

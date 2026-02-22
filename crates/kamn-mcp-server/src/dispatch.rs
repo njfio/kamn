@@ -1,8 +1,5 @@
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
 
-const UNSUPPORTED_REASON: &str =
-    "operation is not yet supported by the current service route surface";
-
 /// Backend abstraction used by MCP tool dispatch.
 pub trait McpToolBackend {
     /// Registers the local agent identity.
@@ -17,6 +14,14 @@ pub trait McpToolBackend {
     fn query_message(&self, message_id: &str) -> Result<String, AgentLibError>;
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
+    /// Accepts one task by identifier.
+    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Completes one task by identifier.
+    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError>;
+    /// Funds escrow with payload contract.
+    fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError>;
+    /// Releases one escrow by identifier.
+    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError>;
     /// Reads service health.
     fn health(&self) -> Result<String, AgentLibError>;
     /// Verifies one proof receipt projection.
@@ -89,6 +94,42 @@ impl McpToolBackend for KamnAgentHandle {
         ))
     }
 
+    fn accept_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::accept_task(self, task_id)?;
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"{}"}}"#,
+            escape_json(receipt.task_id.as_str()),
+            escape_json(receipt.state.as_str()),
+        ))
+    }
+
+    fn complete_task(&self, task_id: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::complete_task(self, task_id)?;
+        Ok(format!(
+            r#"{{"task_id":"{}","state":"{}"}}"#,
+            escape_json(receipt.task_id.as_str()),
+            escape_json(receipt.state.as_str()),
+        ))
+    }
+
+    fn fund_escrow(&self, payload: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::fund_escrow(self, payload)?;
+        Ok(format!(
+            r#"{{"escrow_id":"{}","state":"{}"}}"#,
+            escape_json(receipt.escrow_id.as_str()),
+            escape_json(receipt.state.as_str()),
+        ))
+    }
+
+    fn release_escrow(&self, escrow_id: &str) -> Result<String, AgentLibError> {
+        let receipt = KamnAgentHandle::release_escrow(self, escrow_id)?;
+        Ok(format!(
+            r#"{{"escrow_id":"{}","state":"{}"}}"#,
+            escape_json(receipt.escrow_id.as_str()),
+            escape_json(receipt.state.as_str()),
+        ))
+    }
+
     fn health(&self) -> Result<String, AgentLibError> {
         let health = KamnAgentHandle::health(self)?;
         Ok(format!(
@@ -150,6 +191,34 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
         "create_task" => {
             backend.create_task(required_string_arg(request_json, "payload")?.as_str())
         }
+        "accept_task" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.accept_task(task_id.as_str())
+        }
+        "complete_task" => {
+            let task_id = match required_string_arg(request_json, "task_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.complete_task(task_id.as_str())
+        }
+        "fund_escrow" => {
+            let payload = match required_string_arg(request_json, "payload") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.fund_escrow(payload.as_str())
+        }
+        "release_escrow" => {
+            let escrow_id = match required_string_arg(request_json, "escrow_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.release_escrow(escrow_id.as_str())
+        }
         "health" => backend.health(),
         "verify_proof" => {
             let message_id = match required_string_arg(request_json, "message_id") {
@@ -174,13 +243,6 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 block_height,
                 finality.as_str(),
             )
-        }
-        "accept_task" | "complete_task" | "fund_escrow" | "release_escrow" => {
-            return Ok(unsupported_response_json(
-                request_id.as_str(),
-                tool.as_str(),
-                UNSUPPORTED_REASON,
-            ));
         }
         unknown => {
             return Ok(unsupported_response_json(

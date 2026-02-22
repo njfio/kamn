@@ -125,6 +125,30 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         201,
                         r#"{"task_id":"task-cli","state":"submitted"}"#,
                     )?;
+                } else if method == "POST" && path == "/v1/tasks/task-cli/accept" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"task_id":"task-cli","state":"accepted"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/tasks/task-cli/complete" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"task_id":"task-cli","state":"completed"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/escrow/fund" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"escrow_id":"escrow-cli","state":"funded"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/escrow/escrow-cli/release" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"escrow_id":"escrow-cli","state":"released"}"#,
+                    )?;
                 } else {
                     write_http_response(
                         &mut stream,
@@ -251,17 +275,81 @@ fn spec_c03_cli_verify_proof_command_executes_and_validates_args() {
 }
 
 #[test]
-fn spec_c04_cli_unsupported_command_regression_remains_explicit() {
-    let unsupported_error = dispatch(&parsed(
+fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 4));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+
+    let accept_output = dispatch(&parsed(
         CommandKind::AcceptTask,
-        "http://localhost:18080",
-        &["task-1"],
+        endpoint.as_str(),
+        &["task-cli"],
     ))
-    .expect_err("accept-task should remain unsupported");
-    assert!(matches!(
-        unsupported_error,
-        AgentLibError::UnsupportedOperation(_)
-    ));
+    .expect("accept-task should succeed");
+    assert!(
+        accept_output.contains("state=accepted"),
+        "accept-task output should include accepted state: {accept_output}"
+    );
+
+    let complete_output = dispatch(&parsed(
+        CommandKind::CompleteTask,
+        endpoint.as_str(),
+        &["task-cli"],
+    ))
+    .expect("complete-task should succeed");
+    assert!(
+        complete_output.contains("state=completed"),
+        "complete-task output should include completed state: {complete_output}"
+    );
+
+    let fund_output = dispatch(&parsed(
+        CommandKind::FundEscrow,
+        endpoint.as_str(),
+        &[r#"{"task_id":"task-cli","amount":100}"#],
+    ))
+    .expect("fund-escrow should succeed");
+    assert!(
+        fund_output.contains("escrow_id=escrow-cli"),
+        "fund-escrow output should include escrow id: {fund_output}"
+    );
+    assert!(
+        fund_output.contains("state=funded"),
+        "fund-escrow output should include funded state: {fund_output}"
+    );
+
+    let release_output = dispatch(&parsed(
+        CommandKind::ReleaseEscrow,
+        endpoint.as_str(),
+        &["escrow-cli"],
+    ))
+    .expect("release-escrow should succeed");
+    assert!(
+        release_output.contains("state=released"),
+        "release-escrow output should include released state: {release_output}"
+    );
+
+    for (command, label) in [
+        (CommandKind::AcceptTask, "task_id"),
+        (CommandKind::CompleteTask, "task_id"),
+        (CommandKind::FundEscrow, "fund_escrow_payload"),
+        (CommandKind::ReleaseEscrow, "escrow_id"),
+    ] {
+        let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
+            .expect_err("missing required arg should fail");
+        assert!(
+            matches!(error, AgentLibError::InvalidInput { .. }),
+            "missing required arg for {label} should be invalid input: {error}"
+        );
+    }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
 }
 
 #[test]
