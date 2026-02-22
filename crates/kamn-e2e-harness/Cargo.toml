@@ -1,0 +1,13 @@
+[package]
+name = "kamn-e2e-harness"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+kamn-agent-lib = { path = "../kamn-agent-lib" }
+kamn-cli = { path = "../kamn-cli" }
+kamn-mcp-server = { path = "../kamn-mcp-server" }
+
+[lints]
+workspace = true
