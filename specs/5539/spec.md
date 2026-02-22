@@ -1,6 +1,6 @@
 # Issue #5539 Spec - Service API Scope-Policy Fixture Allow/Deny Route Coverage Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Issue: #5539
 - Parent: #3812
 - Milestone: R50.35 Service API scope-policy fixture allow/deny route coverage metrics exposure
