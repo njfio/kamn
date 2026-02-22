@@ -490,3 +490,59 @@ fn spec_c28_mcp_any_without_agent_binary_returns_deterministic_error() {
     let err = execute_run_contract(&config).expect_err("mcp-any missing agent binary should fail");
     assert!(err.contains("missing required agent binary for MCP modes"));
 }
+
+#[test]
+fn spec_c29_run_output_contains_process_runtime_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"process_runtime\":"));
+    assert!(output.contains("\"kolme_runtime\""));
+    assert!(output.contains("\"kamn_nodes_runtime\""));
+    assert!(output.contains("\"agent_runtime\""));
+    assert!(output.contains("\"spawn_strategy\""));
+}
+
+#[test]
+fn spec_c30_process_runtime_agent_runtime_is_sdk_direct_for_sdk_mode() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"process_runtime\":{\"kolme_runtime\":\"external-binary\",\"kamn_nodes_runtime\":\"managed-process-set\",\"agent_runtime\":\"sdk-direct\""));
+}
+
+#[test]
+fn spec_c31_process_runtime_agent_runtime_is_cli_scripted_for_cli_mode() {
+    let config = RunCommandConfig {
+        mode: "cli-scripted".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"agent_runtime\":\"cli-scripted\""));
+}
+
+#[test]
+fn spec_c32_process_runtime_agent_runtime_is_mcp_agent_for_mcp_mode() {
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"agent_runtime\":\"mcp-agent\""));
+}
