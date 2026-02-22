@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 345
+- archived_issue_count: 331
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -165,20 +165,6 @@
 | 4201 | add CI smoke checker for full-stack convergence marker drift and local-heavy lane exclusion | 2026-02-18 | `specs/archive/4201` | `specs/4201/ARCHIVED.md` |
 | 4202 | update convergence-governance docs and drift-contract tests for live-validation closure | 2026-02-18 | `specs/archive/4202` | `specs/4202/ARCHIVED.md` |
 | 4241 | Issue 4241 | 2026-02-18 | `specs/archive/4241` | `specs/4241/ARCHIVED.md` |
-| 4320 | `Subtask: implement peer adapter reason projection and deterministic multi-process validation hooks` | 2026-02-18 | `specs/archive/4320` | `specs/4320/ARCHIVED.md` |
-| 4321 | `Subtask: add red tests for persisted block digest-finality mismatch rejection and tamper detection` | 2026-02-18 | `specs/archive/4321` | `specs/4321/ARCHIVED.md` |
-| 4322 | `Subtask: implement durable commit checker reason mapping with ci smoke and local-heavy boundary enforcement` | 2026-02-18 | `specs/archive/4322` | `specs/4322/ARCHIVED.md` |
-| 4329 | Issue 4329 | 2026-02-18 | `specs/archive/4329` | `specs/4329/ARCHIVED.md` |
-| 4336 | Issue 4336 | 2026-02-18 | `specs/archive/4336` | `specs/4336/ARCHIVED.md` |
-| 4337 | Issue 4337 | 2026-02-18 | `specs/archive/4337` | `specs/4337/ARCHIVED.md` |
-| 4341 | Issue 4341 | 2026-02-18 | `specs/archive/4341` | `specs/4341/ARCHIVED.md` |
-| 4342 | Issue 4342 | 2026-02-18 | `specs/archive/4342` | `specs/4342/ARCHIVED.md` |
-| 4345 | Issue 4345 | 2026-02-18 | `specs/archive/4345` | `specs/4345/ARCHIVED.md` |
-| 4346 | Issue 4346 | 2026-02-18 | `specs/archive/4346` | `specs/4346/ARCHIVED.md` |
-| 4347 | Issue 4347 | 2026-02-18 | `specs/archive/4347` | `specs/4347/ARCHIVED.md` |
-| 4348 | Issue 4348 | 2026-02-18 | `specs/archive/4348` | `specs/4348/ARCHIVED.md` |
-| 4371 | Issue 4371 | 2026-02-18 | `specs/archive/4371` | `specs/4371/ARCHIVED.md` |
-| 4372 | Issue 4372 | 2026-02-18 | `specs/archive/4372` | `specs/4372/ARCHIVED.md` |
 | 4373 | Issue 4373 | 2026-02-18 | `specs/archive/4373` | `specs/4373/ARCHIVED.md` |
 | 4374 | Issue 4374 | 2026-02-18 | `specs/archive/4374` | `specs/4374/ARCHIVED.md` |
 | 4375 | Issue 4375 | 2026-02-18 | `specs/archive/4375` | `specs/4375/ARCHIVED.md` |
