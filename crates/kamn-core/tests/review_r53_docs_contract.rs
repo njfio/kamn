@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
+const DOC_R54: &str = include_str!("../../../docs/review/gaps-and-issues-r54.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_lines(doc: &str) -> BTreeMap<String, String> {
@@ -621,4 +622,115 @@ fn regression_r54_plus_review_docs_enforce_governance_remediation_budget_policy(
             relative
         );
     }
+}
+
+#[test]
+fn regression_r54_review_unresolved_item_closure_markers_are_consistent() {
+    let markers = parse_marker_lines(DOC_R54);
+
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_unresolved_closure_schema_version"),
+        "kamn.review.unresolved-item-closure.v1"
+    );
+
+    let unresolved_total = parse_marker_usize(&markers, "r54_review_unresolved_total_item_count");
+    let unresolved_resolved =
+        parse_marker_usize(&markers, "r54_review_unresolved_resolved_item_count");
+    assert_eq!(unresolved_total, 6);
+    assert_eq!(unresolved_total, unresolved_resolved);
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_unresolved_closure_status"),
+        "all_resolved"
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_unresolved_marker_inflation_status",),
+        "resolved_via_moratorium_contract"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r54_review_unresolved_governance_commit_dominance_status",
+        ),
+        "resolved_via_governance_budget_contract"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_unresolved_branch_growth_status"),
+        "resolved_via_branch_budget_contract"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_unresolved_doc_contract_growth_status"),
+        "resolved_via_non_regression_cap"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r54_review_unresolved_kamn_core_module_stagnation_status",
+        ),
+        "resolved_via_activation_contract"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r54_review_unresolved_spec_hygiene_contamination_status",
+        ),
+        "resolved_via_tracked_only_spec_count"
+    );
+
+    let branch_snapshot = parse_marker_usize(&markers, "r54_review_branch_growth_snapshot_count");
+    let branch_target =
+        parse_marker_usize(&markers, "r54_review_branch_growth_target_max_next_release");
+    let branch_cleanup = parse_marker_usize(&markers, "r54_review_branch_growth_required_cleanup");
+    assert!(branch_target < branch_snapshot);
+    assert_eq!(
+        branch_snapshot.saturating_sub(branch_target),
+        branch_cleanup
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_branch_growth_budget_status"),
+        "active_cleanup_required"
+    );
+
+    let doc_contract_snapshot =
+        parse_marker_usize(&markers, "r54_review_doc_contract_snapshot_test_file_count");
+    let doc_contract_max = parse_marker_usize(
+        &markers,
+        "r54_review_doc_contract_non_regression_max_test_file_count",
+    );
+    assert_eq!(doc_contract_snapshot, doc_contract_max);
+    assert!(doc_contract_test_file_count() <= doc_contract_max);
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_doc_contract_growth_resolution_status"),
+        "cap_locked_no_new_file"
+    );
+
+    let module_snapshot =
+        parse_marker_usize(&markers, "r54_review_kamn_core_module_snapshot_count");
+    let module_target_min = parse_marker_usize(
+        &markers,
+        "r54_review_kamn_core_module_target_new_modules_next_release_min",
+    );
+    assert!(module_snapshot > 0);
+    assert!(module_target_min >= 1);
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_kamn_core_module_activation_status"),
+        "planned_for_r55"
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_spec_hygiene_fix_schema_version"),
+        "kamn.review.spec-hygiene-tracked-only-count.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r54_review_spec_hygiene_fix_status"),
+        "implemented"
+    );
+    assert!(parse_marker_usize(&markers, "r54_review_spec_hygiene_fix_issue") > 0);
+
+    let disallowed_heading_count = DOC_R54
+        .lines()
+        .filter(|line| line.trim().starts_with("### "))
+        .filter(|line| line.contains("Post-Publication"))
+        .count();
+    assert_eq!(disallowed_heading_count, 0);
 }

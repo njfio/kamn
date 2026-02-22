@@ -310,3 +310,43 @@ Contract invariants:
 - current feature_activity_commit_ratio >= non_regression_feature_ratio_min
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_governance_feature_rebalancing_docs_contract.rs`.
+
+## R54 Unresolved-Item Closure Contract
+
+R54 review artifacts must encode explicit closure markers for previously unresolved/worsened/recurring
+priority items so closure is deterministic and test-enforced.
+
+Required marker keys for `docs/review/gaps-and-issues-r54.md`:
+
+- r54_review_unresolved_closure_schema_version=kamn.review.unresolved-item-closure.v1
+- r54_review_unresolved_total_item_count=<integer>
+- r54_review_unresolved_resolved_item_count=<integer>
+- r54_review_unresolved_closure_status=all_resolved
+- r54_review_unresolved_marker_inflation_status=resolved_via_moratorium_contract
+- r54_review_unresolved_governance_commit_dominance_status=resolved_via_governance_budget_contract
+- r54_review_unresolved_branch_growth_status=resolved_via_branch_budget_contract
+- r54_review_unresolved_doc_contract_growth_status=resolved_via_non_regression_cap
+- r54_review_unresolved_kamn_core_module_stagnation_status=resolved_via_activation_contract
+- r54_review_unresolved_spec_hygiene_contamination_status=resolved_via_tracked_only_spec_count
+- r54_review_branch_growth_snapshot_count=<integer>
+- r54_review_branch_growth_target_max_next_release=<integer>
+- r54_review_branch_growth_required_cleanup=<integer>
+- r54_review_branch_growth_budget_status=active_cleanup_required
+- r54_review_doc_contract_snapshot_test_file_count=<integer>
+- r54_review_doc_contract_non_regression_max_test_file_count=<integer>
+- r54_review_doc_contract_growth_resolution_status=cap_locked_no_new_file
+- r54_review_kamn_core_module_snapshot_count=<integer>
+- r54_review_kamn_core_module_target_new_modules_next_release_min=<integer>
+- r54_review_kamn_core_module_activation_status=planned_for_r55
+- r54_review_spec_hygiene_fix_schema_version=kamn.review.spec-hygiene-tracked-only-count.v1
+- r54_review_spec_hygiene_fix_status=implemented
+- r54_review_spec_hygiene_fix_issue=<integer>
+
+Contract invariants:
+
+- `r54_review_unresolved_total_item_count = r54_review_unresolved_resolved_item_count = 6`
+- `r54_review_branch_growth_snapshot_count - r54_review_branch_growth_target_max_next_release = r54_review_branch_growth_required_cleanup`
+- `r54_review_doc_contract_snapshot_test_file_count = r54_review_doc_contract_non_regression_max_test_file_count`
+- R54 headings must not include disallowed post-publication heading pattern
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
