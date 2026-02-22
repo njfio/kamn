@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(unix)]
 use std::{fs, os::unix::fs::PermissionsExt};
 
@@ -9,12 +10,14 @@ use kamn_e2e_harness::{
 };
 
 fn temp_path(name: &str) -> PathBuf {
+    static UNIQUE_COUNTER: AtomicU64 = AtomicU64::new(0);
     let pid = std::process::id();
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock should be monotonic")
         .as_nanos();
-    std::env::temp_dir().join(format!("kamn-e2e-harness-{pid}-{nanos}-{name}"))
+    let seq = UNIQUE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("kamn-e2e-harness-{pid}-{nanos}-{seq}-{name}"))
 }
 
 fn valid_chain_dump_json() -> &'static str {
