@@ -17,6 +17,8 @@ pub(super) struct ServiceApiScopePolicyFixtureProjection {
     pub(super) unique_allow_route_count: usize,
     pub(super) unique_deny_route_count: usize,
     pub(super) unique_allow_deny_overlap_route_count: usize,
+    pub(super) unique_allow_only_route_count: usize,
+    pub(super) unique_deny_only_route_count: usize,
     pub(super) unique_allow_scope_count: usize,
     pub(super) unique_deny_scope_count: usize,
 }
@@ -37,6 +39,8 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_allow_route_count: 0,
         unique_deny_route_count: 0,
         unique_allow_deny_overlap_route_count: 0,
+        unique_allow_only_route_count: 0,
+        unique_deny_only_route_count: 0,
         unique_allow_scope_count: 0,
         unique_deny_scope_count: 0,
     };
@@ -112,6 +116,10 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
     projection.unique_allow_deny_overlap_route_count = unique_allow_routes
         .intersection(&unique_deny_routes)
         .count();
+    projection.unique_allow_only_route_count =
+        unique_allow_routes.difference(&unique_deny_routes).count();
+    projection.unique_deny_only_route_count =
+        unique_deny_routes.difference(&unique_allow_routes).count();
     projection.unique_allow_scope_count = unique_allow_scopes.len();
     projection.unique_deny_scope_count = unique_deny_scopes.len();
     projection
