@@ -7,4 +7,4 @@
 - [x] T5 (Conformance/Integration, RED): add failing `kamn-agent-lib` tests proving former stubs are now routed through SDK.
 - [x] T6 (Implementation, GREEN): replace `KamnAgentHandle` and `ServiceApiHttpClient` stubs with SDK-backed implementations.
 - [x] T7 (Regression): run targeted suites for `kamn-node`, `kamn-sdk`, and `kamn-agent-lib` plus fmt/clippy.
-- [ ] T8 (Process): update issue process log and PR evidence matrix with AC mapping + Red/Green excerpts.
+- [x] T8 (Process): update issue process log and PR evidence matrix with AC mapping + Red/Green excerpts.
