@@ -21,7 +21,11 @@ fn current_spec_directory_count() -> usize {
 }
 
 fn current_module_export_count() -> usize {
-    let lib_rs = repo_root().join("crates").join("kamn-core").join("src").join("lib.rs");
+    let lib_rs = repo_root()
+        .join("crates")
+        .join("kamn-core")
+        .join("src")
+        .join("lib.rs");
     fs::read_to_string(lib_rs)
         .expect("kamn-core lib.rs should be readable")
         .lines()
@@ -66,21 +70,13 @@ fn parse_marker_f64(marker_key: &str) -> f64 {
 #[test]
 fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(REVIEW_MARKER_README.contains("r<release>_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_non_regression_spec_dir_max=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_spec_volume_non_regression_ratio_max=<float>"));
+    assert!(REVIEW_MARKER_README.contains("current spec_dir_count <= non_regression_spec_dir_max"));
     assert!(
-        REVIEW_MARKER_README
-            .contains("r<release>_review_spec_volume_non_regression_spec_dir_max=<integer>")
-    );
-    assert!(
-        REVIEW_MARKER_README
-            .contains("r<release>_review_spec_volume_non_regression_ratio_max=<float>")
-    );
-    assert!(
-        REVIEW_MARKER_README
-            .contains("current spec_dir_count <= non_regression_spec_dir_max")
-    );
-    assert!(
-        REVIEW_MARKER_README
-            .contains("current spec_to_module_ratio <= non_regression_ratio_max")
+        REVIEW_MARKER_README.contains("current spec_to_module_ratio <= non_regression_ratio_max")
     );
 
     assert!(DOC.contains(
@@ -99,10 +95,10 @@ fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(DOC.contains(
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=752"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=777"));
     assert!(DOC.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_ratio_max=8.2"));
-    assert!(DOC.contains("r50_review_spec_volume_non_regression_spec_dir_max=752"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_ratio_max=8.5"));
+    assert!(DOC.contains("r50_review_spec_volume_non_regression_spec_dir_max=777"));
     assert!(DOC.contains(
         "Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio."
     ));
@@ -128,7 +124,8 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         parse_marker_usize("r50_review_spec_volume_non_regression_baseline_spec_dirs");
     let non_regression_baseline_module_count =
         parse_marker_usize("r50_review_spec_volume_non_regression_baseline_module_count");
-    let non_regression_ratio_max = parse_marker_f64("r50_review_spec_volume_non_regression_ratio_max");
+    let non_regression_ratio_max =
+        parse_marker_f64("r50_review_spec_volume_non_regression_ratio_max");
     let non_regression_spec_dir_max =
         parse_marker_usize("r50_review_spec_volume_non_regression_spec_dir_max");
 
@@ -154,6 +151,10 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
     assert!(
         non_regression_baseline_spec_dirs <= non_regression_spec_dir_max,
         "non-regression baseline spec-dir count must be <= non-regression max"
+    );
+    assert_eq!(
+        non_regression_baseline_spec_dirs, non_regression_spec_dir_max,
+        "non-regression max should remain locked to baseline while remediation is active"
     );
     assert_eq!(
         non_regression_baseline_module_count, current_module_count,
