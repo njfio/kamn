@@ -4669,6 +4669,8 @@ Fast-mode CI tooling regression coverage includes:
     - `ci-shell-rust-ratio-guardrail-<run_id>-<run_attempt>`
     - `ci-combined-shell-surface-trend-<run_id>-<run_attempt>`
     - `ci-shell-rust-loc-telemetry-<run_id>-<run_attempt>`
+  - `.github/workflows/ci-fast-gate.yml` also runs PR-scoped `workspace-premerge-gate`:
+    - `bash scripts/ci/run_with_retry.sh --label workspace-premerge-tests --max-attempts 2 -- cargo test --workspace --locked --all-features --no-fail-fast`
 - Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
