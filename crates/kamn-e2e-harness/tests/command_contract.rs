@@ -191,3 +191,43 @@ fn spec_c12_run_output_contains_infra_and_agent_deploy_placeholders() {
     assert!(output.contains("\"phase\":\"AGENT_DEPLOY\""));
     assert!(output.contains("deterministic placeholder"));
 }
+
+#[test]
+fn spec_c13_run_output_contains_nested_step_records() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"steps\":[{"));
+    assert!(output.contains("\"step\""));
+    assert!(output.contains("\"status\""));
+    assert!(output.contains("\"detail\""));
+}
+
+#[test]
+fn spec_c14_infra_up_step_markers_align_with_prd_actions() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("Start PostgreSQL container (docker)"));
+    assert!(output.contains("Run Kolme migrations"));
+    assert!(output.contains("Verify KAMN Service API health (/healthz)"));
+}
+
+#[test]
+fn spec_c15_agent_deploy_step_markers_align_with_prd_actions() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("Generate ed25519 key pairs for Alice, Bob, Carol"));
+    assert!(output.contains("Register agents via kamn-agent-lib"));
+    assert!(output.contains("Record infrastructure evidence"));
+}
