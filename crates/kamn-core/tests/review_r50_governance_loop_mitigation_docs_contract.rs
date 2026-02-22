@@ -1,4 +1,5 @@
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
+const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_usize(marker_key: &str) -> usize {
     let needle = format!("{marker_key}=");
@@ -36,6 +37,25 @@ fn parse_marker_f64(marker_key: &str) -> f64 {
 
 #[test]
 fn functional_r50_governance_loop_mitigation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains("review_snapshot_semantics_policy_schema_version"));
+    assert!(REVIEW_MARKER_README.contains("kamn.review.snapshot-semantics-policy.v1"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_remote_head_count_contract_mode=informational_only"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_reconciliation_issue_chain_count=<integer>"));
+    assert!(
+        REVIEW_MARKER_README.contains("r<release>_review_branch_reconciliation_issue_chain_max=1")
+    );
+
+    assert!(DOC.contains(
+        "review_snapshot_semantics_policy_schema_version=kamn.review.snapshot-semantics-policy.v1"
+    ));
+    assert!(DOC.contains("r50_review_snapshot_as_of_date=2026-02-21"));
+    assert!(DOC.contains("r50_review_branch_remote_head_count_contract_mode=informational_only"));
+    assert!(DOC.contains("r50_review_branch_reconciliation_issue_chain_count=0"));
+    assert!(DOC.contains("r50_review_branch_reconciliation_issue_chain_max=1"));
+    assert!(DOC.contains("r50_review_branch_remote_head_count_snapshot=51"));
+
     assert!(DOC.contains(
         "r50_review_governance_loop_mitigation_policy_schema_version=kamn.review.governance-loop-mitigation-policy.v1"
     ));
@@ -58,6 +78,12 @@ fn functional_r50_governance_loop_mitigation_markers_present() {
 
 #[test]
 fn integration_r50_governance_loop_mitigation_marker_consistency() {
+    let branch_reconciliation_chain_count =
+        parse_marker_usize("r50_review_branch_reconciliation_issue_chain_count");
+    let branch_reconciliation_chain_max =
+        parse_marker_usize("r50_review_branch_reconciliation_issue_chain_max");
+    let branch_count_snapshot = parse_marker_usize("r50_review_branch_remote_head_count_snapshot");
+
     let baseline_issue_count = parse_marker_usize("r50_review_reconciliation_baseline_issue_count");
     let issue_cap = parse_marker_usize("r50_review_reconciliation_followup_issue_cap");
     let expected_issue_reduction =
@@ -90,4 +116,7 @@ fn integration_r50_governance_loop_mitigation_marker_consistency() {
         baseline_spec_dirs.saturating_sub(target_spec_dir_max),
         required_reduction
     );
+    assert_eq!(branch_reconciliation_chain_max, 1);
+    assert!(branch_reconciliation_chain_count <= branch_reconciliation_chain_max);
+    assert!(branch_count_snapshot > 0);
 }
