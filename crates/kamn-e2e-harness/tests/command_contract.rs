@@ -25,6 +25,10 @@ fn write_stub_binary(path: &PathBuf) {
     std::fs::write(path, "#!/bin/sh\nexit 0\n").expect("stub binary should be created");
 }
 
+fn write_failing_stub_binary(path: &PathBuf) {
+    std::fs::write(path, "#!/bin/sh\nexit 1\n").expect("failing stub binary should be created");
+}
+
 #[cfg(unix)]
 fn set_executable(path: &PathBuf) {
     let mut permissions = fs::metadata(path)
@@ -2324,4 +2328,53 @@ fn spec_c106_verify_command_rejects_evidence_artifact_invalid_captured_at_format
     );
     let _ = std::fs::remove_dir(evidence_dir.join("s01-agent-discovery"));
     let _ = std::fs::remove_dir(evidence_dir);
+}
+
+#[test]
+fn spec_c107_external_execution_probe_failure_marks_runtime_orchestration_fail() {
+    let kolme_binary = temp_path("kolme-node-probe-fail");
+    write_failing_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
+
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"runtime_orchestration\":"));
+    assert!(output.contains("\"status\":\"FAIL\""));
+    assert!(output.contains("probe failed"));
+
+    let _ = std::fs::remove_file(kolme_binary);
+}
+
+#[test]
+fn spec_c108_external_execution_probe_failure_marks_validation_fail() {
+    let kolme_binary = temp_path("kolme-node-runtime-validation-fail");
+    write_failing_stub_binary(&kolme_binary);
+    #[cfg(unix)]
+    set_executable(&kolme_binary);
+
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: kolme_binary.display().to_string(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"runtime_validation_execution\":"));
+    assert!(output.contains("\"orchestration_contract\":\"FAIL\""));
+    assert!(output.contains("\"lifecycle_contract\":\"FAIL\""));
+    assert!(output.contains("\"overall\":\"FAIL\""));
+
+    let _ = std::fs::remove_file(kolme_binary);
 }

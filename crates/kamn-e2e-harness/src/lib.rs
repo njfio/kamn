@@ -5,6 +5,7 @@ use std::collections::HashSet;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::process::{Command, Stdio};
 
 /// Driver implementations for each execution mode.
 pub mod drivers;
@@ -138,6 +139,12 @@ pub struct LifecycleSummary {
 struct ScenarioExecutionResult {
     id: String,
     status: PhaseResultStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ExternalRuntimeProbeSummary {
+    status: PhaseResultStatus,
+    detail: String,
 }
 
 impl ExecutionMode {
@@ -605,25 +612,65 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         evidence_status.as_str(),
         live_execution_overall.as_str()
     );
-    let runtime_external_execution_json = if config.external_execution {
-        "{\"requested\":true,\"guard_status\":\"PASS\",\"execution_mode\":\"external-runtime\",\"preflight\":\"ready\"}"
+    let external_runtime_probe = if config.external_execution {
+        Some(probe_external_runtime(config, mode))
     } else {
-        "{\"requested\":false,\"guard_status\":\"SKIP\",\"execution_mode\":\"contract-only\",\"preflight\":\"not-requested\"}"
+        None
     };
-    let runtime_orchestration_json = if config.external_execution {
-        "{\"postgres\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kolme\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_processor\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_listener\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_approver\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"}}"
+    let runtime_external_execution_json = if let Some(probe) = external_runtime_probe.as_ref() {
+        format!(
+            "{{\"requested\":true,\"guard_status\":\"{}\",\"execution_mode\":\"external-runtime\",\"preflight\":\"ready\",\"probe_detail\":\"{}\"}}",
+            probe.status.as_str(),
+            escape_json(probe.detail.as_str())
+        )
     } else {
-        "{\"postgres\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kolme\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_processor\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_listener\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_approver\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"}}"
+        "{\"requested\":false,\"guard_status\":\"SKIP\",\"execution_mode\":\"contract-only\",\"preflight\":\"not-requested\"}".to_owned()
     };
-    let runtime_lifecycle_execution_json = if config.external_execution {
-        "{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}"
+    let runtime_orchestration_json = if let Some(probe) = external_runtime_probe.as_ref() {
+        if probe.status == PhaseResultStatus::Pass {
+            "{\"postgres\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kolme\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_processor\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_listener\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_approver\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"}}".to_owned()
+        } else {
+            let detail = format!("external probe failed: {}", probe.detail);
+            format!(
+                "{{\"postgres\":{{\"requested\":true,\"status\":\"FAIL\",\"detail\":\"{}\"}},\"kolme\":{{\"requested\":true,\"status\":\"FAIL\",\"detail\":\"{}\"}},\"kamn_processor\":{{\"requested\":true,\"status\":\"FAIL\",\"detail\":\"{}\"}},\"kamn_listener\":{{\"requested\":true,\"status\":\"FAIL\",\"detail\":\"{}\"}},\"kamn_approver\":{{\"requested\":true,\"status\":\"FAIL\",\"detail\":\"{}\"}}}}",
+                escape_json(detail.as_str()),
+                escape_json(detail.as_str()),
+                escape_json(detail.as_str()),
+                escape_json(detail.as_str()),
+                escape_json(detail.as_str())
+            )
+        }
     } else {
-        "{\"postgres\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kolme\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_processor\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_listener\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_approver\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"}}"
+        "{\"postgres\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kolme\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_processor\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_listener\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_approver\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"}}".to_owned()
     };
-    let runtime_validation_execution_json = if config.external_execution {
-        "{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"PASS\",\"evidence_contract\":\"PASS\",\"overall\":\"PASS\"}"
+    let runtime_lifecycle_execution_json = if let Some(probe) = external_runtime_probe.as_ref() {
+        if probe.status == PhaseResultStatus::Pass {
+            "{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}".to_owned()
+        } else {
+            "{\"postgres\":{\"init\":\"FAIL\",\"spawn\":\"FAIL\",\"health_check\":\"FAIL\",\"ready\":\"FAIL\"},\"kolme\":{\"init\":\"FAIL\",\"spawn\":\"FAIL\",\"health_check\":\"FAIL\",\"ready\":\"FAIL\"},\"kamn_processor\":{\"init\":\"FAIL\",\"spawn\":\"FAIL\",\"health_check\":\"FAIL\",\"ready\":\"FAIL\"},\"kamn_listener\":{\"init\":\"FAIL\",\"spawn\":\"FAIL\",\"health_check\":\"FAIL\",\"ready\":\"FAIL\"},\"kamn_approver\":{\"init\":\"FAIL\",\"spawn\":\"FAIL\",\"health_check\":\"FAIL\",\"ready\":\"FAIL\"}}".to_owned()
+        }
     } else {
-        "{\"requested\":false,\"orchestration_contract\":\"SKIP\",\"lifecycle_contract\":\"SKIP\",\"live_validation_contract\":\"SKIP\",\"evidence_contract\":\"SKIP\",\"overall\":\"SKIP\"}"
+        "{\"postgres\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kolme\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_processor\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_listener\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"},\"kamn_approver\":{\"init\":\"SKIP\",\"spawn\":\"SKIP\",\"health_check\":\"SKIP\",\"ready\":\"SKIP\"}}".to_owned()
+    };
+    let runtime_validation_execution_json = if let Some(probe) = external_runtime_probe.as_ref() {
+        let orchestration_contract = probe.status;
+        let lifecycle_contract = probe.status;
+        let overall = aggregate_status(&[
+            orchestration_contract,
+            lifecycle_contract,
+            live_validation_status,
+            evidence_status,
+        ]);
+        format!(
+            "{{\"requested\":true,\"orchestration_contract\":\"{}\",\"lifecycle_contract\":\"{}\",\"live_validation_contract\":\"{}\",\"evidence_contract\":\"{}\",\"overall\":\"{}\"}}",
+            orchestration_contract.as_str(),
+            lifecycle_contract.as_str(),
+            live_validation_status.as_str(),
+            evidence_status.as_str(),
+            overall.as_str()
+        )
+    } else {
+        "{\"requested\":false,\"orchestration_contract\":\"SKIP\",\"lifecycle_contract\":\"SKIP\",\"live_validation_contract\":\"SKIP\",\"evidence_contract\":\"SKIP\",\"overall\":\"SKIP\"}".to_owned()
     };
     let scenario_ids = selected
         .iter()
@@ -718,6 +765,74 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         phase_totals_json,
         step_totals_json
     ))
+}
+
+fn aggregate_status(statuses: &[PhaseResultStatus]) -> PhaseResultStatus {
+    if statuses.contains(&PhaseResultStatus::Fail) {
+        return PhaseResultStatus::Fail;
+    }
+    if statuses
+        .iter()
+        .all(|status| *status == PhaseResultStatus::Skip)
+    {
+        return PhaseResultStatus::Skip;
+    }
+    PhaseResultStatus::Pass
+}
+
+fn probe_binary_invocation(binary: &str, label: &str) -> (PhaseResultStatus, String) {
+    match Command::new(binary)
+        .arg("--help")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+    {
+        Ok(status) if status.success() => {
+            (PhaseResultStatus::Pass, format!("{label} probe passed"))
+        }
+        Ok(status) => {
+            let exit_status = status
+                .code()
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "signal".to_owned());
+            (
+                PhaseResultStatus::Fail,
+                format!("{label} probe failed (exit_status={exit_status})"),
+            )
+        }
+        Err(error) => (
+            PhaseResultStatus::Fail,
+            format!("{label} probe failed ({error})"),
+        ),
+    }
+}
+
+fn probe_external_runtime(
+    config: &RunCommandConfig,
+    mode: ExecutionMode,
+) -> ExternalRuntimeProbeSummary {
+    let (kolme_status, kolme_detail) =
+        probe_binary_invocation(config.kolme_binary.as_str(), "kolme");
+    let (agent_status, agent_detail) = if is_mcp_mode(mode) {
+        let Some(agent_binary) = config.agent_binary.as_deref() else {
+            return ExternalRuntimeProbeSummary {
+                status: PhaseResultStatus::Fail,
+                detail: "agent probe failed (missing binary path)".to_owned(),
+            };
+        };
+        probe_binary_invocation(agent_binary, "agent")
+    } else {
+        (
+            PhaseResultStatus::Skip,
+            "agent probe skipped (mode does not require agent binary)".to_owned(),
+        )
+    };
+    let status = aggregate_status(&[kolme_status, agent_status]);
+    ExternalRuntimeProbeSummary {
+        status,
+        detail: format!("{kolme_detail}; {agent_detail}"),
+    }
 }
 
 fn execute_selected_scenarios(
@@ -1288,7 +1403,8 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
 #[cfg(test)]
 mod tests {
     use super::{
-        all_execution_modes, all_orchestration_phases, all_phase_result_statuses, ExecutionMode,
+        aggregate_status, all_execution_modes, all_orchestration_phases, all_phase_result_statuses,
+        ExecutionMode, PhaseResultStatus,
     };
 
     #[test]
@@ -1324,5 +1440,21 @@ mod tests {
             .map(|status| status.as_str())
             .collect();
         assert_eq!(labels, vec!["PASS", "FAIL", "SKIP"]);
+    }
+
+    #[test]
+    fn unit_aggregate_status_fail_dominates() {
+        let aggregated = aggregate_status(&[
+            PhaseResultStatus::Pass,
+            PhaseResultStatus::Fail,
+            PhaseResultStatus::Skip,
+        ]);
+        assert_eq!(aggregated, PhaseResultStatus::Fail);
+    }
+
+    #[test]
+    fn unit_aggregate_status_all_skip_returns_skip() {
+        let aggregated = aggregate_status(&[PhaseResultStatus::Skip, PhaseResultStatus::Skip]);
+        assert_eq!(aggregated, PhaseResultStatus::Skip);
     }
 }
