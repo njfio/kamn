@@ -1,6 +1,6 @@
 # Issue #5543 Spec - Service API Scope-Policy Fixture Exclusive Allow-Only/Deny-Only Route Coverage Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Issue: #5543
 - Parent: #3812
 - Milestone: R50.37 Service API scope-policy fixture exclusive allow-only and deny-only route coverage metrics exposure
