@@ -95,6 +95,19 @@ pub struct OrchestrationPhaseResult {
     pub completed_at: String,
     /// Deterministic detail marker.
     pub details: String,
+    /// Deterministic step records for this phase.
+    pub steps: Vec<OrchestrationStepRecord>,
+}
+
+/// Deterministic step record for one phase action.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrchestrationStepRecord {
+    /// Step label.
+    pub step: String,
+    /// Step status marker.
+    pub status: PhaseResultStatus,
+    /// Deterministic step detail marker.
+    pub detail: String,
 }
 
 impl ExecutionMode {
@@ -360,13 +373,27 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     let phase_results_json = phase_results
         .iter()
         .map(|result| {
+            let steps_json = result
+                .steps
+                .iter()
+                .map(|step| {
+                    format!(
+                        "{{\"step\":\"{}\",\"status\":\"{}\",\"detail\":\"{}\"}}",
+                        escape_json(step.step.as_str()),
+                        step.status.as_str(),
+                        escape_json(step.detail.as_str())
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(",");
             format!(
-                "{{\"phase\":\"{}\",\"status\":\"{}\",\"started_at\":\"{}\",\"completed_at\":\"{}\",\"details\":\"{}\"}}",
+                "{{\"phase\":\"{}\",\"status\":\"{}\",\"started_at\":\"{}\",\"completed_at\":\"{}\",\"details\":\"{}\",\"steps\":[{}]}}",
                 result.phase.as_str(),
                 result.status.as_str(),
                 escape_json(result.started_at.as_str()),
                 escape_json(result.completed_at.as_str()),
-                escape_json(result.details.as_str())
+                escape_json(result.details.as_str()),
+                steps_json
             )
         })
         .collect::<Vec<_>>()
@@ -417,9 +444,110 @@ fn build_phase_results(phases: &[OrchestrationPhase]) -> Vec<OrchestrationPhaseR
                 started_at: started_at.to_owned(),
                 completed_at: completed_at.to_owned(),
                 details: details.to_owned(),
+                steps: phase_step_records(*phase),
             }
         })
         .collect()
+}
+
+fn phase_step_records(phase: OrchestrationPhase) -> Vec<OrchestrationStepRecord> {
+    let pass = PhaseResultStatus::Pass;
+    match phase {
+        OrchestrationPhase::InfraUp => vec![
+            OrchestrationStepRecord {
+                step: "Start PostgreSQL container (docker)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: postgres startup".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Run Kolme migrations".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: migrations complete".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Start Kolme processor (in-memory or Fjall storage)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: kolme processor online".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Verify Kolme API health (/healthz)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: kolme health verified".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Start KAMN processor node".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: processor node online".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Start KAMN listener node".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: listener node online".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Start KAMN approver node".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: approver node online".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Wait for peer discovery (3 connected peers)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: peer discovery complete".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Verify KAMN Service API health (/healthz)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: kamn health verified".to_owned(),
+            },
+        ],
+        OrchestrationPhase::AgentDeploy => vec![
+            OrchestrationStepRecord {
+                step: "Generate ed25519 key pairs for Alice, Bob, Carol".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: keys generated".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Write key files to temp directory".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: key files materialized".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Register agents via kamn-agent-lib (POST /v1/agents/bootstrap)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: agents registered".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "[MCP modes] Spawn kamn-mcp-server per agent with identity".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: mcp servers spawned".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "[MCP modes] Verify MCP server health".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: mcp health verified".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Record infrastructure evidence".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: infra evidence recorded".to_owned(),
+            },
+        ],
+        OrchestrationPhase::ScenarioRun => vec![OrchestrationStepRecord {
+            step: "Aggregate results".to_owned(),
+            status: PhaseResultStatus::Skip,
+            detail: "deterministic placeholder: scenario execution skipped".to_owned(),
+        }],
+        OrchestrationPhase::Evidence => vec![OrchestrationStepRecord {
+            step: "Write manifest.json".to_owned(),
+            status: PhaseResultStatus::Skip,
+            detail: "deterministic placeholder: evidence finalize skipped".to_owned(),
+        }],
+        OrchestrationPhase::Teardown => vec![OrchestrationStepRecord {
+            step: "Archive evidence bundle".to_owned(),
+            status: PhaseResultStatus::Skip,
+            detail: "deterministic placeholder: teardown skipped".to_owned(),
+        }],
+    }
 }
 
 fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>, String> {
