@@ -1,0 +1,129 @@
+name: E2E Live Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-sdk-direct:
+    name: E2E SDK-Direct
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kamn_e2e
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build KAMN workspace
+        run: cargo build --workspace --release
+
+      - name: Build Kolme devnet binary
+        run: |
+          git clone https://github.com/fpco/kolme /tmp/kolme
+          cd /tmp/kolme
+          cargo build --release -p kolme-cli
+
+      - name: Run E2E harness (SDK-direct mode)
+        run: |
+          cargo run --release -p kamn-e2e-harness -- \
+            run \
+            --mode sdk-direct \
+            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --evidence-dir /tmp/evidence \
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06
+
+      - name: Verify evidence bundle
+        run: |
+          cargo run --release -p kamn-e2e-harness -- \
+            verify \
+            --evidence-dir /tmp/evidence \
+            --kolme-chain-dump /tmp/evidence/kolme_chain_dump.json \
+            --output /tmp/evidence/verification-report.json
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-evidence-${{ github.sha }}
+          path: /tmp/evidence/
+
+  e2e-mcp-agent:
+    name: E2E MCP Agent
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build KAMN workspace
+        run: cargo build --workspace --release
+
+      - name: Build Tau runtime
+        run: |
+          git clone https://github.com/njfio/Tau /tmp/tau
+          cd /tmp/tau
+          cargo build --release
+
+      - name: Build Kolme devnet binary
+        run: |
+          git clone https://github.com/fpco/kolme /tmp/kolme
+          cd /tmp/kolme
+          cargo build --release -p kolme-cli
+
+      - name: Run E2E harness (MCP-Tau mode)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cargo run --release -p kamn-e2e-harness -- \
+            run \
+            --mode mcp-tau \
+            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --agent-binary /tmp/tau/target/release/tau \
+            --evidence-dir /tmp/evidence \
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15
+
+  e2e-cli-smoke:
+    name: E2E CLI Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build KAMN workspace
+        run: cargo build --workspace --release
+
+      - name: Build Kolme devnet binary
+        run: |
+          git clone https://github.com/fpco/kolme /tmp/kolme
+          cd /tmp/kolme
+          cargo build --release -p kolme-cli
+
+      - name: Run E2E smoke (CLI mode, P0 scenarios)
+        run: |
+          cargo run --release -p kamn-e2e-harness -- \
+            run \
+            --mode cli-scripted \
+            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --evidence-dir /tmp/evidence \
+            --scenarios S-01,S-02
