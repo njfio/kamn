@@ -21,6 +21,9 @@ pub(super) struct ServiceApiScopePolicyFixtureProjection {
     pub(super) unique_deny_only_route_count: usize,
     pub(super) unique_allow_scope_count: usize,
     pub(super) unique_deny_scope_count: usize,
+    pub(super) unique_allow_deny_overlap_scope_count: usize,
+    pub(super) unique_allow_only_scope_count: usize,
+    pub(super) unique_deny_only_scope_count: usize,
 }
 
 pub(super) fn parse_service_api_scope_policy_fixture_projection(
@@ -43,6 +46,9 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_deny_only_route_count: 0,
         unique_allow_scope_count: 0,
         unique_deny_scope_count: 0,
+        unique_allow_deny_overlap_scope_count: 0,
+        unique_allow_only_scope_count: 0,
+        unique_deny_only_scope_count: 0,
     };
     let mut reason_codes_csv = String::new();
     let mut unique_routes = BTreeSet::new();
@@ -122,5 +128,12 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_deny_routes.difference(&unique_allow_routes).count();
     projection.unique_allow_scope_count = unique_allow_scopes.len();
     projection.unique_deny_scope_count = unique_deny_scopes.len();
+    projection.unique_allow_deny_overlap_scope_count = unique_allow_scopes
+        .intersection(&unique_deny_scopes)
+        .count();
+    projection.unique_allow_only_scope_count =
+        unique_allow_scopes.difference(&unique_deny_scopes).count();
+    projection.unique_deny_only_scope_count =
+        unique_deny_scopes.difference(&unique_allow_scopes).count();
     projection
 }
