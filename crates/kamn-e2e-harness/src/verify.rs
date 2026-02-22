@@ -1,34 +1,133 @@
 use crate::evidence::MANIFEST_SCHEMA_VERSION;
 
+fn require_marker(manifest_json: &str, marker: &str, error: &str) -> Result<(), String> {
+    if !manifest_json.contains(marker) {
+        return Err(error.to_owned());
+    }
+    Ok(())
+}
+
 /// Verifies a minimal JSON manifest payload using deterministic marker checks.
 pub fn verify_manifest(manifest_json: &str) -> Result<(), String> {
-    if !manifest_json.contains(MANIFEST_SCHEMA_VERSION) {
-        return Err("manifest schema version mismatch".to_owned());
-    }
-    if !manifest_json.contains("\"run_id\":") {
-        return Err("manifest missing run_id".to_owned());
-    }
-    if !manifest_json.contains("\"started_at\":") {
-        return Err("manifest missing started_at".to_owned());
-    }
-    if !manifest_json.contains("\"completed_at\":") {
-        return Err("manifest missing completed_at".to_owned());
-    }
-    if !manifest_json.contains("\"duration_seconds\":") {
-        return Err("manifest missing duration_seconds".to_owned());
-    }
-    if !manifest_json.contains("\"execution_mode\":") {
-        return Err("manifest missing execution_mode".to_owned());
-    }
-    if !manifest_json.contains("\"infrastructure\":") {
-        return Err("manifest missing infrastructure".to_owned());
-    }
-    if !manifest_json.contains("\"scenarios\":") {
-        return Err("manifest missing scenarios".to_owned());
-    }
-    if !manifest_json.contains("\"summary\":") {
-        return Err("manifest missing summary".to_owned());
-    }
+    require_marker(
+        manifest_json,
+        MANIFEST_SCHEMA_VERSION,
+        "manifest schema version mismatch",
+    )?;
+    require_marker(manifest_json, "\"run_id\":", "manifest missing run_id")?;
+    require_marker(
+        manifest_json,
+        "\"started_at\":",
+        "manifest missing started_at",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"completed_at\":",
+        "manifest missing completed_at",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"duration_seconds\":",
+        "manifest missing duration_seconds",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"execution_mode\":",
+        "manifest missing execution_mode",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"infrastructure\":",
+        "manifest missing infrastructure",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"scenarios\":",
+        "manifest missing scenarios",
+    )?;
+    require_marker(manifest_json, "\"summary\":", "manifest missing summary")?;
+
+    require_marker(
+        manifest_json,
+        "\"kolme_version\":",
+        "manifest missing infrastructure.kolme_version",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"kamn_version\":",
+        "manifest missing infrastructure.kamn_version",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"kamn_commit\":",
+        "manifest missing infrastructure.kamn_commit",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"kamn_agent_lib_version\":",
+        "manifest missing infrastructure.kamn_agent_lib_version",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"agent_runtime\":",
+        "manifest missing infrastructure.agent_runtime",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"node_count\":",
+        "manifest missing infrastructure.node_count",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"agent_count\":",
+        "manifest missing infrastructure.agent_count",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"storage_backend\":",
+        "manifest missing infrastructure.storage_backend",
+    )?;
+
+    require_marker(
+        manifest_json,
+        "\"total_scenarios\":",
+        "manifest missing summary.total_scenarios",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"passed\":",
+        "manifest missing summary.passed",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"failed\":",
+        "manifest missing summary.failed",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"skipped\":",
+        "manifest missing summary.skipped",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"kolme_blocks_produced\":",
+        "manifest missing summary.kolme_blocks_produced",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"messages_exchanged\":",
+        "manifest missing summary.messages_exchanged",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"proofs_anchored\":",
+        "manifest missing summary.proofs_anchored",
+    )?;
+    require_marker(
+        manifest_json,
+        "\"proofs_verified\":",
+        "manifest missing summary.proofs_verified",
+    )?;
     Ok(())
 }
 
