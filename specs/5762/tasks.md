@@ -7,4 +7,4 @@
 - [x] T5 (Conformance/GREEN): run `cargo test -p kamn-mcp-server --test real_backend_integration_contract`.
 - [x] T6 (Conformance/GREEN): run `cargo test -p kamn-core --test review_r50_spec_volume_remediation_docs_contract` and archive-policy checker.
 - [x] T7 (Verify): run `cargo fmt --all --check` and `cargo clippy -p kamn-mcp-server --tests -- -D warnings`.
-- [ ] T8 (Closure): set spec status to Implemented, update milestone index, close issue.
+- [x] T8 (Closure): set spec status to Implemented, update milestone index, close issue.
