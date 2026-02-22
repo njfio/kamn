@@ -163,6 +163,17 @@ Zero production panicking paths maintained since R36 (16 consecutive reviews).
 
 Despite clean clippy and zero prod panics, **main branch fails to compile fully and has 2 test failures.** This is the first time in the review series that `git checkout main && cargo test --workspace` does not produce a clean run. Prior reviews (R36–R51) all had 0 failures on main.
 
+### 4.3 Post-Publication Code-Quality Status Reconciliation Markers (Issue #5759)
+
+Post-publication reconciliation records resolved code-quality posture while preserving the
+historical Section 4.2 baseline wording unchanged.
+
+- r52_review_post_publication_code_quality_status_reconciliation_schema_version=kamn.review.code-quality-status-post-publication-reconciliation.v1
+- r52_review_code_quality_snapshot_status=broken_main
+- r52_review_code_quality_post_publication_workspace_gate_status=pass
+- r52_review_code_quality_post_publication_cli_compile_status=resolved
+- r52_review_code_quality_snapshot_rows_preserved=true
+
 ---
 
 ## 5. Spec and Governance

@@ -324,3 +324,80 @@ fn integration_r52_post_publication_branch_hygiene_status_reconciliation_markers
         "historical priority row for branches should remain unchanged"
     );
 }
+
+#[test]
+fn functional_r52_post_publication_code_quality_status_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_code_quality_status_reconciliation_schema_version"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.code-quality-status-post-publication-reconciliation.v1"));
+    assert!(REVIEW_MARKER_README.contains("r<release>_review_code_quality_snapshot_status=<text>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_code_quality_post_publication_workspace_gate_status=<pass|fail>"
+    ));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_code_quality_post_publication_cli_compile_status=<resolved|unresolved>"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_code_quality_snapshot_rows_preserved=<true|false>"));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_code_quality_status_reconciliation_schema_version=kamn.review.code-quality-status-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC.contains("r52_review_code_quality_snapshot_status=broken_main"));
+    assert!(DOC.contains("r52_review_code_quality_post_publication_workspace_gate_status=pass"));
+    assert!(DOC.contains("r52_review_code_quality_post_publication_cli_compile_status=resolved"));
+    assert!(DOC.contains("r52_review_code_quality_snapshot_rows_preserved=true"));
+}
+
+#[test]
+fn integration_r52_post_publication_code_quality_status_reconciliation_markers_are_consistent() {
+    let schema = parse_marker_value(
+        "r52_review_post_publication_code_quality_status_reconciliation_schema_version",
+    );
+    let snapshot_status = parse_marker_value("r52_review_code_quality_snapshot_status");
+    let workspace_gate_status =
+        parse_marker_value("r52_review_code_quality_post_publication_workspace_gate_status");
+    let cli_compile_status =
+        parse_marker_value("r52_review_code_quality_post_publication_cli_compile_status");
+    let snapshot_rows_preserved =
+        parse_marker_value("r52_review_code_quality_snapshot_rows_preserved");
+
+    let quality_gate_workspace_status =
+        parse_marker_value("r52_review_workspace_quality_gate_status_post_publication");
+    let quality_gate_cli_status =
+        parse_marker_value("r52_review_cli_compile_status_post_publication");
+
+    assert_eq!(
+        schema, "kamn.review.code-quality-status-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert_eq!(
+        snapshot_status, "broken_main",
+        "snapshot code-quality status should remain fixed to baseline wording"
+    );
+    assert_eq!(
+        workspace_gate_status, quality_gate_workspace_status,
+        "code-quality workspace gate status should match quality-gate reconciliation status"
+    );
+    assert_eq!(
+        cli_compile_status, quality_gate_cli_status,
+        "code-quality CLI compile status should match quality-gate reconciliation status"
+    );
+    assert_eq!(
+        snapshot_rows_preserved, "true",
+        "code-quality snapshot-preservation marker should remain true"
+    );
+
+    assert!(
+        DOC.contains("### 4.2 Quality Gate Regression — BROKEN MAIN"),
+        "historical section 4.2 heading should remain unchanged"
+    );
+    assert!(
+        DOC.contains(
+            "Despite clean clippy and zero prod panics, **main branch fails to compile fully and has 2 test failures.**"
+        ),
+        "historical section 4.2 baseline sentence should remain unchanged"
+    );
+}
