@@ -51,14 +51,11 @@ fn functional_r50_doc_contract_consolidation_markers_present() {
     assert!(REVIEW_MARKER_README.contains(
         "r<release>_review_doc_contract_non_regression_schema_version=kamn.review.doc-contract-non-regression-ratchet.v1"
     ));
-    assert!(
-        REVIEW_MARKER_README
-            .contains("r<release>_review_doc_contract_non_regression_baseline_test_file_count=<integer>")
-    );
-    assert!(
-        REVIEW_MARKER_README
-            .contains("r<release>_review_doc_contract_non_regression_max_test_file_count=<integer>")
-    );
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_doc_contract_non_regression_baseline_test_file_count=<integer>"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_doc_contract_non_regression_max_test_file_count=<integer>"));
     assert!(
         REVIEW_MARKER_README.contains(
             "r<release>_review_doc_contract_non_regression_count_formula=rg --files crates/kamn-core/tests | rg '_docs\\\\.rs$|docs_contract' | wc -l"
