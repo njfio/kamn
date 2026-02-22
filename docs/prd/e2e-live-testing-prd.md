@@ -298,7 +298,7 @@ Or with environment-based identity:
 | `verify_proof` | Implemented | Dispatches through `KamnAgentHandle::verify_proof` with deterministic invalid-request handling for malformed payload fields. |
 
 Current `kamn-cli` activation status for the same supported surface:
-- Implemented: `health`, `list-messages`, `verify-proof`
+- Implemented: `register`, `send-message`, `create-channel`, `list-messages`, `query-message`, `create-task`, `verify-proof`, `health`
 - Pending service route support: `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`
 
 **MCP Tool Definitions:**

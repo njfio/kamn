@@ -59,6 +59,8 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String
 fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Result<(), String> {
     let status_text = match status {
         200 => "200 OK",
+        201 => "201 Created",
+        202 => "202 Accepted",
         _ => "500 Internal Server Error",
     };
     let payload = format!(
@@ -93,11 +95,35 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         200,
                         r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
                     )?;
+                } else if method == "POST" && path == "/v1/messages/send" {
+                    write_http_response(
+                        &mut stream,
+                        202,
+                        r#"{"message_id":"msg-cli","status":"created","runtime_mode":"api"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/channels/create" {
+                    write_http_response(
+                        &mut stream,
+                        201,
+                        r#"{"channel_id":"channel-cli","status":"created"}"#,
+                    )?;
                 } else if method == "GET" && path == "/v1/channels/channel-cli/messages" {
                     write_http_response(
                         &mut stream,
                         200,
                         r#"{"channel_id":"channel-cli","messages":["msg-1","msg-2"]}"#,
+                    )?;
+                } else if method == "GET" && path == "/v1/messages/msg-cli" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"message_id":"msg-cli","status":"created"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/tasks/create" {
+                    write_http_response(
+                        &mut stream,
+                        201,
+                        r#"{"task_id":"task-cli","state":"submitted"}"#,
                     )?;
                 } else {
                     write_http_response(
@@ -236,4 +262,85 @@ fn spec_c04_cli_unsupported_command_regression_remains_explicit() {
         unsupported_error,
         AgentLibError::UnsupportedOperation(_)
     ));
+}
+
+#[test]
+fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 4));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+
+    let register_output = dispatch(&parsed(CommandKind::Register, endpoint.as_str(), &[]))
+        .expect("register should succeed");
+    assert!(
+        register_output.contains("kamn:did:agent"),
+        "register output should include did marker: {register_output}"
+    );
+
+    let send_output = dispatch(&parsed(
+        CommandKind::SendMessage,
+        endpoint.as_str(),
+        &[r#"{"message":"hello"}"#],
+    ))
+    .expect("send-message should succeed");
+    assert!(
+        send_output.contains("message_id=msg-cli"),
+        "send-message output should include message id: {send_output}"
+    );
+
+    let channel_output = dispatch(&parsed(
+        CommandKind::CreateChannel,
+        endpoint.as_str(),
+        &[r#"{"name":"ops"}"#],
+    ))
+    .expect("create-channel should succeed");
+    assert!(
+        channel_output.contains("channel_id=channel-cli"),
+        "create-channel output should include channel id: {channel_output}"
+    );
+
+    let query_output = dispatch(&parsed(
+        CommandKind::QueryMessage,
+        endpoint.as_str(),
+        &["msg-cli"],
+    ))
+    .expect("query-message should succeed");
+    assert!(
+        query_output.contains("status=created"),
+        "query-message output should include status marker: {query_output}"
+    );
+
+    let task_output = dispatch(&parsed(
+        CommandKind::CreateTask,
+        endpoint.as_str(),
+        &[r#"{"task":"triage"}"#],
+    ))
+    .expect("create-task should succeed");
+    assert!(
+        task_output.contains("task_id=task-cli"),
+        "create-task output should include task id: {task_output}"
+    );
+
+    for (command, label) in [
+        (CommandKind::SendMessage, "send_message_payload"),
+        (CommandKind::CreateChannel, "create_channel_payload"),
+        (CommandKind::QueryMessage, "query_message_id"),
+        (CommandKind::CreateTask, "create_task_payload"),
+    ] {
+        let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
+            .expect_err("missing required arg should fail");
+        assert!(
+            matches!(error, AgentLibError::InvalidInput { .. }),
+            "missing arg for {label} should be invalid input: {error}"
+        );
+    }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
 }
