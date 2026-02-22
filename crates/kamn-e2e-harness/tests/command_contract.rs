@@ -21,6 +21,8 @@ fn spec_c01_parser_accepts_run_with_required_flags() {
         "run",
         "--mode",
         "sdk-direct",
+        "--kolme-binary",
+        "/tmp/kolme-node",
         "--evidence-dir",
         "/tmp/evidence",
         "--scenarios",
@@ -29,6 +31,8 @@ fn spec_c01_parser_accepts_run_with_required_flags() {
     .expect("run command should parse");
     let expected = HarnessCommand::Run(RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     });
@@ -78,6 +82,8 @@ fn spec_c05_scenario_csv_parser_rejects_unknown_id() {
 fn spec_c06_run_command_output_contains_selected_mode_and_count_markers() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned(), "S-15".to_owned()],
     };
@@ -144,6 +150,8 @@ fn spec_c08_phase_inventory_contains_prd_canonical_order() {
 fn spec_c09_run_output_contains_phase_progression_markers() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     };
@@ -167,6 +175,8 @@ fn spec_c10_phase_result_status_inventory_is_canonical() {
 fn spec_c11_run_output_contains_phase_results_required_fields() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     };
@@ -183,6 +193,8 @@ fn spec_c11_run_output_contains_phase_results_required_fields() {
 fn spec_c12_run_output_contains_infra_and_agent_deploy_placeholders() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -196,6 +208,8 @@ fn spec_c12_run_output_contains_infra_and_agent_deploy_placeholders() {
 fn spec_c13_run_output_contains_nested_step_records() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -210,6 +224,8 @@ fn spec_c13_run_output_contains_nested_step_records() {
 fn spec_c14_infra_up_step_markers_align_with_prd_actions() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -223,6 +239,8 @@ fn spec_c14_infra_up_step_markers_align_with_prd_actions() {
 fn spec_c15_agent_deploy_step_markers_align_with_prd_actions() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -236,6 +254,8 @@ fn spec_c15_agent_deploy_step_markers_align_with_prd_actions() {
 fn spec_c16_mcp_steps_are_skipped_in_sdk_direct_mode() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -252,6 +272,8 @@ fn spec_c16_mcp_steps_are_skipped_in_sdk_direct_mode() {
 fn spec_c17_mcp_steps_are_pass_in_mcp_tau_mode() {
     let config = RunCommandConfig {
         mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -268,6 +290,8 @@ fn spec_c17_mcp_steps_are_pass_in_mcp_tau_mode() {
 fn spec_c18_fail_path_marks_infra_health_step_and_phase_fail() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/fail-path".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -281,6 +305,8 @@ fn spec_c18_fail_path_marks_infra_health_step_and_phase_fail() {
 fn spec_c19_run_output_contains_lifecycle_summary_totals() {
     let config = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -295,6 +321,8 @@ fn spec_c19_run_output_contains_lifecycle_summary_totals() {
 fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
     let normal = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -308,6 +336,8 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
 
     let fail = RunCommandConfig {
         mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
         evidence_dir: "/tmp/fail-path".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -316,4 +346,87 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
     assert!(
         fail_output.contains("\"step_totals\":{\"total\":18,\"pass\":12,\"fail\":1,\"skip\":5}")
     );
+}
+
+#[test]
+fn spec_c21_parser_accepts_sdk_direct_with_kolme_binary_only() {
+    let parsed = parse_command_args([
+        "run",
+        "--mode",
+        "sdk-direct",
+        "--kolme-binary",
+        "/tmp/kolme-node",
+        "--evidence-dir",
+        "/tmp/evidence",
+        "--scenarios",
+        "S-01,S-02",
+    ])
+    .expect("sdk-direct should parse with kolme binary only");
+    let expected = HarnessCommand::Run(RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    });
+    assert_eq!(parsed, expected);
+}
+
+#[test]
+fn spec_c22_parser_accepts_mcp_tau_with_agent_binary() {
+    let parsed = parse_command_args([
+        "run",
+        "--mode",
+        "mcp-tau",
+        "--kolme-binary",
+        "/tmp/kolme-node",
+        "--agent-binary",
+        "/tmp/tau",
+        "--evidence-dir",
+        "/tmp/evidence",
+        "--scenarios",
+        "S-01",
+    ])
+    .expect("mcp-tau should parse with both runtime binaries");
+    let expected = HarnessCommand::Run(RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    });
+    assert_eq!(parsed, expected);
+}
+
+#[test]
+fn spec_c23_parser_rejects_mcp_any_without_agent_binary() {
+    let err = parse_command_args([
+        "run",
+        "--mode",
+        "mcp-any",
+        "--kolme-binary",
+        "/tmp/kolme-node",
+        "--evidence-dir",
+        "/tmp/evidence",
+        "--scenarios",
+        "S-01",
+    ])
+    .expect_err("mcp-any without agent binary should fail");
+    assert!(err.contains("missing required flag --agent-binary for MCP modes"));
+}
+
+#[test]
+fn spec_c24_run_output_contains_integration_config_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"integration_config\":"));
+    assert!(output.contains("\"kolme_binary\""));
+    assert!(output.contains("\"agent_binary\""));
+    assert!(output.contains("\"agent_binary_required\":false"));
 }
