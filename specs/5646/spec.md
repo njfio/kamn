@@ -2,7 +2,7 @@
 
 - Issue: #5646
 - Milestone: R59 E2E Chain Hash Continuity Verification Contract
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
