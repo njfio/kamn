@@ -60,6 +60,43 @@ impl OrchestrationPhase {
     }
 }
 
+/// Execution status marker for an orchestration phase result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PhaseResultStatus {
+    /// Phase completed successfully.
+    Pass,
+    /// Phase failed.
+    Fail,
+    /// Phase was intentionally skipped.
+    Skip,
+}
+
+impl PhaseResultStatus {
+    /// Returns canonical status marker label.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pass => "PASS",
+            Self::Fail => "FAIL",
+            Self::Skip => "SKIP",
+        }
+    }
+}
+
+/// Deterministic result record for one orchestration phase.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrchestrationPhaseResult {
+    /// Phase marker.
+    pub phase: OrchestrationPhase,
+    /// Outcome status.
+    pub status: PhaseResultStatus,
+    /// Deterministic start timestamp marker.
+    pub started_at: String,
+    /// Deterministic completion timestamp marker.
+    pub completed_at: String,
+    /// Deterministic detail marker.
+    pub details: String,
+}
+
 impl ExecutionMode {
     /// Returns canonical execution-mode label.
     pub fn as_str(self) -> &'static str {
@@ -101,6 +138,15 @@ pub fn all_orchestration_phases() -> Vec<OrchestrationPhase> {
         OrchestrationPhase::ScenarioRun,
         OrchestrationPhase::Evidence,
         OrchestrationPhase::Teardown,
+    ]
+}
+
+/// Returns supported phase-result status markers.
+pub fn all_phase_result_statuses() -> Vec<PhaseResultStatus> {
+    vec![
+        PhaseResultStatus::Pass,
+        PhaseResultStatus::Fail,
+        PhaseResultStatus::Skip,
     ]
 }
 
@@ -300,6 +346,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     let mode = ExecutionMode::parse(config.mode.as_str())?;
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
     let phases = all_orchestration_phases();
+    let phase_results = build_phase_results(phases.as_slice());
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -310,15 +357,69 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         .map(|phase| format!("\"{}\"", phase.as_str()))
         .collect::<Vec<_>>()
         .join(",");
+    let phase_results_json = phase_results
+        .iter()
+        .map(|result| {
+            format!(
+                "{{\"phase\":\"{}\",\"status\":\"{}\",\"started_at\":\"{}\",\"completed_at\":\"{}\",\"details\":\"{}\"}}",
+                result.phase.as_str(),
+                result.status.as_str(),
+                escape_json(result.started_at.as_str()),
+                escape_json(result.completed_at.as_str()),
+                escape_json(result.details.as_str())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}]}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}]}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         selected.len(),
         scenario_ids,
         phases.len(),
-        phase_labels
+        phase_labels,
+        phase_results_json
     ))
+}
+
+fn build_phase_results(phases: &[OrchestrationPhase]) -> Vec<OrchestrationPhaseResult> {
+    let started_at = "1970-01-01T00:00:00Z";
+    let completed_at = "1970-01-01T00:00:01Z";
+    phases
+        .iter()
+        .map(|phase| {
+            let (status, details) = match phase {
+                OrchestrationPhase::InfraUp => (
+                    PhaseResultStatus::Pass,
+                    "deterministic placeholder for infra startup",
+                ),
+                OrchestrationPhase::AgentDeploy => (
+                    PhaseResultStatus::Pass,
+                    "deterministic placeholder for agent deploy",
+                ),
+                OrchestrationPhase::ScenarioRun => (
+                    PhaseResultStatus::Skip,
+                    "deterministic placeholder for scenario execution",
+                ),
+                OrchestrationPhase::Evidence => (
+                    PhaseResultStatus::Skip,
+                    "deterministic placeholder for evidence finalize",
+                ),
+                OrchestrationPhase::Teardown => (
+                    PhaseResultStatus::Skip,
+                    "deterministic placeholder for teardown",
+                ),
+            };
+            OrchestrationPhaseResult {
+                phase: *phase,
+                status,
+                started_at: started_at.to_owned(),
+                completed_at: completed_at.to_owned(),
+                details: details.to_owned(),
+            }
+        })
+        .collect()
 }
 
 fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>, String> {
@@ -369,7 +470,9 @@ pub fn execute_verify_contract(config: &VerifyCommandConfig) -> Result<String, S
 
 #[cfg(test)]
 mod tests {
-    use super::{all_execution_modes, all_orchestration_phases, ExecutionMode};
+    use super::{
+        all_execution_modes, all_orchestration_phases, all_phase_result_statuses, ExecutionMode,
+    };
 
     #[test]
     fn unit_execution_mode_parse_roundtrip() {
@@ -395,5 +498,14 @@ mod tests {
                 "TEARDOWN"
             ]
         );
+    }
+
+    #[test]
+    fn unit_phase_result_status_inventory_is_canonical() {
+        let labels: Vec<&str> = all_phase_result_statuses()
+            .iter()
+            .map(|status| status.as_str())
+            .collect();
+        assert_eq!(labels, vec!["PASS", "FAIL", "SKIP"]);
     }
 }
