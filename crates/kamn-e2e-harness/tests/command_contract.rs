@@ -546,3 +546,36 @@ fn spec_c32_process_runtime_agent_runtime_is_mcp_agent_for_mcp_mode() {
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("\"agent_runtime\":\"mcp-agent\""));
 }
+
+#[test]
+fn spec_c33_run_output_contains_process_lifecycle_service_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"process_lifecycle\":"));
+    assert!(output.contains("\"postgres\""));
+    assert!(output.contains("\"kolme\""));
+    assert!(output.contains("\"kamn_processor\""));
+    assert!(output.contains("\"kamn_listener\""));
+    assert!(output.contains("\"kamn_approver\""));
+}
+
+#[test]
+fn spec_c34_process_lifecycle_service_markers_are_planned() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(
+        output.contains("\"process_lifecycle\":{\"postgres\":\"planned\",\"kolme\":\"planned\",\"kamn_processor\":\"planned\",\"kamn_listener\":\"planned\",\"kamn_approver\":\"planned\"}")
+    );
+}
