@@ -1,0 +1,6 @@
+r53_review_freeze_schema_version=kamn.review.document-freeze.v1
+r53_review_freeze_status=frozen
+r53_review_freeze_line_count=423
+r53_review_freeze_appendix_section_count=14
+r53_review_freeze_fnv1a64_hex=0x5f4ae6683b7b7de3
+r53_review_freeze_last_non_empty_line=- r53_review_portable_agent_post_publication_delta_cli_subcommands=2

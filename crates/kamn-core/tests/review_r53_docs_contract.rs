@@ -76,6 +76,37 @@ fn parse_marker_f64(markers: &BTreeMap<String, String>, key: &str) -> f64 {
         .unwrap_or_else(|_| panic!("marker {key} should be a float"))
 }
 
+fn parse_key_value_lines(doc: &str) -> BTreeMap<String, String> {
+    let mut markers = BTreeMap::new();
+    for raw_line in doc.lines() {
+        let trimmed = raw_line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        markers.insert(key.trim().to_owned(), value.trim().to_owned());
+    }
+    markers
+}
+
+fn parse_marker_hex_u64(markers: &BTreeMap<String, String>, key: &str) -> u64 {
+    let raw = parse_marker_value(markers, key);
+    let hex = raw.trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(hex, 16)
+        .unwrap_or_else(|_| panic!("marker {key} should be a hex u64 value"))
+}
+
+fn fnv1a64(bytes: &[u8]) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
@@ -343,4 +374,55 @@ fn integration_r53_review_markers_are_consistent() {
     assert!(DOC.contains(
         "| **High** | Post-publication reconciliation meta-loop | R52 doc: 283→415 lines, 9 post-pub sections, 60 markers | Stop post-pub appending | **NEW** |"
     ));
+}
+
+#[test]
+fn regression_r53_review_document_freeze_baseline_is_enforced() {
+    let freeze_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("gaps-and-issues-r53.freeze");
+    let freeze_doc = fs::read_to_string(&freeze_path).unwrap_or_else(|_| {
+        panic!(
+            "r53 freeze baseline file missing: {}",
+            freeze_path.display()
+        )
+    });
+    let freeze_markers = parse_key_value_lines(&freeze_doc);
+
+    assert_eq!(
+        parse_marker_value(&freeze_markers, "r53_review_freeze_schema_version"),
+        "kamn.review.document-freeze.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&freeze_markers, "r53_review_freeze_status"),
+        "frozen"
+    );
+
+    let expected_line_count = parse_marker_usize(&freeze_markers, "r53_review_freeze_line_count");
+    let expected_appendix_section_count =
+        parse_marker_usize(&freeze_markers, "r53_review_freeze_appendix_section_count");
+    let expected_last_non_empty_line =
+        parse_marker_value(&freeze_markers, "r53_review_freeze_last_non_empty_line");
+    let expected_fnv = parse_marker_hex_u64(&freeze_markers, "r53_review_freeze_fnv1a64_hex");
+
+    let current_line_count = DOC.lines().count();
+    let current_appendix_section_count = DOC
+        .lines()
+        .filter(|line| line.starts_with("### 11."))
+        .count();
+    let current_last_non_empty_line = DOC
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .expect("r53 review doc should contain non-empty lines");
+    let current_fnv = fnv1a64(DOC.as_bytes());
+
+    assert_eq!(current_line_count, expected_line_count);
+    assert_eq!(
+        current_appendix_section_count,
+        expected_appendix_section_count
+    );
+    assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
+    assert_eq!(current_fnv, expected_fnv);
 }
