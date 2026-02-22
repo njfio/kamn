@@ -884,7 +884,7 @@ fn build_phase_results(
                 evidence_status,
             );
             let status = phase_status_for_steps(steps.as_slice());
-            let details = phase_details(*phase, status, scenario_results, evidence_status);
+            let details = phase_details(*phase, mode, status, scenario_results, evidence_status);
             OrchestrationPhaseResult {
                 phase: *phase,
                 status,
@@ -915,6 +915,7 @@ fn phase_status_for_steps(steps: &[OrchestrationStepRecord]) -> PhaseResultStatu
 
 fn phase_details(
     phase: OrchestrationPhase,
+    mode: ExecutionMode,
     status: PhaseResultStatus,
     scenario_results: &[ScenarioExecutionResult],
     evidence_status: PhaseResultStatus,
@@ -938,7 +939,7 @@ fn phase_details(
             )
         }
         (OrchestrationPhase::Evidence, _) => evidence_phase_detail(evidence_status),
-        (OrchestrationPhase::Teardown, _) => "deterministic placeholder for teardown".to_owned(),
+        (OrchestrationPhase::Teardown, _) => teardown_phase_detail(mode, status),
     }
 }
 
@@ -1079,11 +1080,41 @@ fn phase_step_records(
             status: evidence_status,
             detail: evidence_phase_step_detail(evidence_status),
         }],
-        OrchestrationPhase::Teardown => vec![OrchestrationStepRecord {
-            step: "Archive evidence bundle".to_owned(),
-            status: PhaseResultStatus::Skip,
-            detail: "deterministic placeholder: teardown skipped".to_owned(),
-        }],
+        OrchestrationPhase::Teardown => vec![
+            OrchestrationStepRecord {
+                step: "[MCP modes] Stop kamn-mcp-server processes".to_owned(),
+                status: if is_mcp_mode(mode) {
+                    pass
+                } else {
+                    PhaseResultStatus::Skip
+                },
+                detail: if is_mcp_mode(mode) {
+                    "deterministic placeholder: mcp servers stopped".to_owned()
+                } else {
+                    "deterministic placeholder: mcp teardown skipped for non-mcp mode".to_owned()
+                },
+            },
+            OrchestrationStepRecord {
+                step: "Stop KAMN nodes (graceful shutdown)".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: kamn nodes stopped".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Stop Kolme devnet".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: kolme devnet stopped".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Stop PostgreSQL container".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: postgres container stopped".to_owned(),
+            },
+            OrchestrationStepRecord {
+                step: "Archive evidence bundle".to_owned(),
+                status: pass,
+                detail: "deterministic placeholder: evidence bundle archived".to_owned(),
+            },
+        ],
     }
 }
 
@@ -1116,6 +1147,15 @@ fn evidence_phase_step_detail(status: PhaseResultStatus) -> String {
             "expected_artifacts=4 recorded_artifacts=0 status=SKIP".to_owned()
         }
     }
+}
+
+fn teardown_phase_detail(mode: ExecutionMode, status: PhaseResultStatus) -> String {
+    let mcp_step_status = if is_mcp_mode(mode) { "PASS" } else { "SKIP" };
+    format!(
+        "deterministic teardown summary: mcp_stop={} kamn_nodes=PASS kolme=PASS postgres=PASS archive=PASS status={}",
+        mcp_step_status,
+        status.as_str()
+    )
 }
 
 fn is_mcp_mode(mode: ExecutionMode) -> bool {

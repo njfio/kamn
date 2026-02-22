@@ -1666,16 +1666,13 @@ fn spec_c87_teardown_phase_is_pass_with_prd_step_inventory_in_sdk_mode() {
     };
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("{\"phase\":\"TEARDOWN\",\"status\":\"PASS\""));
-    assert!(output.contains(
-        "{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"SKIP\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Stop KAMN nodes (graceful shutdown)\",\"status\":\"PASS\""
-    ));
+    assert!(output
+        .contains("{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"SKIP\""));
+    assert!(
+        output.contains("{\"step\":\"Stop KAMN nodes (graceful shutdown)\",\"status\":\"PASS\"")
+    );
     assert!(output.contains("{\"step\":\"Stop Kolme devnet\",\"status\":\"PASS\""));
-    assert!(output.contains(
-        "{\"step\":\"Stop PostgreSQL container\",\"status\":\"PASS\""
-    ));
+    assert!(output.contains("{\"step\":\"Stop PostgreSQL container\",\"status\":\"PASS\""));
     assert!(output.contains("{\"step\":\"Archive evidence bundle\",\"status\":\"PASS\""));
 }
 
@@ -1691,9 +1688,8 @@ fn spec_c88_teardown_phase_marks_mcp_stop_step_pass_in_mcp_mode() {
     };
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("{\"phase\":\"TEARDOWN\",\"status\":\"PASS\""));
-    assert!(output.contains(
-        "{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"PASS\""
-    ));
+    assert!(output
+        .contains("{\"step\":\"[MCP modes] Stop kamn-mcp-server processes\",\"status\":\"PASS\""));
 }
 
 #[test]
