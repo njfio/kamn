@@ -1615,6 +1615,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamn-cli"
+version = "0.1.0"
+dependencies = [
+ "kamn-agent-lib",
+]
+
+[[package]]
 name = "kamn-core"
 version = "0.1.0"
 dependencies = [
@@ -1634,6 +1641,13 @@ dependencies = [
 [[package]]
 name = "kamn-kolme"
 version = "0.1.0"
+
+[[package]]
+name = "kamn-mcp-server"
+version = "0.1.0"
+dependencies = [
+ "kamn-agent-lib",
+]
 
 [[package]]
 name = "kamn-node"
