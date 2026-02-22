@@ -75,3 +75,25 @@ impl McpServerConfig {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::McpServerConfig;
+
+    #[test]
+    fn unit_mcp_config_accepts_binary_prefixed_arguments() {
+        let parsed = McpServerConfig::from_args([
+            "kamn-mcp-server",
+            "--endpoint",
+            "http://localhost:8080",
+            "--agent-name",
+            "alice",
+            "--key-file",
+            "/tmp/alice.key",
+        ])
+        .expect("config");
+        assert_eq!(parsed.endpoint, "http://localhost:8080");
+        assert_eq!(parsed.agent_name, "alice");
+        assert_eq!(parsed.key_file, "/tmp/alice.key");
+    }
+}

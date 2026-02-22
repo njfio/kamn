@@ -166,3 +166,16 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<String, kamn_agent_lib::AgentL
         CommandKind::Health => commands::health::execute(parsed),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_cli_args, OutputFormat};
+
+    #[test]
+    fn unit_cli_parser_honors_endpoint_flag() {
+        let parsed = parse_cli_args(["kamn-cli", "health", "--endpoint", "http://localhost:8080"])
+            .expect("parsed");
+        assert_eq!(parsed.endpoint, "http://localhost:8080");
+        assert_eq!(parsed.output_format, OutputFormat::Text);
+    }
+}

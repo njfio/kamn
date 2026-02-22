@@ -60,3 +60,15 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
         output_schema: "kamn.mcp.output.v1",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{build_tool_registry, MCP_TOOL_NAMES};
+
+    #[test]
+    fn unit_mcp_tool_registry_count_matches_constant_inventory() {
+        let registry = build_tool_registry();
+        assert_eq!(registry.len(), MCP_TOOL_NAMES.len());
+        assert_eq!(registry.len(), 12);
+    }
+}
