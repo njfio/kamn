@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 331
+- archived_issue_count: 317
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3628 | `Story: decompose signer monolith into modular signing adapter and policy layers` | 2026-02-18 | `specs/archive/3628` | `specs/3628/ARCHIVED.md` |
-| 3630 | `Story: add TLS termination for service and observability endpoints` | 2026-02-18 | `specs/archive/3630` | `specs/3630/ARCHIVED.md` |
-| 3631 | Story: eliminate flaky main tests and harden merge gate reliability | 2026-02-18 | `specs/archive/3631` | `specs/3631/ARCHIVED.md` |
-| 3632 | `Story: harden unified API-observability stack contracts and local-heavy governance` | 2026-02-18 | `specs/archive/3632` | `specs/3632/ARCHIVED.md` |
-| 3636 | `Task: extract signer adapter module for crypto and key-source operations` | 2026-02-18 | `specs/archive/3636` | `specs/3636/ARCHIVED.md` |
-| 3637 | `Task: extract signer policy module for profile normalization and quorum checks` | 2026-02-18 | `specs/archive/3637` | `specs/3637/ARCHIVED.md` |
-| 3638 | `Task: deliver signer parity harness and migration completion` | 2026-02-18 | `specs/archive/3638` | `specs/3638/ARCHIVED.md` |
-| 3643 | `Task: enable TLS on observability routes with endpoint compatibility coverage` | 2026-02-18 | `specs/archive/3643` | `specs/3643/ARCHIVED.md` |
-| 3644 | `Task: ship TLS go-no-go validation lanes and operational runbooks` | 2026-02-18 | `specs/archive/3644` | `specs/3644/ARCHIVED.md` |
-| 3645 | Task: build deterministic flaky-test reproducer and artifact capture pipeline | 2026-02-18 | `specs/archive/3645` | `specs/3645/ARCHIVED.md` |
-| 3646 | Task: fix flaky root cause and remove quarantine from main test path | 2026-02-18 | `specs/archive/3646` | `specs/3646/ARCHIVED.md` |
-| 3647 | Task: enforce anti-flake merge gate policy with deterministic evidence | 2026-02-18 | `specs/archive/3647` | `specs/3647/ARCHIVED.md` |
-| 3650 | `Task: validate unified API-observability stack compatibility and performance` | 2026-02-18 | `specs/archive/3650` | `specs/3650/ARCHIVED.md` |
-| 3653 | `Subtask: extract signer_adapter for key-source and crypto paths` | 2026-02-18 | `specs/archive/3653` | `specs/3653/ARCHIVED.md` |
 | 3654 | `Subtask: extract signer_policy with deterministic quorum and profile checks` | 2026-02-18 | `specs/archive/3654` | `specs/3654/ARCHIVED.md` |
 | 3658 | `Subtask: add observability-over-TLS integration checks and local-heavy lane` | 2026-02-18 | `specs/archive/3658` | `specs/3658/ARCHIVED.md` |
 | 3765 | `Subtask: wire TLS go-no-go lane into release gate with deterministic reason taxonomy` | 2026-02-18 | `specs/archive/3765` | `specs/3765/ARCHIVED.md` |
