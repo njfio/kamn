@@ -3,11 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 237
+- archived_issue_count: 236
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3889 | Task: enforce activation go-no-go budget and documentation parity contracts | 2026-02-18 | `specs/archive/3889` | `specs/3889/ARCHIVED.md` |
 | 3891 | Subtask: add activation readiness and budget marker checks to go-no-go policy | 2026-02-18 | `specs/archive/3891` | `specs/3891/ARCHIVED.md` |
 | 3893 | Subtask: add docs-contract and milestone-summary parity checks for activation closure | 2026-02-18 | `specs/archive/3893` | `specs/3893/ARCHIVED.md` |
 | 3910 | Subtask: stabilize websocket missing-upgrade-header regression test across CI | 2026-02-18 | `specs/archive/3910` | `specs/3910/ARCHIVED.md` |

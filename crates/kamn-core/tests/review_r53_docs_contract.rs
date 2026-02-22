@@ -282,6 +282,61 @@ fn integration_r53_review_markers_are_consistent() {
     );
     assert!(doc_contract_test_file_count() <= non_regression_doc_max);
 
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r53_review_post_publication_portable_agent_reconciliation_schema_version",
+        ),
+        "kamn.review.portable-agent-post-publication-reconciliation.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r53_review_portable_agent_snapshot_status"),
+        "stalled"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r53_review_portable_agent_post_publication_status",
+        ),
+        "advanced_after_query_surfaces"
+    );
+    let portable_agent_issue =
+        parse_marker_usize(&markers, "r53_review_portable_agent_post_publication_issue");
+    let portable_agent_pr =
+        parse_marker_usize(&markers, "r53_review_portable_agent_post_publication_pr");
+    assert!(portable_agent_issue > 0);
+    assert!(portable_agent_pr > 0);
+
+    let mcp_snapshot = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_snapshot_mcp_tool_count",
+    );
+    let mcp_post = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_post_publication_mcp_tool_count",
+    );
+    let mcp_delta = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_post_publication_delta_mcp_tools",
+    );
+    assert!(mcp_post >= mcp_snapshot);
+    assert_eq!(mcp_post - mcp_snapshot, mcp_delta);
+
+    let cli_snapshot = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_snapshot_cli_subcommand_count",
+    );
+    let cli_post = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_post_publication_cli_subcommand_count",
+    );
+    let cli_delta = parse_marker_usize(
+        &markers,
+        "r53_review_portable_agent_post_publication_delta_cli_subcommands",
+    );
+    assert!(cli_post >= cli_snapshot);
+    assert_eq!(cli_post - cli_snapshot, cli_delta);
+
     assert!(DOC.contains(
         "| **Critical** | Governance loop at 99% — 4th consecutive governance-dominated cycle | Process | Fundamental process change needed | **SEVERELY WORSENED** |"
     ));

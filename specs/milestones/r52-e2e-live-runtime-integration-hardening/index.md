@@ -2,7 +2,7 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5772, #5774, #5776
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5772, #5774, #5776, #5778
 - Active issue(s): None
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
@@ -43,3 +43,4 @@
 34. Complete R53 review artifact marker contract coverage across R43+/R50+/R52+ schemas with fail-closed docs-contract validation. (Completed)
 35. Reconcile R50 doc-contract non-regression cap after adding R53 docs-contract lane so workspace quality gate remains green. (Completed)
 36. Add portable-agent query surfaces for task status and agent profile across CLI and MCP interfaces. (Completed)
+37. Reconcile R53 post-publication portable-agent status markers after query-surface delivery. (Completed)

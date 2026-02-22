@@ -170,6 +170,16 @@ The R52 compilation error and test failures are both resolved. `cargo test --wor
 
 The only portable-agent change was a new `real_backend_integration_contract.rs` (250 lines) in kamn-mcp-server that tests real backend dispatch, and a 6-line error handling fix in `dispatch.rs` for `list_messages`. All other portable-agent crates are frozen at R52 state.
 
+### 5.2 Post-Publication Reconciliation (After #5777)
+
+Snapshot semantics above remain tied to commit `982d52df` and are not retroactively rewritten. Post-publication, issue `#5776` / PR `#5777` advanced portable-agent capability by adding `query-task` and `query-agent-profile` across CLI + MCP surfaces with integration and mutation-gate coverage.
+
+Portable-agent surface deltas after `#5777`:
+
+- MCP tool inventory: `12 -> 14` (`+2`)
+- CLI subcommand inventory: `12 -> 14` (`+2`)
+- Real-backend integration contracts: expanded to include both `query_task` and `query_agent_profile`
+
 ---
 
 ## 6. Branch Hygiene — SLIGHTLY WORSENED
@@ -397,3 +407,17 @@ Over 367 commits across 4 review cycles, 8 delivered genuine capability (all fro
 - r53_review_governance_feature_non_regression_schema_version=kamn.review.governance-feature-non-regression-ratchet.v1
 - r53_review_governance_feature_non_regression_governance_ratio_max=0.9904
 - r53_review_governance_feature_non_regression_feature_ratio_min=0.0096
+
+### 11.14 Post-Publication Portable-Agent Reconciliation Markers
+
+- r53_review_post_publication_portable_agent_reconciliation_schema_version=kamn.review.portable-agent-post-publication-reconciliation.v1
+- r53_review_portable_agent_snapshot_status=stalled
+- r53_review_portable_agent_post_publication_status=advanced_after_query_surfaces
+- r53_review_portable_agent_post_publication_issue=5776
+- r53_review_portable_agent_post_publication_pr=5777
+- r53_review_portable_agent_snapshot_mcp_tool_count=12
+- r53_review_portable_agent_post_publication_mcp_tool_count=14
+- r53_review_portable_agent_post_publication_delta_mcp_tools=2
+- r53_review_portable_agent_snapshot_cli_subcommand_count=12
+- r53_review_portable_agent_post_publication_cli_subcommand_count=14
+- r53_review_portable_agent_post_publication_delta_cli_subcommands=2
