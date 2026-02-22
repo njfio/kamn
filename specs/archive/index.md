@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 303
+- archived_issue_count: 289
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3809 | `Subtask: expand unified API-observability compatibility matrix and parity markers` | 2026-02-18 | `specs/archive/3809` | `specs/3809/ARCHIVED.md` |
-| 3811 | `Subtask: enforce signer_adapter API boundary and re-export drift contracts` | 2026-02-18 | `specs/archive/3811` | `specs/3811/ARCHIVED.md` |
-| 3813 | Epic: R27.1 harden runtime operations with real signal handling and lifecycle drain guarantees | 2026-02-18 | `specs/archive/3813` | `specs/3813/ARCHIVED.md` |
-| 3814 | Epic: R27.2 modularize runtime.rs and enforce extraction budget guardrails | 2026-02-18 | `specs/archive/3814` | `specs/3814/ARCHIVED.md` |
-| 3815 | Epic: R27.3 deliver live libp2p+Kolme proof and governance budget closure | 2026-02-18 | `specs/archive/3815` | `specs/3815/ARCHIVED.md` |
-| 3816 | Story: implement real OS signal handling and graceful runtime shutdown orchestration | 2026-02-18 | `specs/archive/3816` | `specs/3816/ARCHIVED.md` |
-| 3817 | Task: implement tokio OS signal-stream orchestration across runtime modes | 2026-02-18 | `specs/archive/3817` | `specs/3817/ARCHIVED.md` |
-| 3818 | Subtask: add SIGINT/SIGTERM listener wiring with deterministic shutdown reason taxonomy | 2026-02-18 | `specs/archive/3818` | `specs/3818/ARCHIVED.md` |
-| 3819 | Subtask: enforce repeated-signal idempotency and typed shutdown errors | 2026-02-18 | `specs/archive/3819` | `specs/3819/ARCHIVED.md` |
-| 3820 | Task: create live lifecycle drain validation lane with bounded local-heavy governance | 2026-02-18 | `specs/archive/3820` | `specs/3820/ARCHIVED.md` |
-| 3821 | Subtask: implement real process signal-injection runner and artifact capture | 2026-02-18 | `specs/archive/3821` | `specs/3821/ARCHIVED.md` |
-| 3822 | Subtask: add policy checker for shutdown markers, CI exclusion, and runtime budget thresholds | 2026-02-18 | `specs/archive/3822` | `specs/3822/ARCHIVED.md` |
-| 3823 | Story: codify shutdown runbook checkpoints and release-governance evidence requirements | 2026-02-18 | `specs/archive/3823` | `specs/3823/ARCHIVED.md` |
-| 3824 | Task: publish shutdown operator runbook with deterministic checkpoint markers | 2026-02-18 | `specs/archive/3824` | `specs/3824/ARCHIVED.md` |
 | 3825 | Subtask: add runbook marker definitions for signal intake, drain completion, and timeout fail-closed reasons | 2026-02-18 | `specs/archive/3825` | `specs/3825/ARCHIVED.md` |
 | 3826 | Subtask: enforce shutdown runbook docs-contract tests with fail-closed drift reasons | 2026-02-18 | `specs/archive/3826` | `specs/3826/ARCHIVED.md` |
 | 3827 | Task: integrate shutdown evidence requirements into release go/no-go gate | 2026-02-18 | `specs/archive/3827` | `specs/3827/ARCHIVED.md` |
