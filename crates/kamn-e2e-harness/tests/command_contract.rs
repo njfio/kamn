@@ -2237,3 +2237,48 @@ fn spec_c104_verify_command_rejects_evidence_artifact_invalid_anchor_tx_hash_for
     let _ = std::fs::remove_dir(evidence_dir.join("s01-agent-discovery"));
     let _ = std::fs::remove_dir(evidence_dir);
 }
+
+#[test]
+fn spec_c105_verify_command_rejects_evidence_artifact_invalid_anchor_block_height_format() {
+    let evidence_dir = temp_path("evidence-invalid-anchor-block-height-format");
+    let output_path = temp_path("report-invalid-anchor-block-height-format.json");
+    let chain_dump_path = temp_path("kolme_chain_dump_invalid_anchor_block_height_format.json");
+    std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+        .expect("evidence scenario dir should be created");
+    std::fs::write(
+        evidence_dir.join("manifest.json"),
+        r#"{"schema_version":"kamn.e2e.evidence-manifest.v3","run_id":"e2e-run","started_at":"2026-02-21T14:30:52Z","completed_at":"2026-02-21T14:35:12Z","duration_seconds":260,"execution_mode":"sdk-direct","infrastructure":{"kolme_version":"0.x.y","kamn_version":"0.1.0","kamn_commit":"49efe252","kamn_agent_lib_version":"0.1.0","agent_runtime":"sdk-direct","node_count":3,"agent_count":3,"storage_backend":"sqlite+postgres"},"scenarios":[],"summary":{"total_scenarios":15,"passed":13,"failed":1,"skipped":1,"kolme_blocks_produced":47,"messages_exchanged":128,"proofs_anchored":47,"proofs_verified":47}}"#,
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        evidence_dir
+            .join("s01-agent-discovery")
+            .join("alice_registration.json"),
+        r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"sha256:abc123","captured_at":"2026-02-21T14:31:05Z","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"sha256:def456","block_height":"forty-two","finality":"FINAL"}}}"#,
+    )
+    .expect("evidence artifact should be written");
+    std::fs::write(&chain_dump_path, valid_chain_dump_json())
+        .expect("chain dump should be written");
+
+    let config = VerifyCommandConfig {
+        evidence_dir: evidence_dir.display().to_string(),
+        kolme_chain_dump: chain_dump_path.display().to_string(),
+        output: output_path.display().to_string(),
+    };
+    let err = execute_verify_contract(&config)
+        .expect_err("verify should fail for invalid anchor block_height");
+    assert!(
+        err.contains("evidence artifact invalid _verification.kolme_anchor.block_height format")
+    );
+
+    let _ = std::fs::remove_file(output_path);
+    let _ = std::fs::remove_file(chain_dump_path);
+    let _ = std::fs::remove_file(evidence_dir.join("manifest.json"));
+    let _ = std::fs::remove_file(
+        evidence_dir
+            .join("s01-agent-discovery")
+            .join("alice_registration.json"),
+    );
+    let _ = std::fs::remove_dir(evidence_dir.join("s01-agent-discovery"));
+    let _ = std::fs::remove_dir(evidence_dir);
+}

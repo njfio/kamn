@@ -273,6 +273,32 @@ fn extract_kolme_anchor_tx_hash_value(artifact_json: &str) -> Option<String> {
     extract_json_string_marker(anchor_fragment, "\"tx_hash\":\"")
 }
 
+fn extract_kolme_anchor_block_height_value(artifact_json: &str) -> Option<u64> {
+    let normalized = strip_json_whitespace(artifact_json);
+    let anchor_marker = "\"kolme_anchor\":{";
+    let anchor_start = normalized.find(anchor_marker)? + anchor_marker.len();
+    let anchor_relative_end = normalized[anchor_start..].find('}')?;
+    let anchor_end = anchor_start + anchor_relative_end;
+    let anchor_fragment = &normalized[anchor_start..anchor_end];
+    let block_height_marker = "\"block_height\":";
+    let value_start = anchor_fragment.find(block_height_marker)? + block_height_marker.len();
+    let value_fragment = &anchor_fragment[value_start..];
+    let digits_len = value_fragment
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .count();
+    if digits_len == 0 {
+        return None;
+    }
+    if digits_len < value_fragment.len() {
+        let next_character = value_fragment.as_bytes()[digits_len] as char;
+        if next_character != ',' && next_character != '}' {
+            return None;
+        }
+    }
+    value_fragment[..digits_len].parse::<u64>().ok()
+}
+
 fn is_sha256_value(value: &str) -> bool {
     value
         .strip_prefix("sha256:")
@@ -387,6 +413,12 @@ pub fn validate_evidence_verification_blocks(
         if !is_sha256_value(&tx_hash) {
             return Err(format!(
                 "evidence artifact invalid _verification.kolme_anchor.tx_hash format: {}",
+                artifact_path.display()
+            ));
+        }
+        if extract_kolme_anchor_block_height_value(&artifact_json).is_none() {
+            return Err(format!(
+                "evidence artifact invalid _verification.kolme_anchor.block_height format: {}",
                 artifact_path.display()
             ));
         }
@@ -609,6 +641,35 @@ mod tests {
         let err = validate_evidence_verification_blocks(&evidence_dir, &[])
             .expect_err("invalid anchor tx hash format should fail");
         assert!(err.contains("evidence artifact invalid _verification.kolme_anchor.tx_hash format"));
+
+        let _ = std::fs::remove_dir_all(&evidence_dir);
+    }
+
+    #[test]
+    fn unit_validate_evidence_verification_blocks_rejects_invalid_anchor_block_height_format() {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic for tests")
+            .as_nanos();
+        let evidence_dir = std::env::temp_dir().join(format!(
+            "kamn-e2e-anchor-height-format-{}-{}",
+            std::process::id(),
+            unique_suffix
+        ));
+        std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+            .expect("evidence directory should be created");
+        std::fs::write(
+            evidence_dir
+                .join("s01-agent-discovery")
+                .join("alice_registration.json"),
+            r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"sha256:abc123","captured_at":"2026-02-21T14:31:05Z","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"sha256:def456","block_height":"forty-two","finality":"FINAL"}}}"#,
+        )
+        .expect("artifact should be written");
+
+        let err = validate_evidence_verification_blocks(&evidence_dir, &[])
+            .expect_err("invalid block_height format should fail");
+        assert!(err
+            .contains("evidence artifact invalid _verification.kolme_anchor.block_height format"));
 
         let _ = std::fs::remove_dir_all(&evidence_dir);
     }
