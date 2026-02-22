@@ -45,6 +45,29 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_governance_loop_mitigation_docs_contract.rs`.
 
+## Post-Publication Branch Cleanup Reconciliation Contract (R52+)
+
+R52+ review artifacts may include post-publication branch hygiene reconciliation waves to document
+merged-only cleanup attempts without rewriting point-in-time review snapshots.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_branch_cleanup_schema_version=kamn.review.branch-hygiene-post-publication-cleanup.v1`
+- `r<release>_review_branch_remote_head_count_pre_cleanup=<integer>`
+- `r<release>_review_branch_remote_head_count_deleted=<integer>`
+- `r<release>_review_branch_remote_head_count_post_cleanup=<integer>`
+
+Optional informational marker:
+
+- `r<release>_review_branch_remote_head_count_baseline_snapshot=<integer>`
+
+Contract invariants:
+
+- `r<release>_review_branch_remote_head_count_pre_cleanup - r<release>_review_branch_remote_head_count_deleted = r<release>_review_branch_remote_head_count_post_cleanup`
+- `r<release>_review_branch_remote_head_count_post_cleanup <= r<release>_review_branch_remote_head_count_pre_cleanup`
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Spec-Volume Non-Regression Ratchet Contract (R50+)
 
 R50+ review artifacts must include a non-regression ratchet while spec-volume remediation remains active.
