@@ -1441,3 +1441,33 @@ fn spec_c75_runtime_orchestration_contract_markers_remain_stable_with_scenario_r
         "\"runtime_orchestration\":{\"postgres\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kolme\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_processor\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_listener\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"},\"kamn_approver\":{\"requested\":false,\"status\":\"SKIP\",\"detail\":\"external execution disabled\"}}"
     ));
 }
+
+#[test]
+fn spec_c76_live_execution_overall_status_fails_when_scenario_fails() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/scenario-fail".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"live_execution\":{\"orchestration_status\":\"PASS\",\"validation_status\":\"FAIL\",\"evidence_status\":\"PASS\",\"overall_status\":\"FAIL\"}"));
+}
+
+#[test]
+fn spec_c77_live_validation_status_and_completed_checks_reflect_failure_path() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/scenario-fail".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains(
+        "\"live_validation\":{\"expected_checks\":4,\"completed_checks\":3,\"status\":\"FAIL\"}"
+    ));
+}
