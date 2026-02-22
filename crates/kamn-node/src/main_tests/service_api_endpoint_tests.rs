@@ -812,18 +812,32 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
-    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+    let expected_scope_policy_fixture_unique_allow_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
-    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_deny_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "deny")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_allow_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes.len();
+    let expected_scope_policy_fixture_unique_deny_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes.len();
+    let expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .intersection(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_allow_only_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .difference(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_deny_only_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes
+            .difference(&expected_scope_policy_fixture_unique_allow_scopes)
+            .count();
     let expected_scope_policy_fixture_unique_allow_routes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
@@ -917,6 +931,15 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_deny_overlap_scope_count {expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_only_scope_count {expected_scope_policy_fixture_unique_allow_only_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_only_scope_count {expected_scope_policy_fixture_unique_deny_only_scope_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_allow_route_count {expected_scope_policy_fixture_unique_allow_route_count}"
@@ -1233,18 +1256,32 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
-    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+    let expected_scope_policy_fixture_unique_allow_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
-    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_deny_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "deny")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_allow_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes.len();
+    let expected_scope_policy_fixture_unique_deny_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes.len();
+    let expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .intersection(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_allow_only_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .difference(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_deny_only_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes
+            .difference(&expected_scope_policy_fixture_unique_allow_scopes)
+            .count();
     let expected_scope_policy_fixture_unique_allow_routes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
@@ -1338,6 +1375,15 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_deny_overlap_scope_count {expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_only_scope_count {expected_scope_policy_fixture_unique_allow_only_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_only_scope_count {expected_scope_policy_fixture_unique_deny_only_scope_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_allow_route_count {expected_scope_policy_fixture_unique_allow_route_count}"
@@ -1506,18 +1552,32 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
-    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+    let expected_scope_policy_fixture_unique_allow_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
-    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_deny_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "deny")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_allow_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes.len();
+    let expected_scope_policy_fixture_unique_deny_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes.len();
+    let expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .intersection(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_allow_only_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .difference(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_deny_only_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes
+            .difference(&expected_scope_policy_fixture_unique_allow_scopes)
+            .count();
     let expected_scope_policy_fixture_unique_allow_routes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
@@ -1611,6 +1671,15 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_deny_overlap_scope_count {expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_only_scope_count {expected_scope_policy_fixture_unique_allow_only_scope_count}"
+    )));
+    assert!(metrics_response.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_only_scope_count {expected_scope_policy_fixture_unique_deny_only_scope_count}"
     )));
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_allow_route_count {expected_scope_policy_fixture_unique_allow_route_count}"
@@ -2024,18 +2093,32 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
         .map(|row| row.expected.as_str())
         .collect::<BTreeSet<_>>()
         .len();
-    let expected_scope_policy_fixture_unique_allow_scope_count = scope_policy_fixture_rows
+    let expected_scope_policy_fixture_unique_allow_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
-    let expected_scope_policy_fixture_unique_deny_scope_count = scope_policy_fixture_rows
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_deny_scopes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "deny")
         .map(|row| row.scope.as_str())
-        .collect::<BTreeSet<_>>()
-        .len();
+        .collect::<BTreeSet<_>>();
+    let expected_scope_policy_fixture_unique_allow_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes.len();
+    let expected_scope_policy_fixture_unique_deny_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes.len();
+    let expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .intersection(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_allow_only_scope_count =
+        expected_scope_policy_fixture_unique_allow_scopes
+            .difference(&expected_scope_policy_fixture_unique_deny_scopes)
+            .count();
+    let expected_scope_policy_fixture_unique_deny_only_scope_count =
+        expected_scope_policy_fixture_unique_deny_scopes
+            .difference(&expected_scope_policy_fixture_unique_allow_scopes)
+            .count();
     let expected_scope_policy_fixture_unique_allow_routes = scope_policy_fixture_rows
         .iter()
         .filter(|row| row.expected == "allow")
@@ -2129,6 +2212,15 @@ fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_deny_scope_count {expected_scope_policy_fixture_unique_deny_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_deny_overlap_scope_count {expected_scope_policy_fixture_unique_allow_deny_overlap_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_allow_only_scope_count {expected_scope_policy_fixture_unique_allow_only_scope_count}"
+    )));
+    assert!(metrics_response.body.contains(&format!(
+        "kamn_service_api_scope_policy_fixture_unique_deny_only_scope_count {expected_scope_policy_fixture_unique_deny_only_scope_count}"
     )));
     assert!(metrics_response.body.contains(&format!(
         "kamn_service_api_scope_policy_fixture_unique_allow_route_count {expected_scope_policy_fixture_unique_allow_route_count}"
