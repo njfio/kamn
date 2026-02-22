@@ -365,10 +365,10 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
     };
     let normal_output = execute_run_contract(&normal).expect("normal run should render");
     assert!(
-        normal_output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":0,\"skip\":2}")
+        normal_output.contains("\"phase_totals\":{\"total\":5,\"pass\":4,\"fail\":0,\"skip\":1}")
     );
     assert!(
-        normal_output.contains("\"step_totals\":{\"total\":18,\"pass\":14,\"fail\":0,\"skip\":4}")
+        normal_output.contains("\"step_totals\":{\"total\":18,\"pass\":15,\"fail\":0,\"skip\":3}")
     );
 
     let fail = RunCommandConfig {
@@ -380,9 +380,9 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
         scenario_ids: vec!["S-01".to_owned()],
     };
     let fail_output = execute_run_contract(&fail).expect("fail-path run should render");
-    assert!(fail_output.contains("\"phase_totals\":{\"total\":5,\"pass\":2,\"fail\":1,\"skip\":2}"));
+    assert!(fail_output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
     assert!(
-        fail_output.contains("\"step_totals\":{\"total\":18,\"pass\":13,\"fail\":1,\"skip\":4}")
+        fail_output.contains("\"step_totals\":{\"total\":18,\"pass\":14,\"fail\":1,\"skip\":3}")
     );
 }
 
@@ -1423,7 +1423,7 @@ fn spec_c74_scenario_run_phase_fails_when_scenario_execution_reports_fail() {
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("\"scenario_results\":[{\"id\":\"S-01\",\"status\":\"FAIL\"},{\"id\":\"S-02\",\"status\":\"PASS\"}]"));
     assert!(output.contains("{\"phase\":\"SCENARIO_RUN\",\"status\":\"FAIL\""));
-    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":2,\"fail\":1,\"skip\":2}"));
+    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
 }
 
 #[test]
@@ -1603,4 +1603,53 @@ fn spec_c83_mode_execution_contract_executed_count_matches_scenario_count() {
     assert!(output.contains(
         "\"mode_execution_contract\":{\"mode\":\"sdk-direct\",\"driver\":\"sdk-direct-driver\",\"selected_scenarios\":3,\"executed_scenarios\":3,\"status\":\"PASS\"}"
     ));
+}
+
+#[test]
+fn spec_c84_evidence_phase_is_pass_on_normal_path() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("{\"phase\":\"EVIDENCE\",\"status\":\"PASS\""));
+    assert!(output.contains(
+        "{\"step\":\"Finalize evidence contract markers\",\"status\":\"PASS\",\"detail\":\"expected_artifacts=4 recorded_artifacts=4 status=PASS\"}"
+    ));
+}
+
+#[test]
+fn spec_c85_evidence_phase_is_fail_on_evidence_fail_path() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence-fail".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("{\"phase\":\"EVIDENCE\",\"status\":\"FAIL\""));
+    assert!(output.contains(
+        "{\"step\":\"Finalize evidence contract markers\",\"status\":\"FAIL\",\"detail\":\"expected_artifacts=4 recorded_artifacts=3 status=FAIL\"}"
+    ));
+}
+
+#[test]
+fn spec_c86_lifecycle_summary_reflects_evidence_phase_failure_transition() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence-fail".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"phase_totals\":{\"total\":5,\"pass\":3,\"fail\":1,\"skip\":1}"));
+    assert!(output.contains("\"step_totals\":{\"total\":18,\"pass\":14,\"fail\":1,\"skip\":3}"));
 }
