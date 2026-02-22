@@ -25,3 +25,16 @@ This artifact captures deterministic gap/status markers for `kamn-e2e-harness` p
 ## Follow-up Scope
 - `phase4_live_infra_orchestration_status=pending`
 - `phase4_ci_lane_status=pending`
+
+## Extended in #5682
+- Enriched scenario model with PRD-backed contract metadata:
+  - `steps`
+  - `verifiable_outputs`
+  - `pass_criteria`
+- Added `scenario_contracts` projection in `run` output for selected scenarios.
+- Populated P0 scenario contracts (S-01..S-06) with PRD section-7 aligned entries.
+
+## Status Markers (After #5682)
+- `phase3_scenario_contract_fields_status=implemented`
+- `phase3_p0_scenario_contract_alignment_status=implemented`
+- `phase3_run_output_scenario_contract_projection_status=implemented`
