@@ -6,14 +6,18 @@ use std::sync::Arc;
 const SDK_DIRECT_LIVE_ENV: &str = "KAMN_E2E_SDK_DIRECT_LIVE";
 const DEFAULT_KOLME_ENDPOINT: &str = "http://localhost:3000";
 const DEFAULT_AGENT_NAME: &str = "kamn-e2e-sdk-direct";
+const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
+    r#"{"title":"sdk-direct-live-s04","description":"live task lifecycle probe"}"#;
+const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
 
-type DiscoveryProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
+type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01.
+/// SDK-direct driver with optional live execution for S-01 and S-04.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
-    discovery_probe: Arc<DiscoveryProbe>,
+    discovery_probe: Arc<LiveProbe>,
+    task_lifecycle_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -34,20 +38,40 @@ impl Default for SdkDirectDriver {
 impl SdkDirectDriver {
     /// Builds SDK-direct driver from environment configuration.
     pub fn from_env() -> Self {
-        Self::with_probe(
+        Self::with_probes(
             live_execution_enabled_from_env(),
             run_live_s01_discovery_probe,
+            run_live_s04_task_lifecycle_probe,
         )
     }
 
-    /// Creates SDK-direct driver with explicit toggle and probe implementation.
-    pub fn with_probe<F>(live_execution_enabled: bool, discovery_probe: F) -> Self
+    /// Creates SDK-direct driver with one probe reused for all live-bound scenarios.
+    pub fn with_probe<F>(live_execution_enabled: bool, live_probe: F) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
+    {
+        let live_probe: Arc<LiveProbe> = Arc::new(live_probe);
+        Self {
+            live_execution_enabled,
+            discovery_probe: live_probe.clone(),
+            task_lifecycle_probe: live_probe,
+        }
+    }
+
+    /// Creates SDK-direct driver with explicit per-scenario probe implementations.
+    pub fn with_probes<F, G>(
+        live_execution_enabled: bool,
+        discovery_probe: F,
+        task_lifecycle_probe: G,
+    ) -> Self
+    where
+        F: Fn() -> Result<(), String> + Send + Sync + 'static,
+        G: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
+            task_lifecycle_probe: Arc::new(task_lifecycle_probe),
         }
     }
 }
@@ -58,18 +82,27 @@ impl HarnessDriver for SdkDirectDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        let status = if self.live_execution_enabled && scenario_id == "S-01" {
-            if (self.discovery_probe)().is_ok() {
-                "pass"
-            } else {
-                "fail"
-            }
-        } else {
-            "pass"
+        let status = match self.live_probe_for_scenario(scenario_id) {
+            Some(probe) if probe.is_ok() => "pass",
+            Some(_) => "fail",
+            None => "pass",
         };
         DriverExecutionResult {
             scenario_id,
             status,
+        }
+    }
+}
+
+impl SdkDirectDriver {
+    fn live_probe_for_scenario(&self, scenario_id: &'static str) -> Option<Result<(), String>> {
+        if !self.live_execution_enabled {
+            return None;
+        }
+        match scenario_id {
+            "S-01" => Some((self.discovery_probe)()),
+            "S-04" => Some((self.task_lifecycle_probe)()),
+            _ => None,
         }
     }
 }
@@ -118,11 +151,70 @@ fn run_live_s01_discovery_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let agent_name =
+        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
+    let create_task_payload = std::env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
+
+    let handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
+
+    let task_receipt = handle
+        .create_task(create_task_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s04 create-task failed: {error}"))?;
+    if task_receipt.task_id.trim().is_empty() {
+        return Err("sdk-direct live s04 create-task returned empty task_id".to_owned());
+    }
+
+    let fund_payload = format!(
+        "{{\"task_id\":\"{}\",\"amount\":{}}}",
+        task_receipt.task_id, DEFAULT_S04_ESCROW_AMOUNT
+    );
+    let escrow_receipt = handle
+        .fund_escrow(fund_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s04 fund-escrow failed: {error}"))?;
+    if escrow_receipt.escrow_id.trim().is_empty() {
+        return Err("sdk-direct live s04 fund-escrow returned empty escrow_id".to_owned());
+    }
+
+    let accept_receipt = handle
+        .accept_task(task_receipt.task_id.as_str())
+        .map_err(|error| format!("sdk-direct live s04 accept-task failed: {error}"))?;
+    if accept_receipt.state.trim().is_empty() {
+        return Err("sdk-direct live s04 accept-task returned empty state".to_owned());
+    }
+
+    let complete_receipt = handle
+        .complete_task(task_receipt.task_id.as_str())
+        .map_err(|error| format!("sdk-direct live s04 complete-task failed: {error}"))?;
+    if complete_receipt.state.trim().is_empty() {
+        return Err("sdk-direct live s04 complete-task returned empty state".to_owned());
+    }
+
+    let release_receipt = handle
+        .release_escrow(escrow_receipt.escrow_id.as_str())
+        .map_err(|error| format!("sdk-direct live s04 release-escrow failed: {error}"))?;
+    if release_receipt.state.trim().is_empty() {
+        return Err("sdk-direct live s04 release-escrow returned empty state".to_owned());
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
-        SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s04_task_lifecycle_probe, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -223,7 +315,26 @@ mod tests {
                 let error =
                     run_live_s01_discovery_probe().expect_err("invalid endpoint should fail");
                 assert!(
-                    error.contains("connect failed"),
+                    error.contains("service.endpoint") || error.contains("service endpoint"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s04_task_lifecycle_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("not-a-valid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+                ("KAMN_AGENT_NAME", Some("sdk-driver-test")),
+            ],
+            || {
+                let error =
+                    run_live_s04_task_lifecycle_probe().expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("service.endpoint") || error.contains("service endpoint"),
                     "probe error should reflect connection failure: {error}",
                 );
             },
@@ -241,6 +352,18 @@ mod tests {
         assert!(
             debug.contains("live_execution_enabled"),
             "debug output should include live toggle field: {debug}",
+        );
+    }
+
+    #[test]
+    fn spec_c01_live_s04_driver_path_fails_closed_when_task_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s04 task probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-04");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-04 should fail closed on probe error",
         );
     }
 }
