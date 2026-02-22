@@ -2,7 +2,7 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785
 - Active issue(s): None
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
@@ -47,3 +47,4 @@
 38. Close pre-merge workspace gate lifecycle by enforcing workflow+docs parity contracts and deterministic marker coverage. (Completed)
 39. Extend opt-in live S-04 task-lifecycle execution across SDK-direct, CLI-scripted, and MCP-agent harness drivers. (Completed)
 40. Extend opt-in live S-06 proof-verification execution across SDK-direct, CLI-scripted, and MCP-agent harness drivers. (Completed)
+41. Finalize R53 milestone closure markers and add fail-closed docs-contract guard for stale active/in-progress drift. (Completed)

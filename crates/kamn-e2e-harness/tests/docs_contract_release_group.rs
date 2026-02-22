@@ -230,6 +230,22 @@ mod r53_mode_execution_contract_docs_contract {
         .expect("r53 milestone index should exist");
         assert!(milestone_index.contains("#5626"));
     }
+
+    #[test]
+    fn spec_c03_r53_milestone_index_marks_milestone_closed() {
+        let root = repo_root();
+        let milestone_index = std::fs::read_to_string(
+            root.join("specs/milestones/r53-e2e-scenario-execution-activation/index.md"),
+        )
+        .expect("r53 milestone index should exist");
+        assert!(milestone_index.contains("Active issue(s): None"));
+        assert!(milestone_index.contains("Completed issue(s): #5620, #5622, #5624, #5626"));
+        assert!(
+            milestone_index.contains(
+                "4. Mode execution contract parity across sdk-direct/cli-scripted/mcp-* drivers. (Completed)"
+            )
+        );
+    }
 }
 
 mod r53_scenario_run_execution_docs_contract {
