@@ -110,10 +110,10 @@ fn functional_r50_spec_volume_remediation_markers_present() {
     assert!(DOC_R50.contains(
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=835"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=836"));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_ratio_max=9.3"));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=835"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=836"));
     assert!(DOC_R50.contains(
         "Spec-volume guardrail remediation contract active (R50.18) with 3 tranches at minimum 14 reductions each toward <=7.7 ratio."
     ));
@@ -224,9 +224,9 @@ fn functional_r52_post_publication_spec_volume_reduction_markers_present() {
     assert!(DOC_R52.contains(
         "r52_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1"
     ));
-    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_pre_count=849"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_pre_count=850"));
     assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_deleted_count=14"));
-    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_post_count=835"));
+    assert!(DOC_R52.contains("r52_review_spec_volume_reduction_tranche_post_count=836"));
     assert!(DOC_R52
         .contains("r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l"));
     assert!(DOC_R52.contains(
@@ -266,7 +266,7 @@ fn integration_r52_post_publication_spec_volume_reduction_markers_are_consistent
         deleted,
         "pre/post delta should equal deleted marker count"
     );
-    assert_eq!(post, 835, "tranche-1 post-count marker should remain fixed");
+    assert_eq!(post, 836, "tranche-1 post-count marker should remain fixed");
     assert_eq!(
         pre_command, post_command,
         "pre/post evidence commands should remain identical for direct count comparison"

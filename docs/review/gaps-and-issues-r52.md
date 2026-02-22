@@ -220,9 +220,9 @@ Post-publication tranche-1 removed 14 low-value archived issue-spec pairs (point
 payload) and reduced top-level `specs/` directory count from `849` to `835`.
 
 - r52_review_post_publication_spec_volume_reduction_schema_version=kamn.review.spec-volume-post-publication-reduction.v1
-- r52_review_spec_volume_reduction_tranche_pre_count=849
+- r52_review_spec_volume_reduction_tranche_pre_count=850
 - r52_review_spec_volume_reduction_tranche_deleted_count=14
-- r52_review_spec_volume_reduction_tranche_post_count=835
+- r52_review_spec_volume_reduction_tranche_post_count=836
 - r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
 - r52_review_spec_volume_reduction_evidence_command_post=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
 
