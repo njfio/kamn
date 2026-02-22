@@ -223,3 +223,104 @@ fn integration_r52_post_publication_priority_reconciliation_markers_are_consiste
         "historical high-priority spec-volume row should remain unchanged"
     );
 }
+
+#[test]
+fn functional_r52_post_publication_branch_hygiene_status_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_post_publication_branch_hygiene_status_reconciliation_schema_version"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.branch-hygiene-status-post-publication-reconciliation.v1"));
+    assert!(
+        REVIEW_MARKER_README.contains("r<release>_review_branch_hygiene_snapshot_status=<text>")
+    );
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_hygiene_snapshot_branch_count=<integer>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_hygiene_post_publication_pre_cleanup_count=<integer>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_branch_hygiene_post_publication_post_cleanup_count=<integer>"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_hygiene_post_publication_status=<text>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_hygiene_snapshot_rows_preserved=<true|false>"));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_branch_hygiene_status_reconciliation_schema_version=kamn.review.branch-hygiene-status-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC.contains("r52_review_branch_hygiene_snapshot_status=slightly_worsened"));
+    assert!(DOC.contains("r52_review_branch_hygiene_snapshot_branch_count=67"));
+    assert!(DOC.contains("r52_review_branch_hygiene_post_publication_pre_cleanup_count=61"));
+    assert!(DOC.contains("r52_review_branch_hygiene_post_publication_post_cleanup_count=61"));
+    assert!(
+        DOC.contains("r52_review_branch_hygiene_post_publication_status=improved_against_snapshot")
+    );
+    assert!(DOC.contains("r52_review_branch_hygiene_snapshot_rows_preserved=true"));
+}
+
+#[test]
+fn integration_r52_post_publication_branch_hygiene_status_reconciliation_markers_are_consistent() {
+    let schema = parse_marker_value(
+        "r52_review_post_publication_branch_hygiene_status_reconciliation_schema_version",
+    );
+    let snapshot_status = parse_marker_value("r52_review_branch_hygiene_snapshot_status");
+    let snapshot_branch_count =
+        parse_marker_usize("r52_review_branch_hygiene_snapshot_branch_count");
+    let post_pre_count =
+        parse_marker_usize("r52_review_branch_hygiene_post_publication_pre_cleanup_count");
+    let post_post_count =
+        parse_marker_usize("r52_review_branch_hygiene_post_publication_post_cleanup_count");
+    let post_status = parse_marker_value("r52_review_branch_hygiene_post_publication_status");
+    let snapshot_rows_preserved =
+        parse_marker_value("r52_review_branch_hygiene_snapshot_rows_preserved");
+
+    let cleanup_baseline =
+        parse_marker_usize("r52_review_branch_remote_head_count_baseline_snapshot");
+    let cleanup_pre = parse_marker_usize("r52_review_branch_remote_head_count_pre_cleanup");
+    let cleanup_post = parse_marker_usize("r52_review_branch_remote_head_count_post_cleanup");
+
+    assert_eq!(
+        schema, "kamn.review.branch-hygiene-status-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert_eq!(
+        snapshot_status, "slightly_worsened",
+        "snapshot status should remain fixed to baseline wording"
+    );
+    assert_eq!(
+        snapshot_branch_count, cleanup_baseline,
+        "status reconciliation snapshot count should match cleanup baseline marker"
+    );
+    assert_eq!(
+        post_pre_count, cleanup_pre,
+        "status reconciliation pre-cleanup count should match cleanup marker"
+    );
+    assert_eq!(
+        post_post_count, cleanup_post,
+        "status reconciliation post-cleanup count should match cleanup marker"
+    );
+    assert!(
+        post_post_count <= snapshot_branch_count,
+        "post-publication branch count should not exceed snapshot baseline count"
+    );
+    assert_eq!(
+        post_status, "improved_against_snapshot",
+        "post-publication status should remain improved_against_snapshot"
+    );
+    assert_eq!(
+        snapshot_rows_preserved, "true",
+        "snapshot rows preserved marker should remain true"
+    );
+
+    assert!(
+        DOC.contains("## 6. Branch Hygiene — SLIGHTLY WORSENED"),
+        "historical branch-hygiene heading should remain unchanged"
+    );
+    assert!(
+        DOC.contains(
+            "| **Medium** | Branches (67, +6) | Trending up | Prune merged branches | **Slightly worsened** |"
+        ),
+        "historical priority row for branches should remain unchanged"
+    );
+}

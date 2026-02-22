@@ -91,6 +91,29 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
 
+## Post-Publication Branch-Hygiene Status Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication branch-hygiene status reconciliation markers to
+capture current posture while preserving historical snapshot wording in headings and priority rows.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_branch_hygiene_status_reconciliation_schema_version=kamn.review.branch-hygiene-status-post-publication-reconciliation.v1`
+- `r<release>_review_branch_hygiene_snapshot_status=<text>`
+- `r<release>_review_branch_hygiene_snapshot_branch_count=<integer>`
+- `r<release>_review_branch_hygiene_post_publication_pre_cleanup_count=<integer>`
+- `r<release>_review_branch_hygiene_post_publication_post_cleanup_count=<integer>`
+- `r<release>_review_branch_hygiene_post_publication_status=<text>`
+- `r<release>_review_branch_hygiene_snapshot_rows_preserved=<true|false>`
+
+Contract invariants:
+
+- Status reconciliation snapshot/pre/post counts must align with branch cleanup reconciliation markers
+- `r<release>_review_branch_hygiene_post_publication_post_cleanup_count <= r<release>_review_branch_hygiene_snapshot_branch_count`
+- Baseline heading/priority row text remains unchanged; reconciliation markers are additive
+
+This schema is enforced by `crates/kamn-core/tests/review_r52_branch_hygiene_reconciliation_docs_contract.rs`.
+
 ## Post-Publication Priority Summary Reconciliation Contract (R52+)
 
 R52+ review artifacts may add post-publication priority-summary reconciliation markers to report

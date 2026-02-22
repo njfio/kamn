@@ -268,6 +268,19 @@ remote head inventory stayed stable at `61`, which is lower than the R52 baselin
 - r52_review_branch_cleanup_evidence_command_candidates=git branch -r --merged origin/main | rg '^origin/codex/issue-'
 - r52_review_branch_cleanup_evidence_command_post=git ls-remote --heads origin | wc -l
 
+### 6.3 Post-Publication Branch-Hygiene Status Reconciliation Markers (Issue #5756)
+
+Post-publication status reconciliation records current branch posture using existing cleanup evidence
+while preserving the historical baseline heading and priority-row text unchanged.
+
+- r52_review_post_publication_branch_hygiene_status_reconciliation_schema_version=kamn.review.branch-hygiene-status-post-publication-reconciliation.v1
+- r52_review_branch_hygiene_snapshot_status=slightly_worsened
+- r52_review_branch_hygiene_snapshot_branch_count=67
+- r52_review_branch_hygiene_post_publication_pre_cleanup_count=61
+- r52_review_branch_hygiene_post_publication_post_cleanup_count=61
+- r52_review_branch_hygiene_post_publication_status=improved_against_snapshot
+- r52_review_branch_hygiene_snapshot_rows_preserved=true
+
 ---
 
 ## 7. Architecture
