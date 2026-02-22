@@ -134,6 +134,53 @@ pub(super) fn render_service_api_endpoint_response(
             body: serialize_service_api_json(&payload),
         };
     }
+    if method == "POST" {
+        if let Some(task_id) = task_accept_path_id(path) {
+            let payload = ServiceApiTaskTransitionBody {
+                task_id: task_id.to_owned(),
+                state: "accepted".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+        if let Some(task_id) = task_complete_path_id(path) {
+            let payload = ServiceApiTaskTransitionBody {
+                task_id: task_id.to_owned(),
+                state: "completed".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+        if path == ROUTE_ESCROW_FUND {
+            let escrow_id = format!("escrow-local-{}", deterministic_body_tag(body.as_bytes()));
+            let payload = ServiceApiEscrowStatusBody {
+                escrow_id,
+                state: "funded".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+        if let Some(escrow_id) = escrow_release_path_id(path) {
+            let payload = ServiceApiEscrowStatusBody {
+                escrow_id: escrow_id.to_owned(),
+                state: "released".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+    }
     if method == "GET" {
         if let Some(message_id) = message_path_id(path) {
             let payload = ServiceApiMessageGetBody {
@@ -201,12 +248,16 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
     path == ROUTE_MESSAGES_SEND
         || path == ROUTE_CHANNELS_CREATE
         || path == ROUTE_TASKS_CREATE
+        || path == ROUTE_ESCROW_FUND
         || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
         || path == ROUTE_METRICS
         || message_path_id(path).is_some()
         || channel_messages_path_id(path).is_some()
         || task_path_id(path).is_some()
+        || task_accept_path_id(path).is_some()
+        || task_complete_path_id(path).is_some()
+        || escrow_release_path_id(path).is_some()
         || agent_path_id(path).is_some()
 }
 
@@ -235,6 +286,33 @@ pub(super) fn task_path_id(path: &str) -> Option<&str> {
         }
         Some(id)
     })
+}
+
+pub(super) fn task_accept_path_id(path: &str) -> Option<&str> {
+    let task_path = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
+    let task_id = task_path.strip_suffix(ROUTE_TASKS_ACCEPT_SUFFIX)?;
+    if task_id.is_empty() || task_id == "create" || task_id.contains('/') {
+        return None;
+    }
+    Some(task_id)
+}
+
+pub(super) fn task_complete_path_id(path: &str) -> Option<&str> {
+    let task_path = path.strip_prefix(ROUTE_TASKS_PREFIX)?;
+    let task_id = task_path.strip_suffix(ROUTE_TASKS_COMPLETE_SUFFIX)?;
+    if task_id.is_empty() || task_id == "create" || task_id.contains('/') {
+        return None;
+    }
+    Some(task_id)
+}
+
+pub(super) fn escrow_release_path_id(path: &str) -> Option<&str> {
+    let escrow_path = path.strip_prefix(ROUTE_ESCROW_PREFIX)?;
+    let escrow_id = escrow_path.strip_suffix(ROUTE_ESCROW_RELEASE_SUFFIX)?;
+    if escrow_id.is_empty() || escrow_id == "fund" || escrow_id.contains('/') {
+        return None;
+    }
+    Some(escrow_id)
 }
 
 pub(super) fn agent_path_id(path: &str) -> Option<&str> {

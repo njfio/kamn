@@ -229,6 +229,15 @@ pub struct ServiceTaskStatus {
     pub state: String,
 }
 
+/// Parsed response for escrow lifecycle routes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceEscrowStatus {
+    /// Escrow identifier.
+    pub escrow_id: String,
+    /// Current lifecycle state.
+    pub state: String,
+}
+
 /// Parsed response for `GET /v1/agents/{did}`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceAgentProfile {
@@ -388,6 +397,83 @@ impl ServiceApiClient {
         expect_status(response.status, 200)?;
         Ok(ServiceTaskStatus {
             task_id: json_string_field(response.body.as_str(), "task_id")?,
+            state: json_string_field(response.body.as_str(), "state")?,
+        })
+    }
+
+    /// Accepts one task through `POST /v1/tasks/{id}/accept`.
+    pub fn accept_task(
+        &self,
+        task_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, SdkError> {
+        if task_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "task_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/tasks/{task_id}/accept");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceTaskStatus {
+            task_id: json_string_field(response.body.as_str(), "task_id")?,
+            state: json_string_field(response.body.as_str(), "state")?,
+        })
+    }
+
+    /// Completes one task through `POST /v1/tasks/{id}/complete`.
+    pub fn complete_task(
+        &self,
+        task_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, SdkError> {
+        if task_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "task_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/tasks/{task_id}/complete");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceTaskStatus {
+            task_id: json_string_field(response.body.as_str(), "task_id")?,
+            state: json_string_field(response.body.as_str(), "state")?,
+        })
+    }
+
+    /// Funds escrow through `POST /v1/escrow/fund`.
+    pub fn fund_escrow(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, SdkError> {
+        let response = self.request("POST", "/v1/escrow/fund", payload, Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceEscrowStatus {
+            escrow_id: json_string_field(response.body.as_str(), "escrow_id")?,
+            state: json_string_field(response.body.as_str(), "state")?,
+        })
+    }
+
+    /// Releases escrow through `POST /v1/escrow/{id}/release`.
+    pub fn release_escrow(
+        &self,
+        escrow_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, SdkError> {
+        if escrow_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "escrow_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/escrow/{escrow_id}/release");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceEscrowStatus {
+            escrow_id: json_string_field(response.body.as_str(), "escrow_id")?,
             state: json_string_field(response.body.as_str(), "state")?,
         })
     }

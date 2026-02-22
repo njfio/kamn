@@ -10,3 +10,11 @@ row|GET|/v1/messages/msg-123|messages:read|allow
 row|GET|/v1/messages/msg-123|channels:read|deny
 row|GET|/v1/events/ws|events:read|allow
 row|GET|/v1/events/ws|agents:read|deny
+row|POST|/v1/tasks/task-123/accept|tasks:write|allow
+row|POST|/v1/tasks/task-123/accept|tasks:read|deny
+row|POST|/v1/tasks/task-123/complete|tasks:write|allow
+row|POST|/v1/tasks/task-123/complete|messages:write|deny
+row|POST|/v1/escrow/fund|escrow:write|allow
+row|POST|/v1/escrow/fund|tasks:write|deny
+row|POST|/v1/escrow/escrow-123/release|escrow:write|allow
+row|POST|/v1/escrow/escrow-123/release|channels:write|deny
