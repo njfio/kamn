@@ -138,3 +138,88 @@ fn integration_r52_post_publication_quality_gate_reconciliation_markers_are_cons
         "baseline snapshot line should remain unchanged"
     );
 }
+
+#[test]
+fn functional_r52_post_publication_priority_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_post_publication_priority_reconciliation_schema_version"));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.priority-summary-post-publication-reconciliation.v1"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_priority_critical_cli_compile_status_post_publication=<resolved|unresolved>"
+    ));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_priority_medium_activity_ratio_marker_status_post_publication=<resolved|unresolved>"
+    ));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_priority_high_spec_volume_guardrail_status_post_publication=<within_guardrail|breached>"
+    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_priority_summary_snapshot_preserved=<true|false>"));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_priority_reconciliation_schema_version=kamn.review.priority-summary-post-publication-reconciliation.v1"
+    ));
+    assert!(
+        DOC.contains("r52_review_priority_critical_cli_compile_status_post_publication=resolved")
+    );
+    assert!(DOC.contains(
+        "r52_review_priority_medium_activity_ratio_marker_status_post_publication=resolved"
+    ));
+    assert!(DOC.contains(
+        "r52_review_priority_high_spec_volume_guardrail_status_post_publication=within_guardrail"
+    ));
+    assert!(DOC.contains("r52_review_priority_summary_snapshot_preserved=true"));
+}
+
+#[test]
+fn integration_r52_post_publication_priority_reconciliation_markers_are_consistent() {
+    let schema =
+        parse_marker_value("r52_review_post_publication_priority_reconciliation_schema_version");
+    let critical_cli_status =
+        parse_marker_value("r52_review_priority_critical_cli_compile_status_post_publication");
+    let medium_activity_ratio_status = parse_marker_value(
+        "r52_review_priority_medium_activity_ratio_marker_status_post_publication",
+    );
+    let high_spec_volume_status = parse_marker_value(
+        "r52_review_priority_high_spec_volume_guardrail_status_post_publication",
+    );
+    let snapshot_preserved = parse_marker_value("r52_review_priority_summary_snapshot_preserved");
+
+    let quality_gate_cli_status =
+        parse_marker_value("r52_review_cli_compile_status_post_publication");
+    let quality_gate_activity_ratio_status =
+        parse_marker_value("r52_review_activity_ratio_marker_parse_status_post_publication");
+    let guardrail_status =
+        parse_marker_value("r52_review_spec_volume_guardrail_post_publication_status");
+
+    assert_eq!(
+        schema, "kamn.review.priority-summary-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert_eq!(
+        critical_cli_status, quality_gate_cli_status,
+        "priority critical CLI status should match quality-gate reconciliation status"
+    );
+    assert_eq!(
+        medium_activity_ratio_status, quality_gate_activity_ratio_status,
+        "priority medium activity-ratio marker status should match quality-gate reconciliation status"
+    );
+    assert_eq!(
+        high_spec_volume_status, guardrail_status,
+        "priority high spec-volume status should match guardrail reconciliation status"
+    );
+    assert_eq!(
+        snapshot_preserved, "true",
+        "priority summary snapshot-preservation marker should remain true"
+    );
+
+    assert!(
+        DOC.contains("| **Critical** | kamn-cli compilation error on main | `command_activation_contract.rs` 15 type errors | Fix test or dispatch return type | **NEW** |"),
+        "historical critical priority row should remain unchanged"
+    );
+    assert!(
+        DOC.contains("| **High** | Spec volume (845, 9.2:1) severely exceeds 7.7 guardrail | 845 dirs / 92 modules | Stop new specs until ratio improves | **WORSENED** |"),
+        "historical high-priority spec-volume row should remain unchanged"
+    );
+}

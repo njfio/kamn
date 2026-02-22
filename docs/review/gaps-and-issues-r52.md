@@ -305,6 +305,17 @@ No new modules for the third consecutive review. The portable-agent layer develo
 | Info | Ignored tests (14) | Due R54 | Periodic | Stable |
 | Info | kamn-cli untested due to compile error | 14 tests can't run | Blocked by Critical item | **NEW** |
 
+### 8.1 Post-Publication Priority Summary Reconciliation Markers (Issue #5753)
+
+Post-publication reconciliation captures resolved status for selected priority rows while preserving
+the historical baseline table rows above unchanged.
+
+- r52_review_post_publication_priority_reconciliation_schema_version=kamn.review.priority-summary-post-publication-reconciliation.v1
+- r52_review_priority_critical_cli_compile_status_post_publication=resolved
+- r52_review_priority_medium_activity_ratio_marker_status_post_publication=resolved
+- r52_review_priority_high_spec_volume_guardrail_status_post_publication=within_guardrail
+- r52_review_priority_summary_snapshot_preserved=true
+
 ---
 
 ## 9. Critical Assessment: First Capability Cycle Since R49
