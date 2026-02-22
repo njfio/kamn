@@ -181,6 +181,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo_fuzz_seed_budget_markers_csv=seed_budget_ci_smoke_max_seconds,seed_budget_local_heavy_max_seconds`
 - Deep fuzz execution remains local-heavy only and excluded from `ci-fast-gate`.
 
+## Portable-Agent Mutation Gate (R52 Slice)
+- Mutation gate objective for portable-agent activation slices:
+  - execute `cargo-mutants` against only diff-touched Rust code.
+- Deterministic setup command:
+  - `cargo install cargo-mutants --locked`
+- Deterministic in-diff preparation command:
+  - `git diff origin/main...HEAD > /tmp/r52-portable-agent.diff`
+- Bounded mutation-list gate command:
+  - `cargo mutants --in-diff /tmp/r52-portable-agent.diff --list`
+- Optional full mutation execution command (local-heavy):
+  - `cargo mutants --in-diff /tmp/r52-portable-agent.diff`
+- Fallback behavior when tooling is unavailable:
+  - record `mutation_gate_status=tool_unavailable` in PR evidence,
+  - include the install failure stderr,
+  - open a follow-up issue to restore mutation-gate execution before merge of the next slice.
+
 ## Invariant/Fuzz/Concurrency CI Smoke Boundary Contract
 - Bounded CI-smoke contract lane command:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
