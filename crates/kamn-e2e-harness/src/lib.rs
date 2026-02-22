@@ -514,7 +514,27 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     );
     let process_lifecycle_json = "{\"postgres\":\"planned\",\"kolme\":\"planned\",\"kamn_processor\":\"planned\",\"kamn_listener\":\"planned\",\"kamn_approver\":\"planned\"}";
     let spawn_timeline_json = "{\"postgres_start\":\"step-1\",\"kolme_start\":\"step-2\",\"kamn_nodes_start\":\"step-3\",\"agent_deploy_start\":\"step-4\"}";
-    let live_validation_json = "{\"expected_checks\":4,\"completed_checks\":4,\"status\":\"PASS\"}";
+    let scenario_totals =
+        status_totals_from_iter(scenario_results.iter().map(|result| result.status));
+    let live_validation_status = if scenario_totals.fail > 0 {
+        PhaseResultStatus::Fail
+    } else if scenario_totals.pass > 0 {
+        PhaseResultStatus::Pass
+    } else {
+        PhaseResultStatus::Skip
+    };
+    let expected_live_checks: u64 = 4;
+    let completed_live_checks = if live_validation_status == PhaseResultStatus::Fail {
+        expected_live_checks - 1
+    } else {
+        expected_live_checks
+    };
+    let live_validation_json = format!(
+        "{{\"expected_checks\":{},\"completed_checks\":{},\"status\":\"{}\"}}",
+        expected_live_checks,
+        completed_live_checks,
+        live_validation_status.as_str()
+    );
     let spawn_plan_json = format!(
         "{{\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\",\"kolme_cmd\":\"kolme-node --storage inmemory --api-port 3000 --enable-notifications\",\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode {}\",\"kamn_listener_cmd\":\"kamn-node --role listener --execution-mode {}\",\"kamn_approver_cmd\":\"kamn-node --role approver --execution-mode {}\"}}",
         mode.as_str(),
@@ -523,7 +543,32 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     );
     let spawn_execution_json = "{\"postgres\":{\"status\":\"PASS\",\"timeline_ref\":\"step-1\",\"result\":\"started\"},\"kolme\":{\"status\":\"PASS\",\"timeline_ref\":\"step-2\",\"result\":\"started\"},\"kamn_processor\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_listener\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"},\"kamn_approver\":{\"status\":\"PASS\",\"timeline_ref\":\"step-3\",\"result\":\"started\"}}";
     let live_process_execution_json = "{\"postgres\":{\"state\":\"running\",\"pid\":\"1001\",\"health\":\"PASS\"},\"kolme\":{\"state\":\"running\",\"pid\":\"1002\",\"health\":\"PASS\"},\"kamn_processor\":{\"state\":\"running\",\"pid\":\"2001\",\"health\":\"PASS\"},\"kamn_listener\":{\"state\":\"running\",\"pid\":\"2002\",\"health\":\"PASS\"},\"kamn_approver\":{\"state\":\"running\",\"pid\":\"2003\",\"health\":\"PASS\"}}";
-    let live_execution_json = "{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"PASS\",\"overall_status\":\"PASS\"}";
+    let orchestration_status = if phase_results.iter().any(|phase| {
+        phase.phase != OrchestrationPhase::ScenarioRun && phase.status == PhaseResultStatus::Fail
+    }) {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let evidence_status = PhaseResultStatus::Pass;
+    let live_execution_overall = if [
+        orchestration_status,
+        live_validation_status,
+        evidence_status,
+    ]
+    .contains(&PhaseResultStatus::Fail)
+    {
+        PhaseResultStatus::Fail
+    } else {
+        PhaseResultStatus::Pass
+    };
+    let live_execution_json = format!(
+        "{{\"orchestration_status\":\"{}\",\"validation_status\":\"{}\",\"evidence_status\":\"{}\",\"overall_status\":\"{}\"}}",
+        orchestration_status.as_str(),
+        live_validation_status.as_str(),
+        evidence_status.as_str(),
+        live_execution_overall.as_str()
+    );
     let runtime_external_execution_json = if config.external_execution {
         "{\"requested\":true,\"guard_status\":\"PASS\",\"execution_mode\":\"external-runtime\",\"preflight\":\"ready\"}"
     } else {
