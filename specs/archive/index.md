@@ -3,11 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 239
+- archived_issue_count: 238
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3883 | Subtask: add policy checker and CI exclusion tests for native cutover lane | 2026-02-18 | `specs/archive/3883` | `specs/3883/ARCHIVED.md` |
 | 3888 | Subtask: add convergence artifact schema and reason-taxonomy policy checker | 2026-02-18 | `specs/archive/3888` | `specs/3888/ARCHIVED.md` |
 | 3889 | Task: enforce activation go-no-go budget and documentation parity contracts | 2026-02-18 | `specs/archive/3889` | `specs/3889/ARCHIVED.md` |
 | 3891 | Subtask: add activation readiness and budget marker checks to go-no-go policy | 2026-02-18 | `specs/archive/3891` | `specs/3891/ARCHIVED.md` |
