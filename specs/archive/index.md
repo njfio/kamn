@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 235
+- archived_issue_count: 234
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -124,7 +124,6 @@
 | 4477 | `Task: enforce tls evidence bundle completeness-freshness convergence in release gate checks` | 2026-02-18 | `specs/archive/4477` | `specs/4477/ARCHIVED.md` |
 | 4478 | `Task: implement anti-flake classifier and deterministic rerun-policy checker contracts` | 2026-02-18 | `specs/archive/4478` | `specs/4478/ARCHIVED.md` |
 | 4479 | `Task: enforce merge-gate reliability evidence convergence and CI smoke/local-heavy boundary governance` | 2026-02-18 | `specs/archive/4479` | `specs/4479/ARCHIVED.md` |
-| 4693 | `Task: decompose p2p transport and block pipeline monoliths with deterministic module contracts` | 2026-02-18 | `specs/archive/4693` | `specs/4693/ARCHIVED.md` |
 | 4808 | Story: collapse test/matrix/json shell boilerplate into reusable harnesses | 2026-02-18 | `specs/archive/4808` | `specs/4808/ARCHIVED.md` |
 | 4814 | Task: deploy shared test harness and JSON helper utilities across shell contracts | 2026-02-18 | `specs/archive/4814` | `specs/4814/ARCHIVED.md` |
 | 4819 | Subtask: implement scripts/lib/common.sh primitives and complete pilot migration wave | 2026-02-18 | `specs/archive/4819` | `specs/4819/ARCHIVED.md` |
