@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
 use kamn_e2e_harness::{
-    all_orchestration_phases, execute_run_contract, execute_verify_contract, parse_command_args,
-    parse_scenario_csv, HarnessCommand, RunCommandConfig, VerifyCommandConfig,
+    all_orchestration_phases, all_phase_result_statuses, execute_run_contract,
+    execute_verify_contract, parse_command_args, parse_scenario_csv, HarnessCommand,
+    RunCommandConfig, VerifyCommandConfig,
 };
 
 fn temp_path(name: &str) -> PathBuf {
@@ -153,4 +154,40 @@ fn spec_c09_run_output_contains_phase_progression_markers() {
     assert!(output.contains("\"SCENARIO_RUN\""));
     assert!(output.contains("\"EVIDENCE\""));
     assert!(output.contains("\"TEARDOWN\"]"));
+}
+
+#[test]
+fn spec_c10_phase_result_status_inventory_is_canonical() {
+    let statuses = all_phase_result_statuses();
+    let labels: Vec<&str> = statuses.iter().map(|status| status.as_str()).collect();
+    assert_eq!(labels, vec!["PASS", "FAIL", "SKIP"]);
+}
+
+#[test]
+fn spec_c11_run_output_contains_phase_results_required_fields() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"phase_results\":[{"));
+    assert!(output.contains("\"phase\":\"INFRA_UP\""));
+    assert!(output.contains("\"status\":\"PASS\""));
+    assert!(output.contains("\"started_at\""));
+    assert!(output.contains("\"completed_at\""));
+    assert!(output.contains("\"details\""));
+}
+
+#[test]
+fn spec_c12_run_output_contains_infra_and_agent_deploy_placeholders() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"phase\":\"INFRA_UP\""));
+    assert!(output.contains("\"phase\":\"AGENT_DEPLOY\""));
+    assert!(output.contains("deterministic placeholder"));
 }

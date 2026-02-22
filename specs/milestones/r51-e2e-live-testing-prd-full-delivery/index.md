@@ -2,8 +2,8 @@
 
 - Milestone: `R51 E2E Live Testing PRD Full Delivery`
 - Epic: #5557
-- Completed issue(s): #5558, #5560, #5562, #5564, #5566
-- Active issue(s): #5568
+- Completed issue(s): #5558, #5560, #5562, #5564, #5566, #5568
+- Active issue(s): #5570
 - Scope: deliver `docs/prd/e2e-live-testing-prd.md` architecture and scenario contracts through spec-driven, issue-driven, TDD implementation slices.
 
 ## Delivery Slices
@@ -12,5 +12,6 @@
 3. Phase-3 harness scaffold (`kamn-e2e-harness`) with mode/scenario/evidence contract baselines. (Completed)
 4. Phase-4a scenario matrix + evidence verifier contract completion. (Completed)
 5. Phase-4b harness run/verify command contracts + scenario selection. (Completed)
-6. Phase-4c orchestration phase-state contracts in run output. (Active)
-7. Phase-4d live integration + CI hardening. (Pending)
+6. Phase-4c orchestration phase-state contracts in run output. (Completed)
+7. Phase-4d phase-result contract scaffolds in run output. (Active)
+8. Phase-4e live integration + CI hardening. (Pending)
