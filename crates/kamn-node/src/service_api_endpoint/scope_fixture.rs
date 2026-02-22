@@ -24,6 +24,9 @@ pub(super) struct ServiceApiScopePolicyFixtureProjection {
     pub(super) unique_allow_deny_overlap_scope_count: usize,
     pub(super) unique_allow_only_scope_count: usize,
     pub(super) unique_deny_only_scope_count: usize,
+    pub(super) unique_allow_deny_overlap_method_count: usize,
+    pub(super) unique_allow_only_method_count: usize,
+    pub(super) unique_deny_only_method_count: usize,
 }
 
 pub(super) fn parse_service_api_scope_policy_fixture_projection(
@@ -49,6 +52,9 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_allow_deny_overlap_scope_count: 0,
         unique_allow_only_scope_count: 0,
         unique_deny_only_scope_count: 0,
+        unique_allow_deny_overlap_method_count: 0,
+        unique_allow_only_method_count: 0,
+        unique_deny_only_method_count: 0,
     };
     let mut reason_codes_csv = String::new();
     let mut unique_routes = BTreeSet::new();
@@ -59,6 +65,8 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
     let mut unique_deny_routes = BTreeSet::new();
     let mut unique_allow_scopes = BTreeSet::new();
     let mut unique_deny_scopes = BTreeSet::new();
+    let mut unique_allow_methods = BTreeSet::new();
+    let mut unique_deny_methods = BTreeSet::new();
     for line in fixture.lines().map(str::trim) {
         if line.is_empty() || line.starts_with('#') {
             continue;
@@ -89,10 +97,12 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
             projection.allow_row_count += 1;
             unique_allow_routes.insert((method.to_owned(), path.to_owned()));
             unique_allow_scopes.insert(scope.to_owned());
+            unique_allow_methods.insert(method.to_owned());
         } else if expected == "deny" {
             projection.deny_row_count += 1;
             unique_deny_routes.insert((method.to_owned(), path.to_owned()));
             unique_deny_scopes.insert(scope.to_owned());
+            unique_deny_methods.insert(method.to_owned());
         }
         unique_routes.insert((method.to_owned(), path.to_owned()));
         unique_scopes.insert(scope.to_owned());
@@ -135,5 +145,14 @@ pub(super) fn parse_service_api_scope_policy_fixture_projection(
         unique_allow_scopes.difference(&unique_deny_scopes).count();
     projection.unique_deny_only_scope_count =
         unique_deny_scopes.difference(&unique_allow_scopes).count();
+    projection.unique_allow_deny_overlap_method_count = unique_allow_methods
+        .intersection(&unique_deny_methods)
+        .count();
+    projection.unique_allow_only_method_count = unique_allow_methods
+        .difference(&unique_deny_methods)
+        .count();
+    projection.unique_deny_only_method_count = unique_deny_methods
+        .difference(&unique_allow_methods)
+        .count();
     projection
 }
