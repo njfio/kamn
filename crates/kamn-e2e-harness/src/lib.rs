@@ -359,7 +359,8 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     let mode = ExecutionMode::parse(config.mode.as_str())?;
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
     let phases = all_orchestration_phases();
-    let phase_results = build_phase_results(phases.as_slice());
+    let fail_path_marker = config.evidence_dir.contains("fail-path");
+    let phase_results = build_phase_results(phases.as_slice(), mode, fail_path_marker);
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -410,47 +411,73 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     ))
 }
 
-fn build_phase_results(phases: &[OrchestrationPhase]) -> Vec<OrchestrationPhaseResult> {
+fn build_phase_results(
+    phases: &[OrchestrationPhase],
+    mode: ExecutionMode,
+    fail_path_marker: bool,
+) -> Vec<OrchestrationPhaseResult> {
     let started_at = "1970-01-01T00:00:00Z";
     let completed_at = "1970-01-01T00:00:01Z";
     phases
         .iter()
         .map(|phase| {
-            let (status, details) = match phase {
-                OrchestrationPhase::InfraUp => (
-                    PhaseResultStatus::Pass,
-                    "deterministic placeholder for infra startup",
-                ),
-                OrchestrationPhase::AgentDeploy => (
-                    PhaseResultStatus::Pass,
-                    "deterministic placeholder for agent deploy",
-                ),
-                OrchestrationPhase::ScenarioRun => (
-                    PhaseResultStatus::Skip,
-                    "deterministic placeholder for scenario execution",
-                ),
-                OrchestrationPhase::Evidence => (
-                    PhaseResultStatus::Skip,
-                    "deterministic placeholder for evidence finalize",
-                ),
-                OrchestrationPhase::Teardown => (
-                    PhaseResultStatus::Skip,
-                    "deterministic placeholder for teardown",
-                ),
-            };
+            let steps = phase_step_records(*phase, mode, fail_path_marker);
+            let status = phase_status_for_steps(*phase, steps.as_slice());
+            let details = phase_details(*phase, status);
             OrchestrationPhaseResult {
                 phase: *phase,
                 status,
                 started_at: started_at.to_owned(),
                 completed_at: completed_at.to_owned(),
                 details: details.to_owned(),
-                steps: phase_step_records(*phase),
+                steps,
             }
         })
         .collect()
 }
 
-fn phase_step_records(phase: OrchestrationPhase) -> Vec<OrchestrationStepRecord> {
+fn phase_status_for_steps(
+    phase: OrchestrationPhase,
+    steps: &[OrchestrationStepRecord],
+) -> PhaseResultStatus {
+    if steps
+        .iter()
+        .any(|step| step.status == PhaseResultStatus::Fail)
+    {
+        return PhaseResultStatus::Fail;
+    }
+    if steps
+        .iter()
+        .all(|step| step.status == PhaseResultStatus::Skip)
+    {
+        return PhaseResultStatus::Skip;
+    }
+    match phase {
+        OrchestrationPhase::ScenarioRun
+        | OrchestrationPhase::Evidence
+        | OrchestrationPhase::Teardown => PhaseResultStatus::Skip,
+        OrchestrationPhase::InfraUp | OrchestrationPhase::AgentDeploy => PhaseResultStatus::Pass,
+    }
+}
+
+fn phase_details(phase: OrchestrationPhase, status: PhaseResultStatus) -> &'static str {
+    match (phase, status) {
+        (OrchestrationPhase::InfraUp, PhaseResultStatus::Fail) => {
+            "deterministic fail-path marker for infra startup"
+        }
+        (OrchestrationPhase::InfraUp, _) => "deterministic placeholder for infra startup",
+        (OrchestrationPhase::AgentDeploy, _) => "deterministic placeholder for agent deploy",
+        (OrchestrationPhase::ScenarioRun, _) => "deterministic placeholder for scenario execution",
+        (OrchestrationPhase::Evidence, _) => "deterministic placeholder for evidence finalize",
+        (OrchestrationPhase::Teardown, _) => "deterministic placeholder for teardown",
+    }
+}
+
+fn phase_step_records(
+    phase: OrchestrationPhase,
+    mode: ExecutionMode,
+    fail_path_marker: bool,
+) -> Vec<OrchestrationStepRecord> {
     let pass = PhaseResultStatus::Pass;
     match phase {
         OrchestrationPhase::InfraUp => vec![
@@ -496,8 +523,16 @@ fn phase_step_records(phase: OrchestrationPhase) -> Vec<OrchestrationStepRecord>
             },
             OrchestrationStepRecord {
                 step: "Verify KAMN Service API health (/healthz)".to_owned(),
-                status: pass,
-                detail: "deterministic placeholder: kamn health verified".to_owned(),
+                status: if fail_path_marker {
+                    PhaseResultStatus::Fail
+                } else {
+                    pass
+                },
+                detail: if fail_path_marker {
+                    "deterministic fail-path marker: kamn health check failed".to_owned()
+                } else {
+                    "deterministic placeholder: kamn health verified".to_owned()
+                },
             },
         ],
         OrchestrationPhase::AgentDeploy => vec![
@@ -518,13 +553,30 @@ fn phase_step_records(phase: OrchestrationPhase) -> Vec<OrchestrationStepRecord>
             },
             OrchestrationStepRecord {
                 step: "[MCP modes] Spawn kamn-mcp-server per agent with identity".to_owned(),
-                status: pass,
-                detail: "deterministic placeholder: mcp servers spawned".to_owned(),
+                status: if is_mcp_mode(mode) {
+                    pass
+                } else {
+                    PhaseResultStatus::Skip
+                },
+                detail: if is_mcp_mode(mode) {
+                    "deterministic placeholder: mcp servers spawned".to_owned()
+                } else {
+                    "deterministic placeholder: mcp server spawn skipped for non-mcp mode"
+                        .to_owned()
+                },
             },
             OrchestrationStepRecord {
                 step: "[MCP modes] Verify MCP server health".to_owned(),
-                status: pass,
-                detail: "deterministic placeholder: mcp health verified".to_owned(),
+                status: if is_mcp_mode(mode) {
+                    pass
+                } else {
+                    PhaseResultStatus::Skip
+                },
+                detail: if is_mcp_mode(mode) {
+                    "deterministic placeholder: mcp health verified".to_owned()
+                } else {
+                    "deterministic placeholder: mcp health skipped for non-mcp mode".to_owned()
+                },
             },
             OrchestrationStepRecord {
                 step: "Record infrastructure evidence".to_owned(),
@@ -548,6 +600,10 @@ fn phase_step_records(phase: OrchestrationPhase) -> Vec<OrchestrationStepRecord>
             detail: "deterministic placeholder: teardown skipped".to_owned(),
         }],
     }
+}
+
+fn is_mcp_mode(mode: ExecutionMode) -> bool {
+    matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny)
 }
 
 fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>, String> {
