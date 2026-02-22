@@ -525,3 +525,100 @@ fn regression_r54_plus_review_docs_enforce_post_publication_moratorium() {
         }
     }
 }
+
+#[test]
+fn regression_r54_plus_review_docs_enforce_governance_remediation_budget_policy() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("governance-remediation-budget.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "governance remediation budget policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+
+    assert_eq!(
+        parse_marker_value(
+            &policy,
+            "review_governance_remediation_budget_policy_schema_version"
+        ),
+        "kamn.review.governance-remediation-budget-policy.v1"
+    );
+    let effective_release_min = parse_marker_usize(
+        &policy,
+        "review_governance_remediation_budget_effective_release_min",
+    ) as u32;
+    let expected_marker_schema = parse_marker_value(
+        &policy,
+        "review_governance_remediation_budget_marker_schema_version",
+    );
+    let policy_budget_max = parse_marker_f64(
+        &policy,
+        "review_governance_remediation_budget_max_commits_per_item",
+    );
+    let status_within = parse_marker_value(
+        &policy,
+        "review_governance_remediation_budget_status_within",
+    );
+    let status_over =
+        parse_marker_value(&policy, "review_governance_remediation_budget_status_over");
+
+    for review_doc_path in tracked_review_docs() {
+        let relative = review_doc_path
+            .strip_prefix(repo_root())
+            .expect("review doc should be under repo root")
+            .to_string_lossy()
+            .to_string();
+        let Some(release) = parse_release_from_review_path(&relative) else {
+            continue;
+        };
+        if release < effective_release_min {
+            continue;
+        }
+
+        let doc = fs::read_to_string(&review_doc_path)
+            .unwrap_or_else(|_| panic!("review doc should be readable: {}", relative));
+        let markers = parse_marker_lines(&doc);
+        let key = |suffix: &str| format!("r{release}_review_governance_remediation_{suffix}");
+
+        let marker_schema = parse_marker_value(&markers, &key("budget_schema_version"));
+        assert_eq!(marker_schema, expected_marker_schema);
+
+        let item_count = parse_marker_usize(&markers, &key("item_count"));
+        let commit_count = parse_marker_usize(&markers, &key("commit_count"));
+        let commits_per_item = parse_marker_f64(&markers, &key("commits_per_item"));
+        let budget_max = parse_marker_f64(&markers, &key("budget_max_commits_per_item"));
+        let budget_status = parse_marker_value(&markers, &key("budget_status"));
+
+        assert!(
+            (budget_max - policy_budget_max).abs() <= 0.001,
+            "policy budget max mismatch for {}",
+            relative
+        );
+
+        let computed_commits_per_item = if item_count == 0 {
+            0.0
+        } else {
+            commit_count as f64 / item_count as f64
+        };
+        assert!(
+            (computed_commits_per_item - commits_per_item).abs() <= 0.01,
+            "commits-per-item marker mismatch for {}",
+            relative
+        );
+
+        let expected_status = if commits_per_item <= policy_budget_max + 0.001 {
+            status_within
+        } else {
+            status_over
+        };
+        assert_eq!(
+            budget_status, expected_status,
+            "budget status mismatch for {}",
+            relative
+        );
+    }
+}
