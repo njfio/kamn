@@ -1,6 +1,6 @@
 # Issue #5541 Spec - Service API Scope-Policy Fixture Allow/Deny Overlap Route Coverage Metrics Exposure
 
-- Status: Reviewed (agent-authored; human review requested in PR)
+- Status: Implemented
 - Issue: #5541
 - Parent: #3812
 - Milestone: R50.36 Service API scope-policy fixture allow-deny overlap route coverage metrics exposure
