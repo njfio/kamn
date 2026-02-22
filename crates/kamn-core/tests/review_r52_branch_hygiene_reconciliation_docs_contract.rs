@@ -1,18 +1,22 @@
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
-fn parse_marker_usize(marker_key: &str) -> usize {
+fn parse_marker_value(marker_key: &str) -> String {
     let needle = format!("{marker_key}=");
     let line = DOC
         .lines()
         .find(|line| line.contains(needle.as_str()))
         .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
+    line.split_once(needle.as_str())
         .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
         .1
         .trim_matches('`')
-        .trim();
+        .trim()
+        .to_string()
+}
+
+fn parse_marker_usize(marker_key: &str) -> usize {
+    let value = parse_marker_value(marker_key);
     value
         .parse::<usize>()
         .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
@@ -58,5 +62,79 @@ fn integration_r52_branch_hygiene_reconciliation_counts_are_consistent() {
     assert!(
         post <= baseline,
         "post-cleanup count should not exceed R52 baseline snapshot"
+    );
+}
+
+#[test]
+fn functional_r52_post_publication_quality_gate_reconciliation_markers_present() {
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_post_publication_quality_gate_reconciliation_schema_version"));
+    assert!(REVIEW_MARKER_README
+        .contains("kamn.review.quality-gate-post-publication-reconciliation.v1"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_workspace_quality_gate_status_post_publication=<pass|fail>"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_cli_compile_status_post_publication=<resolved|unresolved>"));
+    assert!(REVIEW_MARKER_README.contains(
+        "r<release>_review_activity_ratio_marker_parse_status_post_publication=<resolved|unresolved>"
+    ));
+
+    assert!(DOC.contains(
+        "r52_review_post_publication_quality_gate_reconciliation_schema_version=kamn.review.quality-gate-post-publication-reconciliation.v1"
+    ));
+    assert!(DOC.contains("r52_review_workspace_quality_gate_status_post_publication=pass"));
+    assert!(DOC.contains("r52_review_cli_compile_status_post_publication=resolved"));
+    assert!(DOC.contains("r52_review_activity_ratio_marker_parse_status_post_publication=resolved"));
+}
+
+#[test]
+fn integration_r52_post_publication_quality_gate_reconciliation_markers_are_consistent() {
+    let schema = parse_marker_value(
+        "r52_review_post_publication_quality_gate_reconciliation_schema_version",
+    );
+    let workspace_gate_status =
+        parse_marker_value("r52_review_workspace_quality_gate_status_post_publication");
+    let cli_compile_status = parse_marker_value("r52_review_cli_compile_status_post_publication");
+    let activity_ratio_parse_status =
+        parse_marker_value("r52_review_activity_ratio_marker_parse_status_post_publication");
+    let workspace_gate_command =
+        parse_marker_value("r52_review_workspace_quality_gate_command_post_publication");
+    let activity_ratio_command =
+        parse_marker_value("r52_review_activity_ratio_marker_parse_command_post_publication");
+
+    assert_eq!(
+        schema, "kamn.review.quality-gate-post-publication-reconciliation.v1",
+        "schema version should remain fixed"
+    );
+    assert_eq!(
+        workspace_gate_status, "pass",
+        "workspace quality gate must remain resolved as pass"
+    );
+    assert_eq!(
+        cli_compile_status, "resolved",
+        "CLI compile error post-publication status must remain resolved"
+    );
+    assert_eq!(
+        activity_ratio_parse_status, "resolved",
+        "activity-ratio marker parser status must remain resolved"
+    );
+    assert_eq!(
+        workspace_gate_command, "cargo test --workspace --locked --all-features --no-fail-fast",
+        "workspace quality-gate evidence command should be deterministic"
+    );
+    assert_eq!(
+        activity_ratio_command,
+        "cargo test -p kamn-core --test release_review_activity_ratio_docs_contract",
+        "activity-ratio evidence command should be deterministic"
+    );
+    assert!(
+        DOC.contains("**As of:** R52 review, commit `8e0871cc` (2026-02-22)"),
+        "as-of snapshot baseline should remain unchanged"
+    );
+    assert!(
+        DOC.contains(
+            "**Baseline snapshot:** commit `8e0871cc` | **Rust LOC:** 198,094 | **Tests:** 3,160 passed, 2 failed, 10 ignored (excl kamn-cli — see Section 1.1) | **Shell LOC:** 141,965"
+        ),
+        "baseline snapshot line should remain unchanged"
     );
 }

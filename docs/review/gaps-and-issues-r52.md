@@ -67,6 +67,25 @@ The kamn-e2e-harness consolidation (#5690) merged 39 individual doc-contract tes
 
 Tests: 3,160 passed (R52) vs 3,616 passed (R51) = -456. The drop is attributable to the doc-contract consolidation in kamn-e2e-harness: 39 test files with multiple assertions each were merged into 2 files, eliminating redundant test functions. This is healthy consolidation, not capability regression.
 
+### 1.6 Post-Publication Quality-Gate Reconciliation (Issue #5711)
+
+Post-publication quality-gate reconciliation captures the now-resolved status of the critical
+R52 as-of snapshot failures while preserving the historical snapshot lines above unchanged.
+
+Post-publication verification evidence:
+
+- `cargo test --workspace --locked --all-features --no-fail-fast` -> pass
+- `cargo test -p kamn-core --test release_review_activity_ratio_docs_contract` -> pass
+
+Policy markers:
+
+- r52_review_post_publication_quality_gate_reconciliation_schema_version=kamn.review.quality-gate-post-publication-reconciliation.v1
+- r52_review_workspace_quality_gate_status_post_publication=pass
+- r52_review_cli_compile_status_post_publication=resolved
+- r52_review_activity_ratio_marker_parse_status_post_publication=resolved
+- r52_review_workspace_quality_gate_command_post_publication=cargo test --workspace --locked --all-features --no-fail-fast
+- r52_review_activity_ratio_marker_parse_command_post_publication=cargo test -p kamn-core --test release_review_activity_ratio_docs_contract
+
 ---
 
 ## 2. Portable Agent Layer — FIRST REAL CAPABILITY
