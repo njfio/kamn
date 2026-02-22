@@ -3,24 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 275
+- archived_issue_count: 261
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3839 | Subtask: add module-boundary ownership markers to runtime architecture docs | 2026-02-18 | `specs/archive/3839` | `specs/3839/ARCHIVED.md` |
-| 3840 | Subtask: add docs-contract tests for runtime module ownership marker parity | 2026-02-18 | `specs/archive/3840` | `specs/3840/ARCHIVED.md` |
-| 3841 | Task: enforce runtime.rs line-count trend budget policy and threshold telemetry | 2026-02-18 | `specs/archive/3841` | `specs/3841/ARCHIVED.md` |
-| 3842 | Subtask: implement runtime.rs size-threshold checker with deterministic fail codes | 2026-02-18 | `specs/archive/3842` | `specs/3842/ARCHIVED.md` |
-| 3843 | Subtask: add baseline fixture refresh policy tests for runtime size trend governance | 2026-02-18 | `specs/archive/3843` | `specs/3843/ARCHIVED.md` |
-| 3844 | Story: validate live libp2p+Kolme convergence and finality under local-heavy triadic topology | 2026-02-18 | `specs/archive/3844` | `specs/3844/ARCHIVED.md` |
-| 3845 | Task: implement triadic local topology orchestrator and convergence/finality live lane | 2026-02-18 | `specs/archive/3845` | `specs/3845/ARCHIVED.md` |
-| 3846 | Subtask: add three-node orchestration harness with deterministic churn and recovery drills | 2026-02-18 | `specs/archive/3846` | `specs/3846/ARCHIVED.md` |
-| 3847 | Subtask: define combined live-proof artifact schema for convergence and finality checkpoints | 2026-02-18 | `specs/archive/3847` | `specs/3847/ARCHIVED.md` |
-| 3848 | Task: enforce signature realism and managed-signer parity in live validation matrix | 2026-02-18 | `specs/archive/3848` | `specs/3848/ARCHIVED.md` |
-| 3849 | Subtask: add real secp256k1 signer profile matrix checks for managed and failover paths | 2026-02-18 | `specs/archive/3849` | `specs/3849/ARCHIVED.md` |
-| 3850 | Subtask: add signature parity policy checker and reason-taxonomy drift contracts | 2026-02-18 | `specs/archive/3850` | `specs/3850/ARCHIVED.md` |
-| 3851 | Story: unify governance budgets and automate release evidence closure for R27 | 2026-02-18 | `specs/archive/3851` | `specs/3851/ARCHIVED.md` |
-| 3852 | Task: implement unified governance budget report across script, harness, and ignored-test surfaces | 2026-02-18 | `specs/archive/3852` | `specs/3852/ARCHIVED.md` |
 | 3853 | Subtask: add combined governance budget report generator and schema contract | 2026-02-18 | `specs/archive/3853` | `specs/3853/ARCHIVED.md` |
 | 3854 | Subtask: enforce threshold policy with deterministic fail codes across budget surfaces | 2026-02-18 | `specs/archive/3854` | `specs/3854/ARCHIVED.md` |
 | 3855 | Task: automate live-validation release evidence bundle and milestone closure summary | 2026-02-18 | `specs/archive/3855` | `specs/3855/ARCHIVED.md` |
