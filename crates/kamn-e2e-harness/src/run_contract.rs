@@ -494,7 +494,9 @@ fn execute_selected_scenarios(
 fn driver_for_mode(mode: ExecutionMode) -> Result<Box<dyn drivers::HarnessDriver>, String> {
     match mode {
         ExecutionMode::SdkDirect => Ok(Box::new(drivers::sdk_direct::SdkDirectDriver::from_env())),
-        ExecutionMode::CliScripted => Ok(Box::new(drivers::cli_scripted::CliScriptedDriver)),
+        ExecutionMode::CliScripted => Ok(Box::new(
+            drivers::cli_scripted::CliScriptedDriver::from_env(),
+        )),
         ExecutionMode::McpTau | ExecutionMode::McpAny => {
             Ok(Box::new(drivers::mcp_agent::McpAgentDriver::new(mode)?))
         }
