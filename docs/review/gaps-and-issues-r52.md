@@ -226,6 +226,20 @@ archive payload) and reduced top-level `specs/` directory count from `707` to `6
 - r52_review_spec_volume_reduction_evidence_command_pre=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
 - r52_review_spec_volume_reduction_evidence_command_post=find specs -mindepth 1 -maxdepth 1 -type d | wc -l
 
+### 5.6 Post-Publication Spec-Volume Guardrail Reconciliation Markers (Issue #5750)
+
+Post-publication reconciliation records current guardrail posture after remediation while keeping
+the R52 snapshot baseline lines in sections 5.1 and 5.4 unchanged.
+
+- r52_review_post_publication_spec_volume_guardrail_reconciliation_schema_version=kamn.review.spec-volume-guardrail-post-publication-reconciliation.v1
+- r52_review_spec_volume_guardrail_snapshot_spec_dir_count=845
+- r52_review_spec_volume_guardrail_snapshot_module_count=92
+- r52_review_spec_volume_guardrail_post_publication_spec_dir_count=693
+- r52_review_spec_volume_guardrail_post_publication_module_count=92
+- r52_review_spec_volume_guardrail_post_publication_ratio=7.5
+- r52_review_spec_volume_guardrail_target_ratio_max=7.7
+- r52_review_spec_volume_guardrail_post_publication_status=within_guardrail
+
 ---
 
 ## 6. Branch Hygiene — SLIGHTLY WORSENED

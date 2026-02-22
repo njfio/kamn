@@ -135,6 +135,31 @@ Contract invariants:
 
 This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
 
+## Post-Publication Spec-Volume Guardrail Reconciliation Contract (R52+)
+
+R52+ review artifacts may add post-publication guardrail reconciliation markers to document that
+spec-volume remediation moved current state back within guardrail bounds, without rewriting the
+historical as-of snapshot baseline.
+
+Required marker keys for `docs/review/gaps-and-issues-r<release>.md` where `<release> >= 52`:
+
+- `r<release>_review_post_publication_spec_volume_guardrail_reconciliation_schema_version=kamn.review.spec-volume-guardrail-post-publication-reconciliation.v1`
+- `r<release>_review_spec_volume_guardrail_snapshot_spec_dir_count=<integer>`
+- `r<release>_review_spec_volume_guardrail_snapshot_module_count=<integer>`
+- `r<release>_review_spec_volume_guardrail_post_publication_spec_dir_count=<integer>`
+- `r<release>_review_spec_volume_guardrail_post_publication_module_count=<integer>`
+- `r<release>_review_spec_volume_guardrail_post_publication_ratio=<float>`
+- `r<release>_review_spec_volume_guardrail_target_ratio_max=<float>`
+- `r<release>_review_spec_volume_guardrail_post_publication_status=<within_guardrail|breached>`
+
+Contract invariants:
+
+- `r<release>_review_spec_volume_guardrail_post_publication_spec_dir_count <= r<release>_review_spec_volume_guardrail_snapshot_spec_dir_count`
+- `r<release>_review_spec_volume_guardrail_post_publication_ratio <= r<release>_review_spec_volume_guardrail_target_ratio_max` when status is `within_guardrail`
+- Historical snapshot markers remain present and unchanged
+
+This schema is enforced by `crates/kamn-core/tests/review_r50_spec_volume_remediation_docs_contract.rs`.
+
 ## Doc-Contract Test-File Non-Regression Ratchet Contract (R50+)
 
 R50+ review artifacts must include a non-regression ratchet for doc-contract test-file count while
