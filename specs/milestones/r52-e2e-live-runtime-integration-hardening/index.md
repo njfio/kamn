@@ -2,8 +2,8 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700
-- Active issue(s): #5702
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702
+- Active issue(s): #5704
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability.
 
 ## Delivery Slices
@@ -16,4 +16,5 @@
 7. Opt-in live SDK-direct S-01 driver execution using `kamn-agent-lib` discovery signals. (Completed)
 8. Opt-in live CLI-scripted S-01 driver execution using `kamn-cli health` command probe. (Completed)
 9. Opt-in live MCP-agent S-01 driver execution using `kamn-mcp-server` command probe. (Completed)
-10. Upgrade MCP-agent S-01 probe to framed JSON-RPC initialize + tools/call health flow. (In Progress)
+10. Upgrade MCP-agent S-01 probe to framed JSON-RPC initialize + tools/call health flow. (Completed)
+11. Align `kamn-cli` default/output contract with PRD JSON semantics. (In Progress)
