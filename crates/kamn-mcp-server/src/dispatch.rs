@@ -1,4 +1,4 @@
-use kamn_agent_lib::{AgentLibError, KamnAgentHandle};
+use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
 
 const UNSUPPORTED_REASON: &str =
     "operation is not yet supported by the current service route surface";
@@ -19,6 +19,14 @@ pub trait McpToolBackend {
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Reads service health.
     fn health(&self) -> Result<String, AgentLibError>;
+    /// Verifies one proof receipt projection.
+    fn verify_proof(
+        &self,
+        message_id: &str,
+        tx_hash: &str,
+        block_height: u64,
+        finality: &str,
+    ) -> Result<String, AgentLibError>;
 }
 
 impl McpToolBackend for KamnAgentHandle {
@@ -92,6 +100,28 @@ impl McpToolBackend for KamnAgentHandle {
             escape_json(health.observability_health.as_str()),
         ))
     }
+
+    fn verify_proof(
+        &self,
+        message_id: &str,
+        tx_hash: &str,
+        block_height: u64,
+        finality: &str,
+    ) -> Result<String, AgentLibError> {
+        let receipt = KolmeProofReceipt {
+            tx_hash: tx_hash.to_owned(),
+            block_height,
+            finality: finality.to_owned(),
+        };
+        let verification = KamnAgentHandle::verify_proof(self, message_id, &receipt)?;
+        Ok(format!(
+            r#"{{"message_id":"{}","block_height":{},"finality":"{}","verified":{}}}"#,
+            escape_json(verification.message_id.as_str()),
+            verification.block_height,
+            escape_json(verification.finality.as_str()),
+            verification.verified,
+        ))
+    }
 }
 
 /// Dispatches one JSON tool request into a JSON response envelope.
@@ -121,7 +151,31 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
             backend.create_task(required_string_arg(request_json, "payload")?.as_str())
         }
         "health" => backend.health(),
-        "accept_task" | "complete_task" | "fund_escrow" | "release_escrow" | "verify_proof" => {
+        "verify_proof" => {
+            let message_id = match required_string_arg(request_json, "message_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            let tx_hash = match required_string_arg(request_json, "tx_hash") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            let block_height = match required_u64_arg(request_json, "block_height") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            let finality = match required_string_arg(request_json, "finality") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.verify_proof(
+                message_id.as_str(),
+                tx_hash.as_str(),
+                block_height,
+                finality.as_str(),
+            )
+        }
+        "accept_task" | "complete_task" | "fund_escrow" | "release_escrow" => {
             return Ok(unsupported_response_json(
                 request_id.as_str(),
                 tool.as_str(),
@@ -166,6 +220,12 @@ pub fn invalid_request_response_json(error_message: &str) -> String {
 
 fn required_string_arg(payload: &str, key: &str) -> Result<String, String> {
     json_string_field(payload, key)
+}
+
+fn required_u64_arg(payload: &str, key: &str) -> Result<u64, String> {
+    let raw = required_string_arg(payload, key)?;
+    raw.parse::<u64>()
+        .map_err(|_| format!("field {key} must be an unsigned integer string"))
 }
 
 fn success_response_json(request_id: &str, tool: &str, result_payload: &str) -> String {
