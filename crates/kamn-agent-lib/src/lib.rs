@@ -14,8 +14,8 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -197,11 +197,13 @@ impl KamnAgentHandle {
         ))
     }
 
-    /// Placeholder for channel message listing route not yet exposed by current SDK service client.
-    pub fn list_messages(&self, _channel_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "list_messages requires service route support not present in phase-1",
-        ))
+    /// Lists channel messages through the service API.
+    pub fn list_messages(&self, channel_id: &str) -> Result<ServiceChannelMessages, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "")?;
+        self.service_client.list_channel_messages(channel_id, &auth)
     }
 
     fn next_nonce(&self) -> Result<u64, AgentLibError> {
