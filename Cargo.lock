@@ -1607,6 +1607,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamn-agent-lib"
+version = "0.1.0"
+dependencies = [
+ "kamn-kolme",
+ "kamn-sdk",
+]
+
+[[package]]
 name = "kamn-core"
 version = "0.1.0"
 dependencies = [

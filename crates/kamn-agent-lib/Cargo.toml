@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+kamn-kolme = { path = "../kamn-kolme" }
 kamn-sdk = { path = "../kamn-sdk" }
 
 [lints]
