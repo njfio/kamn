@@ -106,6 +106,12 @@ R50.17 codifies deterministic mitigation policy so future review cycles do not r
 
 Policy markers:
 
+- `review_snapshot_semantics_policy_schema_version=kamn.review.snapshot-semantics-policy.v1`
+- `r50_review_snapshot_as_of_date=2026-02-21`
+- `r50_review_branch_remote_head_count_snapshot=51`
+- `r50_review_branch_remote_head_count_contract_mode=informational_only`
+- `r50_review_branch_reconciliation_issue_chain_count=0`
+- `r50_review_branch_reconciliation_issue_chain_max=1`
 - `r50_review_governance_loop_mitigation_policy_schema_version=kamn.review.governance-loop-mitigation-policy.v1`
 - `r50_review_marker_semantics=point_in_time_snapshot`
 - `r50_review_branch_count_marker_contract_mode=informational_only`
@@ -122,6 +128,8 @@ Policy markers:
 - `r50_review_spec_volume_target_spec_dir_max=708`
 - `r50_review_spec_volume_required_reduction=42`
 - `r50_review_spec_volume_remediation_status=active`
+
+Branch-count snapshot markers are informational-only and are not self-updating after publication.
 
 ---
 

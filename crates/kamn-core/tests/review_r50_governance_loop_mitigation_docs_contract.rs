@@ -39,12 +39,10 @@ fn parse_marker_f64(marker_key: &str) -> f64 {
 fn functional_r50_governance_loop_mitigation_markers_present() {
     assert!(REVIEW_MARKER_README.contains("review_snapshot_semantics_policy_schema_version"));
     assert!(REVIEW_MARKER_README.contains("kamn.review.snapshot-semantics-policy.v1"));
-    assert!(REVIEW_MARKER_README.contains(
-        "r<release>_review_branch_remote_head_count_contract_mode=informational_only"
-    ));
-    assert!(REVIEW_MARKER_README.contains(
-        "r<release>_review_branch_reconciliation_issue_chain_count=<integer>"
-    ));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_remote_head_count_contract_mode=informational_only"));
+    assert!(REVIEW_MARKER_README
+        .contains("r<release>_review_branch_reconciliation_issue_chain_count=<integer>"));
     assert!(
         REVIEW_MARKER_README.contains("r<release>_review_branch_reconciliation_issue_chain_max=1")
     );

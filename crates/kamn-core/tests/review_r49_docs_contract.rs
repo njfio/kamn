@@ -21,7 +21,6 @@ fn parse_marker_usize(marker_key: &str) -> usize {
 fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_artifact_schema_version=kamn.review.gaps-and-issues-r49.v1"));
     assert!(DOC.contains("r49_review_baseline_capture_date=2026-02-21"));
-    assert!(DOC.contains("r49_review_baseline_branch_remote_head_count=50"));
     assert!(DOC.contains("r49_review_baseline_open_issue_count=1"));
     assert!(DOC.contains("r49_review_baseline_open_milestone_count=1"));
     assert!(DOC.contains("r49_review_ignored_test_inventory_count=12"));
@@ -31,16 +30,12 @@ fn functional_r49_review_markers_present() {
     assert!(DOC.contains("r49_review_post_publication_issue=5485"));
     assert!(DOC.contains("r49_review_post_publication_feature_issue=5499"));
     assert!(DOC.contains("r49_review_post_publication_feature_pr=5500"));
-    assert!(DOC.contains("r49_review_post_publication_branch_count_reconciliation_issue=5495"));
-    assert!(DOC.contains("r49_review_post_publication_branch_remote_head_count=50"));
     assert!(DOC.contains("r49_review_post_publication_open_issue_count=0"));
     assert!(DOC.contains("r49_review_post_publication_open_milestone_count=0"));
     assert!(DOC.contains("r49_review_post_publication_ignored_test_inventory_count=12"));
-    assert!(
-        DOC.contains(
-            "Branch hygiene remains controlled at `50` remote heads (post-publication revalidation snapshot)."
-        )
-    );
+    assert!(DOC.contains(
+        "Publication snapshot values above remain historical to R49.3 artifact publication time."
+    ));
     assert!(
         DOC.contains(
             "Post-publication production feature delivery is reconciled via issue `#5499` and PR `#5500`."
@@ -54,7 +49,6 @@ fn integration_r49_review_marker_consistency() {
     let baseline_open_milestone_count =
         parse_marker_usize("r49_review_baseline_open_milestone_count");
     let baseline_ignored_count = parse_marker_usize("r49_review_ignored_test_inventory_count");
-    let baseline_branch_count = parse_marker_usize("r49_review_baseline_branch_remote_head_count");
     let post_open_issue_count = parse_marker_usize("r49_review_post_publication_open_issue_count");
     let post_open_milestone_count =
         parse_marker_usize("r49_review_post_publication_open_milestone_count");
@@ -62,23 +56,16 @@ fn integration_r49_review_marker_consistency() {
         parse_marker_usize("r49_review_post_publication_ignored_test_inventory_count");
     let post_feature_issue = parse_marker_usize("r49_review_post_publication_feature_issue");
     let post_feature_pr = parse_marker_usize("r49_review_post_publication_feature_pr");
-    let post_branch_reconciliation_issue =
-        parse_marker_usize("r49_review_post_publication_branch_count_reconciliation_issue");
-    let post_branch_count =
-        parse_marker_usize("r49_review_post_publication_branch_remote_head_count");
 
     assert_eq!(baseline_open_issue_count, 1);
     assert_eq!(baseline_open_milestone_count, 1);
     assert_eq!(baseline_ignored_count, 12);
-    assert_eq!(baseline_branch_count, 50);
 
     assert_eq!(post_open_issue_count, 0);
     assert_eq!(post_open_milestone_count, 0);
     assert_eq!(post_ignored_count, 12);
     assert_eq!(post_feature_issue, 5499);
     assert_eq!(post_feature_pr, 5500);
-    assert_eq!(post_branch_reconciliation_issue, 5495);
-    assert_eq!(post_branch_count, 50);
 
     assert!(post_open_issue_count <= baseline_open_issue_count);
     assert!(post_open_milestone_count <= baseline_open_milestone_count);
