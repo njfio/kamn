@@ -2,7 +2,7 @@
 
 - Issue: #5637
 - Milestone: R56 E2E Verify Manifest Contract Hardening
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
