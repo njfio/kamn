@@ -2,7 +2,7 @@
 
 - Issue: #5643
 - Milestone: R58 E2E Chain Dump Verification Contract Hardening
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
