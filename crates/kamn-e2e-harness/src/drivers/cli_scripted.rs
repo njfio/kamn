@@ -10,15 +10,20 @@ const DEFAULT_CLI_BINARY: &str = "kamn-cli";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"cli-scripted-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
+const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
+const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01 and S-04.
+/// CLI-scripted driver with optional live execution for S-01, S-04, and S-06.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
     discovery_runner: Arc<LiveCliRunner>,
     task_lifecycle_runner: Arc<LiveCliRunner>,
+    proof_verification_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -43,6 +48,7 @@ impl CliScriptedDriver {
             live_execution_enabled_from_env(),
             run_live_s01_cli_health_probe,
             run_live_s04_cli_task_lifecycle_probe,
+            run_live_s06_cli_proof_verification_probe,
         )
     }
 
@@ -55,24 +61,28 @@ impl CliScriptedDriver {
         Self {
             live_execution_enabled,
             discovery_runner: live_runner.clone(),
-            task_lifecycle_runner: live_runner,
+            task_lifecycle_runner: live_runner.clone(),
+            proof_verification_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G>(
+    pub fn with_runners<F, G, H>(
         live_execution_enabled: bool,
         discovery_runner: F,
         task_lifecycle_runner: G,
+        proof_verification_runner: H,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
+        H: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
             task_lifecycle_runner: Arc::new(task_lifecycle_runner),
+            proof_verification_runner: Arc::new(proof_verification_runner),
         }
     }
 }
@@ -103,6 +113,7 @@ impl CliScriptedDriver {
         match scenario_id {
             "S-01" => Some((self.discovery_runner)()),
             "S-04" => Some((self.task_lifecycle_runner)()),
+            "S-06" => Some((self.proof_verification_runner)()),
             _ => None,
         }
     }
@@ -266,6 +277,75 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s06_cli_proof_verification_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let message_id = env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
+        .unwrap_or_else(|_| DEFAULT_S06_MESSAGE_ID.to_owned());
+    let tx_hash =
+        env::var("KAMN_E2E_S06_PROOF_TX_HASH").unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
+    let block_height = env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("cli live s06 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S06_BLOCK_HEIGHT);
+    let finality =
+        env::var("KAMN_E2E_S06_PROOF_FINALITY").unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
+    let block_height_value = block_height.to_string();
+
+    let output = run_cli_command_capture_stdout(
+        cli_binary.as_str(),
+        &[
+            "verify-proof",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_id.as_str(),
+            tx_hash.as_str(),
+            block_height_value.as_str(),
+            finality.as_str(),
+        ],
+        "cli live s06 verify-proof",
+    )?;
+
+    let verified = parse_text_output_field(output.as_str(), "verified").ok_or_else(|| {
+        format!("cli live s06 verify-proof response missing verified field: {output}")
+    })?;
+    if verified != "true" {
+        return Err(format!(
+            "cli live s06 verify-proof returned verified={verified}"
+        ));
+    }
+
+    let reported_finality =
+        parse_text_output_field(output.as_str(), "finality").ok_or_else(|| {
+            format!("cli live s06 verify-proof response missing finality field: {output}")
+        })?;
+    if reported_finality != "FINAL" {
+        return Err(format!(
+            "cli live s06 verify-proof returned non-final finality: {reported_finality}"
+        ));
+    }
+
+    let reported_height =
+        parse_text_output_field(output.as_str(), "block_height").ok_or_else(|| {
+            format!("cli live s06 verify-proof response missing block_height field: {output}")
+        })?;
+    let parsed_height = reported_height.parse::<u64>().map_err(|_| {
+        format!("cli live s06 verify-proof returned invalid block_height: {output}")
+    })?;
+    if parsed_height == 0 {
+        return Err("cli live s06 verify-proof returned block_height=0".to_owned());
+    }
+
+    Ok(())
+}
+
 fn run_cli_command_capture_stdout(
     cli_binary: &str,
     args: &[&str],
@@ -310,22 +390,23 @@ mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, parse_text_output_field,
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
-        run_live_s04_cli_task_lifecycle_probe, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        run_live_s04_cli_task_lifecycle_probe, run_live_s06_cli_proof_verification_probe,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
-    use std::sync::{Mutex, OnceLock};
-
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::PathBuf;
+    use std::sync::PoisonError;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn with_env_vars<F>(updates: &[(&str, Option<&str>)], test: F)
     where
         F: FnOnce(),
     {
-        let _guard = env_lock().lock().expect("env lock");
+        let _guard = crate::drivers::test_env_lock()
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         let previous = updates
             .iter()
             .map(|(key, _)| ((*key).to_owned(), env::var_os(key)))
@@ -360,6 +441,23 @@ mod tests {
         if let Err(payload) = result {
             std::panic::resume_unwind(payload);
         }
+    }
+
+    fn unique_temp_script_path(stem: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{stem}-{}-{nonce}.py", std::process::id()))
+    }
+
+    fn write_executable_python_script(script_path: &PathBuf, source: &str) {
+        fs::write(script_path, source).expect("script fixture should be written");
+        let mut permissions = fs::metadata(script_path)
+            .expect("script metadata should be readable")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(script_path, permissions).expect("script fixture should be executable");
     }
 
     #[test]
@@ -423,6 +521,57 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s06_cli_proof_verification_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s06_cli_proof_verification_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s06_cli_proof_verification_probe_accepts_success_payload() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s06-success");
+        let script_source = format!(
+            r#"#!/usr/bin/env python3
+import sys
+sys.stdout.write({payload:?})
+"#,
+            payload = "message_id=s06-live-proof block_height=1 finality=FINAL verified=true"
+        );
+        write_executable_python_script(&script_path, script_source.as_str());
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                run_live_s06_cli_proof_verification_probe()
+                    .expect("success payload should pass verification probe");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_cli_command_capture_stdout_returns_trimmed_stdout_on_success() {
         let output = run_cli_command_capture_stdout(
             "/bin/sh",
@@ -468,6 +617,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-04 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c02_live_s06_driver_path_fails_closed_when_proof_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s06 proof probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-06");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-06 should fail closed on probe error",
         );
     }
 }

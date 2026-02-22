@@ -1,6 +1,6 @@
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
-use kamn_agent_lib::KamnAgentHandle;
+use kamn_agent_lib::{KamnAgentHandle, KolmeProofReceipt};
 use std::sync::Arc;
 
 const SDK_DIRECT_LIVE_ENV: &str = "KAMN_E2E_SDK_DIRECT_LIVE";
@@ -9,15 +9,20 @@ const DEFAULT_AGENT_NAME: &str = "kamn-e2e-sdk-direct";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"sdk-direct-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
+const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
+const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01 and S-04.
+/// SDK-direct driver with optional live execution for S-01, S-04, and S-06.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
     discovery_probe: Arc<LiveProbe>,
     task_lifecycle_probe: Arc<LiveProbe>,
+    proof_verification_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -42,6 +47,7 @@ impl SdkDirectDriver {
             live_execution_enabled_from_env(),
             run_live_s01_discovery_probe,
             run_live_s04_task_lifecycle_probe,
+            run_live_s06_proof_verification_probe,
         )
     }
 
@@ -54,24 +60,28 @@ impl SdkDirectDriver {
         Self {
             live_execution_enabled,
             discovery_probe: live_probe.clone(),
-            task_lifecycle_probe: live_probe,
+            task_lifecycle_probe: live_probe.clone(),
+            proof_verification_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G>(
+    pub fn with_probes<F, G, H>(
         live_execution_enabled: bool,
         discovery_probe: F,
         task_lifecycle_probe: G,
+        proof_verification_probe: H,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
+        H: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
+            proof_verification_probe: Arc::new(proof_verification_probe),
         }
     }
 }
@@ -102,6 +112,7 @@ impl SdkDirectDriver {
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
+            "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
         }
     }
@@ -210,26 +221,76 @@ fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s06_proof_verification_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let agent_name =
+        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
+    let message_id = std::env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
+        .unwrap_or_else(|_| DEFAULT_S06_MESSAGE_ID.to_owned());
+    let tx_hash = std::env::var("KAMN_E2E_S06_PROOF_TX_HASH")
+        .unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
+    let block_height = std::env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("sdk-direct live s06 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S06_BLOCK_HEIGHT);
+    let finality = std::env::var("KAMN_E2E_S06_PROOF_FINALITY")
+        .unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
+
+    let handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s06 connect failed: {error}"))?;
+
+    let receipt = KolmeProofReceipt {
+        tx_hash,
+        block_height,
+        finality,
+    };
+    let verification = handle
+        .verify_proof(message_id.as_str(), &receipt)
+        .map_err(|error| format!("sdk-direct live s06 verify-proof failed: {error}"))?;
+
+    if !verification.verified {
+        return Err("sdk-direct live s06 verify-proof returned verified=false".to_owned());
+    }
+    if verification.finality.trim() != "FINAL" {
+        return Err(format!(
+            "sdk-direct live s06 verify-proof returned non-final finality: {}",
+            verification.finality
+        ));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
-        run_live_s04_task_lifecycle_probe, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s04_task_lifecycle_probe, run_live_s06_proof_verification_probe, SdkDirectDriver,
+        SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
-    use std::sync::{Mutex, OnceLock};
-
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
+    use std::sync::PoisonError;
 
     fn with_env_vars<F>(updates: &[(&str, Option<&str>)], test: F)
     where
         F: FnOnce(),
     {
-        let _guard = env_lock().lock().expect("env lock");
+        let _guard = crate::drivers::test_env_lock()
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         let previous = updates
             .iter()
             .map(|(key, _)| ((*key).to_owned(), env::var_os(key)))
@@ -342,6 +403,37 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s06_proof_verification_probe_rejects_invalid_block_height_env_value() {
+        with_env_vars(
+            &[("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT", Some("not-a-number"))],
+            || {
+                let error = run_live_s06_proof_verification_probe()
+                    .expect_err("invalid block height env value should fail");
+                assert!(
+                    error.contains("invalid block height env value"),
+                    "probe error should reflect parse failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s06_proof_verification_probe_accepts_final_verified_receipt() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+                ("KAMN_AGENT_NAME", Some("sdk-driver-test")),
+                ("KAMN_E2E_S06_PROOF_FINALITY", Some("final")),
+            ],
+            || {
+                run_live_s06_proof_verification_probe()
+                    .expect("final verified proof probe should succeed");
+            },
+        );
+    }
+
+    #[test]
     fn unit_sdk_direct_driver_debug_includes_live_toggle_field() {
         let driver = SdkDirectDriver::with_probe(false, || Ok(()));
         let debug = format!("{driver:?}");
@@ -364,6 +456,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-04 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c02_live_s06_driver_path_fails_closed_when_proof_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s06 proof probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-06");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-06 should fail closed on probe error",
         );
     }
 }
