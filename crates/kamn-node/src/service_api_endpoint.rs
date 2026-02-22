@@ -200,6 +200,9 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) scope_policy_fixture_unique_deny_only_route_count: usize,
     pub(crate) scope_policy_fixture_unique_allow_scope_count: usize,
     pub(crate) scope_policy_fixture_unique_deny_scope_count: usize,
+    pub(crate) scope_policy_fixture_unique_allow_deny_overlap_scope_count: usize,
+    pub(crate) scope_policy_fixture_unique_allow_only_scope_count: usize,
+    pub(crate) scope_policy_fixture_unique_deny_only_scope_count: usize,
     pub(crate) lifecycle_rejection_reason_taxonomy_version: String,
     pub(crate) lifecycle_rejection_reason_code_count: usize,
     pub(crate) route_authz_matrix_schema_version: String,
@@ -515,6 +518,12 @@ pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> Servic
             .unique_allow_scope_count,
         scope_policy_fixture_unique_deny_scope_count: scope_policy_fixture_projection
             .unique_deny_scope_count,
+        scope_policy_fixture_unique_allow_deny_overlap_scope_count: scope_policy_fixture_projection
+            .unique_allow_deny_overlap_scope_count,
+        scope_policy_fixture_unique_allow_only_scope_count: scope_policy_fixture_projection
+            .unique_allow_only_scope_count,
+        scope_policy_fixture_unique_deny_only_scope_count: scope_policy_fixture_projection
+            .unique_deny_only_scope_count,
         lifecycle_rejection_reason_taxonomy_version,
         lifecycle_rejection_reason_code_count,
         route_authz_matrix_schema_version,
