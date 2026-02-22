@@ -150,6 +150,10 @@ pub fn verify_chain_dump(chain_dump_json: &str) -> Result<(), String> {
         "chain dump missing blocks marker",
     )?;
     let block_hash_pairs = extract_chain_block_hash_pairs(chain_dump_json)?;
+    let genesis_anchor = block_hash_pairs[0].1.as_str();
+    if genesis_anchor != "GENESIS" {
+        return Err("chain dump genesis anchor mismatch at block index 0".to_owned());
+    }
     for (index, pair) in block_hash_pairs.windows(2).enumerate() {
         let previous_block_hash = pair[0].0.as_str();
         let next_previous_hash = pair[1].1.as_str();
@@ -437,5 +441,14 @@ mod tests {
         )
         .expect_err("chain continuity mismatch should fail");
         assert!(err.contains("chain dump hash continuity mismatch at block index 1"));
+    }
+
+    #[test]
+    fn unit_verify_chain_dump_rejects_genesis_anchor_mismatch() {
+        let err = verify_chain_dump(
+            r#"{"chain_name":"kamn-e2e-devnet","chain_version":1,"blocks":[{"height":0,"block_hash":"sha256:block-0","previous_block_hash":"sha256:not-genesis"},{"height":1,"block_hash":"sha256:block-1","previous_block_hash":"sha256:block-0"}]}"#,
+        )
+        .expect_err("genesis anchor mismatch should fail");
+        assert!(err.contains("chain dump genesis anchor mismatch at block index 0"));
     }
 }
