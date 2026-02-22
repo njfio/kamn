@@ -207,6 +207,10 @@ pub fn build_core_run_plan(mode: ExecutionMode) -> HarnessRunPlan {
 pub struct RunCommandConfig {
     /// Selected execution mode label.
     pub mode: String,
+    /// Kolme node binary path.
+    pub kolme_binary: String,
+    /// Agent runtime binary path when required by mode.
+    pub agent_binary: Option<String>,
     /// Evidence output directory.
     pub evidence_dir: String,
     /// Selected scenario IDs.
@@ -291,6 +295,8 @@ where
     match args[0].as_str() {
         "run" => {
             let mut mode = None;
+            let mut kolme_binary = None;
+            let mut agent_binary = None;
             let mut evidence_dir = None;
             let mut scenarios_csv = None;
             let mut index = 1;
@@ -298,6 +304,20 @@ where
                 let (parsed_mode, advanced) = parse_flag_value(&args, index, "--mode")?;
                 if let Some(value) = parsed_mode {
                     mode = Some(value);
+                    index = advanced + 1;
+                    continue;
+                }
+                let (parsed_kolme_binary, advanced) =
+                    parse_flag_value(&args, index, "--kolme-binary")?;
+                if let Some(value) = parsed_kolme_binary {
+                    kolme_binary = Some(value);
+                    index = advanced + 1;
+                    continue;
+                }
+                let (parsed_agent_binary, advanced) =
+                    parse_flag_value(&args, index, "--agent-binary")?;
+                if let Some(value) = parsed_agent_binary {
+                    agent_binary = Some(value);
                     index = advanced + 1;
                     continue;
                 }
@@ -317,7 +337,14 @@ where
             }
 
             let mode = mode.ok_or_else(|| "missing required flag --mode".to_owned())?;
-            ExecutionMode::parse(mode.as_str())?;
+            let parsed_mode = ExecutionMode::parse(mode.as_str())?;
+            let kolme_binary =
+                kolme_binary.ok_or_else(|| "missing required flag --kolme-binary".to_owned())?;
+            if matches!(parsed_mode, ExecutionMode::McpTau | ExecutionMode::McpAny)
+                && agent_binary.is_none()
+            {
+                return Err("missing required flag --agent-binary for MCP modes".to_owned());
+            }
             let evidence_dir =
                 evidence_dir.ok_or_else(|| "missing required flag --evidence-dir".to_owned())?;
             let scenarios_csv =
@@ -325,6 +352,8 @@ where
             let scenario_ids = parse_scenario_csv(scenarios_csv.as_str())?;
             Ok(HarnessCommand::Run(RunCommandConfig {
                 mode,
+                kolme_binary,
+                agent_binary,
                 evidence_dir,
                 scenario_ids,
             }))
@@ -379,10 +408,29 @@ fn escape_json(value: &str) -> String {
 /// Executes run-command contract behavior and returns deterministic JSON summary.
 pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String> {
     let mode = ExecutionMode::parse(config.mode.as_str())?;
+    let agent_binary_required = matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny);
+    if agent_binary_required && config.agent_binary.is_none() {
+        return Err("missing required agent binary for MCP modes".to_owned());
+    }
     let selected = select_scenarios(config.scenario_ids.as_slice())?;
     let phases = all_orchestration_phases();
     let fail_path_marker = config.evidence_dir.contains("fail-path");
     let phase_results = build_phase_results(phases.as_slice(), mode, fail_path_marker);
+    let agent_binary_json = config
+        .agent_binary
+        .as_deref()
+        .map(|value| format!("\"{}\"", escape_json(value)))
+        .unwrap_or_else(|| "null".to_owned());
+    let integration_config_json = format!(
+        "{{\"kolme_binary\":\"{}\",\"agent_binary\":{},\"agent_binary_required\":{}}}",
+        escape_json(config.kolme_binary.as_str()),
+        agent_binary_json,
+        if agent_binary_required {
+            "true"
+        } else {
+            "false"
+        }
+    );
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -437,9 +485,10 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
+        integration_config_json,
         selected.len(),
         scenario_ids,
         phases.len(),
