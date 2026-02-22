@@ -110,6 +110,28 @@ pub struct OrchestrationStepRecord {
     pub detail: String,
 }
 
+/// Status counter tuple for lifecycle aggregation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LifecycleStatusTotals {
+    /// Total records counted.
+    pub total: u64,
+    /// Count of `PASS`.
+    pub pass: u64,
+    /// Count of `FAIL`.
+    pub fail: u64,
+    /// Count of `SKIP`.
+    pub skip: u64,
+}
+
+/// Deterministic lifecycle summary for run output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LifecycleSummary {
+    /// Aggregated totals for phase statuses.
+    pub phase_totals: LifecycleStatusTotals,
+    /// Aggregated totals for step statuses.
+    pub step_totals: LifecycleStatusTotals,
+}
+
 impl ExecutionMode {
     /// Returns canonical execution-mode label.
     pub fn as_str(self) -> &'static str {
@@ -399,16 +421,67 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         })
         .collect::<Vec<_>>()
         .join(",");
+    let lifecycle_summary = compute_lifecycle_summary(phase_results.as_slice());
+    let phase_totals_json = format!(
+        "{{\"total\":{},\"pass\":{},\"fail\":{},\"skip\":{}}}",
+        lifecycle_summary.phase_totals.total,
+        lifecycle_summary.phase_totals.pass,
+        lifecycle_summary.phase_totals.fail,
+        lifecycle_summary.phase_totals.skip
+    );
+    let step_totals_json = format!(
+        "{{\"total\":{},\"pass\":{},\"fail\":{},\"skip\":{}}}",
+        lifecycle_summary.step_totals.total,
+        lifecycle_summary.step_totals.pass,
+        lifecycle_summary.step_totals.fail,
+        lifecycle_summary.step_totals.skip
+    );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}]}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         selected.len(),
         scenario_ids,
         phases.len(),
         phase_labels,
-        phase_results_json
+        phase_results_json,
+        phase_totals_json,
+        step_totals_json
     ))
+}
+
+fn compute_lifecycle_summary(phase_results: &[OrchestrationPhaseResult]) -> LifecycleSummary {
+    let phase_totals = status_totals_from_iter(phase_results.iter().map(|result| result.status));
+    let step_totals = status_totals_from_iter(
+        phase_results
+            .iter()
+            .flat_map(|result| result.steps.iter().map(|step| step.status)),
+    );
+    LifecycleSummary {
+        phase_totals,
+        step_totals,
+    }
+}
+
+fn status_totals_from_iter<I>(statuses: I) -> LifecycleStatusTotals
+where
+    I: IntoIterator<Item = PhaseResultStatus>,
+{
+    let mut totals = LifecycleStatusTotals {
+        total: 0,
+        pass: 0,
+        fail: 0,
+        skip: 0,
+    };
+    for status in statuses {
+        totals.total += 1;
+        match status {
+            PhaseResultStatus::Pass => totals.pass += 1,
+            PhaseResultStatus::Fail => totals.fail += 1,
+            PhaseResultStatus::Skip => totals.skip += 1,
+        }
+    }
+    totals
 }
 
 fn build_phase_results(
