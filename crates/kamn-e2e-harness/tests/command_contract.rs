@@ -33,6 +33,7 @@ fn spec_c01_parser_accepts_run_with_required_flags() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     });
@@ -84,6 +85,7 @@ fn spec_c06_run_command_output_contains_selected_mode_and_count_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned(), "S-15".to_owned()],
     };
@@ -152,6 +154,7 @@ fn spec_c09_run_output_contains_phase_progression_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     };
@@ -177,6 +180,7 @@ fn spec_c11_run_output_contains_phase_results_required_fields() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     };
@@ -195,6 +199,7 @@ fn spec_c12_run_output_contains_infra_and_agent_deploy_placeholders() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -210,6 +215,7 @@ fn spec_c13_run_output_contains_nested_step_records() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -226,6 +232,7 @@ fn spec_c14_infra_up_step_markers_align_with_prd_actions() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -241,6 +248,7 @@ fn spec_c15_agent_deploy_step_markers_align_with_prd_actions() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -256,6 +264,7 @@ fn spec_c16_mcp_steps_are_skipped_in_sdk_direct_mode() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -274,6 +283,7 @@ fn spec_c17_mcp_steps_are_pass_in_mcp_tau_mode() {
         mode: "mcp-tau".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -292,6 +302,7 @@ fn spec_c18_fail_path_marks_infra_health_step_and_phase_fail() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/fail-path".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -307,6 +318,7 @@ fn spec_c19_run_output_contains_lifecycle_summary_totals() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -323,6 +335,7 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -338,6 +351,7 @@ fn spec_c20_lifecycle_summary_is_deterministic_for_normal_and_fail_path_runs() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/fail-path".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -366,6 +380,7 @@ fn spec_c21_parser_accepts_sdk_direct_with_kolme_binary_only() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
     });
@@ -392,6 +407,7 @@ fn spec_c22_parser_accepts_mcp_tau_with_agent_binary() {
         mode: "mcp-tau".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     });
@@ -421,6 +437,7 @@ fn spec_c24_run_output_contains_integration_config_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -437,6 +454,7 @@ fn spec_c25_run_output_contains_runtime_readiness_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -454,6 +472,7 @@ fn spec_c26_sdk_direct_runtime_readiness_marks_agent_binary_skip() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -469,6 +488,7 @@ fn spec_c27_mcp_tau_runtime_readiness_marks_agent_binary_pass() {
         mode: "mcp-tau".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -484,6 +504,7 @@ fn spec_c28_mcp_any_without_agent_binary_returns_deterministic_error() {
         mode: "mcp-any".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -497,6 +518,7 @@ fn spec_c29_run_output_contains_process_runtime_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -514,6 +536,7 @@ fn spec_c30_process_runtime_agent_runtime_is_sdk_direct_for_sdk_mode() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -527,6 +550,7 @@ fn spec_c31_process_runtime_agent_runtime_is_cli_scripted_for_cli_mode() {
         mode: "cli-scripted".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -540,6 +564,7 @@ fn spec_c32_process_runtime_agent_runtime_is_mcp_agent_for_mcp_mode() {
         mode: "mcp-tau".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -553,6 +578,7 @@ fn spec_c33_run_output_contains_process_lifecycle_service_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -571,6 +597,7 @@ fn spec_c34_process_lifecycle_service_markers_are_planned() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -586,6 +613,7 @@ fn spec_c35_run_output_contains_spawn_timeline_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -603,6 +631,7 @@ fn spec_c36_spawn_timeline_markers_follow_canonical_ordering() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -618,6 +647,7 @@ fn spec_c37_run_output_contains_live_validation_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -634,6 +664,7 @@ fn spec_c38_live_validation_markers_are_deterministic_and_coherent() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -649,6 +680,7 @@ fn spec_c39_run_output_contains_spawn_plan_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -667,6 +699,7 @@ fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -681,6 +714,7 @@ fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
         mode: "mcp-tau".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -696,6 +730,7 @@ fn spec_c41_run_output_contains_spawn_execution_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -716,6 +751,7 @@ fn spec_c42_spawn_execution_markers_are_deterministic_and_status_coherent() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -731,6 +767,7 @@ fn spec_c43_run_output_contains_live_process_execution_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -752,6 +789,7 @@ fn spec_c44_live_process_execution_markers_are_deterministic_and_coherent() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -767,6 +805,7 @@ fn spec_c45_run_output_contains_live_execution_markers() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -784,6 +823,7 @@ fn spec_c46_live_execution_markers_are_deterministic_and_coherent() {
         mode: "sdk-direct".to_owned(),
         kolme_binary: "/tmp/kolme-node".to_owned(),
         agent_binary: None,
+        external_execution: false,
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
@@ -791,4 +831,74 @@ fn spec_c46_live_execution_markers_are_deterministic_and_coherent() {
     assert!(output.contains(
         "\"live_execution\":{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"PASS\",\"overall_status\":\"PASS\"}"
     ));
+}
+
+#[test]
+fn spec_c47_parser_accepts_external_execution_flag() {
+    let parsed = parse_command_args([
+        "run",
+        "--mode",
+        "sdk-direct",
+        "--kolme-binary",
+        "/tmp/kolme-node",
+        "--enable-external-execution",
+        "--evidence-dir",
+        "/tmp/evidence",
+        "--scenarios",
+        "S-01",
+    ])
+    .expect("run command should parse with external execution flag");
+    let HarnessCommand::Run(config) = parsed else {
+        panic!("expected run command");
+    };
+    assert!(config.external_execution);
+}
+
+#[test]
+fn spec_c48_run_output_contains_runtime_external_execution_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"runtime_external_execution\":"));
+    assert!(output.contains("\"requested\""));
+    assert!(output.contains("\"guard_status\""));
+    assert!(output.contains("\"execution_mode\""));
+    assert!(output.contains("\"preflight\""));
+}
+
+#[test]
+fn spec_c49_external_execution_missing_kolme_binary_returns_deterministic_error() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/does-not-exist-kolme".to_owned(),
+        agent_binary: None,
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let err =
+        execute_run_contract(&config).expect_err("missing kolme binary should fail preflight");
+    assert!(err.contains("external execution preflight failed"));
+    assert!(err.contains("kolme binary not found"));
+}
+
+#[test]
+fn spec_c50_external_execution_missing_agent_binary_in_mcp_mode_is_deterministic_error() {
+    let config = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/does-not-exist-kolme".to_owned(),
+        agent_binary: Some("/tmp/does-not-exist-agent".to_owned()),
+        external_execution: true,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let err =
+        execute_run_contract(&config).expect_err("missing agent binary should fail preflight");
+    assert!(err.contains("external execution preflight failed"));
 }
