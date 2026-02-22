@@ -263,6 +263,11 @@ fn extract_evidence_hash_value(artifact_json: &str) -> Option<String> {
     extract_json_string_marker(&normalized, "\"evidence_hash\":\"")
 }
 
+fn extract_captured_at_value(artifact_json: &str) -> Option<String> {
+    let normalized = strip_json_whitespace(artifact_json);
+    extract_json_string_marker(&normalized, "\"captured_at\":\"")
+}
+
 fn extract_kolme_anchor_tx_hash_value(artifact_json: &str) -> Option<String> {
     let normalized = strip_json_whitespace(artifact_json);
     let anchor_marker = "\"kolme_anchor\":{";
@@ -303,6 +308,77 @@ fn is_sha256_value(value: &str) -> bool {
     value
         .strip_prefix("sha256:")
         .is_some_and(|suffix| !suffix.is_empty())
+}
+
+fn parse_two_digits(bytes: &[u8], start: usize) -> Option<u8> {
+    let tens = bytes.get(start)?;
+    let ones = bytes.get(start + 1)?;
+    if !tens.is_ascii_digit() || !ones.is_ascii_digit() {
+        return None;
+    }
+    Some((tens - b'0') * 10 + (ones - b'0'))
+}
+
+fn parse_four_digits(bytes: &[u8], start: usize) -> Option<u16> {
+    let thousands = bytes.get(start)?;
+    let hundreds = bytes.get(start + 1)?;
+    let tens = bytes.get(start + 2)?;
+    let ones = bytes.get(start + 3)?;
+    if !thousands.is_ascii_digit()
+        || !hundreds.is_ascii_digit()
+        || !tens.is_ascii_digit()
+        || !ones.is_ascii_digit()
+    {
+        return None;
+    }
+    Some(
+        (thousands - b'0') as u16 * 1000
+            + (hundreds - b'0') as u16 * 100
+            + (tens - b'0') as u16 * 10
+            + (ones - b'0') as u16,
+    )
+}
+
+fn is_rfc3339_utc_z_timestamp(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if bytes.len() != 20 {
+        return false;
+    }
+    if bytes[4] != b'-'
+        || bytes[7] != b'-'
+        || bytes[10] != b'T'
+        || bytes[13] != b':'
+        || bytes[16] != b':'
+        || bytes[19] != b'Z'
+    {
+        return false;
+    }
+
+    let Some(year) = parse_four_digits(bytes, 0) else {
+        return false;
+    };
+    let Some(month) = parse_two_digits(bytes, 5) else {
+        return false;
+    };
+    let Some(day) = parse_two_digits(bytes, 8) else {
+        return false;
+    };
+    let Some(hour) = parse_two_digits(bytes, 11) else {
+        return false;
+    };
+    let Some(minute) = parse_two_digits(bytes, 14) else {
+        return false;
+    };
+    let Some(second) = parse_two_digits(bytes, 17) else {
+        return false;
+    };
+
+    year > 0
+        && (1..=12).contains(&month)
+        && (1..=31).contains(&day)
+        && hour <= 23
+        && minute <= 59
+        && second <= 59
 }
 
 fn collect_evidence_json_artifacts(dir: &Path, artifacts: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -399,6 +475,20 @@ pub fn validate_evidence_verification_blocks(
         if !is_sha256_value(&evidence_hash) {
             return Err(format!(
                 "evidence artifact invalid _verification.evidence_hash format: {}",
+                artifact_path.display()
+            ));
+        }
+        let captured_at = extract_captured_at_value(&artifact_json)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "evidence artifact missing _verification.captured_at: {}",
+                    artifact_path.display()
+                )
+            })?;
+        if !is_rfc3339_utc_z_timestamp(&captured_at) {
+            return Err(format!(
+                "evidence artifact invalid _verification.captured_at format: {}",
                 artifact_path.display()
             ));
         }
@@ -670,6 +760,34 @@ mod tests {
             .expect_err("invalid block_height format should fail");
         assert!(err
             .contains("evidence artifact invalid _verification.kolme_anchor.block_height format"));
+
+        let _ = std::fs::remove_dir_all(&evidence_dir);
+    }
+
+    #[test]
+    fn unit_validate_evidence_verification_blocks_rejects_invalid_captured_at_format() {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic for tests")
+            .as_nanos();
+        let evidence_dir = std::env::temp_dir().join(format!(
+            "kamn-e2e-captured-at-format-{}-{}",
+            std::process::id(),
+            unique_suffix
+        ));
+        std::fs::create_dir_all(evidence_dir.join("s01-agent-discovery"))
+            .expect("evidence directory should be created");
+        std::fs::write(
+            evidence_dir
+                .join("s01-agent-discovery")
+                .join("alice_registration.json"),
+            r#"{"data":{"agent":"alice"},"_verification":{"evidence_hash":"sha256:abc123","captured_at":"2026/02/21 14:31:05","source_node":"kamn-processor-1","agent":"alice","kolme_anchor":{"tx_hash":"sha256:def456","block_height":42,"finality":"FINAL"}}}"#,
+        )
+        .expect("artifact should be written");
+
+        let err = validate_evidence_verification_blocks(&evidence_dir, &[])
+            .expect_err("invalid captured_at format should fail");
+        assert!(err.contains("evidence artifact invalid _verification.captured_at format"));
 
         let _ = std::fs::remove_dir_all(&evidence_dir);
     }
