@@ -145,6 +145,34 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
             expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
         },
         ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/tasks/task-matrix/accept",
+            body: "{}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/tasks/task-matrix/complete",
+            body: "{}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/escrow/fund",
+            body: "{\"task_id\":\"task-matrix\",\"amount\":100}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/escrow/escrow-matrix/release",
+            body: "{}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
             method: "GET",
             path: "/v1/messages/msg-matrix",
             body: "",
@@ -233,6 +261,14 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", "/v1/messages/send") => "messages:write",
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
+        ("POST", "/v1/escrow/fund") => "escrow:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
+            "tasks:write"
+        }
+        ("POST", _) if path.starts_with("/v1/escrow/") && path.ends_with("/release") => {
+            "escrow:write"
+        }
         ("GET", "/v1/events/ws") => "events:read",
         ("GET", _) if path.starts_with("/v1/messages/") && path != "/v1/messages/send" => {
             "messages:read"
@@ -736,6 +772,41 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     let task_response =
         render_service_api_endpoint_response(&snapshot, "GET", "/v1/tasks/task-1", "");
     assert_eq!(task_response.status_code, 200);
+
+    let task_accept_response =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-1/accept", "{}");
+    assert_eq!(task_accept_response.status_code, 200);
+    assert!(task_accept_response.body.contains("\"state\":\"accepted\""));
+
+    let task_complete_response =
+        render_service_api_endpoint_response(&snapshot, "POST", "/v1/tasks/task-1/complete", "{}");
+    assert_eq!(task_complete_response.status_code, 200);
+    assert!(task_complete_response
+        .body
+        .contains("\"state\":\"completed\""));
+
+    let escrow_fund_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/escrow/fund",
+        "{\"task_id\":\"task-1\",\"amount\":100}",
+    );
+    assert_eq!(escrow_fund_response.status_code, 200);
+    assert!(escrow_fund_response
+        .body
+        .contains("\"escrow_id\":\"escrow-local-"));
+    assert!(escrow_fund_response.body.contains("\"state\":\"funded\""));
+
+    let escrow_release_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/escrow/escrow-1/release",
+        "{}",
+    );
+    assert_eq!(escrow_release_response.status_code, 200);
+    assert!(escrow_release_response
+        .body
+        .contains("\"state\":\"released\""));
 
     let agent_response = render_service_api_endpoint_response(
         &snapshot,

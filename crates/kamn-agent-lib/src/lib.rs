@@ -14,8 +14,9 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceHealthStatus,
-    ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceEscrowStatus,
+    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt,
+    ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -169,32 +170,40 @@ impl KamnAgentHandle {
         self.kolme_client.verify_proof(message_id, receipt)
     }
 
-    /// Placeholder for task acceptance route not yet exposed by current SDK service client.
-    pub fn accept_task(&self, _task_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "accept_task requires service route support not present in phase-1",
-        ))
+    /// Accepts one task through the service API.
+    pub fn accept_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "{}")?;
+        self.service_client.accept_task(task_id, &auth)
     }
 
-    /// Placeholder for task completion route not yet exposed by current SDK service client.
-    pub fn complete_task(&self, _task_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "complete_task requires service route support not present in phase-1",
-        ))
+    /// Completes one task through the service API.
+    pub fn complete_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "{}")?;
+        self.service_client.complete_task(task_id, &auth)
     }
 
-    /// Placeholder for escrow funding route not yet exposed by current SDK service client.
-    pub fn fund_escrow(&self, _payload: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "fund_escrow requires service route support not present in phase-1",
-        ))
+    /// Funds escrow through the service API.
+    pub fn fund_escrow(&self, payload: &str) -> Result<ServiceEscrowStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, payload)?;
+        self.service_client.fund_escrow(payload, &auth)
     }
 
-    /// Placeholder for escrow release route not yet exposed by current SDK service client.
-    pub fn release_escrow(&self, _escrow_id: &str) -> Result<(), AgentLibError> {
-        Err(AgentLibError::UnsupportedOperation(
-            "release_escrow requires service route support not present in phase-1",
-        ))
+    /// Releases one escrow through the service API.
+    pub fn release_escrow(&self, escrow_id: &str) -> Result<ServiceEscrowStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self
+            .service_client
+            .build_auth(self.identity.did(), nonce, "{}")?;
+        self.service_client.release_escrow(escrow_id, &auth)
     }
 
     /// Lists channel messages through the service API.
@@ -217,21 +226,18 @@ impl KamnAgentHandle {
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentIdentity, AgentLibError, KamnAgentHandle};
+    use super::{AgentIdentity, KamnAgentHandle};
 
     #[test]
-    fn unit_kamn_agent_handle_reports_unsupported_operations_explicitly() {
+    fn unit_kamn_agent_handle_exposes_identity_after_connect() {
         let identity = AgentIdentity::from_agent_name("alice").expect("identity");
         let handle = KamnAgentHandle::with_identity(
             "http://localhost:8080",
             "http://localhost:3000",
-            identity,
+            identity.clone(),
         )
         .expect("handle");
 
-        let error = handle
-            .accept_task("task-1")
-            .expect_err("accept_task should be unsupported in phase-1");
-        assert!(matches!(error, AgentLibError::UnsupportedOperation(_)));
+        assert_eq!(handle.identity().did(), identity.did());
     }
 }

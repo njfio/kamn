@@ -357,6 +357,44 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     let payload =
                         format!("{{\"task_id\":\"{}\",\"state\":\"submitted\"}}", task_id);
                     write_http_response(&mut stream, 201, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/tasks/")
+                    && path.ends_with("/accept")
+                {
+                    let task_id = path
+                        .trim_start_matches("/v1/tasks/")
+                        .trim_end_matches("/accept")
+                        .trim_end_matches('/');
+                    let payload = format!("{{\"task_id\":\"{}\",\"state\":\"accepted\"}}", task_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/tasks/")
+                    && path.ends_with("/complete")
+                {
+                    let task_id = path
+                        .trim_start_matches("/v1/tasks/")
+                        .trim_end_matches("/complete")
+                        .trim_end_matches('/');
+                    let payload =
+                        format!("{{\"task_id\":\"{}\",\"state\":\"completed\"}}", task_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/escrow/fund" {
+                    let escrow_id =
+                        format!("escrow-local-{:016x}", deterministic_tag(body.as_bytes()));
+                    let payload =
+                        format!("{{\"escrow_id\":\"{}\",\"state\":\"funded\"}}", escrow_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/escrow/")
+                    && path.ends_with("/release")
+                {
+                    let escrow_id = path
+                        .trim_start_matches("/v1/escrow/")
+                        .trim_end_matches("/release")
+                        .trim_end_matches('/');
+                    let payload =
+                        format!("{{\"escrow_id\":\"{}\",\"state\":\"released\"}}", escrow_id);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "GET" && path.starts_with("/v1/tasks/") {
                     let task_id = path.trim_start_matches("/v1/tasks/");
                     let payload =
@@ -564,6 +602,50 @@ fn spec_c01_service_api_client_lists_channel_messages_through_route_contract() {
         messages.messages,
         vec!["msg-local-a".to_owned(), "msg-local-b".to_owned()]
     );
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c02_service_api_client_executes_task_transition_and_escrow_route_contracts() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 4));
+    wait_for_server_ready(bind_addr.as_str());
+
+    let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
+        .expect("client should connect");
+    let sender =
+        AgentDid::parse("kamn:did:agent:sdk-task-escrow").expect("sender did should parse");
+
+    let accepted = client
+        .accept_task("task-local-123", &auth(&sender, 1, "{}"))
+        .expect("accept task should succeed");
+    assert_eq!(accepted.task_id, "task-local-123");
+    assert_eq!(accepted.state, "accepted");
+
+    let completed = client
+        .complete_task("task-local-123", &auth(&sender, 2, "{}"))
+        .expect("complete task should succeed");
+    assert_eq!(completed.task_id, "task-local-123");
+    assert_eq!(completed.state, "completed");
+
+    let fund_payload = r#"{"task_id":"task-local-123","amount":100}"#;
+    let funded = client
+        .fund_escrow(fund_payload, &auth(&sender, 3, fund_payload))
+        .expect("fund escrow should succeed");
+    assert!(funded.escrow_id.starts_with("escrow-local-"));
+    assert_eq!(funded.state, "funded");
+
+    let released = client
+        .release_escrow(funded.escrow_id.as_str(), &auth(&sender, 4, "{}"))
+        .expect("release escrow should succeed");
+    assert_eq!(released.escrow_id, funded.escrow_id);
+    assert_eq!(released.state, "released");
 
     let server_result = server.join().expect("server thread should join");
     assert!(

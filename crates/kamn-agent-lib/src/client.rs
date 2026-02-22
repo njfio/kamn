@@ -1,8 +1,9 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
     service_signature_for_fields, AgentDid, ServiceAgentProfile, ServiceApiClient,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceEscrowStatus, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
+    ServiceTaskStatus,
 };
 
 const DEFAULT_CHAIN_ID: &str = "kamn-agent-lib";
@@ -120,6 +121,42 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, AgentLibError> {
         Ok(self.inner.get_task(task_id, auth)?)
+    }
+
+    /// Accepts one task via `POST /v1/tasks/{id}/accept`.
+    pub fn accept_task(
+        &self,
+        task_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
+        Ok(self.inner.accept_task(task_id, auth)?)
+    }
+
+    /// Completes one task via `POST /v1/tasks/{id}/complete`.
+    pub fn complete_task(
+        &self,
+        task_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceTaskStatus, AgentLibError> {
+        Ok(self.inner.complete_task(task_id, auth)?)
+    }
+
+    /// Funds escrow via `POST /v1/escrow/fund`.
+    pub fn fund_escrow(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, AgentLibError> {
+        Ok(self.inner.fund_escrow(payload, auth)?)
+    }
+
+    /// Releases one escrow via `POST /v1/escrow/{id}/release`.
+    pub fn release_escrow(
+        &self,
+        escrow_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceEscrowStatus, AgentLibError> {
+        Ok(self.inner.release_escrow(escrow_id, auth)?)
     }
 
     /// Queries one agent profile via `GET /v1/agents/{did}`.
