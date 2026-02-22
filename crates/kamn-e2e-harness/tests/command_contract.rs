@@ -2138,9 +2138,7 @@ fn spec_c102_verify_command_rejects_evidence_artifact_non_final_kolme_anchor_fin
     };
     let err = execute_verify_contract(&config)
         .expect_err("verify should fail for non-final finality value");
-    assert!(err.contains(
-        "evidence artifact invalid _verification.kolme_anchor.finality value"
-    ));
+    assert!(err.contains("evidence artifact invalid _verification.kolme_anchor.finality value"));
 
     let _ = std::fs::remove_file(output_path);
     let _ = std::fs::remove_file(chain_dump_path);
