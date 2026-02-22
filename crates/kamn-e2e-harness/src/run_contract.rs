@@ -497,9 +497,9 @@ fn driver_for_mode(mode: ExecutionMode) -> Result<Box<dyn drivers::HarnessDriver
         ExecutionMode::CliScripted => Ok(Box::new(
             drivers::cli_scripted::CliScriptedDriver::from_env(),
         )),
-        ExecutionMode::McpTau | ExecutionMode::McpAny => {
-            Ok(Box::new(drivers::mcp_agent::McpAgentDriver::new(mode)?))
-        }
+        ExecutionMode::McpTau | ExecutionMode::McpAny => Ok(Box::new(
+            drivers::mcp_agent::McpAgentDriver::from_env(mode)?,
+        )),
     }
 }
 
