@@ -1075,11 +1075,45 @@ fn phase_step_records(
                 ),
             }]
         }
-        OrchestrationPhase::Evidence => vec![OrchestrationStepRecord {
-            step: "Finalize evidence contract markers".to_owned(),
-            status: evidence_status,
-            detail: evidence_phase_step_detail(evidence_status),
-        }],
+        OrchestrationPhase::Evidence => {
+            let prerequisite_status = if evidence_status == PhaseResultStatus::Skip {
+                PhaseResultStatus::Skip
+            } else {
+                pass
+            };
+            vec![
+                OrchestrationStepRecord {
+                    step: "Dump Kolme chain state".to_owned(),
+                    status: prerequisite_status,
+                    detail: "deterministic placeholder: kolme chain state dumped".to_owned(),
+                },
+                OrchestrationStepRecord {
+                    step: "Dump KAMN node state snapshots".to_owned(),
+                    status: prerequisite_status,
+                    detail: "deterministic placeholder: kamn node snapshots dumped".to_owned(),
+                },
+                OrchestrationStepRecord {
+                    step: "Verify all proof anchors independently".to_owned(),
+                    status: evidence_status,
+                    detail: evidence_verify_step_detail(evidence_status),
+                },
+                OrchestrationStepRecord {
+                    step: "Generate chain-of-custody report".to_owned(),
+                    status: evidence_status,
+                    detail: evidence_custody_step_detail(evidence_status),
+                },
+                OrchestrationStepRecord {
+                    step: "Compute evidence bundle hash".to_owned(),
+                    status: evidence_status,
+                    detail: evidence_hash_step_detail(evidence_status),
+                },
+                OrchestrationStepRecord {
+                    step: "Write manifest.json".to_owned(),
+                    status: evidence_status,
+                    detail: evidence_manifest_step_detail(evidence_status),
+                },
+            ]
+        }
         OrchestrationPhase::Teardown => vec![
             OrchestrationStepRecord {
                 step: "[MCP modes] Stop kamn-mcp-server processes".to_owned(),
@@ -1121,30 +1155,51 @@ fn phase_step_records(
 fn evidence_phase_detail(status: PhaseResultStatus) -> String {
     match status {
         PhaseResultStatus::Fail => {
-            "deterministic evidence contract failure summary: expected_artifacts=4 recorded_artifacts=3 status=FAIL"
-                .to_owned()
+            "deterministic evidence phase summary: steps_total=6 pass=2 fail=4 skip=0 expected_artifacts=4 recorded_artifacts=3 status=FAIL".to_owned()
         }
         PhaseResultStatus::Pass => {
-            "deterministic evidence contract summary: expected_artifacts=4 recorded_artifacts=4 status=PASS"
-                .to_owned()
+            "deterministic evidence phase summary: steps_total=6 pass=6 fail=0 skip=0 expected_artifacts=4 recorded_artifacts=4 status=PASS".to_owned()
         }
         PhaseResultStatus::Skip => {
-            "deterministic evidence contract summary: expected_artifacts=4 recorded_artifacts=0 status=SKIP"
-                .to_owned()
+            "deterministic evidence phase summary: steps_total=6 pass=0 fail=0 skip=6 expected_artifacts=4 recorded_artifacts=0 status=SKIP".to_owned()
         }
     }
 }
 
-fn evidence_phase_step_detail(status: PhaseResultStatus) -> String {
+fn evidence_verify_step_detail(status: PhaseResultStatus) -> String {
+    match status {
+        PhaseResultStatus::Fail => "proof_verification=FAIL verified=3 failed=1".to_owned(),
+        PhaseResultStatus::Pass => "proof_verification=PASS verified=4 failed=0".to_owned(),
+        PhaseResultStatus::Skip => "proof_verification=SKIP verified=0 failed=0".to_owned(),
+    }
+}
+
+fn evidence_custody_step_detail(status: PhaseResultStatus) -> String {
+    match status {
+        PhaseResultStatus::Fail => "custody_report=FAIL entries=3".to_owned(),
+        PhaseResultStatus::Pass => "custody_report=PASS entries=4".to_owned(),
+        PhaseResultStatus::Skip => "custody_report=SKIP entries=0".to_owned(),
+    }
+}
+
+fn evidence_hash_step_detail(status: PhaseResultStatus) -> String {
+    match status {
+        PhaseResultStatus::Fail => "bundle_hash=FAIL algorithm=sha256".to_owned(),
+        PhaseResultStatus::Pass => "bundle_hash=PASS algorithm=sha256".to_owned(),
+        PhaseResultStatus::Skip => "bundle_hash=SKIP algorithm=sha256".to_owned(),
+    }
+}
+
+fn evidence_manifest_step_detail(status: PhaseResultStatus) -> String {
     match status {
         PhaseResultStatus::Fail => {
-            "expected_artifacts=4 recorded_artifacts=3 status=FAIL".to_owned()
+            "manifest_write=FAIL schema=kamn.e2e.evidence-manifest.v3".to_owned()
         }
         PhaseResultStatus::Pass => {
-            "expected_artifacts=4 recorded_artifacts=4 status=PASS".to_owned()
+            "manifest_write=PASS schema=kamn.e2e.evidence-manifest.v3".to_owned()
         }
         PhaseResultStatus::Skip => {
-            "expected_artifacts=4 recorded_artifacts=0 status=SKIP".to_owned()
+            "manifest_write=SKIP schema=kamn.e2e.evidence-manifest.v3".to_owned()
         }
     }
 }
