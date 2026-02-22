@@ -4,7 +4,7 @@ use super::ScenarioDefinition;
 pub fn definition() -> ScenarioDefinition {
     ScenarioDefinition {
         id: "S-05",
-        name: "Escrow Settlement (Dispute)",
+        name: "Escrow Settlement",
         priority: "P0",
     }
 }
