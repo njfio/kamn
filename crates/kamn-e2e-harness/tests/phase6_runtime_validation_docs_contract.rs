@@ -27,4 +27,8 @@ fn spec_c16_milestone_index_references_active_phase6_runtime_validation_issue() 
     )
     .expect("milestone index should exist");
     assert!(milestone_index.contains("#5606"));
+    assert!(milestone_index.contains("Active issue(s): None"));
+    assert!(
+        milestone_index.contains("25. Phase-6 runtime external validation execution. (Completed)")
+    );
 }
