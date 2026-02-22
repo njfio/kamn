@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 const CHAIN_ID: &str = "kolme-localnet";
 const CHAIN_VERSION: &str = "v0";
+const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -152,6 +153,8 @@ fn write_websocket_upgrade_response(stream: &mut TcpStream) -> Result<(), String
 }
 
 fn validate_auth(
+    method: &str,
+    path: &str,
     body: &str,
     headers: &BTreeMap<String, String>,
     replay_guard: &mut BTreeSet<(String, u64)>,
@@ -234,7 +237,56 @@ fn validate_auth(
             "request nonce replay detected for sender",
         ));
     }
+
+    if let Some(expected_scope) = required_scope_for_route(method, path) {
+        let scope = headers.get(REQUEST_AUTH_SCOPE_HEADER).ok_or((
+            401,
+            "unauthorized",
+            "service_api_auth_scope_header_missing",
+            "missing required header: x-kamn-authz-scope",
+        ))?;
+        if scope != expected_scope {
+            return Err((
+                401,
+                "unauthorized",
+                "service_api_auth_scope_route_mismatch",
+                "scope route mismatch",
+            ));
+        }
+    }
     Ok(())
+}
+
+fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
+    if !route_requires_auth(method, path) {
+        return None;
+    }
+
+    Some(match (method, path) {
+        ("POST", "/v1/messages/send") => "messages:write",
+        ("POST", "/v1/channels/create") => "channels:write",
+        ("POST", "/v1/tasks/create") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
+        ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
+            "tasks:write"
+        }
+        ("POST", "/v1/escrow/fund") => "escrow:write",
+        ("POST", _) if path.starts_with("/v1/escrow/") && path.ends_with("/release") => {
+            "escrow:write"
+        }
+        ("GET", "/v1/events/ws") => "events:read",
+        ("GET", _) if path.starts_with("/v1/messages/") => "messages:read",
+        ("GET", _) if path.starts_with("/v1/channels/") && path.ends_with("/messages") => {
+            "channels:read"
+        }
+        ("GET", _) if path.starts_with("/v1/tasks/") && path != "/v1/tasks/create" => "tasks:read",
+        ("GET", _) if path.starts_with("/v1/agents/") => "agents:read",
+        _ => "protected:unknown",
+    })
+}
+
+fn route_requires_auth(method: &str, path: &str) -> bool {
+    !(method == "GET" && (path == "/healthz" || path == "/metrics"))
 }
 
 fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(), String> {
@@ -277,9 +329,13 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     continue;
                 }
 
-                if let Err((status, error, reason_code, message)) =
-                    validate_auth(&body, &headers, &mut replay_guard)
-                {
+                if let Err((status, error, reason_code, message)) = validate_auth(
+                    method.as_str(),
+                    path.as_str(),
+                    &body,
+                    &headers,
+                    &mut replay_guard,
+                ) {
                     let payload = format!(
                         "{{\"error\":\"{error}\",\"reason_code\":\"{reason_code}\",\"message\":\"{message}\"}}",
                     );
@@ -428,13 +484,14 @@ fn wait_for_server_ready(addr: &str) {
     thread::sleep(Duration::from_millis(40));
 }
 
-fn auth(sender: &AgentDid, nonce: u64, body: &str) -> ServiceRequestAuth {
-    ServiceRequestAuth::new(
+fn auth_with_scope(sender: &AgentDid, nonce: u64, body: &str, scope: &str) -> ServiceRequestAuth {
+    ServiceRequestAuth::new_with_scope(
         sender.clone(),
         nonce,
         service_signature_for_fields(sender, nonce, CHAIN_ID, CHAIN_VERSION, body),
+        Some(scope),
     )
-    .expect("request auth should build")
+    .expect("request auth with scope should build")
 }
 
 #[test]
@@ -461,36 +518,54 @@ fn functional_service_api_client_executes_signed_http_route_contracts() {
 
     let send_payload = r#"{"message":"hello from sdk"}"#;
     let send_response = client
-        .send_message(send_payload, &auth(&sender, 1, send_payload))
+        .send_message(
+            send_payload,
+            &auth_with_scope(&sender, 1, send_payload, "messages:write"),
+        )
         .expect("send message should succeed");
     assert!(send_response.message_id.starts_with("msg-local-"));
     assert_eq!(send_response.status, "created");
 
     let message_status = client
-        .get_message(send_response.message_id.as_str(), &auth(&sender, 2, ""))
+        .get_message(
+            send_response.message_id.as_str(),
+            &auth_with_scope(&sender, 2, "", "messages:read"),
+        )
         .expect("get message should succeed");
     assert_eq!(message_status.message_id, send_response.message_id);
     assert_eq!(message_status.status, "created");
 
     let channel_payload = r#"{"name":"ops"}"#;
     let channel_response = client
-        .create_channel(channel_payload, &auth(&sender, 3, channel_payload))
+        .create_channel(
+            channel_payload,
+            &auth_with_scope(&sender, 3, channel_payload, "channels:write"),
+        )
         .expect("create channel should succeed");
     assert!(channel_response.channel_id.starts_with("channel-local-"));
 
     let task_payload = r#"{"task":"triage"}"#;
     let task_response = client
-        .create_task(task_payload, &auth(&sender, 4, task_payload))
+        .create_task(
+            task_payload,
+            &auth_with_scope(&sender, 4, task_payload, "tasks:write"),
+        )
         .expect("create task should succeed");
     assert!(task_response.task_id.starts_with("task-local-"));
 
     let task_status = client
-        .get_task(task_response.task_id.as_str(), &auth(&sender, 5, ""))
+        .get_task(
+            task_response.task_id.as_str(),
+            &auth_with_scope(&sender, 5, "", "tasks:read"),
+        )
         .expect("get task should succeed");
     assert_eq!(task_status.state, "submitted");
 
     let profile = client
-        .get_agent_profile(sender.as_str(), &auth(&sender, 6, ""))
+        .get_agent_profile(
+            sender.as_str(),
+            &auth_with_scope(&sender, 6, "", "agents:read"),
+        )
         .expect("agent profile should resolve");
     assert_eq!(profile.did, sender.as_str());
     assert_eq!(profile.reputation_score, 500);
@@ -524,7 +599,7 @@ fn integration_service_api_client_reads_websocket_event_frame() {
     let sender = AgentDid::parse("kamn:did:agent:sdk-events").expect("sender did should parse");
 
     let event = client
-        .read_event_once(&auth(&sender, 9, ""))
+        .read_event_once(&auth_with_scope(&sender, 9, "", "events:read"))
         .expect("event read should succeed");
     assert_eq!(event.event, "state-transition");
     assert_eq!(event.runtime_mode, "api");
@@ -550,7 +625,7 @@ fn regression_service_api_client_rejects_replayed_nonce() {
         .expect("client should connect");
     let sender = AgentDid::parse("kamn:did:agent:sdk-replay").expect("sender did should parse");
     let payload = r#"{"message":"nonce replay"}"#;
-    let replay_auth = auth(&sender, 11, payload);
+    let replay_auth = auth_with_scope(&sender, 11, payload, "messages:write");
 
     client
         .send_message(payload, &replay_auth)
@@ -565,7 +640,12 @@ fn regression_service_api_client_rejects_replayed_nonce() {
         "replay failure should expose deterministic reason code: {replay_error}"
     );
 
-    let invalid_auth = auth(&sender, 12, r#"{"message":"mismatch-signature"}"#);
+    let invalid_auth = auth_with_scope(
+        &sender,
+        12,
+        r#"{"message":"mismatch-signature"}"#,
+        "messages:write",
+    );
     let unauthorized_error = client
         .send_message(payload, &invalid_auth)
         .expect_err("signature mismatch should fail closed");
@@ -595,7 +675,10 @@ fn spec_c01_service_api_client_lists_channel_messages_through_route_contract() {
     let sender = AgentDid::parse("kamn:did:agent:sdk-list").expect("sender did should parse");
 
     let messages = client
-        .list_channel_messages("channel-local-123", &auth(&sender, 1, ""))
+        .list_channel_messages(
+            "channel-local-123",
+            &auth_with_scope(&sender, 1, "", "channels:read"),
+        )
         .expect("list channel messages should succeed");
     assert_eq!(messages.channel_id, "channel-local-123");
     assert_eq!(
@@ -623,26 +706,38 @@ fn spec_c02_service_api_client_executes_task_transition_and_escrow_route_contrac
         AgentDid::parse("kamn:did:agent:sdk-task-escrow").expect("sender did should parse");
 
     let accepted = client
-        .accept_task("task-local-123", &auth(&sender, 1, "{}"))
+        .accept_task(
+            "task-local-123",
+            &auth_with_scope(&sender, 1, "{}", "tasks:write"),
+        )
         .expect("accept task should succeed");
     assert_eq!(accepted.task_id, "task-local-123");
     assert_eq!(accepted.state, "accepted");
 
     let completed = client
-        .complete_task("task-local-123", &auth(&sender, 2, "{}"))
+        .complete_task(
+            "task-local-123",
+            &auth_with_scope(&sender, 2, "{}", "tasks:write"),
+        )
         .expect("complete task should succeed");
     assert_eq!(completed.task_id, "task-local-123");
     assert_eq!(completed.state, "completed");
 
     let fund_payload = r#"{"task_id":"task-local-123","amount":100}"#;
     let funded = client
-        .fund_escrow(fund_payload, &auth(&sender, 3, fund_payload))
+        .fund_escrow(
+            fund_payload,
+            &auth_with_scope(&sender, 3, fund_payload, "escrow:write"),
+        )
         .expect("fund escrow should succeed");
     assert!(funded.escrow_id.starts_with("escrow-local-"));
     assert_eq!(funded.state, "funded");
 
     let released = client
-        .release_escrow(funded.escrow_id.as_str(), &auth(&sender, 4, "{}"))
+        .release_escrow(
+            funded.escrow_id.as_str(),
+            &auth_with_scope(&sender, 4, "{}", "escrow:write"),
+        )
         .expect("release escrow should succeed");
     assert_eq!(released.escrow_id, funded.escrow_id);
     assert_eq!(released.state, "released");
