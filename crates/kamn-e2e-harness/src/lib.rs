@@ -516,6 +516,22 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
     let spawn_timeline_json = "{\"postgres_start\":\"step-1\",\"kolme_start\":\"step-2\",\"kamn_nodes_start\":\"step-3\",\"agent_deploy_start\":\"step-4\"}";
     let scenario_totals =
         status_totals_from_iter(scenario_results.iter().map(|result| result.status));
+    let mode_driver = mode_driver_label(mode);
+    let selected_scenarios = selected.len() as u64;
+    let executed_scenarios = scenario_results.len() as u64;
+    let mode_execution_status = if selected_scenarios == executed_scenarios {
+        PhaseResultStatus::Pass
+    } else {
+        PhaseResultStatus::Fail
+    };
+    let mode_execution_contract_json = format!(
+        "{{\"mode\":\"{}\",\"driver\":\"{}\",\"selected_scenarios\":{},\"executed_scenarios\":{},\"status\":\"{}\"}}",
+        mode.as_str(),
+        mode_driver,
+        selected_scenarios,
+        executed_scenarios,
+        mode_execution_status.as_str()
+    );
     let live_validation_status = if scenario_totals.fail > 0 {
         PhaseResultStatus::Fail
     } else if scenario_totals.pass > 0 {
@@ -671,7 +687,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"evidence_contract\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_external_execution\":{},\"runtime_orchestration\":{},\"runtime_lifecycle_execution\":{},\"runtime_validation_execution\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"spawn_timeline\":{},\"spawn_plan\":{},\"spawn_execution\":{},\"live_process_execution\":{},\"mode_execution_contract\":{},\"evidence_contract\":{},\"live_execution\":{},\"live_validation\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"scenario_results\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
@@ -686,6 +702,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         spawn_plan_json,
         spawn_execution_json,
         live_process_execution_json,
+        mode_execution_contract_json,
         evidence_contract_json,
         live_execution_json,
         live_validation_json,
@@ -1062,6 +1079,14 @@ fn phase_step_records(
 
 fn is_mcp_mode(mode: ExecutionMode) -> bool {
     matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny)
+}
+
+fn mode_driver_label(mode: ExecutionMode) -> &'static str {
+    match mode {
+        ExecutionMode::SdkDirect => "sdk-direct-driver",
+        ExecutionMode::CliScripted => "cli-scripted-driver",
+        ExecutionMode::McpTau | ExecutionMode::McpAny => "mcp-agent-driver",
+    }
 }
 
 fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>, String> {

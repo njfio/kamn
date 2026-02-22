@@ -1526,3 +1526,81 @@ fn spec_c80_evidence_fail_path_sets_evidence_status_and_overall_fail() {
         "\"live_execution\":{\"orchestration_status\":\"PASS\",\"validation_status\":\"PASS\",\"evidence_status\":\"FAIL\",\"overall_status\":\"FAIL\"}"
     ));
 }
+
+#[test]
+fn spec_c81_run_output_contains_mode_execution_contract_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"mode_execution_contract\":"));
+    assert!(output.contains("\"mode\""));
+    assert!(output.contains("\"driver\""));
+    assert!(output.contains("\"selected_scenarios\""));
+    assert!(output.contains("\"executed_scenarios\""));
+    assert!(output.contains("\"status\""));
+}
+
+#[test]
+fn spec_c82_mode_execution_contract_driver_marker_is_mode_coherent() {
+    let sdk = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let sdk_output = execute_run_contract(&sdk).expect("sdk run should render");
+    assert!(sdk_output.contains(
+        "\"mode_execution_contract\":{\"mode\":\"sdk-direct\",\"driver\":\"sdk-direct-driver\""
+    ));
+
+    let cli = RunCommandConfig {
+        mode: "cli-scripted".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let cli_output = execute_run_contract(&cli).expect("cli run should render");
+    assert!(cli_output.contains(
+        "\"mode_execution_contract\":{\"mode\":\"cli-scripted\",\"driver\":\"cli-scripted-driver\""
+    ));
+
+    let mcp = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let mcp_output = execute_run_contract(&mcp).expect("mcp run should render");
+    assert!(mcp_output.contains(
+        "\"mode_execution_contract\":{\"mode\":\"mcp-tau\",\"driver\":\"mcp-agent-driver\""
+    ));
+}
+
+#[test]
+fn spec_c83_mode_execution_contract_executed_count_matches_scenario_count() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-03".to_owned(), "S-01".to_owned(), "S-15".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"scenario_count\":3"));
+    assert!(output.contains(
+        "\"mode_execution_contract\":{\"mode\":\"sdk-direct\",\"driver\":\"sdk-direct-driver\",\"selected_scenarios\":3,\"executed_scenarios\":3,\"status\":\"PASS\"}"
+    ));
+}
