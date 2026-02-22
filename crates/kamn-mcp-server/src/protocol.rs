@@ -199,12 +199,45 @@ fn build_dispatch_payload(id_token: &str, tool_name: &str, request_json: &str) -
 fn normalize_id_for_dispatch(id_token: &str) -> String {
     let trimmed = id_token.trim();
     if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
-        return trimmed[1..trimmed.len() - 1].to_owned();
+        return unescape_json_scalar(&trimmed[1..trimmed.len() - 1]);
     }
     if trimmed.eq("null") || trimmed.is_empty() {
         return "request-unknown".to_owned();
     }
     trimmed.to_owned()
+}
+
+fn unescape_json_scalar(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut escaped = false;
+
+    for ch in input.chars() {
+        if escaped {
+            match ch {
+                '"' => result.push('"'),
+                '\\' => result.push('\\'),
+                'n' => result.push('\n'),
+                'r' => result.push('\r'),
+                't' => result.push('\t'),
+                other => result.push(other),
+            }
+            escaped = false;
+            continue;
+        }
+
+        if ch == '\\' {
+            escaped = true;
+            continue;
+        }
+
+        result.push(ch);
+    }
+
+    if escaped {
+        result.push('\\');
+    }
+
+    result
 }
 
 fn frame_jsonrpc_response(response_json: &str) -> String {
@@ -347,4 +380,113 @@ fn escape_json(input: &str) -> String {
         }
     }
     escaped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        decode_framed_payloads, escape_json, json_optional_u64_field, normalize_id_for_dispatch,
+        parse_content_length,
+    };
+
+    #[test]
+    fn spec_c01_protocol_normalize_id_contract_handles_quoted_numeric_null_and_empty() {
+        assert_eq!(normalize_id_for_dispatch("\"req-1\""), "req-1");
+        assert_eq!(normalize_id_for_dispatch("42"), "42");
+        assert_eq!(
+            normalize_id_for_dispatch("\"req-1"),
+            "\"req-1",
+            "partially quoted id should not be unquoted",
+        );
+        assert_eq!(
+            normalize_id_for_dispatch("req-1\""),
+            "req-1\"",
+            "partially quoted id should not be unquoted",
+        );
+        assert_eq!(
+            normalize_id_for_dispatch("null"),
+            "request-unknown",
+            "null id token should map to fallback dispatch id",
+        );
+        assert_eq!(
+            normalize_id_for_dispatch(""),
+            "request-unknown",
+            "empty id token should map to fallback dispatch id",
+        );
+    }
+
+    #[test]
+    fn spec_c01_protocol_normalize_id_contract_unescapes_quoted_json_id() {
+        assert_eq!(
+            normalize_id_for_dispatch("\"req-\\\\\\\"1\""),
+            "req-\\\"1",
+            "quoted id should decode escaped json quote sequences",
+        );
+    }
+
+    #[test]
+    fn spec_c02_protocol_parse_content_length_contract_accepts_and_rejects_expected_headers() {
+        let parsed = parse_content_length("Content-Length: 17").expect("header should parse");
+        assert_eq!(parsed, 17);
+        assert!(
+            parse_content_length("Content-Length: not-a-number").is_err(),
+            "non-numeric content-length must be rejected",
+        );
+        assert!(
+            parse_content_length("X-Other: 1").is_err(),
+            "missing content-length must be rejected",
+        );
+    }
+
+    #[test]
+    fn spec_c02_protocol_decode_framed_payloads_contract_supports_single_and_multi_frame_streams() {
+        let single = "Content-Length: 7\r\n\r\n{\"a\":1}";
+        let payloads = decode_framed_payloads(single).expect("single frame should decode");
+        assert_eq!(payloads, vec![r#"{"a":1}"#]);
+
+        let multi = "Content-Length: 7\r\n\r\n{\"a\":1}\r\nContent-Length: 7\r\n\r\n{\"b\":2}";
+        let payloads = decode_framed_payloads(multi).expect("multi-frame should decode");
+        assert_eq!(payloads, vec![r#"{"a":1}"#, r#"{"b":2}"#]);
+    }
+
+    #[test]
+    fn spec_c02_protocol_decode_framed_payloads_contract_rejects_invalid_shapes() {
+        assert!(
+            decode_framed_payloads("Content-Length: 8\r\n\r\n{\"a\":1}").is_err(),
+            "mismatched content-length should fail",
+        );
+        assert!(
+            decode_framed_payloads("Content-Length: 7\r\n{\"a\":1}").is_err(),
+            "missing header terminator should fail",
+        );
+    }
+
+    #[test]
+    fn spec_c03_protocol_json_optional_u64_contract_supports_numeric_and_quoted_forms() {
+        assert_eq!(
+            json_optional_u64_field(r#"{"block_height":9}"#, "block_height"),
+            Some(9),
+        );
+        assert_eq!(
+            json_optional_u64_field(r#"{"block_height":"11"}"#, "block_height"),
+            Some(11),
+        );
+        assert_eq!(
+            json_optional_u64_field(r#"{"block_height":"x"}"#, "block_height"),
+            None,
+        );
+        assert_eq!(
+            json_optional_u64_field(r#"{"other":1}"#, "block_height"),
+            None,
+        );
+    }
+
+    #[test]
+    fn spec_c04_protocol_escape_json_contract_covers_control_character_paths() {
+        let escaped = escape_json("\"\\\n\r\t");
+        assert_eq!(
+            escaped, "\\\"\\\\\\n\\r\\t",
+            "quote, slash, newline, carriage-return, and tab must all be escaped",
+        );
+    }
 }
