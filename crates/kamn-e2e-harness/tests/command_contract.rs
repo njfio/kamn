@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(unix)]
 use std::{fs, os::unix::fs::PermissionsExt};
 
@@ -9,12 +10,14 @@ use kamn_e2e_harness::{
 };
 
 fn temp_path(name: &str) -> PathBuf {
+    static UNIQUE_COUNTER: AtomicU64 = AtomicU64::new(0);
     let pid = std::process::id();
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock should be monotonic")
         .as_nanos();
-    std::env::temp_dir().join(format!("kamn-e2e-harness-{pid}-{nanos}-{name}"))
+    let seq = UNIQUE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("kamn-e2e-harness-{pid}-{nanos}-{seq}-{name}"))
 }
 
 fn valid_chain_dump_json() -> &'static str {
@@ -2377,4 +2380,32 @@ fn spec_c108_external_execution_probe_failure_marks_validation_fail() {
     assert!(output.contains("\"overall\":\"FAIL\""));
 
     let _ = std::fs::remove_file(kolme_binary);
+}
+
+#[test]
+fn spec_c109_run_output_contains_ordered_scenario_contract_projection() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-03".to_owned(), "S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"scenario_contracts\":["));
+    assert!(output.contains("\"steps\":["));
+    assert!(output.contains("\"verifiable_outputs\":["));
+    assert!(output.contains("\"pass_criteria\":["));
+
+    let s03_index = output
+        .find("\"id\":\"S-03\"")
+        .expect("S-03 contract entry should be present");
+    let s01_index = output
+        .find("\"id\":\"S-01\"")
+        .expect("S-01 contract entry should be present");
+    assert!(
+        s03_index < s01_index,
+        "scenario contracts should preserve selected order"
+    );
 }
