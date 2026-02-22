@@ -579,3 +579,35 @@ fn spec_c34_process_lifecycle_service_markers_are_planned() {
         output.contains("\"process_lifecycle\":{\"postgres\":\"planned\",\"kolme\":\"planned\",\"kamn_processor\":\"planned\",\"kamn_listener\":\"planned\",\"kamn_approver\":\"planned\"}")
     );
 }
+
+#[test]
+fn spec_c35_run_output_contains_spawn_timeline_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"spawn_timeline\":"));
+    assert!(output.contains("\"postgres_start\""));
+    assert!(output.contains("\"kolme_start\""));
+    assert!(output.contains("\"kamn_nodes_start\""));
+    assert!(output.contains("\"agent_deploy_start\""));
+}
+
+#[test]
+fn spec_c36_spawn_timeline_markers_follow_canonical_ordering() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(
+        output.contains("\"spawn_timeline\":{\"postgres_start\":\"step-1\",\"kolme_start\":\"step-2\",\"kamn_nodes_start\":\"step-3\",\"agent_deploy_start\":\"step-4\"}")
+    );
+}
