@@ -479,6 +479,7 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         "{{\"kolme_runtime\":\"external-binary\",\"kamn_nodes_runtime\":\"managed-process-set\",\"agent_runtime\":\"{}\",\"spawn_strategy\":\"contract-scaffold\"}}",
         agent_runtime
     );
+    let process_lifecycle_json = "{\"postgres\":\"planned\",\"kolme\":\"planned\",\"kamn_processor\":\"planned\",\"kamn_listener\":\"planned\",\"kamn_approver\":\"planned\"}";
     let scenario_ids = selected
         .iter()
         .map(|item| format!("\"{}\"", item.id))
@@ -533,12 +534,13 @@ pub fn execute_run_contract(config: &RunCommandConfig) -> Result<String, String>
         lifecycle_summary.step_totals.skip
     );
     Ok(format!(
-        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
+        "{{\"command\":\"run\",\"mode\":\"{}\",\"evidence_dir\":\"{}\",\"integration_config\":{},\"runtime_readiness\":{},\"process_runtime\":{},\"process_lifecycle\":{},\"scenario_count\":{},\"scenario_ids\":[{}],\"phase_count\":{},\"phases\":[{}],\"phase_results\":[{}],\"lifecycle_summary\":{{\"phase_totals\":{},\"step_totals\":{}}}}}",
         mode.as_str(),
         escape_json(config.evidence_dir.as_str()),
         integration_config_json,
         runtime_readiness_json,
         process_runtime_json,
+        process_lifecycle_json,
         selected.len(),
         scenario_ids,
         phases.len(),
