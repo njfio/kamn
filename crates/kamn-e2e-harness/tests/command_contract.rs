@@ -1618,18 +1618,12 @@ fn spec_c84_evidence_phase_is_pass_on_normal_path() {
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("{\"phase\":\"EVIDENCE\",\"status\":\"PASS\""));
     assert!(output.contains("{\"step\":\"Dump Kolme chain state\",\"status\":\"PASS\""));
-    assert!(output.contains(
-        "{\"step\":\"Dump KAMN node state snapshots\",\"status\":\"PASS\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Verify all proof anchors independently\",\"status\":\"PASS\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Generate chain-of-custody report\",\"status\":\"PASS\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Compute evidence bundle hash\",\"status\":\"PASS\""
-    ));
+    assert!(output.contains("{\"step\":\"Dump KAMN node state snapshots\",\"status\":\"PASS\""));
+    assert!(
+        output.contains("{\"step\":\"Verify all proof anchors independently\",\"status\":\"PASS\"")
+    );
+    assert!(output.contains("{\"step\":\"Generate chain-of-custody report\",\"status\":\"PASS\""));
+    assert!(output.contains("{\"step\":\"Compute evidence bundle hash\",\"status\":\"PASS\""));
     assert!(output.contains("{\"step\":\"Write manifest.json\",\"status\":\"PASS\""));
 }
 
@@ -1645,18 +1639,12 @@ fn spec_c85_evidence_phase_is_fail_on_evidence_fail_path() {
     };
     let output = execute_run_contract(&config).expect("run output should render");
     assert!(output.contains("{\"phase\":\"EVIDENCE\",\"status\":\"FAIL\""));
-    assert!(output.contains(
-        "{\"step\":\"Verify all proof anchors independently\",\"status\":\"FAIL\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Generate chain-of-custody report\",\"status\":\"FAIL\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Compute evidence bundle hash\",\"status\":\"FAIL\""
-    ));
-    assert!(output.contains(
-        "{\"step\":\"Write manifest.json\",\"status\":\"FAIL\""
-    ));
+    assert!(
+        output.contains("{\"step\":\"Verify all proof anchors independently\",\"status\":\"FAIL\"")
+    );
+    assert!(output.contains("{\"step\":\"Generate chain-of-custody report\",\"status\":\"FAIL\""));
+    assert!(output.contains("{\"step\":\"Compute evidence bundle hash\",\"status\":\"FAIL\""));
+    assert!(output.contains("{\"step\":\"Write manifest.json\",\"status\":\"FAIL\""));
 }
 
 #[test]
