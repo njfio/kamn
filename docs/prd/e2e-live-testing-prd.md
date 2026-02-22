@@ -295,7 +295,7 @@ Or with environment-based identity:
 | `complete_task` | Pending service route support | Explicit unsupported response returned by MCP dispatcher. |
 | `fund_escrow` | Pending service route support | Explicit unsupported response returned by MCP dispatcher. |
 | `release_escrow` | Pending service route support | Explicit unsupported response returned by MCP dispatcher. |
-| `verify_proof` | Pending runtime payload contract | Reserved in tool inventory; dispatcher currently returns explicit unsupported response. |
+| `verify_proof` | Implemented | Dispatches through `KamnAgentHandle::verify_proof` with deterministic invalid-request handling for malformed payload fields. |
 
 **MCP Tool Definitions:**
 
