@@ -635,6 +635,11 @@ fn ensure_external_execution_preflight(
 
 fn ensure_binary_path_is_executable(path: &str, label: &str) -> Result<(), String> {
     let binary_path = Path::new(path);
+    if !binary_path.is_absolute() {
+        return Err(format!(
+            "external execution preflight failed: {label} binary path must be absolute: {path}"
+        ));
+    }
     if !binary_path.exists() {
         return Err(format!(
             "external execution preflight failed: {label} binary not found: {path}"
