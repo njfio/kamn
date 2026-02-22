@@ -3,11 +3,10 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 245
+- archived_issue_count: 244
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
-| 3873 | Task: integrate libp2p recovery evidence into release go-no-go policy contracts | 2026-02-18 | `specs/archive/3873` | `specs/3873/ARCHIVED.md` |
 | 3874 | Subtask: add go-no-go marker checks for recovery artifact freshness and status | 2026-02-18 | `specs/archive/3874` | `specs/3874/ARCHIVED.md` |
 | 3875 | Subtask: add runbook parity docs-contract checks for recovery gate markers | 2026-02-18 | `specs/archive/3875` | `specs/3875/ARCHIVED.md` |
 | 3879 | Subtask: add native-fallback profile compatibility validation checks | 2026-02-18 | `specs/archive/3879` | `specs/3879/ARCHIVED.md` |
