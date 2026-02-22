@@ -2,8 +2,8 @@
 
 - Milestone: `R51 E2E Live Testing PRD Full Delivery`
 - Epic: #5557
-- Completed issue(s): #5558, #5560, #5562, #5564, #5566, #5568, #5570, #5572, #5574, #5576, #5578, #5580, #5582, #5584, #5586, #5588, #5590
-- Active issue(s): #5592
+- Completed issue(s): #5558, #5560, #5562, #5564, #5566, #5568, #5570, #5572, #5574, #5576, #5578, #5580, #5582, #5584, #5586, #5588, #5590, #5592
+- Active issue(s): #5594
 - Scope: deliver `docs/prd/e2e-live-testing-prd.md` architecture and scenario contracts through spec-driven, issue-driven, TDD implementation slices.
 
 ## Delivery Slices
@@ -24,5 +24,6 @@
 15. Phase-5b process lifecycle state contracts. (Completed)
 16. Phase-5c spawn timeline contracts. (Completed)
 17. Phase-5d live validation summary contracts. (Completed)
-18. Phase-6a spawn command-plan contracts. (Active)
-19. Phase-6 real process orchestration and live validation execution. (Pending)
+18. Phase-6a spawn command-plan contracts. (Completed)
+19. Phase-6b spawn execution contracts. (Active)
+20. Phase-6 real process orchestration and live validation execution. (Pending)
