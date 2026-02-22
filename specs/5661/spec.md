@@ -2,7 +2,7 @@
 
 - Issue: #5661
 - Milestone: R64 E2E Verification Captured-At Format Contract
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
