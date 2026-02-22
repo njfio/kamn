@@ -180,6 +180,15 @@ fn parsed(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedC
     }
 }
 
+fn parsed_json(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedCliArgs {
+    ParsedCliArgs {
+        command,
+        output_format: OutputFormat::Json,
+        endpoint: endpoint.to_owned(),
+        passthrough: passthrough.iter().map(|value| value.to_string()).collect(),
+    }
+}
+
 #[test]
 fn spec_c01_cli_health_command_executes_supported_path() {
     let bind_addr = reserve_loopback_addr();
@@ -194,8 +203,8 @@ fn spec_c01_cli_health_command_executes_supported_path() {
     ))
     .expect("health command should succeed");
     assert!(
-        output.contains("status=ok"),
-        "health output should include status marker: {output}"
+        output.text.contains("status=ok"),
+        "health output should include status marker: {output:?}"
     );
 
     let server_result = server.join().expect("server thread should join");
@@ -219,12 +228,12 @@ fn spec_c02_cli_list_messages_command_executes_and_validates_args() {
     ))
     .expect("list-messages should succeed");
     assert!(
-        output.contains("channel_id=channel-cli"),
-        "list-messages output should include channel id: {output}"
+        output.text.contains("channel_id=channel-cli"),
+        "list-messages output should include channel id: {output:?}"
     );
     assert!(
-        output.contains("msg-1,msg-2"),
-        "list-messages output should include message ids: {output}"
+        output.text.contains("msg-1,msg-2"),
+        "list-messages output should include message ids: {output:?}"
     );
 
     let missing_args_error = dispatch(&parsed(
@@ -254,12 +263,12 @@ fn spec_c03_cli_verify_proof_command_executes_and_validates_args() {
     ))
     .expect("verify-proof command should succeed");
     assert!(
-        output.contains("message_id=msg-1"),
-        "verify-proof output should include message id: {output}"
+        output.text.contains("message_id=msg-1"),
+        "verify-proof output should include message id: {output:?}"
     );
     assert!(
-        output.contains("verified=true"),
-        "verify-proof output should include verified projection: {output}"
+        output.text.contains("verified=true"),
+        "verify-proof output should include verified projection: {output:?}"
     );
 
     let invalid_block_height = dispatch(&parsed(
@@ -290,8 +299,8 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
     ))
     .expect("accept-task should succeed");
     assert!(
-        accept_output.contains("state=accepted"),
-        "accept-task output should include accepted state: {accept_output}"
+        accept_output.text.contains("state=accepted"),
+        "accept-task output should include accepted state: {accept_output:?}"
     );
 
     let complete_output = dispatch(&parsed(
@@ -301,8 +310,8 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
     ))
     .expect("complete-task should succeed");
     assert!(
-        complete_output.contains("state=completed"),
-        "complete-task output should include completed state: {complete_output}"
+        complete_output.text.contains("state=completed"),
+        "complete-task output should include completed state: {complete_output:?}"
     );
 
     let fund_output = dispatch(&parsed(
@@ -312,12 +321,12 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
     ))
     .expect("fund-escrow should succeed");
     assert!(
-        fund_output.contains("escrow_id=escrow-cli"),
-        "fund-escrow output should include escrow id: {fund_output}"
+        fund_output.text.contains("escrow_id=escrow-cli"),
+        "fund-escrow output should include escrow id: {fund_output:?}"
     );
     assert!(
-        fund_output.contains("state=funded"),
-        "fund-escrow output should include funded state: {fund_output}"
+        fund_output.text.contains("state=funded"),
+        "fund-escrow output should include funded state: {fund_output:?}"
     );
 
     let release_output = dispatch(&parsed(
@@ -327,8 +336,8 @@ fn spec_c04_cli_task_and_escrow_commands_execute_and_validate_args() {
     ))
     .expect("release-escrow should succeed");
     assert!(
-        release_output.contains("state=released"),
-        "release-escrow output should include released state: {release_output}"
+        release_output.text.contains("state=released"),
+        "release-escrow output should include released state: {release_output:?}"
     );
 
     for (command, label) in [
@@ -364,8 +373,8 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     let register_output = dispatch(&parsed(CommandKind::Register, endpoint.as_str(), &[]))
         .expect("register should succeed");
     assert!(
-        register_output.contains("kamn:did:agent"),
-        "register output should include did marker: {register_output}"
+        register_output.text.contains("kamn:did:agent"),
+        "register output should include did marker: {register_output:?}"
     );
 
     let send_output = dispatch(&parsed(
@@ -375,8 +384,8 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     ))
     .expect("send-message should succeed");
     assert!(
-        send_output.contains("message_id=msg-cli"),
-        "send-message output should include message id: {send_output}"
+        send_output.text.contains("message_id=msg-cli"),
+        "send-message output should include message id: {send_output:?}"
     );
 
     let channel_output = dispatch(&parsed(
@@ -386,8 +395,8 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     ))
     .expect("create-channel should succeed");
     assert!(
-        channel_output.contains("channel_id=channel-cli"),
-        "create-channel output should include channel id: {channel_output}"
+        channel_output.text.contains("channel_id=channel-cli"),
+        "create-channel output should include channel id: {channel_output:?}"
     );
 
     let query_output = dispatch(&parsed(
@@ -397,8 +406,8 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     ))
     .expect("query-message should succeed");
     assert!(
-        query_output.contains("status=created"),
-        "query-message output should include status marker: {query_output}"
+        query_output.text.contains("status=created"),
+        "query-message output should include status marker: {query_output:?}"
     );
 
     let task_output = dispatch(&parsed(
@@ -408,8 +417,8 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
     ))
     .expect("create-task should succeed");
     assert!(
-        task_output.contains("task_id=task-cli"),
-        "create-task output should include task id: {task_output}"
+        task_output.text.contains("task_id=task-cli"),
+        "create-task output should include task id: {task_output:?}"
     );
 
     for (command, label) in [
@@ -425,6 +434,44 @@ fn spec_c05_cli_core_message_and_task_commands_execute_and_validate_args() {
             "missing arg for {label} should be invalid input: {error}"
         );
     }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c06_cli_json_output_contract_renders_structured_health_projection() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 1));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+    let output = dispatch(&parsed_json(CommandKind::Health, endpoint.as_str(), &[]))
+        .expect("health command should succeed");
+    assert!(
+        output.json.starts_with('{'),
+        "json output should start with object marker: {}",
+        output.json
+    );
+    assert!(
+        output.json.contains("\"status\":\"ok\""),
+        "json output should include status projection: {}",
+        output.json
+    );
+    assert!(
+        !output.json.contains("\"result\":"),
+        "json output should not wrap result as escaped blob: {}",
+        output.json
+    );
+    assert!(
+        output.text.contains("status=ok"),
+        "text projection should still include key=value markers: {}",
+        output.text
+    );
 
     let server_result = server.join().expect("server thread should join");
     assert!(

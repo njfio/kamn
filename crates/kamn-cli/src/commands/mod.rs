@@ -1,4 +1,4 @@
-use crate::ParsedCliArgs;
+use crate::{CommandOutput, ParsedCliArgs};
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle};
 
 const DEFAULT_AGENT_NAME: &str = "kamn-cli";
@@ -28,6 +28,66 @@ pub mod release_escrow;
 pub mod send_message;
 /// `verify-proof` command module.
 pub mod verify_proof;
+
+pub(crate) enum OutputValue {
+    String(String),
+    Raw(String),
+    StringList(Vec<String>),
+}
+
+impl OutputValue {
+    fn as_text(&self) -> String {
+        match self {
+            Self::String(value) => value.clone(),
+            Self::Raw(value) => value.clone(),
+            Self::StringList(values) => values.join(","),
+        }
+    }
+
+    fn as_json(&self) -> String {
+        match self {
+            Self::String(value) => format!("\"{}\"", escape_json(value.as_str())),
+            Self::Raw(value) => value.clone(),
+            Self::StringList(values) => {
+                let values = values
+                    .iter()
+                    .map(|value| format!("\"{}\"", escape_json(value.as_str())))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                format!("[{values}]")
+            }
+        }
+    }
+}
+
+pub(crate) fn command_output(fields: Vec<(&'static str, OutputValue)>) -> CommandOutput {
+    let text = fields
+        .iter()
+        .map(|(key, value)| format!("{key}={}", value.as_text()))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let json_fields = fields
+        .iter()
+        .map(|(key, value)| format!("\"{}\":{}", escape_json(key), value.as_json()))
+        .collect::<Vec<_>>()
+        .join(",");
+    CommandOutput::new(format!("{{{json_fields}}}"), text)
+}
+
+fn escape_json(input: &str) -> String {
+    let mut escaped = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
 
 pub(crate) fn connect_handle(args: &ParsedCliArgs) -> Result<KamnAgentHandle, AgentLibError> {
     let agent_name =
@@ -60,4 +120,27 @@ pub(crate) fn required_arg<'a>(
         });
     }
     Ok(value.as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{command_output, OutputValue};
+
+    #[test]
+    fn unit_command_output_json_escapes_control_characters() {
+        let output = command_output(vec![(
+            "payload",
+            OutputValue::String("\"\\\n\r\t".to_owned()),
+        )]);
+        assert_eq!(output.json, "{\"payload\":\"\\\"\\\\\\n\\r\\t\"}");
+    }
+
+    #[test]
+    fn unit_command_output_text_projection_keeps_list_comma_join() {
+        let output = command_output(vec![(
+            "messages",
+            OutputValue::StringList(vec!["a".to_owned(), "b".to_owned()]),
+        )]);
+        assert_eq!(output.text, "messages=a,b");
+    }
 }
