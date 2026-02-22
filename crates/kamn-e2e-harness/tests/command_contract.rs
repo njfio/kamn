@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use kamn_e2e_harness::{
-    execute_run_contract, execute_verify_contract, parse_command_args, parse_scenario_csv,
-    HarnessCommand, RunCommandConfig, VerifyCommandConfig,
+    all_orchestration_phases, execute_run_contract, execute_verify_contract, parse_command_args,
+    parse_scenario_csv, HarnessCommand, RunCommandConfig, VerifyCommandConfig,
 };
 
 fn temp_path(name: &str) -> PathBuf {
@@ -121,4 +121,36 @@ fn spec_c07_verify_command_writes_deterministic_report_output() {
     let _ = std::fs::remove_file(chain_dump_path);
     let _ = std::fs::remove_file(evidence_dir.join("manifest.json"));
     let _ = std::fs::remove_dir(evidence_dir);
+}
+
+#[test]
+fn spec_c08_phase_inventory_contains_prd_canonical_order() {
+    let phases = all_orchestration_phases();
+    let labels: Vec<&str> = phases.iter().map(|phase| phase.as_str()).collect();
+    assert_eq!(
+        labels,
+        vec![
+            "INFRA_UP",
+            "AGENT_DEPLOY",
+            "SCENARIO_RUN",
+            "EVIDENCE",
+            "TEARDOWN"
+        ]
+    );
+}
+
+#[test]
+fn spec_c09_run_output_contains_phase_progression_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned(), "S-02".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"phase_count\":5"));
+    assert!(output.contains("\"phases\":[\"INFRA_UP\""));
+    assert!(output.contains("\"AGENT_DEPLOY\""));
+    assert!(output.contains("\"SCENARIO_RUN\""));
+    assert!(output.contains("\"EVIDENCE\""));
+    assert!(output.contains("\"TEARDOWN\"]"));
 }
