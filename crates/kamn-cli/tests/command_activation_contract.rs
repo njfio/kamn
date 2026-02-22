@@ -80,7 +80,8 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
         .set_nonblocking(true)
         .map_err(|error| format!("server nonblocking mode failed: {error}"))?;
 
-    let deadline = Instant::now() + Duration::from_secs(2);
+    // Workspace-wide test load can delay bind/accept scheduling; keep the fixture budget tolerant.
+    let deadline = Instant::now() + Duration::from_secs(5);
     let mut served = 0usize;
     while served < max_requests {
         if Instant::now() > deadline {
@@ -180,7 +181,7 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
 }
 
 fn wait_for_server_ready() {
-    thread::sleep(Duration::from_millis(40));
+    thread::sleep(Duration::from_millis(120));
 }
 
 fn parsed(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedCliArgs {
