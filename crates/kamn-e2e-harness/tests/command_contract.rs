@@ -642,3 +642,50 @@ fn spec_c38_live_validation_markers_are_deterministic_and_coherent() {
         "\"live_validation\":{\"expected_checks\":4,\"completed_checks\":4,\"status\":\"PASS\"}"
     ));
 }
+
+#[test]
+fn spec_c39_run_output_contains_spawn_plan_markers() {
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"spawn_plan\":"));
+    assert!(output.contains("\"postgres_cmd\""));
+    assert!(output.contains("\"kolme_cmd\""));
+    assert!(output.contains("\"kamn_processor_cmd\""));
+    assert!(output.contains("\"kamn_listener_cmd\""));
+    assert!(output.contains("\"kamn_approver_cmd\""));
+}
+
+#[test]
+fn spec_c40_spawn_plan_markers_are_deterministic_and_mode_coherent() {
+    let sdk_direct = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let sdk_output = execute_run_contract(&sdk_direct).expect("run output should render");
+    assert!(sdk_output
+        .contains("\"postgres_cmd\":\"docker run --rm --name kamn-e2e-postgres postgres:15\""));
+    assert!(sdk_output.contains(
+        "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode sdk-direct\""
+    ));
+
+    let mcp_tau = RunCommandConfig {
+        mode: "mcp-tau".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: Some("/tmp/tau".to_owned()),
+        evidence_dir: "/tmp/evidence".to_owned(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let mcp_output = execute_run_contract(&mcp_tau).expect("run output should render");
+    assert!(mcp_output.contains(
+        "\"kamn_processor_cmd\":\"kamn-node --role processor --execution-mode mcp-tau\""
+    ));
+}
