@@ -24,3 +24,12 @@ This artifact records phase-6 runtime external execution integration markers.
 
 ## Follow-up Scope
 - `phase6_runtime_external_process_orchestration_status=pending`
+
+## Extended in #5680
+- External execution path now performs real binary probes (`--help` invocation) for configured runtime binaries.
+- Probe outcomes are exposed in `runtime_external_execution.guard_status` and `runtime_external_execution.probe_detail`.
+- Probe failures produce deterministic `FAIL` status markers without panic.
+
+## Status Markers (After #5680)
+- `phase6_runtime_external_probe_execution_contract=implemented`
+- `phase6_runtime_external_probe_failure_status=implemented`

@@ -23,3 +23,11 @@ This artifact records phase-6 runtime lifecycle execution markers.
 
 ## Follow-up Scope
 - `phase6_runtime_external_validation_execution_status=pending`
+
+## Extended in #5680
+- External execution lifecycle transition markers now reflect executable probe outcomes.
+- Probe failure drives deterministic lifecycle transition markers to `FAIL`.
+
+## Status Markers (After #5680)
+- `phase6_runtime_lifecycle_probe_derived_status=implemented`
+- `phase6_runtime_lifecycle_probe_failure_contract=implemented`

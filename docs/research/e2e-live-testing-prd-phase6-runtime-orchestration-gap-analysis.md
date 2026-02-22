@@ -24,3 +24,11 @@ This artifact records phase-6 runtime external process orchestration markers.
 
 ## Follow-up Scope
 - `phase6_runtime_external_lifecycle_execution_status=pending`
+
+## Extended in #5680
+- External execution enabled path now derives orchestration statuses from executable probe outcomes.
+- When probe invocation fails, role markers transition to `requested=true,status=FAIL` with deterministic failure detail.
+
+## Status Markers (After #5680)
+- `phase6_runtime_orchestration_probe_derived_status=implemented`
+- `phase6_runtime_orchestration_probe_failure_contract=implemented`

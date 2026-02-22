@@ -25,3 +25,12 @@ This artifact records phase-6 runtime validation execution markers.
 
 ## Follow-up Scope
 - `phase6_runtime_external_validation_execution_status=complete`
+
+## Extended in #5680
+- External execution validation markers now consume probe-derived runtime contract status.
+- `orchestration_contract` and `lifecycle_contract` are `FAIL` when probe execution fails.
+- `overall` status now deterministically aggregates orchestration, lifecycle, live-validation, and evidence contract statuses.
+
+## Status Markers (After #5680)
+- `phase6_runtime_validation_probe_derived_status=implemented`
+- `phase6_runtime_validation_probe_failure_contract=implemented`
