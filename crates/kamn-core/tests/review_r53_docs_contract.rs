@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
@@ -105,6 +106,35 @@ fn fnv1a64(bytes: &[u8]) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
     }
     hash
+}
+
+fn parse_release_from_review_path(path: &str) -> Option<u32> {
+    let file = path.rsplit('/').next()?;
+    let stem = file.strip_suffix(".md")?;
+    let release = stem.strip_prefix("gaps-and-issues-r")?;
+    release.parse::<u32>().ok()
+}
+
+fn tracked_review_docs() -> Vec<PathBuf> {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "docs/review"])
+        .output()
+        .expect("git should be available for tracked review-doc discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files docs/review failed with status {:?}",
+        output.status.code()
+    );
+
+    let mut docs = String::from_utf8(output.stdout)
+        .expect("git ls-files output should be valid UTF-8")
+        .lines()
+        .filter(|line| line.starts_with("docs/review/gaps-and-issues-r") && line.ends_with(".md"))
+        .map(|line| repo_root().join(line))
+        .collect::<Vec<_>>();
+    docs.sort();
+    docs
 }
 
 fn repo_root() -> PathBuf {
@@ -425,4 +455,73 @@ fn regression_r53_review_document_freeze_baseline_is_enforced() {
     );
     assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
     assert_eq!(current_fnv, expected_fnv);
+}
+
+#[test]
+fn regression_r54_plus_review_docs_enforce_post_publication_moratorium() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("post-publication-moratorium.policy");
+    let policy_doc = fs::read_to_string(&policy_path)
+        .unwrap_or_else(|_| panic!("moratorium policy file missing: {}", policy_path.display()));
+    let policy = parse_key_value_lines(&policy_doc);
+
+    assert_eq!(
+        parse_marker_value(&policy, "review_post_publication_moratorium_schema_version"),
+        "kamn.review.post-publication-moratorium.v1"
+    );
+    let effective_release_min = parse_marker_usize(
+        &policy,
+        "review_post_publication_moratorium_effective_release_min",
+    ) as u32;
+    let disallowed_heading_substring = parse_marker_value(
+        &policy,
+        "review_post_publication_moratorium_disallowed_heading_substring",
+    );
+    let disallowed_marker_substring = parse_marker_value(
+        &policy,
+        "review_post_publication_moratorium_disallowed_marker_substring",
+    );
+
+    for review_doc_path in tracked_review_docs() {
+        let relative = review_doc_path
+            .strip_prefix(repo_root())
+            .expect("review doc should be under repo root")
+            .to_string_lossy()
+            .to_string();
+        let Some(release) = parse_release_from_review_path(&relative) else {
+            continue;
+        };
+        if release < effective_release_min {
+            continue;
+        }
+
+        let doc = fs::read_to_string(&review_doc_path)
+            .unwrap_or_else(|_| panic!("review doc should be readable: {}", relative));
+        for (index, raw_line) in doc.lines().enumerate() {
+            let line_no = index + 1;
+            let trimmed = raw_line.trim();
+            if trimmed.starts_with("### ") {
+                assert!(
+                    !trimmed.contains(disallowed_heading_substring),
+                    "post-publication heading forbidden in {}:{}: {}",
+                    relative,
+                    line_no,
+                    trimmed
+                );
+            }
+            if let Some(marker_line) = trimmed.strip_prefix("- ") {
+                if let Some((key, _value)) = marker_line.split_once('=') {
+                    assert!(
+                        !key.contains(disallowed_marker_substring),
+                        "post-publication marker forbidden in {}:{}: {}",
+                        relative,
+                        line_no,
+                        key
+                    );
+                }
+            }
+        }
+    }
 }
