@@ -297,6 +297,10 @@ Or with environment-based identity:
 | `release_escrow` | Pending service route support | Explicit unsupported response returned by MCP dispatcher. |
 | `verify_proof` | Implemented | Dispatches through `KamnAgentHandle::verify_proof` with deterministic invalid-request handling for malformed payload fields. |
 
+Current `kamn-cli` activation status for the same supported surface:
+- Implemented: `health`, `list-messages`, `verify-proof`
+- Pending service route support: `accept-task`, `complete-task`, `fund-escrow`, `release-escrow`
+
 **MCP Tool Definitions:**
 
 Each KAMN operation becomes an MCP tool with a JSON Schema parameter definition:
