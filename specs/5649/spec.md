@@ -2,7 +2,7 @@
 
 - Issue: #5649
 - Milestone: R60 E2E Chain Genesis Anchor Verification Contract
-- Status: Reviewed
+- Status: Implemented
 - Priority: P1
 
 ## Problem Statement
