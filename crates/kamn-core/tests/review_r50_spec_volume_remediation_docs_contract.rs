@@ -132,7 +132,7 @@ fn functional_r50_spec_volume_remediation_markers_present() {
         "r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1"
     ));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_spec_dirs=693"));
-    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_module_count=92"));
+    assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_baseline_module_count=93"));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_ratio_max=7.6"));
     assert!(DOC_R50.contains("r50_review_spec_volume_non_regression_spec_dir_max=693"));
     assert!(DOC_R50.contains(

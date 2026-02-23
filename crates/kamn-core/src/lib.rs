@@ -111,6 +111,8 @@ pub mod key_lifecycle;
 /// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;
 pub mod kolme_runtime_commit;
+/// Live probe matrix contracts for mode/scenario outcome validation and deterministic aggregation.
+pub mod live_probe_matrix;
 /// Message delivery replay, nonce, and acceptance window guardrail contracts.
 pub mod message_delivery_guards;
 /// Canonical message envelope schema validation and normalization contracts.
@@ -692,6 +694,10 @@ pub use kolme_runtime_commit::{
     KolmeRuntimeCommitSignedBroadcastEnvelope, KolmeRuntimeCommitTransportErrorKind,
     KolmeRuntimeCommitWebsocketConnector, RuntimeCommitFinalityProjection,
     RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
+};
+pub use live_probe_matrix::{
+    LiveProbeMatrixEntry, LiveProbeMatrixError, LiveProbeMatrixMode, LiveProbeMatrixReport,
+    LiveProbeMatrixStatus,
 };
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
