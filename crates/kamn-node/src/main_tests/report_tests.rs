@@ -94,6 +94,10 @@ fn functional_json_render_is_deterministic() {
 
 #[test]
 fn integration_parse_bootstrap_and_render_json() {
+    let _env_lock = lock_signer_env_guard();
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None);
+    let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None);
+
     let args = vec![
         "kamn-node".to_owned(),
         "--role".to_owned(),
@@ -130,6 +134,10 @@ fn integration_parse_bootstrap_and_render_json() {
 
 #[test]
 fn integration_profile_bootstrap_and_render_json() {
+    let _env_lock = lock_signer_env_guard();
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None);
+    let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None);
+
     let args = vec![
         "kamn-node".to_owned(),
         "--profile".to_owned(),
