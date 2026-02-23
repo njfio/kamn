@@ -229,7 +229,7 @@ Governance-feature rebalancing contract active (R50.20) targeting >=0.25 feature
 
 - `r50_review_spec_volume_non_regression_schema_version=kamn.review.spec-volume-non-regression-ratchet.v1`
 - `r50_review_spec_volume_non_regression_baseline_spec_dirs=693`
-- `r50_review_spec_volume_non_regression_baseline_module_count=92`
+- `r50_review_spec_volume_non_regression_baseline_module_count=93`
 - `r50_review_spec_volume_non_regression_ratio_max=7.6`
 - `r50_review_spec_volume_non_regression_spec_dir_max=693`
 
