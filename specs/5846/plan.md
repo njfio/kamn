@@ -1,4 +1,4 @@
-# Plan: Issue #5844
+# Plan: Issue #5846
 
 ## Approach
 1. Introduce cryptographic TCP envelope signing/verification in `crates/kamn-sdk/src/tcp.rs`.

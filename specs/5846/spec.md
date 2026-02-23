@@ -1,6 +1,6 @@
-# Spec: Issue #5844 - Cryptographic TCP Envelope Signatures
+# Spec: Issue #5846 - Cryptographic TCP Envelope Signatures
 
-- Issue: #5844
+- Issue: #5846
 - Status: Implemented
 - Type: task
 - Priority: P1

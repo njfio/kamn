@@ -96,7 +96,7 @@ fn unit_tcp_envelope_rejects_duplicate_keys() {
 
 #[test]
 fn regression_tcp_envelope_rejects_baseline_v1_deterministic_signature() {
-    // Regression: #5844
+    // Regression: #5846
     let signer_public_key = signer_public_key_hex();
     let signature = signature_for_fields(
         "kamn:did:agent:sender-legacy",

@@ -1,4 +1,4 @@
-# Tasks: Issue #5844
+# Tasks: Issue #5846
 
 ## Ordered Tasks
 - [x] T1 (RED): add conformance/regression tests proving deterministic baseline-v1 signatures are rejected by TCP envelope verification and forged handshake signatures fail closed.
