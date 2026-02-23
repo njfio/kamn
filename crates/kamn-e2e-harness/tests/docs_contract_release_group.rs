@@ -380,6 +380,48 @@ mod r55_evidence_step_inventory_docs_contract {
     }
 }
 
+mod r55_live_s02_execution_evidence_docs_contract {
+    use std::path::{Path, PathBuf};
+
+    fn repo_root() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .to_path_buf()
+    }
+
+    #[test]
+    fn spec_c01_r55_live_s02_execution_docs_markers_present() {
+        let root = repo_root();
+        let doc = std::fs::read_to_string(
+            root.join("docs/research/e2e-live-testing-prd-r55-live-s02-execution-evidence.md"),
+        )
+        .expect("r55 live s02 execution docs marker artifact should exist");
+        assert!(
+            doc.contains("r55_live_s02_execution_schema_version=kamn.e2e.live-s02-execution.v1")
+        );
+        assert!(doc.contains("r55_live_s02_execution_modes_executed=3"));
+        assert!(doc.contains("r55_live_s02_execution_scenarios_executed_csv=S-01,S-02,S-04,S-06"));
+        assert!(doc.contains("r55_live_s02_execution_sdk_direct_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_cli_scripted_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_mcp_tau_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_s02_sdk_direct_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_s02_cli_scripted_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_s02_mcp_tau_status=pass"));
+        assert!(doc.contains("r55_live_s02_execution_overall_status=pass"));
+    }
+
+    #[test]
+    fn spec_c02_r52_milestone_index_references_issue_5812() {
+        let root = repo_root();
+        let milestone_index = std::fs::read_to_string(
+            root.join("specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md"),
+        )
+        .expect("r52 milestone index should exist");
+        assert!(milestone_index.contains("#5812"));
+    }
+}
+
 mod r56_verify_manifest_hardening_docs_contract {
     use std::path::{Path, PathBuf};
 
