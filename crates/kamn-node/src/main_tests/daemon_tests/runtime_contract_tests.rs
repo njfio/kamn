@@ -2,7 +2,7 @@
 fn functional_runtime_daemon_emits_structured_transition_markers() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args_with_clean_daemon_env(vec![
@@ -96,7 +96,7 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
 fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args_with_clean_daemon_env(vec![
@@ -160,7 +160,7 @@ fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() 
 pub(super) fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeout_drain_markers() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args_with_clean_daemon_env(vec![
@@ -366,7 +366,7 @@ fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
 fn env_only_daemon_controls_parse_without_config_file() {
     let _env_lock = daemon_test_env_lock()
         .lock()
-        .expect("daemon env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("12"));
     let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
 
@@ -387,7 +387,7 @@ fn env_only_daemon_controls_parse_without_config_file() {
 fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file() {
     let _env_lock = daemon_test_env_lock()
         .lock()
-        .expect("daemon env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("invalid"));
     let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
 
@@ -579,7 +579,7 @@ pub(super) fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal(
 fn functional_runtime_daemon_projects_phase6_applied_runtime_markers_in_report_output() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let args = vec![
@@ -780,7 +780,7 @@ fn functional_runtime_daemon_projects_phase6_deferred_runtime_markers_when_shutd
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let args = vec![

@@ -45,7 +45,7 @@ fn spec_c04_sdk_direct_live_non_s01_remains_pass_without_probe_invocation() {
         Ok(())
     });
 
-    let result = driver.execute("S-13");
+    let result = driver.execute("S-15");
     assert_eq!(result.status, "pass");
     assert_eq!(
         probe_calls.load(Ordering::SeqCst),

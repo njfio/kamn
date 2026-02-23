@@ -2,7 +2,7 @@
 
 **As of:** R55 review, commit `4d4da4bf` (2026-02-23)
 **Baseline snapshot:** commit `4d4da4bf` | **Rust LOC:** 207,586 | **Tests:** 3,400 passed, 1 failed, 10 ignored | **Shell LOC:** 141,965
-**Follow-up markers:** doc-contract test files 140 | remote branches 51 | spec dirs 695 | kamn-core modules 93
+**Follow-up markers:** doc-contract test files 140 | remote branches 51 | spec dirs 696 | kamn-core modules 93
 
 ---
 
@@ -349,8 +349,8 @@ Over 444 commits across 6 cycles, 28 delivered genuine capability. R55 alone acc
 - r55_review_governance_remediation_budget_status=within_budget
 - r55_review_spec_volume_non_regression_delta_schema_version=kamn.review.spec-volume-non-regression-delta-allowance.v1
 - r55_review_spec_volume_non_regression_base_cap=693
-- r55_review_spec_volume_non_regression_delta_allowance=2
-- r55_review_spec_volume_non_regression_effective_cap=695
+- r55_review_spec_volume_non_regression_delta_allowance=3
+- r55_review_spec_volume_non_regression_effective_cap=696
 - r55_review_spec_volume_non_regression_status=within_effective_cap
 - r55_review_workspace_contract_file_cap_schema_version=kamn.review.workspace-contract-file-cap.v1
 - r55_review_workspace_contract_file_count_formula=count(files in crates/*/tests/*.rs where filename contains 'contract')

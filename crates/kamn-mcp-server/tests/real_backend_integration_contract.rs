@@ -60,6 +60,7 @@ fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Resul
     let status_text = match status {
         200 => "200 OK",
         201 => "201 Created",
+        202 => "202 Accepted",
         404 => "404 Not Found",
         _ => "500 Internal Server Error",
     };
@@ -132,6 +133,20 @@ fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Re
                         &mut stream,
                         200,
                         r#"{"content_id":"content-contract-1","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/bridge/submit" {
+                    write_http_response(
+                        &mut stream,
+                        202,
+                        r#"{"bridge_id":"bridge-contract-1","source_message_id":"msg-bridge-source-1","bridge_status":"submitted"}"#,
+                    )?;
+                } else if (method == "POST" && path == "/v1/bridge/bridge-contract-1/forward")
+                    || (method == "GET" && path == "/v1/bridge/bridge-contract-1")
+                {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"bridge_id":"bridge-contract-1","bridge_status":"forwarded","target_message_id":"msg-bridge-target-1","forward_tx_hash":"sha256:bridge-forwarded-1"}"#,
                     )?;
                 } else {
                     write_http_response(
@@ -383,6 +398,50 @@ fn spec_c08_real_backend_dispatch_content_lifecycle_contract() {
     assert!(query_response.contains(r#""content_id":"content-contract-1""#));
     assert!(query_response.contains(r#""lifecycle_state":"tombstoned""#));
     assert!(query_response.contains(r#""redaction_status":"redacted""#));
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "service fixture should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c09_real_backend_dispatch_bridge_lifecycle_contract() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 3));
+    wait_for_server_ready();
+
+    let backend = real_backend(bind_addr.as_str());
+
+    let submit_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-9a","tool":"submit_bridge_message","payload":"{\"source_message_id\":\"msg-1\"}"}"#,
+    )
+    .expect("submit_bridge_message dispatch should succeed");
+    assert!(submit_response.contains(r#""ok":true"#));
+    assert!(submit_response.contains(r#""tool":"submit_bridge_message""#));
+    assert!(submit_response.contains(r#""bridge_id":"bridge-contract-1""#));
+    assert!(submit_response.contains(r#""bridge_status":"submitted""#));
+
+    let forward_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-9b","tool":"forward_bridge_message","bridge_id":"bridge-contract-1"}"#,
+    )
+    .expect("forward_bridge_message dispatch should succeed");
+    assert!(forward_response.contains(r#""ok":true"#));
+    assert!(forward_response.contains(r#""tool":"forward_bridge_message""#));
+    assert!(forward_response.contains(r#""bridge_status":"forwarded""#));
+
+    let query_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-9c","tool":"query_bridge_message","bridge_id":"bridge-contract-1"}"#,
+    )
+    .expect("query_bridge_message dispatch should succeed");
+    assert!(query_response.contains(r#""ok":true"#));
+    assert!(query_response.contains(r#""tool":"query_bridge_message""#));
+    assert!(query_response.contains(r#""forward_tx_hash":"sha256:bridge-forwarded-1""#));
 
     let server_result = server.join().expect("server thread should join");
     assert!(

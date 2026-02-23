@@ -183,7 +183,7 @@ fn try_send_http_get(addr: &str, path: &str) -> Result<String, String> {
 fn parse_args_with_clean_daemon_env(args: Vec<String>) -> Result<crate::NodeCli, ConfigError> {
     let _env_lock = daemon_test_env_lock()
         .lock()
-        .expect("daemon env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _daemon_control_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_CONTROL", None);
     let _daemon_lifecycle_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_LIFECYCLE_EVENT", None);
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", None);

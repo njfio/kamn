@@ -42,7 +42,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -150,7 +150,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -275,7 +275,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -383,7 +383,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -491,7 +491,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -596,7 +596,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();
@@ -704,7 +704,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_parallel_lan
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();

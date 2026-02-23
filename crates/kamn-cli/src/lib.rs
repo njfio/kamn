@@ -50,6 +50,12 @@ pub enum CommandKind {
     TombstoneContent,
     /// Query one content lifecycle record.
     QueryContent,
+    /// Submit one bridge message.
+    SubmitBridgeMessage,
+    /// Forward one submitted bridge message.
+    ForwardBridgeMessage,
+    /// Query one bridge message.
+    QueryBridgeMessage,
     /// Create one task.
     CreateTask,
     /// Accept one task.
@@ -80,6 +86,9 @@ impl CommandKind {
             "expire-content" => Ok(Self::ExpireContent),
             "tombstone-content" => Ok(Self::TombstoneContent),
             "query-content" => Ok(Self::QueryContent),
+            "submit-bridge-message" => Ok(Self::SubmitBridgeMessage),
+            "forward-bridge-message" => Ok(Self::ForwardBridgeMessage),
+            "query-bridge-message" => Ok(Self::QueryBridgeMessage),
             "create-task" => Ok(Self::CreateTask),
             "accept-task" => Ok(Self::AcceptTask),
             "complete-task" => Ok(Self::CompleteTask),
@@ -197,6 +206,9 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
         CommandKind::ExpireContent => commands::expire_content::execute(parsed),
         CommandKind::TombstoneContent => commands::tombstone_content::execute(parsed),
         CommandKind::QueryContent => commands::query_content::execute(parsed),
+        CommandKind::SubmitBridgeMessage => commands::submit_bridge_message::execute(parsed),
+        CommandKind::ForwardBridgeMessage => commands::forward_bridge_message::execute(parsed),
+        CommandKind::QueryBridgeMessage => commands::query_bridge_message::execute(parsed),
         CommandKind::CreateTask => commands::create_task::execute(parsed),
         CommandKind::AcceptTask => commands::accept_task::execute(parsed),
         CommandKind::CompleteTask => commands::complete_task::execute(parsed),

@@ -1053,9 +1053,12 @@ fn spec_c56_runtime_lifecycle_execution_markers_pass_when_external_enabled() {
         scenario_ids: vec!["S-01".to_owned()],
     };
     let output = execute_run_contract(&config).expect("run output should render");
-    assert!(output.contains(
-        "\"runtime_lifecycle_execution\":{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}"
-    ));
+    assert!(
+        output.contains(
+            "\"runtime_lifecycle_execution\":{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}"
+        ),
+        "runtime_lifecycle_execution marker drift: {output}"
+    );
 
     let _ = std::fs::remove_file(kolme_binary);
 }
@@ -1111,9 +1114,12 @@ fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
         scenario_ids: vec!["S-01".to_owned()],
     };
     let output = execute_run_contract(&config).expect("run output should render");
-    assert!(output.contains(
-        "\"runtime_validation_execution\":{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"PASS\",\"evidence_contract\":\"PASS\",\"overall\":\"PASS\"}"
-    ));
+    assert!(
+        output.contains(
+            "\"runtime_validation_execution\":{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"PASS\",\"evidence_contract\":\"PASS\",\"overall\":\"PASS\"}"
+        ),
+        "runtime_validation_execution marker drift: {output}"
+    );
 
     let _ = std::fs::remove_file(kolme_binary);
 }

@@ -1,5 +1,20 @@
 use super::*;
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiBridgeSubmitBody {
+    bridge_id: String,
+    source_message_id: String,
+    bridge_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiBridgeStatusBody {
+    bridge_id: String,
+    bridge_status: String,
+    target_message_id: String,
+    forward_tx_hash: String,
+}
+
 pub(super) fn render_service_api_endpoint_response(
     snapshot: &ServiceApiSnapshot,
     method: &str,
@@ -148,6 +163,20 @@ pub(super) fn render_service_api_endpoint_response(
             body: serialize_service_api_json(&payload),
         };
     }
+    if method == "POST" && path == ROUTE_BRIDGE_SUBMIT {
+        let bridge_tag = deterministic_body_tag(body.as_bytes());
+        let bridge_id = format!("bridge-local-{bridge_tag:016x}");
+        let payload = ServiceApiBridgeSubmitBody {
+            bridge_id,
+            source_message_id: format!("msg-bridge-source-{bridge_tag:016x}"),
+            bridge_status: "submitted".to_owned(),
+        };
+        return ServiceApiEndpointResponse {
+            status_code: 202,
+            content_type: "application/json",
+            body: serialize_service_api_json(&payload),
+        };
+    }
     if method == "POST" {
         if let Some(task_id) = task_accept_path_id(path) {
             let payload = ServiceApiTaskTransitionBody {
@@ -218,6 +247,19 @@ pub(super) fn render_service_api_endpoint_response(
                 body: serialize_service_api_json(&payload),
             };
         }
+        if let Some(bridge_id) = bridge_forward_path_id(path) {
+            let payload = ServiceApiBridgeStatusBody {
+                bridge_id: bridge_id.to_owned(),
+                bridge_status: "forwarded".to_owned(),
+                target_message_id: format!("msg-bridge-target-{bridge_id}"),
+                forward_tx_hash: format!("sha256:bridge-forwarded-{bridge_id}"),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
     }
     if method == "GET" {
         if let Some(content_id) = content_path_id(path) {
@@ -225,6 +267,19 @@ pub(super) fn render_service_api_endpoint_response(
                 content_id: content_id.to_owned(),
                 lifecycle_state: "tombstoned".to_owned(),
                 redaction_status: "redacted".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+        if let Some(bridge_id) = bridge_path_id(path) {
+            let payload = ServiceApiBridgeStatusBody {
+                bridge_id: bridge_id.to_owned(),
+                bridge_status: "forwarded".to_owned(),
+                target_message_id: format!("msg-bridge-target-{bridge_id}"),
+                forward_tx_hash: format!("sha256:bridge-forwarded-{bridge_id}"),
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,
@@ -300,6 +355,7 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || path == ROUTE_TASKS_CREATE
         || path == ROUTE_ESCROW_FUND
         || path == ROUTE_CONTENT_REGISTER
+        || path == ROUTE_BRIDGE_SUBMIT
         || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
         || path == ROUTE_METRICS
@@ -312,6 +368,8 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || content_path_id(path).is_some()
         || content_expire_path_id(path).is_some()
         || content_tombstone_path_id(path).is_some()
+        || bridge_path_id(path).is_some()
+        || bridge_forward_path_id(path).is_some()
         || agent_path_id(path).is_some()
 }
 
@@ -394,6 +452,24 @@ pub(super) fn content_tombstone_path_id(path: &str) -> Option<&str> {
         return None;
     }
     Some(content_id)
+}
+
+pub(super) fn bridge_path_id(path: &str) -> Option<&str> {
+    path.strip_prefix(ROUTE_BRIDGE_PREFIX).and_then(|id| {
+        if id.is_empty() || id == "submit" || id.contains('/') {
+            return None;
+        }
+        Some(id)
+    })
+}
+
+pub(super) fn bridge_forward_path_id(path: &str) -> Option<&str> {
+    let bridge_path = path.strip_prefix(ROUTE_BRIDGE_PREFIX)?;
+    let bridge_id = bridge_path.strip_suffix(ROUTE_BRIDGE_FORWARD_SUFFIX)?;
+    if bridge_id.is_empty() || bridge_id == "submit" || bridge_id.contains('/') {
+        return None;
+    }
+    Some(bridge_id)
 }
 
 pub(super) fn agent_path_id(path: &str) -> Option<&str> {
@@ -513,8 +589,9 @@ pub(super) fn escape_metrics_label(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        content_expire_path_id, content_path_id, content_tombstone_path_id,
-        route_exists_for_other_method, ROUTE_CONTENT_REGISTER,
+        bridge_forward_path_id, bridge_path_id, content_expire_path_id, content_path_id,
+        content_tombstone_path_id, route_exists_for_other_method, ROUTE_BRIDGE_SUBMIT,
+        ROUTE_CONTENT_REGISTER,
     };
 
     #[test]
@@ -557,8 +634,28 @@ mod tests {
     }
 
     #[test]
-    fn unit_route_exists_for_other_method_includes_content_routes() {
+    fn unit_bridge_path_id_contract_accepts_and_rejects_expected_shapes() {
+        assert_eq!(bridge_path_id("/v1/bridge/bridge-a"), Some("bridge-a"));
+        assert_eq!(bridge_path_id("/v1/bridge/submit"), None);
+        assert_eq!(bridge_path_id("/v1/bridge/bridge-a/forward"), None);
+        assert_eq!(bridge_path_id("/v1/bridge/"), None);
+    }
+
+    #[test]
+    fn unit_bridge_forward_path_id_contract_accepts_and_rejects_expected_shapes() {
+        assert_eq!(
+            bridge_forward_path_id("/v1/bridge/bridge-a/forward"),
+            Some("bridge-a")
+        );
+        assert_eq!(bridge_forward_path_id("/v1/bridge/submit/forward"), None);
+        assert_eq!(bridge_forward_path_id("/v1/bridge//forward"), None);
+        assert_eq!(bridge_forward_path_id("/v1/bridge/bridge-a"), None);
+    }
+
+    #[test]
+    fn unit_route_exists_for_other_method_includes_content_and_bridge_routes() {
         assert!(route_exists_for_other_method(ROUTE_CONTENT_REGISTER));
+        assert!(route_exists_for_other_method(ROUTE_BRIDGE_SUBMIT));
         assert!(route_exists_for_other_method("/v1/content/content-a"));
         assert!(route_exists_for_other_method(
             "/v1/content/content-a/expire"
@@ -566,6 +663,9 @@ mod tests {
         assert!(route_exists_for_other_method(
             "/v1/content/content-a/tombstone"
         ));
+        assert!(route_exists_for_other_method("/v1/bridge/bridge-a"));
+        assert!(route_exists_for_other_method("/v1/bridge/bridge-a/forward"));
         assert!(!route_exists_for_other_method("/v1/content"));
+        assert!(!route_exists_for_other_method("/v1/bridge"));
     }
 }

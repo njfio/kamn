@@ -14,9 +14,10 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
-    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceAgentProfile, ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages,
+    ServiceChannelReceipt, ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus,
+    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt,
+    ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -279,6 +280,48 @@ impl KamnAgentHandle {
             self.service_client
                 .build_auth(self.identity.did(), nonce, "", Some("content:read"))?;
         self.service_client.get_content(content_id, &auth)
+    }
+
+    /// Submits one bridge message through the service API.
+    pub fn submit_bridge_message(
+        &self,
+        payload: &str,
+    ) -> Result<ServiceBridgeSubmission, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("bridge:write"),
+        )?;
+        self.service_client.submit_bridge_message(payload, &auth)
+    }
+
+    /// Forwards one bridge message through the service API.
+    pub fn forward_bridge_message(
+        &self,
+        bridge_id: &str,
+    ) -> Result<ServiceBridgeStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("bridge:write"),
+        )?;
+        self.service_client.forward_bridge_message(bridge_id, &auth)
+    }
+
+    /// Queries one bridge message forwarding state through the service API.
+    pub fn query_bridge_message(
+        &self,
+        bridge_id: &str,
+    ) -> Result<ServiceBridgeStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth =
+            self.service_client
+                .build_auth(self.identity.did(), nonce, "", Some("bridge:read"))?;
+        self.service_client.get_bridge_message(bridge_id, &auth)
     }
 
     /// Lists channel messages through the service API.

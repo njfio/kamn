@@ -292,6 +292,30 @@ pub struct ServiceContentStatus {
     pub redaction_status: String,
 }
 
+/// Parsed response for `POST /v1/bridge/submit`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceBridgeSubmission {
+    /// Bridge identifier.
+    pub bridge_id: String,
+    /// Source message identifier.
+    pub source_message_id: String,
+    /// Bridge lifecycle status marker.
+    pub bridge_status: String,
+}
+
+/// Parsed response for bridge forward/query routes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceBridgeStatus {
+    /// Bridge identifier.
+    pub bridge_id: String,
+    /// Bridge lifecycle status marker.
+    pub bridge_status: String,
+    /// Target message identifier after forwarding.
+    pub target_message_id: String,
+    /// Forward transaction hash marker.
+    pub forward_tx_hash: String,
+}
+
 /// Parsed response for `GET /v1/agents/{did}`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceAgentProfile {
@@ -611,6 +635,67 @@ impl ServiceApiClient {
             content_id: json_string_field(response.body.as_str(), "content_id")?,
             lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
             redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
+        })
+    }
+
+    /// Submits one bridge message via `POST /v1/bridge/submit`.
+    pub fn submit_bridge_message(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeSubmission, SdkError> {
+        let response = self.request("POST", "/v1/bridge/submit", payload, Some(auth))?;
+        expect_status(response.status, 202)?;
+        Ok(ServiceBridgeSubmission {
+            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
+            source_message_id: json_string_field(response.body.as_str(), "source_message_id")?,
+            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
+        })
+    }
+
+    /// Forwards one submitted bridge message via `POST /v1/bridge/{id}/forward`.
+    pub fn forward_bridge_message(
+        &self,
+        bridge_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeStatus, SdkError> {
+        if bridge_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "bridge_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/bridge/{bridge_id}/forward");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceBridgeStatus {
+            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
+            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
+            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
+            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
+        })
+    }
+
+    /// Queries one bridge forwarding status via `GET /v1/bridge/{id}`.
+    pub fn get_bridge_message(
+        &self,
+        bridge_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeStatus, SdkError> {
+        if bridge_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "bridge_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/bridge/{bridge_id}");
+        let response = self.request("GET", route.as_str(), "", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceBridgeStatus {
+            bridge_id: json_string_field(response.body.as_str(), "bridge_id")?,
+            bridge_status: json_string_field(response.body.as_str(), "bridge_status")?,
+            target_message_id: json_string_field(response.body.as_str(), "target_message_id")?,
+            forward_tx_hash: json_string_field(response.body.as_str(), "forward_tx_hash")?,
         })
     }
 

@@ -2,7 +2,7 @@
 fn integration_runtime_full_emits_ordered_bootstrap_readiness_markers() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![
@@ -86,7 +86,7 @@ fn integration_runtime_full_emits_ordered_bootstrap_readiness_markers() {
 fn regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![
@@ -321,7 +321,7 @@ fn regression_shutdown_checkpoint_reconciliation_validator_fails_closed_with_sta
 fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![
@@ -389,7 +389,7 @@ fn regression_runtime_full_os_signal_stop_markers_project_shutdown_field_parity(
     // Regression: #3732
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![
@@ -449,7 +449,7 @@ fn regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field
     // Regression: #4330
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let parsed = parse_args(vec![

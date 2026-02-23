@@ -70,6 +70,28 @@ impl McpToolBackend for TestBackend {
         ))
     }
 
+    fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#,
+            payload.len(),
+            payload.len()
+        ))
+    }
+
+    fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
+    }
+
+    fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"task_id":"task-{}"}}"#, payload.len()))
     }
@@ -275,6 +297,9 @@ fn spec_c06_mcp_dispatch_rejects_malformed_task_and_escrow_requests() {
         r#"{"id":"req-18","tool":"expire_content"}"#,
         r#"{"id":"req-19","tool":"tombstone_content"}"#,
         r#"{"id":"req-20","tool":"query_content"}"#,
+        r#"{"id":"req-21","tool":"submit_bridge_message"}"#,
+        r#"{"id":"req-22","tool":"forward_bridge_message"}"#,
+        r#"{"id":"req-23","tool":"query_bridge_message"}"#,
     ] {
         let response = dispatch_tool_request_json(&backend, request)
             .expect("dispatcher should return structured invalid-request envelope");
@@ -396,5 +421,60 @@ fn spec_c08_mcp_dispatch_executes_content_lifecycle_tools() {
     assert!(
         query_response.contains(r#""lifecycle_state":"tombstoned""#),
         "query_content response should include lifecycle projection: {query_response}"
+    );
+}
+
+#[test]
+fn spec_c09_mcp_dispatch_executes_bridge_lifecycle_tools() {
+    let backend = TestBackend;
+
+    let submit_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-25","tool":"submit_bridge_message","payload":"{\"source_message_id\":\"msg-1\"}"}"#,
+    )
+    .expect("submit_bridge_message should dispatch successfully");
+    assert!(
+        submit_response.contains(r#""ok":true"#),
+        "submit_bridge_message response should mark success: {submit_response}"
+    );
+    assert!(
+        submit_response.contains(r#""tool":"submit_bridge_message""#),
+        "submit_bridge_message response should preserve tool marker: {submit_response}"
+    );
+    assert!(
+        submit_response.contains(r#""bridge_status":"submitted""#),
+        "submit_bridge_message response should include submitted status: {submit_response}"
+    );
+
+    let forward_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-26","tool":"forward_bridge_message","bridge_id":"bridge-1"}"#,
+    )
+    .expect("forward_bridge_message should dispatch successfully");
+    assert!(
+        forward_response.contains(r#""ok":true"#),
+        "forward_bridge_message response should mark success: {forward_response}"
+    );
+    assert!(
+        forward_response.contains(r#""bridge_status":"forwarded""#),
+        "forward_bridge_message response should include forwarded status: {forward_response}"
+    );
+
+    let query_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-27","tool":"query_bridge_message","bridge_id":"bridge-1"}"#,
+    )
+    .expect("query_bridge_message should dispatch successfully");
+    assert!(
+        query_response.contains(r#""ok":true"#),
+        "query_bridge_message response should mark success: {query_response}"
+    );
+    assert!(
+        query_response.contains(r#""tool":"query_bridge_message""#),
+        "query_bridge_message response should preserve tool marker: {query_response}"
+    );
+    assert!(
+        query_response.contains(r#""forward_tx_hash":"sha256:bridge-bridge-1""#),
+        "query_bridge_message response should include forward hash projection: {query_response}"
     );
 }

@@ -152,6 +152,20 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         200,
                         r#"{"content_id":"content-cli","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
                     )?;
+                } else if method == "POST" && path == "/v1/bridge/submit" {
+                    write_http_response(
+                        &mut stream,
+                        202,
+                        r#"{"bridge_id":"bridge-cli","source_message_id":"msg-bridge-source-cli","bridge_status":"submitted"}"#,
+                    )?;
+                } else if (method == "POST" && path == "/v1/bridge/bridge-cli/forward")
+                    || (method == "GET" && path == "/v1/bridge/bridge-cli")
+                {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"bridge_id":"bridge-cli","bridge_status":"forwarded","target_message_id":"msg-bridge-target-cli","forward_tx_hash":"sha256:bridge-forwarded-cli"}"#,
+                    )?;
                 } else if method == "POST" && path == "/v1/tasks/create" {
                     write_http_response(
                         &mut stream,
@@ -597,6 +611,86 @@ fn spec_c08_cli_content_commands_execute_and_validate_args() {
         (CommandKind::ExpireContent, "expire_content_id"),
         (CommandKind::TombstoneContent, "tombstone_content_id"),
         (CommandKind::QueryContent, "query_content_id"),
+    ] {
+        let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
+            .expect_err("missing required arg should fail");
+        assert!(
+            matches!(error, AgentLibError::InvalidInput { .. }),
+            "missing arg for {label} should be invalid input: {error}"
+        );
+    }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c09_cli_bridge_commands_execute_and_validate_args() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 3));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+
+    let submit_output = dispatch(&parsed(
+        CommandKind::SubmitBridgeMessage,
+        endpoint.as_str(),
+        &[r#"{"source_message_id":"msg-cli","target_network":"testnet"}"#],
+    ))
+    .expect("submit-bridge-message should succeed");
+    assert!(
+        submit_output.text.contains("bridge_id=bridge-cli"),
+        "submit-bridge-message output should include bridge id: {submit_output:?}"
+    );
+    assert!(
+        submit_output.text.contains("bridge_status=submitted"),
+        "submit-bridge-message output should include bridge status: {submit_output:?}"
+    );
+
+    let forward_output = dispatch(&parsed(
+        CommandKind::ForwardBridgeMessage,
+        endpoint.as_str(),
+        &["bridge-cli"],
+    ))
+    .expect("forward-bridge-message should succeed");
+    assert!(
+        forward_output.text.contains("bridge_status=forwarded"),
+        "forward-bridge-message output should include bridge status: {forward_output:?}"
+    );
+    assert!(
+        forward_output
+            .text
+            .contains("target_message_id=msg-bridge-target-cli"),
+        "forward-bridge-message output should include target id: {forward_output:?}"
+    );
+
+    let query_output = dispatch(&parsed(
+        CommandKind::QueryBridgeMessage,
+        endpoint.as_str(),
+        &["bridge-cli"],
+    ))
+    .expect("query-bridge-message should succeed");
+    assert!(
+        query_output
+            .text
+            .contains("forward_tx_hash=sha256:bridge-forwarded-cli"),
+        "query-bridge-message output should include forward tx marker: {query_output:?}"
+    );
+
+    for (command, label) in [
+        (
+            CommandKind::SubmitBridgeMessage,
+            "submit_bridge_message_payload",
+        ),
+        (
+            CommandKind::ForwardBridgeMessage,
+            "forward_bridge_message_id",
+        ),
+        (CommandKind::QueryBridgeMessage, "query_bridge_message_id"),
     ] {
         let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
             .expect_err("missing required arg should fail");

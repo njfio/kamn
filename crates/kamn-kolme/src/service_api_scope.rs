@@ -23,6 +23,10 @@ pub enum ServiceApiScope {
     ContentWrite,
     /// Read scope for content lifecycle query operations.
     ContentRead,
+    /// Write scope for bridge lifecycle mutation operations.
+    BridgeWrite,
+    /// Read scope for bridge lifecycle query operations.
+    BridgeRead,
     /// Read scope for agent profile/query operations.
     AgentsRead,
     /// Read scope for event stream/websocket operations.
@@ -44,6 +48,8 @@ impl ServiceApiScope {
             Self::EscrowWrite => "escrow:write",
             Self::ContentWrite => "content:write",
             Self::ContentRead => "content:read",
+            Self::BridgeWrite => "bridge:write",
+            Self::BridgeRead => "bridge:read",
             Self::AgentsRead => "agents:read",
             Self::EventsRead => "events:read",
             Self::ProtectedUnknown => "protected:unknown",
@@ -66,6 +72,8 @@ impl ServiceApiScope {
             "escrow:write" => Self::EscrowWrite,
             "content:write" => Self::ContentWrite,
             "content:read" => Self::ContentRead,
+            "bridge:write" => Self::BridgeWrite,
+            "bridge:read" => Self::BridgeRead,
             "agents:read" => Self::AgentsRead,
             "events:read" => Self::EventsRead,
             "protected:unknown" => Self::ProtectedUnknown,
@@ -131,6 +139,14 @@ mod tests {
         assert_eq!(
             ServiceApiScope::parse("content:read").expect("scope"),
             ServiceApiScope::ContentRead
+        );
+        assert_eq!(
+            ServiceApiScope::parse("bridge:write").expect("scope"),
+            ServiceApiScope::BridgeWrite
+        );
+        assert_eq!(
+            ServiceApiScope::parse("bridge:read").expect("scope"),
+            ServiceApiScope::BridgeRead
         );
         assert_eq!(
             ServiceApiScope::parse("agents:read").expect("scope"),

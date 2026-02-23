@@ -177,7 +177,7 @@ pub(super) fn parse_args_with_clean_daemon_env(
 ) -> Result<crate::NodeCli, ConfigError> {
     let _env_lock = daemon_test_env_lock()
         .lock()
-        .expect("daemon env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", None);
     let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", None);
     parse_args(args)
@@ -1172,7 +1172,7 @@ pub(super) fn run_live_postgres_matrix_repeated_run_projections() -> Option<(
 )> {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let (gate_reason_code, maybe_database_url) = resolve_live_postgres_gate_decision();

@@ -2,6 +2,7 @@
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use crate::{
     all_orchestration_phases, drivers, scenarios, ExecutionMode, LifecycleStatusTotals,
@@ -412,32 +413,61 @@ pub(crate) fn aggregate_status(statuses: &[PhaseResultStatus]) -> PhaseResultSta
     PhaseResultStatus::Pass
 }
 
+const ETXTBSY_ERRNO: i32 = 26;
+const TEXT_FILE_BUSY_RETRY_LIMIT: usize = 3;
+
+fn should_retry_text_file_busy(error: &std::io::Error, retry_attempt: usize) -> bool {
+    error.raw_os_error() == Some(ETXTBSY_ERRNO) && retry_attempt < TEXT_FILE_BUSY_RETRY_LIMIT
+}
+
 fn probe_binary_invocation(binary: &str, label: &str) -> (PhaseResultStatus, String) {
-    match Command::new(binary)
-        .arg("--help")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-    {
-        Ok(status) if status.success() => {
-            (PhaseResultStatus::Pass, format!("{label} probe passed"))
+    probe_binary_invocation_with_status_runner(label, || {
+        Command::new(binary)
+            .arg("--help")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+    })
+}
+
+fn probe_binary_invocation_with_status_runner<F>(
+    label: &str,
+    mut status_runner: F,
+) -> (PhaseResultStatus, String)
+where
+    F: FnMut() -> std::io::Result<std::process::ExitStatus>,
+{
+    for retry_attempt in 0..=TEXT_FILE_BUSY_RETRY_LIMIT {
+        match status_runner() {
+            Ok(status) if status.success() => {
+                return (PhaseResultStatus::Pass, format!("{label} probe passed"));
+            }
+            Ok(status) => {
+                let exit_status = status
+                    .code()
+                    .map(|code| code.to_string())
+                    .unwrap_or_else(|| "signal".to_owned());
+                return (
+                    PhaseResultStatus::Fail,
+                    format!("{label} probe failed (exit_status={exit_status})"),
+                );
+            }
+            Err(error) if should_retry_text_file_busy(&error, retry_attempt) => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(error) => {
+                return (
+                    PhaseResultStatus::Fail,
+                    format!("{label} probe failed ({error})"),
+                );
+            }
         }
-        Ok(status) => {
-            let exit_status = status
-                .code()
-                .map(|code| code.to_string())
-                .unwrap_or_else(|| "signal".to_owned());
-            (
-                PhaseResultStatus::Fail,
-                format!("{label} probe failed (exit_status={exit_status})"),
-            )
-        }
-        Err(error) => (
-            PhaseResultStatus::Fail,
-            format!("{label} probe failed ({error})"),
-        ),
     }
+    (
+        PhaseResultStatus::Fail,
+        format!("{label} probe failed (retry budget exhausted)"),
+    )
 }
 
 fn probe_external_runtime(
@@ -472,6 +502,9 @@ fn execute_selected_scenarios(
     selected: &[scenarios::ScenarioDefinition],
     force_first_fail: bool,
 ) -> Result<Vec<ScenarioExecutionResult>, String> {
+    let _env_guard = crate::drivers::test_env_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let driver = driver_for_mode(mode)?;
     selected
         .iter()
@@ -985,4 +1018,90 @@ fn select_scenarios(ids: &[String]) -> Result<Vec<scenarios::ScenarioDefinition>
         selected.push(matched.clone());
     }
     Ok(selected)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        probe_binary_invocation_with_status_runner, should_retry_text_file_busy, PhaseResultStatus,
+        ETXTBSY_ERRNO, TEXT_FILE_BUSY_RETRY_LIMIT,
+    };
+
+    #[test]
+    fn unit_should_retry_text_file_busy_accepts_etxtbsy_within_retry_budget() {
+        let busy_error = std::io::Error::from_raw_os_error(ETXTBSY_ERRNO);
+        assert!(
+            should_retry_text_file_busy(&busy_error, 0),
+            "first ETXTBSY spawn error should retry"
+        );
+        assert!(
+            should_retry_text_file_busy(&busy_error, TEXT_FILE_BUSY_RETRY_LIMIT - 1),
+            "last in-budget ETXTBSY spawn error should retry"
+        );
+    }
+
+    #[test]
+    fn unit_should_retry_text_file_busy_rejects_non_retryable_error_shapes() {
+        let busy_error = std::io::Error::from_raw_os_error(ETXTBSY_ERRNO);
+        assert!(
+            !should_retry_text_file_busy(&busy_error, TEXT_FILE_BUSY_RETRY_LIMIT),
+            "ETXTBSY should not retry after budget exhaustion"
+        );
+
+        let missing_binary_error = std::io::Error::from_raw_os_error(2);
+        assert!(
+            !should_retry_text_file_busy(&missing_binary_error, 0),
+            "non-ETXTBSY spawn errors must fail immediately"
+        );
+    }
+
+    #[test]
+    fn unit_probe_binary_invocation_retries_text_file_busy_up_to_retry_limit() {
+        let mut calls = 0usize;
+        let (status, detail) = probe_binary_invocation_with_status_runner("kolme", || {
+            calls += 1;
+            assert!(
+                calls <= TEXT_FILE_BUSY_RETRY_LIMIT + 1,
+                "retry loop exceeded ETXTBSY budget: calls={calls}"
+            );
+            Err(std::io::Error::from_raw_os_error(ETXTBSY_ERRNO))
+        });
+        assert_eq!(
+            status,
+            PhaseResultStatus::Fail,
+            "exhausted ETXTBSY retries should fail closed"
+        );
+        assert_eq!(
+            calls,
+            TEXT_FILE_BUSY_RETRY_LIMIT + 1,
+            "expected initial call plus bounded retries"
+        );
+        assert!(
+            detail.contains("kolme probe failed"),
+            "failure detail should retain probe context: {detail}"
+        );
+        assert!(
+            !detail.contains("retry budget exhausted"),
+            "expected concrete spawn error once retry budget is consumed: {detail}"
+        );
+    }
+
+    #[test]
+    fn unit_probe_binary_invocation_fails_immediately_for_non_retryable_spawn_errors() {
+        let mut calls = 0usize;
+        let (status, detail) = probe_binary_invocation_with_status_runner("kolme", || {
+            calls += 1;
+            Err(std::io::Error::from_raw_os_error(2))
+        });
+        assert_eq!(
+            status,
+            PhaseResultStatus::Fail,
+            "non-ETXTBSY errors should fail immediately"
+        );
+        assert_eq!(calls, 1, "non-retryable spawn errors should not loop");
+        assert!(
+            detail.contains("kolme probe failed"),
+            "failure detail should retain probe context: {detail}"
+        );
+    }
 }

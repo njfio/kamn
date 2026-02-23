@@ -2,7 +2,7 @@
 fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -117,7 +117,7 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
 fn functional_runtime_kolme_live_rejects_stale_signer_rotation_epoch_preflight() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
     let _previous_profile_env_guard = EnvVarGuard::set(
@@ -166,7 +166,7 @@ fn functional_runtime_kolme_live_rejects_stale_signer_rotation_epoch_preflight()
 fn functional_runtime_kolme_live_rejects_signer_quorum_shortfall_preflight() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _required_approvals_env_guard = EnvVarGuard::set(
@@ -216,7 +216,7 @@ pub(super) fn functional_runtime_kolme_live_continuous_mode_executes_multiple_cy
     // Regression: #2931
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -281,7 +281,7 @@ pub(super) fn functional_runtime_kolme_live_continuous_mode_executes_multiple_cy
 fn functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -355,7 +355,7 @@ fn regression_runtime_kolme_live_submit_malformed_response_fails_fast_without_re
     // Regression: #2673
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -401,7 +401,7 @@ fn regression_runtime_kolme_live_submit_retry_exhaustion_emits_terminal_decision
     // Regression: #4110
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -490,7 +490,7 @@ fn regression_runtime_kolme_live_submit_retry_exhaustion_emits_terminal_decision
 fn functional_kolme_live_finality_retry_exhaustion_emits_terminal_decision_marker() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -587,7 +587,7 @@ fn functional_kolme_live_finality_retry_exhaustion_emits_terminal_decision_marke
 fn performance_runtime_kolme_live_retry_recovery_stays_within_budget() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(

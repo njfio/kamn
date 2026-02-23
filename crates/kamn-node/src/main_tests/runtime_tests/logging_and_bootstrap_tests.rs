@@ -94,7 +94,7 @@ fn regression_log_renderer_text_projects_default_correlation_and_reason_fields_w
 fn integration_bootstrap_runtime_emits_structured_marker() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
 
@@ -132,7 +132,7 @@ fn integration_bootstrap_runtime_emits_structured_marker() {
 fn functional_kolme_live_submit_and_finality_logs_keep_correlation_id() {
     let _signer_lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -200,7 +200,7 @@ fn functional_kolme_live_submit_and_finality_logs_keep_correlation_id() {
 fn functional_kolme_live_retry_emits_structured_retry_markers() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -331,7 +331,7 @@ fn functional_kolme_live_retry_emits_structured_retry_markers() {
 fn functional_kolme_live_nonce_retry_emits_structured_retry_marker() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
@@ -389,7 +389,7 @@ fn functional_kolme_live_nonce_retry_emits_structured_retry_marker() {
 fn regression_runtime_kolme_live_rejects_fallback_signer_secret_env_with_reason_code() {
     let _lock = signer_env_lock()
         .lock()
-        .expect("signer env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _primary_key_guard = EnvVarGuard::set(
@@ -437,7 +437,7 @@ fn regression_runtime_kolme_live_rejects_fallback_signer_secret_env_with_reason_
 fn regression_invalid_log_level_config_fails_closed() {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("invalid-level"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
 
