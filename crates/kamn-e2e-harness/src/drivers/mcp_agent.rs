@@ -30,6 +30,10 @@ const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-post"}"#;
 const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-mcp-s10";
 const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s10-topology"}"#;
+const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-mcp-s11-primary";
+const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-primary"}"#;
+const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-rotated"}"#;
+const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-stale"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -53,6 +57,7 @@ pub struct McpAgentDriver {
     crash_recovery_probe: Arc<LiveMcpProbe>,
     transport_failover_probe: Arc<LiveMcpProbe>,
     topology_coherence_probe: Arc<LiveMcpProbe>,
+    signer_rotation_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -87,6 +92,7 @@ impl McpAgentDriver {
                 run_live_s08_mcp_crash_recovery_probe,
                 run_live_s09_mcp_transport_failover_probe,
                 run_live_s10_mcp_topology_coherence_probe,
+                run_live_s11_mcp_signer_rotation_probe,
             ),
         )
     }
@@ -116,19 +122,20 @@ impl McpAgentDriver {
             replay_protection_probe: live_probe.clone(),
             crash_recovery_probe: live_probe.clone(),
             transport_failover_probe: live_probe.clone(),
-            topology_coherence_probe: live_probe,
+            topology_coherence_probe: live_probe.clone(),
+            signer_rotation_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_failover_and_topology_probes: (J, K, L, M, N, O),
+        escrow_proof_replay_crash_failover_topology_and_signer_probes: (J, K, L, M, N, O, P),
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -141,6 +148,7 @@ impl McpAgentDriver {
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
+        P: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -152,7 +160,8 @@ impl McpAgentDriver {
             crash_recovery_probe,
             transport_failover_probe,
             topology_coherence_probe,
-        ) = escrow_proof_replay_crash_failover_and_topology_probes;
+            signer_rotation_probe,
+        ) = escrow_proof_replay_crash_failover_topology_and_signer_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -166,6 +175,7 @@ impl McpAgentDriver {
             crash_recovery_probe: Arc::new(crash_recovery_probe),
             transport_failover_probe: Arc::new(transport_failover_probe),
             topology_coherence_probe: Arc::new(topology_coherence_probe),
+            signer_rotation_probe: Arc::new(signer_rotation_probe),
         })
     }
 }
@@ -204,6 +214,7 @@ impl McpAgentDriver {
             "S-08" => Some((self.crash_recovery_probe)()),
             "S-09" => Some((self.transport_failover_probe)()),
             "S-10" => Some((self.topology_coherence_probe)()),
+            "S-11" => Some((self.signer_rotation_probe)()),
             _ => None,
         }
     }
@@ -1262,6 +1273,123 @@ fn run_live_s10_mcp_topology_coherence_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s11_mcp_signer_rotation_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let primary_agent_name = env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S11_PRIMARY_AGENT_NAME.to_owned());
+    let rotated_agent_name = env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
+        .unwrap_or_else(|_| format!("{primary_agent_name}-rotated"));
+    let message_payload = env::var("KAMN_E2E_S11_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_MESSAGE_PAYLOAD.to_owned());
+    let rotated_message_payload = env::var("KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD.to_owned());
+    let stale_message_payload = env::var("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_STALE_MESSAGE_PAYLOAD.to_owned());
+
+    let primary_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(message_payload.as_str())
+    );
+    let primary_send_response = run_live_s11_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        primary_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-message-primary",
+        "send_message",
+        primary_send_arguments.as_str(),
+    )?;
+    let primary_message_id = validate_s08_mcp_message_receipt_fields(
+        primary_send_response.as_str(),
+        "mcp live s11 primary send_message",
+    )?;
+
+    let primary_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(primary_message_id.as_str())
+    );
+    let primary_query_response = run_live_s11_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{primary_agent_name}-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-primary",
+        "query_message",
+        primary_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        primary_query_response.as_str(),
+        primary_message_id.as_str(),
+        "mcp live s11 primary query_message",
+    )?;
+
+    let rotated_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(rotated_message_payload.as_str())
+    );
+    let rotated_send_response = run_live_s11_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        rotated_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-message-rotated",
+        "send_message",
+        rotated_send_arguments.as_str(),
+    )?;
+    let rotated_message_id = validate_s08_mcp_message_receipt_fields(
+        rotated_send_response.as_str(),
+        "mcp live s11 rotated send_message",
+    )?;
+    if rotated_message_id == primary_message_id {
+        return Err("mcp live s11 rotated send_message returned duplicate message_id".to_owned());
+    }
+
+    let rotated_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(rotated_message_id.as_str())
+    );
+    let rotated_query_response = run_live_s11_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{rotated_agent_name}-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-rotated",
+        "query_message",
+        rotated_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        rotated_query_response.as_str(),
+        rotated_message_id.as_str(),
+        "mcp live s11 rotated query_message",
+    )?;
+
+    let stale_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(stale_message_payload.as_str())
+    );
+    let stale_primary_error = run_live_s11_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        primary_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-message-stale-primary",
+        "send_message",
+        stale_send_arguments.as_str(),
+    )
+    .err()
+    .ok_or_else(|| "mcp live s11 stale-primary send_message unexpectedly succeeded".to_owned())?;
+    validate_s07_replay_reason_marker(
+        stale_primary_error.as_str(),
+        "mcp live s11 stale-primary send_message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -1549,6 +1677,27 @@ fn run_live_s10_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s10"))
 }
 
+fn run_live_s11_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s11"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1682,10 +1831,11 @@ mod tests {
         run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
         run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
         run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
-        validate_live_s05_release_escrow_response, validate_probe_health_response,
-        validate_probe_initialize_response, validate_s07_replay_reason_marker,
-        validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
-        McpAgentDriver, MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        run_live_s11_mcp_signer_rotation_probe, validate_live_s05_release_escrow_response,
+        validate_probe_health_response, validate_probe_initialize_response,
+        validate_s07_replay_reason_marker, validate_s08_mcp_message_receipt_fields,
+        validate_s08_mcp_query_message_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -1864,6 +2014,59 @@ elif tool_name == "query_message":
     result.update({"message_id": query_message_id, "status": "sent"})
 elif tool_name == "health":
     result.update({"status": "ok"})
+else:
+    result.update({"error": "unsupported_tool"})
+
+init_payload = {"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}
+tool_payload = {"jsonrpc":"2.0","id":request_id,"result":result}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {len(body)}\r\n\r\n{body}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#;
+        write_executable_python_script(script_path, script_source);
+    }
+
+    fn write_mcp_s11_probe_script(script_path: &std::path::Path) {
+        let script_source = r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+agent_name = ""
+if "--agent-name" in sys.argv:
+    index = sys.argv.index("--agent-name")
+    if index + 1 < len(sys.argv):
+        agent_name = sys.argv[index + 1]
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {"ok": True}
+if tool_name == "send_message":
+    if "stale-primary" in request_id:
+        result = {
+            "ok": False,
+            "error": {
+                "kind": "backend_error",
+                "message": "service_api_auth_replay_nonce_detected"
+            }
+        }
+    elif agent_name.endswith("primary"):
+        result.update({"message_id": "message-primary", "status": "sent"})
+    elif agent_name.endswith("rotated"):
+        result.update({"message_id": "message-rotated", "status": "sent"})
+    else:
+        result.update({"message_id": "message-fallback", "status": "sent"})
+elif tool_name == "query_message":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    query_message_id = message_match.group(1) if message_match else "message-fallback"
+    result.update({"message_id": query_message_id, "status": "sent"})
 else:
     result.update({"error": "unsupported_tool"})
 
@@ -2314,6 +2517,63 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s11_mcp_signer_rotation_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s11_mcp_signer_rotation_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s11_mcp_signer_rotation_probe_accepts_rotation_continuity() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s11-success");
+        write_mcp_s11_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+                (
+                    "KAMN_E2E_S11_PRIMARY_AGENT_NAME",
+                    Some("kamn-e2e-mcp-s11-primary"),
+                ),
+                (
+                    "KAMN_E2E_S11_ROTATED_AGENT_NAME",
+                    Some("kamn-e2e-mcp-s11-rotated"),
+                ),
+            ],
+            || {
+                run_live_s11_mcp_signer_rotation_probe()
+                    .expect("signer-rotation continuity should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -2729,6 +2989,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-10 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c18_live_s11_driver_path_fails_closed_when_signer_rotation_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s11 signer-rotation probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-11");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-11 should fail closed on probe error",
         );
     }
 

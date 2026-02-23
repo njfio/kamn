@@ -30,6 +30,10 @@ const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s09-post"}"#;
 const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-cli-s10";
 const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s10-topology"}"#;
+const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-cli-s11-primary";
+const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-primary"}"#;
+const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-rotated"}"#;
+const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-stale"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -38,7 +42,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09, and S-10.
+/// CLI-scripted driver with optional live execution for S-01 through S-11.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -52,6 +56,7 @@ pub struct CliScriptedDriver {
     crash_recovery_runner: Arc<LiveCliRunner>,
     transport_failover_runner: Arc<LiveCliRunner>,
     topology_coherence_runner: Arc<LiveCliRunner>,
+    signer_rotation_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -85,6 +90,7 @@ impl CliScriptedDriver {
                 run_live_s08_cli_crash_recovery_probe,
                 run_live_s09_cli_transport_failover_probe,
                 run_live_s10_cli_topology_coherence_probe,
+                run_live_s11_cli_signer_rotation_probe,
             ),
         )
     }
@@ -106,19 +112,20 @@ impl CliScriptedDriver {
             replay_protection_runner: live_runner.clone(),
             crash_recovery_runner: live_runner.clone(),
             transport_failover_runner: live_runner.clone(),
-            topology_coherence_runner: live_runner,
+            topology_coherence_runner: live_runner.clone(),
+            signer_rotation_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_failover_and_topology_runners: (K, L, M, N, O),
+        proof_replay_crash_failover_topology_and_signer_runners: (K, L, M, N, O, P),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -131,6 +138,7 @@ impl CliScriptedDriver {
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
+        P: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
@@ -138,7 +146,8 @@ impl CliScriptedDriver {
             crash_recovery_runner,
             transport_failover_runner,
             topology_coherence_runner,
-        ) = proof_replay_crash_failover_and_topology_runners;
+            signer_rotation_runner,
+        ) = proof_replay_crash_failover_topology_and_signer_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -151,6 +160,7 @@ impl CliScriptedDriver {
             crash_recovery_runner: Arc::new(crash_recovery_runner),
             transport_failover_runner: Arc::new(transport_failover_runner),
             topology_coherence_runner: Arc::new(topology_coherence_runner),
+            signer_rotation_runner: Arc::new(signer_rotation_runner),
         }
     }
 }
@@ -189,6 +199,7 @@ impl CliScriptedDriver {
             "S-08" => Some((self.crash_recovery_runner)()),
             "S-09" => Some((self.transport_failover_runner)()),
             "S-10" => Some((self.topology_coherence_runner)()),
+            "S-11" => Some((self.signer_rotation_runner)()),
             _ => None,
         }
     }
@@ -1193,6 +1204,118 @@ fn run_live_s10_cli_topology_coherence_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s11_cli_signer_rotation_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let primary_agent_name = env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S11_PRIMARY_AGENT_NAME.to_owned());
+    let rotated_agent_name = env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
+        .unwrap_or_else(|_| format!("{primary_agent_name}-rotated"));
+    let message_payload = env::var("KAMN_E2E_S11_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_MESSAGE_PAYLOAD.to_owned());
+    let rotated_message_payload = env::var("KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD.to_owned());
+    let stale_message_payload = env::var("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_STALE_MESSAGE_PAYLOAD.to_owned());
+
+    let primary_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s11 primary send-message",
+        primary_agent_name.as_str(),
+    )?;
+    let primary_message_id = validate_s08_message_receipt_fields(
+        primary_send_output.as_str(),
+        "cli live s11 primary send-message",
+    )?;
+
+    let primary_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            primary_message_id.as_str(),
+        ],
+        "cli live s11 primary query-message",
+        format!("{primary_agent_name}-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        primary_query_output.as_str(),
+        primary_message_id.as_str(),
+        "cli live s11 primary query-message",
+    )?;
+
+    let rotated_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            rotated_message_payload.as_str(),
+        ],
+        "cli live s11 rotated send-message",
+        rotated_agent_name.as_str(),
+    )?;
+    let rotated_message_id = validate_s08_message_receipt_fields(
+        rotated_send_output.as_str(),
+        "cli live s11 rotated send-message",
+    )?;
+    if rotated_message_id == primary_message_id {
+        return Err("cli live s11 rotated send-message returned duplicate message_id".to_owned());
+    }
+
+    let rotated_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            rotated_message_id.as_str(),
+        ],
+        "cli live s11 rotated query-message",
+        format!("{rotated_agent_name}-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        rotated_query_output.as_str(),
+        rotated_message_id.as_str(),
+        "cli live s11 rotated query-message",
+    )?;
+
+    let stale_primary_error = run_cli_command_expect_failure_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            stale_message_payload.as_str(),
+        ],
+        "cli live s11 stale-primary send-message",
+        primary_agent_name.as_str(),
+    )?;
+    validate_s07_replay_reason_marker(
+        stale_primary_error.as_str(),
+        "cli live s11 stale-primary send-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1350,10 +1473,10 @@ mod tests {
         run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
         run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
         run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
-        run_live_s10_cli_topology_coherence_probe, validate_live_s05_release_escrow_response,
-        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
+        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1900,6 +2023,86 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s11_cli_signer_rotation_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s11_cli_signer_rotation_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s11_cli_signer_rotation_probe_accepts_rotation_continuity() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s11-success");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+agent_name = os.environ.get("KAMN_AGENT_NAME", "")
+payload = sys.argv[-1] if len(sys.argv) > 0 else ""
+primary_agent_name = os.environ.get("KAMN_E2E_S11_PRIMARY_AGENT_NAME", "kamn-e2e-cli-s11-primary")
+rotated_agent_name = os.environ.get("KAMN_E2E_S11_ROTATED_AGENT_NAME", f"{primary_agent_name}-rotated")
+stale_payload = os.environ.get("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD", "{\"message\":\"cli-scripted-live-s11-stale\"}")
+
+if command == "send-message":
+    if agent_name == primary_agent_name and payload == stale_payload:
+        sys.stderr.write("service_api_auth_replay_nonce_detected")
+        sys.exit(1)
+    if agent_name == primary_agent_name:
+        sys.stdout.write("message_id=message-primary status=sent")
+    elif agent_name == rotated_agent_name:
+        sys.stdout.write("message_id=message-rotated status=sent")
+    else:
+        sys.stdout.write("message_id=message-fallback status=sent")
+elif command == "query-message":
+    message_id = sys.argv[-1] if len(sys.argv) > 0 else "message-fallback"
+    sys.stdout.write(f"message_id={message_id} status=sent")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                (
+                    "KAMN_E2E_S11_PRIMARY_AGENT_NAME",
+                    Some("kamn-e2e-cli-s11-primary"),
+                ),
+                (
+                    "KAMN_E2E_S11_ROTATED_AGENT_NAME",
+                    Some("kamn-e2e-cli-s11-rotated"),
+                ),
+            ],
+            || {
+                run_live_s11_cli_signer_rotation_probe()
+                    .expect("signer-rotation continuity should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s06_cli_proof_verification_probe_accepts_success_payload() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s06-success");
         let script_source = format!(
@@ -2154,6 +2357,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-10 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c11_live_s11_driver_path_fails_closed_when_signer_rotation_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s11 signer-rotation probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-11");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-11 should fail closed on probe error",
         );
     }
 }
