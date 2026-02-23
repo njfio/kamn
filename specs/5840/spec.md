@@ -1,7 +1,7 @@
 # Spec: Issue #5840 - Fix cfg(test) Parsing Drift in Production `expect()` Inventory
 
 - Issue: #5840
-- Status: Implemented
+- Status: Reviewed
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
