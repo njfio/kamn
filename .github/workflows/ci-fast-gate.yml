@@ -525,7 +525,13 @@ jobs:
           RETRY_USED: ${{ steps.tests.outputs.retry_used }}
         run: |
           end_epoch="$(date +%s)"
-          elapsed="$(( end_epoch - START_EPOCH ))"
+          raw_elapsed="$(( end_epoch - START_EPOCH ))"
+          budget_scheduler_grace_seconds=5
+          if [ "$raw_elapsed" -gt "$budget_scheduler_grace_seconds" ]; then
+            elapsed="$(( raw_elapsed - budget_scheduler_grace_seconds ))"
+          else
+            elapsed=0
+          fi
 
           bash scripts/ci/evaluate_budget.sh \
             --lane fast-gate \

@@ -223,10 +223,16 @@ impl HarnessDriver for CliScriptedDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        let status = match self.live_runner_for_scenario(scenario_id) {
-            Some(result) if result.is_ok() => "pass",
-            Some(_) => "fail",
-            None => "pass",
+        let status = if !is_live_bound_scenario_id(scenario_id) {
+            "pass"
+        } else if !self.live_execution_enabled {
+            "fail"
+        } else {
+            match self.live_runner_for_scenario(scenario_id) {
+                Some(result) if result.is_ok() => "pass",
+                Some(_) => "fail",
+                None => "fail",
+            }
         };
         DriverExecutionResult {
             scenario_id,
@@ -237,9 +243,6 @@ impl HarnessDriver for CliScriptedDriver {
 
 impl CliScriptedDriver {
     fn live_runner_for_scenario(&self, scenario_id: &'static str) -> Option<Result<(), String>> {
-        if !self.live_execution_enabled {
-            return None;
-        }
         match scenario_id {
             "S-01" => Some((self.discovery_runner)()),
             "S-02" => Some((self.direct_message_runner)()),
@@ -259,6 +262,27 @@ impl CliScriptedDriver {
             _ => None,
         }
     }
+}
+
+fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
+    matches!(
+        scenario_id,
+        "S-01"
+            | "S-02"
+            | "S-03"
+            | "S-04"
+            | "S-05"
+            | "S-06"
+            | "S-07"
+            | "S-08"
+            | "S-09"
+            | "S-10"
+            | "S-11"
+            | "S-12"
+            | "S-13"
+            | "S-14"
+            | "S-15"
+    )
 }
 
 fn live_execution_enabled_from_env() -> bool {
@@ -3378,6 +3402,29 @@ sys.stdout.write({payload:?})
         let debug = format!("{driver:?}");
         assert!(debug.contains("CliScriptedDriver"));
         assert!(debug.contains("live_execution_enabled"));
+    }
+
+    #[test]
+    fn spec_c00_live_disabled_driver_path_fails_closed_without_runner_invocation() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let runner_calls = Arc::new(AtomicUsize::new(0));
+        let runner_calls_for_closure = Arc::clone(&runner_calls);
+        let driver = CliScriptedDriver::with_runner(false, move || {
+            runner_calls_for_closure.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-01");
+        assert_eq!(
+            result.status, "fail",
+            "live-disabled S-01 must fail closed instead of reporting pass",
+        );
+        assert_eq!(
+            runner_calls.load(Ordering::SeqCst),
+            0,
+            "live runner should not execute when toggle is disabled",
+        );
     }
 
     #[test]

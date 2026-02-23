@@ -308,7 +308,14 @@ pub fn evaluate_cross_store_replay_consistency(
         (Some(runtime), Some(channel), Some(message), Some(task)) => {
             (runtime, channel, message, task)
         }
-        _ => unreachable!("snapshot presence checks completed before tuple extraction"),
+        _ => {
+            return build_and_trace_report(
+                CrossStoreReplayConsistencyStatus::Divergent,
+                "cross_store_replay_divergence_snapshot_tuple_extraction_inconsistent",
+                CrossStoreReplayDivergenceClass::PresenceDrift,
+                projection,
+            );
+        }
     };
 
     if channel_snapshot.schema_version != CHANNEL_SNAPSHOT_SCHEMA_VERSION {

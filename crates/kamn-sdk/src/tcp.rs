@@ -1,4 +1,8 @@
 use crate::{AgentDid, SdkError};
+use kamn_core::{
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+    service_auth_verify_with_public_key_hex, ServiceAuthSignatureError,
+};
 use std::collections::HashMap;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -10,10 +14,10 @@ const DEFAULT_CONNECT_RETRIES: u32 = 20;
 const DEFAULT_RETRY_DELAY_MILLIS: u64 = 100;
 const DEFAULT_MAX_WIRE_BYTES: usize = 32 * 1024;
 const TCP_HANDSHAKE_VERSION: &str = "1";
-const TCP_HANDSHAKE_PROFILE: &str = "ed25519:baseline-v1";
+const TCP_HANDSHAKE_PROFILE: &str = "secp256k1:baseline-v2";
 const TCP_FRAME_DELIMITER: &str = "\n\n";
 
-/// Deterministic signed envelope transported over TCP.
+/// Cryptographically signed envelope transported over TCP.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TcpSignedEnvelope {
     /// Sender DID.
@@ -26,22 +30,42 @@ pub struct TcpSignedEnvelope {
     pub state_hash: String,
     /// Message body.
     pub body: String,
-    /// Deterministic signature marker.
+    /// Compressed secp256k1 signer public key hex.
+    pub signer_public_key: String,
+    /// Cryptographic envelope signature marker.
     pub signature: String,
 }
 
 impl TcpSignedEnvelope {
-    /// Builds and signs a deterministic TCP envelope.
+    /// Builds and signs a cryptographic TCP envelope.
     pub fn new(
         from: AgentDid,
         to: AgentDid,
         nonce: u64,
         state_hash: impl Into<String>,
         body: impl Into<String>,
+        signer_private_key_hex: &str,
     ) -> Result<Self, SdkError> {
         let state_hash = state_hash.into();
         let body = body.into();
-        let signature = signature_for_fields(from.as_str(), nonce, &state_hash, &body);
+        let signer_public_key = service_auth_public_key_hex_from_private_key_hex(
+            signer_private_key_hex,
+        )
+        .map_err(|_| SdkError::InvalidInput {
+            field: "signer_private_key",
+            reason: "must be valid secp256k1 private key hex",
+        })?;
+        let signature = service_auth_sign_with_private_key_hex(
+            from.as_str(),
+            nonce,
+            state_hash.as_str(),
+            body.as_str(),
+            signer_private_key_hex,
+        )
+        .map_err(|_| SdkError::InvalidInput {
+            field: "signer_private_key",
+            reason: "failed to sign tcp envelope fields",
+        })?;
 
         let envelope = Self {
             from,
@@ -49,32 +73,35 @@ impl TcpSignedEnvelope {
             nonce,
             state_hash,
             body,
+            signer_public_key,
             signature,
         };
         envelope.verify_integrity()?;
         Ok(envelope)
     }
 
-    /// Returns deterministic wire payload in canonical field order.
+    /// Returns wire payload in canonical field order.
     pub fn to_wire_payload(&self) -> String {
         format!(
-            "from={}\nto={}\nnonce={}\nstate_hash={}\nbody={}\nsignature={}\n",
+            "from={}\nto={}\nnonce={}\nstate_hash={}\nbody={}\nsigner_public_key={}\nsignature={}\n",
             self.from.as_str(),
             self.to.as_str(),
             self.nonce,
             self.state_hash,
             self.body,
+            self.signer_public_key,
             self.signature
         )
     }
 
-    /// Parses and verifies deterministic wire payload.
+    /// Parses and verifies wire payload.
     pub fn parse_wire_payload(payload: &str) -> Result<Self, SdkError> {
         let mut from: Option<String> = None;
         let mut to: Option<String> = None;
         let mut nonce: Option<u64> = None;
         let mut state_hash: Option<String> = None;
         let mut body: Option<String> = None;
+        let mut signer_public_key: Option<String> = None;
         let mut signature: Option<String> = None;
 
         for raw_line in payload.lines() {
@@ -136,6 +163,15 @@ impl TcpSignedEnvelope {
                     }
                     body = Some(value.to_owned());
                 }
+                "signer_public_key" => {
+                    if signer_public_key.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "wire_payload",
+                            reason: "duplicate key: signer_public_key",
+                        });
+                    }
+                    signer_public_key = Some(value.to_owned());
+                }
                 "signature" => {
                     if signature.is_some() {
                         return Err(SdkError::InvalidInput {
@@ -175,6 +211,10 @@ impl TcpSignedEnvelope {
                 field: "body",
                 reason: "missing required key",
             })?,
+            signer_public_key: signer_public_key.ok_or(SdkError::InvalidInput {
+                field: "signer_public_key",
+                reason: "missing required key",
+            })?,
             signature: signature.ok_or(SdkError::InvalidInput {
                 field: "signature",
                 reason: "missing required key",
@@ -185,7 +225,7 @@ impl TcpSignedEnvelope {
         Ok(envelope)
     }
 
-    /// Verifies payload shape and deterministic signature.
+    /// Verifies payload shape and cryptographic signature.
     pub fn verify_integrity(&self) -> Result<(), SdkError> {
         if self.state_hash.trim().is_empty() {
             return Err(SdkError::InvalidInput {
@@ -211,24 +251,48 @@ impl TcpSignedEnvelope {
                 reason: "must be single-line",
             });
         }
+        if self.signer_public_key.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "signer_public_key",
+                reason: "must not be empty",
+            });
+        }
+        if self.signer_public_key.contains('\n') || self.signer_public_key.contains('\r') {
+            return Err(SdkError::InvalidInput {
+                field: "signer_public_key",
+                reason: "must be single-line",
+            });
+        }
 
-        let expected = signature_for_fields(
+        match service_auth_verify_with_public_key_hex(
+            self.signature.as_str(),
             self.from.as_str(),
             self.nonce,
             self.state_hash.as_str(),
             self.body.as_str(),
-        );
-        if self.signature != expected {
-            return Err(SdkError::InvalidInput {
+            self.signer_public_key.as_str(),
+        ) {
+            Ok(()) => Ok(()),
+            Err(ServiceAuthSignatureError::InvalidPublicKeyHex)
+            | Err(ServiceAuthSignatureError::EmptyField("expected_public_key_hex")) => {
+                Err(SdkError::InvalidInput {
+                    field: "signer_public_key",
+                    reason: "must be valid compressed secp256k1 public key hex",
+                })
+            }
+            Err(_) => Err(SdkError::InvalidInput {
                 field: "signature",
-                reason: "does not match deterministic envelope fields",
-            });
-        }
+                reason: "failed cryptographic envelope verification",
+            }),
+        }?;
         Ok(())
     }
 }
 
-/// Deterministic signature marker for TCP envelope fields.
+/// Legacy deterministic signature fixture marker for TCP envelope fields.
+///
+/// This helper is kept for compatibility fixtures and must not be used as
+/// a valid `TcpSignedEnvelope` signature.
 pub fn signature_for_fields(from: &str, nonce: u64, state_hash: &str, body: &str) -> String {
     format!(
         "sig:ed25519:baseline-v1:{from}:{nonce}:{state_hash}:{}",
@@ -241,6 +305,7 @@ struct TcpHandshakeFrame {
     from: AgentDid,
     to: AgentDid,
     nonce: u64,
+    signer_public_key: String,
     signature: String,
 }
 
@@ -250,16 +315,18 @@ impl TcpHandshakeFrame {
             from: envelope.from.clone(),
             to: envelope.to.clone(),
             nonce: envelope.nonce,
+            signer_public_key: envelope.signer_public_key.clone(),
             signature: envelope.signature.clone(),
         }
     }
 
     fn to_wire_payload(&self) -> String {
         format!(
-            "frame=handshake\nversion={TCP_HANDSHAKE_VERSION}\nprofile={TCP_HANDSHAKE_PROFILE}\nfrom={}\nto={}\nnonce={}\nsignature={}\n",
+            "frame=handshake\nversion={TCP_HANDSHAKE_VERSION}\nprofile={TCP_HANDSHAKE_PROFILE}\nfrom={}\nto={}\nnonce={}\nsigner_public_key={}\nsignature={}\n",
             self.from.as_str(),
             self.to.as_str(),
             self.nonce,
+            self.signer_public_key,
             self.signature
         )
     }
@@ -271,6 +338,7 @@ impl TcpHandshakeFrame {
         let mut from: Option<String> = None;
         let mut to: Option<String> = None;
         let mut nonce: Option<u64> = None;
+        let mut signer_public_key: Option<String> = None;
         let mut signature: Option<String> = None;
 
         for raw_line in payload.lines() {
@@ -342,6 +410,15 @@ impl TcpHandshakeFrame {
                         reason: "must be an unsigned integer",
                     })?);
                 }
+                "signer_public_key" => {
+                    if signer_public_key.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: signer_public_key",
+                        });
+                    }
+                    signer_public_key = Some(value.to_owned());
+                }
                 "signature" => {
                     if signature.is_some() {
                         return Err(SdkError::InvalidInput {
@@ -404,6 +481,10 @@ impl TcpHandshakeFrame {
                 field: "handshake.nonce",
                 reason: "missing required key",
             })?,
+            signer_public_key: signer_public_key.ok_or(SdkError::InvalidInput {
+                field: "handshake.signer_public_key",
+                reason: "missing required key",
+            })?,
             signature: signature.ok_or(SdkError::InvalidInput {
                 field: "handshake.signature",
                 reason: "missing required key",
@@ -428,6 +509,12 @@ impl TcpHandshakeFrame {
             return Err(SdkError::InvalidInput {
                 field: "handshake.nonce",
                 reason: "does not match envelope nonce",
+            });
+        }
+        if self.signer_public_key != envelope.signer_public_key {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.signer_public_key",
+                reason: "does not match envelope signer public key",
             });
         }
         if self.signature != envelope.signature {

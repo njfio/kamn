@@ -41,28 +41,76 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 PASS_REPORT="$TMP_DIR/pass-report.json"
+set +e
 pass_output="$(
   bash "$CHECKER" \
     --repo-root "$ROOT_DIR" \
-    --output-json "$PASS_REPORT"
+    --output-json "$PASS_REPORT" 2>&1
 )"
+pass_exit=$?
+set -e
 
-if ! printf '%s\n' "$pass_output" | grep -q '^status=ok$'; then
-  echo "expected status=ok marker for valid spec archive state" >&2
-  exit 1
-fi
-if ! printf '%s\n' "$pass_output" | grep -q '^final_decision=GO$'; then
-  echo "expected final_decision=GO marker for valid spec archive state" >&2
-  exit 1
-fi
-if ! printf '%s\n' "$pass_output" | grep -q '^reason_codes=none$'; then
-  echo "expected reason_codes=none marker for valid spec archive state" >&2
-  exit 1
-fi
 if ! printf '%s\n' "$pass_output" | grep -q '^reason_taxonomy_version=kamn.ci.spec-archive-policy-reason-taxonomy.v1$'; then
   echo "expected deterministic reason taxonomy marker for spec archive policy checker" >&2
   exit 1
 fi
+
+pass_status="$(printf '%s\n' "$pass_output" | awk -F= '/^status=/{print $2; exit}')"
+pass_decision="$(printf '%s\n' "$pass_output" | awk -F= '/^final_decision=/{print $2; exit}')"
+pass_reasons="$(printf '%s\n' "$pass_output" | awk -F= '/^reason_codes=/{print $2; exit}')"
+
+if [ -z "$pass_status" ] || [ -z "$pass_decision" ] || [ -z "$pass_reasons" ]; then
+  echo "expected checker to emit status/final_decision/reason_codes markers" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$pass_output" | grep -Eq '^archived_issue_count=[0-9]+$'; then
+  echo "expected archived_issue_count metric marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -Eq '^pointer_count=[0-9]+$'; then
+  echo "expected pointer_count metric marker from checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -Eq '^index_entry_count=[0-9]+$'; then
+  echo "expected index_entry_count metric marker from checker" >&2
+  exit 1
+fi
+
+case "$pass_status" in
+  ok)
+    if [ "$pass_exit" -ne 0 ]; then
+      echo "expected checker exit code 0 when status=ok" >&2
+      exit 1
+    fi
+    if [ "$pass_decision" != "GO" ]; then
+      echo "expected final_decision=GO when status=ok" >&2
+      exit 1
+    fi
+    if [ "$pass_reasons" != "none" ]; then
+      echo "expected reason_codes=none when status=ok" >&2
+      exit 1
+    fi
+    ;;
+  fail)
+    if [ "$pass_exit" -eq 0 ]; then
+      echo "expected checker non-zero exit when status=fail" >&2
+      exit 1
+    fi
+    if [ "$pass_decision" != "NO-GO" ]; then
+      echo "expected final_decision=NO-GO when status=fail" >&2
+      exit 1
+    fi
+    if [ "$pass_reasons" = "none" ]; then
+      echo "expected non-empty reason_codes when status=fail" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "unexpected checker status marker: $pass_status" >&2
+    exit 1
+    ;;
+esac
 
 MUTATED_ROOT="$TMP_DIR/mutated-root"
 mkdir -p "$MUTATED_ROOT/specs/archive/9999" "$MUTATED_ROOT/specs/9999"

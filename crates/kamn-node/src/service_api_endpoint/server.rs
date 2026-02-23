@@ -1,5 +1,41 @@
 use super::*;
 
+fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
+    match env::var(SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api auth public key env must not be empty: {SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV}"
+                ));
+            }
+            Ok(Some(normalized.to_owned()))
+        }
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => Err(format!(
+            "service api auth public key env must be utf-8: {SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV}"
+        )),
+    }
+}
+
+fn resolve_service_api_state_file() -> Result<Option<String>, String> {
+    match env::var(SERVICE_API_STATE_FILE_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api state file env must not be empty: {SERVICE_API_STATE_FILE_ENV}"
+                ));
+            }
+            Ok(Some(normalized.to_owned()))
+        }
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => Err(format!(
+            "service api state file env must be utf-8: {SERVICE_API_STATE_FILE_ENV}"
+        )),
+    }
+}
+
 pub(super) fn resolve_service_api_tls_mode() -> Result<ServiceApiTlsMode, String> {
     match env::var(SERVICE_API_TLS_MODE_ENV) {
         Ok(value) => {
@@ -94,6 +130,9 @@ pub(super) async fn serve_service_api_endpoint_async(
     snapshot: ServiceApiSnapshot,
 ) -> Result<(), String> {
     let tls_mode = resolve_service_api_tls_mode()?;
+    let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
+    let state_file = resolve_service_api_state_file()?;
+    let message_store = ServiceApiMessageStore::from_optional_state_file(state_file)?;
     let sender_anti_spam = build_service_api_sender_anti_spam_engine()
         .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
 
@@ -107,6 +146,8 @@ pub(super) async fn serve_service_api_endpoint_async(
             config.rate_limit_per_second,
         ))),
         sender_anti_spam: Arc::new(Mutex::new(sender_anti_spam)),
+        auth_public_key_hex,
+        message_store: Arc::new(Mutex::new(message_store)),
     });
     let request_budget_shared = runtime_state.request_budget.clone();
     let timeout_reached = Arc::new(AtomicBool::new(false));

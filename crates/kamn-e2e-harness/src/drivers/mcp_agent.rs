@@ -239,10 +239,16 @@ impl HarnessDriver for McpAgentDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        let status = match self.live_probe_for_scenario(scenario_id) {
-            Some(result) if result.is_ok() => "pass",
-            Some(_) => "fail",
-            None => "pass",
+        let status = if !is_live_bound_scenario_id(scenario_id) {
+            "pass"
+        } else if !self.live_execution_enabled {
+            "fail"
+        } else {
+            match self.live_probe_for_scenario(scenario_id) {
+                Some(result) if result.is_ok() => "pass",
+                Some(_) => "fail",
+                None => "fail",
+            }
         };
         DriverExecutionResult {
             scenario_id,
@@ -253,9 +259,6 @@ impl HarnessDriver for McpAgentDriver {
 
 impl McpAgentDriver {
     fn live_probe_for_scenario(&self, scenario_id: &'static str) -> Option<Result<(), String>> {
-        if !self.live_execution_enabled {
-            return None;
-        }
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
             "S-02" => Some((self.direct_message_probe)()),
@@ -275,6 +278,27 @@ impl McpAgentDriver {
             _ => None,
         }
     }
+}
+
+fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
+    matches!(
+        scenario_id,
+        "S-01"
+            | "S-02"
+            | "S-03"
+            | "S-04"
+            | "S-05"
+            | "S-06"
+            | "S-07"
+            | "S-08"
+            | "S-09"
+            | "S-10"
+            | "S-11"
+            | "S-12"
+            | "S-13"
+            | "S-14"
+            | "S-15"
+    )
 }
 
 fn live_execution_enabled_from_env() -> bool {
@@ -4192,6 +4216,30 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(debug.contains("McpAgentDriver"));
         assert!(debug.contains("mode"));
         assert!(debug.contains("live_execution_enabled"));
+    }
+
+    #[test]
+    fn spec_c00_live_disabled_driver_path_fails_closed_without_probe_invocation() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let probe_calls = Arc::new(AtomicUsize::new(0));
+        let probe_calls_for_closure = Arc::clone(&probe_calls);
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, false, move || {
+            probe_calls_for_closure.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-01");
+        assert_eq!(
+            result.status, "fail",
+            "live-disabled S-01 must fail closed instead of reporting pass",
+        );
+        assert_eq!(
+            probe_calls.load(Ordering::SeqCst),
+            0,
+            "live probe should not be invoked when toggle is disabled",
+        );
     }
 
     #[test]

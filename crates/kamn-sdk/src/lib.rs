@@ -11,7 +11,7 @@ pub mod live;
 pub mod memory;
 /// Service HTTP and websocket client for runtime API routes.
 pub mod service;
-/// TCP relay transport adapter and deterministic wire envelope models.
+/// TCP relay transport adapter and cryptographic wire envelope models.
 pub mod tcp;
 /// Core data structures used by agent, task, messaging, and escrow APIs.
 pub mod types;

@@ -5,7 +5,7 @@ use kamn_e2e_harness::drivers::cli_scripted::CliScriptedDriver;
 use kamn_e2e_harness::drivers::HarnessDriver;
 
 #[test]
-fn spec_c01_cli_scripted_live_toggle_disabled_keeps_deterministic_pass_without_runner_invocation() {
+fn spec_c01_cli_scripted_live_toggle_disabled_fails_closed_without_runner_invocation() {
     let runner_calls = Arc::new(AtomicUsize::new(0));
     let runner_calls_for_closure = Arc::clone(&runner_calls);
     let driver = CliScriptedDriver::with_runner(false, move || {
@@ -14,7 +14,7 @@ fn spec_c01_cli_scripted_live_toggle_disabled_keeps_deterministic_pass_without_r
     });
 
     let result = driver.execute("S-01");
-    assert_eq!(result.status, "pass");
+    assert_eq!(result.status, "fail");
     assert_eq!(
         runner_calls.load(Ordering::SeqCst),
         0,
