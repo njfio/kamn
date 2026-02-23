@@ -1,4 +1,5 @@
 use super::*;
+use kamn_kolme::{ServiceApiScope, ServiceApiScopeError};
 
 pub(super) fn header_value<'a>(
     headers: &'a BTreeMap<String, String>,
@@ -98,8 +99,10 @@ pub(super) fn enforce_request_scope_policy(
         return Err(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_SCOPE_ROUTE_MISMATCH,
             format!(
-                "scope {parsed_scope} is not authorized for route {} {}",
-                request.method, request.path
+                "scope {} is not authorized for route {} {}",
+                parsed_scope.as_str(),
+                request.method,
+                request.path
             ),
         ));
     }
@@ -202,53 +205,130 @@ pub(super) fn service_api_signature_state_hash(snapshot: &ServiceApiSnapshot) ->
     )
 }
 
-fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
+fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope> {
     if !super::route_requires_auth(method, path) {
         return None;
     }
     let scope = match (method, path) {
-        ("POST", ROUTE_MESSAGES_SEND) => "messages:write",
-        ("POST", ROUTE_CHANNELS_CREATE) => "channels:write",
-        ("POST", ROUTE_TASKS_CREATE) => "tasks:write",
-        ("POST", _) if super::payload::task_accept_path_id(path).is_some() => "tasks:write",
-        ("POST", _) if super::payload::task_complete_path_id(path).is_some() => "tasks:write",
-        ("POST", ROUTE_ESCROW_FUND) => "escrow:write",
-        ("POST", _) if super::payload::escrow_release_path_id(path).is_some() => "escrow:write",
-        ("GET", ROUTE_EVENTS_WS) => "events:read",
-        ("GET", _) if super::payload::message_path_id(path).is_some() => "messages:read",
-        ("GET", _) if super::payload::channel_messages_path_id(path).is_some() => "channels:read",
-        ("GET", _) if super::payload::task_path_id(path).is_some() => "tasks:read",
-        ("GET", _) if super::payload::agent_path_id(path).is_some() => "agents:read",
-        _ => "protected:unknown",
+        ("POST", ROUTE_MESSAGES_SEND) => ServiceApiScope::MessagesWrite,
+        ("POST", ROUTE_CHANNELS_CREATE) => ServiceApiScope::ChannelsWrite,
+        ("POST", ROUTE_TASKS_CREATE) => ServiceApiScope::TasksWrite,
+        ("POST", _) if super::payload::task_accept_path_id(path).is_some() => {
+            ServiceApiScope::TasksWrite
+        }
+        ("POST", _) if super::payload::task_complete_path_id(path).is_some() => {
+            ServiceApiScope::TasksWrite
+        }
+        ("POST", ROUTE_ESCROW_FUND) => ServiceApiScope::EscrowWrite,
+        ("POST", _) if super::payload::escrow_release_path_id(path).is_some() => {
+            ServiceApiScope::EscrowWrite
+        }
+        ("GET", ROUTE_EVENTS_WS) => ServiceApiScope::EventsRead,
+        ("GET", _) if super::payload::message_path_id(path).is_some() => {
+            ServiceApiScope::MessagesRead
+        }
+        ("GET", _) if super::payload::channel_messages_path_id(path).is_some() => {
+            ServiceApiScope::ChannelsRead
+        }
+        ("GET", _) if super::payload::task_path_id(path).is_some() => ServiceApiScope::TasksRead,
+        ("GET", _) if super::payload::agent_path_id(path).is_some() => ServiceApiScope::AgentsRead,
+        _ => ServiceApiScope::ProtectedUnknown,
     };
     Some(scope)
 }
 
-fn parse_scope(scope: &str) -> Result<&str, ServiceApiReasonedError> {
-    let normalized = scope.trim();
-    if normalized.is_empty() {
-        return Err(ServiceApiReasonedError::new(
+fn parse_scope(scope: &str) -> Result<ServiceApiScope, ServiceApiReasonedError> {
+    ServiceApiScope::parse(scope).map_err(|error| match error {
+        ServiceApiScopeError::Empty => ServiceApiReasonedError::new(
             REASON_CODE_AUTH_SCOPE_INVALID,
             format!("scope header must not be empty: {REQUEST_AUTH_SCOPE_HEADER}"),
-        ));
-    }
-    if !matches!(
-        normalized,
-        "messages:write"
-            | "messages:read"
-            | "channels:write"
-            | "channels:read"
-            | "tasks:write"
-            | "tasks:read"
-            | "escrow:write"
-            | "agents:read"
-            | "events:read"
-            | "protected:unknown"
-    ) {
-        return Err(ServiceApiReasonedError::new(
+        ),
+        ServiceApiScopeError::Unknown => ServiceApiReasonedError::new(
             REASON_CODE_AUTH_SCOPE_INVALID,
             format!("scope header value is invalid: {REQUEST_AUTH_SCOPE_HEADER}"),
-        ));
+        ),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_required_scope_for_route_maps_known_route_contracts() {
+        assert_eq!(
+            required_scope_for_route("POST", ROUTE_MESSAGES_SEND),
+            Some(ServiceApiScope::MessagesWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", ROUTE_CHANNELS_CREATE),
+            Some(ServiceApiScope::ChannelsWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", ROUTE_TASKS_CREATE),
+            Some(ServiceApiScope::TasksWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", ROUTE_ESCROW_FUND),
+            Some(ServiceApiScope::EscrowWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", ROUTE_EVENTS_WS),
+            Some(ServiceApiScope::EventsRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/messages/message-1"),
+            Some(ServiceApiScope::MessagesRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/channels/channel-1/messages"),
+            Some(ServiceApiScope::ChannelsRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/tasks/task-1"),
+            Some(ServiceApiScope::TasksRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/agents/kamn:did:agent:alice"),
+            Some(ServiceApiScope::AgentsRead)
+        );
     }
-    Ok(normalized)
+
+    #[test]
+    fn regression_required_scope_for_route_preserves_public_and_unknown_contracts() {
+        // Regression: #5831
+        assert_eq!(required_scope_for_route("GET", ROUTE_HEALTHZ), None);
+        assert_eq!(required_scope_for_route("GET", ROUTE_METRICS), None);
+        assert_eq!(
+            required_scope_for_route("DELETE", "/v1/unknown/path"),
+            Some(ServiceApiScope::ProtectedUnknown)
+        );
+    }
+
+    #[test]
+    fn unit_parse_scope_accepts_trimmed_canonical_values() {
+        assert_eq!(
+            parse_scope(" messages:write ").expect("scope"),
+            ServiceApiScope::MessagesWrite
+        );
+        assert_eq!(
+            parse_scope("tasks:read").expect("scope"),
+            ServiceApiScope::TasksRead
+        );
+        assert_eq!(
+            parse_scope("protected:unknown").expect("scope"),
+            ServiceApiScope::ProtectedUnknown
+        );
+    }
+
+    #[test]
+    fn unit_parse_scope_rejects_empty_and_unknown_values() {
+        let empty_error = parse_scope("  ").expect_err("empty scope should fail");
+        assert_eq!(empty_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
+        assert!(empty_error.message.contains("must not be empty"));
+
+        let unknown_error = parse_scope("content:write").expect_err("unknown scope should fail");
+        assert_eq!(unknown_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
+        assert!(unknown_error.message.contains("value is invalid"));
+    }
 }

@@ -10,6 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 kamn-core = { path = "../kamn-core", features = ["libp2p-live-transport"] }
+kamn-kolme = { path = "../kamn-kolme" }
 axum = { version = "0.8.8", features = ["ws"] }
 futures-util = "0.3.31"
 k256 = { version = "0.13.4", features = ["ecdsa"] }
