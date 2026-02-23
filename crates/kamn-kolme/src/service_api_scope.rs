@@ -19,6 +19,10 @@ pub enum ServiceApiScope {
     TasksRead,
     /// Write scope for escrow lifecycle mutation operations.
     EscrowWrite,
+    /// Write scope for content lifecycle mutation operations.
+    ContentWrite,
+    /// Read scope for content lifecycle query operations.
+    ContentRead,
     /// Read scope for agent profile/query operations.
     AgentsRead,
     /// Read scope for event stream/websocket operations.
@@ -38,6 +42,8 @@ impl ServiceApiScope {
             Self::TasksWrite => "tasks:write",
             Self::TasksRead => "tasks:read",
             Self::EscrowWrite => "escrow:write",
+            Self::ContentWrite => "content:write",
+            Self::ContentRead => "content:read",
             Self::AgentsRead => "agents:read",
             Self::EventsRead => "events:read",
             Self::ProtectedUnknown => "protected:unknown",
@@ -58,6 +64,8 @@ impl ServiceApiScope {
             "tasks:write" => Self::TasksWrite,
             "tasks:read" => Self::TasksRead,
             "escrow:write" => Self::EscrowWrite,
+            "content:write" => Self::ContentWrite,
+            "content:read" => Self::ContentRead,
             "agents:read" => Self::AgentsRead,
             "events:read" => Self::EventsRead,
             "protected:unknown" => Self::ProtectedUnknown,
@@ -117,6 +125,14 @@ mod tests {
             ServiceApiScope::EscrowWrite
         );
         assert_eq!(
+            ServiceApiScope::parse("content:write").expect("scope"),
+            ServiceApiScope::ContentWrite
+        );
+        assert_eq!(
+            ServiceApiScope::parse("content:read").expect("scope"),
+            ServiceApiScope::ContentRead
+        );
+        assert_eq!(
             ServiceApiScope::parse("agents:read").expect("scope"),
             ServiceApiScope::AgentsRead
         );
@@ -138,7 +154,7 @@ mod tests {
             Err(ServiceApiScopeError::Empty)
         );
         assert_eq!(
-            ServiceApiScope::parse("content:write"),
+            ServiceApiScope::parse("content:admin"),
             Err(ServiceApiScopeError::Unknown)
         );
     }

@@ -1,9 +1,9 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
     service_signature_for_fields, AgentDid, ServiceAgentProfile, ServiceApiClient,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceEscrowStatus, ServiceHealthStatus,
-    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
-    ServiceTaskStatus,
+    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
+    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
 };
 use std::env;
 
@@ -165,6 +165,42 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceEscrowStatus, AgentLibError> {
         Ok(self.inner.release_escrow(escrow_id, auth)?)
+    }
+
+    /// Registers content lifecycle via `POST /v1/content/register`.
+    pub fn register_content(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentRegistration, AgentLibError> {
+        Ok(self.inner.register_content(payload, auth)?)
+    }
+
+    /// Expires one content record via `POST /v1/content/{id}/expire`.
+    pub fn expire_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, AgentLibError> {
+        Ok(self.inner.expire_content(content_id, auth)?)
+    }
+
+    /// Tombstones one content record via `POST /v1/content/{id}/tombstone`.
+    pub fn tombstone_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, AgentLibError> {
+        Ok(self.inner.tombstone_content(content_id, auth)?)
+    }
+
+    /// Queries one content lifecycle record via `GET /v1/content/{id}`.
+    pub fn get_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, AgentLibError> {
+        Ok(self.inner.get_content(content_id, auth)?)
     }
 
     /// Queries one agent profile via `GET /v1/agents/{did}`.

@@ -42,6 +42,34 @@ impl McpToolBackend for TestBackend {
         Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
     }
 
+    fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#,
+            payload.len()
+        ))
+    }
+
+    fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#,
+            content_id
+        ))
+    }
+
+    fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
+    }
+
+    fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(r#"{{"task_id":"task-{}"}}"#, payload.len()))
     }
@@ -243,6 +271,10 @@ fn spec_c06_mcp_dispatch_rejects_malformed_task_and_escrow_requests() {
         r#"{"id":"req-12","tool":"release_escrow"}"#,
         r#"{"id":"req-15","tool":"query_task"}"#,
         r#"{"id":"req-16","tool":"query_agent_profile"}"#,
+        r#"{"id":"req-17","tool":"register_content"}"#,
+        r#"{"id":"req-18","tool":"expire_content"}"#,
+        r#"{"id":"req-19","tool":"tombstone_content"}"#,
+        r#"{"id":"req-20","tool":"query_content"}"#,
     ] {
         let response = dispatch_tool_request_json(&backend, request)
             .expect("dispatcher should return structured invalid-request envelope");
@@ -295,5 +327,74 @@ fn spec_c07_mcp_dispatch_executes_query_task_and_query_agent_profile_tools() {
     assert!(
         profile_response.contains(r#""reputation_score":777"#),
         "query_agent_profile response should include reputation score: {profile_response}"
+    );
+}
+
+#[test]
+fn spec_c08_mcp_dispatch_executes_content_lifecycle_tools() {
+    let backend = TestBackend;
+
+    let register_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-21","tool":"register_content","payload":"{\"content\":\"abc\",\"retention_class\":\"standard\"}"}"#,
+    )
+    .expect("register_content should dispatch successfully");
+    assert!(
+        register_response.contains(r#""ok":true"#),
+        "register_content response should mark success: {register_response}"
+    );
+    assert!(
+        register_response.contains(r#""tool":"register_content""#),
+        "register_content response should preserve tool marker: {register_response}"
+    );
+    assert!(
+        register_response.contains(r#""retention_class":"standard""#),
+        "register_content response should include retention class: {register_response}"
+    );
+
+    let expire_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-22","tool":"expire_content","content_id":"content-1"}"#,
+    )
+    .expect("expire_content should dispatch successfully");
+    assert!(
+        expire_response.contains(r#""ok":true"#),
+        "expire_content response should mark success: {expire_response}"
+    );
+    assert!(
+        expire_response.contains(r#""lifecycle_state":"expired""#),
+        "expire_content response should include expired lifecycle state: {expire_response}"
+    );
+
+    let tombstone_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-23","tool":"tombstone_content","content_id":"content-1"}"#,
+    )
+    .expect("tombstone_content should dispatch successfully");
+    assert!(
+        tombstone_response.contains(r#""ok":true"#),
+        "tombstone_content response should mark success: {tombstone_response}"
+    );
+    assert!(
+        tombstone_response.contains(r#""redaction_status":"redacted""#),
+        "tombstone_content response should include redaction status: {tombstone_response}"
+    );
+
+    let query_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-24","tool":"query_content","content_id":"content-1"}"#,
+    )
+    .expect("query_content should dispatch successfully");
+    assert!(
+        query_response.contains(r#""ok":true"#),
+        "query_content response should mark success: {query_response}"
+    );
+    assert!(
+        query_response.contains(r#""tool":"query_content""#),
+        "query_content response should preserve tool marker: {query_response}"
+    );
+    assert!(
+        query_response.contains(r#""lifecycle_state":"tombstoned""#),
+        "query_content response should include lifecycle projection: {query_response}"
     );
 }

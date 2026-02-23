@@ -56,6 +56,7 @@ const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
 const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
 const ROUTE_ESCROW_FUND: &str = "/v1/escrow/fund";
+const ROUTE_CONTENT_REGISTER: &str = "/v1/content/register";
 const ROUTE_MESSAGES_PREFIX: &str = "/v1/messages/";
 const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
 const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
@@ -64,6 +65,9 @@ const ROUTE_TASKS_ACCEPT_SUFFIX: &str = "/accept";
 const ROUTE_TASKS_COMPLETE_SUFFIX: &str = "/complete";
 const ROUTE_ESCROW_PREFIX: &str = "/v1/escrow/";
 const ROUTE_ESCROW_RELEASE_SUFFIX: &str = "/release";
+const ROUTE_CONTENT_PREFIX: &str = "/v1/content/";
+const ROUTE_CONTENT_EXPIRE_SUFFIX: &str = "/expire";
+const ROUTE_CONTENT_TOMBSTONE_SUFFIX: &str = "/tombstone";
 const ROUTE_AGENTS_PREFIX: &str = "/v1/agents/";
 const ROUTE_EVENTS_WS: &str = "/v1/events/ws";
 const ROUTE_HEALTHZ: &str = "/healthz";
@@ -121,9 +125,9 @@ const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
     include_str!("../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_SCHEMA_VERSION: &str =
     "kamn.runtime.service-api-route-authz-matrix.v1";
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 14;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_TOTAL_ROUTE_COUNT: usize = 18;
 pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PUBLIC_ROUTE_COUNT: usize = 2;
-pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 12;
+pub(crate) const SERVICE_API_ROUTE_AUTHZ_MATRIX_PROTECTED_ROUTE_COUNT: usize = 16;
 const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
 const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
 const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
@@ -299,6 +303,21 @@ pub(crate) struct ServiceApiTaskTransitionBody {
 pub(crate) struct ServiceApiEscrowStatusBody {
     pub(crate) escrow_id: String,
     pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiContentRegisterBody {
+    pub(crate) content_id: String,
+    pub(crate) retention_class: String,
+    pub(crate) lifecycle_state: String,
+    pub(crate) redaction_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiContentLifecycleBody {
+    pub(crate) content_id: String,
+    pub(crate) lifecycle_state: String,
+    pub(crate) redaction_status: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

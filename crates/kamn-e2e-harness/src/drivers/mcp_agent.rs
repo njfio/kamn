@@ -34,6 +34,9 @@ const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-mcp-s11-primary";
 const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-primary"}"#;
 const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-rotated"}"#;
 const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s11-stale"}"#;
+const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-mcp-s12";
+const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
+    r#"{"content":"mcp-agent-live-s12","retention_class":"standard"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -58,6 +61,7 @@ pub struct McpAgentDriver {
     transport_failover_probe: Arc<LiveMcpProbe>,
     topology_coherence_probe: Arc<LiveMcpProbe>,
     signer_rotation_probe: Arc<LiveMcpProbe>,
+    retention_deletion_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -93,6 +97,7 @@ impl McpAgentDriver {
                 run_live_s09_mcp_transport_failover_probe,
                 run_live_s10_mcp_topology_coherence_probe,
                 run_live_s11_mcp_signer_rotation_probe,
+                run_live_s12_mcp_retention_deletion_probe,
             ),
         )
     }
@@ -123,19 +128,29 @@ impl McpAgentDriver {
             crash_recovery_probe: live_probe.clone(),
             transport_failover_probe: live_probe.clone(),
             topology_coherence_probe: live_probe.clone(),
-            signer_rotation_probe: live_probe,
+            signer_rotation_probe: live_probe.clone(),
+            retention_deletion_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_failover_topology_and_signer_probes: (J, K, L, M, N, O, P),
+        escrow_proof_replay_crash_failover_topology_signer_and_retention_probes: (
+            J,
+            K,
+            L,
+            M,
+            N,
+            O,
+            P,
+            Q,
+        ),
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -149,6 +164,7 @@ impl McpAgentDriver {
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
+        Q: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -161,7 +177,8 @@ impl McpAgentDriver {
             transport_failover_probe,
             topology_coherence_probe,
             signer_rotation_probe,
-        ) = escrow_proof_replay_crash_failover_topology_and_signer_probes;
+            retention_deletion_probe,
+        ) = escrow_proof_replay_crash_failover_topology_signer_and_retention_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -176,6 +193,7 @@ impl McpAgentDriver {
             transport_failover_probe: Arc::new(transport_failover_probe),
             topology_coherence_probe: Arc::new(topology_coherence_probe),
             signer_rotation_probe: Arc::new(signer_rotation_probe),
+            retention_deletion_probe: Arc::new(retention_deletion_probe),
         })
     }
 }
@@ -215,6 +233,7 @@ impl McpAgentDriver {
             "S-09" => Some((self.transport_failover_probe)()),
             "S-10" => Some((self.topology_coherence_probe)()),
             "S-11" => Some((self.signer_rotation_probe)()),
+            "S-12" => Some((self.retention_deletion_probe)()),
             _ => None,
         }
     }
@@ -1390,6 +1409,190 @@ fn run_live_s11_mcp_signer_rotation_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s12_mcp_retention_deletion_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S12_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
+    let register_payload = env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S12_REGISTER_CONTENT_PAYLOAD.to_owned());
+
+    let register_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(register_payload.as_str())
+    );
+    let register_response = run_live_s12_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-register").as_str(),
+        key_file.as_str(),
+        "probe-register-content",
+        "register_content",
+        register_arguments.as_str(),
+    )?;
+    let content_id =
+        json_optional_string_field(register_response.as_str(), "content_id").ok_or_else(|| {
+            format!(
+                "mcp live s12 register_content response missing content_id field: {register_response}"
+            )
+        })?;
+    if content_id.trim().is_empty() {
+        return Err("mcp live s12 register_content returned empty content_id".to_owned());
+    }
+    let retention_class =
+        json_optional_string_field(register_response.as_str(), "retention_class").ok_or_else(
+            || {
+                format!(
+                    "mcp live s12 register_content response missing retention_class field: {register_response}"
+                )
+            },
+        )?;
+    if retention_class.trim().is_empty() {
+        return Err("mcp live s12 register_content returned empty retention_class".to_owned());
+    }
+
+    let expire_arguments = format!(
+        "{{\"content_id\":\"{}\"}}",
+        escape_json_scalar(content_id.as_str())
+    );
+    let expire_response = run_live_s12_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-expire").as_str(),
+        key_file.as_str(),
+        "probe-expire-content",
+        "expire_content",
+        expire_arguments.as_str(),
+    )?;
+    let expired_content_id = json_optional_string_field(expire_response.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s12 expire_content response missing content_id field: {expire_response}"
+            )
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        expired_content_id.as_str(),
+        "mcp live s12 expire_content",
+    )?;
+    let expired_lifecycle_state =
+        json_optional_string_field(expire_response.as_str(), "lifecycle_state").ok_or_else(
+            || {
+                format!(
+            "mcp live s12 expire_content response missing lifecycle_state field: {expire_response}"
+        )
+            },
+        )?;
+    if expired_lifecycle_state.trim().is_empty() {
+        return Err("mcp live s12 expire_content returned empty lifecycle_state".to_owned());
+    }
+
+    let tombstone_arguments = format!(
+        "{{\"content_id\":\"{}\"}}",
+        escape_json_scalar(content_id.as_str())
+    );
+    let tombstone_response = run_live_s12_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-tombstone").as_str(),
+        key_file.as_str(),
+        "probe-tombstone-content",
+        "tombstone_content",
+        tombstone_arguments.as_str(),
+    )?;
+    let tombstoned_content_id =
+        json_optional_string_field(tombstone_response.as_str(), "content_id").ok_or_else(|| {
+            format!(
+                "mcp live s12 tombstone_content response missing content_id field: {tombstone_response}"
+            )
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        tombstoned_content_id.as_str(),
+        "mcp live s12 tombstone_content",
+    )?;
+    let tombstoned_lifecycle_state =
+        json_optional_string_field(tombstone_response.as_str(), "lifecycle_state").ok_or_else(
+            || {
+                format!(
+                    "mcp live s12 tombstone_content response missing lifecycle_state field: {tombstone_response}"
+                )
+            },
+        )?;
+    if tombstoned_lifecycle_state.trim().is_empty() {
+        return Err("mcp live s12 tombstone_content returned empty lifecycle_state".to_owned());
+    }
+    let tombstoned_redaction_status =
+        json_optional_string_field(tombstone_response.as_str(), "redaction_status").ok_or_else(
+            || {
+                format!(
+                    "mcp live s12 tombstone_content response missing redaction_status field: {tombstone_response}"
+                )
+            },
+        )?;
+    if tombstoned_redaction_status.trim().is_empty() {
+        return Err("mcp live s12 tombstone_content returned empty redaction_status".to_owned());
+    }
+
+    let query_arguments = format!(
+        "{{\"content_id\":\"{}\"}}",
+        escape_json_scalar(content_id.as_str())
+    );
+    let query_response = run_live_s12_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-query").as_str(),
+        key_file.as_str(),
+        "probe-query-content",
+        "query_content",
+        query_arguments.as_str(),
+    )?;
+    let queried_content_id = json_optional_string_field(query_response.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s12 query_content response missing content_id field: {query_response}"
+            )
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        queried_content_id.as_str(),
+        "mcp live s12 query_content",
+    )?;
+    let queried_lifecycle_state =
+        json_optional_string_field(query_response.as_str(), "lifecycle_state").ok_or_else(
+            || {
+                format!(
+            "mcp live s12 query_content response missing lifecycle_state field: {query_response}"
+        )
+            },
+        )?;
+    validate_s12_content_field_coherence(
+        tombstoned_lifecycle_state.as_str(),
+        queried_lifecycle_state.as_str(),
+        "lifecycle_state",
+        "mcp live s12 query_content",
+    )?;
+    let queried_redaction_status =
+        json_optional_string_field(query_response.as_str(), "redaction_status").ok_or_else(
+            || {
+                format!(
+            "mcp live s12 query_content response missing redaction_status field: {query_response}"
+        )
+            },
+        )?;
+    validate_s12_content_field_coherence(
+        tombstoned_redaction_status.as_str(),
+        queried_redaction_status.as_str(),
+        "redaction_status",
+        "mcp live s12 query_content",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -1420,6 +1623,33 @@ fn validate_s08_mcp_query_message_response(
         .ok_or_else(|| format!("{step} response missing status field: {response}"))?;
     if queried_status.trim().is_empty() {
         return Err(format!("{step} returned empty status"));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_id_match(
+    expected_content_id: &str,
+    observed_content_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_content_id != expected_content_id {
+        return Err(format!(
+            "{step} returned mismatched content_id: expected={expected_content_id}, got={observed_content_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
     }
     Ok(())
 }
@@ -1698,6 +1928,27 @@ fn run_live_s11_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s11"))
 }
 
+fn run_live_s12_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s12"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1831,11 +2082,12 @@ mod tests {
         run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
         run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
         run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
-        run_live_s11_mcp_signer_rotation_probe, validate_live_s05_release_escrow_response,
-        validate_probe_health_response, validate_probe_initialize_response,
-        validate_s07_replay_reason_marker, validate_s08_mcp_message_receipt_fields,
-        validate_s08_mcp_query_message_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
-        MCP_AGENT_LIVE_ENV,
+        run_live_s11_mcp_signer_rotation_probe, run_live_s12_mcp_retention_deletion_probe,
+        validate_live_s05_release_escrow_response, validate_probe_health_response,
+        validate_probe_initialize_response, validate_s07_replay_reason_marker,
+        validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
+        validate_s12_content_field_coherence, validate_s12_content_id_match, McpAgentDriver,
+        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -2539,6 +2791,53 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s12_mcp_retention_deletion_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s12_mcp_retention_deletion_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_id_match_rejects_mismatch() {
+        let error = validate_s12_content_id_match("content-a", "content-b", "test step")
+            .expect_err("mismatched content ids should fail");
+        assert!(
+            error.contains("mismatched content_id"),
+            "error should mention content_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_field_coherence_rejects_drift() {
+        let error = validate_s12_content_field_coherence(
+            "tombstoned",
+            "expired",
+            "lifecycle_state",
+            "test step",
+        )
+        .expect_err("field drift should fail");
+        assert!(
+            error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
     fn unit_run_live_s11_mcp_signer_rotation_probe_accepts_rotation_continuity() {
         let script_path = unique_temp_script_path("kamn-e2e-mcp-s11-success");
         write_mcp_s11_probe_script(&script_path);
@@ -3002,6 +3301,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-11 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c19_live_s12_driver_path_fails_closed_when_retention_deletion_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s12 retention-deletion probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-12");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-12 should fail closed on probe error",
         );
     }
 

@@ -12,6 +12,8 @@ pub mod complete_task;
 pub mod create_channel;
 /// `create-task` command module.
 pub mod create_task;
+/// `expire-content` command module.
+pub mod expire_content;
 /// `fund-escrow` command module.
 pub mod fund_escrow;
 /// `health` command module.
@@ -20,16 +22,22 @@ pub mod health;
 pub mod list_messages;
 /// `query-agent-profile` command module.
 pub mod query_agent_profile;
+/// `query-content` command module.
+pub mod query_content;
 /// `query-message` command module.
 pub mod query_message;
 /// `query-task` command module.
 pub mod query_task;
 /// `register` command module.
 pub mod register;
+/// `register-content` command module.
+pub mod register_content;
 /// `release-escrow` command module.
 pub mod release_escrow;
 /// `send-message` command module.
 pub mod send_message;
+/// `tombstone-content` command module.
+pub mod tombstone_content;
 /// `verify-proof` command module.
 pub mod verify_proof;
 

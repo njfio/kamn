@@ -132,6 +132,26 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         200,
                         r#"{"did":"kamn:did:agent:alice","reputation_score":777}"#,
                     )?;
+                } else if method == "POST" && path == "/v1/content/register" {
+                    write_http_response(
+                        &mut stream,
+                        201,
+                        r#"{"content_id":"content-cli","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/content/content-cli/expire" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"content_id":"content-cli","lifecycle_state":"expired","redaction_status":"none"}"#,
+                    )?;
+                } else if (method == "POST" && path == "/v1/content/content-cli/tombstone")
+                    || (method == "GET" && path == "/v1/content/content-cli")
+                {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"content_id":"content-cli","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
+                    )?;
                 } else if method == "POST" && path == "/v1/tasks/create" {
                     write_http_response(
                         &mut stream,
@@ -499,6 +519,84 @@ fn spec_c07_cli_query_task_and_profile_commands_execute_and_validate_args() {
     for (command, label) in [
         (CommandKind::QueryTask, "query_task_id"),
         (CommandKind::QueryAgentProfile, "query_agent_profile_did"),
+    ] {
+        let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
+            .expect_err("missing required arg should fail");
+        assert!(
+            matches!(error, AgentLibError::InvalidInput { .. }),
+            "missing arg for {label} should be invalid input: {error}"
+        );
+    }
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c08_cli_content_commands_execute_and_validate_args() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_cli_contract_server(server_addr, 4));
+    wait_for_server_ready();
+
+    let endpoint = format!("http://{bind_addr}");
+
+    let register_output = dispatch(&parsed(
+        CommandKind::RegisterContent,
+        endpoint.as_str(),
+        &[r#"{"content":"abc","retention_class":"standard"}"#],
+    ))
+    .expect("register-content should succeed");
+    assert!(
+        register_output.text.contains("content_id=content-cli"),
+        "register-content output should include content id: {register_output:?}"
+    );
+    assert!(
+        register_output.text.contains("retention_class=standard"),
+        "register-content output should include retention class: {register_output:?}"
+    );
+
+    let expire_output = dispatch(&parsed(
+        CommandKind::ExpireContent,
+        endpoint.as_str(),
+        &["content-cli"],
+    ))
+    .expect("expire-content should succeed");
+    assert!(
+        expire_output.text.contains("lifecycle_state=expired"),
+        "expire-content output should include lifecycle state: {expire_output:?}"
+    );
+
+    let tombstone_output = dispatch(&parsed(
+        CommandKind::TombstoneContent,
+        endpoint.as_str(),
+        &["content-cli"],
+    ))
+    .expect("tombstone-content should succeed");
+    assert!(
+        tombstone_output.text.contains("redaction_status=redacted"),
+        "tombstone-content output should include redaction status: {tombstone_output:?}"
+    );
+
+    let query_output = dispatch(&parsed(
+        CommandKind::QueryContent,
+        endpoint.as_str(),
+        &["content-cli"],
+    ))
+    .expect("query-content should succeed");
+    assert!(
+        query_output.text.contains("lifecycle_state=tombstoned"),
+        "query-content output should include lifecycle state: {query_output:?}"
+    );
+
+    for (command, label) in [
+        (CommandKind::RegisterContent, "register_content_payload"),
+        (CommandKind::ExpireContent, "expire_content_id"),
+        (CommandKind::TombstoneContent, "tombstone_content_id"),
+        (CommandKind::QueryContent, "query_content_id"),
     ] {
         let error = dispatch(&parsed(command, endpoint.as_str(), &[]))
             .expect_err("missing required arg should fail");

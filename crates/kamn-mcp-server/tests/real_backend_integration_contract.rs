@@ -59,6 +59,7 @@ fn parse_http_request(stream: &mut TcpStream) -> Result<(String, String), String
 fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) -> Result<(), String> {
     let status_text = match status {
         200 => "200 OK",
+        201 => "201 Created",
         404 => "404 Not Found",
         _ => "500 Internal Server Error",
     };
@@ -111,6 +112,26 @@ fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Re
                         &mut stream,
                         200,
                         r#"{"did":"kamn:did:agent:alice","reputation_score":42}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/content/register" {
+                    write_http_response(
+                        &mut stream,
+                        201,
+                        r#"{"content_id":"content-contract-1","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}"#,
+                    )?;
+                } else if method == "POST" && path == "/v1/content/content-contract-1/expire" {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"content_id":"content-contract-1","lifecycle_state":"expired","redaction_status":"none"}"#,
+                    )?;
+                } else if (method == "POST" && path == "/v1/content/content-contract-1/tombstone")
+                    || (method == "GET" && path == "/v1/content/content-contract-1")
+                {
+                    write_http_response(
+                        &mut stream,
+                        200,
+                        r#"{"content_id":"content-contract-1","lifecycle_state":"tombstoned","redaction_status":"redacted"}"#,
                     )?;
                 } else {
                     write_http_response(
@@ -305,6 +326,63 @@ fn spec_c06_real_backend_dispatch_query_agent_profile_contract() {
     assert!(response.contains(r#""tool":"query_agent_profile""#));
     assert!(response.contains(r#""did":"kamn:did:agent:alice""#));
     assert!(response.contains(r#""reputation_score":42"#));
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "service fixture should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c08_real_backend_dispatch_content_lifecycle_contract() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_real_backend_service_server(server_addr, 4));
+    wait_for_server_ready();
+
+    let backend = real_backend(bind_addr.as_str());
+
+    let register_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-8a","tool":"register_content","payload":"{\"content\":\"real-backend\"}"}"#,
+    )
+    .expect("register_content dispatch should succeed");
+    assert!(register_response.contains(r#""ok":true"#));
+    assert!(register_response.contains(r#""tool":"register_content""#));
+    assert!(register_response.contains(r#""content_id":"content-contract-1""#));
+    assert!(register_response.contains(r#""retention_class":"standard""#));
+
+    let expire_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-8b","tool":"expire_content","content_id":"content-contract-1"}"#,
+    )
+    .expect("expire_content dispatch should succeed");
+    assert!(expire_response.contains(r#""ok":true"#));
+    assert!(expire_response.contains(r#""tool":"expire_content""#));
+    assert!(expire_response.contains(r#""content_id":"content-contract-1""#));
+    assert!(expire_response.contains(r#""lifecycle_state":"expired""#));
+
+    let tombstone_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-8c","tool":"tombstone_content","content_id":"content-contract-1"}"#,
+    )
+    .expect("tombstone_content dispatch should succeed");
+    assert!(tombstone_response.contains(r#""ok":true"#));
+    assert!(tombstone_response.contains(r#""tool":"tombstone_content""#));
+    assert!(tombstone_response.contains(r#""content_id":"content-contract-1""#));
+    assert!(tombstone_response.contains(r#""redaction_status":"redacted""#));
+
+    let query_response = dispatch_tool_request_json(
+        &backend,
+        r#"{"id":"req-8d","tool":"query_content","content_id":"content-contract-1"}"#,
+    )
+    .expect("query_content dispatch should succeed");
+    assert!(query_response.contains(r#""ok":true"#));
+    assert!(query_response.contains(r#""tool":"query_content""#));
+    assert!(query_response.contains(r#""content_id":"content-contract-1""#));
+    assert!(query_response.contains(r#""lifecycle_state":"tombstoned""#));
+    assert!(query_response.contains(r#""redaction_status":"redacted""#));
 
     let server_result = server.join().expect("server thread should join");
     assert!(

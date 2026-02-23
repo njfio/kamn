@@ -34,6 +34,9 @@ const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-cli-s11-primary";
 const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-primary"}"#;
 const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-rotated"}"#;
 const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s11-stale"}"#;
+const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-cli-s12";
+const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
+    r#"{"content":"cli-scripted-live-s12","retention_class":"standard"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -42,7 +45,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01 through S-11.
+/// CLI-scripted driver with optional live execution for S-01 through S-12.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -57,6 +60,7 @@ pub struct CliScriptedDriver {
     transport_failover_runner: Arc<LiveCliRunner>,
     topology_coherence_runner: Arc<LiveCliRunner>,
     signer_rotation_runner: Arc<LiveCliRunner>,
+    retention_deletion_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -91,6 +95,7 @@ impl CliScriptedDriver {
                 run_live_s09_cli_transport_failover_probe,
                 run_live_s10_cli_topology_coherence_probe,
                 run_live_s11_cli_signer_rotation_probe,
+                run_live_s12_cli_retention_deletion_probe,
             ),
         )
     }
@@ -113,19 +118,20 @@ impl CliScriptedDriver {
             crash_recovery_runner: live_runner.clone(),
             transport_failover_runner: live_runner.clone(),
             topology_coherence_runner: live_runner.clone(),
-            signer_rotation_runner: live_runner,
+            signer_rotation_runner: live_runner.clone(),
+            retention_deletion_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_failover_topology_and_signer_runners: (K, L, M, N, O, P),
+        proof_replay_crash_failover_topology_signer_and_retention_runners: (K, L, M, N, O, P, Q),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -139,6 +145,7 @@ impl CliScriptedDriver {
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
+        Q: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
@@ -147,7 +154,8 @@ impl CliScriptedDriver {
             transport_failover_runner,
             topology_coherence_runner,
             signer_rotation_runner,
-        ) = proof_replay_crash_failover_topology_and_signer_runners;
+            retention_deletion_runner,
+        ) = proof_replay_crash_failover_topology_signer_and_retention_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -161,6 +169,7 @@ impl CliScriptedDriver {
             transport_failover_runner: Arc::new(transport_failover_runner),
             topology_coherence_runner: Arc::new(topology_coherence_runner),
             signer_rotation_runner: Arc::new(signer_rotation_runner),
+            retention_deletion_runner: Arc::new(retention_deletion_runner),
         }
     }
 }
@@ -200,6 +209,7 @@ impl CliScriptedDriver {
             "S-09" => Some((self.transport_failover_runner)()),
             "S-10" => Some((self.topology_coherence_runner)()),
             "S-11" => Some((self.signer_rotation_runner)()),
+            "S-12" => Some((self.retention_deletion_runner)()),
             _ => None,
         }
     }
@@ -1316,6 +1326,174 @@ fn run_live_s11_cli_signer_rotation_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s12_cli_retention_deletion_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S12_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
+    let register_payload = env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S12_REGISTER_CONTENT_PAYLOAD.to_owned());
+
+    let register_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "register-content",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            register_payload.as_str(),
+        ],
+        "cli live s12 register-content",
+        format!("{base_agent_name}-register").as_str(),
+    )?;
+    let content_id = parse_text_output_field(register_output.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s12 register-content response missing content_id field: {register_output}"
+            )
+        })?
+        .to_owned();
+    if content_id.trim().is_empty() {
+        return Err("cli live s12 register-content returned empty content_id".to_owned());
+    }
+    let retention_class =
+        parse_text_output_field(register_output.as_str(), "retention_class").ok_or_else(|| {
+            format!(
+                "cli live s12 register-content response missing retention_class field: {register_output}"
+            )
+        })?;
+    if retention_class.trim().is_empty() {
+        return Err("cli live s12 register-content returned empty retention_class".to_owned());
+    }
+
+    let expire_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "expire-content",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            content_id.as_str(),
+        ],
+        "cli live s12 expire-content",
+        format!("{base_agent_name}-expire").as_str(),
+    )?;
+    let expired_content_id = parse_text_output_field(expire_output.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s12 expire-content response missing content_id field: {expire_output}"
+            )
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        expired_content_id,
+        "cli live s12 expire-content",
+    )?;
+    let expired_lifecycle_state =
+        parse_text_output_field(expire_output.as_str(), "lifecycle_state").ok_or_else(|| {
+            format!(
+            "cli live s12 expire-content response missing lifecycle_state field: {expire_output}"
+        )
+        })?;
+    if expired_lifecycle_state.trim().is_empty() {
+        return Err("cli live s12 expire-content returned empty lifecycle_state".to_owned());
+    }
+
+    let tombstone_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "tombstone-content",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            content_id.as_str(),
+        ],
+        "cli live s12 tombstone-content",
+        format!("{base_agent_name}-tombstone").as_str(),
+    )?;
+    let tombstoned_content_id = parse_text_output_field(tombstone_output.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s12 tombstone-content response missing content_id field: {tombstone_output}"
+            )
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        tombstoned_content_id,
+        "cli live s12 tombstone-content",
+    )?;
+    let tombstoned_lifecycle_state =
+        parse_text_output_field(tombstone_output.as_str(), "lifecycle_state").ok_or_else(|| {
+            format!(
+                "cli live s12 tombstone-content response missing lifecycle_state field: {tombstone_output}"
+            )
+        })?;
+    if tombstoned_lifecycle_state.trim().is_empty() {
+        return Err("cli live s12 tombstone-content returned empty lifecycle_state".to_owned());
+    }
+    let tombstoned_redaction_status =
+        parse_text_output_field(tombstone_output.as_str(), "redaction_status").ok_or_else(|| {
+            format!(
+                "cli live s12 tombstone-content response missing redaction_status field: {tombstone_output}"
+            )
+        })?;
+    if tombstoned_redaction_status.trim().is_empty() {
+        return Err("cli live s12 tombstone-content returned empty redaction_status".to_owned());
+    }
+
+    let query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-content",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            content_id.as_str(),
+        ],
+        "cli live s12 query-content",
+        format!("{base_agent_name}-query").as_str(),
+    )?;
+    let queried_content_id = parse_text_output_field(query_output.as_str(), "content_id")
+        .ok_or_else(|| {
+            format!("cli live s12 query-content response missing content_id field: {query_output}")
+        })?;
+    validate_s12_content_id_match(
+        content_id.as_str(),
+        queried_content_id,
+        "cli live s12 query-content",
+    )?;
+    let queried_lifecycle_state = parse_text_output_field(query_output.as_str(), "lifecycle_state")
+        .ok_or_else(|| {
+            format!(
+                "cli live s12 query-content response missing lifecycle_state field: {query_output}"
+            )
+        })?;
+    validate_s12_content_field_coherence(
+        tombstoned_lifecycle_state,
+        queried_lifecycle_state,
+        "lifecycle_state",
+        "cli live s12 query-content",
+    )?;
+    let queried_redaction_status =
+        parse_text_output_field(query_output.as_str(), "redaction_status").ok_or_else(|| {
+            format!(
+                "cli live s12 query-content response missing redaction_status field: {query_output}"
+            )
+        })?;
+    validate_s12_content_field_coherence(
+        tombstoned_redaction_status,
+        queried_redaction_status,
+        "redaction_status",
+        "cli live s12 query-content",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1347,6 +1525,33 @@ fn validate_s08_query_message_response(
         .ok_or_else(|| format!("{step} response missing status field: {output}"))?;
     if queried_status.trim().is_empty() {
         return Err(format!("{step} returned empty status"));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_id_match(
+    expected_content_id: &str,
+    observed_content_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_content_id != expected_content_id {
+        return Err(format!(
+            "{step} returned mismatched content_id: expected={expected_content_id}, got={observed_content_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
     }
     Ok(())
 }
@@ -1474,9 +1679,10 @@ mod tests {
         run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
         run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
         run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
-        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response,
-        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        run_live_s12_cli_retention_deletion_probe, validate_live_s05_release_escrow_response,
+        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, validate_s12_content_field_coherence,
+        validate_s12_content_id_match, CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -2041,6 +2247,49 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s12_cli_retention_deletion_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s12_cli_retention_deletion_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_id_match_rejects_mismatch() {
+        let error = validate_s12_content_id_match("content-a", "content-b", "test step")
+            .expect_err("mismatched content ids should fail");
+        assert!(
+            error.contains("mismatched content_id"),
+            "error should mention content_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_field_coherence_rejects_drift() {
+        let error = validate_s12_content_field_coherence(
+            "tombstoned",
+            "expired",
+            "lifecycle_state",
+            "test step",
+        )
+        .expect_err("field drift should fail");
+        assert!(
+            error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
     fn unit_run_live_s11_cli_signer_rotation_probe_accepts_rotation_continuity() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s11-success");
         let script_source = r#"#!/usr/bin/env python3
@@ -2369,6 +2618,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-11 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c12_live_s12_driver_path_fails_closed_when_retention_deletion_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s12 retention-deletion probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-12");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-12 should fail closed on probe error",
         );
     }
 }

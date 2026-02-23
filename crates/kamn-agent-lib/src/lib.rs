@@ -14,9 +14,9 @@ pub use identity::AgentIdentity;
 pub use kolme::{KolmeProofReceipt, KolmeProofVerification};
 
 pub use kamn_sdk::{
-    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceEscrowStatus,
-    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceTaskReceipt,
-    ServiceTaskStatus,
+    ServiceAgentProfile, ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
+    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
+    ServiceMessageStatus, ServiceTaskReceipt, ServiceTaskStatus,
 };
 
 /// Authentication helpers.
@@ -228,6 +228,57 @@ impl KamnAgentHandle {
             Some("escrow:write"),
         )?;
         self.service_client.release_escrow(escrow_id, &auth)
+    }
+
+    /// Registers content lifecycle state through the service API.
+    pub fn register_content(
+        &self,
+        payload: &str,
+    ) -> Result<ServiceContentRegistration, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("content:write"),
+        )?;
+        self.service_client.register_content(payload, &auth)
+    }
+
+    /// Expires one content record through the service API.
+    pub fn expire_content(&self, content_id: &str) -> Result<ServiceContentStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("content:write"),
+        )?;
+        self.service_client.expire_content(content_id, &auth)
+    }
+
+    /// Tombstones one content record through the service API.
+    pub fn tombstone_content(
+        &self,
+        content_id: &str,
+    ) -> Result<ServiceContentStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("content:write"),
+        )?;
+        self.service_client.tombstone_content(content_id, &auth)
+    }
+
+    /// Queries one content lifecycle record through the service API.
+    pub fn query_content(&self, content_id: &str) -> Result<ServiceContentStatus, AgentLibError> {
+        let nonce = self.next_nonce()?;
+        let auth =
+            self.service_client
+                .build_auth(self.identity.did(), nonce, "", Some("content:read"))?;
+        self.service_client.get_content(content_id, &auth)
     }
 
     /// Lists channel messages through the service API.

@@ -18,3 +18,11 @@ row|POST|/v1/escrow/fund|escrow:write|allow
 row|POST|/v1/escrow/fund|tasks:write|deny
 row|POST|/v1/escrow/escrow-123/release|escrow:write|allow
 row|POST|/v1/escrow/escrow-123/release|channels:write|deny
+row|POST|/v1/content/register|content:write|allow
+row|POST|/v1/content/register|content:read|deny
+row|POST|/v1/content/content-123/expire|content:write|allow
+row|POST|/v1/content/content-123/expire|tasks:write|deny
+row|POST|/v1/content/content-123/tombstone|content:write|allow
+row|POST|/v1/content/content-123/tombstone|messages:write|deny
+row|GET|/v1/content/content-123|content:read|allow
+row|GET|/v1/content/content-123|content:write|deny
