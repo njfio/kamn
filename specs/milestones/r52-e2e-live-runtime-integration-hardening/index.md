@@ -2,7 +2,7 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810, #5812, #5814, #5815, #5818, #5820
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810, #5812, #5814, #5815, #5818, #5820, #5822
 - Active issue(s): None
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
@@ -63,3 +63,4 @@
 54. Close residual sdk-direct live `S-03` mutation escapes by extracting deterministic response-shape validation seams and enforcing in-diff mutation cleanliness. (Completed via #5815)
 55. Activate opt-in live `S-05` escrow-settlement scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance and regression coverage. (Completed via #5818)
 56. Activate opt-in live `S-07` replay-protection scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, in-diff mutation cleanliness, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5820)
+57. Activate opt-in live `S-08` node-crash-recovery scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, continuity probe validation, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5822)
