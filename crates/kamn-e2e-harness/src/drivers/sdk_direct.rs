@@ -319,15 +319,11 @@ fn run_live_s03_group_channel_probe() -> Result<(), String> {
     let queried_status = query_message_handle
         .query_message(send_receipt.message_id.as_str())
         .map_err(|error| format!("sdk-direct live s03 query-message failed: {error}"))?;
-    if queried_status.message_id != send_receipt.message_id {
-        return Err(format!(
-            "sdk-direct live s03 query-message returned mismatched message_id: expected={}, got={}",
-            send_receipt.message_id, queried_status.message_id
-        ));
-    }
-    if queried_status.status.trim().is_empty() {
-        return Err("sdk-direct live s03 query-message returned empty status".to_owned());
-    }
+    validate_live_s03_query_message_response(
+        send_receipt.message_id.as_str(),
+        queried_status.message_id.as_str(),
+        queried_status.status.as_str(),
+    )?;
 
     let list_messages_handle = KamnAgentHandle::connect(
         endpoint.as_str(),
@@ -338,13 +334,41 @@ fn run_live_s03_group_channel_probe() -> Result<(), String> {
     let message_listing = list_messages_handle
         .list_messages(channel_receipt.channel_id.as_str())
         .map_err(|error| format!("sdk-direct live s03 list-messages failed: {error}"))?;
-    if message_listing.channel_id != channel_receipt.channel_id {
+    validate_live_s03_list_messages_response(
+        channel_receipt.channel_id.as_str(),
+        message_listing.channel_id.as_str(),
+    )?;
+
+    Ok(())
+}
+
+fn validate_live_s03_query_message_response(
+    expected_message_id: &str,
+    queried_message_id: &str,
+    queried_status: &str,
+) -> Result<(), String> {
+    if queried_message_id != expected_message_id {
         return Err(format!(
-            "sdk-direct live s03 list-messages returned mismatched channel_id: expected={}, got={}",
-            channel_receipt.channel_id, message_listing.channel_id
+            "sdk-direct live s03 query-message returned mismatched message_id: expected={}, got={}",
+            expected_message_id, queried_message_id
         ));
     }
+    if queried_status.trim().is_empty() {
+        return Err("sdk-direct live s03 query-message returned empty status".to_owned());
+    }
+    Ok(())
+}
 
+fn validate_live_s03_list_messages_response(
+    expected_channel_id: &str,
+    listed_channel_id: &str,
+) -> Result<(), String> {
+    if listed_channel_id != expected_channel_id {
+        return Err(format!(
+            "sdk-direct live s03 list-messages returned mismatched channel_id: expected={}, got={}",
+            expected_channel_id, listed_channel_id
+        ));
+    }
     Ok(())
 }
 
@@ -488,8 +512,9 @@ mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
         run_live_s02_direct_message_probe, run_live_s03_group_channel_probe,
-        run_live_s04_task_lifecycle_probe, run_live_s06_proof_verification_probe, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        run_live_s04_task_lifecycle_probe, run_live_s06_proof_verification_probe,
+        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
+        SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -627,6 +652,26 @@ mod tests {
                     "probe error should reflect connection failure: {error}",
                 );
             },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s03_group_channel_probe_rejects_query_message_id_mismatch() {
+        let error = validate_live_s03_query_message_response("message-1", "message-2", "sent")
+            .expect_err("mismatched query message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s03_group_channel_probe_rejects_list_channel_id_mismatch() {
+        let error = validate_live_s03_list_messages_response("channel-1", "channel-2")
+            .expect_err("mismatched listed channel_id should fail");
+        assert!(
+            error.contains("mismatched channel_id"),
+            "error should mention channel_id mismatch: {error}",
         );
     }
 
