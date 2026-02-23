@@ -18,6 +18,8 @@ const DEFAULT_S04_AGENT_NAME: &str = "kamn-e2e-cli-s04";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"cli-scripted-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S05_AGENT_NAME: &str = "kamn-e2e-cli-s05";
+const DEFAULT_S05_FUND_ESCROW_PAYLOAD: &str = r#"{"task_id":"cli-scripted-live-s05","amount":1}"#;
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -25,7 +27,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, and S-06.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, and S-06.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -33,6 +35,7 @@ pub struct CliScriptedDriver {
     direct_message_runner: Arc<LiveCliRunner>,
     group_channel_runner: Arc<LiveCliRunner>,
     task_lifecycle_runner: Arc<LiveCliRunner>,
+    escrow_settlement_runner: Arc<LiveCliRunner>,
     proof_verification_runner: Arc<LiveCliRunner>,
 }
 
@@ -60,6 +63,7 @@ impl CliScriptedDriver {
             run_live_s02_cli_direct_message_probe,
             run_live_s03_cli_group_channel_probe,
             run_live_s04_cli_task_lifecycle_probe,
+            run_live_s05_cli_escrow_settlement_probe,
             run_live_s06_cli_proof_verification_probe,
         )
     }
@@ -76,18 +80,20 @@ impl CliScriptedDriver {
             direct_message_runner: live_runner.clone(),
             task_lifecycle_runner: live_runner.clone(),
             group_channel_runner: live_runner.clone(),
+            escrow_settlement_runner: live_runner.clone(),
             proof_verification_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J>(
+    pub fn with_runners<F, G, H, I, J, K>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
-        proof_verification_runner: J,
+        escrow_settlement_runner: J,
+        proof_verification_runner: K,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -95,6 +101,7 @@ impl CliScriptedDriver {
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
         J: Fn() -> Result<(), String> + Send + Sync + 'static,
+        K: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
@@ -102,6 +109,7 @@ impl CliScriptedDriver {
             direct_message_runner: Arc::new(direct_message_runner),
             group_channel_runner: Arc::new(group_channel_runner),
             task_lifecycle_runner: Arc::new(task_lifecycle_runner),
+            escrow_settlement_runner: Arc::new(escrow_settlement_runner),
             proof_verification_runner: Arc::new(proof_verification_runner),
         }
     }
@@ -135,6 +143,7 @@ impl CliScriptedDriver {
             "S-02" => Some((self.direct_message_runner)()),
             "S-03" => Some((self.group_channel_runner)()),
             "S-04" => Some((self.task_lifecycle_runner)()),
+            "S-05" => Some((self.escrow_settlement_runner)()),
             "S-06" => Some((self.proof_verification_runner)()),
             _ => None,
         }
@@ -584,6 +593,79 @@ fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s05_cli_escrow_settlement_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S05_AGENT_NAME.to_owned());
+    let fund_payload = env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S05_FUND_ESCROW_PAYLOAD.to_owned());
+    let fund_agent_name = format!("{base_agent_name}-fund");
+    let release_agent_name = format!("{base_agent_name}-release");
+
+    let fund_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "fund-escrow",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            fund_payload.as_str(),
+        ],
+        "cli live s05 fund-escrow",
+        fund_agent_name.as_str(),
+    )?;
+    let escrow_id = parse_text_output_field(fund_output.as_str(), "escrow_id")
+        .ok_or_else(|| {
+            format!("cli live s05 fund-escrow response missing escrow_id field: {fund_output}")
+        })?
+        .to_owned();
+    if escrow_id.trim().is_empty() {
+        return Err("cli live s05 fund-escrow returned empty escrow_id".to_owned());
+    }
+    let fund_state = parse_text_output_field(fund_output.as_str(), "state").ok_or_else(|| {
+        format!("cli live s05 fund-escrow response missing state field: {fund_output}")
+    })?;
+    if fund_state.trim().is_empty() {
+        return Err("cli live s05 fund-escrow returned empty state".to_owned());
+    }
+
+    let release_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "release-escrow",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            escrow_id.as_str(),
+        ],
+        "cli live s05 release-escrow",
+        release_agent_name.as_str(),
+    )?;
+    let released_escrow_id = parse_text_output_field(release_output.as_str(), "escrow_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s05 release-escrow response missing escrow_id field: {release_output}"
+            )
+        })?;
+    if released_escrow_id != escrow_id {
+        return Err(format!(
+            "cli live s05 release-escrow returned mismatched escrow_id: expected={escrow_id}, got={released_escrow_id}"
+        ));
+    }
+    let release_state =
+        parse_text_output_field(release_output.as_str(), "state").ok_or_else(|| {
+            format!("cli live s05 release-escrow response missing state field: {release_output}")
+        })?;
+    if release_state.trim().is_empty() {
+        return Err("cli live s05 release-escrow returned empty state".to_owned());
+    }
+
+    Ok(())
+}
+
 fn run_live_s06_cli_proof_verification_probe() -> Result<(), String> {
     let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
     let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
@@ -726,8 +808,9 @@ mod tests {
         live_execution_enabled_from_env, parse_bool_flag, parse_text_output_field,
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
         run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
-        run_live_s04_cli_task_lifecycle_probe, run_live_s06_cli_proof_verification_probe,
-        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
+        run_live_s06_cli_proof_verification_probe, CliScriptedDriver, CLI_BINARY_ENV,
+        CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -985,6 +1068,24 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s05_cli_escrow_settlement_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s05_cli_escrow_settlement_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_run_live_s06_cli_proof_verification_probe_rejects_missing_binary() {
         with_env_vars(
             &[
@@ -1117,6 +1218,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-03 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c05_live_s05_driver_path_fails_closed_when_escrow_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s05 escrow probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-05");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-05 should fail closed on probe error",
         );
     }
 }

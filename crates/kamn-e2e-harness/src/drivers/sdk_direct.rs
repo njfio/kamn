@@ -14,6 +14,7 @@ const DEFAULT_S03_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s03-cha
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"sdk-direct-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S05_FUND_ESCROW_PAYLOAD: &str = r#"{"task_id":"sdk-direct-live-s05","amount":1}"#;
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -21,7 +22,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, and S-06.
+/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, and S-06.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -29,6 +30,7 @@ pub struct SdkDirectDriver {
     direct_message_probe: Arc<LiveProbe>,
     group_channel_probe: Arc<LiveProbe>,
     task_lifecycle_probe: Arc<LiveProbe>,
+    escrow_settlement_probe: Arc<LiveProbe>,
     proof_verification_probe: Arc<LiveProbe>,
 }
 
@@ -56,6 +58,7 @@ impl SdkDirectDriver {
             run_live_s02_direct_message_probe,
             run_live_s03_group_channel_probe,
             run_live_s04_task_lifecycle_probe,
+            run_live_s05_escrow_settlement_probe,
             run_live_s06_proof_verification_probe,
         )
     }
@@ -72,18 +75,20 @@ impl SdkDirectDriver {
             direct_message_probe: live_probe.clone(),
             task_lifecycle_probe: live_probe.clone(),
             group_channel_probe: live_probe.clone(),
+            escrow_settlement_probe: live_probe.clone(),
             proof_verification_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J>(
+    pub fn with_probes<F, G, H, I, J, K>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        proof_verification_probe: J,
+        escrow_settlement_probe: J,
+        proof_verification_probe: K,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -91,6 +96,7 @@ impl SdkDirectDriver {
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
         J: Fn() -> Result<(), String> + Send + Sync + 'static,
+        K: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
@@ -98,6 +104,7 @@ impl SdkDirectDriver {
             direct_message_probe: Arc::new(direct_message_probe),
             group_channel_probe: Arc::new(group_channel_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
+            escrow_settlement_probe: Arc::new(escrow_settlement_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
         }
     }
@@ -131,6 +138,7 @@ impl SdkDirectDriver {
             "S-02" => Some((self.direct_message_probe)()),
             "S-03" => Some((self.group_channel_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
+            "S-05" => Some((self.escrow_settlement_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
         }
@@ -455,6 +463,54 @@ fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s05_escrow_settlement_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let agent_name =
+        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
+    let fund_payload = std::env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S05_FUND_ESCROW_PAYLOAD.to_owned());
+
+    let fund_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s05-fund").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s05 connect failed: {error}"))?;
+    let funded_receipt = fund_handle
+        .fund_escrow(fund_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s05 fund-escrow failed: {error}"))?;
+    if funded_receipt.escrow_id.trim().is_empty() {
+        return Err("sdk-direct live s05 fund-escrow returned empty escrow_id".to_owned());
+    }
+    if funded_receipt.state.trim().is_empty() {
+        return Err("sdk-direct live s05 fund-escrow returned empty state".to_owned());
+    }
+
+    let release_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s05-release").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s05 connect failed: {error}"))?;
+    let release_receipt = release_handle
+        .release_escrow(funded_receipt.escrow_id.as_str())
+        .map_err(|error| format!("sdk-direct live s05 release-escrow failed: {error}"))?;
+    if release_receipt.escrow_id != funded_receipt.escrow_id {
+        return Err(format!(
+            "sdk-direct live s05 release-escrow returned mismatched escrow_id: expected={}, got={}",
+            funded_receipt.escrow_id, release_receipt.escrow_id
+        ));
+    }
+    if release_receipt.state.trim().is_empty() {
+        return Err("sdk-direct live s05 release-escrow returned empty state".to_owned());
+    }
+
+    Ok(())
+}
+
 fn run_live_s06_proof_verification_probe() -> Result<(), String> {
     let endpoint =
         std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
@@ -512,9 +568,9 @@ mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
         run_live_s02_direct_message_probe, run_live_s03_group_channel_probe,
-        run_live_s04_task_lifecycle_probe, run_live_s06_proof_verification_probe,
-        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
-        SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
+        run_live_s06_proof_verification_probe, validate_live_s03_list_messages_response,
+        validate_live_s03_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -695,6 +751,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s05_escrow_settlement_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s05_escrow_settlement_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_run_live_s06_proof_verification_probe_rejects_invalid_block_height_env_value() {
         with_env_vars(
             &[("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT", Some("not-a-number"))],
@@ -784,6 +858,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-03 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c05_live_s05_driver_path_fails_closed_when_escrow_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s05 escrow probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-05");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-05 should fail closed on probe error",
         );
     }
 }
