@@ -21,7 +21,7 @@ fn functional_runtime_daemon_live_postgres_validation_slice_multi_host_execution
 
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard multi-host prerequisite marker checks");
+        .unwrap_or_else(|error| error.into_inner());
 
     let _unset_primary = EnvVarGuard::set("KAMN_TEST_POSTGRES_URL", None);
     let _unset_fallback = EnvVarGuard::set("DATABASE_URL", None);
@@ -121,7 +121,7 @@ fn integration_runtime_daemon_phase6_live_postgres_validation_slice_multi_host_e
 ) {
     let _lock = log_env_lock()
         .lock()
-        .expect("log env lock should guard test mutation");
+        .unwrap_or_else(|error| error.into_inner());
     let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
     let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
     let _host_pair_guard = EnvVarGuard::set(

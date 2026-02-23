@@ -70,6 +70,28 @@ impl McpToolBackend for ProtocolBackend {
         ))
     }
 
+    fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"bridge-{}","source_message_id":"source-{}","bridge_status":"submitted"}}"#,
+            payload.len(),
+            payload.len()
+        ))
+    }
+
+    fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
+    }
+
+    fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"forwarded","target_message_id":"target-{}","forward_tx_hash":"sha256:bridge-{}"}}"#,
+            bridge_id, bridge_id, bridge_id
+        ))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(
             r#"{{"task_id":"task-{}","state":"created"}}"#,
@@ -217,6 +239,18 @@ fn spec_c02_mcp_tools_list_framed_tool_inventory_contract() {
     assert!(
         body.contains(r#""name":"query_content""#),
         "tools/list should include query_content tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"submit_bridge_message""#),
+        "tools/list should include submit_bridge_message tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"forward_bridge_message""#),
+        "tools/list should include forward_bridge_message tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"query_bridge_message""#),
+        "tools/list should include query_bridge_message tool: {body}",
     );
 }
 
@@ -367,6 +401,47 @@ fn spec_c08_mcp_tools_call_content_lifecycle_dispatch_contract() {
     assert!(
         query_body.contains(r#""lifecycle_state":"tombstoned""#),
         "query_content payload should include lifecycle projection: {query_body}",
+    );
+
+    let submit_bridge_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-13","method":"tools/call","params":{"name":"submit_bridge_message","arguments":{"payload":"{\"source_message_id\":\"msg-1\"}"}}}"#,
+    );
+    let submit_bridge_responses =
+        process_stdio_input(&backend, submit_bridge_request.as_str()).expect("input should parse");
+    let submit_bridge_body = parse_framed_json(submit_bridge_responses[0].as_str());
+    assert!(
+        submit_bridge_body.contains(r#""tool":"submit_bridge_message""#),
+        "submit_bridge_message payload should preserve tool marker: {submit_bridge_body}",
+    );
+    assert!(
+        submit_bridge_body.contains(r#""bridge_status":"submitted""#),
+        "submit_bridge_message payload should include submitted status: {submit_bridge_body}",
+    );
+
+    let forward_bridge_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-14","method":"tools/call","params":{"name":"forward_bridge_message","arguments":{"bridge_id":"bridge-1"}}}"#,
+    );
+    let forward_bridge_responses =
+        process_stdio_input(&backend, forward_bridge_request.as_str()).expect("input should parse");
+    let forward_bridge_body = parse_framed_json(forward_bridge_responses[0].as_str());
+    assert!(
+        forward_bridge_body.contains(r#""bridge_status":"forwarded""#),
+        "forward_bridge_message payload should include forwarded status: {forward_bridge_body}",
+    );
+
+    let query_bridge_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-15","method":"tools/call","params":{"name":"query_bridge_message","arguments":{"bridge_id":"bridge-1"}}}"#,
+    );
+    let query_bridge_responses =
+        process_stdio_input(&backend, query_bridge_request.as_str()).expect("input should parse");
+    let query_bridge_body = parse_framed_json(query_bridge_responses[0].as_str());
+    assert!(
+        query_bridge_body.contains(r#""tool":"query_bridge_message""#),
+        "query_bridge_message payload should preserve tool marker: {query_bridge_body}",
+    );
+    assert!(
+        query_bridge_body.contains(r#""forward_tx_hash":"sha256:bridge-bridge-1""#),
+        "query_bridge_message payload should include forward hash projection: {query_bridge_body}",
     );
 }
 

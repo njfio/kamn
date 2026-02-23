@@ -25,7 +25,11 @@ pub trait HarnessDriver {
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult;
 }
 
-#[cfg(test)]
+/// Process-wide lock used to serialize environment-variable access.
+///
+/// Driver unit tests mutate `KAMN_E2E_*` vars and production/runtime contract code
+/// reads those vars. Guarding both sides with one lock prevents cross-test
+/// contamination when integration tests execute in parallel.
 pub(crate) fn test_env_lock() -> &'static std::sync::Mutex<()> {
     use std::sync::{Mutex, OnceLock};
 

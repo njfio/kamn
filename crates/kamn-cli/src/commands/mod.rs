@@ -14,6 +14,8 @@ pub mod create_channel;
 pub mod create_task;
 /// `expire-content` command module.
 pub mod expire_content;
+/// `forward-bridge-message` command module.
+pub mod forward_bridge_message;
 /// `fund-escrow` command module.
 pub mod fund_escrow;
 /// `health` command module.
@@ -22,6 +24,8 @@ pub mod health;
 pub mod list_messages;
 /// `query-agent-profile` command module.
 pub mod query_agent_profile;
+/// `query-bridge-message` command module.
+pub mod query_bridge_message;
 /// `query-content` command module.
 pub mod query_content;
 /// `query-message` command module.
@@ -36,6 +40,8 @@ pub mod register_content;
 pub mod release_escrow;
 /// `send-message` command module.
 pub mod send_message;
+/// `submit-bridge-message` command module.
+pub mod submit_bridge_message;
 /// `tombstone-content` command module.
 pub mod tombstone_content;
 /// `verify-proof` command module.

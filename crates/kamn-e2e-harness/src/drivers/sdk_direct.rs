@@ -32,6 +32,9 @@ const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-pri
 const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-sdk-s12";
 const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
     r#"{"content":"sdk-direct-live-s12","retention_class":"standard"}"#;
+const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-sdk-s13";
+const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
+    r#"{"source_message_id":"sdk-direct-live-s13","target_network":"testnet"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -40,7 +43,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01 through S-12.
+/// SDK-direct driver with optional live execution for S-01 through S-13.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -56,6 +59,7 @@ pub struct SdkDirectDriver {
     topology_coherence_probe: Arc<LiveProbe>,
     signer_rotation_probe: Arc<LiveProbe>,
     retention_deletion_probe: Arc<LiveProbe>,
+    bridge_forwarding_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -91,6 +95,7 @@ impl SdkDirectDriver {
                 run_live_s10_topology_coherence_probe,
                 run_live_s11_signer_rotation_probe,
                 run_live_s12_retention_deletion_probe,
+                run_live_s13_bridge_forwarding_probe,
             ),
         )
     }
@@ -114,19 +119,29 @@ impl SdkDirectDriver {
             transport_failover_probe: live_probe.clone(),
             topology_coherence_probe: live_probe.clone(),
             signer_rotation_probe: live_probe.clone(),
-            retention_deletion_probe: live_probe,
+            retention_deletion_probe: live_probe.clone(),
+            bridge_forwarding_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_crash_failover_topology_signer_and_retention_probes: (K, L, M, N, O, P, Q),
+        proof_replay_crash_failover_topology_signer_retention_and_bridge_probes: (
+            K,
+            L,
+            M,
+            N,
+            O,
+            P,
+            Q,
+            R,
+        ),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -141,6 +156,7 @@ impl SdkDirectDriver {
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
+        R: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_probe,
@@ -150,7 +166,8 @@ impl SdkDirectDriver {
             topology_coherence_probe,
             signer_rotation_probe,
             retention_deletion_probe,
-        ) = proof_replay_crash_failover_topology_signer_and_retention_probes;
+            bridge_forwarding_probe,
+        ) = proof_replay_crash_failover_topology_signer_retention_and_bridge_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -165,6 +182,7 @@ impl SdkDirectDriver {
             topology_coherence_probe: Arc::new(topology_coherence_probe),
             signer_rotation_probe: Arc::new(signer_rotation_probe),
             retention_deletion_probe: Arc::new(retention_deletion_probe),
+            bridge_forwarding_probe: Arc::new(bridge_forwarding_probe),
         }
     }
 }
@@ -205,6 +223,7 @@ impl SdkDirectDriver {
             "S-10" => Some((self.topology_coherence_probe)()),
             "S-11" => Some((self.signer_rotation_probe)()),
             "S-12" => Some((self.retention_deletion_probe)()),
+            "S-13" => Some((self.bridge_forwarding_probe)()),
             _ => None,
         }
     }
@@ -1213,6 +1232,108 @@ fn run_live_s12_retention_deletion_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s13_bridge_forwarding_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S13_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
+    let submit_payload = std::env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD.to_owned());
+
+    let submit_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-submit").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s13 submit connect failed: {error}"))?;
+    let submitted = submit_handle
+        .submit_bridge_message(submit_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s13 submit-bridge-message failed: {error}"))?;
+    if submitted.bridge_id.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 submit-bridge-message returned empty bridge_id".to_owned(),
+        );
+    }
+    if submitted.source_message_id.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 submit-bridge-message returned empty source_message_id".to_owned(),
+        );
+    }
+    if submitted.bridge_status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 submit-bridge-message returned empty bridge_status".to_owned(),
+        );
+    }
+
+    let forward_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-forward").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s13 forward connect failed: {error}"))?;
+    let forwarded = forward_handle
+        .forward_bridge_message(submitted.bridge_id.as_str())
+        .map_err(|error| format!("sdk-direct live s13 forward-bridge-message failed: {error}"))?;
+    validate_s13_bridge_id_match(
+        submitted.bridge_id.as_str(),
+        forwarded.bridge_id.as_str(),
+        "sdk-direct live s13 forward-bridge-message",
+    )?;
+    if forwarded.bridge_status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 forward-bridge-message returned empty bridge_status".to_owned(),
+        );
+    }
+    if forwarded.target_message_id.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 forward-bridge-message returned empty target_message_id"
+                .to_owned(),
+        );
+    }
+    if forwarded.forward_tx_hash.trim().is_empty() {
+        return Err(
+            "sdk-direct live s13 forward-bridge-message returned empty forward_tx_hash".to_owned(),
+        );
+    }
+
+    let query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s13 query connect failed: {error}"))?;
+    let queried = query_handle
+        .query_bridge_message(submitted.bridge_id.as_str())
+        .map_err(|error| format!("sdk-direct live s13 query-bridge-message failed: {error}"))?;
+    validate_s13_bridge_id_match(
+        submitted.bridge_id.as_str(),
+        queried.bridge_id.as_str(),
+        "sdk-direct live s13 query-bridge-message",
+    )?;
+    validate_s13_bridge_field_coherence(
+        forwarded.bridge_status.as_str(),
+        queried.bridge_status.as_str(),
+        "bridge_status",
+        "sdk-direct live s13 query-bridge-message",
+    )?;
+    validate_s13_bridge_field_coherence(
+        forwarded.target_message_id.as_str(),
+        queried.target_message_id.as_str(),
+        "target_message_id",
+        "sdk-direct live s13 query-bridge-message",
+    )?;
+    validate_s13_bridge_field_coherence(
+        forwarded.forward_tx_hash.as_str(),
+        queried.forward_tx_hash.as_str(),
+        "forward_tx_hash",
+        "sdk-direct live s13 query-bridge-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -1282,6 +1403,33 @@ fn validate_s12_content_field_coherence(
     Ok(())
 }
 
+fn validate_s13_bridge_id_match(
+    expected_bridge_id: &str,
+    observed_bridge_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_bridge_id != expected_bridge_id {
+        return Err(format!(
+            "{step} returned mismatched bridge_id: expected={expected_bridge_id}, got={observed_bridge_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
 fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
     if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
         return Err(format!(
@@ -1307,12 +1455,13 @@ mod tests {
         run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
         run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
         run_live_s10_topology_coherence_probe, run_live_s11_signer_rotation_probe,
-        run_live_s12_retention_deletion_probe, validate_live_s03_list_messages_response,
-        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
-        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response,
-        validate_s12_content_field_coherence, validate_s12_content_id_match, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        run_live_s12_retention_deletion_probe, run_live_s13_bridge_forwarding_probe,
+        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
+        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
+        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, validate_s12_content_field_coherence,
+        validate_s12_content_id_match, validate_s13_bridge_field_coherence,
+        validate_s13_bridge_id_match, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1659,6 +1808,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s13_bridge_forwarding_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s13_bridge_forwarding_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s12_content_id_match_rejects_mismatch() {
         let error = validate_s12_content_id_match("content-a", "content-b", "test step")
             .expect_err("mismatched content ids should fail");
@@ -1679,6 +1846,27 @@ mod tests {
         .expect_err("field drift should fail");
         assert!(
             error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_id_match_rejects_mismatch() {
+        let error = validate_s13_bridge_id_match("bridge-a", "bridge-b", "test step")
+            .expect_err("mismatched bridge ids should fail");
+        assert!(
+            error.contains("mismatched bridge_id"),
+            "error should mention bridge_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_field_coherence_rejects_drift() {
+        let error =
+            validate_s13_bridge_field_coherence("forwarded", "stale", "bridge_status", "test step")
+                .expect_err("bridge field drift should fail");
+        assert!(
+            error.contains("bridge_status drift"),
             "error should mention field drift: {error}",
         );
     }
@@ -1907,6 +2095,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-12 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c13_live_s13_driver_path_fails_closed_when_bridge_forwarding_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s13 bridge-forwarding probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-13");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-13 should fail closed on probe error",
         );
     }
 }

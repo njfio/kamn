@@ -176,6 +176,7 @@ fn build_dispatch_payload(id_token: &str, tool_name: &str, request_json: &str) -
         "did",
         "task_id",
         "content_id",
+        "bridge_id",
         "escrow_id",
         "tx_hash",
         "finality",

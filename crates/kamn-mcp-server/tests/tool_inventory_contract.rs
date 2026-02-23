@@ -1,7 +1,7 @@
 use kamn_mcp_server::tools::{build_tool_registry, MCP_TOOL_NAMES};
 
 #[test]
-fn spec_c03_mcp_tool_registry_contains_required_18_tools() {
+fn spec_c03_mcp_tool_registry_contains_required_21_tools() {
     let required = [
         "register",
         "send_message",
@@ -14,6 +14,9 @@ fn spec_c03_mcp_tool_registry_contains_required_18_tools() {
         "expire_content",
         "tombstone_content",
         "query_content",
+        "submit_bridge_message",
+        "forward_bridge_message",
+        "query_bridge_message",
         "create_task",
         "accept_task",
         "complete_task",
@@ -106,5 +109,37 @@ fn spec_c08_mcp_content_tool_descriptors_match_contract_descriptions() {
     assert_eq!(
         query_content.description, "Query one content record",
         "query_content descriptor should keep canonical contract description",
+    );
+}
+
+#[test]
+fn spec_c09_mcp_bridge_tool_descriptors_match_contract_descriptions() {
+    let registry = build_tool_registry();
+
+    let submit_bridge_message = registry
+        .iter()
+        .find(|tool| tool.name == "submit_bridge_message")
+        .expect("submit_bridge_message descriptor should exist");
+    assert_eq!(
+        submit_bridge_message.description, "Submit one bridge message",
+        "submit_bridge_message descriptor should keep canonical contract description",
+    );
+
+    let forward_bridge_message = registry
+        .iter()
+        .find(|tool| tool.name == "forward_bridge_message")
+        .expect("forward_bridge_message descriptor should exist");
+    assert_eq!(
+        forward_bridge_message.description, "Forward one bridge message",
+        "forward_bridge_message descriptor should keep canonical contract description",
+    );
+
+    let query_bridge_message = registry
+        .iter()
+        .find(|tool| tool.name == "query_bridge_message")
+        .expect("query_bridge_message descriptor should exist");
+    assert_eq!(
+        query_bridge_message.description, "Query one bridge message",
+        "query_bridge_message descriptor should keep canonical contract description",
     );
 }

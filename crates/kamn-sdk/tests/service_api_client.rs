@@ -274,6 +274,13 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<&'static str> {
         ("POST", _) if path.starts_with("/v1/escrow/") && path.ends_with("/release") => {
             "escrow:write"
         }
+        ("POST", "/v1/bridge/submit") => "bridge:write",
+        ("POST", _) if path.starts_with("/v1/bridge/") && path.ends_with("/forward") => {
+            "bridge:write"
+        }
+        ("GET", _) if path.starts_with("/v1/bridge/") && path != "/v1/bridge/submit" => {
+            "bridge:read"
+        }
         ("GET", "/v1/events/ws") => "events:read",
         ("GET", _) if path.starts_with("/v1/messages/") => "messages:read",
         ("GET", _) if path.starts_with("/v1/channels/") && path.ends_with("/messages") => {
@@ -440,6 +447,25 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     let payload =
                         format!("{{\"escrow_id\":\"{}\",\"state\":\"funded\"}}", escrow_id);
                     write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "POST" && path == "/v1/bridge/submit" {
+                    let bridge_tag = deterministic_tag(body.as_bytes());
+                    let payload = format!(
+                        "{{\"bridge_id\":\"bridge-local-{bridge_tag:016x}\",\"source_message_id\":\"msg-bridge-source-{bridge_tag:016x}\",\"bridge_status\":\"submitted\"}}"
+                    );
+                    write_http_response(&mut stream, 202, payload.as_str())?;
+                } else if method == "POST"
+                    && path.starts_with("/v1/bridge/")
+                    && path.ends_with("/forward")
+                {
+                    let bridge_id = path
+                        .trim_start_matches("/v1/bridge/")
+                        .trim_end_matches("/forward")
+                        .trim_end_matches('/');
+                    let payload = format!(
+                        "{{\"bridge_id\":\"{}\",\"bridge_status\":\"forwarded\",\"target_message_id\":\"msg-bridge-target-{}\",\"forward_tx_hash\":\"sha256:bridge-forwarded-{}\"}}",
+                        bridge_id, bridge_id, bridge_id
+                    );
+                    write_http_response(&mut stream, 200, payload.as_str())?;
                 } else if method == "POST"
                     && path.starts_with("/v1/escrow/")
                     && path.ends_with("/release")
@@ -459,6 +485,16 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
                     let did = path.trim_start_matches("/v1/agents/");
                     let payload = format!("{{\"did\":\"{}\",\"reputation_score\":500}}", did);
+                    write_http_response(&mut stream, 200, payload.as_str())?;
+                } else if method == "GET"
+                    && path.starts_with("/v1/bridge/")
+                    && path != "/v1/bridge/submit"
+                {
+                    let bridge_id = path.trim_start_matches("/v1/bridge/");
+                    let payload = format!(
+                        "{{\"bridge_id\":\"{}\",\"bridge_status\":\"forwarded\",\"target_message_id\":\"msg-bridge-target-{}\",\"forward_tx_hash\":\"sha256:bridge-forwarded-{}\"}}",
+                        bridge_id, bridge_id, bridge_id
+                    );
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else {
                     write_http_response(
@@ -741,6 +777,60 @@ fn spec_c02_service_api_client_executes_task_transition_and_escrow_route_contrac
         .expect("release escrow should succeed");
     assert_eq!(released.escrow_id, funded.escrow_id);
     assert_eq!(released.state, "released");
+
+    let server_result = server.join().expect("server thread should join");
+    assert!(
+        server_result.is_ok(),
+        "test service contract server should satisfy request budget"
+    );
+}
+
+#[test]
+fn spec_c03_service_api_client_executes_bridge_route_contracts() {
+    let bind_addr = reserve_loopback_addr();
+    let server_addr = bind_addr.clone();
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 3));
+    wait_for_server_ready(bind_addr.as_str());
+
+    let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
+        .expect("client should connect");
+    let sender = AgentDid::parse("kamn:did:agent:sdk-bridge").expect("sender did should parse");
+
+    let submit_payload = r#"{"source_message_id":"msg-sdk","target_network":"testnet"}"#;
+    let submitted = client
+        .submit_bridge_message(
+            submit_payload,
+            &auth_with_scope(&sender, 1, submit_payload, "bridge:write"),
+        )
+        .expect("submit bridge should succeed");
+    assert!(submitted.bridge_id.starts_with("bridge-local-"));
+    assert_eq!(submitted.bridge_status, "submitted");
+
+    let forwarded = client
+        .forward_bridge_message(
+            submitted.bridge_id.as_str(),
+            &auth_with_scope(&sender, 2, "{}", "bridge:write"),
+        )
+        .expect("forward bridge should succeed");
+    assert_eq!(forwarded.bridge_id, submitted.bridge_id);
+    assert_eq!(forwarded.bridge_status, "forwarded");
+    assert!(
+        forwarded
+            .target_message_id
+            .starts_with("msg-bridge-target-"),
+        "forward route should expose target message marker"
+    );
+
+    let queried = client
+        .get_bridge_message(
+            submitted.bridge_id.as_str(),
+            &auth_with_scope(&sender, 3, "", "bridge:read"),
+        )
+        .expect("query bridge should succeed");
+    assert_eq!(queried.bridge_id, submitted.bridge_id);
+    assert_eq!(queried.bridge_status, forwarded.bridge_status);
+    assert_eq!(queried.target_message_id, forwarded.target_message_id);
+    assert_eq!(queried.forward_tx_hash, forwarded.forward_tx_hash);
 
     let server_result = server.join().expect("server thread should join");
     assert!(

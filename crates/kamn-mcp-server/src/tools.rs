@@ -12,7 +12,7 @@ pub struct ToolDescriptor {
 }
 
 /// Required PRD phase-2 MCP tool names.
-pub const MCP_TOOL_NAMES: [&str; 18] = [
+pub const MCP_TOOL_NAMES: [&str; 21] = [
     "register",
     "send_message",
     "create_channel",
@@ -24,6 +24,9 @@ pub const MCP_TOOL_NAMES: [&str; 18] = [
     "expire_content",
     "tombstone_content",
     "query_content",
+    "submit_bridge_message",
+    "forward_bridge_message",
+    "query_bridge_message",
     "create_task",
     "accept_task",
     "complete_task",
@@ -55,6 +58,9 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
         "expire_content" => "Expire one content record",
         "tombstone_content" => "Tombstone one content record",
         "query_content" => "Query one content record",
+        "submit_bridge_message" => "Submit one bridge message",
+        "forward_bridge_message" => "Forward one bridge message",
+        "query_bridge_message" => "Query one bridge message",
         "create_task" => "Create one task",
         "accept_task" => "Accept one task",
         "complete_task" => "Complete one task",
@@ -81,6 +87,6 @@ mod tests {
     fn unit_mcp_tool_registry_count_matches_constant_inventory() {
         let registry = build_tool_registry();
         assert_eq!(registry.len(), MCP_TOOL_NAMES.len());
-        assert_eq!(registry.len(), 18);
+        assert_eq!(registry.len(), 21);
     }
 }

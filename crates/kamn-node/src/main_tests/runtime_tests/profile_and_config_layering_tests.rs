@@ -83,7 +83,7 @@ fn profile_defaults_can_be_overridden_by_explicit_flags() {
 fn parses_config_file_layer_for_core_node_fields() {
     let _env_lock = signer_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None);
     let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", None);
     let _log_level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None);
@@ -115,7 +115,7 @@ fn parses_config_file_layer_for_core_node_fields() {
 fn env_overrides_config_file_chain_id_and_sync_mode() {
     let _env_lock = signer_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
     let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", Some("slow"));
     let config_path = write_temp_node_config(
@@ -140,7 +140,7 @@ fn env_overrides_config_file_chain_id_and_sync_mode() {
 fn cli_values_override_env_and_config_layers() {
     let _env_lock = signer_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
     let config_path = write_temp_node_config("role=listener\nchain_id=kamn-config-file\n");
     let args = vec![
@@ -163,7 +163,7 @@ fn cli_values_override_env_and_config_layers() {
 fn regression_2967_invalid_env_override_fails_closed() {
     let _env_lock = signer_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", Some("turbo"));
     let config_path = write_temp_node_config("role=processor\n");
 
@@ -189,7 +189,7 @@ fn regression_2967_invalid_env_override_fails_closed() {
 fn integration_config_layering_executes_bootstrap_report_with_expected_precedence() {
     let _env_lock = signer_env_lock()
         .lock()
-        .expect("env lock should guard process-level overrides");
+        .unwrap_or_else(|error| error.into_inner());
     let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
     let config_path = write_temp_node_config("role=listener\nchain_id=kamn-config-file\n");
     let args = vec![

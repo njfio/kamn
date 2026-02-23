@@ -24,6 +24,12 @@ pub trait McpToolBackend {
     fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError>;
     /// Queries one content lifecycle record.
     fn query_content(&self, content_id: &str) -> Result<String, AgentLibError>;
+    /// Submits one bridge message.
+    fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError>;
+    /// Forwards one bridge message.
+    fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one bridge message.
+    fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError>;
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Accepts one task by identifier.
@@ -153,6 +159,38 @@ impl McpToolBackend for KamnAgentHandle {
             escape_json(status.content_id.as_str()),
             escape_json(status.lifecycle_state.as_str()),
             escape_json(status.redaction_status.as_str()),
+        ))
+    }
+
+    fn submit_bridge_message(&self, payload: &str) -> Result<String, AgentLibError> {
+        let submission = KamnAgentHandle::submit_bridge_message(self, payload)?;
+        Ok(format!(
+            r#"{{"bridge_id":"{}","source_message_id":"{}","bridge_status":"{}"}}"#,
+            escape_json(submission.bridge_id.as_str()),
+            escape_json(submission.source_message_id.as_str()),
+            escape_json(submission.bridge_status.as_str()),
+        ))
+    }
+
+    fn forward_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::forward_bridge_message(self, bridge_id)?;
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"{}","target_message_id":"{}","forward_tx_hash":"{}"}}"#,
+            escape_json(status.bridge_id.as_str()),
+            escape_json(status.bridge_status.as_str()),
+            escape_json(status.target_message_id.as_str()),
+            escape_json(status.forward_tx_hash.as_str()),
+        ))
+    }
+
+    fn query_bridge_message(&self, bridge_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::query_bridge_message(self, bridge_id)?;
+        Ok(format!(
+            r#"{{"bridge_id":"{}","bridge_status":"{}","target_message_id":"{}","forward_tx_hash":"{}"}}"#,
+            escape_json(status.bridge_id.as_str()),
+            escape_json(status.bridge_status.as_str()),
+            escape_json(status.target_message_id.as_str()),
+            escape_json(status.forward_tx_hash.as_str()),
         ))
     }
 
@@ -304,6 +342,27 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
             backend.query_content(content_id.as_str())
+        }
+        "submit_bridge_message" => {
+            let payload = match required_string_arg(request_json, "payload") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.submit_bridge_message(payload.as_str())
+        }
+        "forward_bridge_message" => {
+            let bridge_id = match required_string_arg(request_json, "bridge_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.forward_bridge_message(bridge_id.as_str())
+        }
+        "query_bridge_message" => {
+            let bridge_id = match required_string_arg(request_json, "bridge_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_bridge_message(bridge_id.as_str())
         }
         "create_task" => {
             backend.create_task(required_string_arg(request_json, "payload")?.as_str())

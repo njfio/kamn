@@ -37,6 +37,9 @@ const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live
 const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-cli-s12";
 const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
     r#"{"content":"cli-scripted-live-s12","retention_class":"standard"}"#;
+const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-cli-s13";
+const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
+    r#"{"source_message_id":"cli-scripted-live-s13","target_network":"testnet"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -45,7 +48,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01 through S-12.
+/// CLI-scripted driver with optional live execution for S-01 through S-13.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -61,6 +64,7 @@ pub struct CliScriptedDriver {
     topology_coherence_runner: Arc<LiveCliRunner>,
     signer_rotation_runner: Arc<LiveCliRunner>,
     retention_deletion_runner: Arc<LiveCliRunner>,
+    bridge_forwarding_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -96,6 +100,7 @@ impl CliScriptedDriver {
                 run_live_s10_cli_topology_coherence_probe,
                 run_live_s11_cli_signer_rotation_probe,
                 run_live_s12_cli_retention_deletion_probe,
+                run_live_s13_cli_bridge_forwarding_probe,
             ),
         )
     }
@@ -119,19 +124,29 @@ impl CliScriptedDriver {
             transport_failover_runner: live_runner.clone(),
             topology_coherence_runner: live_runner.clone(),
             signer_rotation_runner: live_runner.clone(),
-            retention_deletion_runner: live_runner,
+            retention_deletion_runner: live_runner.clone(),
+            bridge_forwarding_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_failover_topology_signer_and_retention_runners: (K, L, M, N, O, P, Q),
+        proof_replay_crash_failover_topology_signer_retention_and_bridge_runners: (
+            K,
+            L,
+            M,
+            N,
+            O,
+            P,
+            Q,
+            R,
+        ),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -146,6 +161,7 @@ impl CliScriptedDriver {
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
+        R: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
@@ -155,7 +171,8 @@ impl CliScriptedDriver {
             topology_coherence_runner,
             signer_rotation_runner,
             retention_deletion_runner,
-        ) = proof_replay_crash_failover_topology_signer_and_retention_runners;
+            bridge_forwarding_runner,
+        ) = proof_replay_crash_failover_topology_signer_retention_and_bridge_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -170,6 +187,7 @@ impl CliScriptedDriver {
             topology_coherence_runner: Arc::new(topology_coherence_runner),
             signer_rotation_runner: Arc::new(signer_rotation_runner),
             retention_deletion_runner: Arc::new(retention_deletion_runner),
+            bridge_forwarding_runner: Arc::new(bridge_forwarding_runner),
         }
     }
 }
@@ -210,6 +228,7 @@ impl CliScriptedDriver {
             "S-10" => Some((self.topology_coherence_runner)()),
             "S-11" => Some((self.signer_rotation_runner)()),
             "S-12" => Some((self.retention_deletion_runner)()),
+            "S-13" => Some((self.bridge_forwarding_runner)()),
             _ => None,
         }
     }
@@ -1494,6 +1513,178 @@ fn run_live_s12_cli_retention_deletion_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s13_cli_bridge_forwarding_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S13_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
+    let submit_payload = env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD.to_owned());
+
+    let submit_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "submit-bridge-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            submit_payload.as_str(),
+        ],
+        "cli live s13 submit-bridge-message",
+        format!("{base_agent_name}-submit").as_str(),
+    )?;
+    let bridge_id = parse_text_output_field(submit_output.as_str(), "bridge_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s13 submit-bridge-message response missing bridge_id field: {submit_output}"
+            )
+        })?
+        .to_owned();
+    if bridge_id.trim().is_empty() {
+        return Err("cli live s13 submit-bridge-message returned empty bridge_id".to_owned());
+    }
+    let source_message_id =
+        parse_text_output_field(submit_output.as_str(), "source_message_id").ok_or_else(|| {
+            format!(
+                "cli live s13 submit-bridge-message response missing source_message_id field: {submit_output}"
+            )
+        })?;
+    if source_message_id.trim().is_empty() {
+        return Err(
+            "cli live s13 submit-bridge-message returned empty source_message_id".to_owned(),
+        );
+    }
+    let submit_bridge_status =
+        parse_text_output_field(submit_output.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "cli live s13 submit-bridge-message response missing bridge_status field: {submit_output}"
+            )
+        })?;
+    if submit_bridge_status.trim().is_empty() {
+        return Err("cli live s13 submit-bridge-message returned empty bridge_status".to_owned());
+    }
+
+    let forward_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "forward-bridge-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            bridge_id.as_str(),
+        ],
+        "cli live s13 forward-bridge-message",
+        format!("{base_agent_name}-forward").as_str(),
+    )?;
+    let forwarded_bridge_id = parse_text_output_field(forward_output.as_str(), "bridge_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s13 forward-bridge-message response missing bridge_id field: {forward_output}"
+            )
+        })?;
+    validate_s13_bridge_id_match(
+        bridge_id.as_str(),
+        forwarded_bridge_id,
+        "cli live s13 forward-bridge-message",
+    )?;
+    let forwarded_bridge_status =
+        parse_text_output_field(forward_output.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "cli live s13 forward-bridge-message response missing bridge_status field: {forward_output}"
+            )
+        })?;
+    if forwarded_bridge_status.trim().is_empty() {
+        return Err("cli live s13 forward-bridge-message returned empty bridge_status".to_owned());
+    }
+    let forwarded_target_message_id =
+        parse_text_output_field(forward_output.as_str(), "target_message_id").ok_or_else(|| {
+            format!(
+                "cli live s13 forward-bridge-message response missing target_message_id field: {forward_output}"
+            )
+        })?;
+    if forwarded_target_message_id.trim().is_empty() {
+        return Err(
+            "cli live s13 forward-bridge-message returned empty target_message_id".to_owned(),
+        );
+    }
+    let forwarded_tx_hash =
+        parse_text_output_field(forward_output.as_str(), "forward_tx_hash").ok_or_else(|| {
+            format!(
+                "cli live s13 forward-bridge-message response missing forward_tx_hash field: {forward_output}"
+            )
+        })?;
+    if forwarded_tx_hash.trim().is_empty() {
+        return Err(
+            "cli live s13 forward-bridge-message returned empty forward_tx_hash".to_owned(),
+        );
+    }
+
+    let query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-bridge-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            bridge_id.as_str(),
+        ],
+        "cli live s13 query-bridge-message",
+        format!("{base_agent_name}-query").as_str(),
+    )?;
+    let queried_bridge_id = parse_text_output_field(query_output.as_str(), "bridge_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s13 query-bridge-message response missing bridge_id field: {query_output}"
+            )
+        })?;
+    validate_s13_bridge_id_match(
+        bridge_id.as_str(),
+        queried_bridge_id,
+        "cli live s13 query-bridge-message",
+    )?;
+    let queried_bridge_status =
+        parse_text_output_field(query_output.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "cli live s13 query-bridge-message response missing bridge_status field: {query_output}"
+            )
+        })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_bridge_status,
+        queried_bridge_status,
+        "bridge_status",
+        "cli live s13 query-bridge-message",
+    )?;
+    let queried_target_message_id =
+        parse_text_output_field(query_output.as_str(), "target_message_id").ok_or_else(|| {
+            format!(
+                "cli live s13 query-bridge-message response missing target_message_id field: {query_output}"
+            )
+        })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_target_message_id,
+        queried_target_message_id,
+        "target_message_id",
+        "cli live s13 query-bridge-message",
+    )?;
+    let queried_forward_tx_hash =
+        parse_text_output_field(query_output.as_str(), "forward_tx_hash").ok_or_else(|| {
+            format!(
+                "cli live s13 query-bridge-message response missing forward_tx_hash field: {query_output}"
+            )
+        })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_tx_hash,
+        queried_forward_tx_hash,
+        "forward_tx_hash",
+        "cli live s13 query-bridge-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1543,6 +1734,33 @@ fn validate_s12_content_id_match(
 }
 
 fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_id_match(
+    expected_bridge_id: &str,
+    observed_bridge_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_bridge_id != expected_bridge_id {
+        return Err(format!(
+            "{step} returned mismatched bridge_id: expected={expected_bridge_id}, got={observed_bridge_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_field_coherence(
     expected_field_value: &str,
     observed_field_value: &str,
     field_name: &str,
@@ -1679,10 +1897,12 @@ mod tests {
         run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
         run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
         run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
-        run_live_s12_cli_retention_deletion_probe, validate_live_s05_release_escrow_response,
-        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, validate_s12_content_field_coherence,
-        validate_s12_content_id_match, CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        run_live_s12_cli_retention_deletion_probe, run_live_s13_cli_bridge_forwarding_probe,
+        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        validate_s12_content_field_coherence, validate_s12_content_id_match,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, CliScriptedDriver,
+        CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -2265,6 +2485,24 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s13_cli_bridge_forwarding_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s13_cli_bridge_forwarding_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s12_content_id_match_rejects_mismatch() {
         let error = validate_s12_content_id_match("content-a", "content-b", "test step")
             .expect_err("mismatched content ids should fail");
@@ -2285,6 +2523,27 @@ else:
         .expect_err("field drift should fail");
         assert!(
             error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_id_match_rejects_mismatch() {
+        let error = validate_s13_bridge_id_match("bridge-a", "bridge-b", "test step")
+            .expect_err("mismatched bridge ids should fail");
+        assert!(
+            error.contains("mismatched bridge_id"),
+            "error should mention bridge_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_field_coherence_rejects_drift() {
+        let error =
+            validate_s13_bridge_field_coherence("forwarded", "stale", "bridge_status", "test step")
+                .expect_err("bridge field drift should fail");
+        assert!(
+            error.contains("bridge_status drift"),
             "error should mention field drift: {error}",
         );
     }
@@ -2630,6 +2889,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-12 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c13_live_s13_driver_path_fails_closed_when_bridge_forwarding_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s13 bridge-forwarding probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-13");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-13 should fail closed on probe error",
         );
     }
 }

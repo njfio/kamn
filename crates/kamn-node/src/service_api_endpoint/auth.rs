@@ -230,10 +230,15 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
         ("POST", _) if super::payload::content_tombstone_path_id(path).is_some() => {
             ServiceApiScope::ContentWrite
         }
+        ("POST", ROUTE_BRIDGE_SUBMIT) => ServiceApiScope::BridgeWrite,
+        ("POST", _) if super::payload::bridge_forward_path_id(path).is_some() => {
+            ServiceApiScope::BridgeWrite
+        }
         ("GET", ROUTE_EVENTS_WS) => ServiceApiScope::EventsRead,
         ("GET", _) if super::payload::content_path_id(path).is_some() => {
             ServiceApiScope::ContentRead
         }
+        ("GET", _) if super::payload::bridge_path_id(path).is_some() => ServiceApiScope::BridgeRead,
         ("GET", _) if super::payload::message_path_id(path).is_some() => {
             ServiceApiScope::MessagesRead
         }
@@ -307,12 +312,24 @@ mod tests {
             Some(ServiceApiScope::ContentWrite)
         );
         assert_eq!(
+            required_scope_for_route("POST", ROUTE_BRIDGE_SUBMIT),
+            Some(ServiceApiScope::BridgeWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/bridge/bridge-1/forward"),
+            Some(ServiceApiScope::BridgeWrite)
+        );
+        assert_eq!(
             required_scope_for_route("GET", ROUTE_EVENTS_WS),
             Some(ServiceApiScope::EventsRead)
         );
         assert_eq!(
             required_scope_for_route("GET", "/v1/content/content-1"),
             Some(ServiceApiScope::ContentRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/bridge/bridge-1"),
+            Some(ServiceApiScope::BridgeRead)
         );
         assert_eq!(
             required_scope_for_route("GET", "/v1/messages/message-1"),
@@ -364,6 +381,14 @@ mod tests {
         assert_eq!(
             parse_scope(" content:write ").expect("scope"),
             ServiceApiScope::ContentWrite
+        );
+        assert_eq!(
+            parse_scope(" bridge:write ").expect("scope"),
+            ServiceApiScope::BridgeWrite
+        );
+        assert_eq!(
+            parse_scope("bridge:read").expect("scope"),
+            ServiceApiScope::BridgeRead
         );
         assert_eq!(
             parse_scope("protected:unknown").expect("scope"),

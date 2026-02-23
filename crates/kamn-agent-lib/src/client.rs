@@ -1,9 +1,10 @@
 use crate::errors::AgentLibError;
 use kamn_sdk::{
     service_signature_for_fields, AgentDid, ServiceAgentProfile, ServiceApiClient,
-    ServiceChannelMessages, ServiceChannelReceipt, ServiceContentRegistration,
-    ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus, ServiceMessageReceipt,
-    ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt, ServiceTaskStatus,
+    ServiceBridgeStatus, ServiceBridgeSubmission, ServiceChannelMessages, ServiceChannelReceipt,
+    ServiceContentRegistration, ServiceContentStatus, ServiceEscrowStatus, ServiceHealthStatus,
+    ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
+    ServiceTaskStatus,
 };
 use std::env;
 
@@ -201,6 +202,33 @@ impl ServiceApiHttpClient {
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceContentStatus, AgentLibError> {
         Ok(self.inner.get_content(content_id, auth)?)
+    }
+
+    /// Submits one bridge message via `POST /v1/bridge/submit`.
+    pub fn submit_bridge_message(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeSubmission, AgentLibError> {
+        Ok(self.inner.submit_bridge_message(payload, auth)?)
+    }
+
+    /// Forwards one bridge message via `POST /v1/bridge/{id}/forward`.
+    pub fn forward_bridge_message(
+        &self,
+        bridge_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeStatus, AgentLibError> {
+        Ok(self.inner.forward_bridge_message(bridge_id, auth)?)
+    }
+
+    /// Queries one bridge message via `GET /v1/bridge/{id}`.
+    pub fn get_bridge_message(
+        &self,
+        bridge_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceBridgeStatus, AgentLibError> {
+        Ok(self.inner.get_bridge_message(bridge_id, auth)?)
     }
 
     /// Queries one agent profile via `GET /v1/agents/{did}`.

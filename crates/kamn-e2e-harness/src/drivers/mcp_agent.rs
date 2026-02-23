@@ -37,6 +37,9 @@ const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s1
 const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-mcp-s12";
 const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
     r#"{"content":"mcp-agent-live-s12","retention_class":"standard"}"#;
+const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-mcp-s13";
+const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
+    r#"{"source_message_id":"mcp-agent-live-s13","target_network":"testnet"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -62,6 +65,7 @@ pub struct McpAgentDriver {
     topology_coherence_probe: Arc<LiveMcpProbe>,
     signer_rotation_probe: Arc<LiveMcpProbe>,
     retention_deletion_probe: Arc<LiveMcpProbe>,
+    bridge_forwarding_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -98,6 +102,7 @@ impl McpAgentDriver {
                 run_live_s10_mcp_topology_coherence_probe,
                 run_live_s11_mcp_signer_rotation_probe,
                 run_live_s12_mcp_retention_deletion_probe,
+                run_live_s13_mcp_bridge_forwarding_probe,
             ),
         )
     }
@@ -129,19 +134,20 @@ impl McpAgentDriver {
             transport_failover_probe: live_probe.clone(),
             topology_coherence_probe: live_probe.clone(),
             signer_rotation_probe: live_probe.clone(),
-            retention_deletion_probe: live_probe,
+            retention_deletion_probe: live_probe.clone(),
+            bridge_forwarding_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_failover_topology_signer_and_retention_probes: (
+        escrow_proof_replay_crash_failover_topology_signer_retention_and_bridge_probes: (
             J,
             K,
             L,
@@ -150,6 +156,7 @@ impl McpAgentDriver {
             O,
             P,
             Q,
+            R,
         ),
     ) -> Result<Self, String>
     where
@@ -165,6 +172,7 @@ impl McpAgentDriver {
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
+        R: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -178,7 +186,8 @@ impl McpAgentDriver {
             topology_coherence_probe,
             signer_rotation_probe,
             retention_deletion_probe,
-        ) = escrow_proof_replay_crash_failover_topology_signer_and_retention_probes;
+            bridge_forwarding_probe,
+        ) = escrow_proof_replay_crash_failover_topology_signer_retention_and_bridge_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -194,6 +203,7 @@ impl McpAgentDriver {
             topology_coherence_probe: Arc::new(topology_coherence_probe),
             signer_rotation_probe: Arc::new(signer_rotation_probe),
             retention_deletion_probe: Arc::new(retention_deletion_probe),
+            bridge_forwarding_probe: Arc::new(bridge_forwarding_probe),
         })
     }
 }
@@ -234,6 +244,7 @@ impl McpAgentDriver {
             "S-10" => Some((self.topology_coherence_probe)()),
             "S-11" => Some((self.signer_rotation_probe)()),
             "S-12" => Some((self.retention_deletion_probe)()),
+            "S-13" => Some((self.bridge_forwarding_probe)()),
             _ => None,
         }
     }
@@ -1593,6 +1604,191 @@ fn run_live_s12_mcp_retention_deletion_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s13_mcp_bridge_forwarding_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S13_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
+    let submit_payload = env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD.to_owned());
+
+    let submit_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(submit_payload.as_str())
+    );
+    let submit_response = run_live_s13_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-submit").as_str(),
+        key_file.as_str(),
+        "probe-submit-bridge-message",
+        "submit_bridge_message",
+        submit_arguments.as_str(),
+    )?;
+    let bridge_id = json_optional_string_field(submit_response.as_str(), "bridge_id").ok_or_else(
+        || {
+            format!(
+                "mcp live s13 submit_bridge_message response missing bridge_id field: {submit_response}"
+            )
+        },
+    )?;
+    if bridge_id.trim().is_empty() {
+        return Err("mcp live s13 submit_bridge_message returned empty bridge_id".to_owned());
+    }
+    let source_message_id =
+        json_optional_string_field(submit_response.as_str(), "source_message_id").ok_or_else(
+            || {
+                format!(
+                    "mcp live s13 submit_bridge_message response missing source_message_id field: {submit_response}"
+                )
+            },
+        )?;
+    if source_message_id.trim().is_empty() {
+        return Err(
+            "mcp live s13 submit_bridge_message returned empty source_message_id".to_owned(),
+        );
+    }
+    let submit_bridge_status =
+        json_optional_string_field(submit_response.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "mcp live s13 submit_bridge_message response missing bridge_status field: {submit_response}"
+            )
+        })?;
+    if submit_bridge_status.trim().is_empty() {
+        return Err("mcp live s13 submit_bridge_message returned empty bridge_status".to_owned());
+    }
+
+    let forward_arguments = format!(
+        "{{\"bridge_id\":\"{}\"}}",
+        escape_json_scalar(bridge_id.as_str())
+    );
+    let forward_response = run_live_s13_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-forward").as_str(),
+        key_file.as_str(),
+        "probe-forward-bridge-message",
+        "forward_bridge_message",
+        forward_arguments.as_str(),
+    )?;
+    let forwarded_bridge_id = json_optional_string_field(forward_response.as_str(), "bridge_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s13 forward_bridge_message response missing bridge_id field: {forward_response}"
+            )
+        })?;
+    validate_s13_bridge_id_match(
+        bridge_id.as_str(),
+        forwarded_bridge_id.as_str(),
+        "mcp live s13 forward_bridge_message",
+    )?;
+    let forwarded_bridge_status =
+        json_optional_string_field(forward_response.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "mcp live s13 forward_bridge_message response missing bridge_status field: {forward_response}"
+            )
+        })?;
+    if forwarded_bridge_status.trim().is_empty() {
+        return Err("mcp live s13 forward_bridge_message returned empty bridge_status".to_owned());
+    }
+    let forwarded_target_message_id = json_optional_string_field(
+        forward_response.as_str(),
+        "target_message_id",
+    )
+    .ok_or_else(|| {
+        format!(
+            "mcp live s13 forward_bridge_message response missing target_message_id field: {forward_response}"
+        )
+    })?;
+    if forwarded_target_message_id.trim().is_empty() {
+        return Err(
+            "mcp live s13 forward_bridge_message returned empty target_message_id".to_owned(),
+        );
+    }
+    let forwarded_tx_hash =
+        json_optional_string_field(forward_response.as_str(), "forward_tx_hash").ok_or_else(
+            || {
+                format!(
+                    "mcp live s13 forward_bridge_message response missing forward_tx_hash field: {forward_response}"
+                )
+            },
+        )?;
+    if forwarded_tx_hash.trim().is_empty() {
+        return Err(
+            "mcp live s13 forward_bridge_message returned empty forward_tx_hash".to_owned(),
+        );
+    }
+
+    let query_arguments = format!(
+        "{{\"bridge_id\":\"{}\"}}",
+        escape_json_scalar(bridge_id.as_str())
+    );
+    let query_response = run_live_s13_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-query").as_str(),
+        key_file.as_str(),
+        "probe-query-bridge-message",
+        "query_bridge_message",
+        query_arguments.as_str(),
+    )?;
+    let queried_bridge_id = json_optional_string_field(query_response.as_str(), "bridge_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s13 query_bridge_message response missing bridge_id field: {query_response}"
+            )
+        })?;
+    validate_s13_bridge_id_match(
+        bridge_id.as_str(),
+        queried_bridge_id.as_str(),
+        "mcp live s13 query_bridge_message",
+    )?;
+    let queried_bridge_status =
+        json_optional_string_field(query_response.as_str(), "bridge_status").ok_or_else(|| {
+            format!(
+                "mcp live s13 query_bridge_message response missing bridge_status field: {query_response}"
+            )
+        })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_bridge_status.as_str(),
+        queried_bridge_status.as_str(),
+        "bridge_status",
+        "mcp live s13 query_bridge_message",
+    )?;
+    let queried_target_message_id = json_optional_string_field(
+        query_response.as_str(),
+        "target_message_id",
+    )
+    .ok_or_else(|| {
+        format!(
+            "mcp live s13 query_bridge_message response missing target_message_id field: {query_response}"
+        )
+    })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_target_message_id.as_str(),
+        queried_target_message_id.as_str(),
+        "target_message_id",
+        "mcp live s13 query_bridge_message",
+    )?;
+    let queried_tx_hash =
+        json_optional_string_field(query_response.as_str(), "forward_tx_hash").ok_or_else(|| {
+            format!(
+                "mcp live s13 query_bridge_message response missing forward_tx_hash field: {query_response}"
+            )
+        })?;
+    validate_s13_bridge_field_coherence(
+        forwarded_tx_hash.as_str(),
+        queried_tx_hash.as_str(),
+        "forward_tx_hash",
+        "mcp live s13 query_bridge_message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -1641,6 +1837,33 @@ fn validate_s12_content_id_match(
 }
 
 fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_id_match(
+    expected_bridge_id: &str,
+    observed_bridge_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_bridge_id != expected_bridge_id {
+        return Err(format!(
+            "{step} returned mismatched bridge_id: expected={expected_bridge_id}, got={observed_bridge_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s13_bridge_field_coherence(
     expected_field_value: &str,
     observed_field_value: &str,
     field_name: &str,
@@ -1949,6 +2172,27 @@ fn run_live_s12_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s12"))
 }
 
+fn run_live_s13_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s13"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -2083,10 +2327,12 @@ mod tests {
         run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
         run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
         run_live_s11_mcp_signer_rotation_probe, run_live_s12_mcp_retention_deletion_probe,
+        run_live_s13_mcp_bridge_forwarding_probe, run_live_s13_mcp_tool_call,
         validate_live_s05_release_escrow_response, validate_probe_health_response,
         validate_probe_initialize_response, validate_s07_replay_reason_marker,
         validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
-        validate_s12_content_field_coherence, validate_s12_content_id_match, McpAgentDriver,
+        validate_s12_content_field_coherence, validate_s12_content_id_match,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, McpAgentDriver,
         MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
@@ -2813,6 +3059,46 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s13_mcp_bridge_forwarding_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s13_mcp_bridge_forwarding_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s13_mcp_tool_call_rewrites_error_context() {
+        let error = run_live_s13_mcp_tool_call(
+            "/definitely/missing/kamn-mcp-server",
+            "http://localhost:8080",
+            "probe-agent",
+            "/tmp/probe.key",
+            "probe-s13",
+            "submit_bridge_message",
+            "{}",
+        )
+        .expect_err("missing binary should fail");
+        assert!(
+            error.contains("mcp live s13"),
+            "error should be rewritten to s13 context: {error}",
+        );
+    }
+
+    #[test]
     fn unit_validate_s12_content_id_match_rejects_mismatch() {
         let error = validate_s12_content_id_match("content-a", "content-b", "test step")
             .expect_err("mismatched content ids should fail");
@@ -2833,6 +3119,27 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         .expect_err("field drift should fail");
         assert!(
             error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_id_match_rejects_mismatch() {
+        let error = validate_s13_bridge_id_match("bridge-a", "bridge-b", "test step")
+            .expect_err("mismatched bridge ids should fail");
+        assert!(
+            error.contains("mismatched bridge_id"),
+            "error should mention bridge_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s13_bridge_field_coherence_rejects_drift() {
+        let error =
+            validate_s13_bridge_field_coherence("forwarded", "stale", "bridge_status", "test step")
+                .expect_err("bridge field drift should fail");
+        assert!(
+            error.contains("bridge_status drift"),
             "error should mention field drift: {error}",
         );
     }
@@ -3314,6 +3621,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-12 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c20_live_s13_driver_path_fails_closed_when_bridge_forwarding_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s13 bridge-forwarding probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-13");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-13 should fail closed on probe error",
         );
     }
 
