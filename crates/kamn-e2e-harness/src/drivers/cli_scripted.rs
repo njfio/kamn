@@ -45,6 +45,12 @@ const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A: &str = r#"{"message":"cli-scripted-li
 const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B: &str = r#"{"message":"cli-scripted-live-s14-batch-b"}"#;
 const DEFAULT_S14_BLOCK_HEIGHT: u64 = 1;
 const DEFAULT_S14_FINALITY: &str = "final";
+const DEFAULT_S15_AGENT_NAME: &str = "kamn-e2e-cli-s15";
+const DEFAULT_S15_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s15-performance"}"#;
+const DEFAULT_S15_ITERATIONS: u64 = 3;
+const DEFAULT_S15_MAX_TOTAL_MILLIS: u128 = 5_000;
+const DEFAULT_S15_MAX_P50_MILLIS: u128 = 2_500;
+const DEFAULT_S15_MAX_P99_MILLIS: u128 = 5_000;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -53,7 +59,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01 through S-14.
+/// CLI-scripted driver with optional live execution for S-01 through S-15.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -71,6 +77,7 @@ pub struct CliScriptedDriver {
     retention_deletion_runner: Arc<LiveCliRunner>,
     bridge_forwarding_runner: Arc<LiveCliRunner>,
     batch_merkle_runner: Arc<LiveCliRunner>,
+    performance_smoke_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -108,6 +115,7 @@ impl CliScriptedDriver {
                 run_live_s12_cli_retention_deletion_probe,
                 run_live_s13_cli_bridge_forwarding_probe,
                 run_live_s14_cli_batch_merkle_probe,
+                run_live_s15_cli_performance_smoke_probe,
             ),
         )
     }
@@ -133,19 +141,20 @@ impl CliScriptedDriver {
             signer_rotation_runner: live_runner.clone(),
             retention_deletion_runner: live_runner.clone(),
             bridge_forwarding_runner: live_runner.clone(),
-            batch_merkle_runner: live_runner,
+            batch_merkle_runner: live_runner.clone(),
+            performance_smoke_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_runners: (
+        proof_replay_crash_failover_topology_signer_retention_bridge_merkle_and_performance_runners: (
             K,
             L,
             M,
@@ -155,6 +164,7 @@ impl CliScriptedDriver {
             Q,
             R,
             S,
+            T,
         ),
     ) -> Self
     where
@@ -172,6 +182,7 @@ impl CliScriptedDriver {
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
         R: Fn() -> Result<(), String> + Send + Sync + 'static,
         S: Fn() -> Result<(), String> + Send + Sync + 'static,
+        T: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
@@ -183,7 +194,8 @@ impl CliScriptedDriver {
             retention_deletion_runner,
             bridge_forwarding_runner,
             batch_merkle_runner,
-        ) = proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_runners;
+            performance_smoke_runner,
+        ) = proof_replay_crash_failover_topology_signer_retention_bridge_merkle_and_performance_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -200,6 +212,7 @@ impl CliScriptedDriver {
             retention_deletion_runner: Arc::new(retention_deletion_runner),
             bridge_forwarding_runner: Arc::new(bridge_forwarding_runner),
             batch_merkle_runner: Arc::new(batch_merkle_runner),
+            performance_smoke_runner: Arc::new(performance_smoke_runner),
         }
     }
 }
@@ -242,6 +255,7 @@ impl CliScriptedDriver {
             "S-12" => Some((self.retention_deletion_runner)()),
             "S-13" => Some((self.bridge_forwarding_runner)()),
             "S-14" => Some((self.batch_merkle_runner)()),
+            "S-15" => Some((self.performance_smoke_runner)()),
             _ => None,
         }
     }
@@ -1850,6 +1864,95 @@ fn run_live_s14_cli_batch_merkle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s15_cli_performance_smoke_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S15_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S15_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S15_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S15_MESSAGE_PAYLOAD.to_owned());
+    let iterations = env::var("KAMN_E2E_S15_ITERATIONS")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("cli live s15 invalid iterations env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S15_ITERATIONS);
+    if iterations == 0 {
+        return Err("cli live s15 iterations must be greater than zero".to_owned());
+    }
+
+    let max_total_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_TOTAL_MILLIS",
+        DEFAULT_S15_MAX_TOTAL_MILLIS,
+        "cli live s15 max-total budget",
+    )?;
+    let max_p50_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_P50_MILLIS",
+        DEFAULT_S15_MAX_P50_MILLIS,
+        "cli live s15 max-p50 budget",
+    )?;
+    let max_p99_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_P99_MILLIS",
+        DEFAULT_S15_MAX_P99_MILLIS,
+        "cli live s15 max-p99 budget",
+    )?;
+
+    let total_start = std::time::Instant::now();
+    let mut latency_samples = Vec::with_capacity(iterations as usize);
+    for iteration in 0..iterations {
+        let iteration_start = std::time::Instant::now();
+        let send_output = run_cli_command_capture_stdout_with_agent_name(
+            cli_binary.as_str(),
+            &[
+                "send-message",
+                "--endpoint",
+                endpoint.as_str(),
+                "--format",
+                "text",
+                message_payload.as_str(),
+            ],
+            "cli live s15 send-message",
+            format!("{base_agent_name}-send-{iteration}").as_str(),
+        )?;
+        let message_id =
+            validate_s08_message_receipt_fields(send_output.as_str(), "cli live s15 send-message")?;
+
+        let query_output = run_cli_command_capture_stdout_with_agent_name(
+            cli_binary.as_str(),
+            &[
+                "query-message",
+                "--endpoint",
+                endpoint.as_str(),
+                "--format",
+                "text",
+                message_id.as_str(),
+            ],
+            "cli live s15 query-message",
+            format!("{base_agent_name}-query-{iteration}").as_str(),
+        )?;
+        validate_s08_query_message_response(
+            query_output.as_str(),
+            message_id.as_str(),
+            "cli live s15 query-message",
+        )?;
+
+        latency_samples.push(iteration_start.elapsed().as_millis());
+    }
+    let total_elapsed_millis = total_start.elapsed().as_millis();
+
+    validate_s15_latency_budget_samples(
+        latency_samples.as_slice(),
+        total_elapsed_millis,
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+        "cli live s15 performance-smoke",
+    )
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1978,6 +2081,71 @@ fn validate_s14_cli_verify_proof_response(
     Ok(())
 }
 
+fn parse_s15_budget_env_u128(
+    env_key: &str,
+    default_value: u128,
+    step: &str,
+) -> Result<u128, String> {
+    let parsed = env::var(env_key)
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u128>()
+                .map_err(|_| format!("{step} invalid env value for {env_key}: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(default_value);
+    if parsed == 0 {
+        return Err(format!("{step} must be greater than zero for {env_key}"));
+    }
+    Ok(parsed)
+}
+
+fn validate_s15_latency_budget_samples(
+    samples_millis: &[u128],
+    total_elapsed_millis: u128,
+    max_total_millis: u128,
+    max_p50_millis: u128,
+    max_p99_millis: u128,
+    step: &str,
+) -> Result<(), String> {
+    if samples_millis.is_empty() {
+        return Err(format!("{step} produced zero latency samples"));
+    }
+
+    let mut sorted = samples_millis.to_vec();
+    sorted.sort_unstable();
+    let p50_index = percentile_index(sorted.len(), 50);
+    let p99_index = percentile_index(sorted.len(), 99);
+    let p50 = sorted[p50_index];
+    let p99 = sorted[p99_index];
+
+    if total_elapsed_millis > max_total_millis {
+        return Err(format!(
+            "{step} total elapsed millis exceeded budget: observed={total_elapsed_millis}, max={max_total_millis}"
+        ));
+    }
+    if p50 > max_p50_millis {
+        return Err(format!(
+            "{step} p50 millis exceeded budget: observed={p50}, max={max_p50_millis}"
+        ));
+    }
+    if p99 > max_p99_millis {
+        return Err(format!(
+            "{step} p99 millis exceeded budget: observed={p99}, max={max_p99_millis}"
+        ));
+    }
+    Ok(())
+}
+
+fn percentile_index(sample_count: usize, percentile: u128) -> usize {
+    let numerator = (sample_count as u128)
+        .saturating_mul(percentile)
+        .saturating_add(100u128.saturating_sub(1));
+    let rank = numerator / 100;
+    rank.saturating_sub(1).min(sample_count as u128 - 1) as usize
+}
+
 fn run_cli_command_capture_stdout(
     cli_binary: &str,
     args: &[&str],
@@ -2094,20 +2262,22 @@ fn live_s07_probe_agent_suffix() -> String {
 mod tests {
     use super::env;
     use super::{
-        live_execution_enabled_from_env, parse_bool_flag, parse_text_output_field,
-        run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
-        run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
-        run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
-        run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
-        run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
-        run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
-        run_live_s12_cli_retention_deletion_probe, run_live_s13_cli_bridge_forwarding_probe,
-        run_live_s14_cli_batch_merkle_probe, validate_live_s05_release_escrow_response,
+        live_execution_enabled_from_env, parse_bool_flag, parse_s15_budget_env_u128,
+        parse_text_output_field, percentile_index, run_cli_command_capture_stdout,
+        run_live_s01_cli_health_probe, run_live_s02_cli_direct_message_probe,
+        run_live_s03_cli_group_channel_probe, run_live_s04_cli_task_lifecycle_probe,
+        run_live_s05_cli_escrow_settlement_probe, run_live_s06_cli_proof_verification_probe,
+        run_live_s07_cli_replay_protection_probe, run_live_s08_cli_crash_recovery_probe,
+        run_live_s09_cli_transport_failover_probe, run_live_s10_cli_topology_coherence_probe,
+        run_live_s11_cli_signer_rotation_probe, run_live_s12_cli_retention_deletion_probe,
+        run_live_s13_cli_bridge_forwarding_probe, run_live_s14_cli_batch_merkle_probe,
+        run_live_s15_cli_performance_smoke_probe, validate_live_s05_release_escrow_response,
         validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
         validate_s08_query_message_response, validate_s12_content_field_coherence,
         validate_s12_content_id_match, validate_s13_bridge_field_coherence,
-        validate_s13_bridge_id_match, validate_s14_cli_verify_proof_response, CliScriptedDriver,
-        CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        validate_s13_bridge_id_match, validate_s14_cli_verify_proof_response,
+        validate_s15_latency_budget_samples, CliScriptedDriver, CLI_BINARY_ENV,
+        CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -2726,6 +2896,24 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s15_cli_performance_smoke_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s15_cli_performance_smoke_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_run_live_s14_cli_batch_merkle_probe_accepts_distinct_batch_ids_and_final_proofs() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s14-success");
         let script_source = r#"#!/usr/bin/env python3
@@ -2842,6 +3030,95 @@ else:
         assert!(
             error.contains("block_height=0"),
             "error should mention block-height contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_accepts_within_budget_samples() {
+        validate_s15_latency_budget_samples(&[10, 20, 30], 80, 100, 25, 35, "test helper")
+            .expect("within-budget samples should pass");
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_total_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 20, 30], 120, 100, 25, 35, "test helper")
+                .expect_err("total budget violation should fail");
+        assert!(
+            error.contains("total elapsed millis exceeded budget"),
+            "error should mention total budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_p50_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 50, 90], 90, 200, 20, 100, "test helper")
+                .expect_err("p50 budget violation should fail");
+        assert!(
+            error.contains("p50 millis exceeded budget"),
+            "error should mention p50 budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_p99_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 20, 90], 90, 200, 50, 80, "test helper")
+                .expect_err("p99 budget violation should fail");
+        assert!(
+            error.contains("p99 millis exceeded budget"),
+            "error should mention p99 budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_parse_s15_budget_env_u128_uses_default_when_env_missing() {
+        with_env_vars(&[("KAMN_E2E_S15_TOTAL_BUDGET_MS", None)], || {
+            let parsed = parse_s15_budget_env_u128(
+                "KAMN_E2E_S15_TOTAL_BUDGET_MS",
+                91,
+                "cli-scripted live s15 test helper",
+            )
+            .expect("missing env key should use default");
+            assert_eq!(parsed, 91);
+        });
+    }
+
+    #[test]
+    fn unit_parse_s15_budget_env_u128_parses_positive_env_value() {
+        with_env_vars(&[("KAMN_E2E_S15_TOTAL_BUDGET_MS", Some("143"))], || {
+            let parsed = parse_s15_budget_env_u128(
+                "KAMN_E2E_S15_TOTAL_BUDGET_MS",
+                91,
+                "cli-scripted live s15 test helper",
+            )
+            .expect("valid env key should parse");
+            assert_eq!(parsed, 143);
+        });
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_accepts_exact_budget_boundaries() {
+        validate_s15_latency_budget_samples(&[10, 20, 30], 60, 60, 20, 30, "test helper")
+            .expect("equal total/p50/p99 budget boundaries should pass");
+    }
+
+    #[test]
+    fn unit_percentile_index_returns_expected_midpoint_index() {
+        assert_eq!(
+            percentile_index(3, 50),
+            1,
+            "len=3 and p50 should map to middle sample index",
+        );
+    }
+
+    #[test]
+    fn unit_percentile_index_clamps_percentile_above_hundred_to_last_index() {
+        assert_eq!(
+            percentile_index(3, 150),
+            2,
+            "percentiles above 100 should clamp to the last sample index",
         );
     }
 
@@ -3256,6 +3533,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-14 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c15_live_s15_driver_path_fails_closed_when_performance_smoke_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s15 performance-smoke probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-15");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-15 should fail closed on probe error",
         );
     }
 }

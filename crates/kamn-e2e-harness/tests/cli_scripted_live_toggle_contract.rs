@@ -37,7 +37,7 @@ fn spec_c03_cli_scripted_live_s01_failure_maps_to_fail() {
 }
 
 #[test]
-fn spec_c04_cli_scripted_live_non_s01_remains_pass_without_runner_invocation() {
+fn spec_c04_cli_scripted_live_non_live_bound_scenario_remains_pass_without_runner_invocation() {
     let runner_calls = Arc::new(AtomicUsize::new(0));
     let runner_calls_for_closure = Arc::clone(&runner_calls);
     let driver = CliScriptedDriver::with_runner(true, move || {
@@ -45,11 +45,11 @@ fn spec_c04_cli_scripted_live_non_s01_remains_pass_without_runner_invocation() {
         Ok(())
     });
 
-    let result = driver.execute("S-15");
+    let result = driver.execute("S-99");
     assert_eq!(result.status, "pass");
     assert_eq!(
         runner_calls.load(Ordering::SeqCst),
         0,
-        "non-live-bound scenarios should not invoke live runner",
+        "non-live-bound scenario should not invoke live runner",
     );
 }
