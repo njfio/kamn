@@ -5,9 +5,12 @@ use kamn_sdk::{
     ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth, ServiceTaskReceipt,
     ServiceTaskStatus,
 };
+use std::env;
 
 const DEFAULT_CHAIN_ID: &str = "kamn-agent-lib";
 const DEFAULT_CHAIN_VERSION: &str = "1";
+const AGENT_CHAIN_ID_ENV: &str = "KAMN_AGENT_CHAIN_ID";
+const AGENT_CHAIN_VERSION_ENV: &str = "KAMN_AGENT_CHAIN_VERSION";
 
 /// Typed Service API HTTP client wrapper used by `KamnAgentHandle`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +23,10 @@ pub struct ServiceApiHttpClient {
 impl ServiceApiHttpClient {
     /// Connects to a KAMN service endpoint with default chain-signature context.
     pub fn connect(endpoint: &str) -> Result<Self, AgentLibError> {
-        Self::connect_with_chain_context(endpoint, DEFAULT_CHAIN_ID, DEFAULT_CHAIN_VERSION)
+        let chain_id = env::var(AGENT_CHAIN_ID_ENV).unwrap_or_else(|_| DEFAULT_CHAIN_ID.to_owned());
+        let chain_version =
+            env::var(AGENT_CHAIN_VERSION_ENV).unwrap_or_else(|_| DEFAULT_CHAIN_VERSION.to_owned());
+        Self::connect_with_chain_context(endpoint, chain_id.as_str(), chain_version.as_str())
     }
 
     /// Connects to a KAMN service endpoint with explicit chain-signature context.
@@ -54,6 +60,7 @@ impl ServiceApiHttpClient {
         sender_did: &AgentDid,
         nonce: u64,
         body: &str,
+        authz_scope: Option<&str>,
     ) -> Result<ServiceRequestAuth, AgentLibError> {
         let signature = service_signature_for_fields(
             sender_did,
@@ -62,10 +69,11 @@ impl ServiceApiHttpClient {
             self.chain_version.as_str(),
             body,
         );
-        Ok(ServiceRequestAuth::new(
+        Ok(ServiceRequestAuth::new_with_scope(
             sender_did.clone(),
             nonce,
             signature,
+            authz_scope,
         )?)
     }
 

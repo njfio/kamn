@@ -172,46 +172,70 @@ fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
     let create_task_payload = std::env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
 
-    let handle = KamnAgentHandle::connect(
+    let create_handle = KamnAgentHandle::connect(
         endpoint.as_str(),
         kolme_endpoint.as_str(),
-        agent_name.as_str(),
+        format!("{agent_name}-s04-create").as_str(),
     )
     .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
 
-    let task_receipt = handle
+    let task_receipt = create_handle
         .create_task(create_task_payload.as_str())
         .map_err(|error| format!("sdk-direct live s04 create-task failed: {error}"))?;
     if task_receipt.task_id.trim().is_empty() {
         return Err("sdk-direct live s04 create-task returned empty task_id".to_owned());
     }
 
+    let fund_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s04-fund").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
     let fund_payload = format!(
         "{{\"task_id\":\"{}\",\"amount\":{}}}",
         task_receipt.task_id, DEFAULT_S04_ESCROW_AMOUNT
     );
-    let escrow_receipt = handle
+    let escrow_receipt = fund_handle
         .fund_escrow(fund_payload.as_str())
         .map_err(|error| format!("sdk-direct live s04 fund-escrow failed: {error}"))?;
     if escrow_receipt.escrow_id.trim().is_empty() {
         return Err("sdk-direct live s04 fund-escrow returned empty escrow_id".to_owned());
     }
 
-    let accept_receipt = handle
+    let accept_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s04-accept").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
+    let accept_receipt = accept_handle
         .accept_task(task_receipt.task_id.as_str())
         .map_err(|error| format!("sdk-direct live s04 accept-task failed: {error}"))?;
     if accept_receipt.state.trim().is_empty() {
         return Err("sdk-direct live s04 accept-task returned empty state".to_owned());
     }
 
-    let complete_receipt = handle
+    let complete_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s04-complete").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
+    let complete_receipt = complete_handle
         .complete_task(task_receipt.task_id.as_str())
         .map_err(|error| format!("sdk-direct live s04 complete-task failed: {error}"))?;
     if complete_receipt.state.trim().is_empty() {
         return Err("sdk-direct live s04 complete-task returned empty state".to_owned());
     }
 
-    let release_receipt = handle
+    let release_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s04-release").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s04 connect failed: {error}"))?;
+    let release_receipt = release_handle
         .release_escrow(escrow_receipt.escrow_id.as_str())
         .map_err(|error| format!("sdk-direct live s04 release-escrow failed: {error}"))?;
     if release_receipt.state.trim().is_empty() {

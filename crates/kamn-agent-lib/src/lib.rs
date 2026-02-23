@@ -105,54 +105,66 @@ impl KamnAgentHandle {
     /// Sends a message through the service API.
     pub fn send_message(&self, payload: &str) -> Result<ServiceMessageReceipt, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, payload)?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("messages:write"),
+        )?;
         self.service_client.send_message(payload, &auth)
     }
 
     /// Queries a message status by identifier.
     pub fn query_message(&self, message_id: &str) -> Result<ServiceMessageStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "")?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "",
+            Some("messages:read"),
+        )?;
         self.service_client.get_message(message_id, &auth)
     }
 
     /// Creates a channel through the service API.
     pub fn create_channel(&self, payload: &str) -> Result<ServiceChannelReceipt, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, payload)?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("channels:write"),
+        )?;
         self.service_client.create_channel(payload, &auth)
     }
 
     /// Creates a task through the service API.
     pub fn create_task(&self, payload: &str) -> Result<ServiceTaskReceipt, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, payload)?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("tasks:write"),
+        )?;
         self.service_client.create_task(payload, &auth)
     }
 
     /// Queries task status by identifier.
     pub fn query_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "")?;
+        let auth =
+            self.service_client
+                .build_auth(self.identity.did(), nonce, "", Some("tasks:read"))?;
         self.service_client.get_task(task_id, &auth)
     }
 
     /// Queries agent profile by DID.
     pub fn query_agent_profile(&self, did: &str) -> Result<ServiceAgentProfile, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "")?;
+        let auth =
+            self.service_client
+                .build_auth(self.identity.did(), nonce, "", Some("agents:read"))?;
         self.service_client.get_agent_profile(did, &auth)
     }
 
@@ -173,45 +185,60 @@ impl KamnAgentHandle {
     /// Accepts one task through the service API.
     pub fn accept_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "{}")?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("tasks:write"),
+        )?;
         self.service_client.accept_task(task_id, &auth)
     }
 
     /// Completes one task through the service API.
     pub fn complete_task(&self, task_id: &str) -> Result<ServiceTaskStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "{}")?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("tasks:write"),
+        )?;
         self.service_client.complete_task(task_id, &auth)
     }
 
     /// Funds escrow through the service API.
     pub fn fund_escrow(&self, payload: &str) -> Result<ServiceEscrowStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, payload)?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            payload,
+            Some("escrow:write"),
+        )?;
         self.service_client.fund_escrow(payload, &auth)
     }
 
     /// Releases one escrow through the service API.
     pub fn release_escrow(&self, escrow_id: &str) -> Result<ServiceEscrowStatus, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "{}")?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "{}",
+            Some("escrow:write"),
+        )?;
         self.service_client.release_escrow(escrow_id, &auth)
     }
 
     /// Lists channel messages through the service API.
     pub fn list_messages(&self, channel_id: &str) -> Result<ServiceChannelMessages, AgentLibError> {
         let nonce = self.next_nonce()?;
-        let auth = self
-            .service_client
-            .build_auth(self.identity.did(), nonce, "")?;
+        let auth = self.service_client.build_auth(
+            self.identity.did(),
+            nonce,
+            "",
+            Some("channels:read"),
+        )?;
         self.service_client.list_channel_messages(channel_id, &auth)
     }
 

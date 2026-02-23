@@ -7,6 +7,7 @@ const REQUEST_TIMEOUT_SECONDS: u64 = 2;
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const SERVICE_WS_ROUTE: &str = "/v1/events/ws";
 const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
@@ -124,11 +125,22 @@ pub struct ServiceRequestAuth {
     sender_did: AgentDid,
     nonce: u64,
     signature: String,
+    scope: Option<String>,
 }
 
 impl ServiceRequestAuth {
     /// Builds a validated request auth envelope.
     pub fn new(sender_did: AgentDid, nonce: u64, signature: String) -> Result<Self, SdkError> {
+        Self::new_with_scope(sender_did, nonce, signature, None)
+    }
+
+    /// Builds a validated request auth envelope with optional auth scope marker.
+    pub fn new_with_scope(
+        sender_did: AgentDid,
+        nonce: u64,
+        signature: String,
+        scope: Option<&str>,
+    ) -> Result<Self, SdkError> {
         if nonce == 0 {
             return Err(SdkError::InvalidInput {
                 field: "request_auth.nonce",
@@ -141,10 +153,24 @@ impl ServiceRequestAuth {
                 reason: "must not be empty",
             });
         }
+        let scope = match scope {
+            Some(scope) => {
+                let normalized = scope.trim();
+                if normalized.is_empty() {
+                    return Err(SdkError::InvalidInput {
+                        field: "request_auth.scope",
+                        reason: "must not be empty when set",
+                    });
+                }
+                Some(normalized.to_owned())
+            }
+            None => None,
+        };
         Ok(Self {
             sender_did,
             nonce,
             signature,
+            scope,
         })
     }
 
@@ -158,6 +184,10 @@ impl ServiceRequestAuth {
 
     fn signature(&self) -> &str {
         self.signature.as_str()
+    }
+
+    fn scope(&self) -> Option<&str> {
+        self.scope.as_deref()
     }
 }
 
@@ -533,14 +563,19 @@ impl ServiceApiClient {
         let mut stream = self.endpoint.connect_stream()?;
         let route = self.endpoint.route_path(SERVICE_WS_ROUTE);
         let authority = format!("{}:{}", self.endpoint.host, self.endpoint.port);
+        let scope_header = auth
+            .scope()
+            .map(|scope| format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n"))
+            .unwrap_or_default();
         let request = format!(
-            "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{}: {}\r\n{}: {}\r\n{}: {}\r\nContent-Length: 0\r\n\r\n",
+            "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{}: {}\r\n{}: {}\r\n{}: {}\r\n{}Content-Length: 0\r\n\r\n",
             REQUEST_AUTH_SENDER_DID_HEADER,
             auth.sender_did().as_str(),
             REQUEST_AUTH_NONCE_HEADER,
             auth.nonce(),
             REQUEST_AUTH_SIGNATURE_HEADER,
             auth.signature(),
+            scope_header,
         );
         stream
             .write_all(request.as_bytes())
@@ -622,6 +657,9 @@ impl ServiceApiClient {
             auth_headers.push_str(
                 format!("{REQUEST_AUTH_SIGNATURE_HEADER}: {}\r\n", auth.signature()).as_str(),
             );
+            if let Some(scope) = auth.scope() {
+                auth_headers.push_str(format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n").as_str());
+            }
         }
         let request = format!(
             "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\n{auth_headers}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
