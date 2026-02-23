@@ -250,8 +250,37 @@ sock.close()
 PY
 )"
 api_addr="127.0.0.1:${api_port}"
+auth_private_key_hex="${KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX:-1111111111111111111111111111111111111111111111111111111111111111}"
+auth_public_key_hex="$(
+  python3 - "$auth_private_key_hex" <<'PY'
+import sys
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
+order = int(
+    "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
+)
+private_key_hex = sys.argv[1].strip()
+try:
+    private_scalar = int(private_key_hex, 16)
+except ValueError as exc:
+    raise SystemExit("invalid service auth private key hex") from exc
+if private_scalar <= 0 or private_scalar >= order:
+    raise SystemExit("service auth private key scalar must be within secp256k1 range")
+private_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+public_key_hex = private_key.public_key().public_bytes(
+    serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint
+).hex()
+print(public_key_hex)
+PY
+)"
+if [ -z "$auth_public_key_hex" ]; then
+  echo "failed to derive service api auth public key hex" >&2
+  exit 1
+fi
 
 api_stdout="$TMP_DIR/service-api-axum-ingress-live.out"
+KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
@@ -285,24 +314,79 @@ auth_sender_did="kamn:did:agent:axum-ingress-validator"
 auth_state_hash="service-api:kamn-devnet:v0.1.0"
 
 probe_report="$TMP_DIR/service-api-axum-ingress-probes.json"
-python3 - "$api_addr" "$probe_report" "$auth_sender_did" "$auth_state_hash" <<'PY'
+python3 \
+  - "$api_addr" "$probe_report" "$auth_sender_did" "$auth_state_hash" "$auth_private_key_hex" <<'PY'
 import concurrent.futures
+import hashlib
 import http.client
 import json
 import socket
 import sys
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 api_addr = sys.argv[1]
 probe_report = sys.argv[2]
 sender_did = sys.argv[3]
 state_hash = sys.argv[4]
+private_key_hex = sys.argv[5]
 host, port_text = api_addr.rsplit(":", 1)
 port = int(port_text)
+secp256k1_order = int(
+    "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
+)
+
+try:
+    private_scalar = int(private_key_hex, 16)
+except ValueError as exc:
+    raise SystemExit("service api axum ingress probe private key hex is invalid") from exc
+if private_scalar <= 0 or private_scalar >= secp256k1_order:
+    raise SystemExit("service api axum ingress probe private key scalar is invalid")
+signing_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+
+
+def signing_payload(nonce: int, payload: str, sender: str) -> str:
+    return (
+        f"sender_len={len(sender)}\n"
+        f"sender={sender}\n"
+        f"nonce={nonce}\n"
+        f"state_hash_len={len(state_hash)}\n"
+        f"state_hash={state_hash}\n"
+        f"payload_len={len(payload)}\n"
+        f"payload={payload}"
+    )
 
 
 def signature(nonce: int, payload: str, sender: str | None = None) -> str:
     sender_value = sender_did if sender is None else sender
-    return f"sig:ed25519:baseline-v1:{sender_value}:{nonce}:{state_hash}:{len(payload)}"
+    message = signing_payload(nonce, payload, sender_value).encode("utf-8")
+    der_signature = signing_key.sign(message, ec.ECDSA(hashes.SHA256()))
+    r_value, s_value = decode_dss_signature(der_signature)
+    if s_value > secp256k1_order // 2:
+        s_value = secp256k1_order - s_value
+    message_hash = int.from_bytes(hashlib.sha256(message).digest(), byteorder="big")
+    nonce_scalar = (
+        (message_hash + (r_value * private_scalar)) * pow(s_value, -1, secp256k1_order)
+    ) % secp256k1_order
+    if nonce_scalar == 0:
+        raise SystemExit("service api axum ingress probe nonce scalar resolved to zero")
+    ephemeral_point = (
+        ec.derive_private_key(nonce_scalar, ec.SECP256K1())
+        .public_key()
+        .public_numbers()
+    )
+    if ephemeral_point.x == r_value:
+        recovery_prefix = 0
+    elif ephemeral_point.x - r_value == secp256k1_order:
+        recovery_prefix = 1
+    else:
+        raise SystemExit(
+            "service api axum ingress probe failed to map signature to recovery-id domain"
+        )
+    recovery_id = (recovery_prefix << 1) | (ephemeral_point.y & 1)
+    signature_hex = f"{r_value:064x}{s_value:064x}"
+    return f"sig:secp256k1:baseline-v2:{recovery_id}:{signature_hex}"
 
 
 def request(method: str, path: str, body: str, headers: dict[str, str]) -> tuple[int, str]:
@@ -513,9 +597,7 @@ def run_concurrency_probe() -> None:
                 "content-type": "application/json",
                 "X-KAMN-Sender-DID": sender,
                 "X-KAMN-Request-Nonce": str(nonce),
-                "X-KAMN-Request-Signature": (
-                    f"sig:ed25519:baseline-v1:{sender}:{nonce}:{state_hash}:{len(payload)}"
-                ),
+                "X-KAMN-Request-Signature": signature(nonce, payload, sender),
                 "X-KAMN-Authz-Scope": "messages:write",
             },
         )
