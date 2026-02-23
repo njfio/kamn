@@ -35,6 +35,11 @@ const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
 const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-sdk-s13";
 const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
     r#"{"source_message_id":"sdk-direct-live-s13","target_network":"testnet"}"#;
+const DEFAULT_S14_AGENT_NAME: &str = "kamn-e2e-sdk-s14";
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A: &str = r#"{"message":"sdk-direct-live-s14-batch-a"}"#;
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B: &str = r#"{"message":"sdk-direct-live-s14-batch-b"}"#;
+const DEFAULT_S14_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S14_FINALITY: &str = "final";
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -43,7 +48,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01 through S-13.
+/// SDK-direct driver with optional live execution for S-01 through S-14.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -60,6 +65,7 @@ pub struct SdkDirectDriver {
     signer_rotation_probe: Arc<LiveProbe>,
     retention_deletion_probe: Arc<LiveProbe>,
     bridge_forwarding_probe: Arc<LiveProbe>,
+    batch_merkle_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -96,6 +102,7 @@ impl SdkDirectDriver {
                 run_live_s11_signer_rotation_probe,
                 run_live_s12_retention_deletion_probe,
                 run_live_s13_bridge_forwarding_probe,
+                run_live_s14_batch_merkle_probe,
             ),
         )
     }
@@ -120,19 +127,20 @@ impl SdkDirectDriver {
             topology_coherence_probe: live_probe.clone(),
             signer_rotation_probe: live_probe.clone(),
             retention_deletion_probe: live_probe.clone(),
-            bridge_forwarding_probe: live_probe,
+            bridge_forwarding_probe: live_probe.clone(),
+            batch_merkle_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_crash_failover_topology_signer_retention_and_bridge_probes: (
+        proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes: (
             K,
             L,
             M,
@@ -141,6 +149,7 @@ impl SdkDirectDriver {
             P,
             Q,
             R,
+            S,
         ),
     ) -> Self
     where
@@ -157,6 +166,7 @@ impl SdkDirectDriver {
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
         R: Fn() -> Result<(), String> + Send + Sync + 'static,
+        S: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_probe,
@@ -167,7 +177,8 @@ impl SdkDirectDriver {
             signer_rotation_probe,
             retention_deletion_probe,
             bridge_forwarding_probe,
-        ) = proof_replay_crash_failover_topology_signer_retention_and_bridge_probes;
+            batch_merkle_probe,
+        ) = proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -183,6 +194,7 @@ impl SdkDirectDriver {
             signer_rotation_probe: Arc::new(signer_rotation_probe),
             retention_deletion_probe: Arc::new(retention_deletion_probe),
             bridge_forwarding_probe: Arc::new(bridge_forwarding_probe),
+            batch_merkle_probe: Arc::new(batch_merkle_probe),
         }
     }
 }
@@ -224,6 +236,7 @@ impl SdkDirectDriver {
             "S-11" => Some((self.signer_rotation_probe)()),
             "S-12" => Some((self.retention_deletion_probe)()),
             "S-13" => Some((self.bridge_forwarding_probe)()),
+            "S-14" => Some((self.batch_merkle_probe)()),
             _ => None,
         }
     }
@@ -1334,6 +1347,139 @@ fn run_live_s13_bridge_forwarding_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S14_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
+    let batch_message_payload_a = std::env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A.to_owned());
+    let batch_message_payload_b = std::env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B.to_owned());
+    let block_height = std::env::var("KAMN_E2E_S14_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("sdk-direct live s14 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S14_BLOCK_HEIGHT);
+    let finality =
+        std::env::var("KAMN_E2E_S14_FINALITY").unwrap_or_else(|_| DEFAULT_S14_FINALITY.to_owned());
+
+    let batch_sender_a_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-batch-a").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s14 batch-a connect failed: {error}"))?;
+    let batch_a_receipt = batch_sender_a_handle
+        .send_message(batch_message_payload_a.as_str())
+        .map_err(|error| format!("sdk-direct live s14 batch-a send-message failed: {error}"))?;
+    validate_s08_message_receipt_fields(
+        batch_a_receipt.message_id.as_str(),
+        batch_a_receipt.status.as_str(),
+        "sdk-direct live s14 batch-a send-message",
+    )?;
+
+    let batch_sender_b_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-batch-b").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s14 batch-b connect failed: {error}"))?;
+    let batch_b_receipt = batch_sender_b_handle
+        .send_message(batch_message_payload_b.as_str())
+        .map_err(|error| format!("sdk-direct live s14 batch-b send-message failed: {error}"))?;
+    validate_s08_message_receipt_fields(
+        batch_b_receipt.message_id.as_str(),
+        batch_b_receipt.status.as_str(),
+        "sdk-direct live s14 batch-b send-message",
+    )?;
+    validate_s08_distinct_message_ids(
+        batch_a_receipt.message_id.as_str(),
+        batch_b_receipt.message_id.as_str(),
+        "sdk-direct live s14 batch-b send-message",
+    )?;
+
+    let query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s14 query connect failed: {error}"))?;
+    let batch_a_query = query_handle
+        .query_message(batch_a_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s14 batch-a query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        batch_a_receipt.message_id.as_str(),
+        batch_a_query.message_id.as_str(),
+        batch_a_query.status.as_str(),
+        "sdk-direct live s14 batch-a query-message",
+    )?;
+
+    let batch_b_query = query_handle
+        .query_message(batch_b_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s14 batch-b query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        batch_b_receipt.message_id.as_str(),
+        batch_b_query.message_id.as_str(),
+        batch_b_query.status.as_str(),
+        "sdk-direct live s14 batch-b query-message",
+    )?;
+
+    let batch_root = std::env::var("KAMN_E2E_S14_BATCH_ROOT").unwrap_or_else(|_| {
+        format!(
+            "sha256:s14:{}:{}",
+            batch_a_receipt.message_id, batch_b_receipt.message_id
+        )
+    });
+    if batch_root.trim().is_empty() {
+        return Err("sdk-direct live s14 batch-root marker must not be empty".to_owned());
+    }
+
+    let proof_receipt = KolmeProofReceipt {
+        tx_hash: batch_root,
+        block_height,
+        finality,
+    };
+    let proof_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-proof").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s14 proof connect failed: {error}"))?;
+
+    let batch_a_verification = proof_handle
+        .verify_proof(batch_a_receipt.message_id.as_str(), &proof_receipt)
+        .map_err(|error| format!("sdk-direct live s14 batch-a verify-proof failed: {error}"))?;
+    validate_s14_proof_response(
+        batch_a_receipt.message_id.as_str(),
+        batch_a_verification.message_id.as_str(),
+        batch_a_verification.block_height,
+        batch_a_verification.finality.as_str(),
+        batch_a_verification.verified,
+        "sdk-direct live s14 batch-a verify-proof",
+    )?;
+
+    let batch_b_verification = proof_handle
+        .verify_proof(batch_b_receipt.message_id.as_str(), &proof_receipt)
+        .map_err(|error| format!("sdk-direct live s14 batch-b verify-proof failed: {error}"))?;
+    validate_s14_proof_response(
+        batch_b_receipt.message_id.as_str(),
+        batch_b_verification.message_id.as_str(),
+        batch_b_verification.block_height,
+        batch_b_verification.finality.as_str(),
+        batch_b_verification.verified,
+        "sdk-direct live s14 batch-b verify-proof",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -1430,6 +1576,33 @@ fn validate_s13_bridge_field_coherence(
     Ok(())
 }
 
+fn validate_s14_proof_response(
+    expected_message_id: &str,
+    observed_message_id: &str,
+    observed_block_height: u64,
+    observed_finality: &str,
+    observed_verified: bool,
+    step: &str,
+) -> Result<(), String> {
+    if observed_message_id != expected_message_id {
+        return Err(format!(
+            "{step} returned mismatched message_id: expected={expected_message_id}, got={observed_message_id}"
+        ));
+    }
+    if !observed_verified {
+        return Err(format!("{step} returned verified=false"));
+    }
+    if observed_finality.trim() != "FINAL" {
+        return Err(format!(
+            "{step} returned non-final finality: {observed_finality}"
+        ));
+    }
+    if observed_block_height == 0 {
+        return Err(format!("{step} returned block_height=0"));
+    }
+    Ok(())
+}
+
 fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
     if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
         return Err(format!(
@@ -1456,12 +1629,13 @@ mod tests {
         run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
         run_live_s10_topology_coherence_probe, run_live_s11_signer_rotation_probe,
         run_live_s12_retention_deletion_probe, run_live_s13_bridge_forwarding_probe,
-        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
-        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
-        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, validate_s12_content_field_coherence,
-        validate_s12_content_id_match, validate_s13_bridge_field_coherence,
-        validate_s13_bridge_id_match, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s14_batch_merkle_probe, validate_live_s03_list_messages_response,
+        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
+        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        validate_s12_content_field_coherence, validate_s12_content_id_match,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+        validate_s14_proof_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1826,6 +2000,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s14_batch_merkle_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error =
+                    run_live_s14_batch_merkle_probe().expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s12_content_id_match_rejects_mismatch() {
         let error = validate_s12_content_id_match("content-a", "content-b", "test step")
             .expect_err("mismatched content ids should fail");
@@ -1923,6 +2115,68 @@ mod tests {
         assert!(
             error.contains("duplicate message_id"),
             "error should mention duplicate message_id: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_accepts_valid_receipt() {
+        validate_s14_proof_response("message-1", "message-1", 42, "FINAL", true, "test helper")
+            .expect("valid S-14 proof response should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_mismatched_message_id() {
+        let error =
+            validate_s14_proof_response("message-1", "message-2", 42, "FINAL", true, "test helper")
+                .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_unverified_receipt() {
+        let error = validate_s14_proof_response(
+            "message-1",
+            "message-1",
+            42,
+            "FINAL",
+            false,
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_proof_response(
+            "message-1",
+            "message-1",
+            42,
+            "PENDING",
+            true,
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_zero_block_height() {
+        let error =
+            validate_s14_proof_response("message-1", "message-1", 0, "FINAL", true, "test helper")
+                .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
         );
     }
 
@@ -2107,6 +2361,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-13 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c14_live_s14_driver_path_fails_closed_when_batch_merkle_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s14 batch-merkle probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-14");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-14 should fail closed on probe error",
         );
     }
 }

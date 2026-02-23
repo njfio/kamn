@@ -40,6 +40,11 @@ const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
 const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-cli-s13";
 const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
     r#"{"source_message_id":"cli-scripted-live-s13","target_network":"testnet"}"#;
+const DEFAULT_S14_AGENT_NAME: &str = "kamn-e2e-cli-s14";
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A: &str = r#"{"message":"cli-scripted-live-s14-batch-a"}"#;
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B: &str = r#"{"message":"cli-scripted-live-s14-batch-b"}"#;
+const DEFAULT_S14_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S14_FINALITY: &str = "final";
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -48,7 +53,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01 through S-13.
+/// CLI-scripted driver with optional live execution for S-01 through S-14.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -65,6 +70,7 @@ pub struct CliScriptedDriver {
     signer_rotation_runner: Arc<LiveCliRunner>,
     retention_deletion_runner: Arc<LiveCliRunner>,
     bridge_forwarding_runner: Arc<LiveCliRunner>,
+    batch_merkle_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -101,6 +107,7 @@ impl CliScriptedDriver {
                 run_live_s11_cli_signer_rotation_probe,
                 run_live_s12_cli_retention_deletion_probe,
                 run_live_s13_cli_bridge_forwarding_probe,
+                run_live_s14_cli_batch_merkle_probe,
             ),
         )
     }
@@ -125,19 +132,20 @@ impl CliScriptedDriver {
             topology_coherence_runner: live_runner.clone(),
             signer_rotation_runner: live_runner.clone(),
             retention_deletion_runner: live_runner.clone(),
-            bridge_forwarding_runner: live_runner,
+            bridge_forwarding_runner: live_runner.clone(),
+            batch_merkle_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_failover_topology_signer_retention_and_bridge_runners: (
+        proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_runners: (
             K,
             L,
             M,
@@ -146,6 +154,7 @@ impl CliScriptedDriver {
             P,
             Q,
             R,
+            S,
         ),
     ) -> Self
     where
@@ -162,6 +171,7 @@ impl CliScriptedDriver {
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
         R: Fn() -> Result<(), String> + Send + Sync + 'static,
+        S: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
@@ -172,7 +182,8 @@ impl CliScriptedDriver {
             signer_rotation_runner,
             retention_deletion_runner,
             bridge_forwarding_runner,
-        ) = proof_replay_crash_failover_topology_signer_retention_and_bridge_runners;
+            batch_merkle_runner,
+        ) = proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -188,6 +199,7 @@ impl CliScriptedDriver {
             signer_rotation_runner: Arc::new(signer_rotation_runner),
             retention_deletion_runner: Arc::new(retention_deletion_runner),
             bridge_forwarding_runner: Arc::new(bridge_forwarding_runner),
+            batch_merkle_runner: Arc::new(batch_merkle_runner),
         }
     }
 }
@@ -229,6 +241,7 @@ impl CliScriptedDriver {
             "S-11" => Some((self.signer_rotation_runner)()),
             "S-12" => Some((self.retention_deletion_runner)()),
             "S-13" => Some((self.bridge_forwarding_runner)()),
+            "S-14" => Some((self.batch_merkle_runner)()),
             _ => None,
         }
     }
@@ -1685,6 +1698,158 @@ fn run_live_s13_cli_bridge_forwarding_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s14_cli_batch_merkle_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S14_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
+    let batch_message_payload_a = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A.to_owned());
+    let batch_message_payload_b = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B.to_owned());
+    let block_height = env::var("KAMN_E2E_S14_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("cli live s14 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S14_BLOCK_HEIGHT);
+    let finality =
+        env::var("KAMN_E2E_S14_FINALITY").unwrap_or_else(|_| DEFAULT_S14_FINALITY.to_owned());
+    let block_height_value = block_height.to_string();
+
+    let batch_a_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_message_payload_a.as_str(),
+        ],
+        "cli live s14 batch-a send-message",
+        format!("{base_agent_name}-batch-a").as_str(),
+    )?;
+    let batch_a_message_id = validate_s08_message_receipt_fields(
+        batch_a_send_output.as_str(),
+        "cli live s14 batch-a send-message",
+    )?;
+
+    let batch_b_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_message_payload_b.as_str(),
+        ],
+        "cli live s14 batch-b send-message",
+        format!("{base_agent_name}-batch-b").as_str(),
+    )?;
+    let batch_b_message_id = validate_s08_message_receipt_fields(
+        batch_b_send_output.as_str(),
+        "cli live s14 batch-b send-message",
+    )?;
+    if batch_b_message_id == batch_a_message_id {
+        return Err("cli live s14 batch-b send-message returned duplicate message_id".to_owned());
+    }
+
+    let batch_a_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_a_message_id.as_str(),
+        ],
+        "cli live s14 batch-a query-message",
+        format!("{base_agent_name}-query-a").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        batch_a_query_output.as_str(),
+        batch_a_message_id.as_str(),
+        "cli live s14 batch-a query-message",
+    )?;
+
+    let batch_b_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_b_message_id.as_str(),
+        ],
+        "cli live s14 batch-b query-message",
+        format!("{base_agent_name}-query-b").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        batch_b_query_output.as_str(),
+        batch_b_message_id.as_str(),
+        "cli live s14 batch-b query-message",
+    )?;
+
+    let batch_root = env::var("KAMN_E2E_S14_BATCH_ROOT")
+        .unwrap_or_else(|_| format!("sha256:s14:{}:{}", batch_a_message_id, batch_b_message_id));
+    if batch_root.trim().is_empty() {
+        return Err("cli live s14 batch-root marker must not be empty".to_owned());
+    }
+
+    let batch_a_verify_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "verify-proof",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_a_message_id.as_str(),
+            batch_root.as_str(),
+            block_height_value.as_str(),
+            finality.as_str(),
+        ],
+        "cli live s14 batch-a verify-proof",
+        format!("{base_agent_name}-proof-a").as_str(),
+    )?;
+    validate_s14_cli_verify_proof_response(
+        batch_a_verify_output.as_str(),
+        batch_a_message_id.as_str(),
+        "cli live s14 batch-a verify-proof",
+    )?;
+
+    let batch_b_verify_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "verify-proof",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            batch_b_message_id.as_str(),
+            batch_root.as_str(),
+            block_height_value.as_str(),
+            finality.as_str(),
+        ],
+        "cli live s14 batch-b verify-proof",
+        format!("{base_agent_name}-proof-b").as_str(),
+    )?;
+    validate_s14_cli_verify_proof_response(
+        batch_b_verify_output.as_str(),
+        batch_b_message_id.as_str(),
+        "cli live s14 batch-b verify-proof",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1771,6 +1936,45 @@ fn validate_s13_bridge_field_coherence(
             "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
         ));
     }
+    Ok(())
+}
+
+fn validate_s14_cli_verify_proof_response(
+    output: &str,
+    expected_message_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    let observed_message_id = parse_text_output_field(output, "message_id")
+        .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?;
+    if observed_message_id != expected_message_id {
+        return Err(format!(
+            "{step} returned mismatched message_id: expected={expected_message_id}, got={observed_message_id}"
+        ));
+    }
+
+    let observed_verified = parse_text_output_field(output, "verified")
+        .ok_or_else(|| format!("{step} response missing verified field: {output}"))?;
+    if observed_verified != "true" {
+        return Err(format!("{step} returned verified={observed_verified}"));
+    }
+
+    let observed_finality = parse_text_output_field(output, "finality")
+        .ok_or_else(|| format!("{step} response missing finality field: {output}"))?;
+    if observed_finality != "FINAL" {
+        return Err(format!(
+            "{step} returned non-final finality: {observed_finality}"
+        ));
+    }
+
+    let observed_block_height = parse_text_output_field(output, "block_height")
+        .ok_or_else(|| format!("{step} response missing block_height field: {output}"))?;
+    let parsed_block_height = observed_block_height
+        .parse::<u64>()
+        .map_err(|_| format!("{step} returned invalid block_height: {output}"))?;
+    if parsed_block_height == 0 {
+        return Err(format!("{step} returned block_height=0"));
+    }
+
     Ok(())
 }
 
@@ -1898,10 +2102,11 @@ mod tests {
         run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
         run_live_s10_cli_topology_coherence_probe, run_live_s11_cli_signer_rotation_probe,
         run_live_s12_cli_retention_deletion_probe, run_live_s13_cli_bridge_forwarding_probe,
-        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response,
-        validate_s12_content_field_coherence, validate_s12_content_id_match,
-        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, CliScriptedDriver,
+        run_live_s14_cli_batch_merkle_probe, validate_live_s05_release_escrow_response,
+        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, validate_s12_content_field_coherence,
+        validate_s12_content_id_match, validate_s13_bridge_field_coherence,
+        validate_s13_bridge_id_match, validate_s14_cli_verify_proof_response, CliScriptedDriver,
         CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
@@ -2503,6 +2708,144 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s14_cli_batch_merkle_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error =
+                    run_live_s14_cli_batch_merkle_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s14_cli_batch_merkle_probe_accepts_distinct_batch_ids_and_final_proofs() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s14-success");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+agent_name = os.environ.get("KAMN_AGENT_NAME", "")
+
+if command == "send-message":
+    if agent_name.endswith("-batch-a"):
+        sys.stdout.write("message_id=message-batch-a status=sent")
+    elif agent_name.endswith("-batch-b"):
+        sys.stdout.write("message_id=message-batch-b status=sent")
+    else:
+        sys.stdout.write("message_id=message-fallback status=sent")
+elif command == "query-message":
+    message_id = sys.argv[-1] if len(sys.argv) > 0 else "message-fallback"
+    sys.stdout.write(f"message_id={message_id} status=sent")
+elif command == "verify-proof":
+    message_id = sys.argv[-4] if len(sys.argv) >= 4 else "message-fallback"
+    block_height = sys.argv[-2] if len(sys.argv) >= 2 else "1"
+    sys.stdout.write(
+        f"message_id={message_id} verified=true finality=FINAL block_height={block_height}"
+    )
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_E2E_S14_AGENT_NAME", Some("kamn-e2e-cli-s14")),
+            ],
+            || {
+                run_live_s14_cli_batch_merkle_probe()
+                    .expect("distinct batch IDs with final proofs should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_accepts_valid_payload() {
+        validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect("valid S-14 proof payload should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_mismatched_message_id() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-2 verified=true finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_unverified_payload() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=false finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=PENDING block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_zero_block_height() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=FINAL block_height=0",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
+        );
+    }
+
+    #[test]
     fn unit_validate_s12_content_id_match_rejects_mismatch() {
         let error = validate_s12_content_id_match("content-a", "content-b", "test step")
             .expect_err("mismatched content ids should fail");
@@ -2901,6 +3244,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-13 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c14_live_s14_driver_path_fails_closed_when_batch_merkle_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s14 batch-merkle probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-14");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-14 should fail closed on probe error",
         );
     }
 }

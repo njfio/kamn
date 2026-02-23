@@ -40,6 +40,11 @@ const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
 const DEFAULT_S13_AGENT_NAME: &str = "kamn-e2e-mcp-s13";
 const DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD: &str =
     r#"{"source_message_id":"mcp-agent-live-s13","target_network":"testnet"}"#;
+const DEFAULT_S14_AGENT_NAME: &str = "kamn-e2e-mcp-s14";
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A: &str = r#"{"message":"mcp-agent-live-s14-batch-a"}"#;
+const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B: &str = r#"{"message":"mcp-agent-live-s14-batch-b"}"#;
+const DEFAULT_S14_BLOCK_HEIGHT: u64 = 1;
+const DEFAULT_S14_FINALITY: &str = "final";
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -66,6 +71,7 @@ pub struct McpAgentDriver {
     signer_rotation_probe: Arc<LiveMcpProbe>,
     retention_deletion_probe: Arc<LiveMcpProbe>,
     bridge_forwarding_probe: Arc<LiveMcpProbe>,
+    batch_merkle_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -103,6 +109,7 @@ impl McpAgentDriver {
                 run_live_s11_mcp_signer_rotation_probe,
                 run_live_s12_mcp_retention_deletion_probe,
                 run_live_s13_mcp_bridge_forwarding_probe,
+                run_live_s14_mcp_batch_merkle_probe,
             ),
         )
     }
@@ -135,19 +142,20 @@ impl McpAgentDriver {
             topology_coherence_probe: live_probe.clone(),
             signer_rotation_probe: live_probe.clone(),
             retention_deletion_probe: live_probe.clone(),
-            bridge_forwarding_probe: live_probe,
+            bridge_forwarding_probe: live_probe.clone(),
+            batch_merkle_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_failover_topology_signer_retention_and_bridge_probes: (
+        escrow_proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes: (
             J,
             K,
             L,
@@ -157,6 +165,7 @@ impl McpAgentDriver {
             P,
             Q,
             R,
+            S,
         ),
     ) -> Result<Self, String>
     where
@@ -173,6 +182,7 @@ impl McpAgentDriver {
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
         R: Fn() -> Result<(), String> + Send + Sync + 'static,
+        S: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -187,7 +197,8 @@ impl McpAgentDriver {
             signer_rotation_probe,
             retention_deletion_probe,
             bridge_forwarding_probe,
-        ) = escrow_proof_replay_crash_failover_topology_signer_retention_and_bridge_probes;
+            batch_merkle_probe,
+        ) = escrow_proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -204,6 +215,7 @@ impl McpAgentDriver {
             signer_rotation_probe: Arc::new(signer_rotation_probe),
             retention_deletion_probe: Arc::new(retention_deletion_probe),
             bridge_forwarding_probe: Arc::new(bridge_forwarding_probe),
+            batch_merkle_probe: Arc::new(batch_merkle_probe),
         })
     }
 }
@@ -245,6 +257,7 @@ impl McpAgentDriver {
             "S-11" => Some((self.signer_rotation_probe)()),
             "S-12" => Some((self.retention_deletion_probe)()),
             "S-13" => Some((self.bridge_forwarding_probe)()),
+            "S-14" => Some((self.batch_merkle_probe)()),
             _ => None,
         }
     }
@@ -1789,6 +1802,192 @@ fn run_live_s13_mcp_bridge_forwarding_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s14_mcp_batch_merkle_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S14_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
+    let batch_message_payload_a = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A.to_owned());
+    let batch_message_payload_b = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
+        .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B.to_owned());
+    let block_height = env::var("KAMN_E2E_S14_BLOCK_HEIGHT")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("mcp live s14 invalid block height env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S14_BLOCK_HEIGHT);
+    let finality =
+        env::var("KAMN_E2E_S14_FINALITY").unwrap_or_else(|_| DEFAULT_S14_FINALITY.to_owned());
+
+    let batch_a_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(batch_message_payload_a.as_str())
+    );
+    let batch_a_send_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-batch-a").as_str(),
+        key_file.as_str(),
+        "probe-send-message-batch-a",
+        "send_message",
+        batch_a_send_arguments.as_str(),
+    )?;
+    let batch_a_message_id = validate_s08_mcp_message_receipt_fields(
+        batch_a_send_response.as_str(),
+        "mcp live s14 batch-a send_message",
+    )?;
+
+    let batch_b_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(batch_message_payload_b.as_str())
+    );
+    let batch_b_send_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-batch-b").as_str(),
+        key_file.as_str(),
+        "probe-send-message-batch-b",
+        "send_message",
+        batch_b_send_arguments.as_str(),
+    )?;
+    let batch_b_message_id = validate_s08_mcp_message_receipt_fields(
+        batch_b_send_response.as_str(),
+        "mcp live s14 batch-b send_message",
+    )?;
+    if batch_b_message_id == batch_a_message_id {
+        return Err("mcp live s14 batch-b send_message returned duplicate message_id".to_owned());
+    }
+
+    let batch_a_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(batch_a_message_id.as_str())
+    );
+    let batch_a_query_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-query-a").as_str(),
+        key_file.as_str(),
+        "probe-query-message-batch-a",
+        "query_message",
+        batch_a_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        batch_a_query_response.as_str(),
+        batch_a_message_id.as_str(),
+        "mcp live s14 batch-a query_message",
+    )?;
+
+    let batch_b_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(batch_b_message_id.as_str())
+    );
+    let batch_b_query_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-query-b").as_str(),
+        key_file.as_str(),
+        "probe-query-message-batch-b",
+        "query_message",
+        batch_b_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        batch_b_query_response.as_str(),
+        batch_b_message_id.as_str(),
+        "mcp live s14 batch-b query_message",
+    )?;
+
+    let batch_root = env::var("KAMN_E2E_S14_BATCH_ROOT")
+        .unwrap_or_else(|_| format!("sha256:s14:{}:{}", batch_a_message_id, batch_b_message_id));
+    if batch_root.trim().is_empty() {
+        return Err("mcp live s14 batch-root marker must not be empty".to_owned());
+    }
+
+    let batch_a_verify_arguments = format!(
+        "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
+        escape_json_scalar(batch_a_message_id.as_str()),
+        escape_json_scalar(batch_root.as_str()),
+        block_height,
+        escape_json_scalar(finality.as_str()),
+    );
+    let batch_a_verify_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-proof-a").as_str(),
+        key_file.as_str(),
+        "probe-verify-proof-batch-a",
+        "verify_proof",
+        batch_a_verify_arguments.as_str(),
+    )?;
+    validate_s14_mcp_verify_proof_response(
+        batch_a_verify_response.as_str(),
+        batch_a_message_id.as_str(),
+        "mcp live s14 batch-a verify_proof",
+    )?;
+
+    let batch_b_verify_arguments = format!(
+        "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
+        escape_json_scalar(batch_b_message_id.as_str()),
+        escape_json_scalar(batch_root.as_str()),
+        block_height,
+        escape_json_scalar(finality.as_str()),
+    );
+    let batch_b_verify_response = run_live_s14_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        format!("{base_agent_name}-proof-b").as_str(),
+        key_file.as_str(),
+        "probe-verify-proof-batch-b",
+        "verify_proof",
+        batch_b_verify_arguments.as_str(),
+    )?;
+    validate_s14_mcp_verify_proof_response(
+        batch_b_verify_response.as_str(),
+        batch_b_message_id.as_str(),
+        "mcp live s14 batch-b verify_proof",
+    )?;
+
+    Ok(())
+}
+
+fn validate_s14_mcp_verify_proof_response(
+    response: &str,
+    expected_message_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    let observed_message_id = json_optional_string_field(response, "message_id")
+        .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
+    if observed_message_id != expected_message_id {
+        return Err(format!(
+            "{step} returned mismatched message_id: expected={expected_message_id}, got={observed_message_id}"
+        ));
+    }
+    if !response.contains(r#""verified":true"#) {
+        return Err(format!(
+            "{step} returned verified=false payload: {response}"
+        ));
+    }
+    let observed_finality = json_optional_string_field(response, "finality")
+        .ok_or_else(|| format!("{step} response missing finality field: {response}"))?;
+    if observed_finality != "FINAL" {
+        return Err(format!(
+            "{step} returned non-final finality: {observed_finality}"
+        ));
+    }
+    let observed_block_height = json_optional_u64_field(response, "block_height")
+        .ok_or_else(|| format!("{step} response missing block_height field: {response}"))?;
+    if observed_block_height == 0 {
+        return Err(format!("{step} returned block_height=0"));
+    }
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -2193,6 +2392,27 @@ fn run_live_s13_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s13"))
 }
 
+fn run_live_s14_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s14"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -2328,12 +2548,14 @@ mod tests {
         run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
         run_live_s11_mcp_signer_rotation_probe, run_live_s12_mcp_retention_deletion_probe,
         run_live_s13_mcp_bridge_forwarding_probe, run_live_s13_mcp_tool_call,
+        run_live_s14_mcp_batch_merkle_probe, run_live_s14_mcp_tool_call,
         validate_live_s05_release_escrow_response, validate_probe_health_response,
         validate_probe_initialize_response, validate_s07_replay_reason_marker,
         validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
         validate_s12_content_field_coherence, validate_s12_content_id_match,
-        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, McpAgentDriver,
-        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+        validate_s14_mcp_verify_proof_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -2565,6 +2787,64 @@ elif tool_name == "query_message":
     message_match = re.search(r'"message_id":"([^"]+)"', stream)
     query_message_id = message_match.group(1) if message_match else "message-fallback"
     result.update({"message_id": query_message_id, "status": "sent"})
+else:
+    result.update({"error": "unsupported_tool"})
+
+init_payload = {"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}
+tool_payload = {"jsonrpc":"2.0","id":request_id,"result":result}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {len(body)}\r\n\r\n{body}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#;
+        write_executable_python_script(script_path, script_source);
+    }
+
+    fn write_mcp_s14_probe_script(script_path: &std::path::Path) {
+        let script_source = r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+agent_name = ""
+if "--agent-name" in sys.argv:
+    index = sys.argv.index("--agent-name")
+    if index + 1 < len(sys.argv):
+        agent_name = sys.argv[index + 1]
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {"ok": True}
+if tool_name == "send_message":
+    if agent_name.endswith("batch-a"):
+        result.update({"message_id": "message-batch-a", "status": "sent"})
+    elif agent_name.endswith("batch-b"):
+        result.update({"message_id": "message-batch-b", "status": "sent"})
+    else:
+        result.update({"message_id": "message-fallback", "status": "sent"})
+elif tool_name == "query_message":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    query_message_id = message_match.group(1) if message_match else "message-fallback"
+    result.update({"message_id": query_message_id, "status": "sent"})
+elif tool_name == "verify_proof":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    verify_message_id = message_match.group(1) if message_match else "message-fallback"
+    block_height_match = re.search(r'"block_height":"([0-9]+)"', stream)
+    block_height = int(block_height_match.group(1)) if block_height_match else 1
+    result.update(
+        {
+            "message_id": verify_message_id,
+            "verified": True,
+            "finality": "FINAL",
+            "block_height": block_height,
+        }
+    )
 else:
     result.update({"error": "unsupported_tool"})
 
@@ -3081,6 +3361,56 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s14_mcp_batch_merkle_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error =
+                    run_live_s14_mcp_batch_merkle_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s14_mcp_batch_merkle_probe_accepts_distinct_batch_ids_and_final_proofs() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s14-success");
+        write_mcp_s14_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+                ("KAMN_E2E_S14_AGENT_NAME", Some("kamn-e2e-mcp-s14")),
+            ],
+            || {
+                run_live_s14_mcp_batch_merkle_probe()
+                    .expect("distinct batch IDs with final proofs should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s13_mcp_tool_call_rewrites_error_context() {
         let error = run_live_s13_mcp_tool_call(
             "/definitely/missing/kamn-mcp-server",
@@ -3095,6 +3425,24 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(
             error.contains("mcp live s13"),
             "error should be rewritten to s13 context: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s14_mcp_tool_call_rewrites_error_context() {
+        let error = run_live_s14_mcp_tool_call(
+            "/definitely/missing/kamn-mcp-server",
+            "http://localhost:8080",
+            "probe-agent",
+            "/tmp/probe.key",
+            "probe-s14",
+            "verify_proof",
+            "{}",
+        )
+        .expect_err("missing binary should fail");
+        assert!(
+            error.contains("mcp live s14"),
+            "error should be rewritten to s14 context: {error}",
         );
     }
 
@@ -3141,6 +3489,72 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(
             error.contains("bridge_status drift"),
             "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_accepts_valid_payload() {
+        validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect("valid S-14 MCP proof payload should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_mismatched_message_id() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-2","verified":true,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_unverified_payload() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":false,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"PENDING","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_zero_block_height() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":0}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
         );
     }
 
@@ -3634,6 +4048,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-13 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c21_live_s14_driver_path_fails_closed_when_batch_merkle_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s14 batch-merkle probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-14");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-14 should fail closed on probe error",
         );
     }
 
