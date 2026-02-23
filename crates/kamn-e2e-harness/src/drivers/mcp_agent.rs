@@ -1080,6 +1080,59 @@ sys.stdout.write(
         write_executable_python_script(script_path, script_source.as_str());
     }
 
+    fn write_mcp_s03_probe_script(
+        script_path: &std::path::Path,
+        query_message_id: &str,
+        list_channel_id: &str,
+        include_messages: bool,
+    ) {
+        let include_messages_literal = if include_messages { "True" } else { "False" };
+        let script_source = format!(
+            r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+query_message_id = {query_message_id:?}
+list_channel_id = {list_channel_id:?}
+include_messages = {include_messages_literal}
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {{"ok": True}}
+if tool_name == "create_channel":
+    result.update({{"channel_id":"channel-1","status":"created"}})
+elif tool_name == "send_message":
+    result.update({{"message_id":"message-1","status":"sent","channel_id":"channel-1"}})
+elif tool_name == "query_message":
+    result.update({{"message_id": query_message_id, "status":"sent"}})
+elif tool_name == "list_messages":
+    result.update({{"channel_id": list_channel_id}})
+    if include_messages:
+        result.update({{"messages":["message-1"]}})
+else:
+    result.update({{"error":"unsupported_tool"}})
+
+init_payload = {{"jsonrpc":"2.0","id":"probe-init","result":{{"serverInfo":{{"name":"kamn"}}}}}}
+tool_payload = {{"jsonrpc":"2.0","id":request_id,"result":result}}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {{len(body)}}\r\n\r\n{{body}}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#,
+            query_message_id = query_message_id,
+            list_channel_id = list_channel_id,
+            include_messages_literal = include_messages_literal,
+        );
+        write_executable_python_script(script_path, script_source.as_str());
+    }
+
     #[test]
     fn unit_parse_bool_flag_accepts_true_like_values() {
         for value in ["1", "true", "TRUE", "yes", "on"] {
@@ -1170,6 +1223,70 @@ sys.stdout.write(
                 );
             },
         );
+    }
+
+    #[test]
+    fn unit_run_live_s03_mcp_group_channel_probe_rejects_query_message_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s03-query-mismatch");
+        write_mcp_s03_probe_script(&script_path, "message-2", "channel-1", true);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s03_mcp_group_channel_probe()
+                    .expect_err("mismatched query message_id should fail");
+                assert!(
+                    error.contains("mismatched message_id"),
+                    "error should mention message_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_run_live_s03_mcp_group_channel_probe_rejects_missing_messages_field() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s03-missing-messages");
+        write_mcp_s03_probe_script(&script_path, "message-1", "channel-1", false);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s03_mcp_group_channel_probe()
+                    .expect_err("missing list_messages messages field should fail");
+                assert!(
+                    error.contains("missing messages field"),
+                    "error should mention messages field contract: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
     }
 
     #[test]

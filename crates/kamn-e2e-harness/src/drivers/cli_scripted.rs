@@ -875,6 +875,98 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s03_cli_group_channel_probe_rejects_query_message_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s03-query-mismatch");
+        let script_source = r#"#!/usr/bin/env python3
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+if command == "create-channel":
+    sys.stdout.write("channel_id=channel-1 status=created")
+elif command == "send-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "query-message":
+    sys.stdout.write("message_id=message-2 status=sent")
+elif command == "list-messages":
+    sys.stdout.write("channel_id=channel-1 messages=[message-1]")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s03_cli_group_channel_probe()
+                    .expect_err("mismatched query message_id should fail");
+                assert!(
+                    error.contains("mismatched message_id"),
+                    "error should mention message_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_run_live_s03_cli_group_channel_probe_rejects_list_channel_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s03-list-mismatch");
+        let script_source = r#"#!/usr/bin/env python3
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+if command == "create-channel":
+    sys.stdout.write("channel_id=channel-1 status=created")
+elif command == "send-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "query-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "list-messages":
+    sys.stdout.write("channel_id=channel-2 messages=[message-1]")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s03_cli_group_channel_probe()
+                    .expect_err("mismatched listed channel_id should fail");
+                assert!(
+                    error.contains("mismatched channel_id"),
+                    "error should mention channel_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s04_cli_task_lifecycle_probe_rejects_missing_binary() {
         with_env_vars(
             &[
