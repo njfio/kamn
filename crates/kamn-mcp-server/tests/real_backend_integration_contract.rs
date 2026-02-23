@@ -140,13 +140,9 @@ fn run_real_backend_service_server(bind_addr: String, max_requests: usize) -> Re
                         202,
                         r#"{"bridge_id":"bridge-contract-1","source_message_id":"msg-bridge-source-1","bridge_status":"submitted"}"#,
                     )?;
-                } else if method == "POST" && path == "/v1/bridge/bridge-contract-1/forward" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"bridge_id":"bridge-contract-1","bridge_status":"forwarded","target_message_id":"msg-bridge-target-1","forward_tx_hash":"sha256:bridge-forwarded-1"}"#,
-                    )?;
-                } else if method == "GET" && path == "/v1/bridge/bridge-contract-1" {
+                } else if (method == "POST" && path == "/v1/bridge/bridge-contract-1/forward")
+                    || (method == "GET" && path == "/v1/bridge/bridge-contract-1")
+                {
                     write_http_response(
                         &mut stream,
                         200,

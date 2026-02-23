@@ -158,13 +158,9 @@ fn run_cli_contract_server(bind_addr: String, max_requests: usize) -> Result<(),
                         202,
                         r#"{"bridge_id":"bridge-cli","source_message_id":"msg-bridge-source-cli","bridge_status":"submitted"}"#,
                     )?;
-                } else if method == "POST" && path == "/v1/bridge/bridge-cli/forward" {
-                    write_http_response(
-                        &mut stream,
-                        200,
-                        r#"{"bridge_id":"bridge-cli","bridge_status":"forwarded","target_message_id":"msg-bridge-target-cli","forward_tx_hash":"sha256:bridge-forwarded-cli"}"#,
-                    )?;
-                } else if method == "GET" && path == "/v1/bridge/bridge-cli" {
+                } else if (method == "POST" && path == "/v1/bridge/bridge-cli/forward")
+                    || (method == "GET" && path == "/v1/bridge/bridge-cli")
+                {
                     write_http_response(
                         &mut stream,
                         200,
