@@ -23,6 +23,7 @@ pub mod receipt_finality;
 pub mod runtime_lifecycle_policy;
 pub mod runtime_request_identity_policy;
 pub mod runtime_transport_contracts;
+pub mod service_api_scope;
 pub mod tls_policy;
 pub mod transport;
 pub mod transport_request_policy;
@@ -126,6 +127,7 @@ pub use runtime_transport_contracts::{
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderTransport,
     KolmeRuntimeCommitTransportErrorKind,
 };
+pub use service_api_scope::{ServiceApiScope, ServiceApiScopeError};
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,
     KolmeTlsPolicyError,

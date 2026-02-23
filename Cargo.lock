@@ -1667,6 +1667,7 @@ dependencies = [
  "futures-util",
  "k256",
  "kamn-core",
+ "kamn-kolme",
  "rustls",
  "rustls-pemfile",
  "serde",

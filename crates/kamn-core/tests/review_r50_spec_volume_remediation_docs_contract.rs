@@ -5,6 +5,7 @@ use std::process::Command;
 
 const DOC_R50: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const DOC_R52: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
+const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn repo_root() -> PathBuf {
@@ -185,6 +186,18 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         DOC_R50,
         "r50_review_spec_volume_non_regression_spec_dir_max",
     );
+    let non_regression_effective_cap = parse_marker_usize(
+        DOC_R55,
+        "r55_review_spec_volume_non_regression_effective_cap",
+    );
+    let non_regression_delta_base_cap =
+        parse_marker_usize(DOC_R55, "r55_review_spec_volume_non_regression_base_cap");
+    let non_regression_delta_allowance = parse_marker_usize(
+        DOC_R55,
+        "r55_review_spec_volume_non_regression_delta_allowance",
+    );
+    let non_regression_delta_status =
+        parse_marker_text(DOC_R55, "r55_review_spec_volume_non_regression_status");
 
     let current_spec_dirs = current_spec_directory_count();
     let current_module_count = current_module_export_count();
@@ -214,12 +227,27 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         "non-regression max should remain locked to baseline while remediation is active"
     );
     assert_eq!(
+        non_regression_delta_base_cap, non_regression_spec_dir_max,
+        "R55 spec-volume delta base cap should match the locked non-regression baseline"
+    );
+    assert_eq!(
+        non_regression_delta_base_cap.saturating_add(non_regression_delta_allowance),
+        non_regression_effective_cap,
+        "R55 effective cap must equal base cap plus allowance"
+    );
+    let expected_delta_status = if current_spec_dirs <= non_regression_effective_cap {
+        "within_effective_cap"
+    } else {
+        "breached_effective_cap"
+    };
+    assert_eq!(non_regression_delta_status, expected_delta_status);
+    assert_eq!(
         non_regression_baseline_module_count, current_module_count,
         "non-regression module baseline should match current exported module count"
     );
     assert!(
-        current_spec_dirs <= non_regression_spec_dir_max,
-        "current spec-dir count must not exceed non-regression cap"
+        current_spec_dirs <= non_regression_effective_cap,
+        "current spec-dir count must not exceed effective non-regression cap"
     );
     assert!(
         current_ratio <= non_regression_ratio_max,
