@@ -23,6 +23,8 @@ const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s0
 const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-sdk-s09";
 const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09-pre"}"#;
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09-post"}"#;
+const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-sdk-s10";
+const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s10-topology"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -31,7 +33,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, and S-09.
+/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09, and S-10.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -44,6 +46,7 @@ pub struct SdkDirectDriver {
     replay_protection_probe: Arc<LiveProbe>,
     crash_recovery_probe: Arc<LiveProbe>,
     transport_failover_probe: Arc<LiveProbe>,
+    topology_coherence_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -76,6 +79,7 @@ impl SdkDirectDriver {
                 run_live_s07_replay_protection_probe,
                 run_live_s08_crash_recovery_probe,
                 run_live_s09_transport_failover_probe,
+                run_live_s10_topology_coherence_probe,
             ),
         )
     }
@@ -96,19 +100,20 @@ impl SdkDirectDriver {
             proof_verification_probe: live_probe.clone(),
             replay_protection_probe: live_probe.clone(),
             crash_recovery_probe: live_probe.clone(),
-            transport_failover_probe: live_probe,
+            transport_failover_probe: live_probe.clone(),
+            topology_coherence_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_crash_and_failover_probes: (K, L, M, N),
+        proof_replay_crash_failover_and_topology_probes: (K, L, M, N, O),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -120,13 +125,15 @@ impl SdkDirectDriver {
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
+        O: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_probe,
             replay_protection_probe,
             crash_recovery_probe,
             transport_failover_probe,
-        ) = proof_replay_crash_and_failover_probes;
+            topology_coherence_probe,
+        ) = proof_replay_crash_failover_and_topology_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -138,6 +145,7 @@ impl SdkDirectDriver {
             replay_protection_probe: Arc::new(replay_protection_probe),
             crash_recovery_probe: Arc::new(crash_recovery_probe),
             transport_failover_probe: Arc::new(transport_failover_probe),
+            topology_coherence_probe: Arc::new(topology_coherence_probe),
         }
     }
 }
@@ -175,6 +183,7 @@ impl SdkDirectDriver {
             "S-07" => Some((self.replay_protection_probe)()),
             "S-08" => Some((self.crash_recovery_probe)()),
             "S-09" => Some((self.transport_failover_probe)()),
+            "S-10" => Some((self.topology_coherence_probe)()),
             _ => None,
         }
     }
@@ -873,6 +882,97 @@ fn run_live_s09_transport_failover_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s10_topology_coherence_probe() -> Result<(), String> {
+    let primary_endpoint = std::env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
+        .or_else(|_| std::env::var("KAMN_ENDPOINT"))
+        .unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let secondary_endpoint = std::env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT")
+        .unwrap_or_else(|_| primary_endpoint.clone());
+    let tertiary_endpoint = std::env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT")
+        .unwrap_or_else(|_| secondary_endpoint.clone());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S10_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
+    let message_payload = std::env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S10_MESSAGE_PAYLOAD.to_owned());
+
+    let primary_send_handle = KamnAgentHandle::connect(
+        primary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-primary-send").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s10 primary connect failed: {error}"))?;
+    let primary_receipt = primary_send_handle
+        .send_message(message_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s10 primary send-message failed: {error}"))?;
+    validate_s08_message_receipt_fields(
+        primary_receipt.message_id.as_str(),
+        primary_receipt.status.as_str(),
+        "sdk-direct live s10 primary send-message",
+    )?;
+
+    let secondary_query_handle = KamnAgentHandle::connect(
+        secondary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-secondary-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s10 secondary connect failed: {error}"))?;
+    let secondary_query = secondary_query_handle
+        .query_message(primary_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s10 secondary query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        primary_receipt.message_id.as_str(),
+        secondary_query.message_id.as_str(),
+        secondary_query.status.as_str(),
+        "sdk-direct live s10 secondary query-message",
+    )?;
+
+    let tertiary_query_handle = KamnAgentHandle::connect(
+        tertiary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-tertiary-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s10 tertiary connect failed: {error}"))?;
+    let tertiary_query = tertiary_query_handle
+        .query_message(primary_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s10 tertiary query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        primary_receipt.message_id.as_str(),
+        tertiary_query.message_id.as_str(),
+        tertiary_query.status.as_str(),
+        "sdk-direct live s10 tertiary query-message",
+    )?;
+
+    let secondary_health_handle = KamnAgentHandle::connect(
+        secondary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-secondary-boundary").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s10 secondary connect failed: {error}"))?;
+    let secondary_health = secondary_health_handle
+        .health()
+        .map_err(|error| format!("sdk-direct live s10 secondary health check failed: {error}"))?;
+    if secondary_health.status.trim().is_empty() {
+        return Err("sdk-direct live s10 secondary health check returned empty status".to_owned());
+    }
+
+    let tertiary_health_handle = KamnAgentHandle::connect(
+        tertiary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-tertiary-boundary").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s10 tertiary connect failed: {error}"))?;
+    let tertiary_health = tertiary_health_handle
+        .health()
+        .map_err(|error| format!("sdk-direct live s10 tertiary health check failed: {error}"))?;
+    if tertiary_health.status.trim().is_empty() {
+        return Err("sdk-direct live s10 tertiary health check returned empty status".to_owned());
+    }
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -939,10 +1039,11 @@ mod tests {
         run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
         run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
         run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
-        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
-        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
-        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s10_topology_coherence_probe, validate_live_s03_list_messages_response,
+        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
+        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response, SdkDirectDriver,
+        SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1224,6 +1325,35 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s10_topology_coherence_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                (
+                    "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+                    Some("invalid-primary-endpoint"),
+                ),
+                (
+                    "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+                    Some("invalid-secondary-endpoint"),
+                ),
+                (
+                    "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+                    Some("invalid-tertiary-endpoint"),
+                ),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s10_topology_coherence_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -1411,6 +1541,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-09 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c10_live_s10_driver_path_fails_closed_when_topology_coherence_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s10 topology-coherence probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-10");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-10 should fail closed on probe error",
         );
     }
 }

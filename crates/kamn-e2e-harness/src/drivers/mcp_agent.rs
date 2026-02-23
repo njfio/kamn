@@ -28,6 +28,8 @@ const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s08
 const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-mcp-s09";
 const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-pre"}"#;
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-post"}"#;
+const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-mcp-s10";
+const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s10-topology"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -50,6 +52,7 @@ pub struct McpAgentDriver {
     replay_protection_probe: Arc<LiveMcpProbe>,
     crash_recovery_probe: Arc<LiveMcpProbe>,
     transport_failover_probe: Arc<LiveMcpProbe>,
+    topology_coherence_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -83,6 +86,7 @@ impl McpAgentDriver {
                 run_live_s07_mcp_replay_protection_probe,
                 run_live_s08_mcp_crash_recovery_probe,
                 run_live_s09_mcp_transport_failover_probe,
+                run_live_s10_mcp_topology_coherence_probe,
             ),
         )
     }
@@ -111,19 +115,20 @@ impl McpAgentDriver {
             proof_verification_probe: live_probe.clone(),
             replay_protection_probe: live_probe.clone(),
             crash_recovery_probe: live_probe.clone(),
-            transport_failover_probe: live_probe,
+            transport_failover_probe: live_probe.clone(),
+            topology_coherence_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_and_failover_probes: (J, K, L, M, N),
+        escrow_proof_replay_crash_failover_and_topology_probes: (J, K, L, M, N, O),
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -135,6 +140,7 @@ impl McpAgentDriver {
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
+        O: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -145,7 +151,8 @@ impl McpAgentDriver {
             replay_protection_probe,
             crash_recovery_probe,
             transport_failover_probe,
-        ) = escrow_proof_replay_crash_and_failover_probes;
+            topology_coherence_probe,
+        ) = escrow_proof_replay_crash_failover_and_topology_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -158,6 +165,7 @@ impl McpAgentDriver {
             replay_protection_probe: Arc::new(replay_protection_probe),
             crash_recovery_probe: Arc::new(crash_recovery_probe),
             transport_failover_probe: Arc::new(transport_failover_probe),
+            topology_coherence_probe: Arc::new(topology_coherence_probe),
         })
     }
 }
@@ -195,6 +203,7 @@ impl McpAgentDriver {
             "S-07" => Some((self.replay_protection_probe)()),
             "S-08" => Some((self.crash_recovery_probe)()),
             "S-09" => Some((self.transport_failover_probe)()),
+            "S-10" => Some((self.topology_coherence_probe)()),
             _ => None,
         }
     }
@@ -1139,6 +1148,120 @@ fn run_live_s09_mcp_transport_failover_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s10_mcp_topology_coherence_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let primary_endpoint = env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
+        .or_else(|_| env::var("KAMN_ENDPOINT"))
+        .unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let secondary_endpoint =
+        env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let tertiary_endpoint =
+        env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT").unwrap_or_else(|_| secondary_endpoint.clone());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S10_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S10_MESSAGE_PAYLOAD.to_owned());
+
+    let send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(message_payload.as_str())
+    );
+    let primary_send_response = run_live_s10_mcp_tool_call(
+        binary.as_str(),
+        primary_endpoint.as_str(),
+        format!("{base_agent_name}-primary-send").as_str(),
+        key_file.as_str(),
+        "probe-send-message-primary",
+        "send_message",
+        send_arguments.as_str(),
+    )?;
+    let message_id = validate_s08_mcp_message_receipt_fields(
+        primary_send_response.as_str(),
+        "mcp live s10 primary send_message",
+    )?;
+
+    let query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(message_id.as_str())
+    );
+    let secondary_query_response = run_live_s10_mcp_tool_call(
+        binary.as_str(),
+        secondary_endpoint.as_str(),
+        format!("{base_agent_name}-secondary-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-secondary",
+        "query_message",
+        query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        secondary_query_response.as_str(),
+        message_id.as_str(),
+        "mcp live s10 secondary query_message",
+    )?;
+
+    let tertiary_query_response = run_live_s10_mcp_tool_call(
+        binary.as_str(),
+        tertiary_endpoint.as_str(),
+        format!("{base_agent_name}-tertiary-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-tertiary",
+        "query_message",
+        query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        tertiary_query_response.as_str(),
+        message_id.as_str(),
+        "mcp live s10 tertiary query_message",
+    )?;
+
+    let secondary_health_response = run_live_s10_mcp_tool_call(
+        binary.as_str(),
+        secondary_endpoint.as_str(),
+        format!("{base_agent_name}-secondary-boundary").as_str(),
+        key_file.as_str(),
+        "probe-health-secondary",
+        "health",
+        "{}",
+    )?;
+    let secondary_health_status =
+        json_optional_string_field(secondary_health_response.as_str(), "status").ok_or_else(
+            || {
+                format!(
+                    "mcp live s10 secondary health response missing status field: {secondary_health_response}"
+                )
+            },
+        )?;
+    if secondary_health_status.trim().is_empty() {
+        return Err("mcp live s10 secondary health check returned empty status".to_owned());
+    }
+
+    let tertiary_health_response = run_live_s10_mcp_tool_call(
+        binary.as_str(),
+        tertiary_endpoint.as_str(),
+        format!("{base_agent_name}-tertiary-boundary").as_str(),
+        key_file.as_str(),
+        "probe-health-tertiary",
+        "health",
+        "{}",
+    )?;
+    let tertiary_health_status =
+        json_optional_string_field(tertiary_health_response.as_str(), "status").ok_or_else(
+            || {
+                format!(
+                    "mcp live s10 tertiary health response missing status field: {tertiary_health_response}"
+                )
+            },
+        )?;
+    if tertiary_health_status.trim().is_empty() {
+        return Err("mcp live s10 tertiary health check returned empty status".to_owned());
+    }
+
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -1405,6 +1528,27 @@ fn run_live_s09_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s09"))
 }
 
+fn run_live_s10_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s10"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1537,11 +1681,11 @@ mod tests {
         run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
         run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
         run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
-        run_live_s09_mcp_transport_failover_probe, validate_live_s05_release_escrow_response,
-        validate_probe_health_response, validate_probe_initialize_response,
-        validate_s07_replay_reason_marker, validate_s08_mcp_message_receipt_fields,
-        validate_s08_mcp_query_message_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
-        MCP_AGENT_LIVE_ENV,
+        run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
+        validate_live_s05_release_escrow_response, validate_probe_health_response,
+        validate_probe_initialize_response, validate_s07_replay_reason_marker,
+        validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
+        McpAgentDriver, MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -2099,6 +2243,77 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s10_mcp_topology_coherence_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                (
+                    "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+                    Some("http://localhost:8080"),
+                ),
+                (
+                    "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                (
+                    "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+                    Some("http://localhost:8082"),
+                ),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s10_mcp_topology_coherence_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s10_mcp_topology_coherence_probe_accepts_topology_query_continuity() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s10-success");
+        write_mcp_s08_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                (
+                    "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+                    Some("http://localhost:8080"),
+                ),
+                (
+                    "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                (
+                    "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+                    Some("http://localhost:8082"),
+                ),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                run_live_s10_mcp_topology_coherence_probe()
+                    .expect("topology query continuity should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -2501,6 +2716,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-09 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c17_live_s10_driver_path_fails_closed_when_topology_coherence_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s10 topology-coherence probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-10");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-10 should fail closed on probe error",
         );
     }
 

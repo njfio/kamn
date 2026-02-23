@@ -28,6 +28,8 @@ const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-
 const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-cli-s09";
 const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s09-pre"}"#;
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s09-post"}"#;
+const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-cli-s10";
+const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s10-topology"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -36,7 +38,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, and S-09.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09, and S-10.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -49,6 +51,7 @@ pub struct CliScriptedDriver {
     replay_protection_runner: Arc<LiveCliRunner>,
     crash_recovery_runner: Arc<LiveCliRunner>,
     transport_failover_runner: Arc<LiveCliRunner>,
+    topology_coherence_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -81,6 +84,7 @@ impl CliScriptedDriver {
                 run_live_s07_cli_replay_protection_probe,
                 run_live_s08_cli_crash_recovery_probe,
                 run_live_s09_cli_transport_failover_probe,
+                run_live_s10_cli_topology_coherence_probe,
             ),
         )
     }
@@ -101,19 +105,20 @@ impl CliScriptedDriver {
             proof_verification_runner: live_runner.clone(),
             replay_protection_runner: live_runner.clone(),
             crash_recovery_runner: live_runner.clone(),
-            transport_failover_runner: live_runner,
+            transport_failover_runner: live_runner.clone(),
+            topology_coherence_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M, N>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N, O>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_crash_and_failover_runners: (K, L, M, N),
+        proof_replay_crash_failover_and_topology_runners: (K, L, M, N, O),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -125,13 +130,15 @@ impl CliScriptedDriver {
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
+        O: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_runner,
             replay_protection_runner,
             crash_recovery_runner,
             transport_failover_runner,
-        ) = proof_replay_crash_and_failover_runners;
+            topology_coherence_runner,
+        ) = proof_replay_crash_failover_and_topology_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -143,6 +150,7 @@ impl CliScriptedDriver {
             replay_protection_runner: Arc::new(replay_protection_runner),
             crash_recovery_runner: Arc::new(crash_recovery_runner),
             transport_failover_runner: Arc::new(transport_failover_runner),
+            topology_coherence_runner: Arc::new(topology_coherence_runner),
         }
     }
 }
@@ -180,6 +188,7 @@ impl CliScriptedDriver {
             "S-07" => Some((self.replay_protection_runner)()),
             "S-08" => Some((self.crash_recovery_runner)()),
             "S-09" => Some((self.transport_failover_runner)()),
+            "S-10" => Some((self.topology_coherence_runner)()),
             _ => None,
         }
     }
@@ -1067,6 +1076,123 @@ fn run_live_s09_cli_transport_failover_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s10_cli_topology_coherence_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let primary_endpoint = env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
+        .or_else(|_| env::var("KAMN_ENDPOINT"))
+        .unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let secondary_endpoint =
+        env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let tertiary_endpoint =
+        env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT").unwrap_or_else(|_| secondary_endpoint.clone());
+    let base_agent_name =
+        env::var("KAMN_E2E_S10_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S10_MESSAGE_PAYLOAD.to_owned());
+
+    let primary_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            primary_endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s10 primary send-message",
+        format!("{base_agent_name}-primary-send").as_str(),
+    )?;
+    let message_id = validate_s08_message_receipt_fields(
+        primary_send_output.as_str(),
+        "cli live s10 primary send-message",
+    )?;
+
+    let secondary_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            secondary_endpoint.as_str(),
+            "--format",
+            "text",
+            message_id.as_str(),
+        ],
+        "cli live s10 secondary query-message",
+        format!("{base_agent_name}-secondary-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        secondary_query_output.as_str(),
+        message_id.as_str(),
+        "cli live s10 secondary query-message",
+    )?;
+
+    let tertiary_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            tertiary_endpoint.as_str(),
+            "--format",
+            "text",
+            message_id.as_str(),
+        ],
+        "cli live s10 tertiary query-message",
+        format!("{base_agent_name}-tertiary-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        tertiary_query_output.as_str(),
+        message_id.as_str(),
+        "cli live s10 tertiary query-message",
+    )?;
+
+    let secondary_health_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "health",
+            "--endpoint",
+            secondary_endpoint.as_str(),
+            "--format",
+            "text",
+        ],
+        "cli live s10 secondary health check",
+        format!("{base_agent_name}-secondary-boundary").as_str(),
+    )?;
+    let secondary_health_status =
+        parse_text_output_field(secondary_health_output.as_str(), "status").ok_or_else(|| {
+            format!(
+                "cli live s10 secondary health response missing status field: {secondary_health_output}"
+            )
+        })?;
+    if secondary_health_status.trim().is_empty() {
+        return Err("cli live s10 secondary health check returned empty status".to_owned());
+    }
+
+    let tertiary_health_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "health",
+            "--endpoint",
+            tertiary_endpoint.as_str(),
+            "--format",
+            "text",
+        ],
+        "cli live s10 tertiary health check",
+        format!("{base_agent_name}-tertiary-boundary").as_str(),
+    )?;
+    let tertiary_health_status =
+        parse_text_output_field(tertiary_health_output.as_str(), "status").ok_or_else(|| {
+            format!(
+                "cli live s10 tertiary health response missing status field: {tertiary_health_output}"
+            )
+        })?;
+    if tertiary_health_status.trim().is_empty() {
+        return Err("cli live s10 tertiary health check returned empty status".to_owned());
+    }
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1224,9 +1350,10 @@ mod tests {
         run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
         run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
         run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
-        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response,
-        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        run_live_s10_cli_topology_coherence_probe, validate_live_s05_release_escrow_response,
+        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, CliScriptedDriver, CLI_BINARY_ENV,
+        CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1690,6 +1817,89 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s10_cli_topology_coherence_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                (
+                    "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+                    Some("http://localhost:8080"),
+                ),
+                (
+                    "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                (
+                    "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+                    Some("http://localhost:8082"),
+                ),
+            ],
+            || {
+                let error = run_live_s10_cli_topology_coherence_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s10_cli_topology_coherence_probe_accepts_topology_query_continuity() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s10-success");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+
+if command == "send-message":
+    sys.stdout.write("message_id=message-primary status=sent")
+elif command == "query-message":
+    message_id = sys.argv[-1] if len(sys.argv) > 0 else "message-primary"
+    sys.stdout.write(f"message_id={message_id} status=sent")
+elif command == "health":
+    sys.stdout.write("status=ok")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                (
+                    "KAMN_E2E_S10_PRIMARY_ENDPOINT",
+                    Some("http://localhost:8080"),
+                ),
+                (
+                    "KAMN_E2E_S10_SECONDARY_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                (
+                    "KAMN_E2E_S10_TERTIARY_ENDPOINT",
+                    Some("http://localhost:8082"),
+                ),
+            ],
+            || {
+                run_live_s10_cli_topology_coherence_probe()
+                    .expect("topology query continuity should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s06_cli_proof_verification_probe_accepts_success_payload() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s06-success");
         let script_source = format!(
@@ -1932,6 +2142,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-09 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c10_live_s10_driver_path_fails_closed_when_topology_coherence_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s10 topology-coherence probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-10");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-10 should fail closed on probe error",
         );
     }
 }
