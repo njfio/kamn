@@ -3,7 +3,7 @@
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
 - Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810, #5812, #5814, #5815, #5818, #5820, #5822, #5824, #5826, #5828, #5830, #5833, #5835, #5837
-- Active issue(s): None
+- Active issue(s): #5840
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
 ## Delivery Slices
@@ -71,3 +71,4 @@
 62. Activate opt-in live `S-13` bridge-forwarding scenario across sdk-direct, cli-scripted, and mcp-agent drivers with deterministic submit/forward/query continuity validation, cross-surface CLI/MCP/API contract activation, and in-diff mutation cleanliness coverage. (Completed via #5833)
 63. Activate opt-in live `S-14` batch-merkle scenario across sdk-direct, cli-scripted, and mcp-agent drivers with deterministic batched send/query/proof continuity validation while reusing existing operation surfaces. (Completed via #5835)
 64. Activate opt-in live `S-15` performance-smoke scenario across sdk-direct, cli-scripted, and mcp-agent drivers with deterministic bounded-latency continuity validation and fail-closed threshold contracts. (Completed via #5837)
+65. Harden production `expect()` inventory/parser contracts by eliminating cfg(test) brace-literal leakage in checker/docs-contract lanes and aligning deterministic marker semantics. (In progress via #5840)
