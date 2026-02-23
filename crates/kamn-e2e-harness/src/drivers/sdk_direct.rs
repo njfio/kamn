@@ -6,6 +6,8 @@ use std::sync::Arc;
 const SDK_DIRECT_LIVE_ENV: &str = "KAMN_E2E_SDK_DIRECT_LIVE";
 const DEFAULT_KOLME_ENDPOINT: &str = "http://localhost:3000";
 const DEFAULT_AGENT_NAME: &str = "kamn-e2e-sdk-direct";
+const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s02"}"#;
+const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s02-reply"}"#;
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"sdk-direct-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
@@ -16,11 +18,12 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-04, and S-06.
+/// SDK-direct driver with optional live execution for S-01, S-02, S-04, and S-06.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
     discovery_probe: Arc<LiveProbe>,
+    direct_message_probe: Arc<LiveProbe>,
     task_lifecycle_probe: Arc<LiveProbe>,
     proof_verification_probe: Arc<LiveProbe>,
 }
@@ -46,6 +49,7 @@ impl SdkDirectDriver {
         Self::with_probes(
             live_execution_enabled_from_env(),
             run_live_s01_discovery_probe,
+            run_live_s02_direct_message_probe,
             run_live_s04_task_lifecycle_probe,
             run_live_s06_proof_verification_probe,
         )
@@ -60,26 +64,30 @@ impl SdkDirectDriver {
         Self {
             live_execution_enabled,
             discovery_probe: live_probe.clone(),
+            direct_message_probe: live_probe.clone(),
             task_lifecycle_probe: live_probe.clone(),
             proof_verification_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H>(
+    pub fn with_probes<F, G, H, I>(
         live_execution_enabled: bool,
         discovery_probe: F,
-        task_lifecycle_probe: G,
-        proof_verification_probe: H,
+        direct_message_probe: G,
+        task_lifecycle_probe: H,
+        proof_verification_probe: I,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
+        I: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
+            direct_message_probe: Arc::new(direct_message_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
         }
@@ -111,6 +119,7 @@ impl SdkDirectDriver {
         }
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
+            "S-02" => Some((self.direct_message_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
@@ -157,6 +166,91 @@ fn run_live_s01_discovery_probe() -> Result<(), String> {
         .map_err(|error| format!("sdk-direct live discovery health check failed: {error}"))?;
     if health.status.trim().is_empty() {
         return Err("sdk-direct live discovery failed: empty health status".to_owned());
+    }
+
+    Ok(())
+}
+
+fn run_live_s02_direct_message_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let agent_name =
+        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
+    let message_payload = std::env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_MESSAGE_PAYLOAD.to_owned());
+    let reply_payload = std::env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_REPLY_PAYLOAD.to_owned());
+
+    let send_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s02-send").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s02 connect failed: {error}"))?;
+    let send_receipt = send_handle
+        .send_message(message_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s02 send-message failed: {error}"))?;
+    if send_receipt.message_id.trim().is_empty() {
+        return Err("sdk-direct live s02 send-message returned empty message_id".to_owned());
+    }
+    if send_receipt.status.trim().is_empty() {
+        return Err("sdk-direct live s02 send-message returned empty status".to_owned());
+    }
+
+    let query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s02-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s02 connect failed: {error}"))?;
+    let queried_status = query_handle
+        .query_message(send_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s02 query-message failed: {error}"))?;
+    if queried_status.message_id != send_receipt.message_id {
+        return Err(format!(
+            "sdk-direct live s02 query-message returned mismatched message_id: expected={}, got={}",
+            send_receipt.message_id, queried_status.message_id
+        ));
+    }
+    if queried_status.status.trim().is_empty() {
+        return Err("sdk-direct live s02 query-message returned empty status".to_owned());
+    }
+
+    let reply_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s02-reply").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s02 connect failed: {error}"))?;
+    let reply_receipt = reply_handle
+        .send_message(reply_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s02 reply send-message failed: {error}"))?;
+    if reply_receipt.message_id.trim().is_empty() {
+        return Err("sdk-direct live s02 reply send-message returned empty message_id".to_owned());
+    }
+    if reply_receipt.status.trim().is_empty() {
+        return Err("sdk-direct live s02 reply send-message returned empty status".to_owned());
+    }
+
+    let reply_query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{agent_name}-s02-query-reply").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s02 connect failed: {error}"))?;
+    let reply_query_status = reply_query_handle
+        .query_message(reply_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s02 reply query-message failed: {error}"))?;
+    if reply_query_status.message_id != reply_receipt.message_id {
+        return Err(format!(
+            "sdk-direct live s02 reply query-message returned mismatched message_id: expected={}, got={}",
+            reply_receipt.message_id, reply_query_status.message_id
+        ));
+    }
+    if reply_query_status.status.trim().is_empty() {
+        return Err("sdk-direct live s02 reply query-message returned empty status".to_owned());
     }
 
     Ok(())
@@ -301,8 +395,8 @@ fn run_live_s06_proof_verification_probe() -> Result<(), String> {
 mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
-        run_live_s04_task_lifecycle_probe, run_live_s06_proof_verification_probe, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        run_live_s02_direct_message_probe, run_live_s04_task_lifecycle_probe,
+        run_live_s06_proof_verification_probe, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -408,6 +502,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s02_direct_message_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error =
+                    run_live_s02_direct_message_probe().expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_run_live_s04_task_lifecycle_probe_rejects_invalid_endpoint() {
         with_env_vars(
             &[
@@ -492,6 +604,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-06 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c03_live_s02_driver_path_fails_closed_when_message_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s02 message probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-02");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-02 should fail closed on probe error",
         );
     }
 }

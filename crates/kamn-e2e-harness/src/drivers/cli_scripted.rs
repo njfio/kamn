@@ -7,6 +7,9 @@ use std::sync::Arc;
 const CLI_SCRIPTED_LIVE_ENV: &str = "KAMN_E2E_CLI_SCRIPTED_LIVE";
 const CLI_BINARY_ENV: &str = "KAMN_E2E_CLI_BINARY";
 const DEFAULT_CLI_BINARY: &str = "kamn-cli";
+const DEFAULT_S02_AGENT_NAME: &str = "kamn-e2e-cli-s02";
+const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02"}"#;
+const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02-reply"}"#;
 const DEFAULT_S04_AGENT_NAME: &str = "kamn-e2e-cli-s04";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"cli-scripted-live-s04","description":"live task lifecycle probe"}"#;
@@ -18,11 +21,12 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-04, and S-06.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-04, and S-06.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
     discovery_runner: Arc<LiveCliRunner>,
+    direct_message_runner: Arc<LiveCliRunner>,
     task_lifecycle_runner: Arc<LiveCliRunner>,
     proof_verification_runner: Arc<LiveCliRunner>,
 }
@@ -48,6 +52,7 @@ impl CliScriptedDriver {
         Self::with_runners(
             live_execution_enabled_from_env(),
             run_live_s01_cli_health_probe,
+            run_live_s02_cli_direct_message_probe,
             run_live_s04_cli_task_lifecycle_probe,
             run_live_s06_cli_proof_verification_probe,
         )
@@ -62,26 +67,30 @@ impl CliScriptedDriver {
         Self {
             live_execution_enabled,
             discovery_runner: live_runner.clone(),
+            direct_message_runner: live_runner.clone(),
             task_lifecycle_runner: live_runner.clone(),
             proof_verification_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H>(
+    pub fn with_runners<F, G, H, I>(
         live_execution_enabled: bool,
         discovery_runner: F,
-        task_lifecycle_runner: G,
-        proof_verification_runner: H,
+        direct_message_runner: G,
+        task_lifecycle_runner: H,
+        proof_verification_runner: I,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
+        I: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
+            direct_message_runner: Arc::new(direct_message_runner),
             task_lifecycle_runner: Arc::new(task_lifecycle_runner),
             proof_verification_runner: Arc::new(proof_verification_runner),
         }
@@ -113,6 +122,7 @@ impl CliScriptedDriver {
         }
         match scenario_id {
             "S-01" => Some((self.discovery_runner)()),
+            "S-02" => Some((self.direct_message_runner)()),
             "S-04" => Some((self.task_lifecycle_runner)()),
             "S-06" => Some((self.proof_verification_runner)()),
             _ => None,
@@ -161,6 +171,146 @@ fn run_live_s01_cli_health_probe() -> Result<(), String> {
     Err(format!(
         "cli live health probe failed (exit_status={exit_status})"
     ))
+}
+
+fn run_live_s02_cli_direct_message_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S02_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_MESSAGE_PAYLOAD.to_owned());
+    let reply_payload = env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_REPLY_PAYLOAD.to_owned());
+    let send_agent_name = format!("{base_agent_name}-send");
+    let query_agent_name = format!("{base_agent_name}-query");
+    let reply_agent_name = format!("{base_agent_name}-reply");
+    let reply_query_agent_name = format!("{base_agent_name}-query-reply");
+
+    let send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s02 send-message",
+        send_agent_name.as_str(),
+    )?;
+    let message_id = parse_text_output_field(send_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!("cli live s02 send-message response missing message_id field: {send_output}")
+        })?
+        .to_owned();
+    if message_id.trim().is_empty() {
+        return Err("cli live s02 send-message returned empty message_id".to_owned());
+    }
+    let send_status = parse_text_output_field(send_output.as_str(), "status").ok_or_else(|| {
+        format!("cli live s02 send-message response missing status field: {send_output}")
+    })?;
+    if send_status.trim().is_empty() {
+        return Err("cli live s02 send-message returned empty status".to_owned());
+    }
+
+    let query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_id.as_str(),
+        ],
+        "cli live s02 query-message",
+        query_agent_name.as_str(),
+    )?;
+    let queried_message_id = parse_text_output_field(query_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!("cli live s02 query-message response missing message_id field: {query_output}")
+        })?;
+    if queried_message_id != message_id {
+        return Err(format!(
+            "cli live s02 query-message returned mismatched message_id: expected={message_id}, got={queried_message_id}"
+        ));
+    }
+    let queried_status =
+        parse_text_output_field(query_output.as_str(), "status").ok_or_else(|| {
+            format!("cli live s02 query-message response missing status field: {query_output}")
+        })?;
+    if queried_status.trim().is_empty() {
+        return Err("cli live s02 query-message returned empty status".to_owned());
+    }
+
+    let reply_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            reply_payload.as_str(),
+        ],
+        "cli live s02 reply send-message",
+        reply_agent_name.as_str(),
+    )?;
+    let reply_message_id = parse_text_output_field(reply_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s02 reply send-message response missing message_id field: {reply_output}"
+            )
+        })?
+        .to_owned();
+    if reply_message_id.trim().is_empty() {
+        return Err("cli live s02 reply send-message returned empty message_id".to_owned());
+    }
+    let reply_send_status =
+        parse_text_output_field(reply_output.as_str(), "status").ok_or_else(|| {
+            format!("cli live s02 reply send-message response missing status field: {reply_output}")
+        })?;
+    if reply_send_status.trim().is_empty() {
+        return Err("cli live s02 reply send-message returned empty status".to_owned());
+    }
+
+    let reply_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            reply_message_id.as_str(),
+        ],
+        "cli live s02 reply query-message",
+        reply_query_agent_name.as_str(),
+    )?;
+    let reply_queried_message_id = parse_text_output_field(reply_query_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s02 reply query-message response missing message_id field: {reply_query_output}"
+            )
+        })?;
+    if reply_queried_message_id != reply_message_id {
+        return Err(format!(
+            "cli live s02 reply query-message returned mismatched message_id: expected={reply_message_id}, got={reply_queried_message_id}"
+        ));
+    }
+    let reply_queried_status =
+        parse_text_output_field(reply_query_output.as_str(), "status").ok_or_else(|| {
+            format!(
+                "cli live s02 reply query-message response missing status field: {reply_query_output}"
+            )
+        })?;
+    if reply_queried_status.trim().is_empty() {
+        return Err("cli live s02 reply query-message returned empty status".to_owned());
+    }
+
+    Ok(())
 }
 
 fn run_live_s04_cli_task_lifecycle_probe() -> Result<(), String> {
@@ -431,8 +581,9 @@ mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, parse_text_output_field,
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
-        run_live_s04_cli_task_lifecycle_probe, run_live_s06_cli_proof_verification_probe,
-        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        run_live_s02_cli_direct_message_probe, run_live_s04_cli_task_lifecycle_probe,
+        run_live_s06_cli_proof_verification_probe, CliScriptedDriver, CLI_BINARY_ENV,
+        CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -535,6 +686,24 @@ mod tests {
             || {
                 let error =
                     run_live_s01_cli_health_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s02_cli_direct_message_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s02_cli_direct_message_probe()
+                    .expect_err("missing binary should fail");
                 assert!(
                     error.contains("failed to spawn"),
                     "error should reflect spawn failure: {error}",
@@ -670,6 +839,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-06 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c03_live_s02_driver_path_fails_closed_when_message_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s02 message probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-02");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-02 should fail closed on probe error",
         );
     }
 }
