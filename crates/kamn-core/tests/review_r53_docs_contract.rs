@@ -233,6 +233,181 @@ fn is_test_cfg_attribute(line: &str) -> bool {
     trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+struct BraceScanState {
+    block_comment_depth: usize,
+    string_delimiter: Option<u8>,
+    raw_string_hashes: Option<usize>,
+    escape_next: bool,
+}
+
+fn is_ident_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+fn starts_char_literal(bytes: &[u8], index: usize) -> bool {
+    if index >= bytes.len() || bytes[index] != b'\'' {
+        return false;
+    }
+    if index + 1 >= bytes.len() {
+        return false;
+    }
+    let next = bytes[index + 1];
+    !(next.is_ascii_alphabetic() || next == b'_')
+}
+
+fn parse_raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    if index >= bytes.len() {
+        return None;
+    }
+
+    let prefix_len = if bytes[index] == b'r' {
+        1
+    } else if index + 1 < bytes.len() && bytes[index] == b'b' && bytes[index + 1] == b'r' {
+        2
+    } else {
+        return None;
+    };
+
+    if index > 0 && is_ident_byte(bytes[index - 1]) {
+        return None;
+    }
+
+    let mut cursor = index + prefix_len;
+    let mut hash_count = 0usize;
+    while cursor < bytes.len() && bytes[cursor] == b'#' {
+        hash_count += 1;
+        cursor += 1;
+    }
+
+    if cursor < bytes.len() && bytes[cursor] == b'"' {
+        Some((hash_count, cursor + 1))
+    } else {
+        None
+    }
+}
+
+fn line_brace_counts(line: &str, state: &mut BraceScanState) -> (i64, i64) {
+    let bytes = line.as_bytes();
+    let mut index = 0usize;
+    let mut open_count = 0_i64;
+    let mut close_count = 0_i64;
+
+    while index < bytes.len() {
+        if let Some(hash_count) = state.raw_string_hashes {
+            if bytes[index] == b'"' {
+                let mut cursor = index + 1;
+                let mut matched = true;
+                for _ in 0..hash_count {
+                    if cursor >= bytes.len() || bytes[cursor] != b'#' {
+                        matched = false;
+                        break;
+                    }
+                    cursor += 1;
+                }
+                if matched {
+                    state.raw_string_hashes = None;
+                    index = cursor;
+                    continue;
+                }
+            }
+            index += 1;
+            continue;
+        }
+
+        if let Some(delimiter) = state.string_delimiter {
+            if state.escape_next {
+                state.escape_next = false;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == b'\\' {
+                state.escape_next = true;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == delimiter {
+                state.string_delimiter = None;
+            }
+            index += 1;
+            continue;
+        }
+
+        if state.block_comment_depth > 0 {
+            if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
+                state.block_comment_depth += 1;
+                index += 2;
+                continue;
+            }
+            if index + 1 < bytes.len() && bytes[index] == b'*' && bytes[index + 1] == b'/' {
+                state.block_comment_depth = state.block_comment_depth.saturating_sub(1);
+                index += 2;
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+
+        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'/' {
+            break;
+        }
+        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
+            state.block_comment_depth += 1;
+            index += 2;
+            continue;
+        }
+
+        if let Some((hash_count, next_index)) = parse_raw_string_start(bytes, index) {
+            state.raw_string_hashes = Some(hash_count);
+            state.escape_next = false;
+            index = next_index;
+            continue;
+        }
+
+        if index + 1 < bytes.len()
+            && bytes[index] == b'b'
+            && bytes[index + 1] == b'"'
+            && (index == 0 || !is_ident_byte(bytes[index - 1]))
+        {
+            state.string_delimiter = Some(b'"');
+            state.escape_next = false;
+            index += 2;
+            continue;
+        }
+        if index + 1 < bytes.len()
+            && bytes[index] == b'b'
+            && bytes[index + 1] == b'\''
+            && (index == 0 || !is_ident_byte(bytes[index - 1]))
+        {
+            state.string_delimiter = Some(b'\'');
+            state.escape_next = false;
+            index += 2;
+            continue;
+        }
+        if bytes[index] == b'"' {
+            state.string_delimiter = Some(bytes[index]);
+            state.escape_next = false;
+            index += 1;
+            continue;
+        }
+        if bytes[index] == b'\'' && starts_char_literal(bytes, index) {
+            state.string_delimiter = Some(bytes[index]);
+            state.escape_next = false;
+            index += 1;
+            continue;
+        }
+
+        if bytes[index] == b'{' {
+            open_count += 1;
+        } else if bytes[index] == b'}' {
+            close_count += 1;
+        }
+        index += 1;
+    }
+
+    (open_count, close_count)
+}
+
 fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
     while index < lines.len() && lines[index].trim().is_empty() {
         index += 1;
@@ -246,12 +421,12 @@ fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
         return index;
     }
 
+    let mut scan_state = BraceScanState::default();
     let mut brace_depth = 0_i64;
     let mut saw_open_brace = false;
     while index < lines.len() {
         let line = lines[index];
-        let open_count = line.matches('{').count() as i64;
-        let close_count = line.matches('}').count() as i64;
+        let (open_count, close_count) = line_brace_counts(line, &mut scan_state);
         if open_count > 0 {
             saw_open_brace = true;
         }
@@ -324,6 +499,34 @@ fn production_expect_inventory_count() -> usize {
                 .count()
         })
         .sum()
+}
+
+#[test]
+fn unit_cfg_test_item_skip_ignores_braces_inside_strings() {
+    let source = r#"
+fn production_before() {}
+
+#[cfg(test)]
+mod tests {
+    fn brace_confuser_literal() -> &'static str {
+        "}}}}"
+    }
+
+    #[test]
+    fn test_only_expect() {
+        let literal = brace_confuser_literal();
+        let value = Some(literal.len()).expect("test-only expect");
+        assert!(value > 0);
+    }
+}
+
+fn production_after() -> usize { 42 }
+"#;
+    let stripped = production_source_without_cfg_test_items(source);
+    assert!(stripped.contains("fn production_before() {}"));
+    assert!(stripped.contains("fn production_after() -> usize { 42 }"));
+    assert!(!stripped.contains("mod tests"));
+    assert!(!stripped.contains("test-only expect"));
 }
 
 #[test]
@@ -1161,7 +1364,7 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
             &markers,
             "r55_review_production_expect_inventory_count_formula",
         ),
-        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)"
+        "count(lines containing '.expect(' after stripping #[cfg(test)]-guarded items in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/, main_tests.rs, and *_tests.rs)"
     );
     let reported_r55 = parse_marker_usize(
         &markers,

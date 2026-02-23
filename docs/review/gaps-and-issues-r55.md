@@ -361,7 +361,7 @@ Over 444 commits across 6 cycles, 28 delivered genuine capability. R55 alone acc
 - r55_review_workspace_contract_file_cap_status=regressed_with_waiver
 - r55_review_workspace_contract_file_cap_mitigation_issue=5831
 - r55_review_production_expect_inventory_schema_version=kamn.review.production-expect-inventory.v1
-- r55_review_production_expect_inventory_count_formula=count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)
+- r55_review_production_expect_inventory_count_formula=count(lines containing '.expect(' after stripping #[cfg(test)]-guarded items in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/, main_tests.rs, and *_tests.rs)
 - r55_review_production_expect_inventory_reported_count_r55=418
 - r55_review_production_expect_inventory_snapshot_count=0
 - r55_review_production_expect_inventory_delta_vs_r55=418

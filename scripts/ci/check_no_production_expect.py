@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -49,6 +50,141 @@ def is_test_cfg_attribute(line: str) -> bool:
     )
 
 
+@dataclass
+class BraceScanState:
+    block_comment_depth: int = 0
+    string_delimiter: str | None = None
+    raw_string_hashes: int | None = None
+    escape_next: bool = False
+
+
+def is_ident_byte(ch: str) -> bool:
+    return ch.isalnum() or ch == "_"
+
+
+def parse_raw_string_start(line: str, index: int) -> tuple[int, int] | None:
+    if index >= len(line):
+        return None
+
+    prefix_len = 0
+    if line.startswith("br", index):
+        prefix_len = 2
+    elif line[index] == "r":
+        prefix_len = 1
+    else:
+        return None
+
+    if index > 0 and is_ident_byte(line[index - 1]):
+        return None
+
+    cursor = index + prefix_len
+    hash_count = 0
+    while cursor < len(line) and line[cursor] == "#":
+        hash_count += 1
+        cursor += 1
+
+    if cursor < len(line) and line[cursor] == '"':
+        return hash_count, cursor + 1
+    return None
+
+
+def starts_char_literal(line: str, index: int) -> bool:
+    if index >= len(line) or line[index] != "'":
+        return False
+    if index + 1 >= len(line):
+        return False
+    next_ch = line[index + 1]
+    return not (next_ch.isalpha() or next_ch == "_")
+
+
+def scan_line_brace_counts(line: str, state: BraceScanState) -> tuple[int, int]:
+    open_count = 0
+    close_count = 0
+    index = 0
+    line_len = len(line)
+
+    while index < line_len:
+        ch = line[index]
+
+        if state.raw_string_hashes is not None:
+            if ch == '"':
+                suffix = "#" * state.raw_string_hashes
+                if line.startswith(suffix, index + 1):
+                    index += 1 + state.raw_string_hashes
+                    state.raw_string_hashes = None
+                    continue
+            index += 1
+            continue
+
+        if state.string_delimiter is not None:
+            if state.escape_next:
+                state.escape_next = False
+                index += 1
+                continue
+            if ch == "\\":
+                state.escape_next = True
+                index += 1
+                continue
+            if ch == state.string_delimiter:
+                state.string_delimiter = None
+            index += 1
+            continue
+
+        if state.block_comment_depth > 0:
+            if line.startswith("/*", index):
+                state.block_comment_depth += 1
+                index += 2
+                continue
+            if line.startswith("*/", index):
+                state.block_comment_depth -= 1
+                index += 2
+                continue
+            index += 1
+            continue
+
+        if line.startswith("//", index):
+            break
+        if line.startswith("/*", index):
+            state.block_comment_depth += 1
+            index += 2
+            continue
+
+        raw_string = parse_raw_string_start(line, index)
+        if raw_string is not None:
+            state.raw_string_hashes, index = raw_string
+            state.escape_next = False
+            continue
+
+        if line.startswith('b"', index) and (index == 0 or not is_ident_byte(line[index - 1])):
+            state.string_delimiter = '"'
+            state.escape_next = False
+            index += 2
+            continue
+        if line.startswith("b'", index) and (index == 0 or not is_ident_byte(line[index - 1])):
+            state.string_delimiter = "'"
+            state.escape_next = False
+            index += 2
+            continue
+        if ch == '"':
+            state.string_delimiter = ch
+            state.escape_next = False
+            index += 1
+            continue
+        if ch == "'" and starts_char_literal(line, index):
+            state.string_delimiter = ch
+            state.escape_next = False
+            index += 1
+            continue
+
+        if ch == "{":
+            open_count += 1
+        elif ch == "}":
+            close_count += 1
+        index += 1
+
+    return open_count, close_count
+
+
 def skip_cfg_test_item(lines: list[str], index: int) -> int:
     while index < len(lines) and lines[index].strip() == "":
         index += 1
@@ -59,12 +195,12 @@ def skip_cfg_test_item(lines: list[str], index: int) -> int:
     if index >= len(lines):
         return index
 
+    scan_state = BraceScanState()
     brace_depth = 0
     saw_open_brace = False
     while index < len(lines):
         line = lines[index]
-        open_count = line.count("{")
-        close_count = line.count("}")
+        open_count, close_count = scan_line_brace_counts(line, scan_state)
         if open_count > 0:
             saw_open_brace = True
         brace_depth += open_count - close_count
