@@ -1,8 +1,42 @@
 use kamn_agent_lib::{AgentIdentity, KamnAgentHandle};
+use std::ffi::OsString;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::{Duration, Instant};
+
+const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
+const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<OsString>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: &str) -> Self {
+        let previous = std::env::var_os(key);
+        // SAFETY: test mutates process env in a single-threaded setup for this key.
+        unsafe { std::env::set_var(key, value) };
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        match self.previous.take() {
+            Some(previous) => {
+                // SAFETY: restoring process env key after test completion.
+                unsafe { std::env::set_var(self.key, previous) }
+            }
+            None => {
+                // SAFETY: restoring process env key after test completion.
+                unsafe { std::env::remove_var(self.key) }
+            }
+        }
+    }
+}
 
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -180,6 +214,10 @@ fn wait_for_server_ready() {
 
 #[test]
 fn spec_c04_agent_handle_executes_task_and_escrow_route_contracts() {
+    let _auth_key_guard = EnvVarGuard::set(
+        SERVICE_AUTH_PRIVATE_KEY_ENV,
+        TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+    );
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
     let server = thread::spawn(move || run_task_and_escrow_server(server_addr, 4));

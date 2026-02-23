@@ -31,6 +31,29 @@ fn spec_c02_to_c07_workflow_contains_required_lane_and_mode_markers() {
 }
 
 #[test]
+fn spec_c08_to_c14_workflow_enforces_external_live_execution_markers() {
+    let root = repo_root();
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/e2e-live.yml"))
+        .expect("e2e-live workflow should exist");
+    assert!(workflow.contains("--enable-external-execution"));
+    assert!(workflow.contains("KAMN_E2E_SDK_DIRECT_LIVE: \"1\""));
+    assert!(workflow.contains("KAMN_E2E_CLI_SCRIPTED_LIVE: \"1\""));
+    assert!(workflow.contains("KAMN_E2E_MCP_AGENT_LIVE: \"1\""));
+    assert!(workflow.contains("KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY"));
+    assert!(workflow.contains("KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY"));
+    assert!(workflow.contains("KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY"));
+    assert!(workflow.contains("cargo build --release -p example-p2p"));
+    assert!(workflow.contains("RUSTFLAGS=\"-C link-arg=-fuse-ld=bfd\""));
+    assert!(workflow.contains("/tmp/kolme/target/release/example-p2p"));
+    assert!(workflow.contains("api-server"));
+    assert!(workflow.contains("--role processor"));
+    assert!(workflow.contains("--role listener"));
+    assert!(workflow.contains("--role approver"));
+    assert!(workflow.contains("wait_for_port 127.0.0.1 3000"));
+    assert!(workflow.contains("wait_for_http \"http://127.0.0.1:3000/healthz\""));
+}
+
+#[test]
 fn spec_c10_phase4i_docs_markers_present() {
     let root = repo_root();
     let doc = std::fs::read_to_string(

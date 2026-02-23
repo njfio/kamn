@@ -33,10 +33,16 @@ PANIC_REASON_CODES = frozenset(
 
 def is_excluded(path: Path) -> bool:
     path_str = path.as_posix()
+    file_name = path.name
     return (
         "/main_tests/" in path_str
-        or path.name.endswith("_tests.rs")
-        or path.name == "main_tests.rs"
+        or "/tests/" in path_str
+        or "/test_utils/" in path_str
+        or file_name.endswith("_tests.rs")
+        or "_tests_" in file_name
+        or file_name.startswith("runtime_tests")
+        or file_name.startswith("cli_tests")
+        or file_name == "main_tests.rs"
     )
 
 

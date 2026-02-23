@@ -820,11 +820,15 @@ pub use service_marketplace::{
 pub use signature_profile::{
     baseline_signature_algorithm, baseline_signature_for_fields, baseline_signature_profile_id,
     legacy_signature_for_fields, parse_signature_profile_metadata,
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+    service_auth_signing_payload_for_fields, service_auth_verify_with_public_key_hex,
     signature_matches_supported_profile_for_fields,
     signature_profile_compatibility_fixtures_for_fields, unknown_signature_algorithm_for_fields,
-    unknown_signature_profile_for_fields, SignatureProfileCompatibilityFixture,
-    SignatureProfileMetadata, BASELINE_SIGNATURE_ALGORITHM, BASELINE_SIGNATURE_PROFILE_ID,
-    LEGACY_SIGNATURE_PROFILE_ID, UNKNOWN_SIGNATURE_ALGORITHM_ID,
+    unknown_signature_profile_for_fields, ServiceAuthSignatureError,
+    SignatureProfileCompatibilityFixture, SignatureProfileMetadata, BASELINE_SIGNATURE_ALGORITHM,
+    BASELINE_SIGNATURE_PROFILE_ID, LEGACY_SIGNATURE_PROFILE_ID, SERVICE_AUTH_SIGNATURE_ALGORITHM,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SERVICE_AUTH_SIGNATURE_PROFILE_ID,
+    SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV, UNKNOWN_SIGNATURE_ALGORITHM_ID,
 };
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,

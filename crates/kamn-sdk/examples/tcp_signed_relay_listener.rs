@@ -92,6 +92,7 @@ fn run() -> Result<(), SdkError> {
     println!("nonce={}", received.envelope.nonce);
     println!("state_hash={}", received.envelope.state_hash);
     println!("body={}", received.envelope.body);
+    println!("signer_public_key={}", received.envelope.signer_public_key);
     println!("signature={}", received.envelope.signature);
     Ok(())
 }

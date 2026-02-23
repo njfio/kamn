@@ -1007,11 +1007,10 @@ This script:
 ### 10.1 Local Devnet Setup
 
 ```bash
-kolme-node \
-  --storage inmemory \
-  --api-port 3000 \
-  --processor-key $KOLME_PROCESSOR_KEY \
-  --enable-notifications
+git clone https://github.com/fpco/kolme /tmp/kolme
+cd /tmp/kolme
+RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
+/tmp/kolme/target/release/example-p2p api-server --bind 127.0.0.1:3000
 ```
 
 ### 10.2 KAMN Kolme Client Configuration
@@ -1130,16 +1129,17 @@ jobs:
       - name: Build KAMN (all crates including kamn-agent-lib)
         run: cargo build --workspace --release
 
-      - name: Build Kolme devnet
+      - name: Build Kolme local API runtime (example-p2p profile)
         run: |
           git clone https://github.com/fpco/kolme /tmp/kolme
-          cd /tmp/kolme && cargo build --release -p kolme-cli
+          cd /tmp/kolme
+          RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
 
       - name: Run E2E harness (SDK-direct mode)
         run: |
           cargo run --release -p kamn-e2e-harness -- \
             --mode sdk-direct \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
             --evidence-dir /tmp/evidence \
             --scenarios S-01,S-02,S-03,S-04,S-05,S-06
 
@@ -1180,7 +1180,7 @@ jobs:
           cargo run --release -p kamn-e2e-harness -- \
             --mode mcp-tau \
             --agent-binary /tmp/tau/target/release/tau \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
             --evidence-dir /tmp/evidence \
             --scenarios all
 ```
@@ -1198,7 +1198,7 @@ jobs:
         run: |
           cargo run --release -p kamn-e2e-harness -- \
             --mode cli-scripted \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
             --evidence-dir /tmp/evidence \
             --scenarios S-01,S-02
 ```

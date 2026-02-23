@@ -1,4 +1,5 @@
-use crate::{signature_for_fields, AgentDid, SdkError};
+use crate::{AgentDid, SdkError};
+use kamn_core::{service_auth_sign_with_private_key_hex, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV};
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
@@ -198,9 +199,25 @@ pub fn service_signature_for_fields(
     chain_id: &str,
     chain_version: &str,
     body: &str,
-) -> String {
+) -> Result<String, SdkError> {
+    let private_key_hex = std::env::var(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV).map_err(|_| {
+        SdkError::InvalidInput {
+            field: "service.request_auth.private_key",
+            reason: "missing KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+        }
+    })?;
     let state_hash = format!("service-api:{chain_id}:{chain_version}");
-    signature_for_fields(sender_did.as_str(), nonce, state_hash.as_str(), body)
+    service_auth_sign_with_private_key_hex(
+        sender_did.as_str(),
+        nonce,
+        state_hash.as_str(),
+        body,
+        private_key_hex.as_str(),
+    )
+    .map_err(|_| SdkError::InvalidInput {
+        field: "service.request_auth.signature",
+        reason: "failed to produce cryptographic service signature",
+    })
 }
 
 /// Parsed response for `POST /v1/messages/send`.

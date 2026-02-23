@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 const DRIFT_FIXTURE: &str =
     include_str!("../../../fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt");
+const TEST_TCP_SIGNING_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 fn did(value: &str) -> AgentDid {
     match AgentDid::parse(format!("kamn:did:agent:{value}")) {
@@ -118,6 +120,7 @@ fn functional_primary_loss_reconnect_and_catchup_matrix_case() {
         1,
         "state:matrix",
         "primary-online",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("first envelope build failed: {error}"),
@@ -128,6 +131,7 @@ fn functional_primary_loss_reconnect_and_catchup_matrix_case() {
         2,
         "state:matrix",
         "reconnect-catchup",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("second envelope build failed: {error}"),
@@ -198,6 +202,7 @@ fn integration_three_process_failover_matrix_case() {
         1,
         "state:three-process",
         "primary-path",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("primary envelope build failed: {error}"),
@@ -208,6 +213,7 @@ fn integration_three_process_failover_matrix_case() {
         2,
         "state:three-process",
         "standby-path",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("standby envelope build failed: {error}"),
@@ -269,6 +275,7 @@ fn regression_reconnect_drift_signature_fixture_contract() {
         8,
         "state:regression",
         "replay-initial",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("first replay envelope build failed: {error}"),
@@ -279,6 +286,7 @@ fn regression_reconnect_drift_signature_fixture_contract() {
         8,
         "state:regression",
         "replay-duplicate",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("replay envelope build failed: {error}"),
@@ -328,6 +336,7 @@ fn regression_reconnect_drift_signature_fixture_contract() {
         5,
         "state:regression",
         "forged-frame",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("forged envelope build failed: {error}"),
@@ -335,14 +344,16 @@ fn regression_reconnect_drift_signature_fixture_contract() {
     let forged_payload = format!(
         "frame=handshake\n\
 version=1\n\
-profile=ed25519:baseline-v1\n\
+profile=secp256k1:baseline-v2\n\
 from={}\n\
 to={}\n\
 nonce={}\n\
-signature=sig:ed25519:baseline-v1:forged-signature\n\n{}",
+signer_public_key={}\n\
+signature=sig:secp256k1:baseline-v2:0:00\n\n{}",
         forged_envelope.from,
         forged_envelope.to,
         forged_envelope.nonce,
+        forged_envelope.signer_public_key,
         forged_envelope.to_wire_payload()
     );
 
@@ -378,6 +389,7 @@ fn performance_tcp_failover_reconnect_matrix_fast_lane_budget() {
             nonce,
             "state:perf-failover",
             format!("payload-{nonce}"),
+            TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
         ) {
             Ok(value) => value,
             Err(error) => panic!("perf envelope build failed: {error}"),
@@ -434,6 +446,7 @@ fn performance_tcp_failover_reconnect_matrix_deep_lane() {
             nonce,
             "state:deep-failover",
             format!("deep-payload-{nonce}"),
+            TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
         ) {
             Ok(value) => value,
             Err(error) => panic!("deep envelope build failed: {error}"),

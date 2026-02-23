@@ -1,8 +1,9 @@
 use super::*;
 use crate::service_api_endpoint::{
     parse_service_api_payload, project_service_api_lifecycle_rejection, ServiceApiAgentGetBody,
-    ServiceApiChannelCreateBody, ServiceApiHealthBody, ServiceApiLifecycleRejectionProjection,
-    ServiceApiMessageCreateBody, ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+    ServiceApiChannelCreateBody, ServiceApiChannelMessagesBody, ServiceApiHealthBody,
+    ServiceApiLifecycleRejectionProjection, ServiceApiMessageCreateBody, ServiceApiMessageGetBody,
+    ServiceApiTaskCreateBody, DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
     DEFAULT_SERVICE_API_CONCURRENCY_LIMIT, DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
     SERVICE_API_AUTH_REASON_CODES_CSV, SERVICE_API_AUTH_REASON_TAXONOMY_VERSION,
     SERVICE_API_LIFECYCLE_REJECTION_REASON_CODES_CSV,
@@ -16,8 +17,8 @@ use crate::service_api_endpoint::{
     SERVICE_API_WEBSOCKET_REASON_TAXONOMY_VERSION,
 };
 use kamn_core::{
-    baseline_signature_for_fields, cross_store_replay_reason_codes_csv,
-    cross_store_replay_reason_taxonomy_version,
+    cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
 };
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use serde::Deserialize;
@@ -97,6 +98,8 @@ const SERVICE_API_AUTH_SCOPE_ROUTE_MISMATCH_REASON_CODE: &str =
     "service_api_auth_scope_route_mismatch";
 const SERVICE_API_SCOPE_POLICY_FIXTURE: &str =
     include_str!("../../../../fixtures/runtime/service_api_scope_policy_fixture_matrix.txt");
+const TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ServiceApiRouteAuthzMatrixRow {
@@ -762,11 +765,29 @@ fn wait_for_endpoint_ready(addr: &str) {
     panic!("endpoint did not become ready within timeout");
 }
 
+fn service_api_request_signature_for_fields(
+    sender: &str,
+    nonce: u64,
+    state_hash: &str,
+    payload: &str,
+) -> String {
+    service_auth_sign_with_private_key_hex(
+        sender,
+        nonce,
+        state_hash,
+        payload,
+        TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX,
+    )
+    .expect("service-auth signature should render for test fixture key")
+}
+
 struct ServiceApiTestEnvGuards {
     _env_lock: MutexGuard<'static, ()>,
     _tls_mode_guard: EnvVarGuard,
     _tls_cert_guard: EnvVarGuard,
     _tls_key_guard: EnvVarGuard,
+    _auth_public_key_guard: EnvVarGuard,
+    _state_file_guard: EnvVarGuard,
     _log_level_guard: EnvVarGuard,
     _log_format_guard: EnvVarGuard,
     _chain_id_guard: EnvVarGuard,
@@ -775,11 +796,19 @@ struct ServiceApiTestEnvGuards {
 
 fn acquire_service_api_test_env() -> ServiceApiTestEnvGuards {
     let env_lock = lock_signer_env_guard();
+    let auth_public_key_hex =
+        service_auth_public_key_hex_from_private_key_hex(TEST_SERVICE_API_AUTH_PRIVATE_KEY_HEX)
+            .expect("service-auth public key should derive");
     ServiceApiTestEnvGuards {
         _env_lock: env_lock,
         _tls_mode_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", None),
         _tls_cert_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_CERT_FILE", None),
         _tls_key_guard: EnvVarGuard::set("KAMN_SERVICE_API_TLS_KEY_FILE", None),
+        _auth_public_key_guard: EnvVarGuard::set(
+            "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX",
+            Some(auth_public_key_hex.as_str()),
+        ),
+        _state_file_guard: EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", None),
         _log_level_guard: EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", None),
         _log_format_guard: EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", None),
         _chain_id_guard: EnvVarGuard::set("KAMN_NODE_CHAIN_ID", None),
@@ -1426,8 +1455,12 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature =
-        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        sender_nonce,
+        state_hash.as_str(),
+        message_body,
+    );
     let send_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
@@ -2130,8 +2163,12 @@ fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts()
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature =
-        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        sender_nonce,
+        state_hash.as_str(),
+        message_body,
+    );
     let send_response = send_http_request_with_headers(
         bind_addr.as_str(),
         "POST",
@@ -2263,8 +2300,12 @@ fn functional_service_api_endpoint_emits_structured_ingress_correlation_markers(
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature =
-        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        sender_nonce,
+        state_hash.as_str(),
+        message_body,
+    );
     let client_bind_addr = bind_addr.clone();
     let client = thread::spawn(move || {
         thread::sleep(Duration::from_millis(50));
@@ -2817,14 +2858,30 @@ fn integration_service_api_endpoint_scope_policy_rejects_missing_invalid_and_mis
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature_missing_scope =
-        baseline_signature_for_fields(sender_did, 9101, state_hash.as_str(), message_body);
-    let signature_invalid_scope =
-        baseline_signature_for_fields(sender_did, 9102, state_hash.as_str(), message_body);
-    let signature_mismatch_scope =
-        baseline_signature_for_fields(sender_did, 9103, state_hash.as_str(), message_body);
-    let signature_allowed_scope =
-        baseline_signature_for_fields(sender_did, 9104, state_hash.as_str(), message_body);
+    let signature_missing_scope = service_api_request_signature_for_fields(
+        sender_did,
+        9101,
+        state_hash.as_str(),
+        message_body,
+    );
+    let signature_invalid_scope = service_api_request_signature_for_fields(
+        sender_did,
+        9102,
+        state_hash.as_str(),
+        message_body,
+    );
+    let signature_mismatch_scope = service_api_request_signature_for_fields(
+        sender_did,
+        9103,
+        state_hash.as_str(),
+        message_body,
+    );
+    let signature_allowed_scope = service_api_request_signature_for_fields(
+        sender_did,
+        9104,
+        state_hash.as_str(),
+        message_body,
+    );
 
     let missing_scope_response = send_http_request_with_headers_raw(
         bind_addr.as_str(),
@@ -2965,6 +3022,668 @@ fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
 }
 
 #[test]
+fn integration_service_api_endpoint_rejects_legacy_deterministic_signature_profile() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34079".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:test-client-legacy-signature";
+    let nonce = 1_u64;
+    let payload = r#"{"message":"legacy-signature"}"#;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let legacy_signature =
+        kamn_core::legacy_signature_for_fields(sender_did, nonce, state_hash.as_str(), payload);
+
+    let response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        payload,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", legacy_signature.as_str()),
+        ],
+    );
+    assert!(response.contains("HTTP/1.1 401 Unauthorized"));
+    let error_payload = parse_error_envelope_from_http_response(response.as_str());
+    assert_eq!(
+        error_payload.reason_code,
+        "service_api_auth_signature_verification_failed"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_true() {
+    let _env = acquire_service_api_test_env();
+    let _legacy_toggle_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_AUTH_ALLOW_LEGACY_SIGNATURES",
+        Some("true"),
+    );
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34095".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:test-client-legacy-toggle-true";
+    let nonce = 1_u64;
+    let payload = r#"{"message":"legacy-signature-toggle-true"}"#;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let legacy_signature =
+        kamn_core::legacy_signature_for_fields(sender_did, nonce, state_hash.as_str(), payload);
+
+    let response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        payload,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", legacy_signature.as_str()),
+        ],
+    );
+    assert!(response.contains("HTTP/1.1 401 Unauthorized"));
+    let error_payload = parse_error_envelope_from_http_response(response.as_str());
+    assert_eq!(
+        error_payload.reason_code,
+        "service_api_auth_signature_verification_failed"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_persists_message_state_across_restart() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34080".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let bind_addr = reserve_loopback_addr();
+    let send_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let send_snapshot = snapshot.clone();
+    let send_server =
+        thread::spawn(move || serve_service_api_endpoint(&send_config, &send_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let payload = r#"{"message":"durable-store-check"}"#;
+    let send_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-persist",
+        1,
+        state_hash.as_str(),
+        payload,
+    );
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        payload,
+        &[
+            ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-persist"),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+    let send_server_result = send_server
+        .join()
+        .expect("send server thread should complete");
+    assert!(
+        send_server_result.is_ok(),
+        "send-phase service api endpoint should stop cleanly after request budget"
+    );
+
+    let query_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let query_snapshot = snapshot.clone();
+    let query_server =
+        thread::spawn(move || serve_service_api_endpoint(&query_config, &query_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let query_path = format!("/v1/messages/{}", send_payload.message_id);
+    let query_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-persist",
+        2,
+        state_hash.as_str(),
+        "",
+    );
+    let query_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        query_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-persist"),
+            ("X-KAMN-Request-Nonce", "2"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 200 OK"));
+    let query_payload: ServiceApiMessageGetBody =
+        parse_service_api_payload(extract_http_response_body(query_response.as_str()))
+            .expect("query payload should deserialize");
+    assert_eq!(query_payload.message_id, send_payload.message_id);
+    assert_eq!(query_payload.status, "created");
+
+    let query_server_result = query_server
+        .join()
+        .expect("query server thread should complete");
+    assert!(
+        query_server_result.is_ok(),
+        "query-phase service api endpoint should stop cleanly after request budget"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_lists_channel_messages_from_message_store() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-channel-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34081".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let send_payload_body = r#"{"channel_id":"channel-contract-42","message":"hello"}"#;
+    let send_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-channel",
+        11,
+        state_hash.as_str(),
+        send_payload_body,
+    );
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        send_payload_body,
+        &[
+            ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-channel"),
+            ("X-KAMN-Request-Nonce", "11"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+
+    let list_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-channel",
+        12,
+        state_hash.as_str(),
+        "",
+    );
+    let list_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        "/v1/channels/channel-contract-42/messages",
+        "",
+        &[
+            ("X-KAMN-Sender-DID", "kamn:did:agent:test-client-channel"),
+            ("X-KAMN-Request-Nonce", "12"),
+            ("X-KAMN-Request-Signature", list_signature.as_str()),
+        ],
+    );
+    assert!(list_response.contains("HTTP/1.1 200 OK"));
+    let list_payload: ServiceApiChannelMessagesBody =
+        parse_service_api_payload(extract_http_response_body(list_response.as_str()))
+            .expect("channel list payload should deserialize");
+    assert_eq!(list_payload.channel_id, "channel-contract-42");
+    assert!(
+        list_payload.messages.contains(&send_payload.message_id),
+        "channel list should contain sent message id"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after channel list request budget"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-task-escrow-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34106".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let task_caller_did = "kamn:did:agent:test-client-task-state";
+    let escrow_caller_did = "kamn:did:agent:test-client-escrow-state";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 5,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let create_task_payload =
+        r#"{"title":"persisted-task","description":"task persistence contract"}"#;
+    let create_task_signature = service_api_request_signature_for_fields(
+        task_caller_did,
+        21,
+        state_hash.as_str(),
+        create_task_payload,
+    );
+    let create_task_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/tasks/create",
+        create_task_payload,
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "21"),
+            ("X-KAMN-Request-Signature", create_task_signature.as_str()),
+        ],
+    );
+    assert!(create_task_response.contains("HTTP/1.1 201 Created"));
+    let created_task: ServiceApiTaskCreateBody =
+        parse_service_api_payload(extract_http_response_body(create_task_response.as_str()))
+            .expect("task create payload should deserialize");
+    assert_eq!(created_task.state, "submitted");
+
+    let accept_path = format!("/v1/tasks/{}/accept", created_task.task_id);
+    let accept_signature =
+        service_api_request_signature_for_fields(task_caller_did, 22, state_hash.as_str(), "");
+    let accept_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        accept_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "22"),
+            ("X-KAMN-Request-Signature", accept_signature.as_str()),
+        ],
+    );
+    assert!(accept_response.contains("HTTP/1.1 200 OK"));
+
+    let query_task_path = format!("/v1/tasks/{}", created_task.task_id);
+    let query_task_signature =
+        service_api_request_signature_for_fields(task_caller_did, 23, state_hash.as_str(), "");
+    let query_task_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        query_task_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "23"),
+            ("X-KAMN-Request-Signature", query_task_signature.as_str()),
+        ],
+    );
+    assert!(query_task_response.contains("HTTP/1.1 200 OK"));
+    let queried_task: Value =
+        parse_service_api_payload(extract_http_response_body(query_task_response.as_str()))
+            .expect("task query payload should deserialize");
+    assert_eq!(queried_task["task_id"], created_task.task_id);
+    assert_eq!(queried_task["state"], "accepted");
+
+    let fund_payload = r#"{"task_id":"persisted-task","amount":1}"#;
+    let fund_signature = service_api_request_signature_for_fields(
+        escrow_caller_did,
+        24,
+        state_hash.as_str(),
+        fund_payload,
+    );
+    let fund_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/escrow/fund",
+        fund_payload,
+        &[
+            ("X-KAMN-Sender-DID", escrow_caller_did),
+            ("X-KAMN-Request-Nonce", "24"),
+            ("X-KAMN-Request-Signature", fund_signature.as_str()),
+        ],
+    );
+    assert!(fund_response.contains("HTTP/1.1 200 OK"));
+    let funded_escrow: Value =
+        parse_service_api_payload(extract_http_response_body(fund_response.as_str()))
+            .expect("escrow fund payload should deserialize");
+    assert_eq!(funded_escrow["state"], "funded");
+    let escrow_id = funded_escrow["escrow_id"]
+        .as_str()
+        .expect("escrow id should be string")
+        .to_owned();
+
+    let release_path = format!("/v1/escrow/{escrow_id}/release");
+    let release_signature =
+        service_api_request_signature_for_fields(escrow_caller_did, 25, state_hash.as_str(), "");
+    let release_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        release_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", escrow_caller_did),
+            ("X-KAMN-Request-Nonce", "25"),
+            ("X-KAMN-Request-Signature", release_signature.as_str()),
+        ],
+    );
+    assert!(release_response.contains("HTTP/1.1 200 OK"));
+    let released_escrow: Value =
+        parse_service_api_payload(extract_http_response_body(release_response.as_str()))
+            .expect("escrow release payload should deserialize");
+    assert_eq!(released_escrow["escrow_id"], escrow_id);
+    assert_eq!(released_escrow["state"], "released");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after task+escrow persistence requests"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-recipient-delivery-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34107".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let sender_did = "kamn:did:agent:delivery-sender";
+    let recipient_did = "kamn:did:agent:delivery-recipient";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let send_body =
+        r#"{"recipient_did":"kamn:did:agent:delivery-recipient","message":"deliver-me"}"#;
+    let send_signature =
+        service_api_request_signature_for_fields(sender_did, 31, state_hash.as_str(), send_body);
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        send_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "31"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+
+    let mailbox_path = format!("/v1/channels/recipient:{recipient_did}/messages");
+    let mailbox_signature =
+        service_api_request_signature_for_fields(recipient_did, 32, state_hash.as_str(), "");
+    let mailbox_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        mailbox_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Request-Nonce", "32"),
+            ("X-KAMN-Request-Signature", mailbox_signature.as_str()),
+        ],
+    );
+    assert!(mailbox_response.contains("HTTP/1.1 200 OK"));
+    let mailbox_payload: ServiceApiChannelMessagesBody =
+        parse_service_api_payload(extract_http_response_body(mailbox_response.as_str()))
+            .expect("mailbox payload should deserialize");
+    assert!(
+        mailbox_payload.messages.contains(&send_payload.message_id),
+        "recipient mailbox projection should include sent message id"
+    );
+
+    let message_path = format!("/v1/messages/{}", send_payload.message_id);
+    let message_signature =
+        service_api_request_signature_for_fields(recipient_did, 33, state_hash.as_str(), "");
+    let message_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        message_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", recipient_did),
+            ("X-KAMN-Request-Nonce", "33"),
+            ("X-KAMN-Request-Signature", message_signature.as_str()),
+        ],
+    );
+    assert!(message_response.contains("HTTP/1.1 200 OK"));
+    let message_payload: Value =
+        parse_service_api_payload(extract_http_response_body(message_response.as_str()))
+            .expect("message query payload should deserialize");
+    assert_eq!(message_payload["message_id"], send_payload.message_id);
+    assert_eq!(message_payload["status"], "delivered");
+    assert_eq!(message_payload["sender_did"], sender_did);
+    assert_eq!(message_payload["recipient_did"], recipient_did);
+    assert_eq!(message_payload["body"], send_body);
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after recipient delivery contract flow"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
 fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
     let _env = acquire_service_api_test_env();
     let parsed = parse_args(vec![
@@ -3001,10 +3720,18 @@ fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let first_signature =
-        baseline_signature_for_fields(sender_did, 101, state_hash.as_str(), message_body);
-    let second_signature =
-        baseline_signature_for_fields(sender_did, 102, state_hash.as_str(), message_body);
+    let first_signature = service_api_request_signature_for_fields(
+        sender_did,
+        101,
+        state_hash.as_str(),
+        message_body,
+    );
+    let second_signature = service_api_request_signature_for_fields(
+        sender_did,
+        102,
+        state_hash.as_str(),
+        message_body,
+    );
 
     let first_response = send_http_request_with_headers(
         bind_addr.as_str(),
@@ -3088,8 +3815,12 @@ fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspens
 
     let mut responses = Vec::new();
     for nonce in 610_u64..616_u64 {
-        let signature =
-            baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+        let signature = service_api_request_signature_for_fields(
+            sender_did,
+            nonce,
+            state_hash.as_str(),
+            message_body,
+        );
         let nonce_text = nonce.to_string();
         responses.push(send_http_request_with_headers(
             bind_addr.as_str(),
@@ -3184,7 +3915,7 @@ fn integration_service_api_endpoint_sender_anti_spam_burst_rounds_remain_determi
 
         for request_index in 0..requests_per_round {
             let nonce = 9_000 + round * requests_per_round + request_index;
-            let signature = baseline_signature_for_fields(
+            let signature = service_api_request_signature_for_fields(
                 sender_did.as_str(),
                 nonce,
                 state_hash.as_str(),
@@ -3293,8 +4024,12 @@ fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded()
         let state_hash = state_hash.clone();
         clients.push(thread::spawn(move || {
             let nonce = 200 + request_index as u64;
-            let signature =
-                baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+            let signature = service_api_request_signature_for_fields(
+                sender_did,
+                nonce,
+                state_hash.as_str(),
+                message_body,
+            );
             let nonce_text = nonce.to_string();
             barrier.wait();
             send_http_request_with_headers(
@@ -3396,7 +4131,7 @@ fn integration_service_api_endpoint_concurrency_rejection_reason_stays_stable_un
                     "{{\"message\":\"concurrency-burst-round-{round}-request-{request_index}\"}}"
                 );
                 let nonce = 12_000 + round * worker_count as u64 + request_index as u64;
-                let signature = baseline_signature_for_fields(
+                let signature = service_api_request_signature_for_fields(
                     sender_did.as_str(),
                     nonce,
                     state_hash.as_str(),
@@ -3494,7 +4229,7 @@ fn regression_service_api_endpoint_oversized_payload_maps_body_limit_reason_code
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(
+    let signature = service_api_request_signature_for_fields(
         sender_did,
         nonce,
         state_hash.as_str(),
@@ -3565,8 +4300,12 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature =
-        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        sender_nonce,
+        state_hash.as_str(),
+        message_body,
+    );
     let auth_headers = [
         ("X-KAMN-Sender-DID", sender_did),
         ("X-KAMN-Request-Nonce", "7"),
@@ -3643,10 +4382,18 @@ fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_sp
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature_nonce_one =
-        baseline_signature_for_fields(sender_did, 701, state_hash.as_str(), message_body);
-    let signature_nonce_two =
-        baseline_signature_for_fields(sender_did, 702, state_hash.as_str(), message_body);
+    let signature_nonce_one = service_api_request_signature_for_fields(
+        sender_did,
+        701,
+        state_hash.as_str(),
+        message_body,
+    );
+    let signature_nonce_two = service_api_request_signature_for_fields(
+        sender_did,
+        702,
+        state_hash.as_str(),
+        message_body,
+    );
 
     let first_response = send_http_request_with_headers(
         bind_addr.as_str(),
@@ -3746,8 +4493,12 @@ fn regression_service_api_endpoint_replay_duplicate_sequence_reason_ordering_sta
     for round in 0..rounds {
         let body = format!("{{\"message\":\"replay-duplicate-round-{round}\"}}");
         let nonce = 13_000 + round;
-        let signature =
-            baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), body.as_str());
+        let signature = service_api_request_signature_for_fields(
+            sender_did,
+            nonce,
+            state_hash.as_str(),
+            body.as_str(),
+        );
         let nonce_text = nonce.to_string();
         let headers = [
             ("X-KAMN-Sender-DID", sender_did),
@@ -3837,7 +4588,8 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -3900,7 +4652,8 @@ fn integration_service_api_endpoint_websocket_presence_mode_streams_bridge_proje
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -4017,7 +4770,8 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_unsupported_m
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -4079,7 +4833,8 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_missing_owner
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -4145,7 +4900,8 @@ fn regression_service_api_endpoint_websocket_presence_mode_rejects_cross_owner_s
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -4216,7 +4972,8 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_http_request_with_headers(
         bind_addr.as_str(),
         "GET",
@@ -4280,7 +5037,8 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     );
-    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
     let response = send_websocket_upgrade_request_with_version(
         bind_addr.as_str(),
         "/v1/events/ws",
@@ -4418,8 +5176,12 @@ fn integration_service_api_endpoint_lifecycle_projection_matches_live_concurrenc
         let state_hash = state_hash.clone();
         clients.push(thread::spawn(move || {
             let nonce = 810 + request_index as u64;
-            let signature =
-                baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+            let signature = service_api_request_signature_for_fields(
+                sender_did,
+                nonce,
+                state_hash.as_str(),
+                message_body,
+            );
             let nonce_text = nonce.to_string();
             barrier.wait();
             send_http_request_with_headers(
@@ -4518,7 +5280,7 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
                 );
                 let nonce = 4_000 + round * worker_count as u64 + request_index as u64;
                 let signature =
-                    baseline_signature_for_fields(
+                    service_api_request_signature_for_fields(
                         sender_did.as_str(),
                         nonce,
                         state_hash.as_str(),

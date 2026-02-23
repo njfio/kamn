@@ -51,6 +51,89 @@ Run lane with explicit local-heavy opt-in:
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/runtime/run_live_validation_environment_lane.sh --mode run --output-json /tmp/live-validation-environment.json
 ```
 
+## Local Kolme Setup For E2E Harness
+
+For local `kamn-e2e-harness` live runs, use an upstream-supported Kolme API profile from this repo
+without modifying the Kolme source tree:
+
+```bash
+git clone https://github.com/fpco/kolme /tmp/kolme
+cd /tmp/kolme
+RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
+/tmp/kolme/target/release/example-p2p api-server --bind 127.0.0.1:3000
+```
+
+Readiness check:
+
+```bash
+curl --fail --silent --show-error http://127.0.0.1:3000/healthz
+```
+
+### Full Local E2E Smoke (Kolme + 3 KAMN Nodes + Harness Run/Verify)
+
+Start three local KAMN API nodes (processor/listener/approver) in separate shells:
+
+```bash
+target/debug/kamn-node \
+  --runtime-mode api \
+  --role processor \
+  --api-bind 127.0.0.1:8080 \
+  --api-max-requests 1000 \
+  --api-idle-timeout-ms 600000 \
+  --storage-dir /tmp/kamn-node-live-processor
+```
+
+```bash
+target/debug/kamn-node \
+  --runtime-mode api \
+  --role listener \
+  --api-bind 127.0.0.1:8081 \
+  --api-max-requests 1000 \
+  --api-idle-timeout-ms 600000 \
+  --storage-dir /tmp/kamn-node-live-listener
+```
+
+```bash
+target/debug/kamn-node \
+  --runtime-mode api \
+  --role approver \
+  --api-bind 127.0.0.1:8082 \
+  --api-max-requests 1000 \
+  --api-idle-timeout-ms 600000 \
+  --storage-dir /tmp/kamn-node-live-approver
+```
+
+Run harness `run` in live external-execution mode:
+
+```bash
+export KAMN_E2E_SDK_DIRECT_LIVE=true
+export KAMN_ENDPOINT=http://127.0.0.1:8080
+export KAMN_KOLME_ENDPOINT=http://127.0.0.1:3000
+export KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY=/abs/path/to/target/debug/kamn-node
+export KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY=/abs/path/to/target/debug/kamn-node
+export KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY=/abs/path/to/target/debug/kamn-node
+
+target/debug/kamn-e2e-harness run \
+  --mode sdk-direct \
+  --kolme-binary /tmp/kolme/target/release/example-p2p \
+  --enable-external-execution \
+  --evidence-dir /tmp/kamn-e2e-live-evidence \
+  --scenarios S-01 > /tmp/kamn-e2e-live-run.json
+```
+
+Run harness `verify` against generated evidence:
+
+```bash
+target/debug/kamn-e2e-harness verify \
+  --evidence-dir /tmp/kamn-e2e-live-evidence \
+  --kolme-chain-dump /tmp/kamn-e2e-live-evidence/kolme_chain_dump.json \
+  --output /tmp/kamn-e2e-live-verify-report.json > /tmp/kamn-e2e-live-verify.json
+```
+
+Note: keep `run` and `verify` stdout files outside the evidence directory. `verify` validates
+all JSON artifacts in `--evidence-dir` except manifest/chain-dump/report output and will fail
+closed if unrelated JSON files are present there without `_verification` markers.
+
 ## Deterministic Markers
 
 Success markers:

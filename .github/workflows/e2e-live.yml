@@ -35,18 +35,121 @@ jobs:
       - name: Build KAMN workspace
         run: cargo build --workspace --release
 
-      - name: Build Kolme devnet binary
+      - name: Build Kolme local API runtime (example-p2p profile)
         run: |
           git clone https://github.com/fpco/kolme /tmp/kolme
           cd /tmp/kolme
-          cargo build --release -p kolme-cli
+          RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
 
-      - name: Run E2E harness (SDK-direct mode)
+      - name: Run E2E harness (SDK-direct mode, external live stack)
+        env:
+          KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_SDK_DIRECT_LIVE: "1"
+          KAMN_ENDPOINT: http://127.0.0.1:8080
+          KAMN_KOLME_ENDPOINT: http://127.0.0.1:3000
         run: |
+          set -euo pipefail
+
+          SERVICE_AUTH_PRIVATE_KEY_HEX="658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4"
+          export SERVICE_AUTH_PRIVATE_KEY_HEX
+          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              for log in /tmp/kolme.log /tmp/kamn-processor.log /tmp/kamn-listener.log /tmp/kamn-approver.log; do
+                if [ -f "$log" ]; then
+                  echo "::group::$(basename "$log")"
+                  tail -n 200 "$log" || true
+                  echo "::endgroup::"
+                fi
+              done
+            fi
+            for pid in "${APPROVER_PID:-}" "${LISTENER_PID:-}" "${PROCESSOR_PID:-}" "${KOLME_PID:-}"; do
+              if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" || true
+                wait "$pid" || true
+              fi
+            done
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          /tmp/kolme/target/release/example-p2p \
+            api-server \
+            --bind 127.0.0.1:3000 \
+            >/tmp/kolme.log 2>&1 &
+          KOLME_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role processor \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8080 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-processor.log 2>&1 &
+          PROCESSOR_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role listener \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8081 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-listener.log 2>&1 &
+          LISTENER_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role approver \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8082 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-approver.log 2>&1 &
+          APPROVER_PID=$!
+
+          wait_for_http() {
+            local url="$1"
+            for attempt in $(seq 1 120); do
+              if curl -fsS "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          for endpoint in \
+            "http://127.0.0.1:8080/healthz" \
+            "http://127.0.0.1:8081/healthz" \
+            "http://127.0.0.1:8082/healthz"; do
+            wait_for_http "$endpoint"
+          done
+
+          wait_for_port() {
+            local host="$1"
+            local port="$2"
+            for attempt in $(seq 1 120); do
+              if (echo >"/dev/tcp/$host/$port") >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          wait_for_port 127.0.0.1 3000
+          wait_for_http "http://127.0.0.1:3000/healthz"
+
           cargo run --release -p kamn-e2e-harness -- \
             run \
             --mode sdk-direct \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
+            --enable-external-execution \
             --evidence-dir /tmp/evidence \
             --scenarios S-01,S-02,S-03,S-04,S-05,S-06
 
@@ -77,27 +180,124 @@ jobs:
       - name: Build KAMN workspace
         run: cargo build --workspace --release
 
-      - name: Build Tau runtime
-        run: |
-          git clone https://github.com/njfio/Tau /tmp/tau
-          cd /tmp/tau
-          cargo build --release
-
-      - name: Build Kolme devnet binary
+      - name: Build Kolme local API runtime (example-p2p profile)
         run: |
           git clone https://github.com/fpco/kolme /tmp/kolme
           cd /tmp/kolme
-          cargo build --release -p kolme-cli
+          RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
 
-      - name: Run E2E harness (MCP-Tau mode)
+      - name: Run E2E harness (MCP mode, external live stack)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_MCP_AGENT_LIVE: "1"
+          KAMN_E2E_MCP_AGENT_BINARY: ${{ github.workspace }}/target/release/kamn-mcp-server
+          KAMN_ENDPOINT: http://127.0.0.1:8080
+          KAMN_KOLME_ENDPOINT: http://127.0.0.1:3000
         run: |
+          set -euo pipefail
+
+          SERVICE_AUTH_PRIVATE_KEY_HEX="658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4"
+          export SERVICE_AUTH_PRIVATE_KEY_HEX
+          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              for log in /tmp/kolme.log /tmp/kamn-processor.log /tmp/kamn-listener.log /tmp/kamn-approver.log; do
+                if [ -f "$log" ]; then
+                  echo "::group::$(basename "$log")"
+                  tail -n 200 "$log" || true
+                  echo "::endgroup::"
+                fi
+              done
+            fi
+            for pid in "${APPROVER_PID:-}" "${LISTENER_PID:-}" "${PROCESSOR_PID:-}" "${KOLME_PID:-}"; do
+              if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" || true
+                wait "$pid" || true
+              fi
+            done
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          /tmp/kolme/target/release/example-p2p \
+            api-server \
+            --bind 127.0.0.1:3000 \
+            >/tmp/kolme.log 2>&1 &
+          KOLME_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role processor \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8080 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-processor.log 2>&1 &
+          PROCESSOR_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role listener \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8081 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-listener.log 2>&1 &
+          LISTENER_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role approver \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8082 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-approver.log 2>&1 &
+          APPROVER_PID=$!
+
+          wait_for_http() {
+            local url="$1"
+            for attempt in $(seq 1 120); do
+              if curl -fsS "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          for endpoint in \
+            "http://127.0.0.1:8080/healthz" \
+            "http://127.0.0.1:8081/healthz" \
+            "http://127.0.0.1:8082/healthz"; do
+            wait_for_http "$endpoint"
+          done
+
+          wait_for_port() {
+            local host="$1"
+            local port="$2"
+            for attempt in $(seq 1 120); do
+              if (echo >"/dev/tcp/$host/$port") >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          wait_for_port 127.0.0.1 3000
+          wait_for_http "http://127.0.0.1:3000/healthz"
+
           cargo run --release -p kamn-e2e-harness -- \
             run \
             --mode mcp-tau \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
-            --agent-binary /tmp/tau/target/release/tau \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
+            --agent-binary "$GITHUB_WORKSPACE/target/release/kamn-mcp-server" \
+            --enable-external-execution \
             --evidence-dir /tmp/evidence \
             --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15
 
@@ -113,17 +313,121 @@ jobs:
       - name: Build KAMN workspace
         run: cargo build --workspace --release
 
-      - name: Build Kolme devnet binary
+      - name: Build Kolme local API runtime (example-p2p profile)
         run: |
           git clone https://github.com/fpco/kolme /tmp/kolme
           cd /tmp/kolme
-          cargo build --release -p kolme-cli
+          RUSTFLAGS="-C link-arg=-fuse-ld=bfd" cargo build --release -p example-p2p
 
-      - name: Run E2E smoke (CLI mode, P0 scenarios)
+      - name: Run E2E smoke (CLI mode, external live stack)
+        env:
+          KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY: ${{ github.workspace }}/target/release/kamn-node
+          KAMN_E2E_CLI_SCRIPTED_LIVE: "1"
+          KAMN_E2E_CLI_BINARY: ${{ github.workspace }}/target/release/kamn-cli
+          KAMN_ENDPOINT: http://127.0.0.1:8080
+          KAMN_KOLME_ENDPOINT: http://127.0.0.1:3000
         run: |
+          set -euo pipefail
+
+          SERVICE_AUTH_PRIVATE_KEY_HEX="658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4"
+          export SERVICE_AUTH_PRIVATE_KEY_HEX
+          SERVICE_AUTH_PUBLIC_KEY_HEX="$(python3 -c 'from cryptography.hazmat.primitives.asymmetric import ec; from cryptography.hazmat.primitives import serialization; import os; private_key = ec.derive_private_key(int(os.environ["SERVICE_AUTH_PRIVATE_KEY_HEX"], 16), ec.SECP256K1()); print(private_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint).hex())')"
+          export KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX="$SERVICE_AUTH_PRIVATE_KEY_HEX"
+          export KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$SERVICE_AUTH_PUBLIC_KEY_HEX"
+
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              for log in /tmp/kolme.log /tmp/kamn-processor.log /tmp/kamn-listener.log /tmp/kamn-approver.log; do
+                if [ -f "$log" ]; then
+                  echo "::group::$(basename "$log")"
+                  tail -n 200 "$log" || true
+                  echo "::endgroup::"
+                fi
+              done
+            fi
+            for pid in "${APPROVER_PID:-}" "${LISTENER_PID:-}" "${PROCESSOR_PID:-}" "${KOLME_PID:-}"; do
+              if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" || true
+                wait "$pid" || true
+              fi
+            done
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          /tmp/kolme/target/release/example-p2p \
+            api-server \
+            --bind 127.0.0.1:3000 \
+            >/tmp/kolme.log 2>&1 &
+          KOLME_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role processor \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8080 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-processor.log 2>&1 &
+          PROCESSOR_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role listener \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8081 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-listener.log 2>&1 &
+          LISTENER_PID=$!
+
+          "$GITHUB_WORKSPACE/target/release/kamn-node" \
+            --role approver \
+            --runtime-mode api \
+            --api-bind 127.0.0.1:8082 \
+            --api-max-requests 10000 \
+            --api-idle-timeout-ms 600000 \
+            >/tmp/kamn-approver.log 2>&1 &
+          APPROVER_PID=$!
+
+          wait_for_http() {
+            local url="$1"
+            for attempt in $(seq 1 120); do
+              if curl -fsS "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          for endpoint in \
+            "http://127.0.0.1:8080/healthz" \
+            "http://127.0.0.1:8081/healthz" \
+            "http://127.0.0.1:8082/healthz"; do
+            wait_for_http "$endpoint"
+          done
+
+          wait_for_port() {
+            local host="$1"
+            local port="$2"
+            for attempt in $(seq 1 120); do
+              if (echo >"/dev/tcp/$host/$port") >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          wait_for_port 127.0.0.1 3000
+          wait_for_http "http://127.0.0.1:3000/healthz"
+
           cargo run --release -p kamn-e2e-harness -- \
             run \
             --mode cli-scripted \
-            --kolme-binary /tmp/kolme/target/release/kolme-node \
+            --kolme-binary /tmp/kolme/target/release/example-p2p \
+            --enable-external-execution \
             --evidence-dir /tmp/evidence \
             --scenarios S-01,S-02
