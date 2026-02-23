@@ -11,6 +11,8 @@ const DEFAULT_MCP_AGENT_BINARY: &str = "kamn-mcp-server";
 const DEFAULT_MCP_AGENT_NAME: &str = "kamn-e2e-mcp-probe";
 const DEFAULT_MCP_AGENT_KEY_FILE: &str = "/tmp/kamn-e2e-mcp.key";
 const DEFAULT_KAMN_ENDPOINT: &str = "http://localhost:8080";
+const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s02"}"#;
+const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s02-reply"}"#;
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"mcp-agent-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
@@ -27,6 +29,7 @@ pub struct McpAgentDriver {
     mode: ExecutionMode,
     live_execution_enabled: bool,
     discovery_probe: Arc<LiveMcpProbe>,
+    direct_message_probe: Arc<LiveMcpProbe>,
     task_lifecycle_probe: Arc<LiveMcpProbe>,
     proof_verification_probe: Arc<LiveMcpProbe>,
 }
@@ -53,6 +56,7 @@ impl McpAgentDriver {
             mode,
             live_execution_enabled_from_env(),
             run_live_s01_mcp_probe,
+            run_live_s02_mcp_direct_message_probe,
             run_live_s04_mcp_task_lifecycle_probe,
             run_live_s06_mcp_proof_verification_probe,
         )
@@ -75,23 +79,26 @@ impl McpAgentDriver {
             mode,
             live_execution_enabled,
             discovery_probe: live_probe.clone(),
+            direct_message_probe: live_probe.clone(),
             task_lifecycle_probe: live_probe.clone(),
             proof_verification_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H>(
+    pub fn with_probes<F, G, H, I>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
-        task_lifecycle_probe: G,
-        proof_verification_probe: H,
+        direct_message_probe: G,
+        task_lifecycle_probe: H,
+        proof_verification_probe: I,
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
+        I: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -100,6 +107,7 @@ impl McpAgentDriver {
             mode,
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
+            direct_message_probe: Arc::new(direct_message_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
         })
@@ -131,6 +139,7 @@ impl McpAgentDriver {
         }
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
+            "S-02" => Some((self.direct_message_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
@@ -216,6 +225,155 @@ fn run_live_s01_mcp_probe() -> Result<(), String> {
         .find(|payload| payload.contains(r#""id":"probe-health""#))
         .ok_or_else(|| "mcp live probe missing health response payload".to_owned())?;
     validate_probe_health_response(health_response)?;
+    Ok(())
+}
+
+fn run_live_s02_mcp_direct_message_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let message_payload = env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_MESSAGE_PAYLOAD.to_owned());
+    let reply_payload = env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S02_REPLY_PAYLOAD.to_owned());
+    let send_agent_name = format!("{agent_name}-s02-send");
+    let query_agent_name = format!("{agent_name}-s02-query");
+    let reply_agent_name = format!("{agent_name}-s02-reply");
+    let reply_query_agent_name = format!("{agent_name}-s02-query-reply");
+
+    let send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(message_payload.as_str())
+    );
+    let send_response = run_live_s02_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        send_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-message",
+        "send_message",
+        send_arguments.as_str(),
+    )?;
+    let message_id =
+        json_optional_string_field(send_response.as_str(), "message_id").ok_or_else(|| {
+            format!("mcp live s02 send_message response missing message_id field: {send_response}")
+        })?;
+    if message_id.trim().is_empty() {
+        return Err("mcp live s02 send_message returned empty message_id".to_owned());
+    }
+    let send_status =
+        json_optional_string_field(send_response.as_str(), "status").ok_or_else(|| {
+            format!("mcp live s02 send_message response missing status field: {send_response}")
+        })?;
+    if send_status.trim().is_empty() {
+        return Err("mcp live s02 send_message returned empty status".to_owned());
+    }
+
+    let query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(message_id.as_str())
+    );
+    let query_response = run_live_s02_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        query_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-query-message",
+        "query_message",
+        query_arguments.as_str(),
+    )?;
+    let queried_message_id = json_optional_string_field(query_response.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s02 query_message response missing message_id field: {query_response}"
+            )
+        })?;
+    if queried_message_id != message_id {
+        return Err(format!(
+            "mcp live s02 query_message returned mismatched message_id: expected={message_id}, got={queried_message_id}"
+        ));
+    }
+    let queried_status =
+        json_optional_string_field(query_response.as_str(), "status").ok_or_else(|| {
+            format!("mcp live s02 query_message response missing status field: {query_response}")
+        })?;
+    if queried_status.trim().is_empty() {
+        return Err("mcp live s02 query_message returned empty status".to_owned());
+    }
+
+    let reply_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(reply_payload.as_str())
+    );
+    let reply_response = run_live_s02_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        reply_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-reply",
+        "send_message",
+        reply_arguments.as_str(),
+    )?;
+    let reply_message_id =
+        json_optional_string_field(reply_response.as_str(), "message_id").ok_or_else(|| {
+            format!(
+                "mcp live s02 reply send_message response missing message_id field: {reply_response}"
+            )
+        })?;
+    if reply_message_id.trim().is_empty() {
+        return Err("mcp live s02 reply send_message returned empty message_id".to_owned());
+    }
+    let reply_send_status = json_optional_string_field(reply_response.as_str(), "status")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s02 reply send_message response missing status field: {reply_response}"
+            )
+        })?;
+    if reply_send_status.trim().is_empty() {
+        return Err("mcp live s02 reply send_message returned empty status".to_owned());
+    }
+
+    let reply_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(reply_message_id.as_str())
+    );
+    let reply_query_response = run_live_s02_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        reply_query_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-query-reply-message",
+        "query_message",
+        reply_query_arguments.as_str(),
+    )?;
+    let reply_queried_message_id = json_optional_string_field(
+        reply_query_response.as_str(),
+        "message_id",
+    )
+    .ok_or_else(|| {
+        format!(
+            "mcp live s02 reply query_message response missing message_id field: {reply_query_response}"
+        )
+    })?;
+    if reply_queried_message_id != reply_message_id {
+        return Err(format!(
+            "mcp live s02 reply query_message returned mismatched message_id: expected={reply_message_id}, got={reply_queried_message_id}"
+        ));
+    }
+    let reply_queried_status =
+        json_optional_string_field(reply_query_response.as_str(), "status").ok_or_else(|| {
+            format!(
+                "mcp live s02 reply query_message response missing status field: {reply_query_response}"
+            )
+        })?;
+    if reply_queried_status.trim().is_empty() {
+        return Err("mcp live s02 reply query_message returned empty status".to_owned());
+    }
+
     Ok(())
 }
 
@@ -492,6 +650,27 @@ fn run_live_s04_mcp_tool_call(
     Ok(tool_response.clone())
 }
 
+fn run_live_s02_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s02"))
+}
+
 fn run_live_s06_mcp_tool_call(
     binary: &str,
     endpoint: &str,
@@ -634,10 +813,10 @@ mod tests {
         build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
         json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
         parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe,
-        run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
-        run_live_s06_mcp_proof_verification_probe, validate_probe_health_response,
-        validate_probe_initialize_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
-        MCP_AGENT_LIVE_ENV,
+        run_live_s02_mcp_direct_message_probe, run_live_s04_mcp_task_lifecycle_probe,
+        run_live_s04_mcp_tool_call, run_live_s06_mcp_proof_verification_probe,
+        validate_probe_health_response, validate_probe_initialize_response, McpAgentDriver,
+        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -769,6 +948,29 @@ sys.stdout.write(
             ],
             || {
                 let error = run_live_s01_mcp_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s02_mcp_direct_message_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s02_mcp_direct_message_probe()
+                    .expect_err("missing binary should fail");
                 assert!(
                     error.contains("failed to spawn"),
                     "error should reflect spawn failure: {error}",
@@ -1092,6 +1294,19 @@ sys.stdout.write(
         assert_eq!(
             result.status, "fail",
             "live-enabled S-06 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c11_live_s02_driver_path_fails_closed_when_message_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s02 message probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-02");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-02 should fail closed on probe error",
         );
     }
 
