@@ -9,20 +9,20 @@ This artifact records merged-lineage remote branch cleanup execution for issue `
 
 ## Safety Check
 Candidate branch selected for deletion:
-- `codex/issue-5708-r52-branch-hygiene-reconciliation`
+- `codex/issue-5711-r52-quality-gate-reconciliation`
 
 Merged-lineage verification command:
 
 ```bash
 git fetch origin --prune
 git branch -r --merged origin/main | sed 's/^\s*//' \
-  | grep -F 'origin/codex/issue-5708-r52-branch-hygiene-reconciliation'
+  | grep -F 'origin/codex/issue-5711-r52-quality-gate-reconciliation'
 ```
 
 ## Execution Command
 
 ```bash
-git push origin --delete codex/issue-5708-r52-branch-hygiene-reconciliation
+git push origin --delete codex/issue-5711-r52-quality-gate-reconciliation
 ```
 
 ## Post-Cleanup Measurement
@@ -43,5 +43,5 @@ Arithmetic contract:
 ## Status Markers
 - `r55_branch_hygiene_5802_schema_version=kamn.review.branch-hygiene-cleanup-execution.v1`
 - `r55_branch_hygiene_5802_cleanup_mode=merged_lineage_only`
-- `r55_branch_hygiene_5802_deleted_branch_csv=codex/issue-5708-r52-branch-hygiene-reconciliation`
+- `r55_branch_hygiene_5802_deleted_branch_csv=codex/issue-5711-r52-quality-gate-reconciliation`
 - `r55_branch_hygiene_5802_status=target_restored`
