@@ -10,6 +10,10 @@ const DEFAULT_CLI_BINARY: &str = "kamn-cli";
 const DEFAULT_S02_AGENT_NAME: &str = "kamn-e2e-cli-s02";
 const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02"}"#;
 const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s02-reply"}"#;
+const DEFAULT_S03_AGENT_NAME: &str = "kamn-e2e-cli-s03";
+const DEFAULT_S03_CHANNEL_PAYLOAD: &str =
+    r#"{"name":"cli-scripted-live-s03","members":["alice","bob","carol"]}"#;
+const DEFAULT_S03_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s03-channel-message"}"#;
 const DEFAULT_S04_AGENT_NAME: &str = "kamn-e2e-cli-s04";
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"cli-scripted-live-s04","description":"live task lifecycle probe"}"#;
@@ -21,12 +25,13 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-04, and S-06.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, and S-06.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
     discovery_runner: Arc<LiveCliRunner>,
     direct_message_runner: Arc<LiveCliRunner>,
+    group_channel_runner: Arc<LiveCliRunner>,
     task_lifecycle_runner: Arc<LiveCliRunner>,
     proof_verification_runner: Arc<LiveCliRunner>,
 }
@@ -53,6 +58,7 @@ impl CliScriptedDriver {
             live_execution_enabled_from_env(),
             run_live_s01_cli_health_probe,
             run_live_s02_cli_direct_message_probe,
+            run_live_s03_cli_group_channel_probe,
             run_live_s04_cli_task_lifecycle_probe,
             run_live_s06_cli_proof_verification_probe,
         )
@@ -69,28 +75,32 @@ impl CliScriptedDriver {
             discovery_runner: live_runner.clone(),
             direct_message_runner: live_runner.clone(),
             task_lifecycle_runner: live_runner.clone(),
+            group_channel_runner: live_runner.clone(),
             proof_verification_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I>(
+    pub fn with_runners<F, G, H, I, J>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
-        task_lifecycle_runner: H,
-        proof_verification_runner: I,
+        group_channel_runner: H,
+        task_lifecycle_runner: I,
+        proof_verification_runner: J,
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
+        J: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
             direct_message_runner: Arc::new(direct_message_runner),
+            group_channel_runner: Arc::new(group_channel_runner),
             task_lifecycle_runner: Arc::new(task_lifecycle_runner),
             proof_verification_runner: Arc::new(proof_verification_runner),
         }
@@ -123,6 +133,7 @@ impl CliScriptedDriver {
         match scenario_id {
             "S-01" => Some((self.discovery_runner)()),
             "S-02" => Some((self.direct_message_runner)()),
+            "S-03" => Some((self.group_channel_runner)()),
             "S-04" => Some((self.task_lifecycle_runner)()),
             "S-06" => Some((self.proof_verification_runner)()),
             _ => None,
@@ -309,6 +320,139 @@ fn run_live_s02_cli_direct_message_probe() -> Result<(), String> {
     if reply_queried_status.trim().is_empty() {
         return Err("cli live s02 reply query-message returned empty status".to_owned());
     }
+
+    Ok(())
+}
+
+fn run_live_s03_cli_group_channel_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S03_AGENT_NAME.to_owned());
+    let channel_payload = env::var("KAMN_E2E_S03_CHANNEL_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S03_CHANNEL_PAYLOAD.to_owned());
+    let message_payload = env::var("KAMN_E2E_S03_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S03_MESSAGE_PAYLOAD.to_owned());
+    let create_agent_name = format!("{base_agent_name}-create-channel");
+    let send_agent_name = format!("{base_agent_name}-send-message");
+    let query_agent_name = format!("{base_agent_name}-query-message");
+    let list_agent_name = format!("{base_agent_name}-list-messages");
+
+    let create_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "create-channel",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            channel_payload.as_str(),
+        ],
+        "cli live s03 create-channel",
+        create_agent_name.as_str(),
+    )?;
+    let channel_id = parse_text_output_field(create_output.as_str(), "channel_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s03 create-channel response missing channel_id field: {create_output}"
+            )
+        })?
+        .to_owned();
+    if channel_id.trim().is_empty() {
+        return Err("cli live s03 create-channel returned empty channel_id".to_owned());
+    }
+    let create_status =
+        parse_text_output_field(create_output.as_str(), "status").ok_or_else(|| {
+            format!("cli live s03 create-channel response missing status field: {create_output}")
+        })?;
+    if create_status.trim().is_empty() {
+        return Err("cli live s03 create-channel returned empty status".to_owned());
+    }
+
+    let send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s03 send-message",
+        send_agent_name.as_str(),
+    )?;
+    let message_id = parse_text_output_field(send_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!("cli live s03 send-message response missing message_id field: {send_output}")
+        })?
+        .to_owned();
+    if message_id.trim().is_empty() {
+        return Err("cli live s03 send-message returned empty message_id".to_owned());
+    }
+    let send_status = parse_text_output_field(send_output.as_str(), "status").ok_or_else(|| {
+        format!("cli live s03 send-message response missing status field: {send_output}")
+    })?;
+    if send_status.trim().is_empty() {
+        return Err("cli live s03 send-message returned empty status".to_owned());
+    }
+
+    let query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_id.as_str(),
+        ],
+        "cli live s03 query-message",
+        query_agent_name.as_str(),
+    )?;
+    let queried_message_id = parse_text_output_field(query_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!("cli live s03 query-message response missing message_id field: {query_output}")
+        })?;
+    if queried_message_id != message_id {
+        return Err(format!(
+            "cli live s03 query-message returned mismatched message_id: expected={message_id}, got={queried_message_id}"
+        ));
+    }
+    let queried_status =
+        parse_text_output_field(query_output.as_str(), "status").ok_or_else(|| {
+            format!("cli live s03 query-message response missing status field: {query_output}")
+        })?;
+    if queried_status.trim().is_empty() {
+        return Err("cli live s03 query-message returned empty status".to_owned());
+    }
+
+    let list_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "list-messages",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            channel_id.as_str(),
+        ],
+        "cli live s03 list-messages",
+        list_agent_name.as_str(),
+    )?;
+    let listed_channel_id = parse_text_output_field(list_output.as_str(), "channel_id")
+        .ok_or_else(|| {
+            format!("cli live s03 list-messages response missing channel_id field: {list_output}")
+        })?;
+    if listed_channel_id != channel_id {
+        return Err(format!(
+            "cli live s03 list-messages returned mismatched channel_id: expected={channel_id}, got={listed_channel_id}"
+        ));
+    }
+    let _listed_messages =
+        parse_text_output_field(list_output.as_str(), "messages").ok_or_else(|| {
+            format!("cli live s03 list-messages response missing messages field: {list_output}")
+        })?;
 
     Ok(())
 }
@@ -581,9 +725,9 @@ mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, parse_text_output_field,
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
-        run_live_s02_cli_direct_message_probe, run_live_s04_cli_task_lifecycle_probe,
-        run_live_s06_cli_proof_verification_probe, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
+        run_live_s04_cli_task_lifecycle_probe, run_live_s06_cli_proof_verification_probe,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -710,6 +854,116 @@ mod tests {
                 );
             },
         );
+    }
+
+    #[test]
+    fn unit_run_live_s03_cli_group_channel_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error =
+                    run_live_s03_cli_group_channel_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s03_cli_group_channel_probe_rejects_query_message_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s03-query-mismatch");
+        let script_source = r#"#!/usr/bin/env python3
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+if command == "create-channel":
+    sys.stdout.write("channel_id=channel-1 status=created")
+elif command == "send-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "query-message":
+    sys.stdout.write("message_id=message-2 status=sent")
+elif command == "list-messages":
+    sys.stdout.write("channel_id=channel-1 messages=[message-1]")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s03_cli_group_channel_probe()
+                    .expect_err("mismatched query message_id should fail");
+                assert!(
+                    error.contains("mismatched message_id"),
+                    "error should mention message_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_run_live_s03_cli_group_channel_probe_rejects_list_channel_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s03-list-mismatch");
+        let script_source = r#"#!/usr/bin/env python3
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+if command == "create-channel":
+    sys.stdout.write("channel_id=channel-1 status=created")
+elif command == "send-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "query-message":
+    sys.stdout.write("message_id=message-1 status=sent")
+elif command == "list-messages":
+    sys.stdout.write("channel_id=channel-2 messages=[message-1]")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s03_cli_group_channel_probe()
+                    .expect_err("mismatched listed channel_id should fail");
+                assert!(
+                    error.contains("mismatched channel_id"),
+                    "error should mention channel_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
     }
 
     #[test]
@@ -851,6 +1105,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-02 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c04_live_s03_driver_path_fails_closed_when_channel_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s03 channel probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-03");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-03 should fail closed on probe error",
         );
     }
 }

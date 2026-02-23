@@ -45,11 +45,11 @@ fn spec_c04_sdk_direct_live_non_s01_remains_pass_without_probe_invocation() {
         Ok(())
     });
 
-    let result = driver.execute("S-03");
+    let result = driver.execute("S-05");
     assert_eq!(result.status, "pass");
     assert_eq!(
         probe_calls.load(Ordering::SeqCst),
         0,
-        "non-S-01 scenarios should not invoke live probe in this slice",
+        "non-live-bound scenarios should not invoke live probe in this slice",
     );
 }

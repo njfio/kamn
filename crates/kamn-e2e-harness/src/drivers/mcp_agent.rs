@@ -13,6 +13,9 @@ const DEFAULT_MCP_AGENT_KEY_FILE: &str = "/tmp/kamn-e2e-mcp.key";
 const DEFAULT_KAMN_ENDPOINT: &str = "http://localhost:8080";
 const DEFAULT_S02_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s02"}"#;
 const DEFAULT_S02_REPLY_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s02-reply"}"#;
+const DEFAULT_S03_CHANNEL_PAYLOAD: &str =
+    r#"{"name":"mcp-agent-live-s03","members":["alice","bob","carol"]}"#;
+const DEFAULT_S03_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s03-channel-message"}"#;
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"mcp-agent-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
@@ -30,6 +33,7 @@ pub struct McpAgentDriver {
     live_execution_enabled: bool,
     discovery_probe: Arc<LiveMcpProbe>,
     direct_message_probe: Arc<LiveMcpProbe>,
+    group_channel_probe: Arc<LiveMcpProbe>,
     task_lifecycle_probe: Arc<LiveMcpProbe>,
     proof_verification_probe: Arc<LiveMcpProbe>,
 }
@@ -57,6 +61,7 @@ impl McpAgentDriver {
             live_execution_enabled_from_env(),
             run_live_s01_mcp_probe,
             run_live_s02_mcp_direct_message_probe,
+            run_live_s03_mcp_group_channel_probe,
             run_live_s04_mcp_task_lifecycle_probe,
             run_live_s06_mcp_proof_verification_probe,
         )
@@ -81,24 +86,27 @@ impl McpAgentDriver {
             discovery_probe: live_probe.clone(),
             direct_message_probe: live_probe.clone(),
             task_lifecycle_probe: live_probe.clone(),
+            group_channel_probe: live_probe.clone(),
             proof_verification_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I>(
+    pub fn with_probes<F, G, H, I, J>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
-        task_lifecycle_probe: H,
-        proof_verification_probe: I,
+        group_channel_probe: H,
+        task_lifecycle_probe: I,
+        proof_verification_probe: J,
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
         G: Fn() -> Result<(), String> + Send + Sync + 'static,
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
+        J: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -108,6 +116,7 @@ impl McpAgentDriver {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
             direct_message_probe: Arc::new(direct_message_probe),
+            group_channel_probe: Arc::new(group_channel_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
         })
@@ -140,6 +149,7 @@ impl McpAgentDriver {
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
             "S-02" => Some((self.direct_message_probe)()),
+            "S-03" => Some((self.group_channel_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
@@ -372,6 +382,144 @@ fn run_live_s02_mcp_direct_message_probe() -> Result<(), String> {
         })?;
     if reply_queried_status.trim().is_empty() {
         return Err("mcp live s02 reply query_message returned empty status".to_owned());
+    }
+
+    Ok(())
+}
+
+fn run_live_s03_mcp_group_channel_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let channel_payload = env::var("KAMN_E2E_S03_CHANNEL_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S03_CHANNEL_PAYLOAD.to_owned());
+    let message_payload = env::var("KAMN_E2E_S03_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S03_MESSAGE_PAYLOAD.to_owned());
+    let create_agent_name = format!("{agent_name}-s03-create-channel");
+    let send_agent_name = format!("{agent_name}-s03-send-message");
+    let query_agent_name = format!("{agent_name}-s03-query-message");
+    let list_agent_name = format!("{agent_name}-s03-list-messages");
+
+    let create_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(channel_payload.as_str())
+    );
+    let create_response = run_live_s03_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        create_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-create-channel",
+        "create_channel",
+        create_arguments.as_str(),
+    )?;
+    let channel_id = json_optional_string_field(create_response.as_str(), "channel_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s03 create_channel response missing channel_id field: {create_response}"
+            )
+        })?;
+    if channel_id.trim().is_empty() {
+        return Err("mcp live s03 create_channel returned empty channel_id".to_owned());
+    }
+    let create_status =
+        json_optional_string_field(create_response.as_str(), "status").ok_or_else(|| {
+            format!("mcp live s03 create_channel response missing status field: {create_response}")
+        })?;
+    if create_status.trim().is_empty() {
+        return Err("mcp live s03 create_channel returned empty status".to_owned());
+    }
+
+    let send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(message_payload.as_str())
+    );
+    let send_response = run_live_s03_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        send_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-send-message",
+        "send_message",
+        send_arguments.as_str(),
+    )?;
+    let message_id =
+        json_optional_string_field(send_response.as_str(), "message_id").ok_or_else(|| {
+            format!("mcp live s03 send_message response missing message_id field: {send_response}")
+        })?;
+    if message_id.trim().is_empty() {
+        return Err("mcp live s03 send_message returned empty message_id".to_owned());
+    }
+    let send_status =
+        json_optional_string_field(send_response.as_str(), "status").ok_or_else(|| {
+            format!("mcp live s03 send_message response missing status field: {send_response}")
+        })?;
+    if send_status.trim().is_empty() {
+        return Err("mcp live s03 send_message returned empty status".to_owned());
+    }
+
+    let query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(message_id.as_str())
+    );
+    let query_response = run_live_s03_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        query_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-query-message",
+        "query_message",
+        query_arguments.as_str(),
+    )?;
+    let queried_message_id = json_optional_string_field(query_response.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s03 query_message response missing message_id field: {query_response}"
+            )
+        })?;
+    if queried_message_id != message_id {
+        return Err(format!(
+            "mcp live s03 query_message returned mismatched message_id: expected={message_id}, got={queried_message_id}"
+        ));
+    }
+    let queried_status =
+        json_optional_string_field(query_response.as_str(), "status").ok_or_else(|| {
+            format!("mcp live s03 query_message response missing status field: {query_response}")
+        })?;
+    if queried_status.trim().is_empty() {
+        return Err("mcp live s03 query_message returned empty status".to_owned());
+    }
+
+    let list_arguments = format!(
+        "{{\"channel_id\":\"{}\"}}",
+        escape_json_scalar(channel_id.as_str())
+    );
+    let list_response = run_live_s03_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        list_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-list-messages",
+        "list_messages",
+        list_arguments.as_str(),
+    )?;
+    let listed_channel_id = json_optional_string_field(list_response.as_str(), "channel_id")
+        .ok_or_else(|| {
+            format!("mcp live s03 list_messages response missing channel_id field: {list_response}")
+        })?;
+    if listed_channel_id != channel_id {
+        return Err(format!(
+            "mcp live s03 list_messages returned mismatched channel_id: expected={channel_id}, got={listed_channel_id}"
+        ));
+    }
+    if !list_response.contains(r#""messages":["#) {
+        return Err(format!(
+            "mcp live s03 list_messages response missing messages field: {list_response}"
+        ));
     }
 
     Ok(())
@@ -671,6 +819,27 @@ fn run_live_s02_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s02"))
 }
 
+fn run_live_s03_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s03"))
+}
+
 fn run_live_s06_mcp_tool_call(
     binary: &str,
     endpoint: &str,
@@ -813,10 +982,11 @@ mod tests {
         build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
         json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
         parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe,
-        run_live_s02_mcp_direct_message_probe, run_live_s04_mcp_task_lifecycle_probe,
-        run_live_s04_mcp_tool_call, run_live_s06_mcp_proof_verification_probe,
-        validate_probe_health_response, validate_probe_initialize_response, McpAgentDriver,
-        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        run_live_s02_mcp_direct_message_probe, run_live_s03_mcp_group_channel_probe,
+        run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
+        run_live_s06_mcp_proof_verification_probe, validate_probe_health_response,
+        validate_probe_initialize_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -910,6 +1080,59 @@ sys.stdout.write(
         write_executable_python_script(script_path, script_source.as_str());
     }
 
+    fn write_mcp_s03_probe_script(
+        script_path: &std::path::Path,
+        query_message_id: &str,
+        list_channel_id: &str,
+        include_messages: bool,
+    ) {
+        let include_messages_literal = if include_messages { "True" } else { "False" };
+        let script_source = format!(
+            r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+query_message_id = {query_message_id:?}
+list_channel_id = {list_channel_id:?}
+include_messages = {include_messages_literal}
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {{"ok": True}}
+if tool_name == "create_channel":
+    result.update({{"channel_id":"channel-1","status":"created"}})
+elif tool_name == "send_message":
+    result.update({{"message_id":"message-1","status":"sent","channel_id":"channel-1"}})
+elif tool_name == "query_message":
+    result.update({{"message_id": query_message_id, "status":"sent"}})
+elif tool_name == "list_messages":
+    result.update({{"channel_id": list_channel_id}})
+    if include_messages:
+        result.update({{"messages":["message-1"]}})
+else:
+    result.update({{"error":"unsupported_tool"}})
+
+init_payload = {{"jsonrpc":"2.0","id":"probe-init","result":{{"serverInfo":{{"name":"kamn"}}}}}}
+tool_payload = {{"jsonrpc":"2.0","id":request_id,"result":result}}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {{len(body)}}\r\n\r\n{{body}}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#,
+            query_message_id = query_message_id,
+            list_channel_id = list_channel_id,
+            include_messages_literal = include_messages_literal,
+        );
+        write_executable_python_script(script_path, script_source.as_str());
+    }
+
     #[test]
     fn unit_parse_bool_flag_accepts_true_like_values() {
         for value in ["1", "true", "TRUE", "yes", "on"] {
@@ -977,6 +1200,93 @@ sys.stdout.write(
                 );
             },
         );
+    }
+
+    #[test]
+    fn unit_run_live_s03_mcp_group_channel_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error =
+                    run_live_s03_mcp_group_channel_probe().expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s03_mcp_group_channel_probe_rejects_query_message_id_mismatch() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s03-query-mismatch");
+        write_mcp_s03_probe_script(&script_path, "message-2", "channel-1", true);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s03_mcp_group_channel_probe()
+                    .expect_err("mismatched query message_id should fail");
+                assert!(
+                    error.contains("mismatched message_id"),
+                    "error should mention message_id mismatch: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_run_live_s03_mcp_group_channel_probe_rejects_missing_messages_field() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s03-missing-messages");
+        write_mcp_s03_probe_script(&script_path, "message-1", "channel-1", false);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s03_mcp_group_channel_probe()
+                    .expect_err("missing list_messages messages field should fail");
+                assert!(
+                    error.contains("missing messages field"),
+                    "error should mention messages field contract: {error}",
+                );
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
     }
 
     #[test]
@@ -1307,6 +1617,19 @@ sys.stdout.write(
         assert_eq!(
             result.status, "fail",
             "live-enabled S-02 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c12_live_s03_driver_path_fails_closed_when_channel_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s03 channel probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-03");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-03 should fail closed on probe error",
         );
     }
 
