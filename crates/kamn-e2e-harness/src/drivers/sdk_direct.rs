@@ -1634,8 +1634,8 @@ mod tests {
         validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
         validate_s08_message_receipt_fields, validate_s08_query_message_response,
         validate_s12_content_field_coherence, validate_s12_content_id_match,
-        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+        validate_s14_proof_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -2115,6 +2115,68 @@ mod tests {
         assert!(
             error.contains("duplicate message_id"),
             "error should mention duplicate message_id: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_accepts_valid_receipt() {
+        validate_s14_proof_response("message-1", "message-1", 42, "FINAL", true, "test helper")
+            .expect("valid S-14 proof response should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_mismatched_message_id() {
+        let error =
+            validate_s14_proof_response("message-1", "message-2", 42, "FINAL", true, "test helper")
+                .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_unverified_receipt() {
+        let error = validate_s14_proof_response(
+            "message-1",
+            "message-1",
+            42,
+            "FINAL",
+            false,
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_proof_response(
+            "message-1",
+            "message-1",
+            42,
+            "PENDING",
+            true,
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_proof_response_rejects_zero_block_height() {
+        let error =
+            validate_s14_proof_response("message-1", "message-1", 0, "FINAL", true, "test helper")
+                .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
         );
     }
 

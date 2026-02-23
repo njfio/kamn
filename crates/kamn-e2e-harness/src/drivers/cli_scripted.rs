@@ -2106,7 +2106,8 @@ mod tests {
         validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
         validate_s08_query_message_response, validate_s12_content_field_coherence,
         validate_s12_content_id_match, validate_s13_bridge_field_coherence,
-        validate_s13_bridge_id_match, CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
+        validate_s13_bridge_id_match, validate_s14_cli_verify_proof_response, CliScriptedDriver,
+        CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -2721,6 +2722,126 @@ else:
                     "error should reflect spawn failure: {error}",
                 );
             },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s14_cli_batch_merkle_probe_accepts_distinct_batch_ids_and_final_proofs() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s14-success");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+agent_name = os.environ.get("KAMN_AGENT_NAME", "")
+
+if command == "send-message":
+    if agent_name.endswith("-batch-a"):
+        sys.stdout.write("message_id=message-batch-a status=sent")
+    elif agent_name.endswith("-batch-b"):
+        sys.stdout.write("message_id=message-batch-b status=sent")
+    else:
+        sys.stdout.write("message_id=message-fallback status=sent")
+elif command == "query-message":
+    message_id = sys.argv[-1] if len(sys.argv) > 0 else "message-fallback"
+    sys.stdout.write(f"message_id={message_id} status=sent")
+elif command == "verify-proof":
+    message_id = sys.argv[-4] if len(sys.argv) >= 4 else "message-fallback"
+    block_height = sys.argv[-2] if len(sys.argv) >= 2 else "1"
+    sys.stdout.write(
+        f"message_id={message_id} verified=true finality=FINAL block_height={block_height}"
+    )
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_E2E_S14_AGENT_NAME", Some("kamn-e2e-cli-s14")),
+            ],
+            || {
+                run_live_s14_cli_batch_merkle_probe()
+                    .expect("distinct batch IDs with final proofs should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_accepts_valid_payload() {
+        validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect("valid S-14 proof payload should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_mismatched_message_id() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-2 verified=true finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_unverified_payload() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=false finality=FINAL block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=PENDING block_height=42",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_cli_verify_proof_response_rejects_zero_block_height() {
+        let error = validate_s14_cli_verify_proof_response(
+            "message_id=message-1 verified=true finality=FINAL block_height=0",
+            "message-1",
+            "test helper",
+        )
+        .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
         );
     }
 

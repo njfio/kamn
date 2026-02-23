@@ -2553,8 +2553,9 @@ mod tests {
         validate_probe_initialize_response, validate_s07_replay_reason_marker,
         validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
         validate_s12_content_field_coherence, validate_s12_content_id_match,
-        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match, McpAgentDriver,
-        MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
+        validate_s14_mcp_verify_proof_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -2786,6 +2787,64 @@ elif tool_name == "query_message":
     message_match = re.search(r'"message_id":"([^"]+)"', stream)
     query_message_id = message_match.group(1) if message_match else "message-fallback"
     result.update({"message_id": query_message_id, "status": "sent"})
+else:
+    result.update({"error": "unsupported_tool"})
+
+init_payload = {"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}
+tool_payload = {"jsonrpc":"2.0","id":request_id,"result":result}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {len(body)}\r\n\r\n{body}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#;
+        write_executable_python_script(script_path, script_source);
+    }
+
+    fn write_mcp_s14_probe_script(script_path: &std::path::Path) {
+        let script_source = r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+agent_name = ""
+if "--agent-name" in sys.argv:
+    index = sys.argv.index("--agent-name")
+    if index + 1 < len(sys.argv):
+        agent_name = sys.argv[index + 1]
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {"ok": True}
+if tool_name == "send_message":
+    if agent_name.endswith("batch-a"):
+        result.update({"message_id": "message-batch-a", "status": "sent"})
+    elif agent_name.endswith("batch-b"):
+        result.update({"message_id": "message-batch-b", "status": "sent"})
+    else:
+        result.update({"message_id": "message-fallback", "status": "sent"})
+elif tool_name == "query_message":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    query_message_id = message_match.group(1) if message_match else "message-fallback"
+    result.update({"message_id": query_message_id, "status": "sent"})
+elif tool_name == "verify_proof":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    verify_message_id = message_match.group(1) if message_match else "message-fallback"
+    block_height_match = re.search(r'"block_height":"([0-9]+)"', stream)
+    block_height = int(block_height_match.group(1)) if block_height_match else 1
+    result.update(
+        {
+            "message_id": verify_message_id,
+            "verified": True,
+            "finality": "FINAL",
+            "block_height": block_height,
+        }
+    )
 else:
     result.update({"error": "unsupported_tool"})
 
@@ -3324,6 +3383,34 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s14_mcp_batch_merkle_probe_accepts_distinct_batch_ids_and_final_proofs() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s14-success");
+        write_mcp_s14_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+                ("KAMN_E2E_S14_AGENT_NAME", Some("kamn-e2e-mcp-s14")),
+            ],
+            || {
+                run_live_s14_mcp_batch_merkle_probe()
+                    .expect("distinct batch IDs with final proofs should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s13_mcp_tool_call_rewrites_error_context() {
         let error = run_live_s13_mcp_tool_call(
             "/definitely/missing/kamn-mcp-server",
@@ -3402,6 +3489,72 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(
             error.contains("bridge_status drift"),
             "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_accepts_valid_payload() {
+        validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect("valid S-14 MCP proof payload should pass");
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_mismatched_message_id() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-2","verified":true,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("mismatched message_id should fail");
+        assert!(
+            error.contains("mismatched message_id"),
+            "error should mention message_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_unverified_payload() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":false,"finality":"FINAL","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("verified=false should fail");
+        assert!(
+            error.contains("verified=false"),
+            "error should mention verified contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_non_final_finality() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"PENDING","block_height":42}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("non-final finality should fail");
+        assert!(
+            error.contains("non-final finality"),
+            "error should mention finality contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s14_mcp_verify_proof_response_rejects_zero_block_height() {
+        let error = validate_s14_mcp_verify_proof_response(
+            r#"{"result":{"message_id":"message-1","verified":true,"finality":"FINAL","block_height":0}}"#,
+            "message-1",
+            "test helper",
+        )
+        .expect_err("block_height=0 should fail");
+        assert!(
+            error.contains("block_height=0"),
+            "error should mention block-height contract: {error}",
         );
     }
 
