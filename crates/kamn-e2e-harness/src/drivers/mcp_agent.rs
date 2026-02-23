@@ -25,6 +25,9 @@ const DEFAULT_S07_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s07-repl
 const DEFAULT_S08_AGENT_NAME: &str = "kamn-e2e-mcp-s08";
 const DEFAULT_S08_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s08-pre"}"#;
 const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s08-post"}"#;
+const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-mcp-s09";
+const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-pre"}"#;
+const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s09-post"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -46,6 +49,7 @@ pub struct McpAgentDriver {
     proof_verification_probe: Arc<LiveMcpProbe>,
     replay_protection_probe: Arc<LiveMcpProbe>,
     crash_recovery_probe: Arc<LiveMcpProbe>,
+    transport_failover_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -78,6 +82,7 @@ impl McpAgentDriver {
                 run_live_s06_mcp_proof_verification_probe,
                 run_live_s07_mcp_replay_protection_probe,
                 run_live_s08_mcp_crash_recovery_probe,
+                run_live_s09_mcp_transport_failover_probe,
             ),
         )
     }
@@ -105,19 +110,20 @@ impl McpAgentDriver {
             escrow_settlement_probe: live_probe.clone(),
             proof_verification_probe: live_probe.clone(),
             replay_protection_probe: live_probe.clone(),
-            crash_recovery_probe: live_probe,
+            crash_recovery_probe: live_probe.clone(),
+            transport_failover_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_and_crash_probes: (J, K, L, M),
+        escrow_proof_replay_crash_and_failover_probes: (J, K, L, M, N),
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -128,6 +134,7 @@ impl McpAgentDriver {
         K: Fn() -> Result<(), String> + Send + Sync + 'static,
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
+        N: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -137,7 +144,8 @@ impl McpAgentDriver {
             proof_verification_probe,
             replay_protection_probe,
             crash_recovery_probe,
-        ) = escrow_proof_replay_and_crash_probes;
+            transport_failover_probe,
+        ) = escrow_proof_replay_crash_and_failover_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -149,6 +157,7 @@ impl McpAgentDriver {
             proof_verification_probe: Arc::new(proof_verification_probe),
             replay_protection_probe: Arc::new(replay_protection_probe),
             crash_recovery_probe: Arc::new(crash_recovery_probe),
+            transport_failover_probe: Arc::new(transport_failover_probe),
         })
     }
 }
@@ -185,6 +194,7 @@ impl McpAgentDriver {
             "S-06" => Some((self.proof_verification_probe)()),
             "S-07" => Some((self.replay_protection_probe)()),
             "S-08" => Some((self.crash_recovery_probe)()),
+            "S-09" => Some((self.transport_failover_probe)()),
             _ => None,
         }
     }
@@ -1012,6 +1022,123 @@ fn run_live_s08_mcp_crash_recovery_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s09_mcp_transport_failover_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let primary_endpoint =
+        env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let failover_endpoint =
+        env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S09_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
+    let pre_message_payload = env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_PRE_MESSAGE_PAYLOAD.to_owned());
+    let post_message_payload = env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_POST_MESSAGE_PAYLOAD.to_owned());
+
+    let pre_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(pre_message_payload.as_str())
+    );
+    let pre_send_response = run_live_s09_mcp_tool_call(
+        binary.as_str(),
+        primary_endpoint.as_str(),
+        format!("{base_agent_name}-pre-send").as_str(),
+        key_file.as_str(),
+        "probe-send-message-pre",
+        "send_message",
+        pre_send_arguments.as_str(),
+    )?;
+    let pre_message_id = validate_s08_mcp_message_receipt_fields(
+        pre_send_response.as_str(),
+        "mcp live s09 pre-failover send_message",
+    )?;
+
+    let pre_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(pre_message_id.as_str())
+    );
+    let pre_query_response = run_live_s09_mcp_tool_call(
+        binary.as_str(),
+        primary_endpoint.as_str(),
+        format!("{base_agent_name}-pre-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-pre",
+        "query_message",
+        pre_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        pre_query_response.as_str(),
+        pre_message_id.as_str(),
+        "mcp live s09 pre-failover query_message",
+    )?;
+
+    let boundary_response = run_live_s09_mcp_tool_call(
+        binary.as_str(),
+        failover_endpoint.as_str(),
+        format!("{base_agent_name}-boundary").as_str(),
+        key_file.as_str(),
+        "probe-boundary-health",
+        "health",
+        "{}",
+    )?;
+    let boundary_status =
+        json_optional_string_field(boundary_response.as_str(), "status").ok_or_else(|| {
+            format!(
+                "mcp live s09 failover boundary health response missing status field: {boundary_response}"
+            )
+        })?;
+    if boundary_status.trim().is_empty() {
+        return Err("mcp live s09 failover boundary health returned empty status".to_owned());
+    }
+
+    let post_send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(post_message_payload.as_str())
+    );
+    let post_send_response = run_live_s09_mcp_tool_call(
+        binary.as_str(),
+        failover_endpoint.as_str(),
+        format!("{base_agent_name}-post-send").as_str(),
+        key_file.as_str(),
+        "probe-send-message-post",
+        "send_message",
+        post_send_arguments.as_str(),
+    )?;
+    let post_message_id = validate_s08_mcp_message_receipt_fields(
+        post_send_response.as_str(),
+        "mcp live s09 post-failover send_message",
+    )?;
+    if post_message_id == pre_message_id {
+        return Err(
+            "mcp live s09 post-failover send_message returned duplicate message_id".to_owned(),
+        );
+    }
+
+    let post_query_arguments = format!(
+        "{{\"message_id\":\"{}\"}}",
+        escape_json_scalar(post_message_id.as_str())
+    );
+    let post_query_response = run_live_s09_mcp_tool_call(
+        binary.as_str(),
+        failover_endpoint.as_str(),
+        format!("{base_agent_name}-post-query").as_str(),
+        key_file.as_str(),
+        "probe-query-message-post",
+        "query_message",
+        post_query_arguments.as_str(),
+    )?;
+    validate_s08_mcp_query_message_response(
+        post_query_response.as_str(),
+        post_message_id.as_str(),
+        "mcp live s09 post-failover query_message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
     let message_id = json_optional_string_field(response, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {response}"))?;
@@ -1257,6 +1384,27 @@ fn run_live_s08_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s08"))
 }
 
+fn run_live_s09_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s09"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1389,10 +1537,11 @@ mod tests {
         run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
         run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
         run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
-        validate_live_s05_release_escrow_response, validate_probe_health_response,
-        validate_probe_initialize_response, validate_s07_replay_reason_marker,
-        validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
-        McpAgentDriver, MCP_AGENT_BINARY_ENV, MCP_AGENT_LIVE_ENV,
+        run_live_s09_mcp_transport_failover_probe, validate_live_s05_release_escrow_response,
+        validate_probe_health_response, validate_probe_initialize_response,
+        validate_s07_replay_reason_marker, validate_s08_mcp_message_receipt_fields,
+        validate_s08_mcp_query_message_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
     use std::ffi::OsString;
@@ -1893,6 +2042,63 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s09_mcp_transport_failover_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                (
+                    "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s09_mcp_transport_failover_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s09_mcp_transport_failover_probe_accepts_distinct_pre_post_message_ids() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s09-success");
+        write_mcp_s08_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                (
+                    "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                run_live_s09_mcp_transport_failover_probe()
+                    .expect("distinct pre/post message IDs should pass continuity checks");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -2282,6 +2488,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-08 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c16_live_s09_driver_path_fails_closed_when_transport_failover_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s09 transport-failover probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-09");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-09 should fail closed on probe error",
         );
     }
 

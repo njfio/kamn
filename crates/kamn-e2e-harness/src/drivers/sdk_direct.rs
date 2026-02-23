@@ -20,6 +20,9 @@ const DEFAULT_S07_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s07-rep
 const DEFAULT_S08_AGENT_NAME: &str = "kamn-e2e-sdk-s08";
 const DEFAULT_S08_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s08-pre"}"#;
 const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s08-post"}"#;
+const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-sdk-s09";
+const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09-pre"}"#;
+const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09-post"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -28,7 +31,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, and S-08.
+/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, and S-09.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -40,6 +43,7 @@ pub struct SdkDirectDriver {
     proof_verification_probe: Arc<LiveProbe>,
     replay_protection_probe: Arc<LiveProbe>,
     crash_recovery_probe: Arc<LiveProbe>,
+    transport_failover_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -71,6 +75,7 @@ impl SdkDirectDriver {
                 run_live_s06_proof_verification_probe,
                 run_live_s07_replay_protection_probe,
                 run_live_s08_crash_recovery_probe,
+                run_live_s09_transport_failover_probe,
             ),
         )
     }
@@ -90,19 +95,20 @@ impl SdkDirectDriver {
             escrow_settlement_probe: live_probe.clone(),
             proof_verification_probe: live_probe.clone(),
             replay_protection_probe: live_probe.clone(),
-            crash_recovery_probe: live_probe,
+            crash_recovery_probe: live_probe.clone(),
+            transport_failover_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_and_crash_probes: (K, L, M),
+        proof_replay_crash_and_failover_probes: (K, L, M, N),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -113,9 +119,14 @@ impl SdkDirectDriver {
         K: Fn() -> Result<(), String> + Send + Sync + 'static,
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
+        N: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
-        let (proof_verification_probe, replay_protection_probe, crash_recovery_probe) =
-            proof_replay_and_crash_probes;
+        let (
+            proof_verification_probe,
+            replay_protection_probe,
+            crash_recovery_probe,
+            transport_failover_probe,
+        ) = proof_replay_crash_and_failover_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -126,6 +137,7 @@ impl SdkDirectDriver {
             proof_verification_probe: Arc::new(proof_verification_probe),
             replay_protection_probe: Arc::new(replay_protection_probe),
             crash_recovery_probe: Arc::new(crash_recovery_probe),
+            transport_failover_probe: Arc::new(transport_failover_probe),
         }
     }
 }
@@ -162,6 +174,7 @@ impl SdkDirectDriver {
             "S-06" => Some((self.proof_verification_probe)()),
             "S-07" => Some((self.replay_protection_probe)()),
             "S-08" => Some((self.crash_recovery_probe)()),
+            "S-09" => Some((self.transport_failover_probe)()),
             _ => None,
         }
     }
@@ -753,6 +766,113 @@ fn run_live_s08_crash_recovery_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s09_transport_failover_probe() -> Result<(), String> {
+    let primary_endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let failover_endpoint = std::env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT")
+        .unwrap_or_else(|_| primary_endpoint.clone());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S09_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
+    let pre_message_payload = std::env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_PRE_MESSAGE_PAYLOAD.to_owned());
+    let post_message_payload = std::env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_POST_MESSAGE_PAYLOAD.to_owned());
+
+    let pre_send_handle = KamnAgentHandle::connect(
+        primary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-pre-send").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s09 connect failed: {error}"))?;
+    let pre_receipt = pre_send_handle
+        .send_message(pre_message_payload.as_str())
+        .map_err(|error| {
+            format!("sdk-direct live s09 pre-failover send-message failed: {error}")
+        })?;
+    validate_s08_message_receipt_fields(
+        pre_receipt.message_id.as_str(),
+        pre_receipt.status.as_str(),
+        "sdk-direct live s09 pre-failover send-message",
+    )?;
+
+    let pre_query_handle = KamnAgentHandle::connect(
+        primary_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-pre-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s09 connect failed: {error}"))?;
+    let pre_query = pre_query_handle
+        .query_message(pre_receipt.message_id.as_str())
+        .map_err(|error| {
+            format!("sdk-direct live s09 pre-failover query-message failed: {error}")
+        })?;
+    validate_s08_query_message_response(
+        pre_receipt.message_id.as_str(),
+        pre_query.message_id.as_str(),
+        pre_query.status.as_str(),
+        "sdk-direct live s09 pre-failover query-message",
+    )?;
+
+    let boundary_handle = KamnAgentHandle::connect(
+        failover_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-boundary").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s09 failover connect failed: {error}"))?;
+    let boundary_health = boundary_handle.health().map_err(|error| {
+        format!("sdk-direct live s09 failover boundary health check failed: {error}")
+    })?;
+    if boundary_health.status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s09 failover boundary health check returned empty status".to_owned(),
+        );
+    }
+
+    let post_send_handle = KamnAgentHandle::connect(
+        failover_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-post-send").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s09 failover connect failed: {error}"))?;
+    let post_receipt = post_send_handle
+        .send_message(post_message_payload.as_str())
+        .map_err(|error| {
+            format!("sdk-direct live s09 post-failover send-message failed: {error}")
+        })?;
+    validate_s08_message_receipt_fields(
+        post_receipt.message_id.as_str(),
+        post_receipt.status.as_str(),
+        "sdk-direct live s09 post-failover send-message",
+    )?;
+    validate_s08_distinct_message_ids(
+        pre_receipt.message_id.as_str(),
+        post_receipt.message_id.as_str(),
+        "sdk-direct live s09 post-failover send-message",
+    )?;
+
+    let post_query_handle = KamnAgentHandle::connect(
+        failover_endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-post-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s09 failover connect failed: {error}"))?;
+    let post_query = post_query_handle
+        .query_message(post_receipt.message_id.as_str())
+        .map_err(|error| {
+            format!("sdk-direct live s09 post-failover query-message failed: {error}")
+        })?;
+    validate_s08_query_message_response(
+        post_receipt.message_id.as_str(),
+        post_query.message_id.as_str(),
+        post_query.status.as_str(),
+        "sdk-direct live s09 post-failover query-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -818,11 +938,11 @@ mod tests {
         run_live_s02_direct_message_probe, run_live_s03_group_channel_probe,
         run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
         run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
-        run_live_s08_crash_recovery_probe, validate_live_s03_list_messages_response,
-        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
-        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
+        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
+        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
+        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1082,6 +1202,28 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s09_transport_failover_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                (
+                    "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+                    Some("invalid-failover-endpoint"),
+                ),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s09_transport_failover_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -1257,6 +1399,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-08 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c09_live_s09_driver_path_fails_closed_when_transport_failover_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s09 transport-failover probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-09");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-09 should fail closed on probe error",
         );
     }
 }
