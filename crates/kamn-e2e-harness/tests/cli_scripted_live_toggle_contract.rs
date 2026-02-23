@@ -45,7 +45,7 @@ fn spec_c04_cli_scripted_live_non_s01_remains_pass_without_runner_invocation() {
         Ok(())
     });
 
-    let result = driver.execute("S-11");
+    let result = driver.execute("S-12");
     assert_eq!(result.status, "pass");
     assert_eq!(
         runner_calls.load(Ordering::SeqCst),

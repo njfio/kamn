@@ -25,6 +25,10 @@ const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09
 const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s09-post"}"#;
 const DEFAULT_S10_AGENT_NAME: &str = "kamn-e2e-sdk-s10";
 const DEFAULT_S10_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s10-topology"}"#;
+const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-sdk-s11-primary";
+const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-rotated"}"#;
+const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-stale"}"#;
+const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-primary"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -33,7 +37,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09, and S-10.
+/// SDK-direct driver with optional live execution for S-01 through S-11.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -47,6 +51,7 @@ pub struct SdkDirectDriver {
     crash_recovery_probe: Arc<LiveProbe>,
     transport_failover_probe: Arc<LiveProbe>,
     topology_coherence_probe: Arc<LiveProbe>,
+    signer_rotation_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -80,6 +85,7 @@ impl SdkDirectDriver {
                 run_live_s08_crash_recovery_probe,
                 run_live_s09_transport_failover_probe,
                 run_live_s10_topology_coherence_probe,
+                run_live_s11_signer_rotation_probe,
             ),
         )
     }
@@ -101,19 +107,20 @@ impl SdkDirectDriver {
             replay_protection_probe: live_probe.clone(),
             crash_recovery_probe: live_probe.clone(),
             transport_failover_probe: live_probe.clone(),
-            topology_coherence_probe: live_probe,
+            topology_coherence_probe: live_probe.clone(),
+            signer_rotation_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_crash_failover_and_topology_probes: (K, L, M, N, O),
+        proof_replay_crash_failover_topology_and_signer_probes: (K, L, M, N, O, P),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -126,6 +133,7 @@ impl SdkDirectDriver {
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
+        P: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_probe,
@@ -133,7 +141,8 @@ impl SdkDirectDriver {
             crash_recovery_probe,
             transport_failover_probe,
             topology_coherence_probe,
-        ) = proof_replay_crash_failover_and_topology_probes;
+            signer_rotation_probe,
+        ) = proof_replay_crash_failover_topology_and_signer_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -146,6 +155,7 @@ impl SdkDirectDriver {
             crash_recovery_probe: Arc::new(crash_recovery_probe),
             transport_failover_probe: Arc::new(transport_failover_probe),
             topology_coherence_probe: Arc::new(topology_coherence_probe),
+            signer_rotation_probe: Arc::new(signer_rotation_probe),
         }
     }
 }
@@ -184,6 +194,7 @@ impl SdkDirectDriver {
             "S-08" => Some((self.crash_recovery_probe)()),
             "S-09" => Some((self.transport_failover_probe)()),
             "S-10" => Some((self.topology_coherence_probe)()),
+            "S-11" => Some((self.signer_rotation_probe)()),
             _ => None,
         }
     }
@@ -973,6 +984,109 @@ fn run_live_s10_topology_coherence_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s11_signer_rotation_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let primary_agent_name = std::env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S11_PRIMARY_AGENT_NAME.to_owned());
+    let rotated_agent_name = std::env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
+        .unwrap_or_else(|_| format!("{primary_agent_name}-rotated"));
+    let message_payload = std::env::var("KAMN_E2E_S11_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_MESSAGE_PAYLOAD.to_owned());
+    let rotated_message_payload = std::env::var("KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD.to_owned());
+    let stale_message_payload = std::env::var("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S11_STALE_MESSAGE_PAYLOAD.to_owned());
+
+    let primary_send_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        primary_agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s11 primary connect failed: {error}"))?;
+    let primary_receipt = primary_send_handle
+        .send_message(message_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s11 primary send-message failed: {error}"))?;
+    validate_s08_message_receipt_fields(
+        primary_receipt.message_id.as_str(),
+        primary_receipt.status.as_str(),
+        "sdk-direct live s11 primary send-message",
+    )?;
+
+    let primary_query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{primary_agent_name}-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s11 primary query connect failed: {error}"))?;
+    let primary_query = primary_query_handle
+        .query_message(primary_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s11 primary query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        primary_receipt.message_id.as_str(),
+        primary_query.message_id.as_str(),
+        primary_query.status.as_str(),
+        "sdk-direct live s11 primary query-message",
+    )?;
+
+    let rotated_send_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        rotated_agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s11 rotated connect failed: {error}"))?;
+    let rotated_receipt = rotated_send_handle
+        .send_message(rotated_message_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s11 rotated send-message failed: {error}"))?;
+    validate_s08_message_receipt_fields(
+        rotated_receipt.message_id.as_str(),
+        rotated_receipt.status.as_str(),
+        "sdk-direct live s11 rotated send-message",
+    )?;
+    validate_s08_distinct_message_ids(
+        primary_receipt.message_id.as_str(),
+        rotated_receipt.message_id.as_str(),
+        "sdk-direct live s11 rotated send-message",
+    )?;
+
+    let rotated_query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{rotated_agent_name}-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s11 rotated query connect failed: {error}"))?;
+    let rotated_query = rotated_query_handle
+        .query_message(rotated_receipt.message_id.as_str())
+        .map_err(|error| format!("sdk-direct live s11 rotated query-message failed: {error}"))?;
+    validate_s08_query_message_response(
+        rotated_receipt.message_id.as_str(),
+        rotated_query.message_id.as_str(),
+        rotated_query.status.as_str(),
+        "sdk-direct live s11 rotated query-message",
+    )?;
+
+    let stale_primary_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        primary_agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s11 stale-primary connect failed: {error}"))?;
+    let stale_primary_error = stale_primary_handle
+        .send_message(stale_message_payload.as_str())
+        .err()
+        .ok_or_else(|| {
+            "sdk-direct live s11 stale-primary send-message unexpectedly succeeded".to_owned()
+        })?;
+    validate_s07_replay_reason_marker(
+        stale_primary_error.to_string().as_str(),
+        "sdk-direct live s11 stale-primary send-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -1039,11 +1153,11 @@ mod tests {
         run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
         run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
         run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
-        run_live_s10_topology_coherence_probe, validate_live_s03_list_messages_response,
-        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
-        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
-        validate_s08_message_receipt_fields, validate_s08_query_message_response, SdkDirectDriver,
-        SDK_DIRECT_LIVE_ENV,
+        run_live_s10_topology_coherence_probe, run_live_s11_signer_rotation_probe,
+        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
+        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
+        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
+        validate_s08_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1354,6 +1468,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s11_signer_rotation_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error =
+                    run_live_s11_signer_rotation_probe().expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -1553,6 +1685,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-10 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c11_live_s11_driver_path_fails_closed_when_signer_rotation_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s11 signer-rotation probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-11");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-11 should fail closed on probe error",
         );
     }
 }
