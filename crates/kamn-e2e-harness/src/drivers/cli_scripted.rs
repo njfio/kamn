@@ -25,6 +25,9 @@ const DEFAULT_S07_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s07-r
 const DEFAULT_S08_AGENT_NAME: &str = "kamn-e2e-cli-s08";
 const DEFAULT_S08_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s08-pre"}"#;
 const DEFAULT_S08_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s08-post"}"#;
+const DEFAULT_S09_AGENT_NAME: &str = "kamn-e2e-cli-s09";
+const DEFAULT_S09_PRE_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s09-pre"}"#;
+const DEFAULT_S09_POST_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s09-post"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -33,7 +36,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, and S-08.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, and S-09.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -45,6 +48,7 @@ pub struct CliScriptedDriver {
     proof_verification_runner: Arc<LiveCliRunner>,
     replay_protection_runner: Arc<LiveCliRunner>,
     crash_recovery_runner: Arc<LiveCliRunner>,
+    transport_failover_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -76,6 +80,7 @@ impl CliScriptedDriver {
                 run_live_s06_cli_proof_verification_probe,
                 run_live_s07_cli_replay_protection_probe,
                 run_live_s08_cli_crash_recovery_probe,
+                run_live_s09_cli_transport_failover_probe,
             ),
         )
     }
@@ -95,19 +100,20 @@ impl CliScriptedDriver {
             escrow_settlement_runner: live_runner.clone(),
             proof_verification_runner: live_runner.clone(),
             replay_protection_runner: live_runner.clone(),
-            crash_recovery_runner: live_runner,
+            crash_recovery_runner: live_runner.clone(),
+            transport_failover_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K, L, M>(
+    pub fn with_runners<F, G, H, I, J, K, L, M, N>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_replay_and_crash_runners: (K, L, M),
+        proof_replay_crash_and_failover_runners: (K, L, M, N),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -118,9 +124,14 @@ impl CliScriptedDriver {
         K: Fn() -> Result<(), String> + Send + Sync + 'static,
         L: Fn() -> Result<(), String> + Send + Sync + 'static,
         M: Fn() -> Result<(), String> + Send + Sync + 'static,
+        N: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
-        let (proof_verification_runner, replay_protection_runner, crash_recovery_runner) =
-            proof_replay_and_crash_runners;
+        let (
+            proof_verification_runner,
+            replay_protection_runner,
+            crash_recovery_runner,
+            transport_failover_runner,
+        ) = proof_replay_crash_and_failover_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -131,6 +142,7 @@ impl CliScriptedDriver {
             proof_verification_runner: Arc::new(proof_verification_runner),
             replay_protection_runner: Arc::new(replay_protection_runner),
             crash_recovery_runner: Arc::new(crash_recovery_runner),
+            transport_failover_runner: Arc::new(transport_failover_runner),
         }
     }
 }
@@ -167,6 +179,7 @@ impl CliScriptedDriver {
             "S-06" => Some((self.proof_verification_runner)()),
             "S-07" => Some((self.replay_protection_runner)()),
             "S-08" => Some((self.crash_recovery_runner)()),
+            "S-09" => Some((self.transport_failover_runner)()),
             _ => None,
         }
     }
@@ -937,6 +950,123 @@ fn run_live_s08_cli_crash_recovery_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s09_cli_transport_failover_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let primary_endpoint =
+        env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let failover_endpoint =
+        env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let base_agent_name =
+        env::var("KAMN_E2E_S09_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
+    let pre_message_payload = env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_PRE_MESSAGE_PAYLOAD.to_owned());
+    let post_message_payload = env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S09_POST_MESSAGE_PAYLOAD.to_owned());
+
+    let pre_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            primary_endpoint.as_str(),
+            "--format",
+            "text",
+            pre_message_payload.as_str(),
+        ],
+        "cli live s09 pre-failover send-message",
+        format!("{base_agent_name}-pre-send").as_str(),
+    )?;
+    let pre_message_id = validate_s08_message_receipt_fields(
+        pre_send_output.as_str(),
+        "cli live s09 pre-failover send-message",
+    )?;
+
+    let pre_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            primary_endpoint.as_str(),
+            "--format",
+            "text",
+            pre_message_id.as_str(),
+        ],
+        "cli live s09 pre-failover query-message",
+        format!("{base_agent_name}-pre-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        pre_query_output.as_str(),
+        pre_message_id.as_str(),
+        "cli live s09 pre-failover query-message",
+    )?;
+
+    let boundary_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "health",
+            "--endpoint",
+            failover_endpoint.as_str(),
+            "--format",
+            "text",
+        ],
+        "cli live s09 failover boundary health check",
+        format!("{base_agent_name}-boundary").as_str(),
+    )?;
+    let boundary_status =
+        parse_text_output_field(boundary_output.as_str(), "status").ok_or_else(|| {
+            format!(
+                "cli live s09 failover boundary health response missing status field: {boundary_output}"
+            )
+        })?;
+    if boundary_status.trim().is_empty() {
+        return Err("cli live s09 failover boundary health returned empty status".to_owned());
+    }
+
+    let post_send_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            failover_endpoint.as_str(),
+            "--format",
+            "text",
+            post_message_payload.as_str(),
+        ],
+        "cli live s09 post-failover send-message",
+        format!("{base_agent_name}-post-send").as_str(),
+    )?;
+    let post_message_id = validate_s08_message_receipt_fields(
+        post_send_output.as_str(),
+        "cli live s09 post-failover send-message",
+    )?;
+    if post_message_id == pre_message_id {
+        return Err(
+            "cli live s09 post-failover send-message returned duplicate message_id".to_owned(),
+        );
+    }
+
+    let post_query_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "query-message",
+            "--endpoint",
+            failover_endpoint.as_str(),
+            "--format",
+            "text",
+            post_message_id.as_str(),
+        ],
+        "cli live s09 post-failover query-message",
+        format!("{base_agent_name}-post-query").as_str(),
+    )?;
+    validate_s08_query_message_response(
+        post_query_output.as_str(),
+        post_message_id.as_str(),
+        "cli live s09 post-failover query-message",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(output: &str, step: &str) -> Result<String, String> {
     let message_id = parse_text_output_field(output, "message_id")
         .ok_or_else(|| format!("{step} response missing message_id field: {output}"))?
@@ -1093,10 +1223,10 @@ mod tests {
         run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
         run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
         run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
-        run_live_s08_cli_crash_recovery_probe, validate_live_s05_release_escrow_response,
-        validate_s07_replay_reason_marker, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        run_live_s08_cli_crash_recovery_probe, run_live_s09_cli_transport_failover_probe,
+        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1485,6 +1615,81 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s09_cli_transport_failover_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                (
+                    "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+            ],
+            || {
+                let error = run_live_s09_cli_transport_failover_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s09_cli_transport_failover_probe_accepts_distinct_pre_post_message_ids() {
+        let script_path = unique_temp_script_path("kamn-e2e-cli-s09-success");
+        let script_source = r#"#!/usr/bin/env python3
+import os
+import sys
+
+command = sys.argv[1] if len(sys.argv) > 1 else ""
+agent_name = os.environ.get("KAMN_AGENT_NAME", "")
+
+if command == "send-message":
+    if agent_name.endswith("pre-send"):
+        sys.stdout.write("message_id=message-pre status=sent")
+    elif agent_name.endswith("post-send"):
+        sys.stdout.write("message_id=message-post status=sent")
+    else:
+        sys.stdout.write("message_id=message-fallback status=sent")
+elif command == "query-message":
+    message_id = sys.argv[-1] if len(sys.argv) > 0 else "message-fallback"
+    sys.stdout.write(f"message_id={message_id} status=sent")
+elif command == "health":
+    sys.stdout.write("status=ok")
+else:
+    sys.stderr.write("unsupported command")
+    sys.exit(2)
+"#;
+        write_executable_python_script(&script_path, script_source);
+
+        with_env_vars(
+            &[
+                (
+                    CLI_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                (
+                    "KAMN_E2E_S09_FAILOVER_ENDPOINT",
+                    Some("http://localhost:8081"),
+                ),
+            ],
+            || {
+                run_live_s09_cli_transport_failover_probe()
+                    .expect("distinct pre/post message IDs should pass continuity checks");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s06_cli_proof_verification_probe_accepts_success_payload() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s06-success");
         let script_source = format!(
@@ -1715,6 +1920,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-08 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c09_live_s09_driver_path_fails_closed_when_transport_failover_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s09 transport-failover probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-09");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-09 should fail closed on probe error",
         );
     }
 }

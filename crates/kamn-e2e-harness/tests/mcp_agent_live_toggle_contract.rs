@@ -52,7 +52,7 @@ fn spec_c04_mcp_agent_live_non_s01_remains_pass_without_probe_invocation() {
     })
     .expect("driver should build");
 
-    let result = driver.execute("S-09");
+    let result = driver.execute("S-10");
     assert_eq!(result.status, "pass");
     assert_eq!(
         probe_calls.load(Ordering::SeqCst),
