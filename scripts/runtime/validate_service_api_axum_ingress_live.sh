@@ -639,12 +639,62 @@ pathlib.Path(sys.argv[1]).write_text("x" * (70 * 1024), encoding="utf-8")
 PY
 
 oversized_nonce=701
-oversized_length="$(wc -c <"$oversized_body_file" | tr -d '[:space:]')"
-oversized_signature="$(printf 'sig:ed25519:baseline-v1:%s:%s:%s:%s' \
-  "$auth_sender_did" \
-  "$oversized_nonce" \
-  "$auth_state_hash" \
-  "$oversized_length")"
+oversized_signature="$(
+  python3 - "$auth_private_key_hex" "$auth_sender_did" "$oversized_nonce" "$auth_state_hash" "$oversized_body_file" <<'PY'
+import hashlib
+import pathlib
+import sys
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+
+secp256k1_order = int(
+    "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
+)
+private_key_hex = sys.argv[1]
+sender = sys.argv[2]
+nonce = int(sys.argv[3])
+state_hash = sys.argv[4]
+payload = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
+
+private_scalar = int(private_key_hex, 16)
+private_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+message = (
+    f"sender_len={len(sender)}\n"
+    f"sender={sender}\n"
+    f"nonce={nonce}\n"
+    f"state_hash_len={len(state_hash)}\n"
+    f"state_hash={state_hash}\n"
+    f"payload_len={len(payload)}\n"
+    f"payload={payload}"
+).encode("utf-8")
+signature_der = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+r_value, s_value = decode_dss_signature(signature_der)
+if s_value > secp256k1_order // 2:
+    s_value = secp256k1_order - s_value
+message_hash = int.from_bytes(hashlib.sha256(message).digest(), byteorder="big")
+nonce_scalar = (
+    (message_hash + (r_value * private_scalar)) * pow(s_value, -1, secp256k1_order)
+) % secp256k1_order
+if nonce_scalar == 0:
+    raise SystemExit("service api oversized-body signature nonce scalar resolved to zero")
+ephemeral_point = (
+    ec.derive_private_key(nonce_scalar, ec.SECP256K1())
+    .public_key()
+    .public_numbers()
+)
+if ephemeral_point.x == r_value:
+    recovery_prefix = 0
+elif ephemeral_point.x - r_value == secp256k1_order:
+    recovery_prefix = 1
+else:
+    raise SystemExit(
+        "service api oversized-body signature failed to map recovery-id domain"
+    )
+recovery_id = (recovery_prefix << 1) | (ephemeral_point.y & 1)
+print(f"sig:secp256k1:baseline-v2:{recovery_id}:{r_value:064x}{s_value:064x}")
+PY
+)"
 
 oversized_response_file="$TMP_DIR/service-api-axum-oversized-response.json"
 oversized_status="$(curl -sS -o "$oversized_response_file" -w '%{http_code}' \
