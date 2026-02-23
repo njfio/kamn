@@ -1,3 +1,9 @@
+fn lock_signer_env_guard() -> std::sync::MutexGuard<'static, ()> {
+    signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+}
+
 #[test]
 fn parses_required_role_and_defaults() {
     let args = vec![
@@ -98,9 +104,7 @@ fn parses_diagnostics_snapshot_flag() {
 
 #[test]
 fn unit_kolme_live_local_signer_override_marker_defaults_false() {
-    let _signer_lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _signer_lock = lock_signer_env_guard();
     let _override_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", None);
     assert!(!resolve_kolme_live_allow_local_signer_testing_override()
         .expect("override marker should default false when unset"));
@@ -108,9 +112,7 @@ fn unit_kolme_live_local_signer_override_marker_defaults_false() {
 
 #[test]
 fn unit_kolme_live_local_signer_override_marker_parses_boolean_values() {
-    let _signer_lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _signer_lock = lock_signer_env_guard();
 
     {
         let _true_guard =
@@ -128,9 +130,7 @@ fn unit_kolme_live_local_signer_override_marker_parses_boolean_values() {
 
 #[test]
 fn regression_kolme_live_local_signer_override_marker_rejects_invalid_value() {
-    let _signer_lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _signer_lock = lock_signer_env_guard();
     let _override_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", Some("maybe"));
     let error = resolve_kolme_live_allow_local_signer_testing_override()
@@ -212,9 +212,7 @@ fn unit_kolme_live_signer_key_source_policy_classifier_matrix() {
 
 #[test]
 pub(super) fn functional_kolme_live_strict_env_local_key_source_rejects_with_reason_code() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
 
@@ -253,9 +251,7 @@ pub(super) fn functional_kolme_live_strict_env_local_key_source_rejects_with_rea
 #[test]
 fn regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_with_deterministic_reason_code(
 ) {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _fallback_key_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
         Some("11"),
@@ -272,9 +268,7 @@ fn regression_kolme_live_signer_key_source_policy_rejects_fallback_secret_path_w
 
 #[test]
 pub(super) fn functional_kolme_live_strict_env_local_key_source_allows_with_local_override() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
 
@@ -308,9 +302,7 @@ pub(super) fn functional_kolme_live_strict_env_local_key_source_allows_with_loca
 
 #[test]
 pub(super) fn integration_kolme_live_strict_managed_external_key_source_policy_passes() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
 
@@ -344,9 +336,7 @@ pub(super) fn integration_kolme_live_strict_managed_external_key_source_policy_p
 
 #[test]
 fn regression_runtime_kolme_live_honors_declared_managed_external_key_source_without_strict_flag() {
-    let _lock = signer_env_lock()
-        .lock()
-        .expect("signer env lock should guard test mutation");
+    let _lock = lock_signer_env_guard();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);

@@ -4353,7 +4353,6 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
         thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
     wait_for_endpoint_ready(bind_addr.as_str());
 
-    let sender_did = "kamn:did:agent:test-client-concurrency-regression";
     let state_hash = format!(
         "service-api:{}:{}",
         snapshot.chain_id.as_str(),
@@ -4361,11 +4360,13 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
     );
 
     for round in 0..rounds {
+        let sender_did = format!("kamn:did:agent:test-client-concurrency-regression-{round}");
         let barrier = Arc::new(Barrier::new(worker_count));
         let mut clients = Vec::with_capacity(worker_count);
         for request_index in 0..worker_count {
             let client_bind_addr = bind_addr.clone();
             let barrier = barrier.clone();
+            let sender_did = sender_did.clone();
             let state_hash = state_hash.clone();
             clients.push(thread::spawn(move || {
                 let body = format!(
@@ -4373,7 +4374,12 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
                 );
                 let nonce = 4_000 + round * worker_count as u64 + request_index as u64;
                 let signature =
-                    baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), &body);
+                    baseline_signature_for_fields(
+                        sender_did.as_str(),
+                        nonce,
+                        state_hash.as_str(),
+                        &body,
+                    );
                 let nonce_text = nonce.to_string();
                 barrier.wait();
                 send_http_request_with_headers(
@@ -4382,7 +4388,7 @@ fn regression_service_api_endpoint_concurrency_limit_reason_code_stays_stable_ac
                     "/v1/messages/send",
                     body.as_str(),
                     &[
-                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Sender-DID", sender_did.as_str()),
                         ("X-KAMN-Request-Nonce", nonce_text.as_str()),
                         ("X-KAMN-Request-Signature", signature.as_str()),
                     ],
