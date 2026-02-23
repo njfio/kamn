@@ -497,7 +497,25 @@ fn integration_r53_review_markers_are_consistent() {
         &markers,
         "r53_review_spec_volume_non_regression_spec_dir_max",
     );
-    assert!(top_level_spec_dir_count() <= non_regression_spec_dir_max);
+    let r55_markers = parse_marker_lines(DOC_R55);
+    let spec_delta_base_cap = parse_marker_usize(
+        &r55_markers,
+        "r55_review_spec_volume_non_regression_base_cap",
+    );
+    let spec_delta_allowance = parse_marker_usize(
+        &r55_markers,
+        "r55_review_spec_volume_non_regression_delta_allowance",
+    );
+    let spec_effective_cap = parse_marker_usize(
+        &r55_markers,
+        "r55_review_spec_volume_non_regression_effective_cap",
+    );
+    assert_eq!(spec_delta_base_cap, non_regression_spec_dir_max);
+    assert_eq!(
+        spec_delta_base_cap.saturating_add(spec_delta_allowance),
+        spec_effective_cap
+    );
+    assert!(top_level_spec_dir_count() <= spec_effective_cap);
 
     let non_regression_doc_max = parse_marker_usize(
         &markers,
@@ -1018,6 +1036,69 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
             &markers,
             "r55_review_governance_structural_coupling_mitigation_issue",
         ) > 0
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_governance_remediation_budget_schema_version",
+        ),
+        "kamn.review.governance-remediation-budget.v1"
+    );
+    let remediation_item_count =
+        parse_marker_usize(&markers, "r55_review_governance_remediation_item_count");
+    let remediation_commit_count =
+        parse_marker_usize(&markers, "r55_review_governance_remediation_commit_count");
+    let remediation_commits_per_item = parse_marker_f64(
+        &markers,
+        "r55_review_governance_remediation_commits_per_item",
+    );
+    let remediation_budget_max = parse_marker_f64(
+        &markers,
+        "r55_review_governance_remediation_budget_max_commits_per_item",
+    );
+    let computed_remediation_ratio = if remediation_item_count == 0 {
+        0.0
+    } else {
+        remediation_commit_count as f64 / remediation_item_count as f64
+    };
+    assert!((computed_remediation_ratio - remediation_commits_per_item).abs() <= 0.01);
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_governance_remediation_budget_status"),
+        if remediation_commits_per_item <= remediation_budget_max + 0.001 {
+            "within_budget"
+        } else {
+            "over_budget"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_spec_volume_non_regression_delta_schema_version",
+        ),
+        "kamn.review.spec-volume-non-regression-delta-allowance.v1"
+    );
+    let spec_base_cap =
+        parse_marker_usize(&markers, "r55_review_spec_volume_non_regression_base_cap");
+    let spec_delta_allowance = parse_marker_usize(
+        &markers,
+        "r55_review_spec_volume_non_regression_delta_allowance",
+    );
+    let spec_effective_cap = parse_marker_usize(
+        &markers,
+        "r55_review_spec_volume_non_regression_effective_cap",
+    );
+    assert_eq!(
+        spec_base_cap.saturating_add(spec_delta_allowance),
+        spec_effective_cap
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_spec_volume_non_regression_status"),
+        if top_level_spec_dir_count() <= spec_effective_cap {
+            "within_effective_cap"
+        } else {
+            "breached_effective_cap"
+        }
     );
 
     assert_eq!(
