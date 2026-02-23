@@ -5,6 +5,7 @@ use std::process::Command;
 
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
 const DOC_R54: &str = include_str!("../../../docs/review/gaps-and-issues-r54.md");
+const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_lines(doc: &str) -> BTreeMap<String, String> {
@@ -143,12 +144,31 @@ fn repo_root() -> PathBuf {
 }
 
 fn top_level_spec_dir_count() -> usize {
-    fs::read_dir(repo_root().join("specs"))
-        .expect("specs dir should be readable")
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path())
-        .filter(|path| path.is_dir())
-        .count()
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "specs"])
+        .output()
+        .expect("git should be available for tracked spec-dir discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files specs failed with status {:?}",
+        output.status.code()
+    );
+
+    String::from_utf8(output.stdout)
+        .expect("git ls-files output should be valid UTF-8")
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('/');
+            let root = parts.next()?;
+            if root != "specs" {
+                return None;
+            }
+            let top_level = parts.next()?;
+            Some(top_level.to_string())
+        })
+        .collect::<BTreeSet<_>>()
+        .len()
 }
 
 fn doc_contract_test_file_count() -> usize {
@@ -163,6 +183,147 @@ fn doc_contract_test_file_count() -> usize {
             name.ends_with("_docs.rs") || name.contains("docs_contract")
         })
         .count()
+}
+
+fn workspace_contract_test_file_count() -> usize {
+    let mut count = 0usize;
+    let crates_dir = repo_root().join("crates");
+    let crate_entries = fs::read_dir(&crates_dir)
+        .unwrap_or_else(|_| panic!("crates dir should be readable: {}", crates_dir.display()));
+    for crate_entry in crate_entries.filter_map(|entry| entry.ok()) {
+        let tests_dir = crate_entry.path().join("tests");
+        if !tests_dir.is_dir() {
+            continue;
+        }
+        let test_entries = fs::read_dir(&tests_dir)
+            .unwrap_or_else(|_| panic!("tests dir should be readable: {}", tests_dir.display()));
+        for test_entry in test_entries.filter_map(|entry| entry.ok()) {
+            let path = test_entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if name.contains("contract") {
+                count = count.saturating_add(1);
+            }
+        }
+    }
+    count
+}
+
+fn collect_rust_files(root: &Path, out: &mut Vec<PathBuf>) {
+    let entries = fs::read_dir(root)
+        .unwrap_or_else(|_| panic!("source root should be readable: {}", root.display()));
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_rust_files(&path, out);
+            continue;
+        }
+        if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            out.push(path);
+        }
+    }
+}
+
+fn is_test_cfg_attribute(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
+}
+
+fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
+    while index < lines.len() && lines[index].trim().is_empty() {
+        index += 1;
+    }
+
+    while index < lines.len() && lines[index].trim_start().starts_with("#[") {
+        index += 1;
+    }
+
+    if index >= lines.len() {
+        return index;
+    }
+
+    let mut brace_depth = 0_i64;
+    let mut saw_open_brace = false;
+    while index < lines.len() {
+        let line = lines[index];
+        let open_count = line.matches('{').count() as i64;
+        let close_count = line.matches('}').count() as i64;
+        if open_count > 0 {
+            saw_open_brace = true;
+        }
+        brace_depth += open_count - close_count;
+        index += 1;
+
+        if saw_open_brace {
+            if brace_depth <= 0 {
+                return index;
+            }
+            continue;
+        }
+
+        if line.trim_end().ends_with(';') {
+            return index;
+        }
+    }
+    index
+}
+
+fn production_source_without_cfg_test_items(source: &str) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut retained = Vec::with_capacity(lines.len());
+    let mut index = 0usize;
+    while index < lines.len() {
+        if is_test_cfg_attribute(lines[index]) {
+            index = skip_cfg_test_item(&lines, index + 1);
+            continue;
+        }
+        retained.push(lines[index]);
+        index += 1;
+    }
+    retained.join("\n")
+}
+
+fn production_expect_inventory_count() -> usize {
+    let mut source_files = Vec::new();
+    let crates_dir = repo_root().join("crates");
+    let crate_entries = fs::read_dir(&crates_dir)
+        .unwrap_or_else(|_| panic!("crates dir should be readable: {}", crates_dir.display()));
+    for crate_entry in crate_entries.filter_map(|entry| entry.ok()) {
+        let src_dir = crate_entry.path().join("src");
+        if src_dir.is_dir() {
+            collect_rust_files(&src_dir, &mut source_files);
+        }
+    }
+
+    source_files
+        .iter()
+        .filter(|path| {
+            let path_text = path.to_string_lossy();
+            !path_text.contains("/main_tests/")
+                && path.file_name().and_then(|name| name.to_str()) != Some("main_tests.rs")
+                && !path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or_default()
+                    .ends_with("_tests.rs")
+                && !path_text.contains("/runtime_tests")
+                && !path_text.contains("/cli_tests")
+                && !path_text.contains("/test_utils/")
+                && !path_text.contains("/tests/")
+        })
+        .map(|path| {
+            let source = fs::read_to_string(path)
+                .unwrap_or_else(|_| panic!("source file should be readable: {}", path.display()));
+            production_source_without_cfg_test_items(&source)
+                .lines()
+                .filter(|line| line.contains(".expect("))
+                .count()
+        })
+        .sum()
 }
 
 #[test]
@@ -733,4 +894,256 @@ fn regression_r54_review_unresolved_item_closure_markers_are_consistent() {
         .filter(|line| line.contains("Post-Publication"))
         .count();
     assert_eq!(disallowed_heading_count, 0);
+}
+
+#[test]
+fn regression_review_docs_tracked_spec_dir_count_ignores_untracked_top_level_specs_dirs() {
+    let specs_dir = repo_root().join("specs");
+    let temp_dir = specs_dir.join(format!(
+        "zz-untracked-review-r53-spec-dir-contamination-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&temp_dir);
+
+    let baseline = top_level_spec_dir_count();
+    fs::create_dir_all(&temp_dir).unwrap_or_else(|_| {
+        panic!(
+            "failed creating temp specs dir for tracked-only regression: {}",
+            temp_dir.display()
+        )
+    });
+    let observed = top_level_spec_dir_count();
+    let _ = fs::remove_dir_all(&temp_dir);
+
+    assert_eq!(
+        observed, baseline,
+        "tracked spec-dir counting must ignore untracked top-level specs directories"
+    );
+}
+
+#[test]
+fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
+    let markers = parse_marker_lines(DOC_R55);
+
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_unresolved_closure_schema_version"),
+        "kamn.review.unresolved-item-closure.v1"
+    );
+
+    let unresolved_total = parse_marker_usize(&markers, "r55_review_unresolved_total_item_count");
+    let unresolved_resolved =
+        parse_marker_usize(&markers, "r55_review_unresolved_resolved_item_count");
+    assert_eq!(unresolved_total, 5);
+    assert_eq!(unresolved_total, unresolved_resolved);
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_unresolved_closure_status"),
+        "all_resolved"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_unresolved_governance_structural_coupling_status",
+        ),
+        "resolved_via_structural_coupling_budget_contract"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_unresolved_doc_contract_cap_breach_status",
+        ),
+        "resolved_via_workspace_cap_enforcement_contract"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_unresolved_node_kolme_freeze_status"),
+        "resolved_via_runtime_scope_surface_activation"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_unresolved_production_expect_audit_status",
+        ),
+        "resolved_via_deterministic_expect_inventory_contract"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_unresolved_spec_hygiene_contamination_status",
+        ),
+        "resolved_via_tracked_only_count_enforcement"
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_governance_structural_coupling_schema_version",
+        ),
+        "kamn.review.governance-structural-coupling-budget.v1"
+    );
+    let non_merge_commit_count = parse_marker_usize(
+        &markers,
+        "r55_review_governance_structural_coupling_non_merge_commit_count",
+    );
+    let governance_commit_count = parse_marker_usize(
+        &markers,
+        "r55_review_governance_structural_coupling_governance_commit_count",
+    );
+    let governance_commit_ratio = parse_marker_f64(
+        &markers,
+        "r55_review_governance_structural_coupling_governance_commit_ratio",
+    );
+    let governance_target_ratio = parse_marker_f64(
+        &markers,
+        "r55_review_governance_structural_coupling_target_ratio_max_next_release",
+    );
+    assert!(non_merge_commit_count > 0);
+    assert!(governance_commit_count <= non_merge_commit_count);
+    assert!(
+        (governance_commit_ratio - governance_commit_count as f64 / non_merge_commit_count as f64)
+            .abs()
+            <= 0.01
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_governance_structural_coupling_budget_status",
+        ),
+        if governance_commit_ratio <= governance_target_ratio + 0.001 {
+            "within_target"
+        } else {
+            "active_reduction_contract"
+        }
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r55_review_governance_structural_coupling_mitigation_issue",
+        ) > 0
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_workspace_contract_file_cap_schema_version",
+        ),
+        "kamn.review.workspace-contract-file-cap.v1"
+    );
+    let contract_snapshot = parse_marker_usize(
+        &markers,
+        "r55_review_workspace_contract_file_count_snapshot",
+    );
+    let contract_max = parse_marker_usize(
+        &markers,
+        "r55_review_workspace_contract_file_non_regression_max",
+    );
+    let contract_r54_lock =
+        parse_marker_usize(&markers, "r55_review_workspace_contract_file_r54_lock");
+    let contract_delta = parse_marker_usize(
+        &markers,
+        "r55_review_workspace_contract_file_breach_delta_vs_r54_lock",
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_workspace_contract_file_count_formula",),
+        "count(files in crates/*/tests/*.rs where filename contains 'contract')"
+    );
+    assert_eq!(workspace_contract_test_file_count(), contract_snapshot);
+    assert!(workspace_contract_test_file_count() <= contract_max);
+    assert_eq!(
+        contract_snapshot.saturating_sub(contract_r54_lock),
+        contract_delta
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_workspace_contract_file_cap_status"),
+        if contract_snapshot <= contract_r54_lock {
+            "within_r54_lock"
+        } else {
+            "regressed_with_waiver"
+        }
+    );
+    if contract_snapshot > contract_r54_lock {
+        assert!(
+            parse_marker_usize(
+                &markers,
+                "r55_review_workspace_contract_file_cap_mitigation_issue",
+            ) > 0
+        );
+    }
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_production_expect_inventory_schema_version",
+        ),
+        "kamn.review.production-expect-inventory.v1"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_production_expect_inventory_count_formula",
+        ),
+        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)"
+    );
+    let reported_r55 = parse_marker_usize(
+        &markers,
+        "r55_review_production_expect_inventory_reported_count_r55",
+    );
+    let expect_snapshot = parse_marker_usize(
+        &markers,
+        "r55_review_production_expect_inventory_snapshot_count",
+    );
+    let expect_delta = parse_marker_usize(
+        &markers,
+        "r55_review_production_expect_inventory_delta_vs_r55",
+    );
+    let expect_target = parse_marker_usize(
+        &markers,
+        "r55_review_production_expect_inventory_target_max_next_release",
+    );
+    assert_eq!(production_expect_inventory_count(), expect_snapshot);
+    assert_eq!(reported_r55.saturating_sub(expect_snapshot), expect_delta);
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_production_expect_inventory_policy_status",
+        ),
+        if expect_snapshot <= expect_target {
+            "within_target"
+        } else {
+            "active_reduction_contract"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_spec_hygiene_fix_schema_version"),
+        "kamn.review.spec-hygiene-tracked-only-count.v2"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_spec_hygiene_fix_status"),
+        "implemented"
+    );
+    assert!(parse_marker_usize(&markers, "r55_review_spec_hygiene_fix_issue") > 0);
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r55_review_node_kolme_freeze_resolution_schema_version",
+        ),
+        "kamn.review.runtime-surface-reactivation.v1"
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r55_review_node_freeze_reviews_since_last_real_change_before_resolution",
+        ) >= 6
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r55_review_kolme_freeze_reviews_since_last_real_change_before_resolution",
+        ) >= 6
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r55_review_node_kolme_freeze_resolution_status"),
+        "implemented"
+    );
+    assert!(parse_marker_usize(&markers, "r55_review_node_kolme_freeze_resolution_issue") > 0);
 }
