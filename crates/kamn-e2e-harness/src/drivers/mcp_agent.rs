@@ -45,6 +45,12 @@ const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A: &str = r#"{"message":"mcp-agent-live-
 const DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B: &str = r#"{"message":"mcp-agent-live-s14-batch-b"}"#;
 const DEFAULT_S14_BLOCK_HEIGHT: u64 = 1;
 const DEFAULT_S14_FINALITY: &str = "final";
+const DEFAULT_S15_AGENT_NAME: &str = "kamn-e2e-mcp-s15";
+const DEFAULT_S15_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s15-performance"}"#;
+const DEFAULT_S15_ITERATIONS: u64 = 3;
+const DEFAULT_S15_MAX_TOTAL_MILLIS: u128 = 5_000;
+const DEFAULT_S15_MAX_P50_MILLIS: u128 = 2_500;
+const DEFAULT_S15_MAX_P99_MILLIS: u128 = 5_000;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -72,6 +78,7 @@ pub struct McpAgentDriver {
     retention_deletion_probe: Arc<LiveMcpProbe>,
     bridge_forwarding_probe: Arc<LiveMcpProbe>,
     batch_merkle_probe: Arc<LiveMcpProbe>,
+    performance_smoke_probe: Arc<LiveMcpProbe>,
 }
 
 impl std::fmt::Debug for McpAgentDriver {
@@ -110,6 +117,7 @@ impl McpAgentDriver {
                 run_live_s12_mcp_retention_deletion_probe,
                 run_live_s13_mcp_bridge_forwarding_probe,
                 run_live_s14_mcp_batch_merkle_probe,
+                run_live_s15_mcp_performance_smoke_probe,
             ),
         )
     }
@@ -143,19 +151,20 @@ impl McpAgentDriver {
             signer_rotation_probe: live_probe.clone(),
             retention_deletion_probe: live_probe.clone(),
             bridge_forwarding_probe: live_probe.clone(),
-            batch_merkle_probe: live_probe,
+            batch_merkle_probe: live_probe.clone(),
+            performance_smoke_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        escrow_proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes: (
+        escrow_proof_replay_crash_failover_topology_signer_retention_bridge_merkle_and_performance_probes: (
             J,
             K,
             L,
@@ -166,6 +175,7 @@ impl McpAgentDriver {
             Q,
             R,
             S,
+            T,
         ),
     ) -> Result<Self, String>
     where
@@ -183,6 +193,7 @@ impl McpAgentDriver {
         Q: Fn() -> Result<(), String> + Send + Sync + 'static,
         R: Fn() -> Result<(), String> + Send + Sync + 'static,
         S: Fn() -> Result<(), String> + Send + Sync + 'static,
+        T: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
@@ -198,7 +209,8 @@ impl McpAgentDriver {
             retention_deletion_probe,
             bridge_forwarding_probe,
             batch_merkle_probe,
-        ) = escrow_proof_replay_crash_failover_topology_signer_retention_bridge_and_merkle_probes;
+            performance_smoke_probe,
+        ) = escrow_proof_replay_crash_failover_topology_signer_retention_bridge_merkle_and_performance_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -216,6 +228,7 @@ impl McpAgentDriver {
             retention_deletion_probe: Arc::new(retention_deletion_probe),
             bridge_forwarding_probe: Arc::new(bridge_forwarding_probe),
             batch_merkle_probe: Arc::new(batch_merkle_probe),
+            performance_smoke_probe: Arc::new(performance_smoke_probe),
         })
     }
 }
@@ -258,6 +271,7 @@ impl McpAgentDriver {
             "S-12" => Some((self.retention_deletion_probe)()),
             "S-13" => Some((self.bridge_forwarding_probe)()),
             "S-14" => Some((self.batch_merkle_probe)()),
+            "S-15" => Some((self.performance_smoke_probe)()),
             _ => None,
         }
     }
@@ -1956,6 +1970,100 @@ fn run_live_s14_mcp_batch_merkle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s15_mcp_performance_smoke_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S15_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S15_AGENT_NAME.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let message_payload = env::var("KAMN_E2E_S15_MESSAGE_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S15_MESSAGE_PAYLOAD.to_owned());
+    let iterations = env::var("KAMN_E2E_S15_ITERATIONS")
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u64>()
+                .map_err(|_| format!("mcp live s15 invalid iterations env value: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_S15_ITERATIONS);
+    if iterations == 0 {
+        return Err("mcp live s15 iterations must be greater than zero".to_owned());
+    }
+
+    let max_total_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_TOTAL_MILLIS",
+        DEFAULT_S15_MAX_TOTAL_MILLIS,
+        "mcp live s15 max-total budget",
+    )?;
+    let max_p50_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_P50_MILLIS",
+        DEFAULT_S15_MAX_P50_MILLIS,
+        "mcp live s15 max-p50 budget",
+    )?;
+    let max_p99_millis = parse_s15_budget_env_u128(
+        "KAMN_E2E_S15_MAX_P99_MILLIS",
+        DEFAULT_S15_MAX_P99_MILLIS,
+        "mcp live s15 max-p99 budget",
+    )?;
+
+    let send_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(message_payload.as_str())
+    );
+    let total_start = std::time::Instant::now();
+    let mut latency_samples = Vec::with_capacity(iterations as usize);
+    for iteration in 0..iterations {
+        let iteration_start = std::time::Instant::now();
+        let send_response = run_live_s15_mcp_tool_call(
+            binary.as_str(),
+            endpoint.as_str(),
+            format!("{base_agent_name}-send-{iteration}").as_str(),
+            key_file.as_str(),
+            format!("probe-send-message-s15-{iteration}").as_str(),
+            "send_message",
+            send_arguments.as_str(),
+        )?;
+        let message_id = validate_s08_mcp_message_receipt_fields(
+            send_response.as_str(),
+            "mcp live s15 send_message",
+        )?;
+
+        let query_arguments = format!(
+            "{{\"message_id\":\"{}\"}}",
+            escape_json_scalar(message_id.as_str())
+        );
+        let query_response = run_live_s15_mcp_tool_call(
+            binary.as_str(),
+            endpoint.as_str(),
+            format!("{base_agent_name}-query-{iteration}").as_str(),
+            key_file.as_str(),
+            format!("probe-query-message-s15-{iteration}").as_str(),
+            "query_message",
+            query_arguments.as_str(),
+        )?;
+        validate_s08_mcp_query_message_response(
+            query_response.as_str(),
+            message_id.as_str(),
+            "mcp live s15 query_message",
+        )?;
+
+        latency_samples.push(iteration_start.elapsed().as_millis());
+    }
+    let total_elapsed_millis = total_start.elapsed().as_millis();
+
+    validate_s15_latency_budget_samples(
+        latency_samples.as_slice(),
+        total_elapsed_millis,
+        max_total_millis,
+        max_p50_millis,
+        max_p99_millis,
+        "mcp live s15 performance-smoke",
+    )
+}
+
 fn validate_s14_mcp_verify_proof_response(
     response: &str,
     expected_message_id: &str,
@@ -1986,6 +2094,71 @@ fn validate_s14_mcp_verify_proof_response(
         return Err(format!("{step} returned block_height=0"));
     }
     Ok(())
+}
+
+fn parse_s15_budget_env_u128(
+    env_key: &str,
+    default_value: u128,
+    step: &str,
+) -> Result<u128, String> {
+    let parsed = env::var(env_key)
+        .ok()
+        .map(|raw| {
+            raw.trim()
+                .parse::<u128>()
+                .map_err(|_| format!("{step} invalid env value for {env_key}: {raw}"))
+        })
+        .transpose()?
+        .unwrap_or(default_value);
+    if parsed == 0 {
+        return Err(format!("{step} must be greater than zero for {env_key}"));
+    }
+    Ok(parsed)
+}
+
+fn validate_s15_latency_budget_samples(
+    samples_millis: &[u128],
+    total_elapsed_millis: u128,
+    max_total_millis: u128,
+    max_p50_millis: u128,
+    max_p99_millis: u128,
+    step: &str,
+) -> Result<(), String> {
+    if samples_millis.is_empty() {
+        return Err(format!("{step} produced zero latency samples"));
+    }
+
+    let mut sorted = samples_millis.to_vec();
+    sorted.sort_unstable();
+    let p50_index = percentile_index(sorted.len(), 50);
+    let p99_index = percentile_index(sorted.len(), 99);
+    let p50 = sorted[p50_index];
+    let p99 = sorted[p99_index];
+
+    if total_elapsed_millis > max_total_millis {
+        return Err(format!(
+            "{step} total elapsed millis exceeded budget: observed={total_elapsed_millis}, max={max_total_millis}"
+        ));
+    }
+    if p50 > max_p50_millis {
+        return Err(format!(
+            "{step} p50 millis exceeded budget: observed={p50}, max={max_p50_millis}"
+        ));
+    }
+    if p99 > max_p99_millis {
+        return Err(format!(
+            "{step} p99 millis exceeded budget: observed={p99}, max={max_p99_millis}"
+        ));
+    }
+    Ok(())
+}
+
+fn percentile_index(sample_count: usize, percentile: u128) -> usize {
+    let numerator = (sample_count as u128)
+        .saturating_mul(percentile)
+        .saturating_add(100u128.saturating_sub(1));
+    let rank = numerator / 100;
+    rank.saturating_sub(1).min(sample_count as u128 - 1) as usize
 }
 
 fn validate_s08_mcp_message_receipt_fields(response: &str, step: &str) -> Result<String, String> {
@@ -2413,6 +2586,27 @@ fn run_live_s14_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s14"))
 }
 
+fn run_live_s15_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s15"))
+}
+
 fn live_s07_probe_agent_suffix() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -2540,21 +2734,23 @@ mod tests {
     use super::{
         build_framed_jsonrpc_request, escape_json_scalar, json_optional_string_field,
         json_optional_u64_field, live_execution_enabled_from_env, parse_bool_flag,
-        parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe,
-        run_live_s02_mcp_direct_message_probe, run_live_s03_mcp_group_channel_probe,
-        run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
-        run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
-        run_live_s07_mcp_replay_protection_probe, run_live_s08_mcp_crash_recovery_probe,
-        run_live_s09_mcp_transport_failover_probe, run_live_s10_mcp_topology_coherence_probe,
-        run_live_s11_mcp_signer_rotation_probe, run_live_s12_mcp_retention_deletion_probe,
-        run_live_s13_mcp_bridge_forwarding_probe, run_live_s13_mcp_tool_call,
-        run_live_s14_mcp_batch_merkle_probe, run_live_s14_mcp_tool_call,
-        validate_live_s05_release_escrow_response, validate_probe_health_response,
-        validate_probe_initialize_response, validate_s07_replay_reason_marker,
-        validate_s08_mcp_message_receipt_fields, validate_s08_mcp_query_message_response,
-        validate_s12_content_field_coherence, validate_s12_content_id_match,
-        validate_s13_bridge_field_coherence, validate_s13_bridge_id_match,
-        validate_s14_mcp_verify_proof_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
+        parse_framed_jsonrpc_payloads, parse_s15_budget_env_u128, percentile_index,
+        run_live_s01_mcp_probe, run_live_s02_mcp_direct_message_probe,
+        run_live_s03_mcp_group_channel_probe, run_live_s04_mcp_task_lifecycle_probe,
+        run_live_s04_mcp_tool_call, run_live_s05_mcp_escrow_settlement_probe,
+        run_live_s06_mcp_proof_verification_probe, run_live_s07_mcp_replay_protection_probe,
+        run_live_s08_mcp_crash_recovery_probe, run_live_s09_mcp_transport_failover_probe,
+        run_live_s10_mcp_topology_coherence_probe, run_live_s11_mcp_signer_rotation_probe,
+        run_live_s12_mcp_retention_deletion_probe, run_live_s13_mcp_bridge_forwarding_probe,
+        run_live_s13_mcp_tool_call, run_live_s14_mcp_batch_merkle_probe,
+        run_live_s14_mcp_tool_call, run_live_s15_mcp_performance_smoke_probe,
+        run_live_s15_mcp_tool_call, validate_live_s05_release_escrow_response,
+        validate_probe_health_response, validate_probe_initialize_response,
+        validate_s07_replay_reason_marker, validate_s08_mcp_message_receipt_fields,
+        validate_s08_mcp_query_message_response, validate_s12_content_field_coherence,
+        validate_s12_content_id_match, validate_s13_bridge_field_coherence,
+        validate_s13_bridge_id_match, validate_s14_mcp_verify_proof_response,
+        validate_s15_latency_budget_samples, McpAgentDriver, MCP_AGENT_BINARY_ENV,
         MCP_AGENT_LIVE_ENV,
     };
     use super::{env, ExecutionMode};
@@ -2845,6 +3041,47 @@ elif tool_name == "verify_proof":
             "block_height": block_height,
         }
     )
+else:
+    result.update({"error": "unsupported_tool"})
+
+init_payload = {"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn"}}}
+tool_payload = {"jsonrpc":"2.0","id":request_id,"result":result}
+
+def frame(payload):
+    body = json.dumps(payload, separators=(",", ":"))
+    return f"Content-Length: {len(body)}\r\n\r\n{body}"
+
+sys.stdout.write(frame(init_payload) + frame(tool_payload))
+"#;
+        write_executable_python_script(script_path, script_source);
+    }
+
+    fn write_mcp_s15_probe_script(script_path: &std::path::Path) {
+        let script_source = r#"#!/usr/bin/env python3
+import json
+import re
+import sys
+
+stream = sys.stdin.read()
+request_ids = re.findall(r'"id":"([^"]+)"', stream)
+request_id = request_ids[-1] if request_ids else "probe-request"
+tool_names = re.findall(r'"name":"([^"]+)"', stream)
+tool_name = tool_names[-1] if tool_names else ""
+
+result = {"ok": True}
+if tool_name == "send_message":
+    if request_id.endswith("-0"):
+        result.update({"message_id": "message-s15-0", "status": "sent"})
+    elif request_id.endswith("-1"):
+        result.update({"message_id": "message-s15-1", "status": "sent"})
+    elif request_id.endswith("-2"):
+        result.update({"message_id": "message-s15-2", "status": "sent"})
+    else:
+        result.update({"message_id": "message-s15-fallback", "status": "sent"})
+elif tool_name == "query_message":
+    message_match = re.search(r'"message_id":"([^"]+)"', stream)
+    query_message_id = message_match.group(1) if message_match else "message-s15-fallback"
+    result.update({"message_id": query_message_id, "status": "sent"})
 else:
     result.update({"error": "unsupported_tool"})
 
@@ -3411,6 +3648,57 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s15_mcp_performance_smoke_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s15_mcp_performance_smoke_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s15_mcp_performance_smoke_probe_accepts_bounded_latency_continuity() {
+        let script_path = unique_temp_script_path("kamn-e2e-mcp-s15-success");
+        write_mcp_s15_probe_script(&script_path);
+
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some(
+                        script_path
+                            .to_str()
+                            .expect("script path should be valid utf-8"),
+                    ),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+                ("KAMN_E2E_S15_AGENT_NAME", Some("kamn-e2e-mcp-s15")),
+                ("KAMN_E2E_S15_ITERATIONS", Some("3")),
+            ],
+            || {
+                run_live_s15_mcp_performance_smoke_probe()
+                    .expect("bounded-latency continuity should pass");
+            },
+        );
+
+        fs::remove_file(&script_path).expect("script fixture should be removable");
+    }
+
+    #[test]
     fn unit_run_live_s13_mcp_tool_call_rewrites_error_context() {
         let error = run_live_s13_mcp_tool_call(
             "/definitely/missing/kamn-mcp-server",
@@ -3443,6 +3731,24 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(
             error.contains("mcp live s14"),
             "error should be rewritten to s14 context: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_run_live_s15_mcp_tool_call_rewrites_error_context() {
+        let error = run_live_s15_mcp_tool_call(
+            "/definitely/missing/kamn-mcp-server",
+            "http://localhost:8080",
+            "probe-agent",
+            "/tmp/probe.key",
+            "probe-s15",
+            "query_message",
+            "{}",
+        )
+        .expect_err("missing binary should fail");
+        assert!(
+            error.contains("mcp live s15"),
+            "error should be rewritten to s15 context: {error}",
         );
     }
 
@@ -3555,6 +3861,95 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(
             error.contains("block_height=0"),
             "error should mention block-height contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_accepts_within_budget_samples() {
+        validate_s15_latency_budget_samples(&[10, 20, 30], 80, 100, 25, 35, "test helper")
+            .expect("within-budget samples should pass");
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_total_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 20, 30], 120, 100, 25, 35, "test helper")
+                .expect_err("total budget violation should fail");
+        assert!(
+            error.contains("total elapsed millis exceeded budget"),
+            "error should mention total budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_p50_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 50, 90], 90, 200, 20, 100, "test helper")
+                .expect_err("p50 budget violation should fail");
+        assert!(
+            error.contains("p50 millis exceeded budget"),
+            "error should mention p50 budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_rejects_p99_budget_violation() {
+        let error =
+            validate_s15_latency_budget_samples(&[10, 20, 90], 90, 200, 50, 80, "test helper")
+                .expect_err("p99 budget violation should fail");
+        assert!(
+            error.contains("p99 millis exceeded budget"),
+            "error should mention p99 budget: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_parse_s15_budget_env_u128_uses_default_when_env_missing() {
+        with_env_vars(&[("KAMN_E2E_S15_TOTAL_BUDGET_MS", None)], || {
+            let parsed = parse_s15_budget_env_u128(
+                "KAMN_E2E_S15_TOTAL_BUDGET_MS",
+                91,
+                "mcp-agent live s15 test helper",
+            )
+            .expect("missing env key should use default");
+            assert_eq!(parsed, 91);
+        });
+    }
+
+    #[test]
+    fn unit_parse_s15_budget_env_u128_parses_positive_env_value() {
+        with_env_vars(&[("KAMN_E2E_S15_TOTAL_BUDGET_MS", Some("143"))], || {
+            let parsed = parse_s15_budget_env_u128(
+                "KAMN_E2E_S15_TOTAL_BUDGET_MS",
+                91,
+                "mcp-agent live s15 test helper",
+            )
+            .expect("valid env key should parse");
+            assert_eq!(parsed, 143);
+        });
+    }
+
+    #[test]
+    fn unit_validate_s15_latency_budget_samples_accepts_exact_budget_boundaries() {
+        validate_s15_latency_budget_samples(&[10, 20, 30], 60, 60, 20, 30, "test helper")
+            .expect("equal total/p50/p99 budget boundaries should pass");
+    }
+
+    #[test]
+    fn unit_percentile_index_returns_expected_midpoint_index() {
+        assert_eq!(
+            percentile_index(3, 50),
+            1,
+            "len=3 and p50 should map to middle sample index",
+        );
+    }
+
+    #[test]
+    fn unit_percentile_index_clamps_percentile_above_hundred_to_last_index() {
+        assert_eq!(
+            percentile_index(3, 150),
+            2,
+            "percentiles above 100 should clamp to the last sample index",
         );
     }
 
@@ -4065,14 +4460,27 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
-    fn spec_c09_validate_probe_initialize_response_accepts_required_markers() {
+    fn spec_c22_live_s15_driver_path_fails_closed_when_performance_smoke_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s15 performance-smoke probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-15");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-15 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c23_validate_probe_initialize_response_accepts_required_markers() {
         let payload = r#"{"jsonrpc":"2.0","id":"probe-init","result":{"serverInfo":{"name":"kamn-mcp-server"}}}"#;
         validate_probe_initialize_response(payload)
             .expect("required initialize markers should pass");
     }
 
     #[test]
-    fn spec_c10_validate_probe_health_response_accepts_success_payload() {
+    fn spec_c24_validate_probe_health_response_accepts_success_payload() {
         let payload = r#"{"jsonrpc":"2.0","id":"probe-health","result":{"ok":true}}"#;
         validate_probe_health_response(payload).expect("ok=true health payload should pass");
     }

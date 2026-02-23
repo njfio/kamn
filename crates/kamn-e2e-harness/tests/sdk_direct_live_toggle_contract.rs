@@ -37,7 +37,7 @@ fn spec_c03_sdk_direct_live_s01_failure_maps_to_fail() {
 }
 
 #[test]
-fn spec_c04_sdk_direct_live_non_s01_remains_pass_without_probe_invocation() {
+fn spec_c04_sdk_direct_live_non_live_bound_scenario_remains_pass_without_probe_invocation() {
     let probe_calls = Arc::new(AtomicUsize::new(0));
     let probe_calls_for_closure = Arc::clone(&probe_calls);
     let driver = SdkDirectDriver::with_probe(true, move || {
@@ -45,11 +45,11 @@ fn spec_c04_sdk_direct_live_non_s01_remains_pass_without_probe_invocation() {
         Ok(())
     });
 
-    let result = driver.execute("S-15");
+    let result = driver.execute("S-99");
     assert_eq!(result.status, "pass");
     assert_eq!(
         probe_calls.load(Ordering::SeqCst),
         0,
-        "non-live-bound scenarios should not invoke live probe",
+        "non-live-bound scenario should not invoke live probe",
     );
 }

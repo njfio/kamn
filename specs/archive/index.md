@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 230
+- archived_issue_count: 229
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -20,7 +20,6 @@
 | 3926 | `Subtask: add regression tests for Accept/Reject/Suspend backpressure decisions and reason codes` | 2026-02-18 | `specs/archive/3926` | `specs/3926/ARCHIVED.md` |
 | 3963 | Epic: R27.7 reduce script-surface sprawl and accelerate docs graduation closure | 2026-02-18 | `specs/archive/3963` | `specs/3963/ARCHIVED.md` |
 | 3969 | Task: publish architecture navigation artifacts and rustdoc build contract checks | 2026-02-18 | `specs/archive/3969` | `specs/3969/ARCHIVED.md` |
-| 3970 | Subtask: create wrapper-family migration matrix and convert first high-LOC family to shared manifest implementation | 2026-02-18 | `specs/archive/3970` | `specs/3970/ARCHIVED.md` |
 | 3971 | Subtask: add wrapper dispatch parity harness and legacy entrypoint compatibility assertions | 2026-02-18 | `specs/archive/3971` | `specs/3971/ARCHIVED.md` |
 | 3972 | Subtask: implement shell-surface decline trajectory checker with deterministic fail codes | 2026-02-18 | `specs/archive/3972` | `specs/3972/ARCHIVED.md` |
 | 3973 | Subtask: add wrapper-duplication and script-to-rust ratio guardrail checker for CI-fast governance | 2026-02-18 | `specs/archive/3973` | `specs/3973/ARCHIVED.md` |
