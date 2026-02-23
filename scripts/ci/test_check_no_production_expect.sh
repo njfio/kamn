@@ -272,4 +272,27 @@ fi
 
 rm -f "$TMP_DIR/cfg_test_prefix_production_violation.rs"
 
+cat <<'RS' > "$TMP_DIR/cfg_test_brace_heavy_literals.rs"
+fn safe_path() -> Result<(), String> {
+    std::env::var("X").map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn brace_heavy_literals_must_not_leak() {
+        let _imbalanced = "}}}}} these braces must not close cfg(test) item scanning";
+        let _raw = r#"
+            {"payload":"raw braces }}} and literal .expect("}
+        "#;
+        let _value = Some(9).expect("test-only expect should be ignored");
+        assert_eq!(_value, 9);
+    }
+}
+RS
+
+python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
+
+rm -f "$TMP_DIR/cfg_test_brace_heavy_literals.rs"
+
 echo "production expect checker tests passed."

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -55,6 +56,104 @@ def is_test_cfg_attribute(line: str) -> bool:
     )
 
 
+@dataclass
+class BraceScanState:
+    in_block_comment: bool = False
+    in_string: bool = False
+    escape_next: bool = False
+    raw_string_hashes: int | None = None
+
+
+def match_raw_string_start(line: str, index: int) -> tuple[int, int] | None:
+    if line[index] != "r":
+        return None
+    cursor = index + 1
+    hashes = 0
+    while cursor < len(line) and line[cursor] == "#":
+        hashes += 1
+        cursor += 1
+    if cursor < len(line) and line[cursor] == '"':
+        return hashes, cursor + 1
+    return None
+
+
+def match_raw_string_end(line: str, index: int, hashes: int) -> int | None:
+    if line[index] != '"':
+        return None
+    cursor = index + 1
+    for _ in range(hashes):
+        if cursor >= len(line) or line[cursor] != "#":
+            return None
+        cursor += 1
+    return cursor
+
+
+def count_code_braces(line: str, state: BraceScanState) -> tuple[int, int]:
+    open_count = 0
+    close_count = 0
+    index = 0
+
+    while index < len(line):
+        if state.raw_string_hashes is not None:
+            if line[index] == '"':
+                raw_end = match_raw_string_end(line, index, state.raw_string_hashes)
+                if raw_end is not None:
+                    state.raw_string_hashes = None
+                    index = raw_end
+                    continue
+            index += 1
+            continue
+
+        if state.in_block_comment:
+            if line.startswith("*/", index):
+                state.in_block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+
+        if state.in_string:
+            if state.escape_next:
+                state.escape_next = False
+                index += 1
+                continue
+            if line[index] == "\\":
+                state.escape_next = True
+                index += 1
+                continue
+            if line[index] == '"':
+                state.in_string = False
+            index += 1
+            continue
+
+        if line.startswith("//", index):
+            break
+
+        if line.startswith("/*", index):
+            state.in_block_comment = True
+            index += 2
+            continue
+
+        raw_start = match_raw_string_start(line, index)
+        if raw_start is not None:
+            state.raw_string_hashes, index = raw_start
+            continue
+
+        if line[index] == '"':
+            state.in_string = True
+            state.escape_next = False
+            index += 1
+            continue
+
+        if line[index] == "{":
+            open_count += 1
+        elif line[index] == "}":
+            close_count += 1
+        index += 1
+
+    return open_count, close_count
+
+
 def skip_cfg_test_item(lines: list[str], index: int) -> int:
     while index < len(lines) and lines[index].strip() == "":
         index += 1
@@ -67,10 +166,10 @@ def skip_cfg_test_item(lines: list[str], index: int) -> int:
 
     brace_depth = 0
     saw_open_brace = False
+    scan_state = BraceScanState()
     while index < len(lines):
         line = lines[index]
-        open_count = line.count("{")
-        close_count = line.count("}")
+        open_count, close_count = count_code_braces(line, scan_state)
         if open_count > 0:
             saw_open_brace = True
         brace_depth += open_count - close_count

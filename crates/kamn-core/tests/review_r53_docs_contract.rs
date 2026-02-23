@@ -233,6 +233,125 @@ fn is_test_cfg_attribute(line: &str) -> bool {
     trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
 }
 
+#[derive(Default)]
+struct BraceScanState {
+    in_block_comment: bool,
+    in_string: bool,
+    escape_next: bool,
+    raw_string_hashes: Option<usize>,
+}
+
+fn match_raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    if *bytes.get(index)? != b'r' {
+        return None;
+    }
+    let mut cursor = index + 1;
+    let mut hashes = 0usize;
+    while matches!(bytes.get(cursor), Some(b'#')) {
+        hashes += 1;
+        cursor += 1;
+    }
+    if matches!(bytes.get(cursor), Some(b'"')) {
+        return Some((hashes, cursor + 1));
+    }
+    None
+}
+
+fn match_raw_string_end(bytes: &[u8], index: usize, hashes: usize) -> Option<usize> {
+    if *bytes.get(index)? != b'"' {
+        return None;
+    }
+    let mut cursor = index + 1;
+    for _ in 0..hashes {
+        if !matches!(bytes.get(cursor), Some(b'#')) {
+            return None;
+        }
+        cursor += 1;
+    }
+    Some(cursor)
+}
+
+fn count_code_braces(line: &str, state: &mut BraceScanState) -> (i64, i64) {
+    let bytes = line.as_bytes();
+    let mut open_count = 0_i64;
+    let mut close_count = 0_i64;
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        if let Some(raw_hashes) = state.raw_string_hashes {
+            if bytes[index] == b'"' {
+                if let Some(raw_end) = match_raw_string_end(bytes, index, raw_hashes) {
+                    state.raw_string_hashes = None;
+                    index = raw_end;
+                    continue;
+                }
+            }
+            index += 1;
+            continue;
+        }
+
+        if state.in_block_comment {
+            if bytes.get(index) == Some(&b'*') && bytes.get(index + 1) == Some(&b'/') {
+                state.in_block_comment = false;
+                index += 2;
+            } else {
+                index += 1;
+            }
+            continue;
+        }
+
+        if state.in_string {
+            if state.escape_next {
+                state.escape_next = false;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == b'\\' {
+                state.escape_next = true;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == b'"' {
+                state.in_string = false;
+            }
+            index += 1;
+            continue;
+        }
+
+        if bytes.get(index) == Some(&b'/') && bytes.get(index + 1) == Some(&b'/') {
+            break;
+        }
+
+        if bytes.get(index) == Some(&b'/') && bytes.get(index + 1) == Some(&b'*') {
+            state.in_block_comment = true;
+            index += 2;
+            continue;
+        }
+
+        if let Some((hashes, next_index)) = match_raw_string_start(bytes, index) {
+            state.raw_string_hashes = Some(hashes);
+            index = next_index;
+            continue;
+        }
+
+        if bytes[index] == b'"' {
+            state.in_string = true;
+            state.escape_next = false;
+            index += 1;
+            continue;
+        }
+
+        if bytes[index] == b'{' {
+            open_count += 1;
+        } else if bytes[index] == b'}' {
+            close_count += 1;
+        }
+        index += 1;
+    }
+
+    (open_count, close_count)
+}
+
 fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
     while index < lines.len() && lines[index].trim().is_empty() {
         index += 1;
@@ -248,10 +367,10 @@ fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
 
     let mut brace_depth = 0_i64;
     let mut saw_open_brace = false;
+    let mut scan_state = BraceScanState::default();
     while index < lines.len() {
         let line = lines[index];
-        let open_count = line.matches('{').count() as i64;
-        let close_count = line.matches('}').count() as i64;
+        let (open_count, close_count) = count_code_braces(line, &mut scan_state);
         if open_count > 0 {
             saw_open_brace = true;
         }
@@ -324,6 +443,67 @@ fn production_expect_inventory_count() -> usize {
                 .count()
         })
         .sum()
+}
+
+#[test]
+fn regression_cfg_test_skipper_ignores_braces_inside_test_literals() {
+    let source = r###"
+fn stable_path() -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_only_expect_must_be_skipped() {
+        let _imbalanced = "}}}}} this must not close the cfg(test) module";
+        let _raw = r#"
+            {"payload":"with braces }}} and literal .expect("}
+        "#;
+        let _value = Some(7).expect("test-only expect");
+    }
+}
+"###;
+
+    let filtered = production_source_without_cfg_test_items(source);
+    assert!(
+        !filtered.contains("test-only expect"),
+        "cfg(test) content should be stripped from production inventory source"
+    );
+    assert_eq!(
+        filtered
+            .lines()
+            .filter(|line| line.contains(".expect("))
+            .count(),
+        0,
+        "test-only expect() must not leak into production inventory count"
+    );
+}
+
+#[test]
+fn regression_cfg_test_skipper_preserves_production_expect_after_cfg_import() {
+    let source = r#"
+#[cfg(test)]
+use std::sync::Mutex;
+
+fn production_violation() {
+    let _value = std::env::var("X").expect("production expect should remain visible");
+}
+"#;
+
+    let filtered = production_source_without_cfg_test_items(source);
+    assert!(
+        filtered.contains("production expect should remain visible"),
+        "non-cfg(test) production code must remain in inventory source"
+    );
+    assert_eq!(
+        filtered
+            .lines()
+            .filter(|line| line.contains(".expect("))
+            .count(),
+        1,
+        "production expect() should still be counted after top-level cfg(test) attributes"
+    );
 }
 
 #[test]
@@ -1161,7 +1341,7 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
             &markers,
             "r55_review_production_expect_inventory_count_formula",
         ),
-        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)"
+        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/ after stripping cfg(test) items with literal/comment-aware brace scanning)"
     );
     let reported_r55 = parse_marker_usize(
         &markers,
