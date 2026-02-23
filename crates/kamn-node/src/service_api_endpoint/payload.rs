@@ -134,6 +134,20 @@ pub(super) fn render_service_api_endpoint_response(
             body: serialize_service_api_json(&payload),
         };
     }
+    if method == "POST" && path == ROUTE_CONTENT_REGISTER {
+        let content_id = format!("content-local-{}", deterministic_body_tag(body.as_bytes()));
+        let payload = ServiceApiContentRegisterBody {
+            content_id,
+            retention_class: "standard".to_owned(),
+            lifecycle_state: "retained".to_owned(),
+            redaction_status: "none".to_owned(),
+        };
+        return ServiceApiEndpointResponse {
+            status_code: 201,
+            content_type: "application/json",
+            body: serialize_service_api_json(&payload),
+        };
+    }
     if method == "POST" {
         if let Some(task_id) = task_accept_path_id(path) {
             let payload = ServiceApiTaskTransitionBody {
@@ -180,8 +194,44 @@ pub(super) fn render_service_api_endpoint_response(
                 body: serialize_service_api_json(&payload),
             };
         }
+        if let Some(content_id) = content_expire_path_id(path) {
+            let payload = ServiceApiContentLifecycleBody {
+                content_id: content_id.to_owned(),
+                lifecycle_state: "expired".to_owned(),
+                redaction_status: "none".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
+        if let Some(content_id) = content_tombstone_path_id(path) {
+            let payload = ServiceApiContentLifecycleBody {
+                content_id: content_id.to_owned(),
+                lifecycle_state: "tombstoned".to_owned(),
+                redaction_status: "redacted".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
     }
     if method == "GET" {
+        if let Some(content_id) = content_path_id(path) {
+            let payload = ServiceApiContentLifecycleBody {
+                content_id: content_id.to_owned(),
+                lifecycle_state: "tombstoned".to_owned(),
+                redaction_status: "redacted".to_owned(),
+            };
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: serialize_service_api_json(&payload),
+            };
+        }
         if let Some(message_id) = message_path_id(path) {
             let payload = ServiceApiMessageGetBody {
                 message_id: message_id.to_owned(),
@@ -249,6 +299,7 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || path == ROUTE_CHANNELS_CREATE
         || path == ROUTE_TASKS_CREATE
         || path == ROUTE_ESCROW_FUND
+        || path == ROUTE_CONTENT_REGISTER
         || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
         || path == ROUTE_METRICS
@@ -258,6 +309,9 @@ pub(super) fn route_exists_for_other_method(path: &str) -> bool {
         || task_accept_path_id(path).is_some()
         || task_complete_path_id(path).is_some()
         || escrow_release_path_id(path).is_some()
+        || content_path_id(path).is_some()
+        || content_expire_path_id(path).is_some()
+        || content_tombstone_path_id(path).is_some()
         || agent_path_id(path).is_some()
 }
 
@@ -313,6 +367,33 @@ pub(super) fn escrow_release_path_id(path: &str) -> Option<&str> {
         return None;
     }
     Some(escrow_id)
+}
+
+pub(super) fn content_path_id(path: &str) -> Option<&str> {
+    path.strip_prefix(ROUTE_CONTENT_PREFIX).and_then(|id| {
+        if id.is_empty() || id == "register" || id.contains('/') {
+            return None;
+        }
+        Some(id)
+    })
+}
+
+pub(super) fn content_expire_path_id(path: &str) -> Option<&str> {
+    let content_path = path.strip_prefix(ROUTE_CONTENT_PREFIX)?;
+    let content_id = content_path.strip_suffix(ROUTE_CONTENT_EXPIRE_SUFFIX)?;
+    if content_id.is_empty() || content_id == "register" || content_id.contains('/') {
+        return None;
+    }
+    Some(content_id)
+}
+
+pub(super) fn content_tombstone_path_id(path: &str) -> Option<&str> {
+    let content_path = path.strip_prefix(ROUTE_CONTENT_PREFIX)?;
+    let content_id = content_path.strip_suffix(ROUTE_CONTENT_TOMBSTONE_SUFFIX)?;
+    if content_id.is_empty() || content_id == "register" || content_id.contains('/') {
+        return None;
+    }
+    Some(content_id)
 }
 
 pub(super) fn agent_path_id(path: &str) -> Option<&str> {
@@ -427,4 +508,64 @@ pub(super) fn escape_json_string(input: &str) -> String {
 
 pub(super) fn escape_metrics_label(input: &str) -> String {
     input.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        content_expire_path_id, content_path_id, content_tombstone_path_id,
+        route_exists_for_other_method, ROUTE_CONTENT_REGISTER,
+    };
+
+    #[test]
+    fn unit_content_path_id_contract_accepts_and_rejects_expected_shapes() {
+        assert_eq!(content_path_id("/v1/content/content-a"), Some("content-a"));
+        assert_eq!(content_path_id("/v1/content/register"), None);
+        assert_eq!(content_path_id("/v1/content/content-a/expire"), None);
+        assert_eq!(content_path_id("/v1/content/"), None);
+    }
+
+    #[test]
+    fn unit_content_expire_path_id_contract_accepts_and_rejects_expected_shapes() {
+        assert_eq!(
+            content_expire_path_id("/v1/content/content-a/expire"),
+            Some("content-a")
+        );
+        assert_eq!(content_expire_path_id("/v1/content/register/expire"), None);
+        assert_eq!(content_expire_path_id("/v1/content//expire"), None);
+        assert_eq!(
+            content_expire_path_id("/v1/content/content-a/tombstone"),
+            None
+        );
+    }
+
+    #[test]
+    fn unit_content_tombstone_path_id_contract_accepts_and_rejects_expected_shapes() {
+        assert_eq!(
+            content_tombstone_path_id("/v1/content/content-a/tombstone"),
+            Some("content-a")
+        );
+        assert_eq!(
+            content_tombstone_path_id("/v1/content/register/tombstone"),
+            None
+        );
+        assert_eq!(content_tombstone_path_id("/v1/content//tombstone"), None);
+        assert_eq!(
+            content_tombstone_path_id("/v1/content/content-a/expire"),
+            None
+        );
+    }
+
+    #[test]
+    fn unit_route_exists_for_other_method_includes_content_routes() {
+        assert!(route_exists_for_other_method(ROUTE_CONTENT_REGISTER));
+        assert!(route_exists_for_other_method("/v1/content/content-a"));
+        assert!(route_exists_for_other_method(
+            "/v1/content/content-a/expire"
+        ));
+        assert!(route_exists_for_other_method(
+            "/v1/content/content-a/tombstone"
+        ));
+        assert!(!route_exists_for_other_method("/v1/content"));
+    }
 }

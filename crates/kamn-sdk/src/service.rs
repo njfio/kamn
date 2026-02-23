@@ -268,6 +268,30 @@ pub struct ServiceEscrowStatus {
     pub state: String,
 }
 
+/// Parsed response for `POST /v1/content/register`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceContentRegistration {
+    /// Service-generated content identifier.
+    pub content_id: String,
+    /// Retention class marker.
+    pub retention_class: String,
+    /// Lifecycle state marker.
+    pub lifecycle_state: String,
+    /// Redaction status marker.
+    pub redaction_status: String,
+}
+
+/// Parsed response for content lifecycle routes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceContentStatus {
+    /// Content identifier.
+    pub content_id: String,
+    /// Lifecycle state marker.
+    pub lifecycle_state: String,
+    /// Redaction status marker.
+    pub redaction_status: String,
+}
+
 /// Parsed response for `GET /v1/agents/{did}`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceAgentProfile {
@@ -505,6 +529,88 @@ impl ServiceApiClient {
         Ok(ServiceEscrowStatus {
             escrow_id: json_string_field(response.body.as_str(), "escrow_id")?,
             state: json_string_field(response.body.as_str(), "state")?,
+        })
+    }
+
+    /// Registers content retention lifecycle via `POST /v1/content/register`.
+    pub fn register_content(
+        &self,
+        payload: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentRegistration, SdkError> {
+        let response = self.request("POST", "/v1/content/register", payload, Some(auth))?;
+        expect_status(response.status, 201)?;
+        Ok(ServiceContentRegistration {
+            content_id: json_string_field(response.body.as_str(), "content_id")?,
+            retention_class: json_string_field(response.body.as_str(), "retention_class")?,
+            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
+            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
+        })
+    }
+
+    /// Expires one content record via `POST /v1/content/{id}/expire`.
+    pub fn expire_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, SdkError> {
+        if content_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "content_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/content/{content_id}/expire");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceContentStatus {
+            content_id: json_string_field(response.body.as_str(), "content_id")?,
+            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
+            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
+        })
+    }
+
+    /// Tombstones one content record via `POST /v1/content/{id}/tombstone`.
+    pub fn tombstone_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, SdkError> {
+        if content_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "content_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/content/{content_id}/tombstone");
+        let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceContentStatus {
+            content_id: json_string_field(response.body.as_str(), "content_id")?,
+            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
+            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
+        })
+    }
+
+    /// Queries one content lifecycle status via `GET /v1/content/{id}`.
+    pub fn get_content(
+        &self,
+        content_id: &str,
+        auth: &ServiceRequestAuth,
+    ) -> Result<ServiceContentStatus, SdkError> {
+        if content_id.trim().is_empty() {
+            return Err(SdkError::InvalidInput {
+                field: "content_id",
+                reason: "must not be empty",
+            });
+        }
+        let route = format!("/v1/content/{content_id}");
+        let response = self.request("GET", route.as_str(), "", Some(auth))?;
+        expect_status(response.status, 200)?;
+        Ok(ServiceContentStatus {
+            content_id: json_string_field(response.body.as_str(), "content_id")?,
+            lifecycle_state: json_string_field(response.body.as_str(), "lifecycle_state")?,
+            redaction_status: json_string_field(response.body.as_str(), "redaction_status")?,
         })
     }
 

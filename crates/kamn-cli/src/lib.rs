@@ -42,6 +42,14 @@ pub enum CommandKind {
     QueryTask,
     /// Query one agent profile.
     QueryAgentProfile,
+    /// Register one content lifecycle record.
+    RegisterContent,
+    /// Expire one content lifecycle record.
+    ExpireContent,
+    /// Tombstone one content lifecycle record.
+    TombstoneContent,
+    /// Query one content lifecycle record.
+    QueryContent,
     /// Create one task.
     CreateTask,
     /// Accept one task.
@@ -68,6 +76,10 @@ impl CommandKind {
             "query-message" => Ok(Self::QueryMessage),
             "query-task" => Ok(Self::QueryTask),
             "query-agent-profile" => Ok(Self::QueryAgentProfile),
+            "register-content" => Ok(Self::RegisterContent),
+            "expire-content" => Ok(Self::ExpireContent),
+            "tombstone-content" => Ok(Self::TombstoneContent),
+            "query-content" => Ok(Self::QueryContent),
             "create-task" => Ok(Self::CreateTask),
             "accept-task" => Ok(Self::AcceptTask),
             "complete-task" => Ok(Self::CompleteTask),
@@ -181,6 +193,10 @@ pub fn dispatch(parsed: &ParsedCliArgs) -> Result<CommandOutput, kamn_agent_lib:
         CommandKind::QueryMessage => commands::query_message::execute(parsed),
         CommandKind::QueryTask => commands::query_task::execute(parsed),
         CommandKind::QueryAgentProfile => commands::query_agent_profile::execute(parsed),
+        CommandKind::RegisterContent => commands::register_content::execute(parsed),
+        CommandKind::ExpireContent => commands::expire_content::execute(parsed),
+        CommandKind::TombstoneContent => commands::tombstone_content::execute(parsed),
+        CommandKind::QueryContent => commands::query_content::execute(parsed),
         CommandKind::CreateTask => commands::create_task::execute(parsed),
         CommandKind::AcceptTask => commands::accept_task::execute(parsed),
         CommandKind::CompleteTask => commands::complete_task::execute(parsed),

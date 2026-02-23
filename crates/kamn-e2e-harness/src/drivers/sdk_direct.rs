@@ -29,6 +29,9 @@ const DEFAULT_S11_PRIMARY_AGENT_NAME: &str = "kamn-e2e-sdk-s11-primary";
 const DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-rotated"}"#;
 const DEFAULT_S11_STALE_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-stale"}"#;
 const DEFAULT_S11_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s11-primary"}"#;
+const DEFAULT_S12_AGENT_NAME: &str = "kamn-e2e-sdk-s12";
+const DEFAULT_S12_REGISTER_CONTENT_PAYLOAD: &str =
+    r#"{"content":"sdk-direct-live-s12","retention_class":"standard"}"#;
 const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
@@ -37,7 +40,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01 through S-11.
+/// SDK-direct driver with optional live execution for S-01 through S-12.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -52,6 +55,7 @@ pub struct SdkDirectDriver {
     transport_failover_probe: Arc<LiveProbe>,
     topology_coherence_probe: Arc<LiveProbe>,
     signer_rotation_probe: Arc<LiveProbe>,
+    retention_deletion_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -86,6 +90,7 @@ impl SdkDirectDriver {
                 run_live_s09_transport_failover_probe,
                 run_live_s10_topology_coherence_probe,
                 run_live_s11_signer_rotation_probe,
+                run_live_s12_retention_deletion_probe,
             ),
         )
     }
@@ -108,19 +113,20 @@ impl SdkDirectDriver {
             crash_recovery_probe: live_probe.clone(),
             transport_failover_probe: live_probe.clone(),
             topology_coherence_probe: live_probe.clone(),
-            signer_rotation_probe: live_probe,
+            signer_rotation_probe: live_probe.clone(),
+            retention_deletion_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P>(
+    pub fn with_probes<F, G, H, I, J, K, L, M, N, O, P, Q>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_replay_crash_failover_topology_and_signer_probes: (K, L, M, N, O, P),
+        proof_replay_crash_failover_topology_signer_and_retention_probes: (K, L, M, N, O, P, Q),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -134,6 +140,7 @@ impl SdkDirectDriver {
         N: Fn() -> Result<(), String> + Send + Sync + 'static,
         O: Fn() -> Result<(), String> + Send + Sync + 'static,
         P: Fn() -> Result<(), String> + Send + Sync + 'static,
+        Q: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         let (
             proof_verification_probe,
@@ -142,7 +149,8 @@ impl SdkDirectDriver {
             transport_failover_probe,
             topology_coherence_probe,
             signer_rotation_probe,
-        ) = proof_replay_crash_failover_topology_and_signer_probes;
+            retention_deletion_probe,
+        ) = proof_replay_crash_failover_topology_signer_and_retention_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -156,6 +164,7 @@ impl SdkDirectDriver {
             transport_failover_probe: Arc::new(transport_failover_probe),
             topology_coherence_probe: Arc::new(topology_coherence_probe),
             signer_rotation_probe: Arc::new(signer_rotation_probe),
+            retention_deletion_probe: Arc::new(retention_deletion_probe),
         }
     }
 }
@@ -195,6 +204,7 @@ impl SdkDirectDriver {
             "S-09" => Some((self.transport_failover_probe)()),
             "S-10" => Some((self.topology_coherence_probe)()),
             "S-11" => Some((self.signer_rotation_probe)()),
+            "S-12" => Some((self.retention_deletion_probe)()),
             _ => None,
         }
     }
@@ -1087,6 +1097,122 @@ fn run_live_s11_signer_rotation_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s12_retention_deletion_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S12_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
+    let register_payload = std::env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S12_REGISTER_CONTENT_PAYLOAD.to_owned());
+
+    let register_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-register").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s12 register connect failed: {error}"))?;
+    let registration = register_handle
+        .register_content(register_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s12 register-content failed: {error}"))?;
+    if registration.content_id.trim().is_empty() {
+        return Err("sdk-direct live s12 register-content returned empty content_id".to_owned());
+    }
+    if registration.retention_class.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 register-content returned empty retention_class".to_owned(),
+        );
+    }
+    if registration.lifecycle_state.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 register-content returned empty lifecycle_state".to_owned(),
+        );
+    }
+    if registration.redaction_status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 register-content returned empty redaction_status".to_owned(),
+        );
+    }
+
+    let expire_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-expire").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s12 expire connect failed: {error}"))?;
+    let expired = expire_handle
+        .expire_content(registration.content_id.as_str())
+        .map_err(|error| format!("sdk-direct live s12 expire-content failed: {error}"))?;
+    validate_s12_content_id_match(
+        registration.content_id.as_str(),
+        expired.content_id.as_str(),
+        "sdk-direct live s12 expire-content",
+    )?;
+    if expired.lifecycle_state.trim().is_empty() {
+        return Err("sdk-direct live s12 expire-content returned empty lifecycle_state".to_owned());
+    }
+    if expired.redaction_status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 expire-content returned empty redaction_status".to_owned(),
+        );
+    }
+
+    let tombstone_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-tombstone").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s12 tombstone connect failed: {error}"))?;
+    let tombstoned = tombstone_handle
+        .tombstone_content(registration.content_id.as_str())
+        .map_err(|error| format!("sdk-direct live s12 tombstone-content failed: {error}"))?;
+    validate_s12_content_id_match(
+        registration.content_id.as_str(),
+        tombstoned.content_id.as_str(),
+        "sdk-direct live s12 tombstone-content",
+    )?;
+    if tombstoned.lifecycle_state.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 tombstone-content returned empty lifecycle_state".to_owned(),
+        );
+    }
+    if tombstoned.redaction_status.trim().is_empty() {
+        return Err(
+            "sdk-direct live s12 tombstone-content returned empty redaction_status".to_owned(),
+        );
+    }
+
+    let query_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        format!("{base_agent_name}-query").as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s12 query connect failed: {error}"))?;
+    let queried = query_handle
+        .query_content(registration.content_id.as_str())
+        .map_err(|error| format!("sdk-direct live s12 query-content failed: {error}"))?;
+    validate_s12_content_id_match(
+        registration.content_id.as_str(),
+        queried.content_id.as_str(),
+        "sdk-direct live s12 query-content",
+    )?;
+    validate_s12_content_field_coherence(
+        tombstoned.lifecycle_state.as_str(),
+        queried.lifecycle_state.as_str(),
+        "lifecycle_state",
+        "sdk-direct live s12 query-content",
+    )?;
+    validate_s12_content_field_coherence(
+        tombstoned.redaction_status.as_str(),
+        queried.redaction_status.as_str(),
+        "redaction_status",
+        "sdk-direct live s12 query-content",
+    )?;
+
+    Ok(())
+}
+
 fn validate_s08_message_receipt_fields(
     message_id: &str,
     status: &str,
@@ -1129,6 +1255,33 @@ fn validate_s08_distinct_message_ids(
     Ok(())
 }
 
+fn validate_s12_content_id_match(
+    expected_content_id: &str,
+    observed_content_id: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_content_id != expected_content_id {
+        return Err(format!(
+            "{step} returned mismatched content_id: expected={expected_content_id}, got={observed_content_id}"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_s12_content_field_coherence(
+    expected_field_value: &str,
+    observed_field_value: &str,
+    field_name: &str,
+    step: &str,
+) -> Result<(), String> {
+    if observed_field_value != expected_field_value {
+        return Err(format!(
+            "{step} {field_name} drift: expected={expected_field_value}, got={observed_field_value}"
+        ));
+    }
+    Ok(())
+}
+
 fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
     if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
         return Err(format!(
@@ -1154,10 +1307,12 @@ mod tests {
         run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
         run_live_s08_crash_recovery_probe, run_live_s09_transport_failover_probe,
         run_live_s10_topology_coherence_probe, run_live_s11_signer_rotation_probe,
-        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
-        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
-        validate_s08_distinct_message_ids, validate_s08_message_receipt_fields,
-        validate_s08_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        run_live_s12_retention_deletion_probe, validate_live_s03_list_messages_response,
+        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
+        validate_s07_replay_reason_marker, validate_s08_distinct_message_ids,
+        validate_s08_message_receipt_fields, validate_s08_query_message_response,
+        validate_s12_content_field_coherence, validate_s12_content_id_match, SdkDirectDriver,
+        SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -1486,6 +1641,49 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s12_retention_deletion_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s12_retention_deletion_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_id_match_rejects_mismatch() {
+        let error = validate_s12_content_id_match("content-a", "content-b", "test step")
+            .expect_err("mismatched content ids should fail");
+        assert!(
+            error.contains("mismatched content_id"),
+            "error should mention content_id mismatch: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_validate_s12_content_field_coherence_rejects_drift() {
+        let error = validate_s12_content_field_coherence(
+            "tombstoned",
+            "expired",
+            "lifecycle_state",
+            "test step",
+        )
+        .expect_err("field drift should fail");
+        assert!(
+            error.contains("lifecycle_state drift"),
+            "error should mention field drift: {error}",
+        );
+    }
+
+    #[test]
     fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
         validate_s07_replay_reason_marker(
             "operation failed: service_api_auth_replay_nonce_detected",
@@ -1697,6 +1895,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-11 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c12_live_s12_driver_path_fails_closed_when_retention_deletion_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s12 retention-deletion probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-12");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-12 should fail closed on probe error",
         );
     }
 }

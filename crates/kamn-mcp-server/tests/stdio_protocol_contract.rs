@@ -42,6 +42,34 @@ impl McpToolBackend for ProtocolBackend {
         Ok(format!(r#"{{"did":"{}","reputation_score":777}}"#, did))
     }
 
+    fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"content-{}","retention_class":"standard","lifecycle_state":"retained","redaction_status":"none"}}"#,
+            payload.len()
+        ))
+    }
+
+    fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"expired","redaction_status":"none"}}"#,
+            content_id
+        ))
+    }
+
+    fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
+    }
+
+    fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"tombstoned","redaction_status":"redacted"}}"#,
+            content_id
+        ))
+    }
+
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError> {
         Ok(format!(
             r#"{{"task_id":"task-{}","state":"created"}}"#,
@@ -174,6 +202,22 @@ fn spec_c02_mcp_tools_list_framed_tool_inventory_contract() {
         body.contains(r#""name":"query_agent_profile""#),
         "tools/list should include query_agent_profile tool: {body}",
     );
+    assert!(
+        body.contains(r#""name":"register_content""#),
+        "tools/list should include register_content tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"expire_content""#),
+        "tools/list should include expire_content tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"tombstone_content""#),
+        "tools/list should include tombstone_content tool: {body}",
+    );
+    assert!(
+        body.contains(r#""name":"query_content""#),
+        "tools/list should include query_content tool: {body}",
+    );
 }
 
 #[test]
@@ -266,6 +310,63 @@ fn spec_c07_mcp_tools_call_query_task_and_profile_dispatch_contract() {
     assert!(
         query_profile_body.contains(r#""reputation_score":777"#),
         "query_agent_profile payload should include reputation score: {query_profile_body}",
+    );
+}
+
+#[test]
+fn spec_c08_mcp_tools_call_content_lifecycle_dispatch_contract() {
+    let backend = ProtocolBackend;
+
+    let register_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-9","method":"tools/call","params":{"name":"register_content","arguments":{"payload":"{\"content\":\"abc\"}"}}}"#,
+    );
+    let register_responses =
+        process_stdio_input(&backend, register_request.as_str()).expect("input should parse");
+    let register_body = parse_framed_json(register_responses[0].as_str());
+    assert!(
+        register_body.contains(r#""tool":"register_content""#),
+        "register_content payload should preserve tool marker: {register_body}",
+    );
+    assert!(
+        register_body.contains(r#""retention_class":"standard""#),
+        "register_content payload should include retention projection: {register_body}",
+    );
+
+    let expire_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-10","method":"tools/call","params":{"name":"expire_content","arguments":{"content_id":"content-1"}}}"#,
+    );
+    let expire_responses =
+        process_stdio_input(&backend, expire_request.as_str()).expect("input should parse");
+    let expire_body = parse_framed_json(expire_responses[0].as_str());
+    assert!(
+        expire_body.contains(r#""lifecycle_state":"expired""#),
+        "expire_content payload should include lifecycle projection: {expire_body}",
+    );
+
+    let tombstone_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-11","method":"tools/call","params":{"name":"tombstone_content","arguments":{"content_id":"content-1"}}}"#,
+    );
+    let tombstone_responses =
+        process_stdio_input(&backend, tombstone_request.as_str()).expect("input should parse");
+    let tombstone_body = parse_framed_json(tombstone_responses[0].as_str());
+    assert!(
+        tombstone_body.contains(r#""redaction_status":"redacted""#),
+        "tombstone_content payload should include redaction projection: {tombstone_body}",
+    );
+
+    let query_request = frame_request(
+        r#"{"jsonrpc":"2.0","id":"req-12","method":"tools/call","params":{"name":"query_content","arguments":{"content_id":"content-1"}}}"#,
+    );
+    let query_responses =
+        process_stdio_input(&backend, query_request.as_str()).expect("input should parse");
+    let query_body = parse_framed_json(query_responses[0].as_str());
+    assert!(
+        query_body.contains(r#""tool":"query_content""#),
+        "query_content payload should preserve tool marker: {query_body}",
+    );
+    assert!(
+        query_body.contains(r#""lifecycle_state":"tombstoned""#),
+        "query_content payload should include lifecycle projection: {query_body}",
     );
 }
 

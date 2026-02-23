@@ -16,6 +16,14 @@ pub trait McpToolBackend {
     fn query_task(&self, task_id: &str) -> Result<String, AgentLibError>;
     /// Queries one agent profile by DID.
     fn query_agent_profile(&self, did: &str) -> Result<String, AgentLibError>;
+    /// Registers one content lifecycle record.
+    fn register_content(&self, payload: &str) -> Result<String, AgentLibError>;
+    /// Expires one content lifecycle record.
+    fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError>;
+    /// Tombstones one content lifecycle record.
+    fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError>;
+    /// Queries one content lifecycle record.
+    fn query_content(&self, content_id: &str) -> Result<String, AgentLibError>;
     /// Creates one task payload.
     fn create_task(&self, payload: &str) -> Result<String, AgentLibError>;
     /// Accepts one task by identifier.
@@ -104,6 +112,47 @@ impl McpToolBackend for KamnAgentHandle {
             r#"{{"did":"{}","reputation_score":{}}}"#,
             escape_json(profile.did.as_str()),
             profile.reputation_score,
+        ))
+    }
+
+    fn register_content(&self, payload: &str) -> Result<String, AgentLibError> {
+        let registration = KamnAgentHandle::register_content(self, payload)?;
+        Ok(format!(
+            r#"{{"content_id":"{}","retention_class":"{}","lifecycle_state":"{}","redaction_status":"{}"}}"#,
+            escape_json(registration.content_id.as_str()),
+            escape_json(registration.retention_class.as_str()),
+            escape_json(registration.lifecycle_state.as_str()),
+            escape_json(registration.redaction_status.as_str()),
+        ))
+    }
+
+    fn expire_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::expire_content(self, content_id)?;
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"{}","redaction_status":"{}"}}"#,
+            escape_json(status.content_id.as_str()),
+            escape_json(status.lifecycle_state.as_str()),
+            escape_json(status.redaction_status.as_str()),
+        ))
+    }
+
+    fn tombstone_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::tombstone_content(self, content_id)?;
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"{}","redaction_status":"{}"}}"#,
+            escape_json(status.content_id.as_str()),
+            escape_json(status.lifecycle_state.as_str()),
+            escape_json(status.redaction_status.as_str()),
+        ))
+    }
+
+    fn query_content(&self, content_id: &str) -> Result<String, AgentLibError> {
+        let status = KamnAgentHandle::query_content(self, content_id)?;
+        Ok(format!(
+            r#"{{"content_id":"{}","lifecycle_state":"{}","redaction_status":"{}"}}"#,
+            escape_json(status.content_id.as_str()),
+            escape_json(status.lifecycle_state.as_str()),
+            escape_json(status.redaction_status.as_str()),
         ))
     }
 
@@ -227,6 +276,34 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
                 Err(error) => return Ok(invalid_request_response_json(error.as_str())),
             };
             backend.query_agent_profile(did.as_str())
+        }
+        "register_content" => {
+            let payload = match required_string_arg(request_json, "payload") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.register_content(payload.as_str())
+        }
+        "expire_content" => {
+            let content_id = match required_string_arg(request_json, "content_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.expire_content(content_id.as_str())
+        }
+        "tombstone_content" => {
+            let content_id = match required_string_arg(request_json, "content_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.tombstone_content(content_id.as_str())
+        }
+        "query_content" => {
+            let content_id = match required_string_arg(request_json, "content_id") {
+                Ok(value) => value,
+                Err(error) => return Ok(invalid_request_response_json(error.as_str())),
+            };
+            backend.query_content(content_id.as_str())
         }
         "create_task" => {
             backend.create_task(required_string_arg(request_json, "payload")?.as_str())

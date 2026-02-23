@@ -223,7 +223,17 @@ fn required_scope_for_route(method: &str, path: &str) -> Option<ServiceApiScope>
         ("POST", _) if super::payload::escrow_release_path_id(path).is_some() => {
             ServiceApiScope::EscrowWrite
         }
+        ("POST", ROUTE_CONTENT_REGISTER) => ServiceApiScope::ContentWrite,
+        ("POST", _) if super::payload::content_expire_path_id(path).is_some() => {
+            ServiceApiScope::ContentWrite
+        }
+        ("POST", _) if super::payload::content_tombstone_path_id(path).is_some() => {
+            ServiceApiScope::ContentWrite
+        }
         ("GET", ROUTE_EVENTS_WS) => ServiceApiScope::EventsRead,
+        ("GET", _) if super::payload::content_path_id(path).is_some() => {
+            ServiceApiScope::ContentRead
+        }
         ("GET", _) if super::payload::message_path_id(path).is_some() => {
             ServiceApiScope::MessagesRead
         }
@@ -285,8 +295,24 @@ mod tests {
             Some(ServiceApiScope::EscrowWrite)
         );
         assert_eq!(
+            required_scope_for_route("POST", ROUTE_CONTENT_REGISTER),
+            Some(ServiceApiScope::ContentWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/content/content-1/expire"),
+            Some(ServiceApiScope::ContentWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/content/content-1/tombstone"),
+            Some(ServiceApiScope::ContentWrite)
+        );
+        assert_eq!(
             required_scope_for_route("GET", ROUTE_EVENTS_WS),
             Some(ServiceApiScope::EventsRead)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/content/content-1"),
+            Some(ServiceApiScope::ContentRead)
         );
         assert_eq!(
             required_scope_for_route("GET", "/v1/messages/message-1"),
@@ -336,6 +362,10 @@ mod tests {
             ServiceApiScope::TasksRead
         );
         assert_eq!(
+            parse_scope(" content:write ").expect("scope"),
+            ServiceApiScope::ContentWrite
+        );
+        assert_eq!(
             parse_scope("protected:unknown").expect("scope"),
             ServiceApiScope::ProtectedUnknown
         );
@@ -347,7 +377,7 @@ mod tests {
         assert_eq!(empty_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
         assert!(empty_error.message.contains("must not be empty"));
 
-        let unknown_error = parse_scope("content:write").expect_err("unknown scope should fail");
+        let unknown_error = parse_scope("content:admin").expect_err("unknown scope should fail");
         assert_eq!(unknown_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
         assert!(unknown_error.message.contains("value is invalid"));
     }

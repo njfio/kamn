@@ -173,6 +173,34 @@ fn service_api_route_authz_matrix_rows() -> Vec<ServiceApiRouteAuthzMatrixRow> {
             expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
         },
         ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/content/register",
+            body: "{\"content\":\"matrix-content\",\"retention_class\":\"standard\"}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/content/content-matrix/expire",
+            body: "{}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "POST",
+            path: "/v1/content/content-matrix/tombstone",
+            body: "{}",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
+            method: "GET",
+            path: "/v1/content/content-matrix",
+            body: "",
+            requires_auth: true,
+            expected_status_without_auth: "HTTP/1.1 401 Unauthorized",
+        },
+        ServiceApiRouteAuthzMatrixRow {
             method: "GET",
             path: "/v1/messages/msg-matrix",
             body: "",
@@ -262,6 +290,7 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", "/v1/channels/create") => "channels:write",
         ("POST", "/v1/tasks/create") => "tasks:write",
         ("POST", "/v1/escrow/fund") => "escrow:write",
+        ("POST", "/v1/content/register") => "content:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/accept") => "tasks:write",
         ("POST", _) if path.starts_with("/v1/tasks/") && path.ends_with("/complete") => {
             "tasks:write"
@@ -269,7 +298,16 @@ fn required_scope_for_test_route(method: &str, path: &str) -> Option<&'static st
         ("POST", _) if path.starts_with("/v1/escrow/") && path.ends_with("/release") => {
             "escrow:write"
         }
+        ("POST", _) if path.starts_with("/v1/content/") && path.ends_with("/expire") => {
+            "content:write"
+        }
+        ("POST", _) if path.starts_with("/v1/content/") && path.ends_with("/tombstone") => {
+            "content:write"
+        }
         ("GET", "/v1/events/ws") => "events:read",
+        ("GET", _) if path.starts_with("/v1/content/") && path != "/v1/content/register" => {
+            "content:read"
+        }
         ("GET", _) if path.starts_with("/v1/messages/") && path != "/v1/messages/send" => {
             "messages:read"
         }
@@ -807,6 +845,49 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
     assert!(escrow_release_response
         .body
         .contains("\"state\":\"released\""));
+
+    let content_register_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/content/register",
+        "{\"content\":\"hello\"}",
+    );
+    assert_eq!(content_register_response.status_code, 201);
+    assert!(content_register_response
+        .body
+        .contains("\"content_id\":\"content-local-"));
+    assert!(content_register_response
+        .body
+        .contains("\"retention_class\":\"standard\""));
+
+    let content_expire_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/content/content-1/expire",
+        "{}",
+    );
+    assert_eq!(content_expire_response.status_code, 200);
+    assert!(content_expire_response
+        .body
+        .contains("\"lifecycle_state\":\"expired\""));
+
+    let content_tombstone_response = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/content/content-1/tombstone",
+        "{}",
+    );
+    assert_eq!(content_tombstone_response.status_code, 200);
+    assert!(content_tombstone_response
+        .body
+        .contains("\"redaction_status\":\"redacted\""));
+
+    let content_query_response =
+        render_service_api_endpoint_response(&snapshot, "GET", "/v1/content/content-1", "");
+    assert_eq!(content_query_response.status_code, 200);
+    assert!(content_query_response
+        .body
+        .contains("\"lifecycle_state\":\"tombstoned\""));
 
     let agent_response = render_service_api_endpoint_response(
         &snapshot,
