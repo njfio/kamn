@@ -5,6 +5,10 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::{Duration, Instant};
 
+const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
+const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
+    "1111111111111111111111111111111111111111111111111111111111111111";
+
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
     let addr = listener.local_addr().expect("local addr should resolve");
@@ -219,6 +223,10 @@ fn wait_for_server_ready() {
 }
 
 fn parsed(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedCliArgs {
+    std::env::set_var(
+        SERVICE_AUTH_PRIVATE_KEY_ENV,
+        TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+    );
     ParsedCliArgs {
         command,
         output_format: OutputFormat::Text,
@@ -228,6 +236,10 @@ fn parsed(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedC
 }
 
 fn parsed_json(command: CommandKind, endpoint: &str, passthrough: &[&str]) -> ParsedCliArgs {
+    std::env::set_var(
+        SERVICE_AUTH_PRIVATE_KEY_ENV,
+        TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+    );
     ParsedCliArgs {
         command,
         output_format: OutputFormat::Json,
