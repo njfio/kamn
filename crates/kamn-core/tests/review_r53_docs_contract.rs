@@ -6,6 +6,10 @@ use std::process::Command;
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
 const DOC_R54: &str = include_str!("../../../docs/review/gaps-and-issues-r54.md");
 const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
+const RELEASED_REVIEW_DOC_FREEZE_LOCK: &str =
+    include_str!("../../../docs/review/released-review-doc-freeze.lock");
+const LIFECYCLE_STRUCTURAL_COUPLING_POLICY: &str =
+    include_str!("../../../docs/review/lifecycle-structural-coupling.policy");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_lines(doc: &str) -> BTreeMap<String, String> {
@@ -101,6 +105,60 @@ fn parse_marker_hex_u64(markers: &BTreeMap<String, String>, key: &str) -> u64 {
         .unwrap_or_else(|_| panic!("marker {key} should be a hex u64 value"))
 }
 
+fn git_stdout(args: &[&str]) -> String {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(args)
+        .output()
+        .unwrap_or_else(|_| panic!("git command failed to launch: git {}", args.join(" ")));
+    assert!(
+        output.status.success(),
+        "git {} failed with status {:?}",
+        args.join(" "),
+        output.status.code()
+    );
+    String::from_utf8(output.stdout).expect("git output should be valid UTF-8")
+}
+
+fn git_ref_exists(reference: &str) -> bool {
+    Command::new("git")
+        .current_dir(repo_root())
+        .args(["rev-parse", "--verify", reference])
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+fn standalone_lifecycle_commit_count(base_ref: &str, allowed_prefixes: &[String]) -> usize {
+    let merge_base = git_stdout(["merge-base", "HEAD", base_ref].as_slice());
+    let merge_base = merge_base.trim();
+    if merge_base.is_empty() {
+        return 0;
+    }
+    let range = format!("{merge_base}..HEAD");
+    let commits = git_stdout(["rev-list", "--no-merges", "--reverse", range.as_str()].as_slice());
+    commits
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .filter(|commit| {
+            let changed =
+                git_stdout(["show", "--pretty=format:", "--name-only", commit].as_slice());
+            let files = changed
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .collect::<Vec<_>>();
+            if files.is_empty() {
+                return false;
+            }
+            files.iter().all(|path| {
+                allowed_prefixes
+                    .iter()
+                    .any(|prefix| path.starts_with(prefix.as_str()))
+            })
+        })
+        .count()
+}
+
 fn fnv1a64(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     for byte in bytes {
@@ -144,19 +202,23 @@ fn repo_root() -> PathBuf {
 }
 
 fn top_level_spec_dir_count() -> usize {
+    tracked_top_level_spec_dirs().len()
+}
+
+fn tracked_top_level_spec_dirs() -> BTreeSet<String> {
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["ls-files", "specs"])
+        .args(["ls-tree", "-r", "--name-only", "HEAD", "specs"])
         .output()
-        .expect("git should be available for tracked spec-dir discovery");
+        .expect("git should be available for tracked spec-dir discovery via ls-tree");
     assert!(
         output.status.success(),
-        "git ls-files specs failed with status {:?}",
+        "git ls-tree HEAD specs failed with status {:?}",
         output.status.code()
     );
 
     String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
+        .expect("git ls-tree output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
             let mut parts = line.split('/');
@@ -168,7 +230,6 @@ fn top_level_spec_dir_count() -> usize {
             Some(top_level.to_string())
         })
         .collect::<BTreeSet<_>>()
-        .len()
 }
 
 fn doc_contract_test_file_count() -> usize {
@@ -228,9 +289,374 @@ fn collect_rust_files(root: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-fn is_test_cfg_attribute(line: &str) -> bool {
+fn extract_cfg_expression(line: &str) -> Option<&str> {
     let trimmed = line.trim();
-    trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
+    if !(trimmed.starts_with("#[cfg(") && trimmed.ends_with(")]")) {
+        return None;
+    }
+    Some(&trimmed["#[cfg(".len()..trimmed.len() - 2])
+}
+
+#[derive(Clone, Copy, Debug)]
+struct TruthSet {
+    possible_true: bool,
+    possible_false: bool,
+}
+
+impl TruthSet {
+    const fn only_true() -> Self {
+        Self {
+            possible_true: true,
+            possible_false: false,
+        }
+    }
+
+    const fn only_false() -> Self {
+        Self {
+            possible_true: false,
+            possible_false: true,
+        }
+    }
+
+    const fn both() -> Self {
+        Self {
+            possible_true: true,
+            possible_false: true,
+        }
+    }
+}
+
+fn split_top_level_cfg_args(input: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut start = 0usize;
+    let mut depth = 0i64;
+    let mut in_string = false;
+    let mut escape_next = false;
+    for (index, ch) in input.char_indices() {
+        if in_string {
+            if escape_next {
+                escape_next = false;
+                continue;
+            }
+            if ch == '\\' {
+                escape_next = true;
+                continue;
+            }
+            if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match ch {
+            '"' => in_string = true,
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                let value = input[start..index].trim();
+                if !value.is_empty() {
+                    args.push(value.to_string());
+                }
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    let tail = input[start..].trim();
+    if !tail.is_empty() {
+        args.push(tail.to_string());
+    }
+    args
+}
+
+fn cfg_strip_outer_call<'a>(expr: &'a str, name: &str) -> Option<&'a str> {
+    let expr = expr.trim();
+    let prefix = format!("{name}(");
+    if !(expr.starts_with(prefix.as_str()) && expr.ends_with(')')) {
+        return None;
+    }
+
+    let mut depth = 0i64;
+    let mut in_string = false;
+    let mut escape_next = false;
+    for (index, ch) in expr.char_indices() {
+        if in_string {
+            if escape_next {
+                escape_next = false;
+                continue;
+            }
+            if ch == '\\' {
+                escape_next = true;
+                continue;
+            }
+            if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match ch {
+            '"' => in_string = true,
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 && index != expr.len() - 1 {
+                    return None;
+                }
+            }
+            _ => {}
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    Some(&expr[prefix.len()..expr.len() - 1])
+}
+
+fn cfg_truth_set(expr: &str, test_enabled: bool) -> TruthSet {
+    let expr = expr.trim();
+    if expr.is_empty() {
+        return TruthSet::both();
+    }
+
+    if let Some(inner) = cfg_strip_outer_call(expr, "all") {
+        let args = split_top_level_cfg_args(inner);
+        if args.is_empty() {
+            return TruthSet::both();
+        }
+        let mut possible_true = true;
+        let mut possible_false = false;
+        for arg in args {
+            let child = cfg_truth_set(arg.as_str(), test_enabled);
+            possible_true &= child.possible_true;
+            possible_false |= child.possible_false;
+        }
+        return TruthSet {
+            possible_true,
+            possible_false,
+        };
+    }
+
+    if let Some(inner) = cfg_strip_outer_call(expr, "any") {
+        let args = split_top_level_cfg_args(inner);
+        if args.is_empty() {
+            return TruthSet::both();
+        }
+        let mut possible_true = false;
+        let mut possible_false = true;
+        for arg in args {
+            let child = cfg_truth_set(arg.as_str(), test_enabled);
+            possible_true |= child.possible_true;
+            possible_false &= child.possible_false;
+        }
+        return TruthSet {
+            possible_true,
+            possible_false,
+        };
+    }
+
+    if let Some(inner) = cfg_strip_outer_call(expr, "not") {
+        let child = cfg_truth_set(inner, test_enabled);
+        return TruthSet {
+            possible_true: child.possible_false,
+            possible_false: child.possible_true,
+        };
+    }
+
+    if expr == "test" {
+        if test_enabled {
+            TruthSet::only_true()
+        } else {
+            TruthSet::only_false()
+        }
+    } else {
+        // Treat non-test predicates as feature/platform-dependent and therefore potentially true.
+        TruthSet::both()
+    }
+}
+
+fn cfg_expression_requires_test(expr: &str) -> bool {
+    !cfg_truth_set(expr, false).possible_true
+}
+
+fn is_test_cfg_attribute(line: &str) -> bool {
+    let Some(cfg_expr) = extract_cfg_expression(line) else {
+        return false;
+    };
+    cfg_expression_requires_test(cfg_expr)
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct BraceScanState {
+    block_comment_depth: usize,
+    string_delimiter: Option<u8>,
+    raw_string_hashes: Option<usize>,
+    escape_next: bool,
+}
+
+fn is_ident_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+fn starts_char_literal(bytes: &[u8], index: usize) -> bool {
+    if index >= bytes.len() || bytes[index] != b'\'' {
+        return false;
+    }
+    if index + 1 >= bytes.len() {
+        return false;
+    }
+    let next = bytes[index + 1];
+    !(next.is_ascii_alphabetic() || next == b'_')
+}
+
+fn parse_raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    if index >= bytes.len() {
+        return None;
+    }
+
+    let prefix_len = if bytes[index] == b'r' {
+        1
+    } else if index + 1 < bytes.len() && bytes[index] == b'b' && bytes[index + 1] == b'r' {
+        2
+    } else {
+        return None;
+    };
+
+    if index > 0 && is_ident_byte(bytes[index - 1]) {
+        return None;
+    }
+
+    let mut cursor = index + prefix_len;
+    let mut hash_count = 0usize;
+    while cursor < bytes.len() && bytes[cursor] == b'#' {
+        hash_count += 1;
+        cursor += 1;
+    }
+
+    if cursor < bytes.len() && bytes[cursor] == b'"' {
+        Some((hash_count, cursor + 1))
+    } else {
+        None
+    }
+}
+
+fn line_brace_counts(line: &str, state: &mut BraceScanState) -> (i64, i64) {
+    let bytes = line.as_bytes();
+    let mut index = 0usize;
+    let mut open_count = 0_i64;
+    let mut close_count = 0_i64;
+
+    while index < bytes.len() {
+        if let Some(hash_count) = state.raw_string_hashes {
+            if bytes[index] == b'"' {
+                let mut cursor = index + 1;
+                let mut matched = true;
+                for _ in 0..hash_count {
+                    if cursor >= bytes.len() || bytes[cursor] != b'#' {
+                        matched = false;
+                        break;
+                    }
+                    cursor += 1;
+                }
+                if matched {
+                    state.raw_string_hashes = None;
+                    index = cursor;
+                    continue;
+                }
+            }
+            index += 1;
+            continue;
+        }
+
+        if let Some(delimiter) = state.string_delimiter {
+            if state.escape_next {
+                state.escape_next = false;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == b'\\' {
+                state.escape_next = true;
+                index += 1;
+                continue;
+            }
+            if bytes[index] == delimiter {
+                state.string_delimiter = None;
+            }
+            index += 1;
+            continue;
+        }
+
+        if state.block_comment_depth > 0 {
+            if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
+                state.block_comment_depth += 1;
+                index += 2;
+                continue;
+            }
+            if index + 1 < bytes.len() && bytes[index] == b'*' && bytes[index + 1] == b'/' {
+                state.block_comment_depth = state.block_comment_depth.saturating_sub(1);
+                index += 2;
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+
+        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'/' {
+            break;
+        }
+        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
+            state.block_comment_depth += 1;
+            index += 2;
+            continue;
+        }
+
+        if let Some((hash_count, next_index)) = parse_raw_string_start(bytes, index) {
+            state.raw_string_hashes = Some(hash_count);
+            state.escape_next = false;
+            index = next_index;
+            continue;
+        }
+
+        if index + 1 < bytes.len()
+            && bytes[index] == b'b'
+            && bytes[index + 1] == b'"'
+            && (index == 0 || !is_ident_byte(bytes[index - 1]))
+        {
+            state.string_delimiter = Some(b'"');
+            state.escape_next = false;
+            index += 2;
+            continue;
+        }
+        if index + 1 < bytes.len()
+            && bytes[index] == b'b'
+            && bytes[index + 1] == b'\''
+            && (index == 0 || !is_ident_byte(bytes[index - 1]))
+        {
+            state.string_delimiter = Some(b'\'');
+            state.escape_next = false;
+            index += 2;
+            continue;
+        }
+        if bytes[index] == b'"' {
+            state.string_delimiter = Some(bytes[index]);
+            state.escape_next = false;
+            index += 1;
+            continue;
+        }
+        if bytes[index] == b'\'' && starts_char_literal(bytes, index) {
+            state.string_delimiter = Some(bytes[index]);
+            state.escape_next = false;
+            index += 1;
+            continue;
+        }
+
+        if bytes[index] == b'{' {
+            open_count += 1;
+        } else if bytes[index] == b'}' {
+            close_count += 1;
+        }
+        index += 1;
+    }
+
+    (open_count, close_count)
 }
 
 fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
@@ -246,12 +672,12 @@ fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
         return index;
     }
 
+    let mut scan_state = BraceScanState::default();
     let mut brace_depth = 0_i64;
     let mut saw_open_brace = false;
     while index < lines.len() {
         let line = lines[index];
-        let open_count = line.matches('{').count() as i64;
-        let close_count = line.matches('}').count() as i64;
+        let (open_count, close_count) = line_brace_counts(line, &mut scan_state);
         if open_count > 0 {
             saw_open_brace = true;
         }
@@ -303,17 +729,17 @@ fn production_expect_inventory_count() -> usize {
         .iter()
         .filter(|path| {
             let path_text = path.to_string_lossy();
+            let file_name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
             !path_text.contains("/main_tests/")
-                && path.file_name().and_then(|name| name.to_str()) != Some("main_tests.rs")
-                && !path
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or_default()
-                    .ends_with("_tests.rs")
-                && !path_text.contains("/runtime_tests")
-                && !path_text.contains("/cli_tests")
+                && !path_text.contains("/runtime_tests/")
+                && !path_text.contains("/cli_tests/")
                 && !path_text.contains("/test_utils/")
                 && !path_text.contains("/tests/")
+                && file_name != "main_tests.rs"
+                && !file_name.contains("_tests")
         })
         .map(|path| {
             let source = fs::read_to_string(path)
@@ -324,6 +750,65 @@ fn production_expect_inventory_count() -> usize {
                 .count()
         })
         .sum()
+}
+
+#[test]
+fn unit_cfg_test_item_skip_ignores_braces_inside_strings() {
+    let source = r#"
+fn production_before() {}
+
+#[cfg(test)]
+mod tests {
+    fn brace_confuser_literal() -> &'static str {
+        "}}}}"
+    }
+
+    #[test]
+    fn test_only_expect() {
+        let literal = brace_confuser_literal();
+        let value = Some(literal.len()).expect("test-only expect");
+        assert!(value > 0);
+    }
+}
+
+fn production_after() -> usize { 42 }
+"#;
+    let stripped = production_source_without_cfg_test_items(source);
+    assert!(stripped.contains("fn production_before() {}"));
+    assert!(stripped.contains("fn production_after() -> usize { 42 }"));
+    assert!(!stripped.contains("mod tests"));
+    assert!(!stripped.contains("test-only expect"));
+}
+
+#[test]
+fn unit_cfg_expression_requires_test_for_true_test_only_predicates() {
+    assert!(cfg_expression_requires_test("test"));
+    assert!(cfg_expression_requires_test("all(test, feature = \"x\")"));
+    assert!(cfg_expression_requires_test(
+        "all(target_os = \"linux\", test)"
+    ));
+    assert!(!cfg_expression_requires_test("not(test)"));
+    assert!(!cfg_expression_requires_test("any(test, feature = \"x\")"));
+    assert!(!cfg_expression_requires_test("feature = \"contest-mode\""));
+}
+
+#[test]
+fn unit_cfg_attribute_detection_ignores_test_substring_in_feature_string() {
+    assert!(!is_test_cfg_attribute("#[cfg(feature = \"contest-mode\")]"));
+    assert!(!is_test_cfg_attribute("#[cfg(feature = \"latest\")]"));
+    assert!(is_test_cfg_attribute("#[cfg(test)]"));
+}
+
+#[test]
+fn unit_production_source_keeps_cfg_any_test_or_feature_items() {
+    let source = r#"
+#[cfg(any(test, feature = "production_gate"))]
+fn maybe_production() {
+    let _v = std::env::var("X").expect("should remain countable");
+}
+"#;
+    let stripped = production_source_without_cfg_test_items(source);
+    assert!(stripped.contains("should remain countable"));
 }
 
 #[test]
@@ -635,6 +1120,116 @@ fn regression_r53_review_document_freeze_baseline_is_enforced() {
     );
     assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
     assert_eq!(current_fnv, expected_fnv);
+}
+
+#[test]
+fn regression_r51_plus_released_review_docs_are_frozen() {
+    let freeze_markers = parse_key_value_lines(RELEASED_REVIEW_DOC_FREEZE_LOCK);
+    assert_eq!(
+        parse_marker_value(&freeze_markers, "review_doc_freeze_schema_version"),
+        "kamn.review.released-document-freeze.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&freeze_markers, "review_doc_freeze_status"),
+        "frozen"
+    );
+
+    let release_min = parse_marker_usize(&freeze_markers, "review_doc_freeze_release_min");
+    let release_max = parse_marker_usize(&freeze_markers, "review_doc_freeze_release_max");
+    let entry_count = parse_marker_usize(&freeze_markers, "review_doc_freeze_entry_count");
+    assert!(release_min >= 51);
+    assert!(release_max >= release_min);
+    assert!(entry_count > 0);
+
+    for index in 1..=entry_count {
+        let key = |suffix: &str| format!("review_doc_freeze_entry_{index}_{suffix}");
+        let relative_path = parse_marker_value(&freeze_markers, &key("path"));
+        let Some(release) = parse_release_from_review_path(relative_path) else {
+            panic!("freeze path should encode release number: {relative_path}");
+        };
+        assert!(release >= release_min as u32);
+        assert!(release <= release_max as u32);
+
+        let expected_line_count = parse_marker_usize(&freeze_markers, &key("line_count"));
+        let expected_fnv = parse_marker_hex_u64(&freeze_markers, &key("fnv1a64_hex"));
+        let expected_last_non_empty_line =
+            parse_marker_value(&freeze_markers, &key("last_non_empty_line"));
+
+        let file_path = repo_root().join(relative_path);
+        let doc = fs::read_to_string(&file_path).unwrap_or_else(|_| {
+            panic!(
+                "frozen review doc should be readable: {}",
+                file_path.display()
+            )
+        });
+        let current_line_count = doc.lines().count();
+        let current_fnv = fnv1a64(doc.as_bytes());
+        let current_last_non_empty_line = doc
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .expect("frozen review doc should contain non-empty lines");
+
+        assert_eq!(current_line_count, expected_line_count);
+        assert_eq!(current_fnv, expected_fnv);
+        assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
+    }
+}
+
+#[test]
+fn regression_r56_plus_lifecycle_commits_must_not_be_standalone() {
+    let policy_markers = parse_key_value_lines(LIFECYCLE_STRUCTURAL_COUPLING_POLICY);
+    assert_eq!(
+        parse_marker_value(
+            &policy_markers,
+            "review_lifecycle_structural_coupling_policy_schema_version",
+        ),
+        "kamn.review.lifecycle-structural-coupling.v1"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &policy_markers,
+            "review_lifecycle_structural_coupling_status"
+        ),
+        "enforced"
+    );
+    assert!(
+        parse_marker_usize(
+            &policy_markers,
+            "review_lifecycle_structural_coupling_effective_release_min",
+        ) >= 56
+    );
+    let base_ref = parse_marker_value(
+        &policy_markers,
+        "review_lifecycle_structural_coupling_base_ref",
+    );
+    assert!(
+        git_ref_exists(base_ref),
+        "structural coupling base ref must exist for deterministic range scan: {}",
+        base_ref
+    );
+    let max_standalone = parse_marker_usize(
+        &policy_markers,
+        "review_lifecycle_structural_coupling_max_standalone_lifecycle_commits",
+    );
+    let allowed_prefixes = parse_marker_value(
+        &policy_markers,
+        "review_lifecycle_structural_coupling_allowed_path_prefixes",
+    )
+    .split(',')
+    .map(str::trim)
+    .filter(|value| !value.is_empty())
+    .map(ToOwned::to_owned)
+    .collect::<Vec<_>>();
+    assert!(!allowed_prefixes.is_empty());
+
+    let observed = standalone_lifecycle_commit_count(base_ref, &allowed_prefixes);
+    assert!(
+        observed <= max_standalone,
+        "standalone lifecycle commits {} exceed max {}",
+        observed,
+        max_standalone
+    );
 }
 
 #[test]
@@ -1156,12 +1751,17 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
         ),
         "kamn.review.production-expect-inventory.v1"
     );
-    assert_eq!(
-        parse_marker_value(
-            &markers,
-            "r55_review_production_expect_inventory_count_formula",
-        ),
-        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)"
+    let expect_formula = parse_marker_value(
+        &markers,
+        "r55_review_production_expect_inventory_count_formula",
+    );
+    assert!(
+        expect_formula
+            == "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/)"
+            || expect_formula
+                == "count(lines containing '.expect(' after stripping #[cfg(test)]-guarded items in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/, main_tests.rs, and *_tests.rs)",
+        "unexpected production expect formula marker: {}",
+        expect_formula
     );
     let reported_r55 = parse_marker_usize(
         &markers,

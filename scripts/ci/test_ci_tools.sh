@@ -1,21 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
 run_non_kolme_wave_wrapper_family_contracts() {
   for wave in {1..19}; do
     bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh"
     bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh"
   done
 }
-
 run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
   for lightweight_wave in {10..19}; do
     bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh" --wave "$lightweight_wave"
   done
 }
-
 if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
@@ -307,86 +303,51 @@ bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_kolme_live_integration_architecture_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_test_layering_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_ci_tools_command_surface_contract.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/kolme/test_validate_triadic_devnet_smoke.sh"
-bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"
-bash "$ROOT_DIR/scripts/kolme/test_common_sh_helper_migration_contract.sh"
-bash "$ROOT_DIR/scripts/kolme/test_dispatcher_manifest_metadata_contract.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_did_lifecycle_chain_adapter_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_fork_sync_metadata_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_api_probe_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_api_smoke_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_fallback_signer_marker_matrix_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_deployment_preflight_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_generate_managed_signer_backend_slo_telemetry_bundle.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_managed_signer_backend_slo_telemetry_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_managed_signer_backend_slo_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_managed_signer_backend_slo_policy_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_live_node_validation_bundle_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_onchain_lifecycle_evidence_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_live_provider_runtime_integration_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_signed_to_kolme_demo_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_bootstrap_health_checks.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_bootstrap_health_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_e2e_integration_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_replay_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_nonce_broadcast_parity_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_signature_parity_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_signature_parity_matrix.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_signature_parity_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_notifications_consumer_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_native_api_parity_live_proof_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
-bash "$ROOT_DIR/scripts/kolme/test_check_local_runtime_commit_live_evidence_policy.sh"
-bash "$ROOT_DIR/scripts/kolme/test_validate_continuous_runtime_commit_live.sh"
-bash "$ROOT_DIR/scripts/kolme/test_validate_did_lifecycle_chain_adapter_live.sh"
-bash "$ROOT_DIR/scripts/kolme/test_validate_message_proof_anchoring_live.sh"
+kolme_ci_tests=(
+  test_check_lane_migration_matrix_policy.sh test_contract_lane_dispatch_wrapper_matrix.sh
+  test_validate_triadic_devnet_smoke.sh test_generate_fork_compatibility_evidence.sh
+  test_common_sh_helper_migration_contract.sh test_dispatcher_manifest_metadata_contract.sh
+  test_check_fork_compatibility_policy.sh test_run_runtime_commit_adapter_contract_lane.sh
+  test_run_continuous_runtime_commit_contract_lane.sh test_run_did_lifecycle_chain_adapter_contract_lane.sh
+  test_run_message_proof_anchoring_contract_lane.sh test_run_local_fork_sync_metadata_lane.sh
+  test_run_local_fork_smoke_evidence_lane.sh test_run_local_kolme_fork_rust_test_matrix_lane.sh
+  test_check_local_kolme_fork_rust_test_matrix_policy.sh test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh
+  test_run_local_kolme_api_probe_lane.sh test_run_local_kolme_api_smoke_lane.sh
+  test_run_local_kolme_live_api_conformance_contract_lane.sh test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh
+  test_run_local_kamn_live_runtime_integration_contract_lane.sh test_run_local_kamn_live_runtime_integration_real_node_profile.sh
+  test_check_local_kamn_live_runtime_real_node_profile_policy.sh test_check_fallback_signer_marker_matrix_policy.sh
+  test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh test_run_local_kolme_live_deployment_preflight_lane.sh
+  test_check_local_kolme_live_deployment_preflight_policy.sh test_run_local_kolme_live_deployment_preflight_contract_lane.sh
+  test_generate_managed_signer_backend_slo_telemetry_bundle.sh test_run_managed_signer_backend_slo_telemetry_contract_lane.sh
+  test_check_managed_signer_backend_slo_policy.sh test_run_managed_signer_backend_slo_policy_contract_lane.sh
+  test_run_managed_signer_startup_live_validation_contract_lane.sh test_run_local_live_node_validation_bundle_lane.sh
+  test_check_local_live_node_validation_bundle_policy.sh test_run_local_live_node_validation_bundle_contract_lane.sh
+  test_run_onchain_lifecycle_evidence_contract_lane.sh test_run_local_live_provider_runtime_integration_contract_lane.sh
+  test_run_local_signed_to_kolme_demo_contract_lane.sh test_check_local_signed_to_kolme_demo_policy.sh
+  test_run_local_kolme_fork_process_lifecycle_contract_lane.sh test_run_local_kolme_fork_profile_preflight_lane.sh
+  test_run_local_kolme_fork_profile_preflight_contract_lane.sh test_run_local_kolme_fork_self_test_lane.sh
+  test_run_local_kolme_fork_self_test_contract_lane.sh test_run_local_kolme_fork_portability_preflight_lane.sh
+  test_check_local_kolme_fork_portability_preflight_policy.sh test_run_local_kolme_fork_portability_preflight_contract_lane.sh
+  test_run_local_kolme_fork_checkout_bootstrap_lane.sh test_check_local_kolme_fork_checkout_bootstrap_policy.sh
+  test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh test_check_local_kolme_fork_real_process_policy.sh
+  test_run_local_kolme_fork_real_process_contract_lane.sh test_run_local_bootstrap_health_checks.sh
+  test_check_local_bootstrap_health_policy.sh test_run_local_bootstrap_health_checks_contract_lane.sh
+  test_run_local_e2e_integration_lane.sh test_check_local_e2e_integration_policy.sh
+  test_run_local_e2e_integration_contract_lane.sh test_check_local_heavy_validation_matrix_policy.sh
+  test_run_local_heavy_validation_matrix_contract_lane.sh test_check_runtime_commit_replay_policy.sh
+  test_check_nonce_broadcast_parity_policy.sh test_check_signature_parity_policy.sh
+  test_check_runtime_commit_decomposition_parity_matrix.sh test_run_signature_parity_matrix.sh
+  test_run_runtime_commit_contract_lane.sh test_run_runtime_commit_replay_contract_lane.sh
+  test_run_nonce_broadcast_parity_contract_lane.sh test_run_signature_parity_contract_lane.sh
+  test_run_notifications_consumer_contract_lane.sh test_run_block_fallback_reconciliation_contract_lane.sh
+  test_run_fast_gate_native_api_parity_contract_lane.sh test_run_local_native_api_parity_live_proof_lane.sh
+  test_run_local_native_api_parity_live_proof_contract_lane.sh test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh
+  test_check_local_runtime_commit_live_evidence_policy.sh test_validate_continuous_runtime_commit_live.sh
+  test_validate_did_lifecycle_chain_adapter_live.sh test_validate_message_proof_anchoring_live.sh
+)
+for kolme_ci_test in "${kolme_ci_tests[@]}"; do
+  bash "$ROOT_DIR/scripts/kolme/$kolme_ci_test"
+done
 if [ "${KAMN_CI_FORCE_DASHBOARD_PACKAGE_TESTS:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
 elif node --experimental-strip-types -e "" >/dev/null 2>&1; then

@@ -18,17 +18,17 @@ fn repo_root() -> PathBuf {
 fn current_spec_directory_count() -> usize {
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["ls-files", "specs"])
+        .args(["ls-tree", "-r", "--name-only", "HEAD", "specs"])
         .output()
-        .expect("git should be available for tracked spec-dir discovery");
+        .expect("git should be available for tracked spec-dir discovery via ls-tree");
     assert!(
         output.status.success(),
-        "git ls-files specs failed with status {:?}",
+        "git ls-tree HEAD specs failed with status {:?}",
         output.status.code()
     );
 
     String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
+        .expect("git ls-tree output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
             let mut parts = line.split('/');

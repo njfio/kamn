@@ -350,3 +350,46 @@ Contract invariants:
 - R54 headings must not include disallowed post-publication heading pattern
 
 This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
+
+## Released Review Freeze Contract
+
+Released review artifacts for R51+ are immutable and must match deterministic freeze baselines.
+
+Required keys in `docs/review/released-review-doc-freeze.lock`:
+
+- `review_doc_freeze_schema_version=kamn.review.released-document-freeze.v1`
+- `review_doc_freeze_status=frozen`
+- `review_doc_freeze_release_min=<integer>`
+- `review_doc_freeze_release_max=<integer>`
+- `review_doc_freeze_entry_count=<integer>`
+- `review_doc_freeze_entry_<n>_path=docs/review/gaps-and-issues-r<release>.md`
+- `review_doc_freeze_entry_<n>_line_count=<integer>`
+- `review_doc_freeze_entry_<n>_fnv1a64_hex=0x<hex>`
+- `review_doc_freeze_entry_<n>_last_non_empty_line=<text>`
+
+Contract invariants:
+
+- Every frozen entry path must resolve to a tracked review doc in the declared release window.
+- Current line count, fnv1a64 hash, and last non-empty line must equal the lock entry values.
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
+
+## Lifecycle Structural Coupling Policy
+
+Standalone lifecycle-only commits (commits changing only `specs/` and/or `docs/review/`) are forbidden for R56+.
+
+Required keys in `docs/review/lifecycle-structural-coupling.policy`:
+
+- `review_lifecycle_structural_coupling_policy_schema_version=kamn.review.lifecycle-structural-coupling.v1`
+- `review_lifecycle_structural_coupling_status=enforced`
+- `review_lifecycle_structural_coupling_effective_release_min=<integer>`
+- `review_lifecycle_structural_coupling_base_ref=<git-ref>`
+- `review_lifecycle_structural_coupling_allowed_path_prefixes=specs/,docs/review/`
+- `review_lifecycle_structural_coupling_max_standalone_lifecycle_commits=<integer>`
+
+Contract invariants:
+
+- Base ref must resolve in git.
+- `standalone_lifecycle_commit_count(base_ref..HEAD) <= max_standalone_lifecycle_commits`.
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.

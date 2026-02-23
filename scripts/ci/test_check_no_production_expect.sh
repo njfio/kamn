@@ -241,6 +241,30 @@ python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 
 rm -f "$TMP_DIR/cfg_test_only.rs"
 
+cat <<'RS' > "$TMP_DIR/cfg_test_brace_heavy_module.rs"
+fn safe_path() -> Result<(), String> {
+    std::env::var("X").map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    fn brace_confuser_literal() -> &'static str {
+        "}}}}"
+    }
+
+    #[test]
+    fn allows_expect_inside_brace_heavy_test_module() {
+        let literal = brace_confuser_literal();
+        let value = Some(literal.len()).expect("test-only expect");
+        assert!(value > 0);
+    }
+}
+RS
+
+python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
+
+rm -f "$TMP_DIR/cfg_test_brace_heavy_module.rs"
+
 cat <<'RS' > "$TMP_DIR/cfg_test_prefix_production_violation.rs"
 #[cfg(test)]
 use std::sync::Mutex;
@@ -271,5 +295,43 @@ if ! printf '%s\n' "$cfg_test_prefix_output" | grep -q '^reason_class=panic_reac
 fi
 
 rm -f "$TMP_DIR/cfg_test_prefix_production_violation.rs"
+
+assert_cfg_expect_violation() {
+  local fixture_path="$1"
+  local reason_hint="$2"
+  cat > "$fixture_path"
+  set +e
+  local output
+  output="$(python3 "$PY_CHECKER" --root "$TMP_DIR" 2>&1)"
+  local code=$?
+  set -e
+  if [ "$code" -eq 0 ]; then
+    echo "$reason_hint" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$output" | grep -q '^reason_codes_value=production_expect_reachable$'; then
+    echo "expected deterministic reason_codes_value=production_expect_reachable for cfg production expect() violation" >&2
+    exit 1
+  fi
+  rm -f "$fixture_path"
+}
+
+assert_cfg_expect_violation \
+  "$TMP_DIR/cfg_feature_string_contains_test_substring.rs" \
+  "expected checker to fail when cfg(feature = \"*test*\") production expect() is present" <<'RS'
+#[cfg(feature = "contest-mode")]
+fn production_when_feature_enabled() {
+    let _value = std::env::var("X").expect("feature-gated production expect should be detected");
+}
+RS
+
+assert_cfg_expect_violation \
+  "$TMP_DIR/cfg_any_test_or_feature_production_violation.rs" \
+  "expected checker to fail when cfg(any(test, feature)) production expect() is present" <<'RS'
+#[cfg(any(test, feature = "production_gate"))]
+fn production_when_feature_enabled() {
+    let _value = std::env::var("X").expect("cfg(any(test, feature)) production expect should be detected");
+}
+RS
 
 echo "production expect checker tests passed."
