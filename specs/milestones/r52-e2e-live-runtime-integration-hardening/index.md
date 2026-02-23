@@ -2,7 +2,7 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810
 - Active issue(s): None
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
@@ -57,3 +57,4 @@
 48. Execute one merged-lineage remote branch cleanup tranche to restore branch-head target `<=50` after post-R55 drift to 51. (Completed)
 49. Add `kamn-core` live probe matrix module with fail-closed mode/scenario validation and deterministic aggregate helpers. (Completed)
 50. Activate opt-in live `S-02` direct-message round-trip scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance coverage. (Completed via #5808)
+51. Reconcile post-#5808 spec-volume cap regression by executing bounded archived-pointer cleanup to restore docs-contract non-regression guardrail compliance. (Completed via #5810)
