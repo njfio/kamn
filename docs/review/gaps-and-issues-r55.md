@@ -341,6 +341,17 @@ Over 444 commits across 6 cycles, 28 delivered genuine capability. R55 alone acc
 - r55_review_governance_structural_coupling_target_ratio_max_next_release=0.50
 - r55_review_governance_structural_coupling_budget_status=active_reduction_contract
 - r55_review_governance_structural_coupling_mitigation_issue=5831
+- r55_review_governance_remediation_budget_schema_version=kamn.review.governance-remediation-budget.v1
+- r55_review_governance_remediation_item_count=5
+- r55_review_governance_remediation_commit_count=25
+- r55_review_governance_remediation_commits_per_item=5.00
+- r55_review_governance_remediation_budget_max_commits_per_item=5.0
+- r55_review_governance_remediation_budget_status=within_budget
+- r55_review_spec_volume_non_regression_delta_schema_version=kamn.review.spec-volume-non-regression-delta-allowance.v1
+- r55_review_spec_volume_non_regression_base_cap=693
+- r55_review_spec_volume_non_regression_delta_allowance=1
+- r55_review_spec_volume_non_regression_effective_cap=694
+- r55_review_spec_volume_non_regression_status=within_effective_cap
 - r55_review_workspace_contract_file_cap_schema_version=kamn.review.workspace-contract-file-cap.v1
 - r55_review_workspace_contract_file_count_formula=count(files in crates/*/tests/*.rs where filename contains 'contract')
 - r55_review_workspace_contract_file_count_snapshot=140
