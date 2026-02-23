@@ -269,7 +269,19 @@ mod tests {
             Some(ServiceApiScope::TasksWrite)
         );
         assert_eq!(
+            required_scope_for_route("POST", "/v1/tasks/task-1/accept"),
+            Some(ServiceApiScope::TasksWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/tasks/task-1/complete"),
+            Some(ServiceApiScope::TasksWrite)
+        );
+        assert_eq!(
             required_scope_for_route("POST", ROUTE_ESCROW_FUND),
+            Some(ServiceApiScope::EscrowWrite)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/escrow/escrow-1/release"),
             Some(ServiceApiScope::EscrowWrite)
         );
         assert_eq!(
@@ -301,6 +313,14 @@ mod tests {
         assert_eq!(required_scope_for_route("GET", ROUTE_METRICS), None);
         assert_eq!(
             required_scope_for_route("DELETE", "/v1/unknown/path"),
+            Some(ServiceApiScope::ProtectedUnknown)
+        );
+        assert_eq!(
+            required_scope_for_route("POST", "/v1/unknown/path"),
+            Some(ServiceApiScope::ProtectedUnknown)
+        );
+        assert_eq!(
+            required_scope_for_route("GET", "/v1/unknown/path"),
             Some(ServiceApiScope::ProtectedUnknown)
         );
     }
