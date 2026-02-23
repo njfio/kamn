@@ -19,6 +19,7 @@ const DEFAULT_S03_MESSAGE_PAYLOAD: &str = r#"{"message":"mcp-agent-live-s03-chan
 const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"mcp-agent-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
+const DEFAULT_S05_FUND_ESCROW_PAYLOAD: &str = r#"{"task_id":"mcp-agent-live-s05","amount":1}"#;
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -35,6 +36,7 @@ pub struct McpAgentDriver {
     direct_message_probe: Arc<LiveMcpProbe>,
     group_channel_probe: Arc<LiveMcpProbe>,
     task_lifecycle_probe: Arc<LiveMcpProbe>,
+    escrow_settlement_probe: Arc<LiveMcpProbe>,
     proof_verification_probe: Arc<LiveMcpProbe>,
 }
 
@@ -63,7 +65,10 @@ impl McpAgentDriver {
             run_live_s02_mcp_direct_message_probe,
             run_live_s03_mcp_group_channel_probe,
             run_live_s04_mcp_task_lifecycle_probe,
-            run_live_s06_mcp_proof_verification_probe,
+            (
+                run_live_s05_mcp_escrow_settlement_probe,
+                run_live_s06_mcp_proof_verification_probe,
+            ),
         )
     }
 
@@ -87,19 +92,20 @@ impl McpAgentDriver {
             direct_message_probe: live_probe.clone(),
             task_lifecycle_probe: live_probe.clone(),
             group_channel_probe: live_probe.clone(),
+            escrow_settlement_probe: live_probe.clone(),
             proof_verification_probe: live_probe,
         })
     }
 
     /// Creates MCP driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J>(
+    pub fn with_probes<F, G, H, I, J, K>(
         mode: ExecutionMode,
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
-        proof_verification_probe: J,
+        escrow_and_proof_probes: (J, K),
     ) -> Result<Self, String>
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -107,10 +113,12 @@ impl McpAgentDriver {
         H: Fn() -> Result<(), String> + Send + Sync + 'static,
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
         J: Fn() -> Result<(), String> + Send + Sync + 'static,
+        K: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
         if !matches!(mode, ExecutionMode::McpTau | ExecutionMode::McpAny) {
             return Err("McpAgentDriver requires mcp-tau or mcp-any mode".to_owned());
         }
+        let (escrow_settlement_probe, proof_verification_probe) = escrow_and_proof_probes;
         Ok(Self {
             mode,
             live_execution_enabled,
@@ -118,6 +126,7 @@ impl McpAgentDriver {
             direct_message_probe: Arc::new(direct_message_probe),
             group_channel_probe: Arc::new(group_channel_probe),
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
+            escrow_settlement_probe: Arc::new(escrow_settlement_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
         })
     }
@@ -151,6 +160,7 @@ impl McpAgentDriver {
             "S-02" => Some((self.direct_message_probe)()),
             "S-03" => Some((self.group_channel_probe)()),
             "S-04" => Some((self.task_lifecycle_probe)()),
+            "S-05" => Some((self.escrow_settlement_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
             _ => None,
         }
@@ -654,6 +664,95 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s05_mcp_escrow_settlement_probe() -> Result<(), String> {
+    let binary =
+        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
+    let agent_name =
+        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
+    let key_file =
+        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let fund_payload = env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S05_FUND_ESCROW_PAYLOAD.to_owned());
+    let fund_agent_name = format!("{agent_name}-s05-fund");
+    let release_agent_name = format!("{agent_name}-s05-release");
+
+    let fund_arguments = format!(
+        "{{\"payload\":\"{}\"}}",
+        escape_json_scalar(fund_payload.as_str())
+    );
+    let fund_response = run_live_s05_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        fund_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-fund-escrow",
+        "fund_escrow",
+        fund_arguments.as_str(),
+    )?;
+    let escrow_id =
+        json_optional_string_field(fund_response.as_str(), "escrow_id").ok_or_else(|| {
+            format!("mcp live s05 fund_escrow response missing escrow_id field: {fund_response}")
+        })?;
+    if escrow_id.trim().is_empty() {
+        return Err("mcp live s05 fund_escrow returned empty escrow_id".to_owned());
+    }
+    let fund_state =
+        json_optional_string_field(fund_response.as_str(), "state").ok_or_else(|| {
+            format!("mcp live s05 fund_escrow response missing state field: {fund_response}")
+        })?;
+    if fund_state.trim().is_empty() {
+        return Err("mcp live s05 fund_escrow returned empty state".to_owned());
+    }
+
+    let release_arguments = format!(
+        "{{\"escrow_id\":\"{}\"}}",
+        escape_json_scalar(escrow_id.as_str())
+    );
+    let release_response = run_live_s05_mcp_tool_call(
+        binary.as_str(),
+        endpoint.as_str(),
+        release_agent_name.as_str(),
+        key_file.as_str(),
+        "probe-release-escrow",
+        "release_escrow",
+        release_arguments.as_str(),
+    )?;
+    let released_escrow_id = json_optional_string_field(release_response.as_str(), "escrow_id")
+        .ok_or_else(|| {
+            format!(
+                "mcp live s05 release_escrow response missing escrow_id field: {release_response}"
+            )
+        })?;
+    let release_state =
+        json_optional_string_field(release_response.as_str(), "state").ok_or_else(|| {
+            format!("mcp live s05 release_escrow response missing state field: {release_response}")
+        })?;
+    validate_live_s05_release_escrow_response(
+        escrow_id.as_str(),
+        released_escrow_id.as_str(),
+        release_state.as_str(),
+    )?;
+
+    Ok(())
+}
+
+fn validate_live_s05_release_escrow_response(
+    expected_escrow_id: &str,
+    released_escrow_id: &str,
+    release_state: &str,
+) -> Result<(), String> {
+    if released_escrow_id != expected_escrow_id {
+        return Err(format!(
+            "mcp live s05 release_escrow returned mismatched escrow_id: expected={expected_escrow_id}, got={released_escrow_id}"
+        ));
+    }
+    if release_state.trim().is_empty() {
+        return Err("mcp live s05 release_escrow returned empty state".to_owned());
+    }
+    Ok(())
+}
+
 fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
     let binary =
         env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
@@ -840,6 +939,27 @@ fn run_live_s03_mcp_tool_call(
     .map_err(|error| error.replace("mcp live s04", "mcp live s03"))
 }
 
+fn run_live_s05_mcp_tool_call(
+    binary: &str,
+    endpoint: &str,
+    agent_name: &str,
+    key_file: &str,
+    request_id: &str,
+    tool_name: &str,
+    arguments_json: &str,
+) -> Result<String, String> {
+    run_live_s04_mcp_tool_call(
+        binary,
+        endpoint,
+        agent_name,
+        key_file,
+        request_id,
+        tool_name,
+        arguments_json,
+    )
+    .map_err(|error| error.replace("mcp live s04", "mcp live s05"))
+}
+
 fn run_live_s06_mcp_tool_call(
     binary: &str,
     endpoint: &str,
@@ -984,7 +1104,8 @@ mod tests {
         parse_framed_jsonrpc_payloads, run_live_s01_mcp_probe,
         run_live_s02_mcp_direct_message_probe, run_live_s03_mcp_group_channel_probe,
         run_live_s04_mcp_task_lifecycle_probe, run_live_s04_mcp_tool_call,
-        run_live_s06_mcp_proof_verification_probe, validate_probe_health_response,
+        run_live_s05_mcp_escrow_settlement_probe, run_live_s06_mcp_proof_verification_probe,
+        validate_live_s05_release_escrow_response, validate_probe_health_response,
         validate_probe_initialize_response, McpAgentDriver, MCP_AGENT_BINARY_ENV,
         MCP_AGENT_LIVE_ENV,
     };
@@ -1313,6 +1434,39 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
     }
 
     #[test]
+    fn unit_run_live_s05_mcp_escrow_settlement_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (
+                    MCP_AGENT_BINARY_ENV,
+                    Some("/definitely/missing/kamn-mcp-server"),
+                ),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+                ("KAMN_AGENT_NAME", Some("probe")),
+                ("KAMN_AGENT_KEY_FILE", Some("/tmp/probe.key")),
+            ],
+            || {
+                let error = run_live_s05_mcp_escrow_settlement_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_validate_live_s05_release_escrow_response_rejects_mismatched_escrow_id() {
+        let error = validate_live_s05_release_escrow_response("escrow-a", "escrow-b", "released")
+            .expect_err("mismatched escrow ids should fail");
+        assert!(
+            error.contains("mismatched escrow_id"),
+            "error should describe escrow-id mismatch: {error}",
+        );
+    }
+
+    #[test]
     fn unit_run_live_s06_mcp_proof_verification_probe_rejects_missing_binary() {
         with_env_vars(
             &[
@@ -1630,6 +1784,19 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert_eq!(
             result.status, "fail",
             "live-enabled S-03 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c13_live_s05_driver_path_fails_closed_when_escrow_probe_errors() {
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, true, || {
+            Err("mcp-agent live s05 escrow probe failed".to_owned())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-05");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-05 should fail closed on probe error",
         );
     }
 
