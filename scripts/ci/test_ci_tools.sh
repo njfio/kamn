@@ -12,297 +12,84 @@ run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
     bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave_lightweight_contract_lane_dispatch_wrapper_matrix.sh" --wave "$lightweight_wave"
   done
 }
-if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
-  bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
-  bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh"
-  bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
-  bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
-  cargo test -p kamn-core --test shell_test_surface_migration_wave1
-  cargo test -p kamn-core --test shell_test_surface_migration_wave2
-  cargo test -p kamn-core --test shell_test_surface_ratio_policy
-  cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture
-  cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
-  cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
-  bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_drift.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_ignored_test_inventory_parser_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_daemon_os_signal_stress_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh"
-  run_non_kolme_wave_wrapper_family_contracts
-  bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"
-  run_non_kolme_lightweight_wave_wrapper_matrix_contracts
-  bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
-  bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"
-  bash "$ROOT_DIR/scripts/ci/test_pr_template_shell_surface_markers_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"
-  bash "$ROOT_DIR/scripts/ci/test_sync_flaky_registry_issues.sh"
-  bash "$ROOT_DIR/scripts/ci/test_generate_performance_smoke_report.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_performance_thresholds.sh"
-  bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh"
-  python3 "$ROOT_DIR/scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py"
-  bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_local_observability_scrape_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_service_api_prometheus_metrics_ci_exclusion_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_check_service_api_websocket_live_policy.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_select_failover_sync_drill_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_deep_lane.sh"
-  bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_suite.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_missing_docs_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_missing_docs_throughput_report_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_websocket_session_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_failover_drift_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_common_sh_helper_migration_contract.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_dispatcher_manifest_metadata_contract.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_kolme_live_integration_architecture_contract.sh"
-  bash "$ROOT_DIR/scripts/ci/test_check_test_layering_policy.sh"
-  bash "$ROOT_DIR/scripts/ci/test_ci_tools_command_surface_contract.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh"
-  bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh"
-  echo "Fast-mode CI tool regression tests passed."
-  exit 0
-fi
-
-bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"
-bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"
-bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh"
-bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"
-bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"
-cargo test -p kamn-core --test shell_test_surface_migration_wave1
-cargo test -p kamn-core --test shell_test_surface_migration_wave2
-cargo test -p kamn-core --test shell_test_surface_ratio_policy
-cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture
-cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture
-cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture
-cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture
-cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture
-cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture
-bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_drift.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_ignored_test_inventory_parser_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_daemon_os_signal_stress_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh"
-run_non_kolme_wave_wrapper_family_contracts
-bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"
-run_non_kolme_lightweight_wave_wrapper_matrix_contracts
-bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
-bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"
-bash "$ROOT_DIR/scripts/ci/test_pr_template_shell_surface_markers_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"
-bash "$ROOT_DIR/scripts/ci/test_sync_flaky_registry_issues.sh"
-bash "$ROOT_DIR/scripts/ci/test_generate_performance_smoke_report.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_performance_thresholds.sh"
-bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_local_observability_scrape_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_unified_api_observability_local_heavy_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_unified_api_observability_local_heavy_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_unified_api_observability_local_heavy_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_service_api_prometheus_metrics_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_websocket_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_missing_docs_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_missing_docs_throughput_report_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_websocket_session_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_failover_drift_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh"
-bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_kolme_live_integration_architecture_contract.sh"
-bash "$ROOT_DIR/scripts/ci/test_check_test_layering_policy.sh"
-bash "$ROOT_DIR/scripts/ci/test_ci_tools_command_surface_contract.sh"
+run_command_list() {
+  local command
+  for command in "$@"; do
+    eval "$command"
+  done
+}
+fast_pre_wave_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"' 'bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh"' 'bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"' 'cargo test -p kamn-core --test shell_test_surface_migration_wave1' 'cargo test -p kamn-core --test shell_test_surface_migration_wave2' 'cargo test -p kamn-core --test shell_test_surface_ratio_policy' 'cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture'
+  'cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture' 'cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture'
+  'bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_drift.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_ignored_test_inventory_parser_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_daemon_os_signal_stress_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh"'
+)
+fast_between_wave_and_lightweight_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"'
+  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"'
+)
+fast_post_lightweight_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"' 'bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"' 'bash "$ROOT_DIR/scripts/ci/test_pr_template_shell_surface_markers_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_sync_flaky_registry_issues.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_performance_smoke_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_performance_thresholds.sh"' 'bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh"' 'python3 "$ROOT_DIR/scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py"' 'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_local_observability_scrape_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_service_api_prometheus_metrics_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_websocket_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_select_failover_sync_drill_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_suite.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_missing_docs_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_missing_docs_throughput_report_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_websocket_session_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_failover_drift_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_common_sh_helper_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_dispatcher_manifest_metadata_contract.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_live_integration_architecture_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_test_layering_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_ci_tools_command_surface_contract.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh"'
+)
+full_pre_wave_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_anti_flake_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_anti_flake_merge_gate_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_shell_rust_ratio_guardrail.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_loc_hard_ceiling.sh"' 'bash "$ROOT_DIR/scripts/ci/test_fast_gate_shell_surface_ratio_policy_wiring.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_spec_archive_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_superseded_script_deletion_manifest.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_stale_script_references.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_shell_surface_threshold_ratchet.sh"' 'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_compaction.sh"' 'bash "$ROOT_DIR/scripts/ci/test_shell_surface_issue_intake_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_collect_shell_rust_loc_telemetry.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_combined_shell_surface_trend_report.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_combined_shell_surface_trend_policy.sh"' 'cargo test -p kamn-core --test shell_test_surface_migration_wave1' 'cargo test -p kamn-core --test shell_test_surface_migration_wave2' 'cargo test -p kamn-core --test shell_test_surface_ratio_policy' 'cargo test -p kamn-core --test compatibility_ci_dry_run_governance_contract -- --nocapture'
+  'cargo test -p kamn-core --test performance_ci_smoke_governance_contract -- --nocapture' 'cargo test -p kamn-core --test capacity_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test sqlite_crash_recovery_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test lifecycle_ci_dry_run_governance_contract -- --nocapture' 'cargo test -p kamn-core --test dependency_ci_smoke_checker_contract -- --nocapture'
+  'bash "$ROOT_DIR/scripts/ci/test_check_workspace_license_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_observability_endpoint_drift_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_drift.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_ignored_test_inventory_parser_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_reproducer.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_run_daemon_os_signal_stress_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_daemon_os_signal_stress_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_select_targets.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_wave_budget_trend_runner_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh"'
+)
+full_between_wave_and_lightweight_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"'
+  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/ci/test_wrapper_dispatch_legacy_entrypoint_compatibility.sh"'
+)
+full_post_lightweight_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"' 'bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"' 'bash "$ROOT_DIR/scripts/ci/test_pr_template_shell_surface_markers_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_sync_flaky_registry_issues.sh"' 'bash "$ROOT_DIR/scripts/ci/test_generate_performance_smoke_report.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_performance_thresholds.sh"' 'bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_local_signal_secret_hygiene_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_local_full_stack_integration_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_local_observability_scrape_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_unified_api_observability_local_heavy_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_unified_api_observability_local_heavy_live.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_unified_api_observability_local_heavy_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_unified_api_observability_local_heavy_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_service_api_prometheus_metrics_ci_exclusion_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_axum_ingress_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_websocket_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_websocket_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_missing_docs_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_missing_docs_throughput_report_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_kamn_core_live_https_dependency_posture.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_transport_observability_tls_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_websocket_session_ci_smoke_convergence.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_failover_drift_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_partition_finality_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_sqlite_crash_recovery_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_admission_backpressure_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_upgrade_compatibility_ci_smoke_convergence.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_custody_rotation_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_rehearsal_promotion_ci_smoke_convergence.sh"' 'bash "$ROOT_DIR/scripts/ci/test_readme_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_production_service_next_steps_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_ci_strategy_wave_range_marker_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_kolme_live_integration_architecture_contract.sh"' 'bash "$ROOT_DIR/scripts/ci/test_check_test_layering_policy.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_ci_tools_command_surface_contract.sh"'
+)
 kolme_ci_tests=(
   test_check_lane_migration_matrix_policy.sh test_contract_lane_dispatch_wrapper_matrix.sh
   test_validate_triadic_devnet_smoke.sh test_generate_fork_compatibility_evidence.sh
@@ -345,6 +132,82 @@ kolme_ci_tests=(
   test_check_local_runtime_commit_live_evidence_policy.sh test_validate_continuous_runtime_commit_live.sh
   test_validate_did_lifecycle_chain_adapter_live.sh test_validate_message_proof_anchoring_live.sh
 )
+full_post_kolme_pre_dashboard_commands=(
+  'bash "$ROOT_DIR/scripts/frontend/test_dashboard_package_runtime_compat.sh"' 'bash "$ROOT_DIR/scripts/frontend/test_dashboard_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh"' 'bash "$ROOT_DIR/scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh"' 'bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/sdk/test_rustdoc_policy_contract.sh"'
+)
+full_post_kolme_after_retry_commands=(
+  'bash "$ROOT_DIR/scripts/sdk/test_localhost_signed_scenario_runner.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_localhost_signed_report_composer.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_harness.sh"'
+  'bash "$ROOT_DIR/scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_replay_tamper_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_replay_tamper_fast_lane.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_check_live_transport_replay_tamper_policy.sh"'
+  'bash "$ROOT_DIR/scripts/sdk/test_run_tcp_signed_relay_demo.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_tcp_failover_reconnect_matrix.sh"'
+)
+if [ "${KAMN_CI_FORCE_SDK_STRIP_TYPES_TESTS:-false}" = "true" ]; then
+  run_sdk_strip_types_tests=true
+elif node --experimental-strip-types -e "" >/dev/null 2>&1; then
+  run_sdk_strip_types_tests=true
+else
+  run_sdk_strip_types_tests=false
+fi
+full_between_sdk_conditionals_commands=(
+  'bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_lane.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_check_live_transport_smoke_parity_policy.sh"' 'bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_contract_lane.sh"'
+)
+if [ "$run_sdk_strip_types_tests" = "true" ]; then
+  bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_parity_contract_lane.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_run_transport_profile_parity_matrix.sh"
+else
+  echo "skipping sdk strip-types-dependent parity tests in CI tools regression (node strip-types unavailable); smoke parity contract coverage remains active."
+fi
+full_tail_commands=(
+  'bash "$ROOT_DIR/scripts/signer/test_run_signer_emulator_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/did/test_generate_lifecycle_operator_binding_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/did/test_run_lifecycle_operator_binding_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/did/test_run_did_registry_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_live_network_smoke_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_concurrency_state_mutation_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_run_input_mutation_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_lifecycle_property_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_invariant_fuzz_concurrency_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_invariant_fuzz_concurrency_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_generate_live_network_pilot_artifact_summary.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_run_live_network_pilot_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_live_network_pilot_deep_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_runtime_snapshot_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_signal_secret_hygiene_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_local_signal_secret_hygiene_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_signal_secret_hygiene_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_full_io_scenario_matrix_live.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_full_io_scenario_matrix_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh"' 'python3 "$ROOT_DIR/scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_three_node_discovery_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_live_transport_fault_matrix_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_live_transport_fault_matrix_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_live_transport_fault_matrix_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_process_isolated_harness_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_process_isolated_harness_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_local_metrics_scrape_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_local_observability_scrape_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_serde_payload_parity_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_serde_payload_parity_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_reason_code_compatibility_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_reason_code_compatibility_live_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_validation_negative_matrix_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_validation_negative_matrix_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_graceful_shutdown_drain_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_graceful_shutdown_drain_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_shutdown_abrupt_close_regression_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_prometheus_metrics_live_policy.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_prometheus_metrics_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_observability_route_compatibility_live.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_check_service_api_observability_route_compatibility_live_policy.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_observability_route_compatibility_live_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_select_failover_sync_drill_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_deep_lane.sh"'
+  'bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_suite.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_message_lifecycle_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_didcomm_envelope_compatibility_replay.sh"' 'bash "$ROOT_DIR/scripts/message/test_check_didcomm_envelope_compatibility_policy.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_didcomm_envelope_compatibility_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/message/test_run_a2a_mcp_conformance_harness.sh"' 'bash "$ROOT_DIR/scripts/message/test_check_a2a_mcp_conformance_policy.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_a2a_mcp_conformance_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/message/test_generate_key_lifecycle_invariant_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_key_hierarchy_invariant_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/message/test_generate_group_sender_replay_ratchet_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/message/test_run_group_sender_replay_ratchet_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/channel/test_run_channel_lifecycle_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/channel/test_run_channel_policy_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/channel/test_generate_channel_retention_redaction_evidence_bundle.sh"'
+  'bash "$ROOT_DIR/scripts/channel/test_run_channel_retention_redaction_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/compliance/test_run_classification_redaction_lane.sh"' 'bash "$ROOT_DIR/scripts/compliance/test_check_classification_redaction_policy.sh"' 'bash "$ROOT_DIR/scripts/compliance/test_run_classification_redaction_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/governance/test_run_governance_lifecycle_rollback_lane.sh"'
+  'bash "$ROOT_DIR/scripts/governance/test_check_governance_lifecycle_rollback_policy.sh"' 'bash "$ROOT_DIR/scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh"' 'bash "$ROOT_DIR/scripts/governance/test_check_quorum_attestation_replay_policy.sh"' 'bash "$ROOT_DIR/scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/task/test_run_task_operation_snapshot_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/canary/test_run_launch_canary_matrix.sh"' 'bash "$ROOT_DIR/scripts/canary/test_run_launch_canary_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/canary/test_run_post_cutover_slo_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/cutover/test_validate_mainnet_cutover_manifest.sh"' 'bash "$ROOT_DIR/scripts/cutover/test_run_mainnet_cutover_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/cutover/test_run_cutover_rollback_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/cutover/test_check_cutover_ci_exclusion_policy.sh"'
+  'bash "$ROOT_DIR/scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_generate_weighted_decay_property_evidence_bundle.sh"'
+  'bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_matrix.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_matrix.sh"'
+  'bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_check_reputation_dispute_reason_code_policy.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_check_reputation_signal_quarantine_policy.sh"'
+  'bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_recovery_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_run_reputation_recovery_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/reputation/test_check_reputation_recovery_policy.sh"' 'bash "$ROOT_DIR/scripts/framework/test_contract_framework.sh"' 'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
+  'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"' 'bash "$ROOT_DIR/scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/treasury/test_generate_treasury_disbursement_evidence_bundle.sh"'
+  'bash "$ROOT_DIR/scripts/treasury/test_run_treasury_disbursement_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/guard/test_run_durable_guard_recovery_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_matrix.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_credential_redaction_check.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_credentialed_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/bridge/test_run_telegram_ingress_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_ingress_relay_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_outbound_quorum_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_generate_bridge_replay_redaction_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_redaction_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_redaction_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_bridge_deep_lane_dispatch_wrapper_matrix.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_relay_demo_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_generate_localhost_bridge_demo_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_deep_lane.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_generate_bridge_adapter_conformance_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/bridge/test_run_bridge_adapter_conformance_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_preflight_topology.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_generate_bundle.sh"'
+  'bash "$ROOT_DIR/scripts/deploy/test_generate_gonogo_evidence_bundle.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_run_gonogo_evidence_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_generate_staging_rehearsal_bundle.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_run_staging_rehearsal_contract_lane.sh"' 'bash "$ROOT_DIR/scripts/deploy/test_generate_dr_evidence_bundle.sh"'
+  'bash "$ROOT_DIR/scripts/deploy/test_run_dr_evidence_contract_lane.sh"'
+)
+
+if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
+  run_command_list "${fast_pre_wave_commands[@]}"
+  run_non_kolme_wave_wrapper_family_contracts
+  run_command_list "${fast_between_wave_and_lightweight_commands[@]}"
+  run_non_kolme_lightweight_wave_wrapper_matrix_contracts
+  run_command_list "${fast_post_lightweight_commands[@]}"
+  echo "Fast-mode CI tool regression tests passed."
+  exit 0
+fi
+
+run_command_list "${full_pre_wave_commands[@]}"
+run_non_kolme_wave_wrapper_family_contracts
+run_command_list "${full_between_wave_and_lightweight_commands[@]}"
+run_non_kolme_lightweight_wave_wrapper_matrix_contracts
+run_command_list "${full_post_lightweight_commands[@]}"
 for kolme_ci_test in "${kolme_ci_tests[@]}"; do
   bash "$ROOT_DIR/scripts/kolme/$kolme_ci_test"
 done
@@ -355,28 +218,12 @@ elif node --experimental-strip-types -e "" >/dev/null 2>&1; then
 else
   echo "skipping dashboard package runtime test in CI tools regression (node strip-types unavailable); runtime fallback contract remains covered."
 fi
-bash "$ROOT_DIR/scripts/frontend/test_dashboard_package_runtime_compat.sh"
-bash "$ROOT_DIR/scripts/frontend/test_dashboard_contract_lane.sh"
-bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh"
-bash "$ROOT_DIR/scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh"
-bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_rustdoc_policy_contract.sh"
+run_command_list "${full_post_kolme_pre_dashboard_commands[@]}"
 bash "$ROOT_DIR/scripts/ci/run_with_retry.sh" \
   --label "sdk-rust-live-transport-contract-lane" \
   --max-attempts 2 \
   -- bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_localhost_signed_scenario_runner.sh"
-bash "$ROOT_DIR/scripts/sdk/test_localhost_signed_report_composer.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_harness.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_replay_tamper_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_replay_tamper_fast_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_live_transport_replay_tamper_policy.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_tcp_signed_relay_demo.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_tcp_failover_reconnect_matrix.sh"
+run_command_list "${full_post_kolme_after_retry_commands[@]}"
 if [ "${KAMN_CI_FORCE_SDK_STRIP_TYPES_TESTS:-false}" = "true" ]; then
   run_sdk_strip_types_tests=true
 elif node --experimental-strip-types -e "" >/dev/null 2>&1; then
@@ -390,9 +237,7 @@ if [ "$run_sdk_strip_types_tests" = "true" ]; then
 else
   echo "skipping sdk strip-types-dependent parity tests in CI tools regression (node strip-types unavailable); smoke parity contract coverage remains active."
 fi
-bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_live_transport_smoke_parity_policy.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_contract_lane.sh"
+run_command_list "${full_between_sdk_conditionals_commands[@]}"
 if [ "$run_sdk_strip_types_tests" = "true" ]; then
   bash "$ROOT_DIR/scripts/sdk/test_generate_sdk_schema_compatibility_evidence_bundle.sh"
   bash "$ROOT_DIR/scripts/sdk/test_run_sdk_schema_compatibility_contract_lane.sh"
@@ -403,162 +248,6 @@ if [ "$run_sdk_strip_types_tests" = "true" ]; then
 else
   echo "skipping sdk strip-types-dependent schema compatibility and fixture-drift tests in CI tools regression (node strip-types unavailable)."
 fi
-bash "$ROOT_DIR/scripts/signer/test_run_signer_emulator_contract_lane.sh"
-bash "$ROOT_DIR/scripts/did/test_generate_lifecycle_operator_binding_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/did/test_run_lifecycle_operator_binding_contract_lane.sh"
-bash "$ROOT_DIR/scripts/did/test_run_did_registry_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_live_network_smoke_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_concurrency_state_mutation_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_input_mutation_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_lifecycle_property_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_invariant_fuzz_concurrency_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_invariant_fuzz_concurrency_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_generate_live_network_pilot_artifact_summary.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_live_network_pilot_deep_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_live_network_pilot_deep_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_runtime_snapshot_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_signal_secret_hygiene_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_local_signal_secret_hygiene_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_signal_secret_hygiene_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_full_io_scenario_matrix_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_full_io_scenario_matrix_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_recovery_live_evidence_convergence.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh"
-python3 "$ROOT_DIR/scripts/runtime/test_run_sqlite_crash_restart_local_heavy_lane.py"
-bash "$ROOT_DIR/scripts/runtime/test_check_sqlite_crash_restart_local_heavy_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_dependency_local_heavy_deep_scan_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_three_node_discovery_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_three_node_discovery_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_live_transport_fault_matrix_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_live_transport_fault_matrix_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_live_transport_fault_matrix_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_libp2p_process_isolated_harness_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_libp2p_process_isolated_harness_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_local_metrics_scrape_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_local_observability_scrape_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_serde_payload_parity_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_serde_payload_parity_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_reason_code_compatibility_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_reason_code_compatibility_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_validation_negative_matrix_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_validation_negative_matrix_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_graceful_shutdown_drain_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_graceful_shutdown_drain_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_shutdown_abrupt_close_regression_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_prometheus_metrics_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_prometheus_metrics_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_observability_route_compatibility_live.sh"
-bash "$ROOT_DIR/scripts/runtime/test_check_service_api_observability_route_compatibility_live_policy.sh"
-bash "$ROOT_DIR/scripts/runtime/test_validate_service_api_observability_route_compatibility_live_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh"
-bash "$ROOT_DIR/scripts/runtime/test_select_failover_sync_drill_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_deep_lane.sh"
-bash "$ROOT_DIR/scripts/runtime/test_run_failover_sync_drill_suite.sh"
-bash "$ROOT_DIR/scripts/message/test_run_message_lifecycle_contract_lane.sh"
-bash "$ROOT_DIR/scripts/message/test_run_didcomm_envelope_compatibility_replay.sh"
-bash "$ROOT_DIR/scripts/message/test_check_didcomm_envelope_compatibility_policy.sh"
-bash "$ROOT_DIR/scripts/message/test_run_didcomm_envelope_compatibility_contract_lane.sh"
-bash "$ROOT_DIR/scripts/message/test_run_a2a_mcp_conformance_harness.sh"
-bash "$ROOT_DIR/scripts/message/test_check_a2a_mcp_conformance_policy.sh"
-bash "$ROOT_DIR/scripts/message/test_run_a2a_mcp_conformance_contract_lane.sh"
-bash "$ROOT_DIR/scripts/message/test_generate_key_lifecycle_invariant_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/message/test_run_key_hierarchy_invariant_contract_lane.sh"
-bash "$ROOT_DIR/scripts/message/test_generate_group_sender_replay_ratchet_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/message/test_run_group_sender_replay_ratchet_contract_lane.sh"
-bash "$ROOT_DIR/scripts/channel/test_run_channel_lifecycle_contract_lane.sh"
-bash "$ROOT_DIR/scripts/channel/test_run_channel_policy_contract_lane.sh"
-bash "$ROOT_DIR/scripts/channel/test_generate_channel_retention_redaction_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/channel/test_run_channel_retention_redaction_contract_lane.sh"
-bash "$ROOT_DIR/scripts/compliance/test_run_classification_redaction_lane.sh"
-bash "$ROOT_DIR/scripts/compliance/test_check_classification_redaction_policy.sh"
-bash "$ROOT_DIR/scripts/compliance/test_run_classification_redaction_contract_lane.sh"
-bash "$ROOT_DIR/scripts/governance/test_run_governance_lifecycle_rollback_lane.sh"
-bash "$ROOT_DIR/scripts/governance/test_check_governance_lifecycle_rollback_policy.sh"
-bash "$ROOT_DIR/scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh"
-bash "$ROOT_DIR/scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh"
-bash "$ROOT_DIR/scripts/governance/test_check_quorum_attestation_replay_policy.sh"
-bash "$ROOT_DIR/scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh"
-bash "$ROOT_DIR/scripts/task/test_run_task_operation_snapshot_contract_lane.sh"
-bash "$ROOT_DIR/scripts/canary/test_run_launch_canary_matrix.sh"
-bash "$ROOT_DIR/scripts/canary/test_run_launch_canary_contract_lane.sh"
-bash "$ROOT_DIR/scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/canary/test_run_post_cutover_slo_contract_lane.sh"
-bash "$ROOT_DIR/scripts/cutover/test_validate_mainnet_cutover_manifest.sh"
-bash "$ROOT_DIR/scripts/cutover/test_run_mainnet_cutover_contract_lane.sh"
-bash "$ROOT_DIR/scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/cutover/test_run_cutover_rollback_contract_lane.sh"
-bash "$ROOT_DIR/scripts/cutover/test_check_cutover_ci_exclusion_policy.sh"
-bash "$ROOT_DIR/scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh"
-bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_contract_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_generate_weighted_decay_property_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_matrix.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_deep_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_contract_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_matrix.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_reputation_dispute_deep_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_check_reputation_dispute_reason_code_policy.sh"
-bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_check_reputation_signal_quarantine_policy.sh"
-bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_recovery_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/reputation/test_run_reputation_recovery_contract_lane.sh"
-bash "$ROOT_DIR/scripts/reputation/test_check_reputation_recovery_policy.sh"
-bash "$ROOT_DIR/scripts/framework/test_contract_framework.sh"
-bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"
-bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"
-bash "$ROOT_DIR/scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_contract_lane.sh"
-bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_deep_lane.sh"
-bash "$ROOT_DIR/scripts/treasury/test_generate_treasury_disbursement_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/treasury/test_run_treasury_disbursement_contract_lane.sh"
-bash "$ROOT_DIR/scripts/guard/test_run_durable_guard_recovery_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_matrix.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_credential_redaction_check.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_credentialed_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_telegram_ingress_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_ingress_relay_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_outbound_quorum_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_generate_bridge_replay_redaction_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_redaction_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_redaction_deep_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_bridge_deep_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_relay_demo_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_generate_localhost_bridge_demo_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_contract_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_deep_lane.sh"
-bash "$ROOT_DIR/scripts/bridge/test_generate_bridge_adapter_conformance_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/bridge/test_run_bridge_adapter_conformance_contract_lane.sh"
-bash "$ROOT_DIR/scripts/deploy/test_preflight_topology.sh"
-bash "$ROOT_DIR/scripts/deploy/test_generate_bundle.sh"
-bash "$ROOT_DIR/scripts/deploy/test_generate_gonogo_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/deploy/test_run_gonogo_evidence_contract_lane.sh"
-bash "$ROOT_DIR/scripts/deploy/test_generate_staging_rehearsal_bundle.sh"
-bash "$ROOT_DIR/scripts/deploy/test_run_staging_rehearsal_contract_lane.sh"
-bash "$ROOT_DIR/scripts/deploy/test_generate_dr_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/deploy/test_run_dr_evidence_contract_lane.sh"
+run_command_list "${full_tail_commands[@]}"
 
 echo "All CI tool regression tests passed."
