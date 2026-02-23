@@ -15,6 +15,9 @@ const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
     r#"{"title":"sdk-direct-live-s04","description":"live task lifecycle probe"}"#;
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
 const DEFAULT_S05_FUND_ESCROW_PAYLOAD: &str = r#"{"task_id":"sdk-direct-live-s05","amount":1}"#;
+const DEFAULT_S07_AGENT_NAME: &str = "kamn-e2e-sdk-s07";
+const DEFAULT_S07_MESSAGE_PAYLOAD: &str = r#"{"message":"sdk-direct-live-s07-replay"}"#;
+const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -22,7 +25,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, and S-06.
+/// SDK-direct driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, and S-07.
 #[derive(Clone)]
 pub struct SdkDirectDriver {
     live_execution_enabled: bool,
@@ -32,6 +35,7 @@ pub struct SdkDirectDriver {
     task_lifecycle_probe: Arc<LiveProbe>,
     escrow_settlement_probe: Arc<LiveProbe>,
     proof_verification_probe: Arc<LiveProbe>,
+    replay_protection_probe: Arc<LiveProbe>,
 }
 
 impl std::fmt::Debug for SdkDirectDriver {
@@ -59,7 +63,10 @@ impl SdkDirectDriver {
             run_live_s03_group_channel_probe,
             run_live_s04_task_lifecycle_probe,
             run_live_s05_escrow_settlement_probe,
-            run_live_s06_proof_verification_probe,
+            (
+                run_live_s06_proof_verification_probe,
+                run_live_s07_replay_protection_probe,
+            ),
         )
     }
 
@@ -76,19 +83,20 @@ impl SdkDirectDriver {
             task_lifecycle_probe: live_probe.clone(),
             group_channel_probe: live_probe.clone(),
             escrow_settlement_probe: live_probe.clone(),
-            proof_verification_probe: live_probe,
+            proof_verification_probe: live_probe.clone(),
+            replay_protection_probe: live_probe,
         }
     }
 
     /// Creates SDK-direct driver with explicit per-scenario probe implementations.
-    pub fn with_probes<F, G, H, I, J, K>(
+    pub fn with_probes<F, G, H, I, J, K, L>(
         live_execution_enabled: bool,
         discovery_probe: F,
         direct_message_probe: G,
         group_channel_probe: H,
         task_lifecycle_probe: I,
         escrow_settlement_probe: J,
-        proof_verification_probe: K,
+        proof_and_replay_probes: (K, L),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -97,7 +105,9 @@ impl SdkDirectDriver {
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
         J: Fn() -> Result<(), String> + Send + Sync + 'static,
         K: Fn() -> Result<(), String> + Send + Sync + 'static,
+        L: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
+        let (proof_verification_probe, replay_protection_probe) = proof_and_replay_probes;
         Self {
             live_execution_enabled,
             discovery_probe: Arc::new(discovery_probe),
@@ -106,6 +116,7 @@ impl SdkDirectDriver {
             task_lifecycle_probe: Arc::new(task_lifecycle_probe),
             escrow_settlement_probe: Arc::new(escrow_settlement_probe),
             proof_verification_probe: Arc::new(proof_verification_probe),
+            replay_protection_probe: Arc::new(replay_protection_probe),
         }
     }
 }
@@ -140,6 +151,7 @@ impl SdkDirectDriver {
             "S-04" => Some((self.task_lifecycle_probe)()),
             "S-05" => Some((self.escrow_settlement_probe)()),
             "S-06" => Some((self.proof_verification_probe)()),
+            "S-07" => Some((self.replay_protection_probe)()),
             _ => None,
         }
     }
@@ -575,14 +587,84 @@ fn run_live_s06_proof_verification_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s07_replay_protection_probe() -> Result<(), String> {
+    let endpoint =
+        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let kolme_endpoint =
+        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let base_agent_name = std::env::var("KAMN_E2E_S07_AGENT_NAME")
+        .unwrap_or_else(|_| DEFAULT_S07_AGENT_NAME.to_owned());
+    let message_payload = std::env::var("KAMN_E2E_S07_REPLAY_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S07_MESSAGE_PAYLOAD.to_owned());
+    let replay_agent_name = format!(
+        "{base_agent_name}-{}",
+        live_s07_probe_agent_suffix().as_str()
+    );
+
+    let first_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        replay_agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s07 connect failed: {error}"))?;
+    let first_receipt = first_handle
+        .send_message(message_payload.as_str())
+        .map_err(|error| format!("sdk-direct live s07 initial send-message failed: {error}"))?;
+    if first_receipt.message_id.trim().is_empty() {
+        return Err(
+            "sdk-direct live s07 initial send-message returned empty message_id".to_owned(),
+        );
+    }
+    if first_receipt.status.trim().is_empty() {
+        return Err("sdk-direct live s07 initial send-message returned empty status".to_owned());
+    }
+
+    let replay_handle = KamnAgentHandle::connect(
+        endpoint.as_str(),
+        kolme_endpoint.as_str(),
+        replay_agent_name.as_str(),
+    )
+    .map_err(|error| format!("sdk-direct live s07 connect failed: {error}"))?;
+    let replay_error = replay_handle
+        .send_message(message_payload.as_str())
+        .err()
+        .ok_or_else(|| {
+            "sdk-direct live s07 replay send-message unexpectedly succeeded".to_owned()
+        })?;
+    let replay_error_text = replay_error.to_string();
+    validate_s07_replay_reason_marker(
+        replay_error_text.as_str(),
+        "sdk-direct live s07 replay send-message",
+    )?;
+
+    Ok(())
+}
+
+fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
+    if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
+        return Err(format!(
+            "{step} missing replay reason marker: {replay_error}"
+        ));
+    }
+    Ok(())
+}
+
+fn live_s07_probe_agent_suffix() -> String {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_nanos().to_string())
+        .unwrap_or_else(|_| "0".to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         live_execution_enabled_from_env, parse_bool_flag, run_live_s01_discovery_probe,
         run_live_s02_direct_message_probe, run_live_s03_group_channel_probe,
         run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
-        run_live_s06_proof_verification_probe, validate_live_s03_list_messages_response,
-        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
+        run_live_s06_proof_verification_probe, run_live_s07_replay_protection_probe,
+        validate_live_s03_list_messages_response, validate_live_s03_query_message_response,
+        validate_live_s05_release_escrow_receipt, validate_s07_replay_reason_marker,
         SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
@@ -807,6 +889,53 @@ mod tests {
     }
 
     #[test]
+    fn unit_run_live_s07_replay_protection_probe_rejects_invalid_endpoint() {
+        with_env_vars(
+            &[
+                ("KAMN_ENDPOINT", Some("invalid-endpoint")),
+                ("KAMN_KOLME_ENDPOINT", Some("http://localhost:3000")),
+            ],
+            || {
+                let error = run_live_s07_replay_protection_probe()
+                    .expect_err("invalid endpoint should fail");
+                assert!(
+                    error.contains("connect failed"),
+                    "probe error should reflect connection failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
+        validate_s07_replay_reason_marker(
+            "operation failed: service_api_auth_replay_nonce_detected",
+            "test helper",
+        )
+        .expect("expected marker should be accepted");
+    }
+
+    #[test]
+    fn unit_validate_s07_replay_reason_marker_rejects_missing_marker() {
+        let error = validate_s07_replay_reason_marker("operation failed", "test helper")
+            .expect_err("missing marker should fail");
+        assert!(
+            error.contains("missing replay reason marker"),
+            "error should mention replay marker contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_live_s07_probe_agent_suffix_is_non_empty_numeric() {
+        let suffix = super::live_s07_probe_agent_suffix();
+        assert!(!suffix.is_empty(), "suffix should be non-empty");
+        assert!(
+            suffix.chars().all(|character| character.is_ascii_digit()),
+            "suffix should be numeric: {suffix}",
+        );
+    }
+
+    #[test]
     fn unit_run_live_s06_proof_verification_probe_accepts_final_verified_receipt() {
         with_env_vars(
             &[
@@ -893,6 +1022,18 @@ mod tests {
         assert_eq!(
             result.status, "fail",
             "live-enabled S-05 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c07_live_s07_driver_path_fails_closed_when_replay_probe_errors() {
+        let driver = SdkDirectDriver::with_probe(true, || {
+            Err("sdk-direct live s07 replay probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-07");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-07 should fail closed on probe error",
         );
     }
 }

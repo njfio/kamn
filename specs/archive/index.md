@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-18
-- archived_issue_count: 234
+- archived_issue_count: 233
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -19,7 +19,6 @@
 | 3925 | `Subtask: wire runtime backpressure and queue-shedding into live transport dispatch` | 2026-02-18 | `specs/archive/3925` | `specs/3925/ARCHIVED.md` |
 | 3926 | `Subtask: add regression tests for Accept/Reject/Suspend backpressure decisions and reason codes` | 2026-02-18 | `specs/archive/3926` | `specs/3926/ARCHIVED.md` |
 | 3963 | Epic: R27.7 reduce script-surface sprawl and accelerate docs graduation closure | 2026-02-18 | `specs/archive/3963` | `specs/3963/ARCHIVED.md` |
-| 3964 | Story: migrate remaining wrapper families to manifest dispatcher with parity guarantees | 2026-02-18 | `specs/archive/3964` | `specs/3964/ARCHIVED.md` |
 | 3965 | Story: graduate missing-docs allow-list modules and improve architecture navigability contracts | 2026-02-18 | `specs/archive/3965` | `specs/3965/ARCHIVED.md` |
 | 3966 | Task: inventory and migrate prioritized high-LOC wrapper families to manifest shared implementations | 2026-02-18 | `specs/archive/3966` | `specs/3966/ARCHIVED.md` |
 | 3968 | Task: graduate target missing-docs modules with public API coverage contracts | 2026-02-18 | `specs/archive/3968` | `specs/3968/ARCHIVED.md` |

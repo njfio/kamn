@@ -20,6 +20,9 @@ const DEFAULT_S04_CREATE_TASK_PAYLOAD: &str =
 const DEFAULT_S04_ESCROW_AMOUNT: u64 = 1;
 const DEFAULT_S05_AGENT_NAME: &str = "kamn-e2e-cli-s05";
 const DEFAULT_S05_FUND_ESCROW_PAYLOAD: &str = r#"{"task_id":"cli-scripted-live-s05","amount":1}"#;
+const DEFAULT_S07_AGENT_NAME: &str = "kamn-e2e-cli-s07";
+const DEFAULT_S07_MESSAGE_PAYLOAD: &str = r#"{"message":"cli-scripted-live-s07-replay"}"#;
+const S07_REPLAY_REASON_MARKER: &str = "service_api_auth_replay_nonce_detected";
 const DEFAULT_S06_MESSAGE_ID: &str = "s06-live-proof";
 const DEFAULT_S06_TX_HASH: &str = "sha256:s06-live-proof";
 const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
@@ -27,7 +30,7 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveCliRunner = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
-/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, and S-06.
+/// CLI-scripted driver with optional live execution for S-01, S-02, S-03, S-04, S-05, S-06, and S-07.
 #[derive(Clone)]
 pub struct CliScriptedDriver {
     live_execution_enabled: bool,
@@ -37,6 +40,7 @@ pub struct CliScriptedDriver {
     task_lifecycle_runner: Arc<LiveCliRunner>,
     escrow_settlement_runner: Arc<LiveCliRunner>,
     proof_verification_runner: Arc<LiveCliRunner>,
+    replay_protection_runner: Arc<LiveCliRunner>,
 }
 
 impl std::fmt::Debug for CliScriptedDriver {
@@ -64,7 +68,10 @@ impl CliScriptedDriver {
             run_live_s03_cli_group_channel_probe,
             run_live_s04_cli_task_lifecycle_probe,
             run_live_s05_cli_escrow_settlement_probe,
-            run_live_s06_cli_proof_verification_probe,
+            (
+                run_live_s06_cli_proof_verification_probe,
+                run_live_s07_cli_replay_protection_probe,
+            ),
         )
     }
 
@@ -81,19 +88,20 @@ impl CliScriptedDriver {
             task_lifecycle_runner: live_runner.clone(),
             group_channel_runner: live_runner.clone(),
             escrow_settlement_runner: live_runner.clone(),
-            proof_verification_runner: live_runner,
+            proof_verification_runner: live_runner.clone(),
+            replay_protection_runner: live_runner,
         }
     }
 
     /// Creates CLI-scripted driver with explicit per-scenario live runners.
-    pub fn with_runners<F, G, H, I, J, K>(
+    pub fn with_runners<F, G, H, I, J, K, L>(
         live_execution_enabled: bool,
         discovery_runner: F,
         direct_message_runner: G,
         group_channel_runner: H,
         task_lifecycle_runner: I,
         escrow_settlement_runner: J,
-        proof_verification_runner: K,
+        proof_and_replay_runners: (K, L),
     ) -> Self
     where
         F: Fn() -> Result<(), String> + Send + Sync + 'static,
@@ -102,7 +110,9 @@ impl CliScriptedDriver {
         I: Fn() -> Result<(), String> + Send + Sync + 'static,
         J: Fn() -> Result<(), String> + Send + Sync + 'static,
         K: Fn() -> Result<(), String> + Send + Sync + 'static,
+        L: Fn() -> Result<(), String> + Send + Sync + 'static,
     {
+        let (proof_verification_runner, replay_protection_runner) = proof_and_replay_runners;
         Self {
             live_execution_enabled,
             discovery_runner: Arc::new(discovery_runner),
@@ -111,6 +121,7 @@ impl CliScriptedDriver {
             task_lifecycle_runner: Arc::new(task_lifecycle_runner),
             escrow_settlement_runner: Arc::new(escrow_settlement_runner),
             proof_verification_runner: Arc::new(proof_verification_runner),
+            replay_protection_runner: Arc::new(replay_protection_runner),
         }
     }
 }
@@ -145,6 +156,7 @@ impl CliScriptedDriver {
             "S-04" => Some((self.task_lifecycle_runner)()),
             "S-05" => Some((self.escrow_settlement_runner)()),
             "S-06" => Some((self.proof_verification_runner)()),
+            "S-07" => Some((self.replay_protection_runner)()),
             _ => None,
         }
     }
@@ -748,12 +760,104 @@ fn run_live_s06_cli_proof_verification_probe() -> Result<(), String> {
     Ok(())
 }
 
+fn run_live_s07_cli_replay_protection_probe() -> Result<(), String> {
+    let cli_binary = env::var(CLI_BINARY_ENV).unwrap_or_else(|_| DEFAULT_CLI_BINARY.to_owned());
+    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
+    let base_agent_name =
+        env::var("KAMN_E2E_S07_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S07_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S07_REPLAY_PAYLOAD")
+        .unwrap_or_else(|_| DEFAULT_S07_MESSAGE_PAYLOAD.to_owned());
+    let replay_agent_name = format!(
+        "{base_agent_name}-{}",
+        live_s07_probe_agent_suffix().as_str()
+    );
+
+    let initial_output = run_cli_command_capture_stdout_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s07 initial send-message",
+        replay_agent_name.as_str(),
+    )?;
+    let initial_message_id = parse_text_output_field(initial_output.as_str(), "message_id")
+        .ok_or_else(|| {
+            format!(
+                "cli live s07 initial send-message response missing message_id field: {initial_output}"
+            )
+        })?;
+    if initial_message_id.trim().is_empty() {
+        return Err("cli live s07 initial send-message returned empty message_id".to_owned());
+    }
+    let initial_status =
+        parse_text_output_field(initial_output.as_str(), "status").ok_or_else(|| {
+            format!(
+                "cli live s07 initial send-message response missing status field: {initial_output}"
+            )
+        })?;
+    if initial_status.trim().is_empty() {
+        return Err("cli live s07 initial send-message returned empty status".to_owned());
+    }
+
+    let replay_error = run_cli_command_expect_failure_with_agent_name(
+        cli_binary.as_str(),
+        &[
+            "send-message",
+            "--endpoint",
+            endpoint.as_str(),
+            "--format",
+            "text",
+            message_payload.as_str(),
+        ],
+        "cli live s07 replay send-message",
+        replay_agent_name.as_str(),
+    )?;
+    validate_s07_replay_reason_marker(replay_error.as_str(), "cli live s07 replay send-message")?;
+
+    Ok(())
+}
+
 fn run_cli_command_capture_stdout(
     cli_binary: &str,
     args: &[&str],
     step: &str,
 ) -> Result<String, String> {
     run_cli_command_capture_stdout_with_optional_agent_name(cli_binary, args, step, None)
+}
+
+fn run_cli_command_expect_failure_with_agent_name(
+    cli_binary: &str,
+    args: &[&str],
+    step: &str,
+    agent_name: &str,
+) -> Result<String, String> {
+    let mut command = Command::new(cli_binary);
+    command
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("KAMN_AGENT_NAME", agent_name);
+    let output = command
+        .output()
+        .map_err(|error| format!("{step} failed to spawn: {error}"))?;
+
+    if output.status.success() {
+        return Err(format!("{step} unexpectedly succeeded"));
+    }
+
+    let stderr = String::from_utf8_lossy(output.stderr.as_slice())
+        .trim()
+        .to_owned();
+    if stderr.is_empty() {
+        return Err(format!("{step} failed without stderr details"));
+    }
+    Ok(stderr)
 }
 
 fn run_cli_command_capture_stdout_with_agent_name(
@@ -814,6 +918,22 @@ fn parse_text_output_field<'a>(output: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
+fn validate_s07_replay_reason_marker(replay_error: &str, step: &str) -> Result<(), String> {
+    if !replay_error.contains(S07_REPLAY_REASON_MARKER) {
+        return Err(format!(
+            "{step} missing replay reason marker: {replay_error}"
+        ));
+    }
+    Ok(())
+}
+
+fn live_s07_probe_agent_suffix() -> String {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_nanos().to_string())
+        .unwrap_or_else(|_| "0".to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::env;
@@ -822,7 +942,8 @@ mod tests {
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
         run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
         run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
-        run_live_s06_cli_proof_verification_probe, validate_live_s05_release_escrow_response,
+        run_live_s06_cli_proof_verification_probe, run_live_s07_cli_replay_protection_probe,
+        validate_live_s05_release_escrow_response, validate_s07_replay_reason_marker,
         CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
@@ -1127,6 +1248,24 @@ else:
     }
 
     #[test]
+    fn unit_run_live_s07_cli_replay_protection_probe_rejects_missing_binary() {
+        with_env_vars(
+            &[
+                (CLI_BINARY_ENV, Some("/definitely/missing/kamn-cli")),
+                ("KAMN_ENDPOINT", Some("http://localhost:8080")),
+            ],
+            || {
+                let error = run_live_s07_cli_replay_protection_probe()
+                    .expect_err("missing binary should fail");
+                assert!(
+                    error.contains("failed to spawn"),
+                    "error should reflect spawn failure: {error}",
+                );
+            },
+        );
+    }
+
+    #[test]
     fn unit_run_live_s06_cli_proof_verification_probe_accepts_success_payload() {
         let script_path = unique_temp_script_path("kamn-e2e-cli-s06-success");
         let script_source = format!(
@@ -1181,11 +1320,67 @@ sys.stdout.write({payload:?})
     }
 
     #[test]
+    fn unit_run_cli_command_expect_failure_with_agent_name_returns_stderr() {
+        let output = super::run_cli_command_expect_failure_with_agent_name(
+            "/bin/sh",
+            &["-c", "echo replay >&2; exit 2"],
+            "test helper",
+            "probe",
+        )
+        .expect("stderr should be captured on expected failure");
+        assert_eq!(output, "replay");
+    }
+
+    #[test]
+    fn unit_run_cli_command_expect_failure_with_agent_name_rejects_success_status() {
+        let error = super::run_cli_command_expect_failure_with_agent_name(
+            "/bin/sh",
+            &["-c", "exit 0"],
+            "test helper",
+            "probe",
+        )
+        .expect_err("success status should be rejected");
+        assert!(
+            error.contains("unexpectedly succeeded"),
+            "error should mention unexpected success: {error}",
+        );
+    }
+
+    #[test]
     fn unit_parse_text_output_field_extracts_known_keys_and_missing_is_none() {
         let output = "task_id=task-1 state=created";
         assert_eq!(parse_text_output_field(output, "task_id"), Some("task-1"));
         assert_eq!(parse_text_output_field(output, "state"), Some("created"));
         assert_eq!(parse_text_output_field(output, "missing"), None);
+    }
+
+    #[test]
+    fn unit_validate_s07_replay_reason_marker_accepts_expected_marker() {
+        validate_s07_replay_reason_marker(
+            "operation failed: service_api_auth_replay_nonce_detected",
+            "test helper",
+        )
+        .expect("expected marker should be accepted");
+    }
+
+    #[test]
+    fn unit_validate_s07_replay_reason_marker_rejects_missing_marker() {
+        let error = validate_s07_replay_reason_marker("operation failed", "test helper")
+            .expect_err("missing marker should fail");
+        assert!(
+            error.contains("missing replay reason marker"),
+            "error should mention replay marker contract: {error}",
+        );
+    }
+
+    #[test]
+    fn unit_live_s07_probe_agent_suffix_is_non_empty_numeric() {
+        let suffix = super::live_s07_probe_agent_suffix();
+        assert!(!suffix.is_empty(), "suffix should be non-empty");
+        assert!(
+            suffix.chars().all(|character| character.is_ascii_digit()),
+            "suffix should be numeric: {suffix}",
+        );
     }
 
     #[test]
@@ -1253,6 +1448,18 @@ sys.stdout.write({payload:?})
         assert_eq!(
             result.status, "fail",
             "live-enabled S-05 should fail closed on probe error",
+        );
+    }
+
+    #[test]
+    fn spec_c07_live_s07_driver_path_fails_closed_when_replay_probe_errors() {
+        let driver = CliScriptedDriver::with_runner(true, || {
+            Err("cli-scripted live s07 replay probe failed".to_owned())
+        });
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-07");
+        assert_eq!(
+            result.status, "fail",
+            "live-enabled S-07 should fail closed on probe error",
         );
     }
 }
