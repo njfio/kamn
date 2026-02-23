@@ -498,16 +498,28 @@ fn run_live_s05_escrow_settlement_probe() -> Result<(), String> {
     let release_receipt = release_handle
         .release_escrow(funded_receipt.escrow_id.as_str())
         .map_err(|error| format!("sdk-direct live s05 release-escrow failed: {error}"))?;
-    if release_receipt.escrow_id != funded_receipt.escrow_id {
+    validate_live_s05_release_escrow_receipt(
+        funded_receipt.escrow_id.as_str(),
+        release_receipt.escrow_id.as_str(),
+        release_receipt.state.as_str(),
+    )?;
+
+    Ok(())
+}
+
+fn validate_live_s05_release_escrow_receipt(
+    expected_escrow_id: &str,
+    released_escrow_id: &str,
+    released_state: &str,
+) -> Result<(), String> {
+    if released_escrow_id != expected_escrow_id {
         return Err(format!(
-            "sdk-direct live s05 release-escrow returned mismatched escrow_id: expected={}, got={}",
-            funded_receipt.escrow_id, release_receipt.escrow_id
+            "sdk-direct live s05 release-escrow returned mismatched escrow_id: expected={expected_escrow_id}, got={released_escrow_id}"
         ));
     }
-    if release_receipt.state.trim().is_empty() {
+    if released_state.trim().is_empty() {
         return Err("sdk-direct live s05 release-escrow returned empty state".to_owned());
     }
-
     Ok(())
 }
 
@@ -570,7 +582,8 @@ mod tests {
         run_live_s02_direct_message_probe, run_live_s03_group_channel_probe,
         run_live_s04_task_lifecycle_probe, run_live_s05_escrow_settlement_probe,
         run_live_s06_proof_verification_probe, validate_live_s03_list_messages_response,
-        validate_live_s03_query_message_response, SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
+        validate_live_s03_query_message_response, validate_live_s05_release_escrow_receipt,
+        SdkDirectDriver, SDK_DIRECT_LIVE_ENV,
     };
     use std::env;
     use std::ffi::OsString;
@@ -765,6 +778,16 @@ mod tests {
                     "probe error should reflect connection failure: {error}",
                 );
             },
+        );
+    }
+
+    #[test]
+    fn unit_validate_live_s05_release_escrow_receipt_rejects_mismatched_escrow_id() {
+        let error = validate_live_s05_release_escrow_receipt("escrow-a", "escrow-b", "released")
+            .expect_err("mismatched escrow ids should fail");
+        assert!(
+            error.contains("mismatched escrow_id"),
+            "error should describe escrow-id mismatch: {error}",
         );
     }
 

@@ -650,19 +650,32 @@ fn run_live_s05_cli_escrow_settlement_probe() -> Result<(), String> {
                 "cli live s05 release-escrow response missing escrow_id field: {release_output}"
             )
         })?;
-    if released_escrow_id != escrow_id {
-        return Err(format!(
-            "cli live s05 release-escrow returned mismatched escrow_id: expected={escrow_id}, got={released_escrow_id}"
-        ));
-    }
     let release_state =
         parse_text_output_field(release_output.as_str(), "state").ok_or_else(|| {
             format!("cli live s05 release-escrow response missing state field: {release_output}")
         })?;
+    validate_live_s05_release_escrow_response(
+        escrow_id.as_str(),
+        released_escrow_id,
+        release_state,
+    )?;
+
+    Ok(())
+}
+
+fn validate_live_s05_release_escrow_response(
+    expected_escrow_id: &str,
+    released_escrow_id: &str,
+    release_state: &str,
+) -> Result<(), String> {
+    if released_escrow_id != expected_escrow_id {
+        return Err(format!(
+            "cli live s05 release-escrow returned mismatched escrow_id: expected={expected_escrow_id}, got={released_escrow_id}"
+        ));
+    }
     if release_state.trim().is_empty() {
         return Err("cli live s05 release-escrow returned empty state".to_owned());
     }
-
     Ok(())
 }
 
@@ -809,8 +822,8 @@ mod tests {
         run_cli_command_capture_stdout, run_live_s01_cli_health_probe,
         run_live_s02_cli_direct_message_probe, run_live_s03_cli_group_channel_probe,
         run_live_s04_cli_task_lifecycle_probe, run_live_s05_cli_escrow_settlement_probe,
-        run_live_s06_cli_proof_verification_probe, CliScriptedDriver, CLI_BINARY_ENV,
-        CLI_SCRIPTED_LIVE_ENV,
+        run_live_s06_cli_proof_verification_probe, validate_live_s05_release_escrow_response,
+        CliScriptedDriver, CLI_BINARY_ENV, CLI_SCRIPTED_LIVE_ENV,
     };
     use std::ffi::OsString;
     use std::fs;
@@ -1082,6 +1095,16 @@ else:
                     "error should reflect spawn failure: {error}",
                 );
             },
+        );
+    }
+
+    #[test]
+    fn unit_validate_live_s05_release_escrow_response_rejects_mismatched_escrow_id() {
+        let error = validate_live_s05_release_escrow_response("escrow-a", "escrow-b", "released")
+            .expect_err("mismatched escrow ids should fail");
+        assert!(
+            error.contains("mismatched escrow_id"),
+            "error should describe escrow-id mismatch: {error}",
         );
     }
 
