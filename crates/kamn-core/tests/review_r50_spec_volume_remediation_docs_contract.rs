@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -41,6 +41,49 @@ fn current_spec_directory_count() -> usize {
         })
         .collect::<BTreeSet<_>>()
         .len()
+}
+
+fn current_active_spec_directory_count() -> usize {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "specs"])
+        .output()
+        .expect("git should be available for tracked spec-dir discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files specs failed with status {:?}",
+        output.status.code()
+    );
+
+    let mut active_by_top_level = BTreeMap::<String, bool>::new();
+    for line in String::from_utf8(output.stdout)
+        .expect("git ls-files output should be valid UTF-8")
+        .lines()
+    {
+        let mut parts = line.split('/');
+        let Some(root) = parts.next() else {
+            continue;
+        };
+        if root != "specs" {
+            continue;
+        }
+        let Some(top_level) = parts.next() else {
+            continue;
+        };
+        let remainder = parts.collect::<Vec<_>>();
+        let is_archive_pointer_only = remainder.len() == 1 && remainder[0] == "ARCHIVED.md";
+        let entry = active_by_top_level
+            .entry(top_level.to_string())
+            .or_insert(false);
+        if !is_archive_pointer_only {
+            *entry = true;
+        }
+    }
+
+    active_by_top_level
+        .values()
+        .filter(|is_active| **is_active)
+        .count()
 }
 
 fn current_module_export_count() -> usize {
@@ -200,8 +243,9 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         parse_marker_text(DOC_R55, "r55_review_spec_volume_non_regression_status");
 
     let current_spec_dirs = current_spec_directory_count();
+    let current_active_spec_dirs = current_active_spec_directory_count();
     let current_module_count = current_module_export_count();
-    let current_ratio = current_spec_dirs as f64 / current_module_count as f64;
+    let current_ratio = current_active_spec_dirs as f64 / current_module_count as f64;
 
     let computed_target_spec_dir_max = (target_ratio_max * module_count as f64).floor() as usize;
     assert_eq!(computed_target_spec_dir_max, target_spec_dir_max);
@@ -250,8 +294,12 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         "current spec-dir count must not exceed effective non-regression cap"
     );
     assert!(
+        current_active_spec_dirs <= current_spec_dirs,
+        "active spec-dir count must not exceed tracked top-level spec-dir count"
+    );
+    assert!(
         current_ratio <= non_regression_ratio_max,
-        "current spec-to-module ratio must not exceed non-regression max"
+        "current active spec-to-module ratio must not exceed non-regression max"
     );
 }
 
