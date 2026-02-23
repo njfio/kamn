@@ -20,7 +20,7 @@ required_markers=(
   "status=ok"
   "verified=true"
   "adapter=tcp"
-  "signature=sig:ed25519:baseline-v1:"
+  "signature=sig:secp256k1:baseline-v2:"
   "tcp signed relay demo completed."
 )
 
