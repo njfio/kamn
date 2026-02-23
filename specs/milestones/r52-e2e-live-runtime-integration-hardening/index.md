@@ -2,7 +2,7 @@
 
 - Milestone: `R52 E2E Live Runtime Integration Hardening`
 - Epic: #5611
-- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810, #5812, #5814, #5815, #5818, #5820, #5822, #5824, #5826
+- Completed issue(s): #5610, #5613, #5615, #5617, #5692, #5693, #5696, #5698, #5700, #5702, #5708, #5711, #5714, #5717, #5720, #5723, #5726, #5729, #5732, #5735, #5738, #5741, #5744, #5747, #5750, #5753, #5756, #5759, #5762, #5765, #5768, #5771, #5772, #5774, #5776, #5778, #5781, #5783, #5785, #5787, #5789, #5791, #5793, #5795, #5797, #5802, #5804, #5808, #5810, #5812, #5814, #5815, #5818, #5820, #5822, #5824, #5826, #5828
 - Active issue(s): None
 - Scope: harden external runtime execution readiness behavior with deterministic diagnostics while preserving phase-6 output contract stability, green-main quality gates, and branch-hygiene post-publication reconciliation evidence.
 
@@ -66,3 +66,4 @@
 57. Activate opt-in live `S-08` node-crash-recovery scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, continuity probe validation, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5822)
 58. Activate opt-in live `S-09` transport-failover scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, deterministic failover-boundary continuity validation, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5824)
 59. Activate opt-in live `S-10` topology-coherence scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, cross-node query/health continuity validation, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5826)
+60. Activate opt-in live `S-11` signer-rotation scenario across sdk-direct, cli-scripted, and mcp-agent drivers with fail-closed conformance, deterministic primary/rotated continuity validation, stale-signer replay rejection checks, and compensating archived-spec cleanup to preserve the `specs/` cap guardrail. (Completed via #5828)
