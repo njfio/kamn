@@ -3680,6 +3680,325 @@ fn integration_service_api_endpoint_persists_task_and_escrow_state_across_routes
 }
 
 #[test]
+fn integration_service_api_endpoint_persists_task_and_escrow_state_across_restart() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-task-escrow-restart-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34110".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let task_caller_did = "kamn:did:agent:test-client-task-restart";
+    let escrow_caller_did = "kamn:did:agent:test-client-escrow-restart";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let create_task_payload = r#"{"title":"restart-task","description":"persist restart"}"#;
+    let create_task_signature = service_api_request_signature_for_fields(
+        task_caller_did,
+        61,
+        state_hash.as_str(),
+        create_task_payload,
+    );
+    let create_task_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/tasks/create",
+        create_task_payload,
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "61"),
+            ("X-KAMN-Request-Signature", create_task_signature.as_str()),
+        ],
+    );
+    assert!(create_task_response.contains("HTTP/1.1 201 Created"));
+    let created_task: ServiceApiTaskCreateBody =
+        parse_service_api_payload(extract_http_response_body(create_task_response.as_str()))
+            .expect("task create payload should deserialize");
+
+    let accept_path = format!("/v1/tasks/{}/accept", created_task.task_id);
+    let accept_signature =
+        service_api_request_signature_for_fields(task_caller_did, 62, state_hash.as_str(), "");
+    let accept_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        accept_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "62"),
+            ("X-KAMN-Request-Signature", accept_signature.as_str()),
+        ],
+    );
+    assert!(accept_response.contains("HTTP/1.1 200 OK"));
+
+    let fund_payload = r#"{"task_id":"restart-task","amount":5}"#;
+    let fund_signature = service_api_request_signature_for_fields(
+        escrow_caller_did,
+        63,
+        state_hash.as_str(),
+        fund_payload,
+    );
+    let fund_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/escrow/fund",
+        fund_payload,
+        &[
+            ("X-KAMN-Sender-DID", escrow_caller_did),
+            ("X-KAMN-Request-Nonce", "63"),
+            ("X-KAMN-Request-Signature", fund_signature.as_str()),
+        ],
+    );
+    assert!(fund_response.contains("HTTP/1.1 200 OK"));
+    let funded_escrow: Value =
+        parse_service_api_payload(extract_http_response_body(fund_response.as_str()))
+            .expect("escrow fund payload should deserialize");
+    let escrow_id = funded_escrow["escrow_id"]
+        .as_str()
+        .expect("escrow id should be string")
+        .to_owned();
+
+    let release_path = format!("/v1/escrow/{escrow_id}/release");
+    let release_signature =
+        service_api_request_signature_for_fields(escrow_caller_did, 64, state_hash.as_str(), "");
+    let release_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        release_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", escrow_caller_did),
+            ("X-KAMN-Request-Nonce", "64"),
+            ("X-KAMN-Request-Signature", release_signature.as_str()),
+        ],
+    );
+    assert!(release_response.contains("HTTP/1.1 200 OK"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after first persistence phase"
+    );
+
+    let restart_report = execute(
+        parse_args(vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "api".to_owned(),
+            "--api-bind".to_owned(),
+            "127.0.0.1:34111".to_owned(),
+        ])
+        .expect("restart api args should parse"),
+    )
+    .expect("restart api execution should succeed");
+    let restart_snapshot = build_service_api_snapshot(&restart_report);
+    let restart_state_hash = format!(
+        "service-api:{}:{}",
+        restart_snapshot.chain_id.as_str(),
+        restart_snapshot.chain_version.as_str()
+    );
+    let restart_bind_addr = reserve_loopback_addr();
+    let restart_endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: restart_bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let restart_server_snapshot = restart_snapshot.clone();
+    let restart_server = thread::spawn(move || {
+        serve_service_api_endpoint(&restart_endpoint_config, &restart_server_snapshot)
+    });
+    wait_for_endpoint_ready(restart_bind_addr.as_str());
+
+    let query_task_path = format!("/v1/tasks/{}", created_task.task_id);
+    let query_task_signature = service_api_request_signature_for_fields(
+        task_caller_did,
+        65,
+        restart_state_hash.as_str(),
+        "",
+    );
+    let query_task_response = send_http_request_with_headers(
+        restart_bind_addr.as_str(),
+        "GET",
+        query_task_path.as_str(),
+        "",
+        &[
+            ("X-KAMN-Sender-DID", task_caller_did),
+            ("X-KAMN-Request-Nonce", "65"),
+            ("X-KAMN-Request-Signature", query_task_signature.as_str()),
+        ],
+    );
+    assert!(query_task_response.contains("HTTP/1.1 200 OK"));
+    let queried_task: Value =
+        parse_service_api_payload(extract_http_response_body(query_task_response.as_str()))
+            .expect("task query payload should deserialize");
+    assert_eq!(queried_task["task_id"], created_task.task_id);
+    assert_eq!(queried_task["state"], "accepted");
+
+    let restart_server_result = restart_server
+        .join()
+        .expect("restart endpoint thread should complete");
+    assert!(
+        restart_server_result.is_ok(),
+        "service api endpoint should stop cleanly after restart query"
+    );
+
+    let state_payload = fs::read_to_string(state_file.as_path())
+        .expect("state file should remain readable across restart");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state payload should parse");
+    assert_eq!(
+        state_json["tasks"][created_task.task_id.as_str()]["state"],
+        "accepted"
+    );
+    assert_eq!(
+        state_json["escrows"][escrow_id.as_str()]["state"],
+        "released"
+    );
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
+fn regression_service_api_endpoint_rejects_unknown_task_and_escrow_resource_transitions() {
+    // Regression: #5866
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34112".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let caller_did = "kamn:did:agent:test-client-missing-resource";
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let accept_signature =
+        service_api_request_signature_for_fields(caller_did, 71, state_hash.as_str(), "");
+    let accept_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/tasks/task-missing-71/accept",
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "71"),
+            ("X-KAMN-Request-Signature", accept_signature.as_str()),
+        ],
+    );
+    assert!(accept_response.contains("HTTP/1.1 404 Not Found"));
+    let accept_payload = parse_error_envelope(extract_http_response_body(accept_response.as_str()));
+    assert_eq!(accept_payload.error, "not-found");
+    assert_eq!(accept_payload.reason_code, "service_api_route_not_found");
+
+    let query_signature =
+        service_api_request_signature_for_fields(caller_did, 72, state_hash.as_str(), "");
+    let query_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        "/v1/tasks/task-missing-71",
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "72"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 404 Not Found"));
+    let query_payload = parse_error_envelope(extract_http_response_body(query_response.as_str()));
+    assert_eq!(query_payload.error, "not-found");
+    assert_eq!(query_payload.reason_code, "service_api_route_not_found");
+
+    let release_signature =
+        service_api_request_signature_for_fields(caller_did, 73, state_hash.as_str(), "");
+    let release_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/escrow/escrow-missing-71/release",
+        "",
+        &[
+            ("X-KAMN-Sender-DID", caller_did),
+            ("X-KAMN-Request-Nonce", "73"),
+            ("X-KAMN-Request-Signature", release_signature.as_str()),
+        ],
+    );
+    assert!(release_response.contains("HTTP/1.1 404 Not Found"));
+    let release_payload =
+        parse_error_envelope(extract_http_response_body(release_response.as_str()));
+    assert_eq!(release_payload.error, "not-found");
+    assert_eq!(release_payload.reason_code, "service_api_route_not_found");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after missing-resource regression flow"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_recipient_mailbox_and_delivery_status_contract() {
     let _env = acquire_service_api_test_env();
     let state_file = std::env::temp_dir().join(format!(
