@@ -58,6 +58,7 @@ pub(crate) use state_io::{
     default_service_api_state_file_path_for_bind_addr, drain_service_api_relay_spool_entries,
     project_service_api_relayed_message_statuses,
 };
+use websocket::ServiceApiWebsocketEventFanout;
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -465,6 +466,7 @@ struct ServiceApiRuntimeState {
     snapshot: ServiceApiSnapshot,
     replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
     request_budget: Arc<ServiceApiRequestBudget>,
+    websocket_events: ServiceApiWebsocketEventFanout,
     runtime_observability: Arc<Mutex<ServiceApiRuntimeObservability>>,
     body_limit_bytes: usize,
     concurrency_limiter: Arc<Semaphore>,
@@ -827,8 +829,12 @@ fn validate_websocket_route_requirements(
     websocket::validate_websocket_route_requirements(is_websocket_route, headers)
 }
 
-fn websocket_upgrade_response(upgrade: WebSocketUpgrade, event_payload: String) -> Response {
-    websocket::websocket_upgrade_response(upgrade, event_payload)
+fn websocket_upgrade_response(
+    upgrade: WebSocketUpgrade,
+    event_payload: String,
+    websocket_events: &ServiceApiWebsocketEventFanout,
+) -> Response {
+    websocket::websocket_upgrade_response(upgrade, event_payload, websocket_events)
 }
 
 fn project_websocket_event_payload(

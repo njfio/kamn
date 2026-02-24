@@ -431,6 +431,12 @@ pub(super) async fn handle_service_api_http_route(
                         );
                     }
                 }
+                state.websocket_events.publish_message_created_event(
+                    &payload,
+                    sender_did,
+                    recipient_did.as_deref(),
+                    channel_id.as_deref(),
+                );
                 super::contract_response(ServiceApiEndpointResponse {
                     status_code: 202,
                     content_type: "application/json",
@@ -636,7 +642,8 @@ pub(super) async fn handle_service_api_websocket_route(
     let _ = context.correlation_id.as_str();
     match super::project_websocket_event_payload(&state.snapshot, &context.parsed_request.headers) {
         Ok(event_payload) => {
-            let mut response = super::websocket_upgrade_response(upgrade, event_payload);
+            let mut response =
+                super::websocket_upgrade_response(upgrade, event_payload, &state.websocket_events);
             response
                 .extensions_mut()
                 .insert(ServiceApiRequestOutcome("websocket-upgrade"));

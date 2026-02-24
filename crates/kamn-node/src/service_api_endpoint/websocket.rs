@@ -1,10 +1,13 @@
 use super::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+use tokio::sync::broadcast;
 
 const WS_EVENTS_MODE_STATE_TRANSITION: &str = "state-transition";
 const WS_EVENTS_MODE_PRESENCE: &str = "presence";
 const WS_PRESENCE_DEFAULT_GATEWAY_NODE: &str = "service-api-gateway";
 const WS_PRESENCE_DEFAULT_CONNECTED_SINCE_EPOCH_SECONDS: u64 = 1_709_000_000;
-const WS_STATE_TRANSITION_STREAM_FRAME_COUNT: u64 = 2;
+const WS_EVENT_BUFFER_CAPACITY: usize = 256;
+const WS_EVENT_MESSAGE_CREATED: &str = "service-api.message.created";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct ServiceApiWebsocketPresenceBody {
@@ -20,6 +23,65 @@ struct ServiceApiWebsocketPresenceBody {
     reason_code: &'static str,
     audit_record_tag: String,
     sequence: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct ServiceApiWebsocketMessageLifecycleBody {
+    event: &'static str,
+    message_id: String,
+    status: String,
+    runtime_mode: String,
+    sender_did: Option<String>,
+    recipient_did: Option<String>,
+    channel_id: Option<String>,
+    sequence: u64,
+}
+
+#[derive(Debug)]
+pub(super) struct ServiceApiWebsocketEventFanout {
+    sender: broadcast::Sender<String>,
+    sequence: AtomicU64,
+}
+
+impl ServiceApiWebsocketEventFanout {
+    pub(super) fn new() -> Self {
+        let (sender, _) = broadcast::channel(WS_EVENT_BUFFER_CAPACITY);
+        Self {
+            sender,
+            sequence: AtomicU64::new(0),
+        }
+    }
+
+    fn next_sequence(&self) -> u64 {
+        self.sequence
+            .fetch_add(1, Ordering::SeqCst)
+            .saturating_add(1)
+    }
+
+    pub(super) fn subscribe(&self) -> broadcast::Receiver<String> {
+        self.sender.subscribe()
+    }
+
+    pub(super) fn publish_message_created_event(
+        &self,
+        payload: &ServiceApiMessageCreateBody,
+        sender_did: Option<&str>,
+        recipient_did: Option<&str>,
+        channel_id: Option<&str>,
+    ) {
+        let event = ServiceApiWebsocketMessageLifecycleBody {
+            event: WS_EVENT_MESSAGE_CREATED,
+            message_id: payload.message_id.clone(),
+            status: payload.status.clone(),
+            runtime_mode: payload.runtime_mode.clone(),
+            sender_did: sender_did.map(str::to_owned),
+            recipient_did: recipient_did.map(str::to_owned),
+            channel_id: channel_id.map(str::to_owned),
+            sequence: self.next_sequence(),
+        };
+        let event_payload = super::serialize_service_api_json(&event);
+        let _ = self.sender.send(event_payload);
+    }
 }
 
 pub(super) fn validate_websocket_route_requirements(
@@ -131,9 +193,11 @@ pub(super) fn project_websocket_error_response(
 pub(super) fn websocket_upgrade_response(
     upgrade: WebSocketUpgrade,
     event_payload: String,
+    websocket_events: &ServiceApiWebsocketEventFanout,
 ) -> Response {
+    let websocket_events = websocket_events.subscribe();
     let mut response = upgrade
-        .on_upgrade(move |socket| stream_websocket_event(socket, event_payload))
+        .on_upgrade(move |socket| stream_websocket_event(socket, event_payload, websocket_events))
         .into_response();
     response
         .headers_mut()
@@ -141,17 +205,47 @@ pub(super) fn websocket_upgrade_response(
     response
 }
 
-pub(super) async fn stream_websocket_event(mut socket: WebSocket, event_payload: String) {
-    for frame_payload in project_stream_frames(event_payload.as_str()) {
-        if socket
-            .send(Message::Text(frame_payload.into()))
-            .await
-            .is_err()
-        {
-            return;
+pub(super) async fn stream_websocket_event(
+    mut socket: WebSocket,
+    event_payload: String,
+    mut websocket_events: broadcast::Receiver<String>,
+) {
+    if socket
+        .send(Message::Text(event_payload.into()))
+        .await
+        .is_err()
+    {
+        return;
+    }
+
+    loop {
+        tokio::select! {
+            result = websocket_events.recv() => {
+                match result {
+                    Ok(event_payload) => {
+                        if socket.send(Message::Text(event_payload.into())).await.is_err() {
+                            return;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => {}
+                    Err(broadcast::error::RecvError::Closed) => return,
+                }
+            }
+            incoming = socket.recv() => {
+                match incoming {
+                    Some(Ok(Message::Close(_))) | None => return,
+                    Some(Ok(Message::Ping(payload))) => {
+                        if socket.send(Message::Pong(payload)).await.is_err() {
+                            return;
+                        }
+                    }
+                    Some(Ok(Message::Pong(_))) => {}
+                    Some(Ok(_)) => {}
+                    Some(Err(_)) => return,
+                }
+            }
         }
     }
-    let _ = socket.send(Message::Close(None)).await;
 }
 
 fn serialize_state_transition_payload(snapshot: &ServiceApiSnapshot) -> String {
@@ -249,28 +343,6 @@ fn project_presence_mode_payload(
         sequence: 1,
     };
     Ok(super::serialize_service_api_json(&payload))
-}
-
-fn project_stream_frames(event_payload: &str) -> Vec<String> {
-    let Ok(mut payload_json) = serde_json::from_str::<serde_json::Value>(event_payload) else {
-        return vec![event_payload.to_owned()];
-    };
-    let Some(event_name) = payload_json
-        .get("event")
-        .and_then(serde_json::Value::as_str)
-    else {
-        return vec![event_payload.to_owned()];
-    };
-    if event_name != WS_EVENTS_MODE_STATE_TRANSITION {
-        return vec![event_payload.to_owned()];
-    }
-
-    let mut frames = Vec::with_capacity(WS_STATE_TRANSITION_STREAM_FRAME_COUNT as usize);
-    for sequence in 1..=WS_STATE_TRANSITION_STREAM_FRAME_COUNT {
-        payload_json["sequence"] = serde_json::Value::from(sequence);
-        frames.push(super::serialize_service_api_json(&payload_json));
-    }
-    frames
 }
 
 fn required_presence_header<'a>(
