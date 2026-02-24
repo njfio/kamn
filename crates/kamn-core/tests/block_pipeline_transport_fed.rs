@@ -11,8 +11,23 @@ use kamn_core::{
 };
 use std::fs;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+
+fn ensure_default_signer_key_env() {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        std::env::set_var("KAMN_SIGNER_PRIVATE_KEY_HEX", TEST_SIGNER_PRIVATE_KEY_A_HEX);
+        std::env::set_var(
+            "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+            TEST_SIGNER_PRIVATE_KEY_A_HEX,
+        );
+    });
+}
 
 #[derive(Debug, Default)]
 struct RejectAllForkChoiceHook;
@@ -46,6 +61,7 @@ fn sample_consensus_input() -> BlockConsensusRoundInput {
 }
 
 fn build_valid_chain_transactions() -> Vec<BaselineTransaction> {
+    ensure_default_signer_key_env();
     let mut planner = MempoolBlockPipeline::new(true, 1, 1).expect("planner pipeline should build");
     let state_hash_one = planner.expected_state_hash().to_owned();
     let tx_one = BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-1", &state_hash_one);
@@ -225,6 +241,7 @@ fn regression_transport_fed_pipeline_rejects_stale_candidate_against_seeded_head
 
 #[test]
 fn functional_transport_event_feed_decodes_inbox_frames_into_transactions() {
+    ensure_default_signer_key_env();
     let transport = InMemoryPeerLifecycleTransport::default();
     let topic = "kamn/messages/v1";
     let sender = "peer-sender";
@@ -303,6 +320,7 @@ fn regression_transport_event_feed_rejects_malformed_payload() {
 
 #[test]
 fn regression_transport_event_feed_rejects_topic_mismatch() {
+    ensure_default_signer_key_env();
     let transport = InMemoryPeerLifecycleTransport::default();
     let sender = "peer-tx";
     let recipient = "peer-runtime";

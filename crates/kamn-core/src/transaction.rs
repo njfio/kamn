@@ -431,14 +431,13 @@ mod tests {
         SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV,
         SIGNER_PRIVATE_KEY_ENV,
     };
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::Mutex;
 
     const TEST_SIGNER_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
     fn signer_env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+        crate::signer_test_env_lock()
     }
 
     fn lock_signer_env() -> std::sync::MutexGuard<'static, ()> {

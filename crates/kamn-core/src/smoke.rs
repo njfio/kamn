@@ -185,6 +185,55 @@ mod tests {
     use super::{RoleSmokeNetwork, SmokeError};
     use crate::config::NodeRole;
     use crate::transaction::{BaselineTransaction, TransactionGuardError};
+    use std::sync::Mutex;
+
+    const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+        "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+
+    fn signer_env_lock() -> &'static Mutex<()> {
+        crate::signer_test_env_lock()
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = std::env::var(key).ok();
+            match value {
+                Some(value) => std::env::set_var(key, value),
+                None => std::env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
+
+    fn with_default_signer_key_env<T>(run: impl FnOnce() -> T) -> T {
+        let _lock = signer_env_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let _generic_key_guard = EnvVarGuard::set(
+            "KAMN_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+        );
+        let _service_key_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+            Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+        );
+        run()
+    }
 
     fn sample_tx(
         id: &str,
@@ -198,58 +247,64 @@ mod tests {
 
     #[test]
     fn rejects_invalid_transaction_payload() {
-        let mut network = RoleSmokeNetwork::new(true);
-        let state_hash = network.expected_state_hash().to_owned();
-        let tx = sample_tx("tx-1", "agent-a", 1, &state_hash, "");
+        with_default_signer_key_env(|| {
+            let mut network = RoleSmokeNetwork::new(true);
+            let state_hash = network.expected_state_hash().to_owned();
+            let tx = sample_tx("tx-1", "agent-a", 1, &state_hash, "");
 
-        assert_eq!(
-            network.submit_transaction(tx),
-            Err(SmokeError::Guard(TransactionGuardError::EmptyField(
-                "payload"
-            )))
-        );
+            assert_eq!(
+                network.submit_transaction(tx),
+                Err(SmokeError::Guard(TransactionGuardError::EmptyField(
+                    "payload"
+                )))
+            );
+        });
     }
 
     #[test]
     fn rejects_duplicate_transactions() {
-        let mut network = RoleSmokeNetwork::new(true);
-        let state_hash = network.expected_state_hash().to_owned();
-        network
-            .submit_transaction(sample_tx("tx-1", "agent-a", 1, &state_hash, "payload-1"))
-            .expect("first transaction should be accepted");
+        with_default_signer_key_env(|| {
+            let mut network = RoleSmokeNetwork::new(true);
+            let state_hash = network.expected_state_hash().to_owned();
+            network
+                .submit_transaction(sample_tx("tx-1", "agent-a", 1, &state_hash, "payload-1"))
+                .expect("first transaction should be accepted");
 
-        let second_state_hash = network.expected_state_hash().to_owned();
-        assert_eq!(
-            network.submit_transaction(sample_tx(
-                "tx-1",
-                "agent-b",
-                1,
-                &second_state_hash,
-                "payload-2"
-            )),
-            Err(SmokeError::Guard(
-                TransactionGuardError::DuplicateTransactionId("tx-1".to_owned())
-            ))
-        );
+            let second_state_hash = network.expected_state_hash().to_owned();
+            assert_eq!(
+                network.submit_transaction(sample_tx(
+                    "tx-1",
+                    "agent-b",
+                    1,
+                    &second_state_hash,
+                    "payload-2"
+                )),
+                Err(SmokeError::Guard(
+                    TransactionGuardError::DuplicateTransactionId("tx-1".to_owned())
+                ))
+            );
+        });
     }
 
     #[test]
     fn produce_block_orders_transactions_by_nonce() {
-        let mut network = RoleSmokeNetwork::new(true);
-        let state_hash = network.expected_state_hash().to_owned();
-        network
-            .submit_transaction(sample_tx("tx-2", "agent-a", 1, &state_hash, "payload-2"))
-            .expect("first submit works");
-        network
-            .submit_transaction(sample_tx("tx-1", "agent-b", 1, &state_hash, "payload-1"))
-            .expect("second submit works");
+        with_default_signer_key_env(|| {
+            let mut network = RoleSmokeNetwork::new(true);
+            let state_hash = network.expected_state_hash().to_owned();
+            network
+                .submit_transaction(sample_tx("tx-2", "agent-a", 1, &state_hash, "payload-2"))
+                .expect("first submit works");
+            network
+                .submit_transaction(sample_tx("tx-1", "agent-b", 1, &state_hash, "payload-1"))
+                .expect("second submit works");
 
-        let block = network
-            .produce_block()
-            .expect("block production should succeed");
-        assert_eq!(block.producer, NodeRole::Processor);
-        assert_eq!(block.transactions[0].id, "tx-1");
-        assert_eq!(block.transactions[1].id, "tx-2");
+            let block = network
+                .produce_block()
+                .expect("block production should succeed");
+            assert_eq!(block.producer, NodeRole::Processor);
+            assert_eq!(block.transactions[0].id, "tx-1");
+            assert_eq!(block.transactions[1].id, "tx-2");
+        });
     }
 
     #[test]

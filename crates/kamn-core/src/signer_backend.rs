@@ -958,14 +958,13 @@ mod tests {
         SignerBackendError, SignerBackendRouter, SignerKeyRole, SignerProviderHandshakeMatrix,
         SignerProviderHandshakeStatus, SigningRequest,
     };
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::Mutex;
 
     const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
         "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
 
     fn signer_env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+        crate::signer_test_env_lock()
     }
 
     struct EnvVarGuard {
@@ -1192,20 +1191,22 @@ mod tests {
 
     #[test]
     fn provider_client_maps_backend_from_canonical_reference() {
-        let request = SigningRequest::new(
-            "secure:aws-kms:key-prod-1",
-            "agent-a",
-            1,
-            "payload-1",
-            "state:genesis",
-        )
-        .expect("request should be valid");
-        let key_reference = CanonicalSecureKeyReference::parse(&request.key_id)
-            .expect("canonical parser should parse secure provider key");
+        with_default_signer_key_env(|| {
+            let request = SigningRequest::new(
+                "secure:aws-kms:key-prod-1",
+                "agent-a",
+                1,
+                "payload-1",
+                "state:genesis",
+            )
+            .expect("request should be valid");
+            let key_reference = CanonicalSecureKeyReference::parse(&request.key_id)
+                .expect("canonical parser should parse secure provider key");
 
-        let signed = deterministic_secure_provider_client_sign(&request, &key_reference)
-            .expect("deterministic provider client should sign");
-        assert_eq!(signed.backend, "secure-aws-kms-emulator");
+            let signed = deterministic_secure_provider_client_sign(&request, &key_reference)
+                .expect("deterministic provider client should sign");
+            assert_eq!(signed.backend, "secure-aws-kms-emulator");
+        });
     }
 
     #[test]

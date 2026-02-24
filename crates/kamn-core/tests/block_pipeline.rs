@@ -2,6 +2,21 @@ use kamn_core::{
     bootstrap, BaselineTransaction, BlockConsensusRoundInput, BlockPipelineError,
     MempoolBlockPipeline, NodeConfig, NodeRole, SyncMode,
 };
+use std::sync::OnceLock;
+
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+
+fn ensure_default_signer_key_env() {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        std::env::set_var("KAMN_SIGNER_PRIVATE_KEY_HEX", TEST_SIGNER_PRIVATE_KEY_A_HEX);
+        std::env::set_var(
+            "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+            TEST_SIGNER_PRIVATE_KEY_A_HEX,
+        );
+    });
+}
 
 fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
     NodeConfig {
@@ -20,6 +35,7 @@ fn sample_tx(
     sender: &str,
     nonce: u64,
 ) -> BaselineTransaction {
+    ensure_default_signer_key_env();
     BaselineTransaction::signed(
         id,
         sender,
