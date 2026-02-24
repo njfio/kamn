@@ -33,12 +33,16 @@ pub enum InvariantFailureCode {
     InvalidNonce,
     /// Nonce value was not sequential for sender.
     NonceOutOfSequence,
+    /// Sender nonce tracking window reached configured capacity.
+    SenderWindowExhausted,
     /// Signature verification failed.
     InvalidSignature,
     /// State hash did not match expected value.
     StateHashMismatch,
     /// Transaction identifier was duplicated.
     DuplicateTransactionId,
+    /// Replay tracking window reached configured capacity.
+    ReplayWindowExhausted,
     /// Unvalidated transaction attempted state commit.
     UnvalidatedCommittedTransaction,
 }
@@ -50,9 +54,11 @@ impl InvariantFailureCode {
             Self::EmptyField => "INV-TX-001-EMPTY-FIELD",
             Self::InvalidNonce => "INV-TX-002-INVALID-NONCE",
             Self::NonceOutOfSequence => "INV-TX-002-NONCE-SEQUENCE",
+            Self::SenderWindowExhausted => "INV-TX-002-SENDER-WINDOW-EXHAUSTED",
             Self::InvalidSignature => "INV-TX-003-INVALID-SIGNATURE",
             Self::StateHashMismatch => "INV-TX-004-STATE-HASH-MISMATCH",
             Self::DuplicateTransactionId => "INV-TX-005-DUPLICATE-TX-ID",
+            Self::ReplayWindowExhausted => "INV-TX-005-REPLAY-WINDOW-EXHAUSTED",
             Self::UnvalidatedCommittedTransaction => "INV-TX-006-UNVALIDATED-COMMIT",
         }
     }
@@ -79,10 +85,14 @@ const FAILURES_TX_001: &[InvariantFailureCode] = &[InvariantFailureCode::EmptyFi
 const FAILURES_TX_002: &[InvariantFailureCode] = &[
     InvariantFailureCode::InvalidNonce,
     InvariantFailureCode::NonceOutOfSequence,
+    InvariantFailureCode::SenderWindowExhausted,
 ];
 const FAILURES_TX_003: &[InvariantFailureCode] = &[InvariantFailureCode::InvalidSignature];
 const FAILURES_TX_004: &[InvariantFailureCode] = &[InvariantFailureCode::StateHashMismatch];
-const FAILURES_TX_005: &[InvariantFailureCode] = &[InvariantFailureCode::DuplicateTransactionId];
+const FAILURES_TX_005: &[InvariantFailureCode] = &[
+    InvariantFailureCode::DuplicateTransactionId,
+    InvariantFailureCode::ReplayWindowExhausted,
+];
 const FAILURES_TX_006: &[InvariantFailureCode] =
     &[InvariantFailureCode::UnvalidatedCommittedTransaction];
 
@@ -210,6 +220,11 @@ pub fn classify_transaction_guard_error(error: &TransactionGuardError) -> Invari
             failure_code: InvariantFailureCode::NonceOutOfSequence,
             message: error.to_string(),
         },
+        TransactionGuardError::SenderWindowExhausted { .. } => InvariantViolation {
+            invariant_id: "INV-TX-002",
+            failure_code: InvariantFailureCode::SenderWindowExhausted,
+            message: error.to_string(),
+        },
         TransactionGuardError::InvalidSignature { .. } => InvariantViolation {
             invariant_id: "INV-TX-003",
             failure_code: InvariantFailureCode::InvalidSignature,
@@ -223,6 +238,11 @@ pub fn classify_transaction_guard_error(error: &TransactionGuardError) -> Invari
         TransactionGuardError::DuplicateTransactionId(_) => InvariantViolation {
             invariant_id: "INV-TX-005",
             failure_code: InvariantFailureCode::DuplicateTransactionId,
+            message: error.to_string(),
+        },
+        TransactionGuardError::ReplayWindowExhausted { .. } => InvariantViolation {
+            invariant_id: "INV-TX-005",
+            failure_code: InvariantFailureCode::ReplayWindowExhausted,
             message: error.to_string(),
         },
         TransactionGuardError::UnvalidatedCommittedTransaction(_) => InvariantViolation {

@@ -1,13 +1,15 @@
 use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
+use k256::elliptic_curve::rand_core::OsRng;
+use std::sync::OnceLock;
 
 /// Canonical algorithm identifier for supported baseline signatures.
-pub const BASELINE_SIGNATURE_ALGORITHM: &str = "ed25519";
+pub const BASELINE_SIGNATURE_ALGORITHM: &str = "deterministic-v1";
 /// Canonical profile identifier for supported baseline signatures.
 pub const BASELINE_SIGNATURE_PROFILE_ID: &str = "baseline-v1";
 /// Legacy unversioned profile identifier retained for compatibility fixtures.
 pub const LEGACY_SIGNATURE_PROFILE_ID: &str = "legacy-unversioned";
 /// Canonical unsupported algorithm identifier used in negative fixtures.
-pub const UNKNOWN_SIGNATURE_ALGORITHM_ID: &str = "secp256k1";
+pub const UNKNOWN_SIGNATURE_ALGORITHM_ID: &str = "unknown-algorithm";
 /// Canonical algorithm identifier for service-auth cryptographic signatures.
 pub const SERVICE_AUTH_SIGNATURE_ALGORITHM: &str = "secp256k1";
 /// Canonical profile identifier for service-auth cryptographic signatures.
@@ -142,6 +144,33 @@ fn encode_hex_lower(bytes: &[u8]) -> String {
     output
 }
 
+fn wipe_bytes(bytes: &mut [u8]) {
+    for byte in bytes {
+        *byte = 0;
+    }
+}
+
+/// Generates an ephemeral secp256k1 private key (hex) for non-production fallback flows.
+pub fn generate_ephemeral_service_auth_private_key_hex() -> String {
+    let signing_key = SigningKey::random(&mut OsRng);
+    encode_hex_lower(signing_key.to_bytes().as_ref())
+}
+
+/// Returns one process-stable debug fallback private key (hex) for non-production flows.
+pub fn debug_fallback_signer_private_key_hex() -> Option<&'static str> {
+    static DEBUG_FALLBACK: OnceLock<Option<String>> = OnceLock::new();
+    DEBUG_FALLBACK
+        .get_or_init(|| {
+            let candidate = generate_ephemeral_service_auth_private_key_hex();
+            if service_auth_public_key_hex_from_private_key_hex(candidate.as_str()).is_ok() {
+                Some(candidate)
+            } else {
+                None
+            }
+        })
+        .as_deref()
+}
+
 fn canonical_service_auth_message(
     sender: &str,
     nonce: u64,
@@ -189,10 +218,16 @@ pub fn service_auth_sign_with_private_key_hex(
         return Err(ServiceAuthSignatureError::EmptyField("private_key_hex"));
     }
     let message = service_auth_signing_payload_for_fields(sender, nonce, state_hash, payload)?;
-    let private_key_bytes = decode_hex_bytes(private_key_hex)
+    let mut private_key_bytes = decode_hex_bytes(private_key_hex)
         .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
-    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice())
-        .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
+    let signing_key = match SigningKey::from_slice(private_key_bytes.as_slice()) {
+        Ok(key) => key,
+        Err(_) => {
+            wipe_bytes(private_key_bytes.as_mut_slice());
+            return Err(ServiceAuthSignatureError::InvalidPrivateKeyHex);
+        }
+    };
+    wipe_bytes(private_key_bytes.as_mut_slice());
     let (signature, recovery_id) = signing_key
         .sign_recoverable(message.as_bytes())
         .map_err(|_| ServiceAuthSignatureError::SigningFailure)?;
@@ -210,10 +245,16 @@ pub fn service_auth_public_key_hex_from_private_key_hex(
     if private_key_hex.trim().is_empty() {
         return Err(ServiceAuthSignatureError::EmptyField("private_key_hex"));
     }
-    let private_key_bytes = decode_hex_bytes(private_key_hex)
+    let mut private_key_bytes = decode_hex_bytes(private_key_hex)
         .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
-    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice())
-        .map_err(|_| ServiceAuthSignatureError::InvalidPrivateKeyHex)?;
+    let signing_key = match SigningKey::from_slice(private_key_bytes.as_slice()) {
+        Ok(key) => key,
+        Err(_) => {
+            wipe_bytes(private_key_bytes.as_mut_slice());
+            return Err(ServiceAuthSignatureError::InvalidPrivateKeyHex);
+        }
+    };
+    wipe_bytes(private_key_bytes.as_mut_slice());
     Ok(encode_hex_lower(
         signing_key
             .verifying_key()
@@ -391,7 +432,7 @@ pub fn signature_profile_compatibility_fixtures_for_fields(
             should_verify: false,
         },
         SignatureProfileCompatibilityFixture {
-            fixture_id: "secp256k1+baseline-v1",
+            fixture_id: "unknown-algorithm+baseline-v1",
             signature: unknown_signature_algorithm_for_fields(sender, nonce, state_hash, payload),
             should_verify: false,
         },
@@ -401,7 +442,7 @@ pub fn signature_profile_compatibility_fixtures_for_fields(
 /// Returns whether a signature matches the supported baseline profile.
 ///
 /// This requires:
-/// - canonical algorithm id (`ed25519`),
+/// - canonical algorithm id (`deterministic-v1`),
 /// - canonical profile id (`baseline-v1`),
 /// - deterministic field rendering match.
 pub fn signature_matches_supported_profile_for_fields(
@@ -450,7 +491,10 @@ mod tests {
     #[test]
     fn baseline_signature_profile_includes_nonce_and_payload_length() {
         let signature = baseline_signature_for_fields("agent-a", 9, "state:x", "abcdef");
-        assert_eq!(signature, "sig:ed25519:baseline-v1:agent-a:9:state:x:6");
+        assert_eq!(
+            signature,
+            "sig:deterministic-v1:baseline-v1:agent-a:9:state:x:6"
+        );
     }
 
     #[test]
@@ -479,7 +523,7 @@ mod tests {
         assert_eq!(fixtures[0].fixture_id, BASELINE_SIGNATURE_PROFILE_ID);
         assert_eq!(fixtures[1].fixture_id, LEGACY_SIGNATURE_PROFILE_ID);
         assert_eq!(fixtures[2].fixture_id, "baseline-v0");
-        assert_eq!(fixtures[3].fixture_id, "secp256k1+baseline-v1");
+        assert_eq!(fixtures[3].fixture_id, "unknown-algorithm+baseline-v1");
         assert!(fixtures[0].should_verify);
         assert!(!fixtures[1].should_verify);
         assert!(!fixtures[2].should_verify);
@@ -488,7 +532,7 @@ mod tests {
 
     #[test]
     fn baseline_signature_profile_algorithm_helper_matches_constant() {
-        assert_eq!(baseline_signature_algorithm(), "ed25519");
+        assert_eq!(baseline_signature_algorithm(), "deterministic-v1");
     }
 
     #[test]
@@ -497,7 +541,7 @@ mod tests {
         assert_eq!(
             parse_signature_profile_metadata(&signature),
             Some(super::SignatureProfileMetadata {
-                algorithm: "ed25519".to_owned(),
+                algorithm: "deterministic-v1".to_owned(),
                 profile_id: BASELINE_SIGNATURE_PROFILE_ID.to_owned(),
             })
         );
@@ -513,7 +557,7 @@ mod tests {
             })
         );
         assert_eq!(
-            parse_signature_profile_metadata("sig:ed25519:baseline-v1"),
+            parse_signature_profile_metadata("sig:deterministic-v1:baseline-v1"),
             None
         );
         assert_eq!(parse_signature_profile_metadata("bad"), None);

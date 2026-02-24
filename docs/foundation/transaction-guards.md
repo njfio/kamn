@@ -29,8 +29,8 @@ This document defines transaction guards in `kamn-core` with cryptographic signa
 - Legacy baseline compatibility helper remains available for migration fixtures:
   - `baseline_signature_for_fields(...)`
   - `signature_profile_compatibility_fixtures_for_fields(...)`
-  - fixture IDs include `legacy-unversioned`, `baseline-v0`, and `secp256k1+baseline-v1`.
-- Legacy baseline-v1 (`sig:ed25519:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`) is accepted only when `KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1`.
+  - fixture IDs include `legacy-unversioned`, `baseline-v0`, and `unknown-algorithm+baseline-v1`.
+- Legacy baseline-v1 (`sig:deterministic-v1:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`) is accepted only when `KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1`.
 - signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
 - non-versioned legacy signature profile is rejected (`Regression: #404`).
 - algorithm/profile metadata drift or downgrade is rejected (`Regression: #677`).

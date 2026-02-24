@@ -9,6 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 kamn-core = { path = "../kamn-core" }
+serde_json = "1.0.145"
 
 [lints]
 workspace = true

@@ -18,5 +18,7 @@ fn spec_c05_envelope_construction_stable_signature_and_nonce() {
     assert_eq!(envelope.nonce, 9);
     assert_eq!(envelope.state_hash, "state-hash-123");
     assert_eq!(envelope.body, "hello world");
-    assert!(envelope.signature.starts_with("sig:ed25519:baseline-v1:"));
+    assert!(envelope
+        .signature
+        .starts_with("sig:deterministic-v1:baseline-v1:"));
 }

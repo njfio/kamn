@@ -92,13 +92,13 @@ fn signature_for_fields(
     body: &str,
 ) -> String {
     format!(
-        "sig:ed25519:baseline-v1:{from}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{}",
+        "sig:deterministic-v1:baseline-v1:{from}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{}",
         body.len()
     )
 }
 
 fn has_supported_signature_prefix(signature: &str) -> bool {
-    signature.starts_with("sig:ed25519:baseline-v1:")
+    signature.starts_with("sig:deterministic-v1:baseline-v1:")
 }
 
 fn parse_wire_message(payload: &str) -> Result<WireMessage, String> {

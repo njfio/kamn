@@ -1,10 +1,12 @@
 use std::collections::BTreeSet;
+use std::env;
 use std::fmt;
 
-/// Key agreement algorithm identifier used for direct-message shared-secret derivation.
-pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
-/// Cipher algorithm identifier used for direct-message payload encryption.
-pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
+/// Deterministic key-agreement profile identifier for non-cryptographic direct-message fixtures.
+pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "KAMN-Deterministic-KA-v1";
+/// Deterministic cipher profile identifier for non-cryptographic direct-message fixtures.
+pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "KAMN-Deterministic-XOR-v1";
+const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
 
 /// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +42,9 @@ impl DirectMessageCryptoEngine {
         sender_key_ref: &str,
         recipient_key_ref: &str,
     ) -> Result<Self, DirectMessageCryptoError> {
+        if !insecure_direct_message_crypto_enabled() {
+            return Err(DirectMessageCryptoError::InsecureCryptoDisabled);
+        }
         validate_key_ref("sender", sender_key_ref)?;
         validate_key_ref("recipient", recipient_key_ref)?;
 
@@ -133,6 +138,8 @@ impl DirectMessageCryptoEngine {
 /// Errors emitted by direct-message crypto construction and processing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectMessageCryptoError {
+    /// Insecure deterministic direct-message crypto is disabled by policy.
+    InsecureCryptoDisabled,
     /// Key reference for role was empty.
     EmptyKeyRef(&'static str),
     /// Key reference for role did not match expected shape.
@@ -154,6 +161,10 @@ pub enum DirectMessageCryptoError {
 impl fmt::Display for DirectMessageCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::InsecureCryptoDisabled => write!(
+                f,
+                "deterministic direct-message crypto is disabled; use production cryptographic transport or set KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO=1 for local-only fixtures"
+            ),
             Self::EmptyKeyRef(role) => write!(f, "{role} key reference must not be empty"),
             Self::InvalidKeyRef(role) => {
                 write!(f, "{role} key reference must include #key-agreement")
@@ -169,6 +180,19 @@ impl fmt::Display for DirectMessageCryptoError {
 }
 
 impl std::error::Error for DirectMessageCryptoError {}
+
+fn insecure_direct_message_crypto_enabled() -> bool {
+    if cfg!(debug_assertions) {
+        return true;
+    }
+    match env::var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV) {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => false,
+    }
+}
 
 fn validate_key_ref(role: &'static str, key_ref: &str) -> Result<(), DirectMessageCryptoError> {
     if key_ref.trim().is_empty() {
@@ -186,7 +210,7 @@ fn derive_shared_secret_fingerprint(sender: &str, recipient: &str) -> String {
     } else {
         (recipient, sender)
     };
-    format!("x25519:{left}|{right}")
+    format!("deterministic-ka-v1:{left}|{right}")
 }
 
 fn derive_keystream(secret: &str, nonce: u64, len: usize) -> Vec<u8> {

@@ -52,7 +52,7 @@ This document captures the signer backend abstraction with cryptographic secure-
   - key-specific private key env: `KAMN_SIGNER_PRIVATE_KEY_HEX__<NORMALIZED_KEY_ID>`
   - shared private key env fallback: `KAMN_SIGNER_PRIVATE_KEY_HEX`
   - service-auth private key env fallback: `KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX`
-- Legacy baseline-v1 verification (`sig:ed25519:baseline-v1:...`) is disabled by default.
+- Legacy baseline-v1 verification (`sig:deterministic-v1:baseline-v1:...`) is disabled by default.
 - Legacy baseline-v1 can be explicitly enabled with `KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1`.
 - non-versioned legacy profile remains rejected (`Regression: #404`).
 - algorithm/profile drift remains rejected (`Regression: #677`).

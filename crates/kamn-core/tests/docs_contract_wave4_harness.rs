@@ -24,10 +24,10 @@ mod transaction_guards_docs {
         assert!(DOC.contains("KAMN_SIGNER_PRIVATE_KEY_HEX"));
         assert!(DOC.contains("KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX"));
         assert!(DOC.contains("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1"));
-        assert!(DOC.contains("sig:ed25519:baseline-v1"));
+        assert!(DOC.contains("sig:deterministic-v1:baseline-v1"));
         assert!(DOC.contains("legacy-unversioned"));
         assert!(DOC.contains("baseline-v0"));
-        assert!(DOC.contains("secp256k1+baseline-v1"));
+        assert!(DOC.contains("unknown-algorithm+baseline-v1"));
         assert!(DOC.contains("shared between `transaction` and `signer_backend` paths"));
     }
 

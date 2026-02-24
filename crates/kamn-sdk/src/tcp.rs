@@ -295,7 +295,7 @@ impl TcpSignedEnvelope {
 /// a valid `TcpSignedEnvelope` signature.
 pub fn signature_for_fields(from: &str, nonce: u64, state_hash: &str, body: &str) -> String {
     format!(
-        "sig:ed25519:baseline-v1:{from}:{nonce}:{state_hash}:{}",
+        "sig:deterministic-v1:baseline-v1:{from}:{nonce}:{state_hash}:{}",
         body.len()
     )
 }

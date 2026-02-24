@@ -1,9 +1,9 @@
 //! Signer backend contracts for local and secure-provider signing flows.
 
 use crate::signature_profile::{
-    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
-    service_auth_verify_with_public_key_hex, signature_matches_supported_profile_for_fields,
-    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    debug_fallback_signer_private_key_hex, service_auth_public_key_hex_from_private_key_hex,
+    service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
+    signature_matches_supported_profile_for_fields, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 use crate::transaction::BaselineTransaction;
 use std::env;
@@ -14,8 +14,6 @@ const SECURE_AWS_KMS_BACKEND_NAME: &str = "secure-aws-kms-emulator";
 const SIGNER_PRIVATE_KEY_ENV: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX";
 const SIGNER_PRIVATE_KEY_ENV_PREFIX: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX__";
 const SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV: &str = "KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1";
-const DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX: &str =
-    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
 
 /// Canonical payload sent to signer backends for signature generation and verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,7 +134,9 @@ fn resolve_signer_private_key_hex(key_id: &str) -> Result<String, SignerBackendE
     }
 
     if cfg!(debug_assertions) {
-        return Ok(DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX.to_owned());
+        if let Some(value) = debug_fallback_signer_private_key_hex() {
+            return Ok(value.to_owned());
+        }
     }
 
     Err(SignerBackendError::MissingSigningKeyMaterial {

@@ -1,5 +1,6 @@
 use crate::{AgentDid, SdkError};
 use kamn_core::{service_auth_sign_with_private_key_hex, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV};
+use serde_json::Value;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
@@ -1069,78 +1070,63 @@ fn expect_status(actual: u16, expected: u16) -> Result<(), SdkError> {
     ))
 }
 
+fn parse_json_root(payload: &str) -> Result<Value, SdkError> {
+    serde_json::from_str(payload)
+        .map_err(|_| SdkError::TransportFailure("service response payload was not valid json"))
+}
+
 fn json_string_field(payload: &str, key: &str) -> Result<String, SdkError> {
-    let marker = format!("\"{key}\":\"");
-    let start = payload
-        .find(marker.as_str())
-        .map(|index| index + marker.len())
-        .ok_or(SdkError::TransportFailure(
-            "service response missing required field",
-        ))?;
-    let rest = &payload[start..];
-    let end = rest.find('"').ok_or(SdkError::TransportFailure(
-        "service response field was not terminated",
+    let root = parse_json_root(payload)?;
+    let value = root.get(key).ok_or(SdkError::TransportFailure(
+        "service response missing required field",
     ))?;
-    Ok(rest[..end].to_owned())
+    if let Some(parsed) = value.as_str() {
+        return Ok(parsed.to_owned());
+    }
+    if let Some(parsed) = value.as_u64() {
+        return Ok(parsed.to_string());
+    }
+    Err(SdkError::TransportFailure(
+        "service response field was not a string",
+    ))
 }
 
 fn json_u64_field(payload: &str, key: &str) -> Result<u64, SdkError> {
-    let marker = format!("\"{key}\":");
-    let start = payload
-        .find(marker.as_str())
-        .map(|index| index + marker.len())
-        .ok_or(SdkError::TransportFailure(
-            "service response missing required field",
-        ))?;
-    let rest = payload[start..].trim_start();
-    let value_end = rest
-        .find(|ch: char| !ch.is_ascii_digit())
-        .unwrap_or(rest.len());
-    if value_end == 0 {
-        return Err(SdkError::TransportFailure(
-            "service response numeric field was malformed",
-        ));
+    let root = parse_json_root(payload)?;
+    let value = root.get(key).ok_or(SdkError::TransportFailure(
+        "service response missing required field",
+    ))?;
+    if let Some(parsed) = value.as_u64() {
+        return Ok(parsed);
     }
-    rest[..value_end]
-        .parse::<u64>()
-        .map_err(|_| SdkError::TransportFailure("service response numeric field was malformed"))
+    if let Some(parsed) = value.as_str().and_then(|raw| raw.parse::<u64>().ok()) {
+        return Ok(parsed);
+    }
+    Err(SdkError::TransportFailure(
+        "service response numeric field was malformed",
+    ))
 }
 
 fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\":\"");
-    let start = payload.find(marker.as_str())? + marker.len();
-    let rest = &payload[start..];
-    let end = rest.find('"')?;
-    Some(rest[..end].to_owned())
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = root.get(key)?;
+    value.as_str().map(str::to_owned)
 }
 
 fn json_string_array_field(payload: &str, key: &str) -> Result<Vec<String>, SdkError> {
-    let marker = format!("\"{key}\":[");
-    let start = payload
-        .find(marker.as_str())
-        .map(|index| index + marker.len())
-        .ok_or(SdkError::TransportFailure(
-            "service response missing required field",
-        ))?;
-    let rest = &payload[start..];
-    let end = rest.find(']').ok_or(SdkError::TransportFailure(
-        "service response array field was not terminated",
+    let root = parse_json_root(payload)?;
+    let value = root.get(key).ok_or(SdkError::TransportFailure(
+        "service response missing required field",
     ))?;
-    let raw_items = rest[..end].trim();
-    if raw_items.is_empty() {
-        return Ok(Vec::new());
+    let items = value.as_array().ok_or(SdkError::TransportFailure(
+        "service response array field was malformed",
+    ))?;
+    let mut parsed = Vec::with_capacity(items.len());
+    for item in items {
+        let value = item.as_str().ok_or(SdkError::TransportFailure(
+            "service response array item was malformed",
+        ))?;
+        parsed.push(value.to_owned());
     }
-
-    raw_items
-        .split(',')
-        .map(|item| {
-            let trimmed = item.trim();
-            if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
-                return Err(SdkError::TransportFailure(
-                    "service response array item was malformed",
-                ));
-            }
-            Ok(trimmed[1..trimmed.len() - 1].to_owned())
-        })
-        .collect()
+    Ok(parsed)
 }

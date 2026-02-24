@@ -5,11 +5,14 @@ pub struct ToolDescriptor {
     pub name: &'static str,
     /// Human-readable purpose.
     pub description: &'static str,
-    /// Deterministic input schema marker.
+    /// Deterministic input schema JSON.
     pub input_schema: &'static str,
-    /// Deterministic output schema marker.
+    /// Deterministic output schema JSON.
     pub output_schema: &'static str,
 }
+
+const GENERIC_INPUT_SCHEMA_JSON: &str = r#"{"type":"object","additionalProperties":true}"#;
+const GENERIC_OUTPUT_SCHEMA_JSON: &str = r#"{"type":"object","additionalProperties":true}"#;
 
 /// Required PRD phase-2 MCP tool names.
 pub const MCP_TOOL_NAMES: [&str; 21] = [
@@ -74,8 +77,8 @@ fn tool_descriptor_for_name(name: &'static str) -> ToolDescriptor {
     ToolDescriptor {
         name,
         description,
-        input_schema: "kamn.mcp.input.v1",
-        output_schema: "kamn.mcp.output.v1",
+        input_schema: GENERIC_INPUT_SCHEMA_JSON,
+        output_schema: GENERIC_OUTPUT_SCHEMA_JSON,
     }
 }
 

@@ -1619,6 +1619,7 @@ name = "kamn-cli"
 version = "0.1.0"
 dependencies = [
  "kamn-agent-lib",
+ "serde_json",
 ]
 
 [[package]]
@@ -1656,6 +1657,7 @@ name = "kamn-mcp-server"
 version = "0.1.0"
 dependencies = [
  "kamn-agent-lib",
+ "serde_json",
 ]
 
 [[package]]
@@ -1681,6 +1683,7 @@ name = "kamn-sdk"
 version = "0.1.0"
 dependencies = [
  "kamn-core",
+ "serde_json",
 ]
 
 [[package]]

@@ -19,5 +19,5 @@ fn spec_c04_auth_roundtrip_builds_kamn_headers() {
     assert_eq!(headers.authz_scope_header.as_deref(), Some("messages:send"));
     assert!(headers
         .signature_header
-        .starts_with("sig:ed25519:baseline-v1:"));
+        .starts_with("sig:deterministic-v1:baseline-v1:"));
 }

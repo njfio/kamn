@@ -50,7 +50,7 @@ The SDK now includes a localhost two-process signed-message demo:
 - Expected markers:
   - `status=ok` (sender and listener)
   - `verified=true`
-  - `signature=sig:ed25519:baseline-v1:...`
+  - `signature=sig:deterministic-v1:baseline-v1:...`
 
 `Regression: #807` ensures the command remains executable and preserves signed-message verification markers.
 
