@@ -1,11 +1,20 @@
 use crate::signature_profile::{
-    baseline_signature_for_fields, signature_matches_supported_profile_for_fields,
+    baseline_signature_for_fields, service_auth_public_key_hex_from_private_key_hex,
+    service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
+    signature_matches_supported_profile_for_fields, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::fmt;
 
 /// Initial expected state hash before any block commits.
 pub const GENESIS_STATE_HASH: &str = "state:genesis";
+const SIGNER_PRIVATE_KEY_ENV: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX";
+const SIGNER_PUBLIC_KEY_ENV: &str = "KAMN_SIGNER_PUBLIC_KEY_HEX";
+const SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV: &str = "KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1";
+const DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
 
 /// Baseline transaction payload used by transaction guard validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,6 +50,17 @@ impl BaselineTransaction {
 
     /// Computes the expected baseline signature for this transaction.
     pub fn expected_signature(&self) -> String {
+        if let Some(private_key_hex) = resolve_transaction_signer_private_key_hex() {
+            if let Ok(signature) = service_auth_sign_with_private_key_hex(
+                &self.sender,
+                self.nonce,
+                &self.state_hash,
+                &self.payload,
+                private_key_hex.as_str(),
+            ) {
+                return signature;
+            }
+        }
         baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
     }
 
@@ -65,6 +85,76 @@ impl BaselineTransaction {
         }
         Ok(())
     }
+}
+
+fn signer_legacy_baseline_v1_compat_enabled() -> bool {
+    match env::var(SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV) {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => false,
+    }
+}
+
+fn resolve_transaction_signer_private_key_hex() -> Option<String> {
+    for env_name in [
+        SIGNER_PRIVATE_KEY_ENV,
+        SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    ] {
+        if let Ok(value) = env::var(env_name) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_owned());
+            }
+        }
+    }
+
+    if cfg!(debug_assertions) {
+        return Some(DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX.to_owned());
+    }
+
+    None
+}
+
+fn resolve_transaction_signer_public_key_hex() -> Option<String> {
+    for env_name in [SIGNER_PUBLIC_KEY_ENV, SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV] {
+        if let Ok(value) = env::var(env_name) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_owned());
+            }
+        }
+    }
+
+    let private_key_hex = resolve_transaction_signer_private_key_hex()?;
+    service_auth_public_key_hex_from_private_key_hex(private_key_hex.as_str()).ok()
+}
+
+fn signature_matches_transaction_contract(tx: &BaselineTransaction) -> bool {
+    if let Some(public_key_hex) = resolve_transaction_signer_public_key_hex() {
+        if service_auth_verify_with_public_key_hex(
+            tx.signature.as_str(),
+            tx.sender.as_str(),
+            tx.nonce,
+            tx.state_hash.as_str(),
+            tx.payload.as_str(),
+            public_key_hex.as_str(),
+        )
+        .is_ok()
+        {
+            return true;
+        }
+    }
+
+    signer_legacy_baseline_v1_compat_enabled()
+        && signature_matches_supported_profile_for_fields(
+            tx.signature.as_str(),
+            tx.sender.as_str(),
+            tx.nonce,
+            tx.state_hash.as_str(),
+            tx.payload.as_str(),
+        )
 }
 
 /// Guard engine that validates transaction shape, signature, nonce, and state continuity.
@@ -110,13 +200,7 @@ impl TransactionGuards {
             });
         }
 
-        if !signature_matches_supported_profile_for_fields(
-            &tx.signature,
-            &tx.sender,
-            tx.nonce,
-            &tx.state_hash,
-            &tx.payload,
-        ) {
+        if !signature_matches_transaction_contract(tx) {
             return Err(TransactionGuardError::InvalidSignature {
                 tx_id: tx.id.clone(),
                 expected: tx.expected_signature(),
