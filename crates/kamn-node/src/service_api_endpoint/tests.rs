@@ -199,6 +199,38 @@ fn service_api_relay_spool_drain_errors_for_non_not_found_paths() {
     let _ = std::fs::remove_dir(directory_path);
 }
 
+#[cfg(unix)]
+#[test]
+fn service_api_relay_spool_drain_errors_for_permission_denied_paths() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-spool-no-read-{unique_suffix}.ndjson"
+    ));
+    std::fs::write(spool_file.as_path(), "{\"message_id\":\"m1\"}\n")
+        .expect("spool fixture should write");
+    std::fs::set_permissions(spool_file.as_path(), std::fs::Permissions::from_mode(0o000))
+        .expect("permissions should apply");
+
+    let error = drain_service_api_relay_spool_entries(spool_file.to_str())
+        .expect_err("permission denied spool file should fail open");
+    assert!(
+        error.contains("service api relay spool read failed"),
+        "permission denied spool opens must fail closed"
+    );
+
+    let _ = std::fs::set_permissions(spool_file.as_path(), std::fs::Permissions::from_mode(0o600));
+    let _ = std::fs::remove_file(spool_file);
+}
+
 #[test]
 fn service_api_relay_projection_missing_state_file_is_noop() {
     let unique_suffix = format!(
