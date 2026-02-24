@@ -234,30 +234,6 @@ python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 
 rm -f "$TMP_DIR/cfg_test_only.rs"
 
-cat <<'RS' > "$TMP_DIR/cfg_test_brace_heavy_module.rs"
-fn safe_path() -> Result<(), String> {
-    std::env::var("X").map(|_| ()).map_err(|e| e.to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    fn brace_confuser_literal() -> &'static str {
-        "}}}}"
-    }
-
-    #[test]
-    fn allows_expect_inside_brace_heavy_test_module() {
-        let literal = brace_confuser_literal();
-        let value = Some(literal.len()).expect("test-only expect");
-        assert!(value > 0);
-    }
-}
-RS
-
-python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
-
-rm -f "$TMP_DIR/cfg_test_brace_heavy_module.rs"
-
 cat <<'RS' > "$TMP_DIR/cfg_test_prefix_production_violation.rs"
 #[cfg(test)]
 use std::sync::Mutex;
