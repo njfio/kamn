@@ -8,8 +8,10 @@
 
 ## Verification Evidence
 - `cargo test -p kamn-node integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_stop`
+- `cargo test -p kamn-node integration_runtime_full_supervisor_starts_observability_lane_before_daemon_stop`
 - `cargo test -p kamn-node regression_runtime_full_supervisor_rejects_service_api_lane_max_requests_drift`
 - `cargo test -p kamn-node regression_runtime_full_supervisor_rejects_observability_lane_max_requests_drift`
 - `cargo test -p kamn-node full_supervisor_stop_contract`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`
+- `cargo mutants --in-diff /tmp/issue5853.diff -p kamn-node` (18 mutants: 8 caught, 4 missed, 6 unviable; follow-up issue #5854 opened for residual misses in `main.rs` run-path wrapper/guards)
