@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
 import argparse
 import json
 import re
 from pathlib import Path
-
 NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 REAL_SIGNING_PROFILE_ENV = "KAMN_KOLME_LIVE_SIGNING_PROFILE"
@@ -181,22 +179,17 @@ KEY_LOADING_ERROR_CLASSIFICATIONS = (
 )
 KEY_LOADING_ERROR_CLASSIFICATIONS_CSV = ",".join(KEY_LOADING_ERROR_CLASSIFICATIONS)
 PANIC_REASON_MARKERS = ("panic", "unreachable", "unwrap(", "expect(")
-
-
 def evaluate_runtime_signer_attestation_bundle(
     attestation_bundle: object, runtime_signer_profile: object
 ) -> list[str]:
     reason_codes: list[str] = []
     if not isinstance(attestation_bundle, dict):
         return ["runtime_signer_attestation_bundle_missing"]
-
     if attestation_bundle.get("schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_invalid")
-
     required_approvals = attestation_bundle.get("required_approvals")
     if not isinstance(required_approvals, int) or required_approvals <= 0:
         reason_codes.append("runtime_signer_attestation_required_approvals_invalid")
-
     approved_signers = attestation_bundle.get("approved_signers")
     normalized_signers: list[str] = []
     if not isinstance(approved_signers, list) or not approved_signers:
@@ -217,10 +210,7 @@ def evaluate_runtime_signer_attestation_bundle(
             and runtime_signer_profile not in normalized_signers
         ):
             reason_codes.append("runtime_signer_attestation_profile_not_approved")
-
     return reason_codes
-
-
 def classify_expected_key_loading_error(
     runtime_signer_profile: object,
     runtime_signer_key_source: object,
@@ -253,8 +243,6 @@ def classify_expected_key_loading_error(
     ):
         return "private_key_env_mismatch"
     return "none"
-
-
 def observed_reason_codes_value(
     reason_codes: list[str], ordered_reason_codes: tuple[str, ...]
 ) -> str:
@@ -266,14 +254,10 @@ def observed_reason_codes_value(
     if not observed:
         return "none"
     return ",".join(observed)
-
-
 def observed_signature_decision_reason_codes_value(reason_codes: list[str]) -> str:
     return observed_reason_codes_value(
         reason_codes, SIGNATURE_DECISION_REASON_TAXONOMY_CODES
     )
-
-
 def classify_go_no_go_marker(
     reason_codes: list[str],
     marker_reason_codes: tuple[str, ...],
@@ -285,8 +269,6 @@ def classify_go_no_go_marker(
     if observed_codes_value == "none":
         return "verified", "GO", observed_codes_value
     return failure_status, "NO-GO", observed_codes_value
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate local KAMN live runtime integration real-node profile summary policy."
@@ -302,71 +284,55 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
-
-
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
-
     if report.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-summary.v1":
         reason_codes.append("schema_version_mismatch")
-
     mode = report.get("mode")
     if mode not in ("dry-run", "run"):
         reason_codes.append("mode_invalid")
-
     status = report.get("status")
     if status not in ("ok", "fail"):
         reason_codes.append("status_invalid")
-
     reason_code = report.get("reason_code")
     if not isinstance(reason_code, str) or not reason_code.strip():
         reason_codes.append("reason_code_missing")
-
     if report.get("local_only_enforced") is not True:
         reason_codes.append("local_only_enforced_missing")
-
     ci_fast_gate_eligible = report.get("ci_fast_gate_eligible")
     if not isinstance(ci_fast_gate_eligible, bool):
         reason_codes.append("ci_fast_gate_eligible_invalid")
     elif ci_fast_gate_eligible:
         reason_codes.append("ci_fast_gate_eligibility_violation")
-
     elapsed_seconds = report.get("elapsed_seconds")
     if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
         reason_codes.append("elapsed_seconds_invalid")
-
     max_seconds = report.get("max_seconds")
     if not isinstance(max_seconds, int) or max_seconds <= 0:
         reason_codes.append("max_seconds_invalid")
-
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
-
     runtime_profile = report.get("runtime_profile")
     if not isinstance(runtime_profile, str) or not runtime_profile.strip():
         reason_codes.append("runtime_profile_missing")
     elif runtime_profile != "real-node":
         reason_codes.append("runtime_profile_mismatch")
-
     runtime_signing_profile = report.get("runtime_signing_profile")
     if not isinstance(runtime_signing_profile, str) or not runtime_signing_profile.strip():
         reason_codes.append("runtime_signing_profile_missing")
     elif runtime_signing_profile != REAL_SIGNING_PROFILE_VALUE:
         reason_codes.append("runtime_signing_profile_mismatch")
-
     runtime_provider_client_contract = report.get("runtime_provider_client_contract")
     if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
         reason_codes.append("runtime_provider_client_contract_missing")
     elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
         reason_codes.append("runtime_provider_client_contract_mismatch")
-
     runtime_signer_profile_selector_env = report.get("runtime_signer_profile_selector_env")
     if not isinstance(runtime_signer_profile_selector_env, str) or not runtime_signer_profile_selector_env.strip():
         reason_codes.append("runtime_signer_profile_selector_env_missing")
     elif runtime_signer_profile_selector_env != REAL_SIGNER_PROFILE_SELECTOR_ENV:
         reason_codes.append("runtime_signer_profile_selector_env_mismatch")
-
     runtime_signer_profile = report.get("runtime_signer_profile")
     expected_signer_private_key_env = ""
     expected_signer_key_reference_env = ""
@@ -379,25 +345,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[runtime_signer_profile]
         expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[runtime_signer_profile]
         expected_signer_public_key_env = SIGNER_PUBLIC_KEY_ENV_BY_PROFILE[runtime_signer_profile]
-
     runtime_signer_previous_profile = report.get("runtime_signer_previous_profile")
     if not isinstance(runtime_signer_previous_profile, str) or not runtime_signer_previous_profile.strip():
         reason_codes.append("runtime_signer_previous_profile_missing")
     elif runtime_signer_previous_profile not in ALLOWED_SIGNER_PROFILES:
         reason_codes.append("runtime_signer_previous_profile_mismatch")
-
     runtime_signer_failover_active = report.get("runtime_signer_failover_active")
     if not isinstance(runtime_signer_failover_active, bool):
         reason_codes.append("runtime_signer_failover_active_invalid")
-
     runtime_signer_rotation_epoch = report.get("runtime_signer_rotation_epoch")
     if not isinstance(runtime_signer_rotation_epoch, int) or runtime_signer_rotation_epoch <= 0:
         reason_codes.append("runtime_signer_rotation_epoch_invalid")
-
     runtime_signer_previous_rotation_epoch = report.get("runtime_signer_previous_rotation_epoch")
     if not isinstance(runtime_signer_previous_rotation_epoch, int) or runtime_signer_previous_rotation_epoch <= 0:
         reason_codes.append("runtime_signer_previous_rotation_epoch_invalid")
-
     if (
         isinstance(runtime_signer_profile, str)
         and runtime_signer_profile in ALLOWED_SIGNER_PROFILES
@@ -417,13 +378,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and runtime_signer_rotation_epoch <= runtime_signer_previous_rotation_epoch
     ):
         reason_codes.append("runtime_signer_rotation_epoch_stale")
-
     runtime_signer_key_source_contract_version = report.get("runtime_signer_key_source_contract_version")
     if not isinstance(runtime_signer_key_source_contract_version, str) or not runtime_signer_key_source_contract_version.strip():
         reason_codes.append("runtime_signer_key_source_contract_version_missing")
     elif runtime_signer_key_source_contract_version != REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION:
         reason_codes.append("runtime_signer_key_source_contract_version_mismatch")
-
     runtime_signer_key_source = report.get("runtime_signer_key_source")
     expected_signer_key_source = ""
     if not isinstance(runtime_signer_key_source, str) or not runtime_signer_key_source.strip():
@@ -440,19 +399,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and expected_signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE[runtime_signer_profile]
     ):
         reason_codes.append("runtime_signer_key_source_profile_pair_disallowed")
-
     runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
     if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
         reason_codes.append("runtime_signer_private_key_env_missing")
     elif expected_signer_private_key_env and runtime_signer_private_key_env != expected_signer_private_key_env:
         reason_codes.append("runtime_signer_private_key_env_mismatch")
-
     runtime_signer_key_reference_env = report.get("runtime_signer_key_reference_env")
     if not isinstance(runtime_signer_key_reference_env, str) or not runtime_signer_key_reference_env.strip():
         reason_codes.append("runtime_signer_key_reference_env_missing")
     elif expected_signer_key_reference_env and runtime_signer_key_reference_env != expected_signer_key_reference_env:
         reason_codes.append("runtime_signer_key_reference_env_mismatch")
-
     runtime_signer_fallback_guard_contract_version = report.get(
         "runtime_signer_fallback_guard_contract_version"
     )
@@ -466,7 +422,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         != REAL_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION
     ):
         reason_codes.append("runtime_signer_fallback_guard_contract_version_mismatch")
-
     runtime_signer_fallback_guard_mode = report.get(
         "runtime_signer_fallback_guard_mode"
     )
@@ -477,13 +432,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_fallback_guard_mode_missing")
     elif runtime_signer_fallback_guard_mode != REAL_SIGNER_FALLBACK_GUARD_MODE:
         reason_codes.append("runtime_signer_fallback_guard_mode_mismatch")
-
     expected_managed_external_raw_private_key_remediation = ""
     if expected_signer_private_key_env and expected_signer_key_reference_env:
         expected_managed_external_raw_private_key_remediation = (
             f"unset {expected_signer_private_key_env}; set {expected_signer_key_reference_env}"
         )
-
     runtime_signer_managed_external_raw_private_key_remediation = report.get(
         "runtime_signer_managed_external_raw_private_key_remediation"
     )
@@ -498,19 +451,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         != expected_managed_external_raw_private_key_remediation
     ):
         reason_codes.append("runtime_signer_managed_external_raw_private_key_remediation_mismatch")
-
     runtime_signer_fallback_private_key_present = report.get("runtime_signer_fallback_private_key_present")
     if not isinstance(runtime_signer_fallback_private_key_present, bool):
         reason_codes.append("runtime_signer_fallback_private_key_present_invalid")
     elif runtime_signer_fallback_private_key_present:
         reason_codes.append("runtime_signer_fallback_private_key_present_violation")
-
     runtime_signer_raw_private_key_present = report.get("runtime_signer_raw_private_key_present")
     if not isinstance(runtime_signer_raw_private_key_present, bool):
         reason_codes.append("runtime_signer_raw_private_key_present_invalid")
     elif expected_signer_key_source == "managed-external" and runtime_signer_raw_private_key_present:
         reason_codes.append("runtime_signer_managed_external_raw_private_key_present_violation")
-
     runtime_signer_private_key_env_zeroized = report.get(
         "runtime_signer_private_key_env_zeroized"
     )
@@ -518,7 +468,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_private_key_env_zeroized_invalid")
     elif runtime_signer_private_key_env_zeroized is not True:
         reason_codes.append("runtime_signer_private_key_env_zeroization_violation")
-
     runtime_signer_private_key_bytes_zeroized = report.get(
         "runtime_signer_private_key_bytes_zeroized"
     )
@@ -526,7 +475,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_private_key_bytes_zeroized_invalid")
     elif runtime_signer_private_key_bytes_zeroized is not True:
         reason_codes.append("runtime_signer_private_key_bytes_zeroization_violation")
-
     runtime_signer_key_loading_panic_free = report.get(
         "runtime_signer_key_loading_panic_free"
     )
@@ -534,14 +482,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_key_loading_panic_free_invalid")
     elif runtime_signer_key_loading_panic_free is not True:
         reason_codes.append("runtime_signer_key_loading_panic_violation")
-
     reason_code_contains_panic_marker = (
         isinstance(reason_code, str)
         and any(marker in reason_code.lower() for marker in PANIC_REASON_MARKERS)
     )
     if reason_code_contains_panic_marker and runtime_signer_key_loading_panic_free is not False:
         reason_codes.append("runtime_signer_key_loading_panic_violation")
-
     runtime_signer_key_loading_error_classification_version = report.get(
         "runtime_signer_key_loading_error_classification_version"
     )
@@ -557,7 +503,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append(
             "runtime_signer_key_loading_error_classification_version_mismatch"
         )
-
     runtime_signer_key_loading_error_classification_allowed_csv = report.get(
         "runtime_signer_key_loading_error_classification_allowed_csv"
     )
@@ -575,7 +520,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append(
             "runtime_signer_key_loading_error_classification_allowed_csv_mismatch"
         )
-
     runtime_signer_key_loading_error_classification = report.get(
         "runtime_signer_key_loading_error_classification"
     )
@@ -605,7 +549,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append(
                 "runtime_signer_key_loading_error_classification_violation"
             )
-
     runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
     if (
         not isinstance(runtime_signer_attestation_schema_version, str)
@@ -614,7 +557,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_attestation_schema_version_missing")
     elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
-
     runtime_signer_attestation_bundle = report.get("runtime_signer_attestation_bundle")
     reason_codes.extend(
         evaluate_runtime_signer_attestation_bundle(
@@ -622,20 +564,17 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             runtime_signer_profile,
         )
     )
-
     runtime_signer_attestation_required_approvals: int | None = None
     runtime_signer_attestation_approved_signers: list[str] = []
     if isinstance(runtime_signer_attestation_bundle, dict):
         required_approvals_value = runtime_signer_attestation_bundle.get("required_approvals")
         if isinstance(required_approvals_value, int):
             runtime_signer_attestation_required_approvals = required_approvals_value
-
         approved_signers_value = runtime_signer_attestation_bundle.get("approved_signers")
         if isinstance(approved_signers_value, list):
             for entry in approved_signers_value:
                 if isinstance(entry, str) and entry.strip():
                     runtime_signer_attestation_approved_signers.append(entry.strip())
-
     runtime_signer_quorum_linkage_contract_version = report.get(
         "runtime_signer_quorum_linkage_contract_version"
     )
@@ -647,7 +586,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_quorum_linkage_contract_version_invalid")
         elif runtime_signer_quorum_linkage_contract_version != "v1":
             reason_codes.append("runtime_signer_quorum_linkage_contract_version_mismatch")
-
     runtime_signer_quorum_required_approvals = report.get(
         "runtime_signer_quorum_required_approvals"
     )
@@ -663,7 +601,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             != runtime_signer_attestation_required_approvals
         ):
             reason_codes.append("runtime_signer_quorum_required_approvals_mismatch")
-
     expected_runtime_signer_quorum_profile_linked = (
         isinstance(runtime_signer_profile, str)
         and runtime_signer_profile.strip()
@@ -678,7 +615,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_runtime_signer_quorum_profile_linked
         and expected_runtime_signer_quorum_satisfied
     )
-
     runtime_signer_quorum_approved_signers_count = report.get(
         "runtime_signer_quorum_approved_signers_count"
     )
@@ -692,7 +628,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             runtime_signer_attestation_approved_signers
         ):
             reason_codes.append("runtime_signer_quorum_approved_signers_count_mismatch")
-
     runtime_signer_quorum_profile_linked = report.get("runtime_signer_quorum_profile_linked")
     if runtime_signer_quorum_profile_linked is not None:
         if not isinstance(runtime_signer_quorum_profile_linked, bool):
@@ -701,14 +636,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             expected_runtime_signer_quorum_profile_linked
         ):
             reason_codes.append("runtime_signer_quorum_profile_linked_mismatch")
-
     runtime_signer_quorum_satisfied = report.get("runtime_signer_quorum_satisfied")
     if runtime_signer_quorum_satisfied is not None:
         if not isinstance(runtime_signer_quorum_satisfied, bool):
             reason_codes.append("runtime_signer_quorum_satisfied_invalid")
         elif runtime_signer_quorum_satisfied != bool(expected_runtime_signer_quorum_satisfied):
             reason_codes.append("runtime_signer_quorum_satisfied_mismatch")
-
     runtime_signer_quorum_linked = report.get("runtime_signer_quorum_linked")
     if runtime_signer_quorum_linked is None:
         runtime_signer_quorum_linked = expected_runtime_signer_quorum_linked
@@ -716,10 +649,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_quorum_linked_invalid")
     elif runtime_signer_quorum_linked != bool(expected_runtime_signer_quorum_linked):
         reason_codes.append("runtime_signer_quorum_linkage_drift")
-
     if runtime_signer_quorum_linked is False:
         reason_codes.append("runtime_signer_quorum_linkage_violation")
-
     if isinstance(runtime_signer_failover_active, bool) and runtime_signer_failover_active:
         if (
             not isinstance(runtime_signer_attestation_required_approvals, int)
@@ -733,25 +664,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and runtime_signer_previous_profile not in runtime_signer_attestation_approved_signers
         ):
             reason_codes.append("runtime_signer_failover_attestation_previous_profile_not_approved")
-
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
         reason_codes.append("runtime_commit_command_profile_missing")
     elif runtime_commit_command_profile != "real-node-non-synthetic-v1":
         reason_codes.append("runtime_commit_command_profile_mismatch")
-
     runtime_commit_policy_command_profile = report.get("runtime_commit_policy_command_profile")
     if not isinstance(runtime_commit_policy_command_profile, str) or not runtime_commit_policy_command_profile.strip():
         reason_codes.append("runtime_commit_policy_command_profile_missing")
     elif runtime_commit_policy_command_profile != "real-node-non-synthetic-v1":
         reason_codes.append("runtime_commit_policy_command_profile_mismatch")
-
     runtime_commit_command_profile_version = report.get("runtime_commit_command_profile_version")
     if not isinstance(runtime_commit_command_profile_version, str) or not runtime_commit_command_profile_version.strip():
         reason_codes.append("runtime_commit_command_profile_version_missing")
     elif runtime_commit_command_profile_version != "v1":
         reason_codes.append("runtime_commit_command_profile_version_mismatch")
-
     runtime_commit_command = report.get("runtime_commit_command")
     if not isinstance(runtime_commit_command, str) or not runtime_commit_command.strip():
         reason_codes.append("runtime_commit_command_missing")
@@ -872,11 +799,9 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_native_payload_messages_marker_missing")
         if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
             reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
-
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
         reason_codes.append("runtime_commit_live_policy_report_missing")
-
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
@@ -1034,7 +959,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_finality_primary_endpoint_mismatch")
         if contracts.get("runtime_commit_finality_fallback_endpoint") != "/block/{height}":
             reason_codes.append("runtime_commit_finality_fallback_endpoint_mismatch")
-
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -1086,7 +1010,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_policy_check_native_payload_marker_missing")
         if runtime_commit_policy_check_command is not None and IN_MEMORY_PROVIDER_MARKER in runtime_commit_policy_check_command:
             reason_codes.append("runtime_commit_policy_check_in_memory_provider_reference_detected")
-
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
         reason_codes.append("artifact_paths_missing")
@@ -1096,10 +1019,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and runtime_commit_live_policy_report not in artifact_paths
     ):
         reason_codes.append("runtime_commit_live_policy_report_artifact_missing")
-
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
-
     observed_final_decision = ""
     if status == "ok":
         observed_final_decision = "GO"
@@ -1111,31 +1032,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "live_runtime_integration_passed"):
             reason_codes.append("fail_status_reason_code_mismatch")
-
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
             reason_codes.append(f"required_reason_code_missing:{required_reason_code}")
-
     if observed_final_decision and observed_final_decision != args.expected_final_decision:
         reason_codes.append("observed_final_decision_mismatch")
-
     normalized_reason_codes = sorted(dict.fromkeys(reason_codes))
     final_decision = "GO" if not normalized_reason_codes else "NO-GO"
     return final_decision, normalized_reason_codes
-
-
 def main() -> int:
     args = parse_args()
     report_path = Path(args.report_file).resolve()
     report = json.loads(report_path.read_text(encoding="utf-8"))
-
     observed_status = report.get("status")
     observed_final_decision = ""
     if observed_status == "ok":
         observed_final_decision = "GO"
     elif observed_status == "fail":
         observed_final_decision = "NO-GO"
-
     final_decision, reason_codes = evaluate(report, args)
     observed_reason_codes_csv = ",".join(reason_codes) if reason_codes else "none"
     (
@@ -1233,12 +1147,10 @@ def main() -> int:
         "reason_codes": reason_codes,
         "final_decision": final_decision,
     }
-
     if args.output_json:
         output_path = Path(args.output_json).resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(output, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-
     status = "ok" if final_decision == "GO" else "fail"
     failed_checks = ",".join(reason_codes) if reason_codes else "none"
     print(f"status={status}")
@@ -1329,9 +1241,6 @@ def main() -> int:
     print(f"failed_checks={failed_checks}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
-
     return 0 if final_decision == "GO" else 1
-
-
 if __name__ == "__main__":
     raise SystemExit(main())

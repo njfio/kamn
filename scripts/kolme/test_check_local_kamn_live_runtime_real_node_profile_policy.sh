@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
@@ -42,27 +41,22 @@ TMP_RUNTIME_POLICY="$TMP_DIR/runtime-policy.json"
 TMP_RUNNER_ERR="$TMP_DIR/runner-error.log"
 TMP_ERR="$TMP_DIR/error.log"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
 if [ ! -x "$CHECKER" ]; then
   echo "expected local KAMN live runtime real-node profile policy checker to be executable" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kamn_live_runtime_real_node_profile_policy.py" "$DOC_FILE"; then
   echo "expected Kolme devnet ops docs to reference real-node profile policy checker command" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kamn_live_runtime_real_node_profile_policy.py" "$CI_DOC_FILE"; then
   echo "expected CI strategy docs to reference real-node profile policy checker command" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kamn_live_runtime_real_node_profile_policy.py" "$README_FILE"; then
   echo "expected README to reference real-node profile policy checker command" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -230,7 +224,6 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
   ]
 }
 JSON
-
 start_epoch="$(date +%s)"
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_OK" \
@@ -240,17 +233,14 @@ python3 "$CHECKER" \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_POLICY_OUT" >/dev/null
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
-
 if [ "$elapsed_seconds" -gt 2 ]; then
   echo "expected real-node profile policy checker to complete in <=2 seconds for fixture input" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected real-node profile policy report schema")
@@ -311,12 +301,10 @@ if report.get("signer_disagreement_go_no_go_decision") != "GO":
 if report.get("signer_disagreement_go_no_go_reason_codes_value") != "none":
     raise SystemExit("expected signer_disagreement_go_no_go_reason_codes_value=none for GO real-node profile report")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_profile"] = "ops-secondary"
 report["runtime_signer_previous_profile"] = "ops-secondary"
@@ -348,7 +336,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_OK_SECONDARY" \
   --expected-final-decision GO \
@@ -356,12 +343,10 @@ python3 "$CHECKER" \
   --require-reason-code dry_run_no_commands_executed \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_POLICY_OUT_SECONDARY" >/dev/null
-
 python3 - "$TMP_POLICY_OUT_SECONDARY" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected secondary real-node profile policy report schema")
@@ -384,12 +369,10 @@ if report.get("signature_decision_reason_taxonomy_version") != "kamn.kolme.local
 if report.get("signature_decision_reason_codes_value") != "none":
     raise SystemExit("expected signature_decision_reason_codes_value=none for GO secondary real-node profile report")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_MANAGED" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_key_source"] = "managed-external"
 runtime_commit_command = str(report.get("runtime_commit_command", ""))
@@ -414,7 +397,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_OK_MANAGED" \
   --expected-final-decision GO \
@@ -422,12 +404,10 @@ python3 "$CHECKER" \
   --require-reason-code dry_run_no_commands_executed \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_POLICY_OUT" >/dev/null
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_SOURCE_MARKER_MISSING" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
     "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local ",
@@ -439,7 +419,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_KEY_SOURCE_MARKER_MISSING" \
@@ -449,22 +428,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 key_source_marker_missing_exit_code=$?
 set -e
-
 if [ "$key_source_marker_missing_exit_code" -eq 0 ]; then
   echo "expected signer key-source command marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_signer_key_source_marker_missing" "$TMP_ERR"; then
   echo "expected signer key-source command marker missing reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_FALLBACK_COMMAND_MARKER" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
     "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local ",
@@ -476,7 +451,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_FALLBACK_COMMAND_MARKER" \
@@ -486,22 +460,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 fallback_command_marker_exit_code=$?
 set -e
-
 if [ "$fallback_command_marker_exit_code" -eq 0 ]; then
   echo "expected fallback signer private key command marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_fallback_private_key_command_marker_detected" "$TMP_ERR"; then
   echo "expected fallback signer private key command marker detected reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_FALLBACK_REMEDIATION_DRIFT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_fallback_guard_mode"] = "allow_if_present"
 contracts = report.get("contracts", {})
@@ -512,7 +482,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_FALLBACK_REMEDIATION_DRIFT" \
@@ -522,27 +491,22 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 fallback_remediation_drift_exit_code=$?
 set -e
-
 if [ "$fallback_remediation_drift_exit_code" -eq 0 ]; then
   echo "expected fallback signer guard-mode marker drift proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_fallback_guard_mode_mismatch" "$TMP_ERR"; then
   echo "expected fallback signer guard-mode marker mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_fallback_guard_mode_contract_mismatch" "$TMP_ERR"; then
   echo "expected fallback signer guard-mode contract marker mismatch reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MANAGED_REMEDIATION_DRIFT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_managed_external_raw_private_key_remediation"] = (
     "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
@@ -557,7 +521,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MANAGED_REMEDIATION_DRIFT" \
@@ -567,27 +530,22 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 managed_remediation_drift_exit_code=$?
 set -e
-
 if [ "$managed_remediation_drift_exit_code" -eq 0 ]; then
   echo "expected managed-external signer remediation marker drift proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_managed_external_raw_private_key_remediation_mismatch" "$TMP_ERR"; then
   echo "expected managed-external signer remediation marker mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_managed_external_raw_private_key_remediation_contract_mismatch" "$TMP_ERR"; then
   echo "expected managed-external signer remediation contract marker mismatch reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_MANAGED" "$TMP_REPORT_MANAGED_KEY_REF_MISSING" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
     " KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary",
@@ -599,7 +557,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MANAGED_KEY_REF_MISSING" \
@@ -609,22 +566,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 managed_key_ref_missing_exit_code=$?
 set -e
-
 if [ "$managed_key_ref_missing_exit_code" -eq 0 ]; then
   echo "expected managed-external signer key-reference marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_managed_external_signer_key_reference_marker_missing" "$TMP_ERR"; then
   echo "expected managed-external signer key-reference marker missing reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_MANAGED" "$TMP_REPORT_MANAGED_PUBLIC_KEY_MARKER_MISSING" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
     " KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX=0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
@@ -636,7 +589,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MANAGED_PUBLIC_KEY_MARKER_MISSING" \
@@ -646,22 +598,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 managed_public_key_marker_missing_exit_code=$?
 set -e
-
 if [ "$managed_public_key_marker_missing_exit_code" -eq 0 ]; then
   echo "expected managed-external signer public-key marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_managed_external_signer_public_key_marker_missing" "$TMP_ERR"; then
   echo "expected managed-external signer public-key marker missing reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_MANAGED_PUBLIC_KEY_MARKER_MISSING_SECONDARY" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_key_source"] = "managed-external"
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
@@ -677,7 +625,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MANAGED_PUBLIC_KEY_MARKER_MISSING_SECONDARY" \
@@ -687,22 +634,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT_SECONDARY" >"$TMP_ERR" 2>&1
 managed_public_key_marker_missing_secondary_exit_code=$?
 set -e
-
 if [ "$managed_public_key_marker_missing_secondary_exit_code" -eq 0 ]; then
   echo "expected managed-external secondary signer public-key marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_managed_external_signer_public_key_marker_missing" "$TMP_ERR"; then
   echo "expected managed-external secondary signer public-key marker missing reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_MANAGED" "$TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
     "KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary",
@@ -714,7 +657,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND" \
@@ -724,22 +666,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 managed_private_key_command_exit_code=$?
 set -e
-
 if [ "$managed_private_key_command_exit_code" -eq 0 ]; then
   echo "expected managed-external private key command marker negative proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_managed_external_private_key_command_marker_detected" "$TMP_ERR"; then
   echo "expected managed-external private key command marker detected reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_KEY_SOURCE_PAIR_BAD" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_key_source"] = "managed-external"
 contracts = report.get("contracts", {})
@@ -750,7 +688,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_KEY_SOURCE_PAIR_BAD" \
@@ -760,22 +697,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 key_source_pair_bad_exit_code=$?
 set -e
-
 if [ "$key_source_pair_bad_exit_code" -eq 0 ]; then
   echo "expected disallowed key-source/profile pair proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$TMP_ERR"; then
   echo "expected disallowed key-source/profile pair reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_SPLIT_BRAIN" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_failover_active"] = True
 report["runtime_signer_previous_profile"] = "ops-primary"
@@ -796,7 +729,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_SPLIT_BRAIN" \
@@ -806,22 +738,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 split_brain_exit_code=$?
 set -e
-
 if [ "$split_brain_exit_code" -eq 0 ]; then
   echo "expected split-brain signer profile proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_signer_profile_split_brain_detected" "$TMP_ERR"; then
   echo "expected split-brain signer profile reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_FAILOVER_ATTESTATION_QUORUM_INSUFFICIENT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_failover_active"] = True
 report["runtime_signer_previous_profile"] = "ops-secondary"
@@ -836,7 +764,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_FAILOVER_ATTESTATION_QUORUM_INSUFFICIENT" \
@@ -846,24 +773,19 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 failover_attestation_quorum_exit_code=$?
 set -e
-
 if [ "$failover_attestation_quorum_exit_code" -eq 0 ]; then
   echo "expected failover attestation quorum minimum proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_failover_attestation_required_approvals_insufficient" "$TMP_ERR"; then
   echo "expected failover attestation minimum approvals reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_ATTESTATION_DUPLICATE" "$TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL" <<'PY'
 import json
 import pathlib
 import sys
-
 base_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-
 duplicate_report = dict(base_report)
 duplicate_bundle = dict(duplicate_report.get("runtime_signer_attestation_bundle", {}))
 duplicate_bundle["approved_signers"] = ["ops-primary", "ops-primary"]
@@ -872,7 +794,6 @@ pathlib.Path(sys.argv[2]).write_text(
     json.dumps(duplicate_report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
-
 quorum_shortfall_report = dict(base_report)
 quorum_shortfall_bundle = dict(quorum_shortfall_report.get("runtime_signer_attestation_bundle", {}))
 quorum_shortfall_bundle["required_approvals"] = 2
@@ -883,7 +804,6 @@ pathlib.Path(sys.argv[3]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_ATTESTATION_DUPLICATE" \
@@ -893,17 +813,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 attestation_duplicate_exit_code=$?
 set -e
-
 if [ "$attestation_duplicate_exit_code" -eq 0 ]; then
   echo "expected duplicate attestation signer proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$TMP_ERR"; then
   echo "expected duplicate attestation signer reason for policy failure" >&2
   exit 1
 fi
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL" \
@@ -913,22 +830,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 attestation_quorum_shortfall_exit_code=$?
 set -e
-
 if [ "$attestation_quorum_shortfall_exit_code" -eq 0 ]; then
   echo "expected attestation quorum shortfall proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
   echo "expected attestation quorum shortfall reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("signature_decision_reason_codes_value")
 if not isinstance(observed, str):
@@ -947,12 +860,10 @@ disagreement_codes = set([] if disagreement_observed == "none" else disagreement
 if "runtime_signer_attestation_quorum_shortfall" not in disagreement_codes:
     raise SystemExit("expected signer_disagreement_go_no_go_reason_codes_value to include runtime_signer_attestation_quorum_shortfall")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_quorum_linked"] = False
 pathlib.Path(sys.argv[2]).write_text(
@@ -960,7 +871,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" \
@@ -970,22 +880,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 quorum_linkage_drift_exit_code=$?
 set -e
-
 if [ "$quorum_linkage_drift_exit_code" -eq 0 ]; then
   echo "expected signer quorum linkage drift proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_quorum_linkage_drift" "$TMP_ERR"; then
   echo "expected signer quorum linkage drift reason for policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("signature_decision_reason_codes_value")
 if not isinstance(observed, str):
@@ -1004,14 +910,11 @@ quorum_codes = set([] if quorum_observed == "none" else quorum_observed.split(",
 if "runtime_signer_quorum_linkage_drift" not in quorum_codes:
     raise SystemExit("expected signer_quorum_go_no_go_reason_codes_value to include runtime_signer_quorum_linkage_drift")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" <<'PY'
 import json
 import pathlib
 import sys
-
 base_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-
 panic_drift_report = dict(base_report)
 panic_drift_report["runtime_signer_key_loading_panic_free"] = False
 panic_drift_report["runtime_signer_key_loading_error_classification"] = "panic-drift"
@@ -1019,7 +922,6 @@ pathlib.Path(sys.argv[2]).write_text(
     json.dumps(panic_drift_report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
-
 classification_drift_report = dict(base_report)
 classification_drift_report["runtime_signer_key_loading_panic_free"] = True
 classification_drift_report["runtime_signer_key_loading_error_classification"] = "unstable-classification-marker"
@@ -1028,7 +930,6 @@ pathlib.Path(sys.argv[3]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_KEY_LOADING_PANIC_DRIFT" \
@@ -1038,17 +939,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 key_loading_panic_drift_exit_code=$?
 set -e
-
 if [ "$key_loading_panic_drift_exit_code" -eq 0 ]; then
   echo "expected key-loading panic-free drift proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_key_loading_panic_violation" "$TMP_ERR"; then
   echo "expected key-loading panic violation reason for policy failure" >&2
   exit 1
 fi
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_KEY_LOADING_CLASSIFICATION_DRIFT" \
@@ -1058,17 +956,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 key_loading_classification_drift_exit_code=$?
 set -e
-
 if [ "$key_loading_classification_drift_exit_code" -eq 0 ]; then
   echo "expected key-loading error classification drift proof to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_key_loading_error_classification_violation" "$TMP_ERR"; then
   echo "expected key-loading error classification violation reason for policy failure" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -1117,7 +1012,6 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
   ]
 }
 JSON
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_BAD" \
@@ -1128,72 +1022,58 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 bad_exit_code=$?
 set -e
-
 if [ "$bad_exit_code" -eq 0 ]; then
   echo "expected real-node profile policy checker to fail for marker drift" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_profile_mismatch" "$TMP_ERR"; then
   echo "expected runtime profile mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_provider_client_contract_mismatch" "$TMP_ERR"; then
   echo "expected provider contract mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_command_profile_mismatch" "$TMP_ERR"; then
   echo "expected runtime commit command profile mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_policy_command_profile_mismatch" "$TMP_ERR"; then
   echo "expected runtime commit policy command profile mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_failover_profile_unchanged" "$TMP_ERR"; then
   echo "expected failover unchanged reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_rotation_epoch_stale" "$TMP_ERR"; then
   echo "expected stale rotation epoch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_private_key_env_mismatch" "$TMP_ERR"; then
   echo "expected signer private key env mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_key_source_contract_version_missing" "$TMP_ERR"; then
   echo "expected signer key-source contract version missing reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_key_source_missing" "$TMP_ERR"; then
   echo "expected signer key-source missing reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_command_profile_version_mismatch" "$TMP_ERR"; then
   echo "expected runtime commit profile marker version mismatch reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_non_synthetic_policy_marker_missing" "$TMP_ERR"; then
   echo "expected strict non-synthetic marker requirement reason for policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:runtime_commit_endpoint" "$TMP_ERR"; then
   echo "expected missing runtime_commit_endpoint check marker for policy failure" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_SYNTHETIC" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -1295,7 +1175,6 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_SYNTHETIC" <<'JSON'
   ]
 }
 JSON
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_SYNTHETIC" \
@@ -1305,32 +1184,26 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 synthetic_exit_code=$?
 set -e
-
 if [ "$synthetic_exit_code" -eq 0 ]; then
   echo "expected real-node profile policy checker to fail for synthetic command regression" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_non_synthetic_submit_probe_missing" "$TMP_ERR"; then
   echo "expected non-synthetic submit probe marker requirement reason for synthetic policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_real_signing_profile_marker_missing" "$TMP_ERR"; then
   echo "expected real signing profile marker requirement reason for synthetic policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_signer_profile_marker_missing" "$TMP_ERR"; then
   echo "expected signer profile marker requirement reason for synthetic policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_SIMULATED" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 command = str(report.get("runtime_commit_command", ""))
 report["runtime_commit_command"] = (
@@ -1341,7 +1214,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_SIMULATED" \
@@ -1351,17 +1223,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 simulated_signing_profile_exit_code=$?
 set -e
-
 if [ "$simulated_signing_profile_exit_code" -eq 0 ]; then
   echo "expected real-node profile policy checker to fail for simulated signing profile marker drift" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_ERR"; then
   echo "expected simulated signing profile detection reason for policy failure" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_INMEMORY" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -1463,7 +1332,6 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_INMEMORY" <<'JSON'
   ]
 }
 JSON
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_INMEMORY" \
@@ -1473,17 +1341,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 inmemory_exit_code=$?
 set -e
-
 if [ "$inmemory_exit_code" -eq 0 ]; then
   echo "expected real-node profile policy checker to fail for in-memory provider reference drift" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_ERR"; then
   echo "expected in-memory provider reference reason for policy failure" >&2
   exit 1
 fi
-
 set +e
 bash "$RUNNER" \
   --mode dry-run \
@@ -1496,17 +1361,14 @@ bash "$RUNNER" \
   --output-json "$TMP_SUMMARY" >"$TMP_RUNNER_ERR" 2>&1
 runner_managed_public_key_marker_exit_code=$?
 set -e
-
 if [ "$runner_managed_public_key_marker_exit_code" -eq 0 ]; then
   echo "expected runner managed-external signer public-key marker gate to fail closed" >&2
   exit 1
 fi
-
 if ! grep -q "runtime-commit-command must include managed signer public-key marker KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX=... when runtime-signer-key-source=managed-external" "$TMP_RUNNER_ERR"; then
   echo "expected runner managed-external signer public-key marker gate reason for failure" >&2
   exit 1
 fi
-
 bash "$RUNNER" \
   --mode dry-run \
   --runtime-profile real-node \
@@ -1514,7 +1376,6 @@ bash "$RUNNER" \
   --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
   --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
   --output-json "$TMP_SUMMARY" >/dev/null
-
 python3 "$CHECKER" \
   --report-file "$TMP_SUMMARY" \
   --expected-final-decision GO \
@@ -1522,7 +1383,6 @@ python3 "$CHECKER" \
   --require-reason-code dry_run_no_commands_executed \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_INTEGRATION_POLICY_OUT" >/dev/null
-
 bash "$RUNNER" \
   --mode dry-run \
   --runtime-profile real-node \
@@ -1531,7 +1391,6 @@ bash "$RUNNER" \
   --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
   --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
   --output-json "$TMP_SUMMARY_SECONDARY" >/dev/null
-
 python3 "$CHECKER" \
   --report-file "$TMP_SUMMARY_SECONDARY" \
   --expected-final-decision GO \
@@ -1539,12 +1398,10 @@ python3 "$CHECKER" \
   --require-reason-code dry_run_no_commands_executed \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_INTEGRATION_POLICY_OUT_SECONDARY" >/dev/null
-
 python3 - "$TMP_SUMMARY" <<'PY'
 import json
 import pathlib
 import sys
-
 summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 runtime_commit_command = summary.get("runtime_commit_command")
 if not isinstance(runtime_commit_command, str):
@@ -1622,12 +1479,10 @@ if not isinstance(runtime_policy_command, str):
 if "--require-native-payload-evidence" not in runtime_policy_command:
     raise SystemExit("expected native payload evidence marker in runner-generated runtime policy command")
 PY
-
 python3 - "$TMP_SUMMARY_SECONDARY" <<'PY'
 import json
 import pathlib
 import sys
-
 summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 runtime_commit_command = summary.get("runtime_commit_command")
 if not isinstance(runtime_commit_command, str):
@@ -1680,29 +1535,24 @@ if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") i
         "expected contracts fallback signer private key command marker allowed=false marker in secondary runner-generated summary"
     )
 PY
-
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 policy = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected GO from real-node profile checker for runner-generated dry-run summary")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for runner-generated real-node profile summary")
 PY
-
 python3 - "$TMP_INTEGRATION_POLICY_OUT_SECONDARY" <<'PY'
 import json
 import pathlib
 import sys
-
 policy = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected GO from real-node profile checker for secondary runner-generated dry-run summary")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for secondary runner-generated real-node profile summary")
 PY
-
 echo "local KAMN live runtime real-node profile policy checker tests passed."
