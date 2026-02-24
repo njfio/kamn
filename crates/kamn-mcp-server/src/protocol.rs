@@ -2,6 +2,7 @@ use crate::dispatch_tool_request_json;
 use crate::invalid_request_response_json;
 use crate::tools::build_tool_registry;
 use crate::McpToolBackend;
+use serde_json::Value;
 
 const JSONRPC_VERSION: &str = "2.0";
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
@@ -98,11 +99,11 @@ fn process_jsonrpc_request<B: McpToolBackend>(backend: &B, request_json: &str) -
                 .into_iter()
                 .map(|tool| {
                     format!(
-                        "{{\"name\":\"{}\",\"description\":\"{}\",\"input_schema\":\"{}\",\"output_schema\":\"{}\"}}",
+                        "{{\"name\":\"{}\",\"description\":\"{}\",\"inputSchema\":{},\"outputSchema\":{}}}",
                         escape_json(tool.name),
                         escape_json(tool.description),
-                        escape_json(tool.input_schema),
-                        escape_json(tool.output_schema),
+                        tool.input_schema,
+                        tool.output_schema,
                     )
                 })
                 .collect::<Vec<_>>()
@@ -325,11 +326,9 @@ fn jsonrpc_error_with_id(id_token: &str, code: i32, message: &str) -> String {
 }
 
 fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\":\"");
-    let start = payload.find(marker.as_str())? + marker.len();
-    let rest = &payload[start..];
-    let end = rest.find('"')?;
-    Some(rest[..end].to_owned())
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = json_field_value(&root, key)?;
+    value.as_str().map(str::to_owned)
 }
 
 fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
@@ -337,59 +336,48 @@ fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
 }
 
 fn json_optional_u64_field(payload: &str, key: &str) -> Option<u64> {
-    let marker = format!("\"{key}\":");
-    let start = payload.find(marker.as_str())? + marker.len();
-    let rest = payload[start..].trim_start();
-
-    let end = rest.find([',', '}', '\n', '\r']).unwrap_or(rest.len());
-    let token = rest[..end].trim();
-    if token.starts_with('"') {
-        return token.trim_matches('"').parse::<u64>().ok();
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = json_field_value(&root, key)?;
+    if let Some(parsed) = value.as_u64() {
+        return Some(parsed);
     }
-    token.parse::<u64>().ok()
+    value.as_str()?.parse::<u64>().ok()
 }
 
 fn json_optional_value_token(payload: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\":");
-    let start = payload.find(marker.as_str())? + marker.len();
-    let rest = payload[start..].trim_start();
-    if rest.is_empty() {
-        return None;
-    }
-
-    if let Some(stripped) = rest.strip_prefix('"') {
-        let end = stripped.find('"')?;
-        return Some(format!("\"{}\"", &stripped[..end]));
-    }
-
-    let end = rest.find([',', '}', '\n', '\r']).unwrap_or(rest.len());
-    let token = rest[..end].trim();
-    if token.is_empty() {
-        return None;
-    }
-    Some(token.to_owned())
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = root.get(key)?;
+    serde_json::to_string(value).ok()
 }
 
 fn escape_json(input: &str) -> String {
-    let mut escaped = String::with_capacity(input.len());
-    for ch in input.chars() {
-        match ch {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
+    match serde_json::to_string(input) {
+        Ok(serialized) => {
+            if serialized.starts_with('"') && serialized.ends_with('"') && serialized.len() >= 2 {
+                return serialized[1..serialized.len() - 1].to_owned();
+            }
+            serialized
         }
+        Err(_) => String::new(),
     }
-    escaped
+}
+
+fn json_field_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
+    root.get(key)
+        .or_else(|| root.get("params").and_then(|value| value.get(key)))
+        .or_else(|| {
+            root.get("params")
+                .and_then(|value| value.get("arguments"))
+                .and_then(|value| value.get(key))
+        })
+        .or_else(|| root.get("arguments").and_then(|value| value.get(key)))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_framed_payloads, escape_json, json_optional_u64_field, normalize_id_for_dispatch,
-        parse_content_length,
+        decode_framed_payloads, escape_json, json_optional_u64_field, json_string_field,
+        normalize_id_for_dispatch, parse_content_length,
     };
 
     #[test]
@@ -490,6 +478,29 @@ mod tests {
         assert_eq!(
             escaped, "\\\"\\\\\\n\\r\\t",
             "quote, slash, newline, carriage-return, and tab must all be escaped",
+        );
+    }
+
+    #[test]
+    fn spec_c05_protocol_json_field_contract_handles_escaped_quotes_and_nested_key_noise() {
+        let payload = r#"{"jsonrpc":"2.0","id":"req-5","method":"tools/call","params":{"name":"health","arguments":{"payload":"quoted value: \"alpha\" and nested key \"name\":\"noise\"","finality":"safe"}}}"#;
+        assert_eq!(
+            json_string_field(payload, "name"),
+            Ok("health".to_owned()),
+            "tool name must come from params.name and not from nested string contents"
+        );
+        assert_eq!(
+            json_string_field(payload, "payload"),
+            Ok("quoted value: \"alpha\" and nested key \"name\":\"noise\"".to_owned()),
+            "escaped quotes in nested payload values must round-trip without truncation"
+        );
+        assert_eq!(
+            json_optional_u64_field(
+                r#"{"params":{"arguments":{"block_height":"17"}}}"#,
+                "block_height"
+            ),
+            Some(17),
+            "quoted numeric arguments in nested payload must parse as u64"
         );
     }
 }

@@ -1,4 +1,5 @@
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
+use serde_json::Value;
 
 /// Backend abstraction used by MCP tool dispatch.
 pub trait McpToolBackend {
@@ -494,11 +495,9 @@ fn backend_error_response_json(request_id: &str, tool: &str, message: &str) -> S
 }
 
 fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\":\"");
-    let start = payload.find(marker.as_str())? + marker.len();
-    let rest = &payload[start..];
-    let end = rest.find('"')?;
-    Some(rest[..end].to_owned())
+    let root = serde_json::from_str::<Value>(payload).ok()?;
+    let value = json_field_value(&root, key)?;
+    value.as_str().map(str::to_owned)
 }
 
 fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
@@ -506,16 +505,24 @@ fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
 }
 
 fn escape_json(input: &str) -> String {
-    let mut escaped = String::with_capacity(input.len());
-    for ch in input.chars() {
-        match ch {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
+    match serde_json::to_string(input) {
+        Ok(serialized) => {
+            if serialized.starts_with('"') && serialized.ends_with('"') && serialized.len() >= 2 {
+                return serialized[1..serialized.len() - 1].to_owned();
+            }
+            serialized
         }
+        Err(_) => String::new(),
     }
-    escaped
+}
+
+fn json_field_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
+    root.get(key)
+        .or_else(|| root.get("params").and_then(|value| value.get(key)))
+        .or_else(|| {
+            root.get("params")
+                .and_then(|value| value.get("arguments"))
+                .and_then(|value| value.get(key))
+        })
+        .or_else(|| root.get("arguments").and_then(|value| value.get(key)))
 }

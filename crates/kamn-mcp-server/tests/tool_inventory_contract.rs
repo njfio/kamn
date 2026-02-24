@@ -43,8 +43,14 @@ fn spec_c04_mcp_tool_registry_has_deterministic_schema_descriptors() {
     let registry = build_tool_registry();
     for tool in registry {
         assert!(!tool.description.trim().is_empty());
-        assert_eq!(tool.input_schema, "kamn.mcp.input.v1");
-        assert_eq!(tool.output_schema, "kamn.mcp.output.v1");
+        assert_eq!(
+            tool.input_schema,
+            r#"{"type":"object","additionalProperties":true}"#
+        );
+        assert_eq!(
+            tool.output_schema,
+            r#"{"type":"object","additionalProperties":true}"#
+        );
     }
 }
 

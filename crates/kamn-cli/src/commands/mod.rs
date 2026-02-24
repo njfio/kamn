@@ -93,18 +93,15 @@ pub(crate) fn command_output(fields: Vec<(&'static str, OutputValue)>) -> Comman
 }
 
 fn escape_json(input: &str) -> String {
-    let mut escaped = String::with_capacity(input.len());
-    for ch in input.chars() {
-        match ch {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
+    match serde_json::to_string(input) {
+        Ok(serialized) => {
+            if serialized.starts_with('"') && serialized.ends_with('"') && serialized.len() >= 2 {
+                return serialized[1..serialized.len() - 1].to_owned();
+            }
+            serialized
         }
+        Err(_) => String::new(),
     }
-    escaped
 }
 
 fn env_var_or_default(key: &str, default: &str) -> String {
