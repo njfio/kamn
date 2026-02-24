@@ -32,6 +32,7 @@ PANIC_REASON_CODES = frozenset(
 )
 
 DEFAULT_RUNTIME_ROOTS = (
+    "crates/kamn-agent-lib/src",
     "crates/kamn-core/src",
     "crates/kamn-node/src",
     "crates/kamn-cli/src",
