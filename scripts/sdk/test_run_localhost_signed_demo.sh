@@ -55,7 +55,7 @@ required_markers=(
   "--- listener ---"
   "status=ok"
   "verified=true"
-  "signature=sig:ed25519:baseline-v1:"
+  "signature=sig:deterministic-v1:baseline-v1:"
   "receipt_reconciliation=GO"
   "artifact_schema=kamn.sdk.localhost-signed.demo-receipt-artifact.v1"
   "localhost signed message demo completed."

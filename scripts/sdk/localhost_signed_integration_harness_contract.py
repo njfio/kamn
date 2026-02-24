@@ -179,7 +179,7 @@ class HarnessContext:
         body: str,
     ) -> str:
         return (
-            "sig:ed25519:baseline-v1:"
+            "sig:deterministic-v1:baseline-v1:"
             f"{from_did}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{len(body)}"
         )
 
@@ -224,7 +224,7 @@ class HarnessContext:
             nonce=1,
             state_hash=STATE_HASH,
             body=BODY,
-            signature="sig:ed25519:baseline-v1:invalid",
+            signature="sig:deterministic-v1:baseline-v1:invalid",
         )
         return self._send_payload(payload)
 
@@ -461,7 +461,7 @@ class HarnessContext:
             f"session_epoch_seconds={int(time.time())}\n"
             f"state_hash={STATE_HASH}\n"
             f"body={BODY}\n"
-            "signature=sig:ed25519:baseline-v1:malformed\n"
+            "signature=sig:deterministic-v1:baseline-v1:malformed\n"
         )
         if not self._send_payload(malformed_payload):
             self.fail_with_reason("payload_send_failed")
