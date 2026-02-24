@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 # Enforce CI-impact and shell-surface impact declarations in PR body when
 # sensitive files are changed.
+
 if [ "${GITHUB_EVENT_NAME:-}" != "pull_request" ]; then
   echo "Non-PR event; CI declaration check skipped."
   exit 0
 fi
+
 if [ -z "${GITHUB_EVENT_PATH:-}" ] || [ ! -f "${GITHUB_EVENT_PATH}" ]; then
   echo "GITHUB_EVENT_PATH is unavailable; CI declaration check skipped."
   exit 0
 fi
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required for check_pr_ci_declaration.sh" >&2
   exit 2
 fi
+
 pr_body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
+
 ci_force="${CI_DECLARATION_FORCE_SENSITIVE:-auto}"
 shell_force="${SHELL_SURFACE_DECLARATION_FORCE_SENSITIVE:-auto}"
+
 case "$ci_force" in
   true|false|auto) ;;
   *)
@@ -24,6 +31,7 @@ case "$ci_force" in
     exit 2
     ;;
 esac
+
 case "$shell_force" in
   true|false|auto) ;;
   *)
@@ -31,18 +39,22 @@ case "$shell_force" in
     exit 2
     ;;
 esac
+
 ci_sensitive=false
 shell_surface_sensitive=false
 ci_force_set=false
 shell_force_set=false
+
 if [ "$ci_force" = "true" ] || [ "$ci_force" = "false" ]; then
   ci_sensitive="$ci_force"
   ci_force_set=true
 fi
+
 if [ "$shell_force" = "true" ] || [ "$shell_force" = "false" ]; then
   shell_surface_sensitive="$shell_force"
   shell_force_set=true
 fi
+
 if [ "$ci_force_set" != true ] || [ "$shell_force_set" != true ]; then
   base_ref="${GITHUB_BASE_REF:-main}"
   if git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
@@ -53,6 +65,7 @@ if [ "$ci_force_set" != true ] || [ "$shell_force_set" != true ]; then
   else
     mapfile -t changed_files < <(git ls-files | sed '/^$/d')
   fi
+
   for file in "${changed_files[@]}"; do
     if [ "$ci_force_set" != true ]; then
       case "$file" in
@@ -61,6 +74,7 @@ if [ "$ci_force_set" != true ] || [ "$shell_force_set" != true ]; then
           ;;
       esac
     fi
+
     if [ "$shell_force_set" != true ]; then
       case "$file" in
         scripts/*|.github/workflows/*|.github/ISSUE_TEMPLATE/*|.github/pull_request_template.md|AGENTS.md|.github/CONTRIBUTING.md)
@@ -68,15 +82,18 @@ if [ "$ci_force_set" != true ] || [ "$shell_force_set" != true ]; then
           ;;
       esac
     fi
+
     if [ "$ci_force_set" != true ] && [ "$shell_force_set" != true ] && [ "$ci_sensitive" = true ] && [ "$shell_surface_sensitive" = true ]; then
       break
     fi
   done
 fi
+
 if [ "$ci_sensitive" != true ] && [ "$shell_surface_sensitive" != true ]; then
   echo "No CI-sensitive or shell-surface-sensitive file changes; declaration check passed."
   exit 0
 fi
+
 extract_field_value() {
   local field="$1"
   printf '%s\n' "$pr_body" | awk -v field="$field" '
@@ -88,6 +105,7 @@ extract_field_value() {
     }
   '
 }
+
 require_nonempty_field() {
   local field="$1"
   local value
@@ -98,20 +116,26 @@ require_nonempty_field() {
   fi
   return 0
 }
+
 is_integer_value() {
   local value="$1"
   [[ "$value" =~ ^[+-]?[0-9]+$ ]]
 }
+
 is_decimal_value() {
   local value="$1"
   [[ "$value" =~ ^[+-]?([0-9]+([.][0-9]+)?|[.][0-9]+)$ ]]
 }
+
 status=0
+
 if [ "$ci_sensitive" = true ]; then
   checked_ci_no='^\s*-\s*\[[xX]\]\s*No CI scope impact\.?\s*$'
   checked_ci_yes='^\s*-\s*\[[xX]\]\s*CI scope impact present\s*\(.*\)?\.?\s*$'
+
   ci_no_count="$(printf '%s\n' "$pr_body" | grep -Eci "$checked_ci_no" || true)"
   ci_yes_count="$(printf '%s\n' "$pr_body" | grep -Eci "$checked_ci_yes" || true)"
+
   if [ "$ci_no_count" -gt 0 ] && [ "$ci_yes_count" -gt 0 ]; then
     echo "PR body marks both CI-impact options as checked; choose exactly one." >&2
     status=1
@@ -126,11 +150,14 @@ if [ "$ci_sensitive" = true ]; then
     require_nonempty_field "Rollback plan if CI cost/runtime regresses:" || status=1
   fi
 fi
+
 if [ "$shell_surface_sensitive" = true ]; then
   checked_shell_no='^\s*-\s*\[[xX]\]\s*No shell-surface impact\.?\s*$'
   checked_shell_yes='^\s*-\s*\[[xX]\]\s*Shell-surface impact present\s*\(.*\)?\.?\s*$'
+
   shell_no_count="$(printf '%s\n' "$pr_body" | grep -Eci "$checked_shell_no" || true)"
   shell_yes_count="$(printf '%s\n' "$pr_body" | grep -Eci "$checked_shell_yes" || true)"
+
   if [ "$shell_no_count" -gt 0 ] && [ "$shell_yes_count" -gt 0 ]; then
     echo "PR body marks both shell-surface impact options as checked; choose exactly one." >&2
     status=1
@@ -140,6 +167,7 @@ if [ "$shell_surface_sensitive" = true ]; then
     status=1
   else
     shell_ratio_target=""
+
     if require_nonempty_field "shell_loc_delta_actual:"; then
       shell_loc_delta_actual="$(extract_field_value "shell_loc_delta_actual:")"
       if ! is_integer_value "$shell_loc_delta_actual"; then
@@ -149,6 +177,7 @@ if [ "$shell_surface_sensitive" = true ]; then
     else
       status=1
     fi
+
     if require_nonempty_field "rust_loc_delta_actual:"; then
       rust_loc_delta_actual="$(extract_field_value "rust_loc_delta_actual:")"
       if ! is_integer_value "$rust_loc_delta_actual"; then
@@ -158,6 +187,7 @@ if [ "$shell_surface_sensitive" = true ]; then
     else
       status=1
     fi
+
     if require_nonempty_field "shell_to_rust_ratio_delta_actual:"; then
       shell_ratio_delta_actual="$(extract_field_value "shell_to_rust_ratio_delta_actual:")"
       if ! is_decimal_value "$shell_ratio_delta_actual"; then
@@ -167,6 +197,7 @@ if [ "$shell_surface_sensitive" = true ]; then
     else
       status=1
     fi
+
     if require_nonempty_field "shell_surface_ratio_target_status:"; then
       shell_ratio_target="$(extract_field_value "shell_surface_ratio_target_status:")"
       case "$shell_ratio_target" in
@@ -179,6 +210,7 @@ if [ "$shell_surface_sensitive" = true ]; then
     else
       status=1
     fi
+
     if require_nonempty_field "shell_surface_mitigation_issue:"; then
       shell_surface_mitigation_issue="$(extract_field_value "shell_surface_mitigation_issue:")"
       if [ "$shell_surface_mitigation_issue" != "None" ] && [[ ! "$shell_surface_mitigation_issue" =~ ^#[0-9]+$ ]]; then
@@ -194,7 +226,9 @@ if [ "$shell_surface_sensitive" = true ]; then
     fi
   fi
 fi
+
 if [ "$status" -ne 0 ]; then
   exit 1
 fi
+
 echo "PR declaration checks passed."
