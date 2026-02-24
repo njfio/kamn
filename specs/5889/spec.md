@@ -1,7 +1,7 @@
 # Spec: Issue #5889 - sdk_direct Unsafe Env Fallback Regression Remediation
 
 - Issue: #5889
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
