@@ -562,6 +562,30 @@ struct NodeBootstrapReport {
     components: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ServiceApiEndpointRuntimePath {
+    SkipForFullSupervisor,
+    ServeInProcess,
+}
+
+fn classify_service_api_endpoint_runtime_path(
+    runtime_mode: &str,
+) -> Result<ServiceApiEndpointRuntimePath, ConfigError> {
+    if runtime_mode == "full" {
+        Ok(ServiceApiEndpointRuntimePath::SkipForFullSupervisor)
+    } else if runtime_mode == "api" {
+        Ok(ServiceApiEndpointRuntimePath::ServeInProcess)
+    } else {
+        Err(ConfigError::RuntimeDaemonLifecycle(
+            "service api endpoint requires runtime-mode api or full".to_owned(),
+        ))
+    }
+}
+
+fn should_skip_observability_endpoint_for_full_supervisor(runtime_mode: &str) -> bool {
+    runtime_mode == "full"
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let runtime_mode = cli.runtime_mode.as_str();
@@ -607,47 +631,46 @@ fn run() -> Result<(), ConfigError> {
     )?;
     emit_bootstrap_report_output(&report, output_mode)?;
     if let Some(endpoint_config) = service_api_endpoint_config {
-        if report.runtime_mode == "full" {
-            // Full-mode endpoint lanes are supervised inside runtime orchestration.
-        } else if report.runtime_mode != "api" {
-            return Err(ConfigError::RuntimeDaemonLifecycle(
-                "service api endpoint requires runtime-mode api or full".to_owned(),
-            ));
-        } else {
-            let snapshot = build_service_api_snapshot(&report);
-            let max_requests_label = endpoint_config.max_requests.to_string();
-            let idle_timeout_ms_label = endpoint_config.idle_timeout_ms.to_string();
-            let body_limit_bytes_label = endpoint_config.body_limit_bytes.to_string();
-            let concurrency_limit_label = endpoint_config.concurrency_limit.to_string();
-            let rate_limit_per_second_label = endpoint_config.rate_limit_per_second.to_string();
-            log_info(
-                "node.runtime.service_api.endpoint.start",
-                &[
-                    ("bind_addr", endpoint_config.bind_addr.as_str()),
-                    ("max_requests", max_requests_label.as_str()),
-                    ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
-                    ("body_limit_bytes", body_limit_bytes_label.as_str()),
-                    ("concurrency_limit", concurrency_limit_label.as_str()),
-                    (
-                        "rate_limit_per_second",
-                        rate_limit_per_second_label.as_str(),
-                    ),
-                    ("execution_id", execution_id.as_str()),
-                ],
-            )?;
-            serve_service_api_endpoint(&endpoint_config, &snapshot)
-                .map_err(ConfigError::RuntimeDaemonLifecycle)?;
-            log_info(
-                "node.runtime.service_api.endpoint.complete",
-                &[
-                    ("bind_addr", endpoint_config.bind_addr.as_str()),
-                    ("execution_id", execution_id.as_str()),
-                ],
-            )?;
+        match classify_service_api_endpoint_runtime_path(report.runtime_mode.as_str())? {
+            ServiceApiEndpointRuntimePath::SkipForFullSupervisor => {
+                // Full-mode endpoint lanes are supervised inside runtime orchestration.
+            }
+            ServiceApiEndpointRuntimePath::ServeInProcess => {
+                let snapshot = build_service_api_snapshot(&report);
+                let max_requests_label = endpoint_config.max_requests.to_string();
+                let idle_timeout_ms_label = endpoint_config.idle_timeout_ms.to_string();
+                let body_limit_bytes_label = endpoint_config.body_limit_bytes.to_string();
+                let concurrency_limit_label = endpoint_config.concurrency_limit.to_string();
+                let rate_limit_per_second_label = endpoint_config.rate_limit_per_second.to_string();
+                log_info(
+                    "node.runtime.service_api.endpoint.start",
+                    &[
+                        ("bind_addr", endpoint_config.bind_addr.as_str()),
+                        ("max_requests", max_requests_label.as_str()),
+                        ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+                        ("body_limit_bytes", body_limit_bytes_label.as_str()),
+                        ("concurrency_limit", concurrency_limit_label.as_str()),
+                        (
+                            "rate_limit_per_second",
+                            rate_limit_per_second_label.as_str(),
+                        ),
+                        ("execution_id", execution_id.as_str()),
+                    ],
+                )?;
+                serve_service_api_endpoint(&endpoint_config, &snapshot)
+                    .map_err(ConfigError::RuntimeDaemonLifecycle)?;
+                log_info(
+                    "node.runtime.service_api.endpoint.complete",
+                    &[
+                        ("bind_addr", endpoint_config.bind_addr.as_str()),
+                        ("execution_id", execution_id.as_str()),
+                    ],
+                )?;
+            }
         }
     }
     if let Some(endpoint_config) = observability_endpoint_config {
-        if report.runtime_mode == "full" {
+        if should_skip_observability_endpoint_for_full_supervisor(report.runtime_mode.as_str()) {
             // Full-mode endpoint lanes are supervised inside runtime orchestration.
         } else {
             let snapshot = build_runtime_observability_snapshot(&report).ok_or_else(|| {
