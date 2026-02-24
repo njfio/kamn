@@ -25,6 +25,7 @@ pub(super) struct DaemonRuntimeProcessingTelemetry {
     pub(super) relay_projected_state_count: u64,
     pub(super) processing_error_count: u64,
     pub(super) tick_processing_samples_ms: Vec<u64>,
+    pub(super) tick_sleep_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,6 +170,7 @@ mod tests {
                 relay_projected_state_count: 2,
                 processing_error_count: 0,
                 tick_processing_samples_ms: vec![8, 12, 10, 14],
+                tick_sleep_count: 0,
             },
         )
         .expect("telemetry");
@@ -197,6 +199,7 @@ mod tests {
                 relay_projected_state_count: 1,
                 processing_error_count: 1,
                 tick_processing_samples_ms: vec![20, 30, 45],
+                tick_sleep_count: 0,
             },
         )
         .expect("telemetry");
@@ -224,6 +227,7 @@ mod tests {
                 relay_projected_state_count: 0,
                 processing_error_count: 0,
                 tick_processing_samples_ms: vec![1, 2, 3, 4, 5],
+                tick_sleep_count: 0,
             },
         )
         .expect("telemetry");

@@ -836,13 +836,106 @@ fn execute_daemon_service_api_relay_tick_loop(
             .tick_processing_samples_ms
             .push((elapsed_ms.min(u128::from(u64::MAX)) as u64).max(1));
 
-        if tick + 1 < executed_ticks {
-            let elapsed = tick_started_at.elapsed();
-            if elapsed < tick_duration {
-                std::thread::sleep(tick_duration - elapsed);
-            }
+        if let Some(remaining_sleep) = daemon_tick_remaining_sleep_duration(
+            tick,
+            executed_ticks,
+            tick_duration,
+            tick_started_at.elapsed(),
+        ) {
+            std::thread::sleep(remaining_sleep);
+            runtime_processing.tick_sleep_count =
+                runtime_processing.tick_sleep_count.saturating_add(1);
         }
     }
 
     Ok(runtime_processing)
+}
+
+fn daemon_tick_remaining_sleep_duration(
+    tick: u64,
+    executed_ticks: u64,
+    tick_duration: Duration,
+    elapsed: Duration,
+) -> Option<Duration> {
+    if tick + 1 >= executed_ticks {
+        return None;
+    }
+    let remaining = tick_duration.checked_sub(elapsed)?;
+    if remaining.is_zero() {
+        return None;
+    }
+    Some(remaining)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{daemon_tick_remaining_sleep_duration, execute_daemon_service_api_relay_tick_loop};
+    use std::time::Duration;
+
+    #[test]
+    fn unit_daemon_relay_tick_loop_sleeps_between_ticks_when_interval_budget_remains() {
+        let runtime_processing =
+            execute_daemon_service_api_relay_tick_loop(3, 50, None, None).expect("tick loop");
+        assert_eq!(runtime_processing.executed_ticks, 3);
+        assert_eq!(runtime_processing.tick_processing_samples_ms.len(), 3);
+        assert_eq!(
+            runtime_processing.tick_sleep_count, 2,
+            "daemon tick loop must sleep exactly between ticks and never after last tick"
+        );
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_single_tick_never_sleeps() {
+        // Regression: #5895
+        let runtime_processing =
+            execute_daemon_service_api_relay_tick_loop(1, 50, None, None).expect("tick loop");
+        assert_eq!(
+            runtime_processing.tick_sleep_count, 0,
+            "single-tick daemon loop must not execute sleep branch"
+        );
+        assert_eq!(runtime_processing.tick_processing_samples_ms.len(), 1);
+    }
+
+    #[test]
+    fn unit_daemon_tick_remaining_sleep_duration_contract_is_deterministic() {
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                0,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(20),
+            ),
+            Some(Duration::from_millis(30))
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                1,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(50),
+            ),
+            None,
+            "equal elapsed and tick duration must not emit zero-duration sleeps"
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                1,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(60),
+            ),
+            None,
+            "elapsed values over tick duration must not underflow remaining sleep"
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                2,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(1),
+            ),
+            None,
+            "last tick must not sleep"
+        );
+    }
 }
