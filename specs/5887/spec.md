@@ -1,7 +1,7 @@
 # Spec: Issue #5887 - E2E Driver Env Fallback Hardening + Audit Root Expansion
 
 - Issue: #5887
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
