@@ -411,9 +411,6 @@ impl fmt::Display for GroupChannelCryptoError {
 impl std::error::Error for GroupChannelCryptoError {}
 
 fn insecure_group_message_crypto_enabled() -> bool {
-    if cfg!(debug_assertions) {
-        return true;
-    }
     match env::var(ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV) {
         Ok(value) => matches!(
             value.trim().to_ascii_lowercase().as_str(),
@@ -545,57 +542,95 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, GroupChannelCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{GroupChannelCryptoEngine, GroupChannelCryptoError};
+    use std::env;
+    use std::sync::{Mutex, OnceLock};
+
+    fn with_group_message_crypto_env<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("env lock should not be poisoned");
+        let previous = env::var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV).ok();
+        match value {
+            Some(value) => env::set_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV, value),
+            None => env::remove_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV),
+        }
+        let output = run();
+        match previous {
+            Some(value) => env::set_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV, value),
+            None => env::remove_var(super::ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV),
+        }
+        output
+    }
+
+    #[test]
+    fn regression_constructor_requires_explicit_opt_in_even_in_debug() {
+        // Regression: #5909
+        with_group_message_crypto_env(None, || {
+            assert_eq!(
+                GroupChannelCryptoEngine::new("channel:group:locked"),
+                Err(GroupChannelCryptoError::InsecureCryptoDisabled)
+            );
+        });
+    }
 
     #[test]
     fn constructor_rejects_empty_channel_id() {
-        assert_eq!(
-            GroupChannelCryptoEngine::new(""),
-            Err(GroupChannelCryptoError::EmptyChannelId)
-        );
+        with_group_message_crypto_env(Some("1"), || {
+            assert_eq!(
+                GroupChannelCryptoEngine::new(""),
+                Err(GroupChannelCryptoError::EmptyChannelId)
+            );
+        });
     }
 
     #[test]
     fn distribution_rejects_empty_recipients() {
-        let mut engine =
-            GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
-        assert_eq!(
-            engine.distribute_sender_key(
-                "kamn:did:agent:alice",
-                "kamn:did:agent:alice#sender-key-1",
-                Vec::new(),
-            ),
-            Err(GroupChannelCryptoError::EmptyRecipients)
-        );
+        with_group_message_crypto_env(Some("1"), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            assert_eq!(
+                engine.distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    Vec::new(),
+                ),
+                Err(GroupChannelCryptoError::EmptyRecipients)
+            );
+        });
     }
 
     #[test]
     fn rotate_marks_previous_generation_inactive() {
-        let mut engine =
-            GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
-        let first = engine
-            .distribute_sender_key(
-                "kamn:did:agent:alice",
-                "kamn:did:agent:alice#sender-key-1",
-                vec!["kamn:did:agent:bob".to_owned()],
-            )
-            .expect("first distribution should succeed");
+        with_group_message_crypto_env(Some("1"), || {
+            let mut engine =
+                GroupChannelCryptoEngine::new("channel:group:1").expect("engine should initialize");
+            let first = engine
+                .distribute_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-1",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("first distribution should succeed");
 
-        let second = engine
-            .rotate_sender_key(
-                "kamn:did:agent:alice",
-                "kamn:did:agent:alice#sender-key-2",
-                vec!["kamn:did:agent:bob".to_owned()],
-            )
-            .expect("rotation should succeed");
+            let second = engine
+                .rotate_sender_key(
+                    "kamn:did:agent:alice",
+                    "kamn:did:agent:alice#sender-key-2",
+                    vec!["kamn:did:agent:bob".to_owned()],
+                )
+                .expect("rotation should succeed");
 
-        let first_record = engine
-            .sender_key_record("kamn:did:agent:alice", first.key_generation)
-            .expect("first generation should exist");
-        let second_record = engine
-            .sender_key_record("kamn:did:agent:alice", second.key_generation)
-            .expect("second generation should exist");
+            let first_record = engine
+                .sender_key_record("kamn:did:agent:alice", first.key_generation)
+                .expect("first generation should exist");
+            let second_record = engine
+                .sender_key_record("kamn:did:agent:alice", second.key_generation)
+                .expect("second generation should exist");
 
-        assert!(!first_record.active);
-        assert!(second_record.active);
+            assert!(!first_record.active);
+            assert!(second_record.active);
+        });
     }
 }

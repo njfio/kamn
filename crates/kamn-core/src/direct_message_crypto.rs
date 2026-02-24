@@ -182,9 +182,6 @@ impl fmt::Display for DirectMessageCryptoError {
 impl std::error::Error for DirectMessageCryptoError {}
 
 fn insecure_direct_message_crypto_enabled() -> bool {
-    if cfg!(debug_assertions) {
-        return true;
-    }
     match env::var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV) {
         Ok(value) => matches!(
             value.trim().to_ascii_lowercase().as_str(),
@@ -262,33 +259,72 @@ fn hex_decode(value: &str) -> Result<Vec<u8>, DirectMessageCryptoError> {
 #[cfg(test)]
 mod tests {
     use super::{DirectMessageCryptoEngine, DirectMessageCryptoError};
+    use std::env;
+    use std::sync::{Mutex, OnceLock};
+
+    fn with_direct_message_crypto_env<T>(value: Option<&str>, run: impl FnOnce() -> T) -> T {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("env lock should not be poisoned");
+        let previous = env::var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV).ok();
+        match value {
+            Some(value) => env::set_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, value),
+            None => env::remove_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV),
+        }
+        let output = run();
+        match previous {
+            Some(value) => env::set_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, value),
+            None => env::remove_var(super::ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV),
+        }
+        output
+    }
+
+    #[test]
+    fn regression_constructor_requires_explicit_opt_in_even_in_debug() {
+        // Regression: #5909
+        with_direct_message_crypto_env(None, || {
+            assert_eq!(
+                DirectMessageCryptoEngine::new(
+                    "kamn:did:agent:alice#key-agreement-1",
+                    "kamn:did:agent:bob#key-agreement-1",
+                ),
+                Err(DirectMessageCryptoError::InsecureCryptoDisabled)
+            );
+        });
+    }
 
     #[test]
     fn constructor_rejects_invalid_key_reference() {
-        assert_eq!(
-            DirectMessageCryptoEngine::new("did:alice#keys-1", "did:bob#key-agreement-1"),
-            Err(DirectMessageCryptoError::InvalidKeyRef("sender"))
-        );
+        with_direct_message_crypto_env(Some("1"), || {
+            assert_eq!(
+                DirectMessageCryptoEngine::new("did:alice#keys-1", "did:bob#key-agreement-1"),
+                Err(DirectMessageCryptoError::InvalidKeyRef("sender"))
+            );
+        });
     }
 
     #[test]
     fn decrypt_rejects_algorithm_mismatch() {
-        let mut engine = match DirectMessageCryptoEngine::new(
-            "did:alice#key-agreement-1",
-            "did:bob#key-agreement-1",
-        ) {
-            Ok(value) => value,
-            Err(error) => panic!("engine init failed: {error}"),
-        };
-        let mut sealed = match engine.encrypt("payload", 1) {
-            Ok(value) => value,
-            Err(error) => panic!("encrypt failed: {error}"),
-        };
-        sealed.cipher_algorithm = "AES-GCM".to_owned();
+        with_direct_message_crypto_env(Some("1"), || {
+            let mut engine = match DirectMessageCryptoEngine::new(
+                "did:alice#key-agreement-1",
+                "did:bob#key-agreement-1",
+            ) {
+                Ok(value) => value,
+                Err(error) => panic!("engine init failed: {error}"),
+            };
+            let mut sealed = match engine.encrypt("payload", 1) {
+                Ok(value) => value,
+                Err(error) => panic!("encrypt failed: {error}"),
+            };
+            sealed.cipher_algorithm = "AES-GCM".to_owned();
 
-        assert_eq!(
-            engine.decrypt(&sealed),
-            Err(DirectMessageCryptoError::AlgorithmMismatch)
-        );
+            assert_eq!(
+                engine.decrypt(&sealed),
+                Err(DirectMessageCryptoError::AlgorithmMismatch)
+            );
+        });
     }
 }

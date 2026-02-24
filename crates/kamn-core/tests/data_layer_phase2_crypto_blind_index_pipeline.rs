@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
 
 use kamn_core::{
     data_layer_phase2_build_operational_artifact, CanonicalMessageEnvelope,
@@ -7,6 +8,15 @@ use kamn_core::{
     EnvelopeMetadata, EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM,
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
 };
+
+const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
+
+fn enable_direct_message_crypto_fixture_mode() {
+    static ENABLED: OnceLock<()> = OnceLock::new();
+    ENABLED.get_or_init(|| {
+        std::env::set_var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, "1");
+    });
+}
 
 fn valid_envelope(message_id: &str) -> CanonicalMessageEnvelope {
     let mut body = BTreeMap::new();
@@ -56,6 +66,7 @@ fn valid_request(
     message_id: &str,
     recipient_bindings: Vec<DataLayerPhase2RecipientEncryptionBinding>,
 ) -> DataLayerPhase2OperationalPipelineRequest {
+    enable_direct_message_crypto_fixture_mode();
     let mut blind_index_fields = BTreeMap::new();
     blind_index_fields.insert("channel_topic".to_owned(), "alpha".to_owned());
     blind_index_fields.insert("message_type".to_owned(), "request".to_owned());
