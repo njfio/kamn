@@ -7,6 +7,7 @@ pub(super) async fn service_api_auth_middleware(
 ) -> Response {
     let method_label = request.method().to_string();
     let path = request.uri().path().to_owned();
+    let request_started_at = Instant::now();
     let is_websocket_route = method_label == "GET" && path == ROUTE_EVENTS_WS;
     let concurrency_permit = match state.concurrency_limiter.clone().try_acquire_owned() {
         Ok(permit) => permit,
@@ -30,6 +31,7 @@ pub(super) async fn service_api_auth_middleware(
             );
             return service_api_middleware_error_response(
                 &state,
+                request_started_at,
                 ServiceApiMiddlewareError {
                     correlation_id: correlation_id.as_str(),
                     method: method_label.as_str(),
@@ -40,7 +42,8 @@ pub(super) async fn service_api_auth_middleware(
                     message: projection.default_message,
                     outcome: projection.outcome,
                 },
-            );
+            )
+            .await;
         }
     };
     // Yield once so queued requests observe bounded in-flight concurrency on the
@@ -62,6 +65,7 @@ pub(super) async fn service_api_auth_middleware(
             );
             return service_api_middleware_error_response(
                 &state,
+                request_started_at,
                 ServiceApiMiddlewareError {
                     correlation_id: correlation_id.as_str(),
                     method: "unknown",
@@ -72,7 +76,8 @@ pub(super) async fn service_api_auth_middleware(
                     message: error.message.as_str(),
                     outcome: "bad-request",
                 },
-            );
+            )
+            .await;
         }
     };
 
@@ -87,6 +92,7 @@ pub(super) async fn service_api_auth_middleware(
     ) {
         return service_api_middleware_error_response(
             &state,
+            request_started_at,
             ServiceApiMiddlewareError {
                 correlation_id: correlation_id.as_str(),
                 method: parsed_request.method.as_str(),
@@ -97,7 +103,8 @@ pub(super) async fn service_api_auth_middleware(
                 message: reason.as_str(),
                 outcome: "log-error",
             },
-        );
+        )
+        .await;
     }
 
     {
@@ -118,6 +125,7 @@ pub(super) async fn service_api_auth_middleware(
             };
             return service_api_middleware_error_response(
                 &state,
+                request_started_at,
                 ServiceApiMiddlewareError {
                     correlation_id: correlation_id.as_str(),
                     method: parsed_request.method.as_str(),
@@ -128,13 +136,15 @@ pub(super) async fn service_api_auth_middleware(
                     message: auth_error.message.as_str(),
                     outcome,
                 },
-            );
+            )
+            .await;
         }
     }
 
     if let Err(error) = super::auth::enforce_request_scope_policy(&parsed_request) {
         return service_api_middleware_error_response(
             &state,
+            request_started_at,
             ServiceApiMiddlewareError {
                 correlation_id: correlation_id.as_str(),
                 method: parsed_request.method.as_str(),
@@ -145,7 +155,8 @@ pub(super) async fn service_api_auth_middleware(
                 message: error.message.as_str(),
                 outcome: "unauthorized",
             },
-        );
+        )
+        .await;
     }
 
     if let Err(error) = super::enforce_sender_anti_spam(&state, &parsed_request).await {
@@ -162,6 +173,7 @@ pub(super) async fn service_api_auth_middleware(
         let _projection_class = projection.rejection_class;
         return service_api_middleware_error_response(
             &state,
+            request_started_at,
             ServiceApiMiddlewareError {
                 correlation_id: correlation_id.as_str(),
                 method: parsed_request.method.as_str(),
@@ -172,7 +184,8 @@ pub(super) async fn service_api_auth_middleware(
                 message: error.message.as_str(),
                 outcome: projection.outcome,
             },
-        );
+        )
+        .await;
     }
 
     if route_requires_auth(parsed_request.method.as_str(), parsed_request.path.as_str()) {
@@ -191,6 +204,7 @@ pub(super) async fn service_api_auth_middleware(
             let _projection_class = projection.rejection_class;
             return service_api_middleware_error_response(
                 &state,
+                request_started_at,
                 ServiceApiMiddlewareError {
                     correlation_id: correlation_id.as_str(),
                     method: parsed_request.method.as_str(),
@@ -201,7 +215,8 @@ pub(super) async fn service_api_auth_middleware(
                     message: projection.default_message,
                     outcome: projection.outcome,
                 },
-            );
+            )
+            .await;
         }
     }
 
@@ -210,6 +225,7 @@ pub(super) async fn service_api_auth_middleware(
     {
         return service_api_middleware_error_response(
             &state,
+            request_started_at,
             ServiceApiMiddlewareError {
                 correlation_id: correlation_id.as_str(),
                 method: parsed_request.method.as_str(),
@@ -220,7 +236,8 @@ pub(super) async fn service_api_auth_middleware(
                 message: error.message.as_str(),
                 outcome: "websocket-bad-request",
             },
-        );
+        )
+        .await;
     }
 
     let method_for_outcome = parsed_request.method.clone();
@@ -249,6 +266,12 @@ pub(super) async fn service_api_auth_middleware(
         response.status().as_u16(),
         outcome,
     );
+    super::runtime_observability::record_runtime_observation(
+        state.as_ref(),
+        response.status().as_u16(),
+        request_started_at.elapsed(),
+    )
+    .await;
     state.request_budget.record_request();
     drop(concurrency_permit);
     response
@@ -291,8 +314,9 @@ pub(super) async fn parse_service_api_request(
     Ok((request, parsed_request))
 }
 
-pub(super) fn service_api_middleware_error_response(
+pub(super) async fn service_api_middleware_error_response(
     state: &ServiceApiRuntimeState,
+    request_started_at: Instant,
     error: ServiceApiMiddlewareError<'_>,
 ) -> Response {
     let response = super::json_error_response(
@@ -308,6 +332,12 @@ pub(super) fn service_api_middleware_error_response(
         error.status_code.as_u16(),
         error.outcome,
     );
+    super::runtime_observability::record_runtime_observation(
+        state,
+        error.status_code.as_u16(),
+        request_started_at.elapsed(),
+    )
+    .await;
     state.request_budget.record_request();
     response
 }
@@ -563,8 +593,10 @@ pub(super) async fn handle_service_api_http_route(
             };
         }
     }
+    let snapshot =
+        super::runtime_observability::snapshot_with_runtime_observability(state.as_ref()).await;
     let rendered = super::render_service_api_endpoint_response(
-        &state.snapshot,
+        &snapshot,
         context.parsed_request.method.as_str(),
         context.parsed_request.path.as_str(),
         context.parsed_request.body.as_str(),
