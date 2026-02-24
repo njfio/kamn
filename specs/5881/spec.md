@@ -1,7 +1,7 @@
 # Spec: Issue #5881 - Shell LOC Reduction Wave (No Behavior Change)
 
 - Issue: #5881
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
