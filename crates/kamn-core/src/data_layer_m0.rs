@@ -2,12 +2,12 @@
 //!
 //! This module provides deterministic record derivation from canonical envelopes
 //! plus an append-only ledger with hash-chain verification. The digest utility
-//! emits a 256-bit hex string with `sha256:` labeling for compatibility with
-//! downstream interfaces and can be swapped with a strict SHA-256 backend later.
+//! emits strict SHA-256 digests with `sha256:` labeling for compatibility with
+//! downstream interfaces.
 
 use crate::{
-    CanonicalMessageEnvelope, DirectMessageCiphertext, DIRECT_MESSAGE_CIPHER_ALGORITHM,
-    DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+    data_layer_hashing::tagged_sha256, CanonicalMessageEnvelope, DirectMessageCiphertext,
+    DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
 };
 use std::collections::BTreeSet;
 use std::fmt;
@@ -506,28 +506,5 @@ fn canonical_aad_payload(
 }
 
 fn tagged_digest(value: &str) -> String {
-    format!(
-        "{DATA_LAYER_M0_HASH_ALGORITHM}:{}",
-        deterministic_digest_256_hex(value)
-    )
-}
-
-fn deterministic_digest_256_hex(value: &str) -> String {
-    const SEEDS: [u64; 4] = [
-        0x243f6a8885a308d3,
-        0x13198a2e03707344,
-        0xa4093822299f31d0,
-        0x082efa98ec4e6c89,
-    ];
-    let mut output = String::with_capacity(64);
-    for (index, seed) in SEEDS.iter().enumerate() {
-        let mut acc = *seed ^ (index as u64).wrapping_mul(0x9e3779b97f4a7c15);
-        for byte in value.bytes() {
-            acc ^= u64::from(byte);
-            acc = acc.wrapping_mul(0x00000100000001B3);
-            acc ^= acc.rotate_left(13);
-        }
-        output.push_str(&format!("{acc:016x}"));
-    }
-    output
+    tagged_sha256(value, DATA_LAYER_M0_HASH_ALGORITHM)
 }

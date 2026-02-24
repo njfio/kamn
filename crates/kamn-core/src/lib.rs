@@ -40,6 +40,8 @@ pub mod cross_chain_receipt;
 pub mod cross_store_replay_consistency;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
+/// Shared SHA-256 helpers used by data-layer M0-M11 hash-chain contracts.
+pub(crate) mod data_layer_hashing;
 /// M0 data-layer foundation records, append-only ledger, and hash-chain contracts.
 pub mod data_layer_m0;
 /// M1 trust-anchor contracts for merkle batching, proof APIs, and Kolme anchoring worker flows.
