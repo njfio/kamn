@@ -1,10 +1,12 @@
 use std::path::{Path, PathBuf};
 
 const REASON_TAXONOMY_VERSION: &str = "kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1";
-const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing";
+const REASON_CODES_CSV: &str = "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing";
 const REASON_CODES_ORDER: &[&str] = &[
     "workflow_file_missing",
     "strategy_doc_missing",
+    "push_trigger_missing",
+    "push_main_branch_scope_missing",
     "sdk_direct_job_missing",
     "sdk_direct_live_toggle_missing",
     "sdk_direct_external_execution_flag_missing",
@@ -20,7 +22,7 @@ const STRATEGY_REQUIRED_MARKERS: &[&str] = &[
     "## E2E Live Workflow Contract",
     "cargo test -p kamn-core --test e2e_live_workflow_lane",
     "e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1",
-    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing",
+    "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing",
     "e2e_live_workflow_contract_status=verified|violation",
 ];
 
@@ -92,6 +94,14 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
     let section = if workflow_text.is_empty() {
         None
     } else {
+        if !workflow_text.contains("push:") {
+            add_reason(&mut raw_reasons, "push_trigger_missing");
+        }
+
+        if !workflow_text.contains("branches:") || !workflow_text.contains("- main") {
+            add_reason(&mut raw_reasons, "push_main_branch_scope_missing");
+        }
+
         let sdk = sdk_direct_section(workflow_text);
         if sdk.is_none() {
             add_reason(&mut raw_reasons, "sdk_direct_job_missing");
@@ -174,7 +184,7 @@ fn unit_e2e_live_workflow_lane_reason_taxonomy_markers_remain_deterministic() {
     );
     assert_eq!(
         REASON_CODES_CSV,
-        "workflow_file_missing,strategy_doc_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing"
+        "workflow_file_missing,strategy_doc_missing,push_trigger_missing,push_main_branch_scope_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing"
     );
 }
 
@@ -208,6 +218,41 @@ fn regression_e2e_live_workflow_lane_rejects_missing_sdk_direct_live_toggle() {
     assert_eq!(
         decision.reason_codes_value,
         "sdk_direct_live_toggle_missing"
+    );
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_push_trigger() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen("  push:\n", "", 1);
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(decision.reason_codes_value, "push_trigger_missing");
+    assert_eq!(decision.contract_status, "violation");
+}
+
+#[test]
+fn regression_e2e_live_workflow_lane_rejects_missing_push_main_branch_scope() {
+    let root = repo_root();
+    let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
+        .expect("workflow fixture should exist");
+    let strategy =
+        read_file_if_exists(&root.join("docs/ci/strategy.md")).expect("strategy fixture exists");
+    let mutated = workflow.replacen("      - main\n", "", 1);
+    let decision = evaluate_contract(Some(mutated.as_str()), Some(strategy.as_str()));
+
+    assert_eq!(decision.status, "fail");
+    assert_eq!(decision.final_decision, "NO-GO");
+    assert_eq!(
+        decision.reason_codes_value,
+        "push_main_branch_scope_missing"
     );
     assert_eq!(decision.contract_status, "violation");
 }
