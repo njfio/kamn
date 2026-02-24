@@ -7,6 +7,11 @@ use kamn_core::{
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+const TEST_SIGNER_PRIVATE_KEY_B_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
 fn signer_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
@@ -504,6 +509,43 @@ fn regression_local_backend_rejects_tampered_signature() {
             .verify_with_backend("local-software", &request, tampered_signature.as_str())
             .is_err(),
         "local backend must reject tampered signatures"
+    );
+}
+
+#[test]
+fn regression_local_backend_rejects_signature_when_verifier_uses_wrong_key() {
+    // Regression: #5897
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let router = SignerBackendRouter::with_secure_availability(false);
+    let request = SigningRequest::new(
+        "secure:key-regression-5897-wrong-key",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let _signing_key_specific_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5897_WRONG_KEY",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    );
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("local fallback should sign");
+
+    let _verifying_key_specific_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5897_WRONG_KEY",
+        Some(TEST_SIGNER_PRIVATE_KEY_B_HEX),
+    );
+    assert!(
+        router
+            .verify_with_backend("local-software", &request, signed.signature.as_str())
+            .is_err(),
+        "local backend must reject signatures when verifier key material does not match signer key"
     );
 }
 

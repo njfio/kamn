@@ -1,9 +1,15 @@
 use kamn_core::{
     baseline_signature_for_fields, legacy_signature_for_fields,
+    service_auth_public_key_hex_from_private_key_hex,
     signature_profile_compatibility_fixtures_for_fields, BaselineTransaction, RoleSmokeNetwork,
     SmokeError, TransactionGuardError, GENESIS_STATE_HASH,
 };
 use std::sync::{Mutex, OnceLock};
+
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+const TEST_SIGNER_PRIVATE_KEY_B_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 fn signer_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -132,6 +138,34 @@ fn regression_tampered_signature_is_rejected() {
     let mut tx =
         BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
     tx.signature = format!("{}-tampered", tx.signature);
+
+    assert!(matches!(
+        network.submit_transaction(tx),
+        Err(SmokeError::Guard(
+            TransactionGuardError::InvalidSignature { .. }
+        ))
+    ));
+}
+
+#[test]
+fn regression_transaction_guard_rejects_signature_when_public_key_mismatch_is_forced() {
+    // Regression: #5897
+    let _lock = lock_signer_env();
+    let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let _private_key_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    );
+    let mismatched_public_key =
+        service_auth_public_key_hex_from_private_key_hex(TEST_SIGNER_PRIVATE_KEY_B_HEX)
+            .expect("test key should decode");
+    let _public_key_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PUBLIC_KEY_HEX",
+        Some(mismatched_public_key.as_str()),
+    );
+
+    let mut network = RoleSmokeNetwork::new(true);
+    let tx = BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
 
     assert!(matches!(
         network.submit_transaction(tx),
