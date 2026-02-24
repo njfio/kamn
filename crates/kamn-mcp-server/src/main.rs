@@ -3,6 +3,13 @@ use kamn_mcp_server::process_stdio_input;
 use kamn_mcp_server::tools::build_tool_registry;
 use std::io::{self, Read};
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match std::env::var(key) {
+        Ok(value) => value,
+        Err(_) => default.to_owned(),
+    }
+}
+
 fn main() {
     let config = match McpServerConfig::from_args(std::env::args()) {
         Ok(config) => config,
@@ -28,8 +35,7 @@ fn main() {
     }
 
     let _ = config.key_file.as_str();
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| "http://localhost:3000".to_owned());
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", "http://localhost:3000");
     let handle = match kamn_agent_lib::KamnAgentHandle::connect(
         config.endpoint.as_str(),
         kolme_endpoint.as_str(),

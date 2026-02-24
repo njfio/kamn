@@ -107,11 +107,16 @@ fn escape_json(input: &str) -> String {
     escaped
 }
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match std::env::var(key) {
+        Ok(value) => value,
+        Err(_) => default.to_owned(),
+    }
+}
+
 pub(crate) fn connect_handle(args: &ParsedCliArgs) -> Result<KamnAgentHandle, AgentLibError> {
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
     KamnAgentHandle::connect(
         args.endpoint.as_str(),
         kolme_endpoint.as_str(),
