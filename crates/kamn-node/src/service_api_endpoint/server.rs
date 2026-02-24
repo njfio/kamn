@@ -18,8 +18,17 @@ fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
     }
 }
 
-fn resolve_service_api_state_file() -> Result<Option<String>, String> {
-    match env::var(SERVICE_API_STATE_FILE_ENV) {
+fn resolve_service_api_state_file(
+    config: &ServiceApiEndpointConfig,
+) -> Result<Option<String>, String> {
+    resolve_service_api_state_file_from_env(env::var(SERVICE_API_STATE_FILE_ENV), config)
+}
+
+fn resolve_service_api_state_file_from_env(
+    env_value: Result<String, env::VarError>,
+    config: &ServiceApiEndpointConfig,
+) -> Result<Option<String>, String> {
+    match env_value {
         Ok(value) => {
             let normalized = value.trim();
             if normalized.is_empty() {
@@ -29,10 +38,44 @@ fn resolve_service_api_state_file() -> Result<Option<String>, String> {
             }
             Ok(Some(normalized.to_owned()))
         }
-        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotPresent) => Ok(Some(default_service_api_state_file_path(config))),
         Err(env::VarError::NotUnicode(_)) => Err(format!(
             "service api state file env must be utf-8: {SERVICE_API_STATE_FILE_ENV}"
         )),
+    }
+}
+
+fn default_service_api_state_file_path(config: &ServiceApiEndpointConfig) -> String {
+    let mut path = env::temp_dir();
+    let bind_label = sanitize_service_api_state_file_component(config.bind_addr.as_str());
+    path.push(format!("kamn-node-service-api-state-{bind_label}.json"));
+    path.to_string_lossy().to_string()
+}
+
+fn sanitize_service_api_state_file_component(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    let mut last_was_separator = false;
+    for ch in value.chars() {
+        let normalized = if ch.is_ascii_alphanumeric() {
+            ch.to_ascii_lowercase()
+        } else {
+            '-'
+        };
+        if normalized == '-' {
+            if !last_was_separator {
+                output.push(normalized);
+            }
+            last_was_separator = true;
+            continue;
+        }
+        output.push(normalized);
+        last_was_separator = false;
+    }
+    let trimmed = output.trim_matches('-');
+    if trimmed.is_empty() {
+        "default".to_owned()
+    } else {
+        trimmed.to_owned()
     }
 }
 
@@ -131,7 +174,7 @@ pub(super) async fn serve_service_api_endpoint_async(
 ) -> Result<(), String> {
     let tls_mode = resolve_service_api_tls_mode()?;
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
-    let state_file = resolve_service_api_state_file()?;
+    let state_file = resolve_service_api_state_file(&config)?;
     let message_store = ServiceApiMessageStore::from_optional_state_file(state_file)?;
     let sender_anti_spam = build_service_api_sender_anti_spam_engine()
         .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
@@ -256,4 +299,50 @@ pub(super) fn build_service_api_router(state: Arc<ServiceApiRuntimeState>) -> Ro
             super::service_api_auth_middleware,
         ))
         .with_state(state)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture_endpoint_config(bind_addr: &str) -> ServiceApiEndpointConfig {
+        ServiceApiEndpointConfig {
+            bind_addr: bind_addr.to_owned(),
+            max_requests: 1,
+            idle_timeout_ms: 1_000,
+            body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+            concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+            rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+        }
+    }
+
+    #[test]
+    fn unit_service_api_state_file_resolution_prefers_explicit_env_override() {
+        let config = fixture_endpoint_config("127.0.0.1:34079");
+        let resolved = resolve_service_api_state_file_from_env(
+            Ok("  /tmp/custom-service-api-state.json  ".to_owned()),
+            &config,
+        )
+        .expect("explicit env state file should resolve");
+        assert_eq!(
+            resolved,
+            Some("/tmp/custom-service-api-state.json".to_owned())
+        );
+    }
+
+    #[test]
+    fn unit_service_api_state_file_resolution_derives_deterministic_default_path_when_env_missing()
+    {
+        let config = fixture_endpoint_config("127.0.0.1:34079");
+        let resolved =
+            resolve_service_api_state_file_from_env(Err(env::VarError::NotPresent), &config)
+                .expect("missing env should derive default state file");
+        let expected = Some(default_service_api_state_file_path(&config));
+        assert_eq!(resolved, expected);
+        let resolved_path = resolved.expect("default path should exist");
+        assert!(
+            resolved_path.contains("kamn-node-service-api-state-127-0-0-1-34079.json"),
+            "default path should encode sanitized bind address: {resolved_path}"
+        );
+    }
 }

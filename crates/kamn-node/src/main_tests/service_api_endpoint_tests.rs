@@ -3158,6 +3158,127 @@ fn regression_service_api_endpoint_rejects_legacy_signature_when_toggle_env_is_t
 }
 
 #[test]
+fn integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env(
+) {
+    let _env = acquire_service_api_test_env();
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34079".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let bind_addr = reserve_loopback_addr();
+    let send_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let send_snapshot = snapshot.clone();
+    let send_server =
+        thread::spawn(move || serve_service_api_endpoint(&send_config, &send_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let payload = r#"{"message":"durable-store-default-check"}"#;
+    let send_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-persist-default",
+        1,
+        state_hash.as_str(),
+        payload,
+    );
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        payload,
+        &[
+            (
+                "X-KAMN-Sender-DID",
+                "kamn:did:agent:test-client-persist-default",
+            ),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+
+    let send_server_result = send_server
+        .join()
+        .expect("send server thread should complete");
+    assert!(
+        send_server_result.is_ok(),
+        "send-phase service api endpoint should stop cleanly after request budget"
+    );
+
+    let query_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let query_snapshot = snapshot.clone();
+    let query_server =
+        thread::spawn(move || serve_service_api_endpoint(&query_config, &query_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let query_path = format!("/v1/messages/{}", send_payload.message_id);
+    let query_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:test-client-persist-default",
+        2,
+        state_hash.as_str(),
+        "",
+    );
+    let query_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        query_path.as_str(),
+        "",
+        &[
+            (
+                "X-KAMN-Sender-DID",
+                "kamn:did:agent:test-client-persist-default",
+            ),
+            ("X-KAMN-Request-Nonce", "2"),
+            ("X-KAMN-Request-Signature", query_signature.as_str()),
+        ],
+    );
+    assert!(query_response.contains("HTTP/1.1 200 OK"));
+    let query_payload: ServiceApiMessageGetBody =
+        parse_service_api_payload(extract_http_response_body(query_response.as_str()))
+            .expect("query payload should deserialize");
+    assert_eq!(query_payload.message_id, send_payload.message_id);
+    assert_eq!(query_payload.status, "created");
+
+    let query_server_result = query_server
+        .join()
+        .expect("query server thread should complete");
+    assert!(
+        query_server_result.is_ok(),
+        "query-phase service api endpoint should stop cleanly after request budget"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_persists_message_state_across_restart() {
     let _env = acquire_service_api_test_env();
     let state_file = std::env::temp_dir().join(format!(

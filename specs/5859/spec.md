@@ -1,7 +1,7 @@
 # Spec: Issue #5859 - Durable-by-Default Service API State Persistence
 
 - Issue: #5859
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
@@ -36,9 +36,10 @@ Out of scope:
 | C-04 | AC-4 | Verify | targeted `cargo test`/`fmt`/`clippy` for touched surfaces | all pass |
 
 ## Test Mapping
-- `cargo test -p kamn-node integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env -- --exact`
-- `cargo test -p kamn-node integration_service_api_endpoint_persists_message_state_across_restart -- --exact`
-- `cargo test -p kamn-node --lib service_api_endpoint::server::tests::unit_service_api_state_file_resolution_prefers_explicit_env_override -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_persists_message_state_across_restart_without_explicit_state_file_env -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_persists_message_state_across_restart -- --exact`
+- `cargo test -p kamn-node service_api_endpoint::server::tests::unit_service_api_state_file_resolution_prefers_explicit_env_override -- --exact`
+- `cargo test -p kamn-node service_api_endpoint::server::tests::unit_service_api_state_file_resolution_derives_deterministic_default_path_when_env_missing -- --exact`
 
 ## Success Metrics / Observable Signals
 - Default (no state-file env) runtime no longer loses Service API message state across restart.
