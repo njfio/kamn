@@ -1,7 +1,7 @@
 # Spec: Issue #5863 - Daemon Relay Drain Lifecycle Projection
 
 - Issue: #5863
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
