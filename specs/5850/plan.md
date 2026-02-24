@@ -1,7 +1,7 @@
 # Plan: Issue #5850
 
 ## Approach
-1. Add a new Rust contract test file (`crates/kamn-core/tests/e2e_live_workflow_contract.rs`) that implements the same invariant checks and deterministic reason taxonomy currently enforced by shell/Python checker fixtures.
+1. Add a new Rust contract test file (`crates/kamn-core/tests/e2e_live_workflow_lane.rs`) that implements the same invariant checks and deterministic reason taxonomy currently enforced by shell/Python checker fixtures.
 2. Remove now-redundant shell/Python checker artifacts:
    - `scripts/ci/check_e2e_live_workflow_contract.py`
    - `scripts/ci/test_check_e2e_live_workflow_contract.sh`
@@ -10,7 +10,7 @@
 5. Verify targeted Rust lane and full fast-mode regression suite.
 
 ## Affected Modules
-- `crates/kamn-core/tests/e2e_live_workflow_contract.rs` (new)
+- `crates/kamn-core/tests/e2e_live_workflow_lane.rs` (new)
 - `scripts/ci/test_ci_tools.sh`
 - `scripts/ci/test_ci_tools_command_surface_contract.sh`
 - `docs/ci/strategy.md`

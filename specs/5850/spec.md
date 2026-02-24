@@ -40,7 +40,7 @@ Out of scope:
 | C-07 | AC-4 | Regression | shell/python script inventory before/after #5850 diff | no net shell/python/workflow increase from #5850 |
 
 ## Test Mapping
-- `cargo test -p kamn-core --test e2e_live_workflow_contract`
+- `cargo test -p kamn-core --test e2e_live_workflow_lane`
 - `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
 
 ## Success Metrics / Observable Signals

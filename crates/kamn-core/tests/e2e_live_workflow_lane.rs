@@ -18,7 +18,7 @@ const SDK_DIRECT_FULL_SCENARIOS: &str =
     "--scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15";
 const STRATEGY_REQUIRED_MARKERS: &[&str] = &[
     "## E2E Live Workflow Contract",
-    "cargo test -p kamn-core --test e2e_live_workflow_contract",
+    "cargo test -p kamn-core --test e2e_live_workflow_lane",
     "e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1",
     "e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing",
     "e2e_live_workflow_contract_status=verified|violation",
@@ -167,7 +167,7 @@ fn evaluate_contract(workflow: Option<&str>, strategy: Option<&str>) -> Contract
 }
 
 #[test]
-fn unit_e2e_live_workflow_contract_reason_taxonomy_markers_remain_deterministic() {
+fn unit_e2e_live_workflow_lane_reason_taxonomy_markers_remain_deterministic() {
     assert_eq!(
         REASON_TAXONOMY_VERSION,
         "kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1"
@@ -179,7 +179,7 @@ fn unit_e2e_live_workflow_contract_reason_taxonomy_markers_remain_deterministic(
 }
 
 #[test]
-fn functional_e2e_live_workflow_contract_accepts_repository_baseline() {
+fn functional_e2e_live_workflow_lane_accepts_repository_baseline() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"));
     let strategy = read_file_if_exists(&root.join("docs/ci/strategy.md"));
@@ -194,7 +194,7 @@ fn functional_e2e_live_workflow_contract_accepts_repository_baseline() {
 }
 
 #[test]
-fn regression_e2e_live_workflow_contract_rejects_missing_sdk_direct_live_toggle() {
+fn regression_e2e_live_workflow_lane_rejects_missing_sdk_direct_live_toggle() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
         .expect("workflow fixture should exist");
@@ -213,7 +213,7 @@ fn regression_e2e_live_workflow_contract_rejects_missing_sdk_direct_live_toggle(
 }
 
 #[test]
-fn regression_e2e_live_workflow_contract_rejects_truncated_scenario_matrix() {
+fn regression_e2e_live_workflow_lane_rejects_truncated_scenario_matrix() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
         .expect("workflow fixture should exist");
@@ -236,7 +236,7 @@ fn regression_e2e_live_workflow_contract_rejects_truncated_scenario_matrix() {
 }
 
 #[test]
-fn regression_e2e_live_workflow_contract_rejects_missing_external_execution_flag() {
+fn regression_e2e_live_workflow_lane_rejects_missing_external_execution_flag() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
         .expect("workflow fixture should exist");
@@ -255,7 +255,7 @@ fn regression_e2e_live_workflow_contract_rejects_missing_external_execution_flag
 }
 
 #[test]
-fn regression_e2e_live_workflow_contract_rejects_missing_strategy_markers() {
+fn regression_e2e_live_workflow_lane_rejects_missing_strategy_markers() {
     let root = repo_root();
     let workflow = read_file_if_exists(&root.join(".github/workflows/e2e-live.yml"))
         .expect("workflow fixture should exist");
