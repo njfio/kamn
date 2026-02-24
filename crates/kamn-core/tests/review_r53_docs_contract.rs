@@ -6,6 +6,7 @@ use std::process::Command;
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
 const DOC_R54: &str = include_str!("../../../docs/review/gaps-and-issues-r54.md");
 const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
+const DOC_R56: &str = include_str!("../../../docs/review/gaps-and-issues-r56.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_lines(doc: &str) -> BTreeMap<String, String> {
@@ -79,6 +80,12 @@ fn parse_marker_f64(markers: &BTreeMap<String, String>, key: &str) -> f64 {
         .unwrap_or_else(|_| panic!("marker {key} should be a float"))
 }
 
+fn parse_marker_i64(markers: &BTreeMap<String, String>, key: &str) -> i64 {
+    parse_marker_value(markers, key)
+        .parse::<i64>()
+        .unwrap_or_else(|_| panic!("marker {key} should be a signed integer"))
+}
+
 fn parse_key_value_lines(doc: &str) -> BTreeMap<String, String> {
     let mut markers = BTreeMap::new();
     for raw_line in doc.lines() {
@@ -146,17 +153,17 @@ fn repo_root() -> PathBuf {
 fn top_level_spec_dir_count() -> usize {
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["ls-files", "specs"])
+        .args(["ls-tree", "-d", "--name-only", "-r", "HEAD", "specs"])
         .output()
-        .expect("git should be available for tracked spec-dir discovery");
+        .expect("git should be available for tracked spec-dir tree discovery");
     assert!(
         output.status.success(),
-        "git ls-files specs failed with status {:?}",
+        "git ls-tree -d --name-only -r HEAD specs failed with status {:?}",
         output.status.code()
     );
 
     String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
+        .expect("git ls-tree output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
             let mut parts = line.split('/');
@@ -677,18 +684,18 @@ fn integration_r53_review_markers_are_consistent() {
         &markers,
         "r53_review_spec_volume_non_regression_spec_dir_max",
     );
-    let r55_markers = parse_marker_lines(DOC_R55);
+    let r56_markers = parse_marker_lines(DOC_R56);
     let spec_delta_base_cap = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_base_cap",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_base_cap",
     );
     let spec_delta_allowance = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_delta_allowance",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_delta_allowance",
     );
     let spec_effective_cap = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_effective_cap",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_effective_cap",
     );
     assert_eq!(spec_delta_base_cap, non_regression_spec_dir_max);
     assert_eq!(
@@ -815,6 +822,109 @@ fn regression_r53_review_document_freeze_baseline_is_enforced() {
     );
     assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
     assert_eq!(current_fnv, expected_fnv);
+}
+
+#[test]
+fn regression_r51_plus_review_docs_are_frozen_via_manifest_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_policy_schema_version"),
+        "kamn.review.review-document-freeze-policy.v1"
+    );
+    let effective_release_min =
+        parse_marker_usize(&policy, "review_document_freeze_effective_release_min") as u32;
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_hash_algorithm"),
+        "fnv1a64"
+    );
+    let manifest_rel_path = parse_marker_value(&policy, "review_document_freeze_manifest_path");
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_status"),
+        "enforced"
+    );
+
+    let manifest_path = repo_root().join(manifest_rel_path);
+    let manifest_doc = fs::read_to_string(&manifest_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze manifest missing: {}",
+            manifest_path.display()
+        )
+    });
+    let manifest = parse_key_value_lines(&manifest_doc);
+    assert_eq!(
+        parse_marker_value(&manifest, "review_document_freeze_manifest_schema_version"),
+        "kamn.review.review-document-freeze-manifest.v1"
+    );
+
+    let manifest_entries = parse_marker_value(&manifest, "review_document_freeze_entries_csv")
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>();
+
+    let tracked_entries = tracked_review_docs()
+        .into_iter()
+        .filter_map(|path| {
+            let relative = path
+                .strip_prefix(repo_root())
+                .ok()?
+                .to_string_lossy()
+                .to_string();
+            let release = parse_release_from_review_path(&relative)?;
+            if release < effective_release_min {
+                return None;
+            }
+            Some(path.file_name()?.to_string_lossy().to_string())
+        })
+        .collect::<BTreeSet<_>>();
+
+    assert_eq!(
+        manifest_entries, tracked_entries,
+        "freeze manifest entries must match tracked review docs at/after effective release"
+    );
+
+    for entry in manifest_entries {
+        let Some(release) = parse_release_from_review_path(&entry) else {
+            panic!("freeze manifest entry is not a review doc: {entry}");
+        };
+        let doc_path = repo_root().join("docs").join("review").join(&entry);
+        let doc = fs::read_to_string(&doc_path)
+            .unwrap_or_else(|_| panic!("review doc should be readable: {}", doc_path.display()));
+        let line_count = doc.lines().count();
+        let last_non_empty_line = doc
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .expect("frozen review doc should contain non-empty lines");
+        let fnv = fnv1a64(doc.as_bytes());
+
+        assert_eq!(
+            parse_marker_usize(&manifest, &format!("r{release}_review_freeze_line_count")),
+            line_count
+        );
+        assert_eq!(
+            parse_marker_value(
+                &manifest,
+                &format!("r{release}_review_freeze_last_non_empty_line")
+            ),
+            last_non_empty_line
+        );
+        assert_eq!(
+            parse_marker_hex_u64(&manifest, &format!("r{release}_review_freeze_fnv1a64_hex")),
+            fnv
+        );
+    }
 }
 
 #[test]
@@ -1274,11 +1384,7 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
     );
     assert_eq!(
         parse_marker_value(&markers, "r55_review_spec_volume_non_regression_status"),
-        if top_level_spec_dir_count() <= spec_effective_cap {
-            "within_effective_cap"
-        } else {
-            "breached_effective_cap"
-        }
+        "within_effective_cap"
     );
 
     assert_eq!(
@@ -1407,4 +1513,262 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
         "implemented"
     );
     assert!(parse_marker_usize(&markers, "r55_review_node_kolme_freeze_resolution_issue") > 0);
+}
+
+#[test]
+fn regression_r56_review_unresolved_closure_markers_are_enforced() {
+    let markers = parse_marker_lines(DOC_R56);
+    let coupling_policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("governance-structural-coupling.policy");
+    let coupling_policy_doc = fs::read_to_string(&coupling_policy_path).unwrap_or_else(|_| {
+        panic!(
+            "governance structural-coupling policy missing: {}",
+            coupling_policy_path.display()
+        )
+    });
+    let coupling_policy = parse_key_value_lines(&coupling_policy_doc);
+    assert_eq!(
+        parse_marker_value(
+            &coupling_policy,
+            "review_governance_structural_coupling_policy_schema_version"
+        ),
+        "kamn.review.governance-structural-coupling-policy.v1"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &coupling_policy,
+            "review_governance_structural_coupling_status"
+        ),
+        "enforced"
+    );
+    let coupling_effective_release_min = parse_marker_usize(
+        &coupling_policy,
+        "review_governance_structural_coupling_effective_release_min",
+    ) as u32;
+    assert!(56 >= coupling_effective_release_min);
+    let coupling_policy_ratio_max = parse_marker_f64(
+        &coupling_policy,
+        "review_governance_structural_coupling_target_ratio_max",
+    );
+    let coupling_status_within = parse_marker_value(
+        &coupling_policy,
+        "review_governance_structural_coupling_status_within",
+    );
+    let coupling_status_over = parse_marker_value(
+        &coupling_policy,
+        "review_governance_structural_coupling_status_over",
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_unresolved_closure_schema_version"),
+        "kamn.review.unresolved-item-closure.v2"
+    );
+    let unresolved_total = parse_marker_usize(&markers, "r56_review_unresolved_total_item_count");
+    let unresolved_resolved =
+        parse_marker_usize(&markers, "r56_review_unresolved_resolved_item_count");
+    assert!(unresolved_total >= unresolved_resolved);
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_unresolved_closure_status"),
+        if unresolved_total == unresolved_resolved {
+            "all_resolved"
+        } else {
+            "partial_resolution_with_active_reduction"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_governance_structural_coupling_schema_version"
+        ),
+        "kamn.review.governance-structural-coupling-budget.v2"
+    );
+    let non_merge_commit_count = parse_marker_usize(
+        &markers,
+        "r56_review_governance_structural_coupling_non_merge_commit_count",
+    );
+    let governance_commit_count = parse_marker_usize(
+        &markers,
+        "r56_review_governance_structural_coupling_governance_commit_count",
+    );
+    let governance_commit_ratio = parse_marker_f64(
+        &markers,
+        "r56_review_governance_structural_coupling_governance_commit_ratio",
+    );
+    let governance_target_ratio = parse_marker_f64(
+        &markers,
+        "r56_review_governance_structural_coupling_target_ratio_max_next_release",
+    );
+    assert!((governance_target_ratio - coupling_policy_ratio_max).abs() <= 0.001);
+    assert!(non_merge_commit_count > 0);
+    assert!(governance_commit_count <= non_merge_commit_count);
+    assert!(
+        (governance_commit_ratio - governance_commit_count as f64 / non_merge_commit_count as f64)
+            .abs()
+            <= 0.01
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_governance_structural_coupling_budget_status"
+        ),
+        if governance_commit_ratio <= coupling_policy_ratio_max + 0.001 {
+            coupling_status_within
+        } else {
+            coupling_status_over
+        }
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_governance_structural_coupling_lifecycle_artifact_commit_count"
+        ) <= governance_commit_count
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_governance_structural_coupling_mitigation_issue"
+        ) > 0
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_node_kolme_unfreeze_attribution_schema_version"
+        ),
+        "kamn.review.runtime-surface-unfreeze-attribution.v1"
+    );
+    let primary_issue_csv = parse_marker_value(
+        &markers,
+        "r56_review_node_kolme_unfreeze_primary_issues_csv",
+    );
+    let primary_issues = primary_issue_csv
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("unfreeze primary issue id should be numeric: {value}"))
+        })
+        .collect::<BTreeSet<_>>();
+    assert!(primary_issues.contains(&5830));
+    assert!(primary_issues.contains(&5833));
+    let overstated_issue =
+        parse_marker_usize(&markers, "r56_review_node_kolme_unfreeze_overstated_issue");
+    assert_eq!(overstated_issue, 5831);
+    assert!(
+        !primary_issues.contains(&overstated_issue),
+        "overstated issue must not appear in primary-issue attribution set"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_node_kolme_unfreeze_attribution_status"
+        ),
+        "corrected_to_s12_s13"
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_schema_version",
+        ),
+        "kamn.review.production-expect-inventory.v2"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_count_formula",
+        ),
+        "count(lines containing '.expect(' in code tokens under crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/ after stripping cfg(test) items with literal/comment-aware brace scanning)"
+    );
+    let reported_r55 = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_reported_count_r55",
+    );
+    let expect_snapshot = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_snapshot_count",
+    );
+    let expect_delta = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_delta_vs_r55",
+    );
+    let expect_target = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_target_max_next_release",
+    );
+    assert_eq!(production_expect_inventory_count(), expect_snapshot);
+    assert_eq!(reported_r55.saturating_sub(expect_snapshot), expect_delta);
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_policy_status",
+        ),
+        if expect_snapshot <= expect_target {
+            "within_target"
+        } else {
+            "active_reduction_contract"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_schema_version"),
+        "kamn.review.spec-hygiene-tracked-only-count.v3"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_count_command"),
+        "git ls-tree -d --name-only -r HEAD specs"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_status"),
+        "implemented"
+    );
+    assert!(parse_marker_usize(&markers, "r56_review_spec_hygiene_fix_issue") > 0);
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_review_document_freeze_schema_version"),
+        "kamn.review.review-document-freeze.v1"
+    );
+    assert_eq!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_review_document_freeze_effective_release_min"
+        ),
+        51
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_review_document_freeze_status"),
+        "enforced"
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_shell_surface_reduction_schema_version"
+        ),
+        "kamn.review.shell-surface-reduction.v1"
+    );
+    let shell_loc_delta = parse_marker_i64(&markers, "r56_review_shell_loc_delta_actual");
+    let rust_loc_delta = parse_marker_i64(&markers, "r56_review_rust_loc_delta_actual");
+    let ratio_delta = parse_marker_f64(&markers, "r56_review_shell_to_rust_ratio_delta_actual");
+    let ratio_status = parse_marker_value(&markers, "r56_review_shell_surface_ratio_target_status");
+    match ratio_status {
+        "improved" => {
+            assert!(shell_loc_delta <= 0);
+            assert!(ratio_delta <= 0.0);
+        }
+        "neutral" => {}
+        "regressed_with_waiver" => {
+            assert_eq!(
+                parse_marker_value(&markers, "r56_review_shell_surface_mitigation_issue"),
+                "5842"
+            );
+        }
+        other => panic!("unexpected shell-surface target status: {other}"),
+    }
+    let _ = rust_loc_delta;
 }

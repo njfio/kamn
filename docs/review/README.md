@@ -350,3 +350,82 @@ Contract invariants:
 - R54 headings must not include disallowed post-publication heading pattern
 
 This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
+
+## Governance Structural-Coupling Policy Contract (R56+)
+
+R56+ review artifacts use a fail-closed governance coupling policy to prevent unresolved ratios
+from being marked as resolved.
+
+Contract marker keys (policy):
+
+- `review_governance_structural_coupling_policy_schema_version=kamn.review.governance-structural-coupling-policy.v1`
+- `review_governance_structural_coupling_effective_release_min=<integer>`
+- `review_governance_structural_coupling_target_ratio_max=<float>`
+- `review_governance_structural_coupling_status_within=within_target`
+- `review_governance_structural_coupling_status_over=active_reduction_contract`
+- `review_governance_structural_coupling_status=enforced`
+
+Contract invariants:
+
+- For each release at/after `effective_release_min`, marker status derives from measured ratio vs policy target.
+- Release markers may not claim resolved/within-target when measured ratio exceeds policy max.
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
+
+## Review Document Freeze Contract (R51+)
+
+R51+ review artifacts are immutable once published and must be covered by a deterministic freeze
+manifest.
+
+Contract marker keys (policy/manifest):
+
+- `review_document_freeze_policy_schema_version=kamn.review.review-document-freeze-policy.v1`
+- `review_document_freeze_effective_release_min=<integer>`
+- `review_document_freeze_hash_algorithm=fnv1a64`
+- `review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest`
+- `review_document_freeze_status=enforced`
+- `review_document_freeze_manifest_schema_version=kamn.review.review-document-freeze-manifest.v1`
+- `review_document_freeze_entries_csv=<csv of gaps-and-issues-rNN.md>`
+- `r<release>_review_freeze_line_count=<integer>`
+- `r<release>_review_freeze_fnv1a64_hex=0x<hex>`
+- `r<release>_review_freeze_last_non_empty_line=<text>`
+
+Contract invariants:
+
+- Every tracked `docs/review/gaps-and-issues-rNN.md` with `NN >= effective_release_min` appears in the manifest CSV.
+- For each manifest entry, `line_count`, `last_non_empty_line`, and `fnv1a64` markers match file contents exactly.
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
+
+## R56 Unresolved Closure Contract
+
+R56 introduces explicit unresolved-item closure semantics that distinguish resolved-via-enforcement
+from active-reduction contracts.
+
+Contract marker keys (R56):
+
+- `r56_review_unresolved_closure_schema_version=kamn.review.unresolved-item-closure.v2`
+- `r56_review_unresolved_total_item_count=<integer>`
+- `r56_review_unresolved_resolved_item_count=<integer>`
+- `r56_review_unresolved_closure_status=<text>`
+- `r56_review_governance_structural_coupling_schema_version=kamn.review.governance-structural-coupling-budget.v2`
+- `r56_review_governance_structural_coupling_non_merge_commit_count=<integer>`
+- `r56_review_governance_structural_coupling_governance_commit_count=<integer>`
+- `r56_review_governance_structural_coupling_governance_commit_ratio=<float>`
+- `r56_review_governance_structural_coupling_target_ratio_max_next_release=<float>`
+- `r56_review_governance_structural_coupling_budget_status=<within_target|active_reduction_contract>`
+- `r56_review_node_kolme_unfreeze_primary_issues_csv=<csv>`
+- `r56_review_node_kolme_unfreeze_overstated_issue=<integer>`
+- `r56_review_production_expect_inventory_snapshot_count=<integer>`
+- `r56_review_production_expect_inventory_policy_status=<within_target|active_reduction_contract>`
+- `r56_review_spec_hygiene_fix_count_command=git ls-tree -d --name-only -r HEAD specs`
+- `r56_review_review_document_freeze_status=enforced`
+- `r56_review_shell_surface_ratio_target_status=<improved|neutral|regressed_with_waiver>`
+
+Contract invariants:
+
+- `governance_commit_ratio ~= governance_commit_count / non_merge_commit_count`
+- `reported_count_r55 - snapshot_count = delta_vs_r55`
+- `target_status` markers must align with computed ratios/counts.
+
+This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.

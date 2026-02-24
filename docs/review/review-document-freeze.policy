@@ -1,0 +1,5 @@
+review_document_freeze_policy_schema_version=kamn.review.review-document-freeze-policy.v1
+review_document_freeze_effective_release_min=51
+review_document_freeze_hash_algorithm=fnv1a64
+review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest
+review_document_freeze_status=enforced
