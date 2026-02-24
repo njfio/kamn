@@ -1,7 +1,7 @@
 # Spec: Issue #5883 - Shell LOC Reduction Wave 2 (Selector Test Surface)
 
 - Issue: #5883
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
