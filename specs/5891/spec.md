@@ -1,7 +1,7 @@
 # Spec: Issue #5891 - Expand Default Panic-Path Audit Coverage to kamn-agent-lib
 
 - Issue: #5891
-- Status: Accepted
+- Status: Implemented
 - Type: task
 - Priority: P2
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
