@@ -146,6 +146,56 @@ fn tracked_review_docs() -> Vec<PathBuf> {
     docs
 }
 
+fn git_commit_count_for_relative_path(relative_path: &str) -> usize {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["rev-list", "--count", "HEAD", "--", relative_path])
+        .output()
+        .unwrap_or_else(|error| panic!("git rev-list should run for {relative_path}: {error}"));
+    assert!(
+        output.status.success(),
+        "git rev-list --count failed for {} with status {:?}",
+        relative_path,
+        output.status.code()
+    );
+    let raw = String::from_utf8(output.stdout)
+        .expect("git rev-list output should be valid UTF-8")
+        .trim()
+        .to_string();
+    raw.parse::<usize>()
+        .unwrap_or_else(|_| panic!("git rev-list count should be an unsigned integer: {raw}"))
+}
+
+fn tracked_shell_line_total() -> usize {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "*.sh"])
+        .output()
+        .expect("git should be available for tracked shell-file discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files *.sh failed with status {:?}",
+        output.status.code()
+    );
+
+    String::from_utf8(output.stdout)
+        .expect("git ls-files *.sh output should be valid UTF-8")
+        .lines()
+        .filter_map(|relative| {
+            let path = repo_root().join(relative);
+            let metadata = fs::symlink_metadata(&path).ok()?;
+            if metadata.file_type().is_symlink() || !metadata.is_file() {
+                return None;
+            }
+            let line_count = fs::read_to_string(&path)
+                .unwrap_or_else(|_| panic!("shell file should be readable: {}", path.display()))
+                .lines()
+                .count();
+            Some(line_count)
+        })
+        .sum()
+}
+
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
@@ -928,6 +978,114 @@ fn regression_r51_plus_review_docs_are_frozen_via_manifest_contract() {
             fnv
         );
     }
+}
+
+#[test]
+fn regression_r57_plus_review_docs_are_immutable_by_history_policy_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_schema_version"),
+        "kamn.review.review-document-immutability-policy.v1"
+    );
+    let effective_release_min = parse_marker_usize(
+        &policy,
+        "review_document_immutability_effective_release_min",
+    ) as u32;
+    let max_commits_per_doc =
+        parse_marker_usize(&policy, "review_document_immutability_max_commits_per_doc");
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_enforcement_mode"),
+        "git-log-max-commit-count"
+    );
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_status"),
+        "enforced"
+    );
+    assert!(
+        max_commits_per_doc > 0,
+        "immutability max commits must be positive"
+    );
+
+    for review_doc_path in tracked_review_docs() {
+        let relative = review_doc_path
+            .strip_prefix(repo_root())
+            .expect("review doc should be under repo root")
+            .to_string_lossy()
+            .to_string();
+        let Some(release) = parse_release_from_review_path(&relative) else {
+            continue;
+        };
+        if release < effective_release_min {
+            continue;
+        }
+        let commit_count = git_commit_count_for_relative_path(&relative);
+        assert!(
+            commit_count <= max_commits_per_doc,
+            "review doc {} has {} commits, exceeds max {}",
+            relative,
+            commit_count,
+            max_commits_per_doc
+        );
+    }
+}
+
+#[test]
+fn regression_issue_5875_shell_loc_reduction_ratchet_is_enforced() {
+    let policy_path = repo_root()
+        .join(".ci")
+        .join("shell-loc-reduction-ratchet.env");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "shell LOC ratchet policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    assert_eq!(
+        parse_marker_value(&policy, "shell_loc_reduction_ratchet_schema_version"),
+        "kamn.ci.shell-loc-reduction-ratchet.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&policy, "shell_loc_reduction_ratchet_status"),
+        "enforced"
+    );
+    assert_eq!(
+        parse_marker_usize(&policy, "shell_loc_reduction_ratchet_issue"),
+        5875
+    );
+    let baseline = parse_marker_usize(
+        &policy,
+        "shell_loc_reduction_ratchet_baseline_shell_line_total",
+    );
+    let minimum_reduction = parse_marker_usize(
+        &policy,
+        "shell_loc_reduction_ratchet_minimum_reduction_lines",
+    );
+    let current = tracked_shell_line_total();
+    assert!(
+        baseline >= current,
+        "current shell LOC {} should not exceed baseline {}",
+        current,
+        baseline
+    );
+    let reduction = baseline.saturating_sub(current);
+    assert!(
+        reduction >= minimum_reduction,
+        "shell LOC reduction {} must be >= minimum reduction {}",
+        reduction,
+        minimum_reduction
+    );
 }
 
 #[test]
