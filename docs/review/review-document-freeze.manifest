@@ -1,0 +1,20 @@
+review_document_freeze_manifest_schema_version=kamn.review.review-document-freeze-manifest.v1
+review_document_freeze_entries_csv=gaps-and-issues-r51.md,gaps-and-issues-r52.md,gaps-and-issues-r53.md,gaps-and-issues-r54.md,gaps-and-issues-r55.md,gaps-and-issues-r56.md
+r51_review_freeze_line_count=282
+r51_review_freeze_fnv1a64_hex=0xaa8e8acd3064d090
+r51_review_freeze_last_non_empty_line=**Grade rationale (C):** First C-grade in the review series. Zero production capability advancement across 149 commits. Spec-to-module ratio at 8.9:1 (severely breaching 7.7 guardrail). Doc-contract tests reversed from consolidation. Three scaffold crates delivered with no executable functionality. The codebase is technically healthy (zero prod panics, clean clippy, 0 failures) but development velocity on actual capabilities has stalled for two consecutive cycles.
+r52_review_freeze_line_count=415
+r52_review_freeze_fnv1a64_hex=0xf204166c213a1b29
+r52_review_freeze_last_non_empty_line=**Grade rationale (B-):** Genuine capability advancement for the first time in 3 cycles — real MCP protocol handling, working CLI dispatch, and agent-lib route implementation. Doc-contract consolidation shows governance feedback was heard. However, the first compilation error on main and first test failures since R45 represent a quality regression that breaks the project's previously unbroken green-main streak. The governance ratio (71%) still dominates, spec volume continues to worsen (9.2:1), and the 7 genuine feat commits are buried under 51 governance commits. The grade reflects both the positive inflection point (capability returning) and the negative quality signal (broken main).
+r53_review_freeze_line_count=423
+r53_review_freeze_fnv1a64_hex=0x5f4ae6683b7b7de3
+r53_review_freeze_last_non_empty_line=- r53_review_portable_agent_post_publication_delta_cli_subcommands=2
+r54_review_freeze_line_count=302
+r54_review_freeze_fnv1a64_hex=0xb2453c8d69a7a0f9
+r54_review_freeze_last_non_empty_line=- r54_review_marker_inflation_resolution_status=resolved_by_moratorium_for_r54_plus
+r55_review_freeze_line_count=377
+r55_review_freeze_fnv1a64_hex=0x8163f35476578c5a
+r55_review_freeze_last_non_empty_line=- r55_review_node_kolme_freeze_resolution_issue=5831
+r56_review_freeze_line_count=420
+r56_review_freeze_fnv1a64_hex=0xc4599b1a889b2cd3
+r56_review_freeze_last_non_empty_line=- r56_review_shell_surface_mitigation_issue=None

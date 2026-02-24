@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
@@ -27,57 +26,46 @@ TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
 TMP_ERR="$TMP_DIR/error.log"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
 if [ ! -x "$CHECKER" ]; then
   echo "expected local Kolme live deployment preflight policy checker to be executable" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$DOC_FILE"; then
   echo "expected Kolme devnet ops docs to reference deployment preflight policy checker command" >&2
   exit 1
 fi
-
 if ! grep -q "deployment_preflight_marker_contract_status=verified" "$DOC_FILE"; then
   echo "expected Kolme devnet ops docs to include deployment preflight marker contract status marker" >&2
   exit 1
 fi
-
 if ! grep -q "deployment_preflight_runbook_marker_parity_status=verified" "$DOC_FILE"; then
   echo "expected Kolme devnet ops docs to include deployment preflight runbook marker parity status marker" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$CI_DOC_FILE"; then
   echo "expected CI strategy docs to reference deployment preflight policy checker command" >&2
   exit 1
 fi
-
 if ! grep -q "run_local_kolme_live_deployment_preflight_contract_lane.sh" "$COST_DOC_FILE"; then
   echo "expected CI cost/lane framework docs to reference deployment preflight contract lane placement" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO" "$COST_DOC_FILE"; then
   echo "expected CI cost/lane framework docs to include runtime signer drift admission matrix decision marker" >&2
   exit 1
 fi
-
 if ! grep -q "signer_key_source_production_managed_external_required" "$COST_DOC_FILE"; then
   echo "expected CI cost/lane framework docs to include production managed-external signer-source fail-closed reason marker" >&2
   exit 1
 fi
-
 if ! grep -q "Deterministic response matrix" "$COST_DOC_FILE"; then
   echo "expected CI cost/lane framework docs to include deterministic response matrix guidance" >&2
   exit 1
 fi
-
 if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$README_FILE"; then
   echo "expected README to reference deployment preflight policy checker command" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
@@ -296,19 +284,16 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_OK" <<'JSON'
   "artifact_paths": []
 }
 JSON
-
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_OK" \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --require-reason-code dry_run_no_commands_executed \
   --output-json "$TMP_POLICY_OUT" >/dev/null
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
     raise SystemExit("unexpected deployment preflight policy report schema")
@@ -364,12 +349,10 @@ if report.get("deployment_preflight_runbook_reason_codes_csv") != "deployment_pr
 if report.get("deployment_preflight_runbook_reason_code") != "none":
     raise SystemExit("expected deployment_preflight_runbook_reason_code=none for GO deployment preflight report")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" "$TMP_REPORT_BUDGET_BYPASS" "$TMP_REPORT_BUDGET_REASON_MISMATCH" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 warn_report = dict(report)
 warn_report["mode"] = "run"
@@ -460,7 +443,6 @@ warn_report["checks"] = [
     {"id": "signer_provenance_contract", "command": "signer provenance evidence file and sha256 marker must be present", "status": "pass", "reason_code": "signer_provenance_validated"},
     {"id": "signer_rotation_freshness_contract", "command": "signer rotation metadata must satisfy freshness threshold", "status": "pass", "reason_code": "signer_rotation_freshness_validated"},
 ]
-
 fail_report = dict(warn_report)
 fail_report["status"] = "fail"
 fail_report["reason_code"] = "checkpoint_failed_signer_quorum_contract"
@@ -481,10 +463,8 @@ fail_report["checks"] = [
     {"id": "signer_provenance_contract", "command": "signer provenance evidence file and sha256 marker must be present", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
     {"id": "signer_rotation_freshness_contract", "command": "signer rotation metadata must satisfy freshness threshold", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
 ]
-
 pathlib.Path(sys.argv[2]).write_text(json.dumps(warn_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 pathlib.Path(sys.argv[3]).write_text(json.dumps(fail_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-
 budget_bypass_report = dict(warn_report)
 budget_bypass_report["elapsed_seconds"] = 13
 budget_bypass_report["max_seconds"] = 12
@@ -493,7 +473,6 @@ pathlib.Path(sys.argv[4]).write_text(
     json.dumps(budget_bypass_report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
-
 budget_reason_mismatch_report = dict(fail_report)
 budget_reason_mismatch_report["elapsed_seconds"] = 13
 budget_reason_mismatch_report["max_seconds"] = 12
@@ -504,19 +483,16 @@ pathlib.Path(sys.argv[5]).write_text(
     encoding="utf-8",
 )
 PY
-
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MATRIX_WARN" \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --require-reason-code deployment_preflight_passed \
   --output-json "$TMP_POLICY_OUT" >/dev/null
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("runtime_signer_drift_admission_matrix_decision") != "WARN":
     raise SystemExit("expected runtime signer drift admission matrix decision WARN for warning-edge deployment report")
@@ -530,7 +506,6 @@ if "runtime_signer_drift_rotation_warning_threshold_reached" not in matrix_reaso
 if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for warning-edge deployment report")
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_MATRIX_FAIL" \
@@ -539,17 +514,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 matrix_fail_exit_code=$?
 set -e
-
 if [ "$matrix_fail_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail for hard-fail runtime signer drift matrix report" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_drift_quorum_fail_threshold_exceeded" "$TMP_ERR"; then
   echo "expected runtime signer drift quorum fail-threshold reason for hard-fail deployment matrix report" >&2
   exit 1
 fi
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_BUDGET_BYPASS" \
@@ -559,17 +531,14 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 budget_bypass_exit_code=$?
 set -e
-
 if [ "$budget_bypass_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when startup-latency budget bypass is accepted" >&2
   exit 1
 fi
-
 if ! grep -q "startup_latency_budget_status_mismatch" "$TMP_ERR"; then
   echo "expected startup_latency_budget_status_mismatch reason for deployment preflight budget bypass failure" >&2
   exit 1
 fi
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_BUDGET_REASON_MISMATCH" \
@@ -578,22 +547,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 budget_reason_mismatch_exit_code=$?
 set -e
-
 if [ "$budget_reason_mismatch_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when exceeded startup-latency budget reason code is not normalized" >&2
   exit 1
 fi
-
 if ! grep -q "startup_latency_budget_reason_code_mismatch" "$TMP_ERR"; then
   echo "expected startup_latency_budget_reason_code_mismatch reason for deployment preflight budget taxonomy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_ROTATION_STALLED" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["signer_rotation_epoch"] = 1
 report["signer_previous_rotation_epoch"] = 1
@@ -603,7 +568,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_ROTATION_STALLED" \
@@ -613,22 +577,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 rotation_stalled_exit_code=$?
 set -e
-
 if [ "$rotation_stalled_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when signer-rotation rehearsal drift is accepted" >&2
   exit 1
 fi
-
 if ! grep -q "signer_rotation_rehearsal_drift_detected" "$TMP_ERR"; then
   echo "expected signer_rotation_rehearsal_drift_detected reason for deployment preflight rotation rehearsal drift failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("rotation_preflight_reason_codes_value")
 if not isinstance(observed, str):
@@ -637,12 +597,10 @@ observed_codes = set([] if observed == "none" else observed.split(","))
 if "signer_rotation_rehearsal_drift_detected" not in observed_codes:
     raise SystemExit("expected rotation_preflight_reason_codes_value to include signer_rotation_rehearsal_drift_detected")
 PY
-
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_CUSTODY_BYPASS" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["quorum_evidence_custody_sha256_match"] = False
 pathlib.Path(sys.argv[2]).write_text(
@@ -650,7 +608,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_CUSTODY_BYPASS" \
@@ -660,37 +617,30 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 custody_bypass_exit_code=$?
 set -e
-
 if [ "$custody_bypass_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when custody continuity bypass is accepted" >&2
   exit 1
 fi
-
 if ! grep -q "custody_continuity_bypass_detected" "$TMP_ERR"; then
   echo "expected custody_continuity_bypass_detected reason for deployment preflight custody continuity bypass failure" >&2
   exit 1
 fi
-
 if ! grep -q "quorum_evidence_custody_sha256_mismatch" "$TMP_ERR"; then
   echo "expected quorum_evidence_custody_sha256_mismatch reason for deployment preflight custody continuity bypass failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("custody_reason_codes_value") != "quorum_evidence_custody_sha256_mismatch,custody_continuity_bypass_detected":
     raise SystemExit("expected custody reason mapping value to include deterministic quorum/custody bypass pair")
 PY
-
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_QUORUM_PARITY_TAMPER" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["quorum_evidence_approval_count"] = 1
 pathlib.Path(sys.argv[2]).write_text(
@@ -698,7 +648,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_QUORUM_PARITY_TAMPER" \
@@ -708,22 +657,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 quorum_parity_tamper_exit_code=$?
 set -e
-
 if [ "$quorum_parity_tamper_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when quorum evidence approval-count marker parity drifts" >&2
   exit 1
 fi
-
 if ! grep -q "quorum_evidence_approval_count_mismatch" "$TMP_ERR"; then
   echo "expected quorum_evidence_approval_count_mismatch reason for deployment preflight quorum marker parity failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_SIGNER_SECRET_MISSING" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["status"] = "fail"
 report["reason_code"] = "checkpoint_failed_signer_secret_contract"
@@ -734,7 +679,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_SIGNER_SECRET_MISSING" \
@@ -743,22 +687,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 signer_secret_missing_exit_code=$?
 set -e
-
 if [ "$signer_secret_missing_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when signer material is missing in run mode" >&2
   exit 1
 fi
-
 if ! grep -q "signer_secret_missing" "$TMP_ERR"; then
   echo "expected signer_secret_missing deterministic config error reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("signer_config_reason_codes_value")
 if not isinstance(observed, str):
@@ -769,12 +709,10 @@ if "signer_secret_missing" not in observed_codes:
 if "signer_secret_invalid_hex" in observed_codes:
     raise SystemExit("expected signer_config_reason_codes_value to prioritize missing signer secret over invalid-hex classification")
 PY
-
 python3 - "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_SIGNER_SECRET_INVALID" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["status"] = "fail"
 report["reason_code"] = "checkpoint_failed_signer_secret_contract"
@@ -785,7 +723,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_SIGNER_SECRET_INVALID" \
@@ -794,22 +731,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 signer_secret_invalid_exit_code=$?
 set -e
-
 if [ "$signer_secret_invalid_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when signer secret hex is invalid in run mode" >&2
   exit 1
 fi
-
 if ! grep -q "signer_secret_invalid_hex" "$TMP_ERR"; then
   echo "expected signer_secret_invalid_hex deterministic config error reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("signer_config_reason_codes_value")
 if not isinstance(observed, str):
@@ -818,12 +751,10 @@ observed_codes = set([] if observed == "none" else observed.split(","))
 if "signer_secret_invalid_hex" not in observed_codes:
     raise SystemExit("expected signer_config_reason_codes_value to include signer_secret_invalid_hex")
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_MINIMUM" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["required_approvals"] = 1
 report["received_approvals"] = 0
@@ -839,7 +770,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_QUORUM_MINIMUM" \
@@ -848,22 +778,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 quorum_minimum_exit_code=$?
 set -e
-
 if [ "$quorum_minimum_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when production required approvals drop below multi-signer minimum" >&2
   exit 1
 fi
-
 if ! grep -q "signer_quorum_minimum_not_met" "$TMP_ERR"; then
   echo "expected signer_quorum_minimum_not_met reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_PRODUCTION_KEY_SOURCE" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["signer_key_source"] = "env-local"
 bundle = dict(report.get("runtime_signer_attestation_bundle", {}))
@@ -877,7 +803,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_PRODUCTION_KEY_SOURCE" \
@@ -886,22 +811,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 production_key_source_exit_code=$?
 set -e
-
 if [ "$production_key_source_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail when production signer key-source is not managed-external" >&2
   exit 1
 fi
-
 if ! grep -q "signer_key_source_production_managed_external_required" "$TMP_ERR"; then
   echo "expected signer_key_source_production_managed_external_required reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 observed = report.get("rotation_preflight_reason_codes_value")
 if not isinstance(observed, str):
@@ -912,12 +833,10 @@ if "signer_key_source_production_managed_external_required" not in observed_code
         "expected rotation_preflight_reason_codes_value to include signer_key_source_production_managed_external_required"
     )
 PY
-
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_DRIFT_MALFORMED" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_drift_telemetry_schema_version"] = "kamn.kolme.runtime-signer-drift-telemetry.v0"
 report["runtime_signer_drift_telemetry"] = {
@@ -936,7 +855,6 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 PY
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_DRIFT_MALFORMED" \
@@ -945,22 +863,18 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 drift_malformed_exit_code=$?
 set -e
-
 if [ "$drift_malformed_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail on malformed runtime signer drift telemetry" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_drift_telemetry_schema_version_mismatch" "$TMP_ERR"; then
   echo "expected runtime signer drift telemetry schema version mismatch reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_drift_telemetry_rotation_delta_invalid" "$TMP_ERR"; then
   echo "expected runtime signer drift telemetry rotation delta invalid reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-live-deployment-preflight-summary.v1",
@@ -1071,7 +985,6 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$TMP_REPORT_BAD" <<'JSON'
   "artifact_paths": []
 }
 JSON
-
 set +e
 python3 "$CHECKER" \
   --report-file "$TMP_REPORT_BAD" \
@@ -1081,167 +994,134 @@ python3 "$CHECKER" \
   --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
 bad_exit_code=$?
 set -e
-
 if [ "$bad_exit_code" -eq 0 ]; then
   echo "expected deployment preflight policy checker to fail for invalid report markers" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_mode_mismatch" "$TMP_ERR"; then
   echo "expected runtime mode mismatch reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_profile_mismatch" "$TMP_ERR"; then
   echo "expected signer profile mismatch reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "ci_fast_gate_eligibility_violation" "$TMP_ERR"; then
   echo "expected fast-gate eligibility violation reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:signer_secret_contract" "$TMP_ERR"; then
   echo "expected missing signer_secret_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:signer_provenance_contract" "$TMP_ERR"; then
   echo "expected missing signer_provenance_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "fallback_signer_secret_present_violation" "$TMP_ERR"; then
   echo "expected fallback signer secret presence violation reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "fallback_signer_secret_checkpoint_reason_mismatch" "$TMP_ERR"; then
   echo "expected fallback signer secret checkpoint reason mismatch for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "fallback_signer_secret_remediation_missing" "$TMP_ERR"; then
   echo "expected fallback signer secret remediation missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:fallback_private_key_contract" "$TMP_ERR"; then
   echo "expected missing fallback_private_key_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_quorum_shortfall" "$TMP_ERR"; then
   echo "expected signer quorum shortfall reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "custody_evidence_missing" "$TMP_ERR"; then
   echo "expected custody evidence missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:signer_quorum_contract" "$TMP_ERR"; then
   echo "expected missing signer_quorum_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:quorum_evidence_contract" "$TMP_ERR"; then
   echo "expected missing quorum_evidence_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:custody_evidence_contract" "$TMP_ERR"; then
   echo "expected missing custody_evidence_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "check_missing:signer_rotation_freshness_contract" "$TMP_ERR"; then
   echo "expected missing signer_rotation_freshness_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_key_source_contract_version_mismatch" "$TMP_ERR"; then
   echo "expected signer key-source contract version mismatch reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_key_source_invalid" "$TMP_ERR"; then
   echo "expected signer key-source invalid reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_provenance_missing" "$TMP_ERR"; then
   echo "expected signer provenance missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "signer_rotation_epoch_stale" "$TMP_ERR"; then
   echo "expected signer rotation stale reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "quorum_evidence_missing" "$TMP_ERR"; then
   echo "expected quorum evidence missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "quorum_evidence_signer_roles_missing" "$TMP_ERR"; then
   echo "expected quorum evidence signer-roles missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "quorum_evidence_rotation_metadata_missing" "$TMP_ERR"; then
   echo "expected quorum evidence rotation metadata missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_schema_version_missing" "$TMP_ERR"; then
   echo "expected runtime signer attestation schema version missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_schema_invalid" "$TMP_ERR"; then
   echo "expected runtime signer attestation schema invalid reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$TMP_ERR"; then
   echo "expected runtime signer attestation duplicate signer reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
   echo "expected runtime signer attestation quorum shortfall reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_attestation_profile_not_approved" "$TMP_ERR"; then
   echo "expected runtime signer attestation profile membership reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "runtime_signer_drift_telemetry_missing" "$TMP_ERR"; then
   echo "expected runtime signer drift telemetry missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "deployment_preflight_required_marker_missing" "$TMP_ERR"; then
   echo "expected deployment preflight required marker missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 if ! grep -q "deployment_preflight_schema_parity_mismatch" "$TMP_ERR"; then
   echo "expected deployment preflight schema parity mismatch reason for deployment preflight policy failure" >&2
   exit 1
 fi
-
 python3 - "$TMP_POLICY_OUT" <<'PY'
 import json
 import pathlib
 import sys
-
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if report.get("deployment_preflight_marker_contract_status") != "failed":
     raise SystemExit("expected deployment_preflight_marker_contract_status=failed for mismatched deployment preflight report")
@@ -1261,21 +1141,17 @@ if report.get("deployment_preflight_runbook_reason_code") not in (
 ):
     raise SystemExit("expected deterministic deployment_preflight_runbook_reason_code for mismatch failure")
 PY
-
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2
   exit 1
 fi
-
 bash "$RUNNER" \
   --mode dry-run \
   --output-json "$TMP_SUMMARY" >/dev/null
-
 python3 "$CHECKER" \
   --report-file "$TMP_SUMMARY" \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --require-reason-code dry_run_no_commands_executed \
   --output-json "$TMP_POLICY_OUT" >/dev/null
-
 echo "local Kolme live deployment preflight policy checker tests passed."

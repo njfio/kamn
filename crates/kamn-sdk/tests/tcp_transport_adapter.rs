@@ -1,3 +1,4 @@
+use kamn_core::service_auth_public_key_hex_from_private_key_hex;
 use kamn_sdk::{
     signature_for_fields, AgentDid, SdkError, TcpSignedEnvelope, TcpTransportAdapter,
     TcpTransportConfig,
@@ -6,6 +7,9 @@ use std::io::Write;
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread;
 use std::time::{Duration, Instant};
+
+const TEST_TCP_SIGNING_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 fn did(value: &str) -> AgentDid {
     match AgentDid::parse(format!("kamn:did:agent:{value}")) {
@@ -47,14 +51,22 @@ fn send_raw_payload(addr: &str, payload: &str) {
     panic!("failed to connect raw payload sender to {addr}");
 }
 
+fn signer_public_key_hex() -> String {
+    match service_auth_public_key_hex_from_private_key_hex(TEST_TCP_SIGNING_PRIVATE_KEY_HEX) {
+        Ok(value) => value,
+        Err(error) => panic!("failed to derive tcp signer public key: {error}"),
+    }
+}
+
 #[test]
-fn unit_tcp_envelope_roundtrip_is_deterministic() {
+fn unit_tcp_envelope_roundtrip_is_cryptographic() {
     let envelope = match TcpSignedEnvelope::new(
         did("sender-1"),
         did("listener-1"),
         7,
         "state:runtime-7",
         "hello-runtime",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("envelope build failed: {error}"),
@@ -83,6 +95,35 @@ fn unit_tcp_envelope_rejects_duplicate_keys() {
 }
 
 #[test]
+fn regression_tcp_envelope_rejects_baseline_v1_deterministic_signature() {
+    // Regression: #5846
+    let signer_public_key = signer_public_key_hex();
+    let signature = signature_for_fields(
+        "kamn:did:agent:sender-legacy",
+        2,
+        "state:legacy",
+        "legacy-payload",
+    );
+    let payload = format!(
+        "from=kamn:did:agent:sender-legacy\n\
+to=kamn:did:agent:listener-legacy\n\
+nonce=2\n\
+state_hash=state:legacy\n\
+body=legacy-payload\n\
+signer_public_key={signer_public_key}\n\
+signature={signature}\n"
+    );
+
+    assert_eq!(
+        TcpSignedEnvelope::parse_wire_payload(payload.as_str()),
+        Err(SdkError::InvalidInput {
+            field: "signature",
+            reason: "failed cryptographic envelope verification",
+        })
+    );
+}
+
+#[test]
 fn functional_tcp_adapter_relays_signed_envelope_between_two_processes() {
     let addr = free_addr();
 
@@ -104,6 +145,7 @@ fn functional_tcp_adapter_relays_signed_envelope_between_two_processes() {
         11,
         "state:functional",
         "functional-envelope",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("envelope build failed: {error}"),
@@ -154,6 +196,7 @@ fn integration_tcp_adapter_rejects_oversized_wire_payload() {
         1,
         "state:large",
         large_body,
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("envelope build failed: {error}"),
@@ -202,6 +245,7 @@ fn functional_tcp_adapter_reconnect_preserves_nonce_replay_guard_state() {
         1,
         "state:reconnect",
         "first-connect",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("first envelope build failed: {error}"),
@@ -212,6 +256,7 @@ fn functional_tcp_adapter_reconnect_preserves_nonce_replay_guard_state() {
         2,
         "state:reconnect",
         "second-connect",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("second envelope build failed: {error}"),
@@ -272,6 +317,7 @@ fn integration_tcp_adapter_replay_nonce_is_rejected_across_reconnect() {
         9,
         "state:replay",
         "nonce-9-initial",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("first envelope build failed: {error}"),
@@ -282,6 +328,7 @@ fn integration_tcp_adapter_replay_nonce_is_rejected_across_reconnect() {
         9,
         "state:replay",
         "nonce-9-replayed",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("replayed envelope build failed: {error}"),
@@ -321,26 +368,33 @@ fn integration_tcp_adapter_replay_nonce_is_rejected_across_reconnect() {
 #[test]
 fn regression_tampered_tcp_envelope_signature_is_rejected() {
     // Regression: #822
-    let signature = signature_for_fields(
-        "kamn:did:agent:sender-regression",
+    let envelope = match TcpSignedEnvelope::new(
+        did("sender-regression"),
+        did("listener-regression"),
         1,
         "state:regression",
         "expected-body",
-    );
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
+    ) {
+        Ok(value) => value,
+        Err(error) => panic!("regression envelope build failed: {error}"),
+    };
     let tampered_payload = format!(
         "from=kamn:did:agent:sender-regression\n\
 to=kamn:did:agent:listener-regression\n\
 nonce=1\n\
 state_hash=state:regression\n\
 body=tampered-body-extended\n\
-signature={signature}\n"
+signer_public_key={}\n\
+signature={}\n",
+        envelope.signer_public_key, envelope.signature
     );
 
     assert_eq!(
         TcpSignedEnvelope::parse_wire_payload(tampered_payload.as_str()),
         Err(SdkError::InvalidInput {
             field: "signature",
-            reason: "does not match deterministic envelope fields",
+            reason: "failed cryptographic envelope verification",
         })
     );
 }
@@ -361,6 +415,7 @@ fn regression_forged_handshake_frame_is_rejected() {
         5,
         "state:forged",
         "forged-handshake-frame",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("envelope build failed: {error}"),
@@ -369,14 +424,16 @@ fn regression_forged_handshake_frame_is_rejected() {
     let forged_payload = format!(
         "frame=handshake\n\
 version=1\n\
-profile=ed25519:baseline-v1\n\
+profile=secp256k1:baseline-v2\n\
 from={}\n\
 to={}\n\
 nonce={}\n\
-signature=sig:ed25519:baseline-v1:forged-signature\n\n{}",
+signer_public_key={}\n\
+signature=sig:secp256k1:baseline-v2:0:00\n\n{}",
         envelope.from,
         envelope.to,
         envelope.nonce,
+        envelope.signer_public_key,
         envelope.to_wire_payload()
     );
 
@@ -418,6 +475,7 @@ fn performance_tcp_adapter_local_relay_contract_stays_within_budget() {
         1,
         "state:perf",
         "perf-envelope",
+        TEST_TCP_SIGNING_PRIVATE_KEY_HEX,
     ) {
         Ok(value) => value,
         Err(error) => panic!("envelope build failed: {error}"),

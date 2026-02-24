@@ -291,6 +291,9 @@ pub(super) fn render_service_api_endpoint_response(
             let payload = ServiceApiMessageGetBody {
                 message_id: message_id.to_owned(),
                 status: "created".to_owned(),
+                sender_did: None,
+                recipient_did: None,
+                body: None,
             };
             return ServiceApiEndpointResponse {
                 status_code: 200,

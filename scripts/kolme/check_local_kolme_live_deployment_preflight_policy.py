@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
-
 REQUIRED_RUNTIME_MODE = "kolme-live"
 SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
 PRIMARY_SIGNER_PROFILE = "ops-primary"
@@ -109,8 +107,6 @@ DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES = (
 DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES_CSV = ",".join(
     DEPLOYMENT_PREFLIGHT_RUNBOOK_REASON_CODES
 )
-
-
 def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> str:
     observed = [
         reason_code
@@ -120,8 +116,6 @@ def observed_rotation_preflight_reason_codes_value(reason_codes: list[str]) -> s
     if not observed:
         return "none"
     return ",".join(observed)
-
-
 def observed_custody_reason_codes_value(reason_codes: list[str]) -> str:
     observed = [
         reason_code for reason_code in CUSTODY_REASON_CODES if reason_code in reason_codes
@@ -129,8 +123,6 @@ def observed_custody_reason_codes_value(reason_codes: list[str]) -> str:
     if not observed:
         return "none"
     return ",".join(observed)
-
-
 def observed_signer_config_reason_codes_value(reason_codes: list[str]) -> str:
     observed = [
         reason_code
@@ -140,8 +132,6 @@ def observed_signer_config_reason_codes_value(reason_codes: list[str]) -> str:
     if not observed:
         return "none"
     return ",".join(observed)
-
-
 def read_nested_value(payload: object, path: tuple[str, ...]) -> object | None:
     current = payload
     for segment in path:
@@ -149,8 +139,6 @@ def read_nested_value(payload: object, path: tuple[str, ...]) -> object | None:
             return None
         current = current[segment]
     return current
-
-
 def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> list[str]:
     reason_codes: list[str] = []
     required_marker_paths = (
@@ -164,7 +152,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         ("contracts", "signer_key_source_contract_version"),
         ("contracts", "required_signer_key_source_for_production"),
     )
-
     for marker_path in required_marker_paths:
         marker_value = read_nested_value(report, marker_path)
         if marker_value is None:
@@ -173,7 +160,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         if isinstance(marker_value, str) and not marker_value.strip():
             reason_codes.append("deployment_preflight_required_marker_missing")
             break
-
     attestation_schema = read_nested_value(
         report, ("runtime_signer_attestation_schema_version",)
     )
@@ -196,7 +182,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
     signer_key_source_contract_version_contract = read_nested_value(
         report, ("contracts", "signer_key_source_contract_version")
     )
-
     parity_pairs = (
         (attestation_schema, attestation_schema_contract),
         (drift_schema, drift_schema_contract),
@@ -216,7 +201,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         ):
             reason_codes.append("deployment_preflight_schema_parity_mismatch")
             break
-
     expected_versions = (
         (attestation_schema, RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION),
         (attestation_schema_contract, RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION),
@@ -238,7 +222,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         ):
             reason_codes.append("deployment_preflight_reason_taxonomy_version_mismatch")
             break
-
     if (
         ROTATION_PREFLIGHT_REASON_CODES_CSV
         != ",".join(ROTATION_PREFLIGHT_REASON_CODES)
@@ -246,7 +229,6 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         or SIGNER_CONFIG_REASON_CODES_CSV != ",".join(SIGNER_CONFIG_REASON_CODES)
     ):
         reason_codes.append("deployment_preflight_reason_codes_csv_mismatch")
-
     observed_status = report.get("status")
     observed_reason_code = report.get("reason_code")
     if observed_status == "ok" and observed_reason_code not in (
@@ -259,21 +241,16 @@ def evaluate_deployment_preflight_marker_contract(report: dict[str, object]) -> 
         "deployment_preflight_passed",
     ):
         reason_codes.append("deployment_preflight_reason_codes_value_mismatch")
-
     normalized_reason_codes: list[str] = []
     for reason_code in reason_codes:
         if reason_code not in normalized_reason_codes:
             normalized_reason_codes.append(reason_code)
     return normalized_reason_codes
-
-
 def observed_deployment_preflight_schema_reason_code(reason_codes: list[str]) -> str:
     for reason_code in DEPLOYMENT_PREFLIGHT_SCHEMA_REASON_CODES:
         if reason_code in reason_codes:
             return reason_code
     return "none"
-
-
 def observed_deployment_preflight_runbook_reason_code(reason_codes: list[str]) -> str:
     taxonomy_mapping_reasons = {
         "deployment_preflight_reason_taxonomy_version_mismatch",
@@ -289,22 +266,17 @@ def observed_deployment_preflight_runbook_reason_code(reason_codes: list[str]) -
     if any(reason in reason_codes for reason in parity_reasons):
         return "runbook_marker_parity_mismatch"
     return "none"
-
-
 def evaluate_runtime_signer_attestation_bundle(
     attestation_bundle: object, runtime_signer_profile: object
 ) -> list[str]:
     reason_codes: list[str] = []
     if not isinstance(attestation_bundle, dict):
         return ["runtime_signer_attestation_bundle_missing"]
-
     if attestation_bundle.get("schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_invalid")
-
     required_approvals = attestation_bundle.get("required_approvals")
     if not isinstance(required_approvals, int) or required_approvals <= 0:
         reason_codes.append("runtime_signer_attestation_required_approvals_invalid")
-
     approved_signers = attestation_bundle.get("approved_signers")
     normalized_signers: list[str] = []
     if not isinstance(approved_signers, list) or not approved_signers:
@@ -325,10 +297,7 @@ def evaluate_runtime_signer_attestation_bundle(
             and runtime_signer_profile not in normalized_signers
         ):
             reason_codes.append("runtime_signer_attestation_profile_not_approved")
-
     return reason_codes
-
-
 def evaluate_runtime_signer_drift_telemetry(
     telemetry_bundle: object,
     expected_required_approvals: object,
@@ -339,45 +308,35 @@ def evaluate_runtime_signer_drift_telemetry(
     reason_codes: list[str] = []
     if not isinstance(telemetry_bundle, dict):
         return ["runtime_signer_drift_telemetry_missing"]
-
     if telemetry_bundle.get("schema_version") != RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_drift_telemetry_schema_invalid")
-
     signer_rotation_epoch = telemetry_bundle.get("signer_rotation_epoch")
     if not isinstance(signer_rotation_epoch, int) or signer_rotation_epoch <= 0:
         reason_codes.append("runtime_signer_drift_telemetry_rotation_epoch_invalid")
-
     signer_previous_rotation_epoch = telemetry_bundle.get("signer_previous_rotation_epoch")
     if not isinstance(signer_previous_rotation_epoch, int) or signer_previous_rotation_epoch <= 0:
         reason_codes.append("runtime_signer_drift_telemetry_previous_rotation_epoch_invalid")
-
     signer_rotation_delta_epochs = telemetry_bundle.get("signer_rotation_delta_epochs")
     if not isinstance(signer_rotation_delta_epochs, int) or signer_rotation_delta_epochs < 0:
         reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_invalid")
-
     signer_rotation_freshness_max_delta = telemetry_bundle.get("signer_rotation_freshness_max_delta")
     if (
         not isinstance(signer_rotation_freshness_max_delta, int)
         or signer_rotation_freshness_max_delta < 0
     ):
         reason_codes.append("runtime_signer_drift_telemetry_freshness_delta_invalid")
-
     signer_rotation_stale = telemetry_bundle.get("signer_rotation_stale")
     if not isinstance(signer_rotation_stale, bool):
         reason_codes.append("runtime_signer_drift_telemetry_stale_flag_invalid")
-
     required_approvals = telemetry_bundle.get("required_approvals")
     if not isinstance(required_approvals, int) or required_approvals <= 0:
         reason_codes.append("runtime_signer_drift_telemetry_required_approvals_invalid")
-
     received_approvals = telemetry_bundle.get("received_approvals")
     if not isinstance(received_approvals, int) or received_approvals < 0:
         reason_codes.append("runtime_signer_drift_telemetry_received_approvals_invalid")
-
     quorum_shortfall = telemetry_bundle.get("quorum_shortfall")
     if not isinstance(quorum_shortfall, bool):
         reason_codes.append("runtime_signer_drift_telemetry_quorum_shortfall_flag_invalid")
-
     if (
         isinstance(signer_rotation_epoch, int)
         and signer_rotation_epoch > 0
@@ -388,7 +347,6 @@ def evaluate_runtime_signer_drift_telemetry(
         and signer_rotation_delta_epochs != signer_rotation_epoch - signer_previous_rotation_epoch
     ):
         reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_mismatch")
-
     if (
         isinstance(signer_rotation_delta_epochs, int)
         and signer_rotation_delta_epochs >= 0
@@ -399,7 +357,6 @@ def evaluate_runtime_signer_drift_telemetry(
         != (signer_rotation_delta_epochs > signer_rotation_freshness_max_delta)
     ):
         reason_codes.append("runtime_signer_drift_telemetry_stale_flag_mismatch")
-
     if (
         isinstance(expected_required_approvals, int)
         and expected_required_approvals > 0
@@ -408,7 +365,6 @@ def evaluate_runtime_signer_drift_telemetry(
         and required_approvals != expected_required_approvals
     ):
         reason_codes.append("runtime_signer_drift_telemetry_required_approvals_mismatch")
-
     if (
         isinstance(expected_received_approvals, int)
         and expected_received_approvals >= 0
@@ -417,7 +373,6 @@ def evaluate_runtime_signer_drift_telemetry(
         and received_approvals != expected_received_approvals
     ):
         reason_codes.append("runtime_signer_drift_telemetry_received_approvals_mismatch")
-
     if (
         isinstance(required_approvals, int)
         and required_approvals > 0
@@ -427,7 +382,6 @@ def evaluate_runtime_signer_drift_telemetry(
         and quorum_shortfall != (received_approvals < required_approvals)
     ):
         reason_codes.append("runtime_signer_drift_telemetry_quorum_shortfall_flag_mismatch")
-
     if (
         isinstance(expected_rotation_delta_epochs, int)
         and expected_rotation_delta_epochs >= 0
@@ -436,7 +390,6 @@ def evaluate_runtime_signer_drift_telemetry(
         and signer_rotation_delta_epochs != expected_rotation_delta_epochs
     ):
         reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_contract_mismatch")
-
     if (
         isinstance(expected_rotation_freshness_max_delta, int)
         and expected_rotation_freshness_max_delta >= 0
@@ -445,36 +398,27 @@ def evaluate_runtime_signer_drift_telemetry(
         and signer_rotation_freshness_max_delta != expected_rotation_freshness_max_delta
     ):
         reason_codes.append("runtime_signer_drift_telemetry_freshness_delta_contract_mismatch")
-
     return reason_codes
-
-
 def evaluate_runtime_signer_drift_thresholds_bundle(
     thresholds_bundle: object,
 ) -> tuple[list[str], dict[str, int] | None]:
     reason_codes: list[str] = []
     if not isinstance(thresholds_bundle, dict):
         return ["runtime_signer_drift_thresholds_bundle_missing"], None
-
     if thresholds_bundle.get("schema_version") != RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_drift_thresholds_schema_invalid")
-
     rotation_warn_delta_epochs = thresholds_bundle.get("rotation_warn_delta_epochs")
     if not isinstance(rotation_warn_delta_epochs, int) or rotation_warn_delta_epochs < 0:
         reason_codes.append("runtime_signer_drift_thresholds_rotation_warn_invalid")
-
     rotation_fail_delta_epochs = thresholds_bundle.get("rotation_fail_delta_epochs")
     if not isinstance(rotation_fail_delta_epochs, int) or rotation_fail_delta_epochs < 0:
         reason_codes.append("runtime_signer_drift_thresholds_rotation_fail_invalid")
-
     quorum_warn_shortfall_events = thresholds_bundle.get("quorum_warn_shortfall_events")
     if not isinstance(quorum_warn_shortfall_events, int) or quorum_warn_shortfall_events < 0:
         reason_codes.append("runtime_signer_drift_thresholds_quorum_warn_invalid")
-
     quorum_fail_shortfall_events = thresholds_bundle.get("quorum_fail_shortfall_events")
     if not isinstance(quorum_fail_shortfall_events, int) or quorum_fail_shortfall_events < 0:
         reason_codes.append("runtime_signer_drift_thresholds_quorum_fail_invalid")
-
     if (
         isinstance(rotation_warn_delta_epochs, int)
         and rotation_warn_delta_epochs >= 0
@@ -483,7 +427,6 @@ def evaluate_runtime_signer_drift_thresholds_bundle(
         and rotation_warn_delta_epochs > rotation_fail_delta_epochs
     ):
         reason_codes.append("runtime_signer_drift_thresholds_rotation_warn_gt_fail")
-
     if (
         isinstance(quorum_warn_shortfall_events, int)
         and quorum_warn_shortfall_events >= 0
@@ -492,10 +435,8 @@ def evaluate_runtime_signer_drift_thresholds_bundle(
         and quorum_warn_shortfall_events > quorum_fail_shortfall_events
     ):
         reason_codes.append("runtime_signer_drift_thresholds_quorum_warn_gt_fail")
-
     if reason_codes:
         return reason_codes, None
-
     return (
         reason_codes,
         {
@@ -505,8 +446,6 @@ def evaluate_runtime_signer_drift_thresholds_bundle(
             "quorum_fail_shortfall_events": int(quorum_fail_shortfall_events),
         },
     )
-
-
 def evaluate_runtime_signer_drift_admission_matrix(
     mode: object,
     thresholds: dict[str, int] | None,
@@ -523,7 +462,6 @@ def evaluate_runtime_signer_drift_admission_matrix(
             "observed_rotation_delta_epochs": signer_rotation_delta_epochs if isinstance(signer_rotation_delta_epochs, int) else 0,
             "observed_quorum_shortfall_events": 0,
         }
-
     if (
         thresholds is None
         or not isinstance(required_approvals, int)
@@ -540,16 +478,13 @@ def evaluate_runtime_signer_drift_admission_matrix(
             "observed_rotation_delta_epochs": signer_rotation_delta_epochs if isinstance(signer_rotation_delta_epochs, int) else 0,
             "observed_quorum_shortfall_events": 0,
         }
-
     observed_quorum_shortfall_events = max(required_approvals - received_approvals, 0)
     fail_reason_codes: list[str] = []
     warning_reason_codes: list[str] = []
-
     if observed_quorum_shortfall_events > thresholds["quorum_fail_shortfall_events"]:
         fail_reason_codes.append("runtime_signer_drift_quorum_fail_threshold_exceeded")
     elif observed_quorum_shortfall_events > thresholds["quorum_warn_shortfall_events"]:
         warning_reason_codes.append("runtime_signer_drift_quorum_warning_threshold_exceeded")
-
     if signer_rotation_delta_epochs > thresholds["rotation_fail_delta_epochs"]:
         fail_reason_codes.append("runtime_signer_drift_rotation_fail_threshold_exceeded")
     elif (
@@ -557,7 +492,6 @@ def evaluate_runtime_signer_drift_admission_matrix(
         and signer_rotation_delta_epochs >= thresholds["rotation_warn_delta_epochs"]
     ):
         warning_reason_codes.append("runtime_signer_drift_rotation_warning_threshold_reached")
-
     if fail_reason_codes:
         return {
             "decision": "NO-GO",
@@ -566,7 +500,6 @@ def evaluate_runtime_signer_drift_admission_matrix(
             "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
             "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
         }
-
     if warning_reason_codes:
         return {
             "decision": "WARN",
@@ -575,7 +508,6 @@ def evaluate_runtime_signer_drift_admission_matrix(
             "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
             "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
         }
-
     return {
         "decision": "GO",
         "class": "healthy",
@@ -583,8 +515,6 @@ def evaluate_runtime_signer_drift_admission_matrix(
         "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
         "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
     }
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate local Kolme live deployment preflight summary policy."
@@ -595,48 +525,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--require-reason-code", action="append", default=[])
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
-
-
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str], dict[str, object]]:
     reason_codes: list[str] = []
-
     if report.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-summary.v1":
         reason_codes.append("schema_version_mismatch")
-
     mode = report.get("mode")
     if mode not in ("dry-run", "run"):
         reason_codes.append("mode_invalid")
-
     status = report.get("status")
     if status not in ("ok", "fail"):
         reason_codes.append("status_invalid")
-
     reason_code = report.get("reason_code")
     if not isinstance(reason_code, str) or not reason_code.strip():
         reason_codes.append("reason_code_missing")
-
     local_only_enforced = report.get("local_only_enforced")
     if not isinstance(local_only_enforced, bool):
         reason_codes.append("local_only_enforced_invalid")
-
     ci_fast_gate_eligible = report.get("ci_fast_gate_eligible")
     if not isinstance(ci_fast_gate_eligible, bool):
         reason_codes.append("ci_fast_gate_eligible_invalid")
     elif not ci_fast_gate_eligible:
         reason_codes.append("ci_fast_gate_eligibility_violation")
-
     elapsed_seconds = report.get("elapsed_seconds")
     if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
         reason_codes.append("elapsed_seconds_invalid")
-
     max_seconds = report.get("max_seconds")
     if not isinstance(max_seconds, int) or max_seconds <= 0:
         reason_codes.append("max_seconds_invalid")
-
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
-
     startup_latency_budget_exceeded = (
         isinstance(elapsed_seconds, int)
         and elapsed_seconds >= 0
@@ -644,25 +562,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and max_seconds > 0
         and elapsed_seconds > max_seconds
     )
-
     runtime_mode = report.get("runtime_mode")
     if not isinstance(runtime_mode, str) or not runtime_mode.strip():
         reason_codes.append("runtime_mode_missing")
     elif runtime_mode != REQUIRED_RUNTIME_MODE:
         reason_codes.append("runtime_mode_mismatch")
-
     signer_profile_selector_env = report.get("signer_profile_selector_env")
     if not isinstance(signer_profile_selector_env, str) or not signer_profile_selector_env.strip():
         reason_codes.append("signer_profile_selector_env_missing")
     elif signer_profile_selector_env != SIGNER_PROFILE_SELECTOR_ENV:
         reason_codes.append("signer_profile_selector_env_mismatch")
-
     signer_profile = report.get("signer_profile")
     if not isinstance(signer_profile, str) or not signer_profile.strip():
         reason_codes.append("signer_profile_missing")
     elif signer_profile not in (PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE):
         reason_codes.append("signer_profile_mismatch")
-
     signer_profile_class = report.get("signer_profile_class")
     if not isinstance(signer_profile_class, str) or not signer_profile_class.strip():
         reason_codes.append("signer_profile_class_missing")
@@ -674,7 +588,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and signer_profile_class != "production"
     ):
         reason_codes.append("signer_profile_class_mismatch")
-
     signer_private_key_env = report.get("signer_private_key_env")
     expected_signer_env = ""
     if signer_profile == PRIMARY_SIGNER_PROFILE:
@@ -685,13 +598,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("signer_private_key_env_missing")
     elif expected_signer_env and signer_private_key_env != expected_signer_env:
         reason_codes.append("signer_private_key_env_mismatch")
-
     signer_key_source_contract_version = report.get("signer_key_source_contract_version")
     if not isinstance(signer_key_source_contract_version, str) or not signer_key_source_contract_version.strip():
         reason_codes.append("signer_key_source_contract_version_missing")
     elif signer_key_source_contract_version != SIGNER_KEY_SOURCE_CONTRACT_VERSION:
         reason_codes.append("signer_key_source_contract_version_mismatch")
-
     signer_key_source = report.get("signer_key_source")
     if not isinstance(signer_key_source, str) or not signer_key_source.strip():
         reason_codes.append("signer_key_source_missing")
@@ -705,35 +616,27 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("signer_key_source_profile_pair_disallowed")
     elif signer_profile_class == "production" and signer_key_source != REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE:
         reason_codes.append("signer_key_source_production_managed_external_required")
-
     signer_provenance_file = report.get("signer_provenance_file")
     if not isinstance(signer_provenance_file, str):
         reason_codes.append("signer_provenance_file_invalid")
-
     signer_provenance_present = report.get("signer_provenance_present")
     if not isinstance(signer_provenance_present, bool):
         reason_codes.append("signer_provenance_present_invalid")
-
     signer_provenance_sha256 = report.get("signer_provenance_sha256")
     if not isinstance(signer_provenance_sha256, str):
         reason_codes.append("signer_provenance_sha256_invalid")
-
     signer_provenance_sha256_valid = report.get("signer_provenance_sha256_valid")
     if not isinstance(signer_provenance_sha256_valid, bool):
         reason_codes.append("signer_provenance_sha256_valid_invalid")
-
     signer_rotation_epoch = report.get("signer_rotation_epoch")
     if not isinstance(signer_rotation_epoch, int) or signer_rotation_epoch <= 0:
         reason_codes.append("signer_rotation_epoch_invalid")
-
     signer_previous_rotation_epoch = report.get("signer_previous_rotation_epoch")
     if not isinstance(signer_previous_rotation_epoch, int) or signer_previous_rotation_epoch <= 0:
         reason_codes.append("signer_previous_rotation_epoch_invalid")
-
     signer_rotation_freshness_max_delta = report.get("signer_rotation_freshness_max_delta")
     if not isinstance(signer_rotation_freshness_max_delta, int) or signer_rotation_freshness_max_delta < 0:
         reason_codes.append("signer_rotation_freshness_max_delta_invalid")
-
     signer_rotation_delta_epochs = report.get("signer_rotation_delta_epochs")
     if not isinstance(signer_rotation_delta_epochs, int):
         reason_codes.append("signer_rotation_delta_epochs_invalid")
@@ -753,30 +656,25 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and signer_rotation_delta_epochs > signer_rotation_freshness_max_delta
     ):
         reason_codes.append("signer_rotation_epoch_stale")
-
     signer_rotation_fresh = report.get("signer_rotation_fresh")
     if not isinstance(signer_rotation_fresh, bool):
         reason_codes.append("signer_rotation_fresh_invalid")
     elif "signer_rotation_epoch_stale" in reason_codes and signer_rotation_fresh:
         reason_codes.append("signer_rotation_fresh_contract_mismatch")
-
     fallback_signer_private_key_env = report.get("fallback_signer_private_key_env")
     if not isinstance(fallback_signer_private_key_env, str) or not fallback_signer_private_key_env.strip():
         reason_codes.append("fallback_signer_private_key_env_missing")
     elif fallback_signer_private_key_env != FALLBACK_SIGNER_SECRET_ENV:
         reason_codes.append("fallback_signer_private_key_env_mismatch")
-
     fallback_signer_secret_remediation = report.get("fallback_signer_secret_remediation")
     expected_fallback_remediation = f"unset {FALLBACK_SIGNER_SECRET_ENV}"
     if not isinstance(fallback_signer_secret_remediation, str) or not fallback_signer_secret_remediation.strip():
         reason_codes.append("fallback_signer_secret_remediation_missing")
     elif fallback_signer_secret_remediation != expected_fallback_remediation:
         reason_codes.append("fallback_signer_secret_remediation_mismatch")
-
     signer_secret_present = report.get("signer_secret_present")
     if not isinstance(signer_secret_present, bool):
         reason_codes.append("signer_secret_present_invalid")
-
     fallback_signer_secret_present = report.get("fallback_signer_secret_present")
     if not isinstance(fallback_signer_secret_present, bool):
         reason_codes.append("fallback_signer_secret_present_invalid")
@@ -784,73 +682,56 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("fallback_signer_secret_present_violation")
         if reason_code != "checkpoint_failed_fallback_private_key_contract":
             reason_codes.append("fallback_signer_secret_checkpoint_reason_mismatch")
-
     signer_secret_hex_valid = report.get("signer_secret_hex_valid")
     if not isinstance(signer_secret_hex_valid, bool):
         reason_codes.append("signer_secret_hex_valid_invalid")
-
     required_approvals = report.get("required_approvals")
     if not isinstance(required_approvals, int) or required_approvals <= 0:
         reason_codes.append("required_approvals_invalid")
     elif signer_profile_class == "production" and required_approvals < MIN_PRODUCTION_REQUIRED_APPROVALS:
         reason_codes.append("signer_quorum_minimum_not_met")
-
     received_approvals = report.get("received_approvals")
     if not isinstance(received_approvals, int) or received_approvals < 0:
         reason_codes.append("received_approvals_invalid")
-
     quorum_evidence_file = report.get("quorum_evidence_file")
     if not isinstance(quorum_evidence_file, str):
         reason_codes.append("quorum_evidence_file_invalid")
-
     quorum_evidence_present = report.get("quorum_evidence_present")
     if not isinstance(quorum_evidence_present, bool):
         reason_codes.append("quorum_evidence_present_invalid")
-
     quorum_evidence_sha256 = report.get("quorum_evidence_sha256")
     if not isinstance(quorum_evidence_sha256, str):
         reason_codes.append("quorum_evidence_sha256_invalid")
-
     quorum_evidence_sha256_valid = report.get("quorum_evidence_sha256_valid")
     if not isinstance(quorum_evidence_sha256_valid, bool):
         reason_codes.append("quorum_evidence_sha256_valid_invalid")
-
     quorum_evidence_schema_valid = report.get("quorum_evidence_schema_valid")
     if not isinstance(quorum_evidence_schema_valid, bool):
         reason_codes.append("quorum_evidence_schema_valid_invalid")
-
     quorum_evidence_approval_count = report.get("quorum_evidence_approval_count")
     if not isinstance(quorum_evidence_approval_count, int) or quorum_evidence_approval_count < 0:
         reason_codes.append("quorum_evidence_approval_count_invalid")
-
     quorum_evidence_signers_unique = report.get("quorum_evidence_signers_unique")
     if not isinstance(quorum_evidence_signers_unique, bool):
         reason_codes.append("quorum_evidence_signers_unique_invalid")
-
     quorum_evidence_matches_threshold = report.get("quorum_evidence_matches_threshold")
     if not isinstance(quorum_evidence_matches_threshold, bool):
         reason_codes.append("quorum_evidence_matches_threshold_invalid")
-
     quorum_evidence_custody_sha256_match = report.get("quorum_evidence_custody_sha256_match")
     if not isinstance(quorum_evidence_custody_sha256_match, bool):
         reason_codes.append("quorum_evidence_custody_sha256_match_invalid")
-
     quorum_evidence_signer_roles_present = report.get("quorum_evidence_signer_roles_present")
     if not isinstance(quorum_evidence_signer_roles_present, bool):
         reason_codes.append("quorum_evidence_signer_roles_present_invalid")
-
     quorum_evidence_signer_roles_valid = report.get("quorum_evidence_signer_roles_valid")
     if not isinstance(quorum_evidence_signer_roles_valid, bool):
         reason_codes.append("quorum_evidence_signer_roles_valid_invalid")
-
     quorum_evidence_rotation_metadata_present = report.get("quorum_evidence_rotation_metadata_present")
     if not isinstance(quorum_evidence_rotation_metadata_present, bool):
         reason_codes.append("quorum_evidence_rotation_metadata_present_invalid")
-
     quorum_evidence_rotation_metadata_valid = report.get("quorum_evidence_rotation_metadata_valid")
     if not isinstance(quorum_evidence_rotation_metadata_valid, bool):
         reason_codes.append("quorum_evidence_rotation_metadata_valid_invalid")
-
     runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
     if (
         not isinstance(runtime_signer_attestation_schema_version, str)
@@ -859,20 +740,17 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_attestation_schema_version_missing")
     elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
-
     reason_codes.extend(
         evaluate_runtime_signer_attestation_bundle(
             report.get("runtime_signer_attestation_bundle"),
             signer_profile,
         )
     )
-
     runtime_signer_attestation_profile_approved = report.get("runtime_signer_attestation_profile_approved")
     if not isinstance(runtime_signer_attestation_profile_approved, bool):
         reason_codes.append("runtime_signer_attestation_profile_approved_invalid")
     elif "runtime_signer_attestation_profile_not_approved" in reason_codes and runtime_signer_attestation_profile_approved:
         reason_codes.append("runtime_signer_attestation_profile_approved_contract_mismatch")
-
     runtime_signer_drift_telemetry_schema_version = report.get(
         "runtime_signer_drift_telemetry_schema_version"
     )
@@ -883,7 +761,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_drift_telemetry_schema_version_missing")
     elif runtime_signer_drift_telemetry_schema_version != RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_drift_telemetry_schema_version_mismatch")
-
     reason_codes.extend(
         evaluate_runtime_signer_drift_telemetry(
             report.get("runtime_signer_drift_telemetry"),
@@ -893,7 +770,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             signer_rotation_freshness_max_delta,
         )
     )
-
     runtime_signer_drift_thresholds_schema_version = report.get(
         "runtime_signer_drift_thresholds_schema_version"
     )
@@ -904,28 +780,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_drift_thresholds_schema_version_missing")
     elif runtime_signer_drift_thresholds_schema_version != RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_drift_thresholds_schema_version_mismatch")
-
     threshold_reason_codes, parsed_runtime_signer_drift_thresholds = evaluate_runtime_signer_drift_thresholds_bundle(
         report.get("runtime_signer_drift_thresholds_bundle")
     )
     reason_codes.extend(threshold_reason_codes)
-
     custody_evidence_file = report.get("custody_evidence_file")
     if not isinstance(custody_evidence_file, str):
         reason_codes.append("custody_evidence_file_invalid")
-
     custody_evidence_present = report.get("custody_evidence_present")
     if not isinstance(custody_evidence_present, bool):
         reason_codes.append("custody_evidence_present_invalid")
-
     custody_evidence_sha256 = report.get("custody_evidence_sha256")
     if not isinstance(custody_evidence_sha256, str):
         reason_codes.append("custody_evidence_sha256_invalid")
-
     custody_evidence_sha256_valid = report.get("custody_evidence_sha256_valid")
     if not isinstance(custody_evidence_sha256_valid, bool):
         reason_codes.append("custody_evidence_sha256_valid_invalid")
-
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
@@ -1060,7 +930,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("signer_rotation_freshness_max_delta_contract_mismatch")
         if contracts.get("signer_rotation_stale_rejected") is not True:
             reason_codes.append("signer_rotation_stale_rejected_contract_mismatch")
-
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -1098,10 +967,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
-
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
-
     observed_final_decision = ""
     if status == "ok":
         observed_final_decision = "GO"
@@ -1118,7 +985,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "deployment_preflight_passed"):
             reason_codes.append("fail_status_reason_code_mismatch")
-
     if mode == "run":
         if isinstance(signer_secret_present, bool):
             if signer_secret_present is not True:
@@ -1145,7 +1011,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         if isinstance(signer_rotation_delta_epochs, int) and signer_rotation_delta_epochs <= 0:
             reason_codes.append("signer_rotation_promotion_stalled")
             reason_codes.append("signer_rotation_rehearsal_drift_detected")
-
         if isinstance(required_approvals, int) and isinstance(received_approvals, int):
             if received_approvals < required_approvals:
                 reason_codes.append("signer_quorum_shortfall")
@@ -1198,7 +1063,6 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("signer_rotation_epoch_stale")
         if signer_rotation_fresh is not True:
             reason_codes.append("signer_rotation_fresh_violation")
-
     runtime_signer_drift_admission_matrix = evaluate_runtime_signer_drift_admission_matrix(
         mode=mode,
         thresholds=parsed_runtime_signer_drift_thresholds,
@@ -1215,32 +1079,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 "runtime_signer_drift_rotation_fail_threshold_exceeded",
             ):
                 reason_codes.append(matrix_reason_code)
-
     reason_codes.extend(evaluate_deployment_preflight_marker_contract(report))
-
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
             reason_codes.append(f"required_reason_code_missing:{required_reason_code}")
-
     if observed_final_decision and observed_final_decision != args.expected_final_decision:
         reason_codes.append("observed_final_decision_mismatch")
-
     final_decision = "GO" if not reason_codes else "NO-GO"
     return final_decision, reason_codes, runtime_signer_drift_admission_matrix
-
-
 def main() -> int:
     args = parse_args()
     report_path = Path(args.report_file).resolve()
     report = json.loads(report_path.read_text(encoding="utf-8"))
-
     observed_status = report.get("status")
     observed_final_decision = ""
     if observed_status == "ok":
         observed_final_decision = "GO"
     elif observed_status == "fail":
         observed_final_decision = "NO-GO"
-
     final_decision, reason_codes, runtime_signer_drift_admission_matrix = evaluate(report, args)
     output = {
         "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
@@ -1295,12 +1151,10 @@ def main() -> int:
             "observed_quorum_shortfall_events"
         ),
     }
-
     if args.output_json:
         output_path = Path(args.output_json).resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(output, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-
     status = "ok" if final_decision == "GO" else "fail"
     failed_checks = ",".join(reason_codes) if reason_codes else "none"
     print(f"status={status}")
@@ -1365,9 +1219,6 @@ def main() -> int:
         f"{observed_signer_config_reason_codes_value(reason_codes)}"
     )
     print(f"failed_checks={failed_checks}")
-
     return 0 if final_decision == "GO" else 1
-
-
 if __name__ == "__main__":
     raise SystemExit(main())

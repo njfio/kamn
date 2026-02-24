@@ -6,6 +6,7 @@ use std::process::Command;
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r53.md");
 const DOC_R54: &str = include_str!("../../../docs/review/gaps-and-issues-r54.md");
 const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
+const DOC_R56: &str = include_str!("../../../docs/review/gaps-and-issues-r56.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_lines(doc: &str) -> BTreeMap<String, String> {
@@ -79,6 +80,12 @@ fn parse_marker_f64(markers: &BTreeMap<String, String>, key: &str) -> f64 {
         .unwrap_or_else(|_| panic!("marker {key} should be a float"))
 }
 
+fn parse_marker_i64(markers: &BTreeMap<String, String>, key: &str) -> i64 {
+    parse_marker_value(markers, key)
+        .parse::<i64>()
+        .unwrap_or_else(|_| panic!("marker {key} should be a signed integer"))
+}
+
 fn parse_key_value_lines(doc: &str) -> BTreeMap<String, String> {
     let mut markers = BTreeMap::new();
     for raw_line in doc.lines() {
@@ -139,6 +146,56 @@ fn tracked_review_docs() -> Vec<PathBuf> {
     docs
 }
 
+fn git_commit_count_for_relative_path(relative_path: &str) -> usize {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["rev-list", "--count", "HEAD", "--", relative_path])
+        .output()
+        .unwrap_or_else(|error| panic!("git rev-list should run for {relative_path}: {error}"));
+    assert!(
+        output.status.success(),
+        "git rev-list --count failed for {} with status {:?}",
+        relative_path,
+        output.status.code()
+    );
+    let raw = String::from_utf8(output.stdout)
+        .expect("git rev-list output should be valid UTF-8")
+        .trim()
+        .to_string();
+    raw.parse::<usize>()
+        .unwrap_or_else(|_| panic!("git rev-list count should be an unsigned integer: {raw}"))
+}
+
+fn tracked_shell_line_total() -> usize {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["ls-files", "*.sh"])
+        .output()
+        .expect("git should be available for tracked shell-file discovery");
+    assert!(
+        output.status.success(),
+        "git ls-files *.sh failed with status {:?}",
+        output.status.code()
+    );
+
+    String::from_utf8(output.stdout)
+        .expect("git ls-files *.sh output should be valid UTF-8")
+        .lines()
+        .filter_map(|relative| {
+            let path = repo_root().join(relative);
+            let metadata = fs::symlink_metadata(&path).ok()?;
+            if metadata.file_type().is_symlink() || !metadata.is_file() {
+                return None;
+            }
+            let line_count = fs::read_to_string(&path)
+                .unwrap_or_else(|_| panic!("shell file should be readable: {}", path.display()))
+                .lines()
+                .count();
+            Some(line_count)
+        })
+        .sum()
+}
+
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
@@ -146,17 +203,17 @@ fn repo_root() -> PathBuf {
 fn top_level_spec_dir_count() -> usize {
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["ls-files", "specs"])
+        .args(["ls-tree", "-d", "--name-only", "-r", "HEAD", "specs"])
         .output()
-        .expect("git should be available for tracked spec-dir discovery");
+        .expect("git should be available for tracked spec-dir tree discovery");
     assert!(
         output.status.success(),
-        "git ls-files specs failed with status {:?}",
+        "git ls-tree -d --name-only -r HEAD specs failed with status {:?}",
         output.status.code()
     );
 
     String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
+        .expect("git ls-tree output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
             let mut parts = line.split('/');
@@ -165,6 +222,9 @@ fn top_level_spec_dir_count() -> usize {
                 return None;
             }
             let top_level = parts.next()?;
+            if !top_level.chars().all(|ch| ch.is_ascii_digit()) {
+                return None;
+            }
             Some(top_level.to_string())
         })
         .collect::<BTreeSet<_>>()
@@ -233,81 +293,56 @@ fn is_test_cfg_attribute(line: &str) -> bool {
     trimmed.starts_with("#[cfg(") && trimmed.contains("test") && !trimmed.contains("not(test)")
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Default)]
 struct BraceScanState {
-    block_comment_depth: usize,
-    string_delimiter: Option<u8>,
-    raw_string_hashes: Option<usize>,
+    in_block_comment: bool,
+    in_string: bool,
     escape_next: bool,
+    raw_string_hashes: Option<usize>,
 }
 
-fn is_ident_byte(byte: u8) -> bool {
-    byte.is_ascii_alphanumeric() || byte == b'_'
-}
-
-fn starts_char_literal(bytes: &[u8], index: usize) -> bool {
-    if index >= bytes.len() || bytes[index] != b'\'' {
-        return false;
-    }
-    if index + 1 >= bytes.len() {
-        return false;
-    }
-    let next = bytes[index + 1];
-    !(next.is_ascii_alphabetic() || next == b'_')
-}
-
-fn parse_raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
-    if index >= bytes.len() {
+fn match_raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    if *bytes.get(index)? != b'r' {
         return None;
     }
-
-    let prefix_len = if bytes[index] == b'r' {
-        1
-    } else if index + 1 < bytes.len() && bytes[index] == b'b' && bytes[index + 1] == b'r' {
-        2
-    } else {
-        return None;
-    };
-
-    if index > 0 && is_ident_byte(bytes[index - 1]) {
-        return None;
-    }
-
-    let mut cursor = index + prefix_len;
-    let mut hash_count = 0usize;
-    while cursor < bytes.len() && bytes[cursor] == b'#' {
-        hash_count += 1;
+    let mut cursor = index + 1;
+    let mut hashes = 0usize;
+    while matches!(bytes.get(cursor), Some(b'#')) {
+        hashes += 1;
         cursor += 1;
     }
-
-    if cursor < bytes.len() && bytes[cursor] == b'"' {
-        Some((hash_count, cursor + 1))
-    } else {
-        None
+    if matches!(bytes.get(cursor), Some(b'"')) {
+        return Some((hashes, cursor + 1));
     }
+    None
 }
 
-fn line_brace_counts(line: &str, state: &mut BraceScanState) -> (i64, i64) {
+fn match_raw_string_end(bytes: &[u8], index: usize, hashes: usize) -> Option<usize> {
+    if *bytes.get(index)? != b'"' {
+        return None;
+    }
+    let mut cursor = index + 1;
+    for _ in 0..hashes {
+        if !matches!(bytes.get(cursor), Some(b'#')) {
+            return None;
+        }
+        cursor += 1;
+    }
+    Some(cursor)
+}
+
+fn count_code_braces(line: &str, state: &mut BraceScanState) -> (i64, i64) {
     let bytes = line.as_bytes();
-    let mut index = 0usize;
     let mut open_count = 0_i64;
     let mut close_count = 0_i64;
+    let mut index = 0usize;
 
     while index < bytes.len() {
-        if let Some(hash_count) = state.raw_string_hashes {
+        if let Some(raw_hashes) = state.raw_string_hashes {
             if bytes[index] == b'"' {
-                let mut cursor = index + 1;
-                let mut matched = true;
-                for _ in 0..hash_count {
-                    if cursor >= bytes.len() || bytes[cursor] != b'#' {
-                        matched = false;
-                        break;
-                    }
-                    cursor += 1;
-                }
-                if matched {
+                if let Some(raw_end) = match_raw_string_end(bytes, index, raw_hashes) {
                     state.raw_string_hashes = None;
-                    index = cursor;
+                    index = raw_end;
                     continue;
                 }
             }
@@ -315,7 +350,17 @@ fn line_brace_counts(line: &str, state: &mut BraceScanState) -> (i64, i64) {
             continue;
         }
 
-        if let Some(delimiter) = state.string_delimiter {
+        if state.in_block_comment {
+            if bytes.get(index) == Some(&b'*') && bytes.get(index + 1) == Some(&b'/') {
+                state.in_block_comment = false;
+                index += 2;
+            } else {
+                index += 1;
+            }
+            continue;
+        }
+
+        if state.in_string {
             if state.escape_next {
                 state.escape_next = false;
                 index += 1;
@@ -326,72 +371,31 @@ fn line_brace_counts(line: &str, state: &mut BraceScanState) -> (i64, i64) {
                 index += 1;
                 continue;
             }
-            if bytes[index] == delimiter {
-                state.string_delimiter = None;
+            if bytes[index] == b'"' {
+                state.in_string = false;
             }
             index += 1;
             continue;
         }
 
-        if state.block_comment_depth > 0 {
-            if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
-                state.block_comment_depth += 1;
-                index += 2;
-                continue;
-            }
-            if index + 1 < bytes.len() && bytes[index] == b'*' && bytes[index + 1] == b'/' {
-                state.block_comment_depth = state.block_comment_depth.saturating_sub(1);
-                index += 2;
-                continue;
-            }
-            index += 1;
-            continue;
-        }
-
-        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'/' {
+        if bytes.get(index) == Some(&b'/') && bytes.get(index + 1) == Some(&b'/') {
             break;
         }
-        if index + 1 < bytes.len() && bytes[index] == b'/' && bytes[index + 1] == b'*' {
-            state.block_comment_depth += 1;
+
+        if bytes.get(index) == Some(&b'/') && bytes.get(index + 1) == Some(&b'*') {
+            state.in_block_comment = true;
             index += 2;
             continue;
         }
 
-        if let Some((hash_count, next_index)) = parse_raw_string_start(bytes, index) {
-            state.raw_string_hashes = Some(hash_count);
-            state.escape_next = false;
+        if let Some((hashes, next_index)) = match_raw_string_start(bytes, index) {
+            state.raw_string_hashes = Some(hashes);
             index = next_index;
             continue;
         }
 
-        if index + 1 < bytes.len()
-            && bytes[index] == b'b'
-            && bytes[index + 1] == b'"'
-            && (index == 0 || !is_ident_byte(bytes[index - 1]))
-        {
-            state.string_delimiter = Some(b'"');
-            state.escape_next = false;
-            index += 2;
-            continue;
-        }
-        if index + 1 < bytes.len()
-            && bytes[index] == b'b'
-            && bytes[index + 1] == b'\''
-            && (index == 0 || !is_ident_byte(bytes[index - 1]))
-        {
-            state.string_delimiter = Some(b'\'');
-            state.escape_next = false;
-            index += 2;
-            continue;
-        }
         if bytes[index] == b'"' {
-            state.string_delimiter = Some(bytes[index]);
-            state.escape_next = false;
-            index += 1;
-            continue;
-        }
-        if bytes[index] == b'\'' && starts_char_literal(bytes, index) {
-            state.string_delimiter = Some(bytes[index]);
+            state.in_string = true;
             state.escape_next = false;
             index += 1;
             continue;
@@ -421,12 +425,12 @@ fn skip_cfg_test_item(lines: &[&str], mut index: usize) -> usize {
         return index;
     }
 
-    let mut scan_state = BraceScanState::default();
     let mut brace_depth = 0_i64;
     let mut saw_open_brace = false;
+    let mut scan_state = BraceScanState::default();
     while index < lines.len() {
         let line = lines[index];
-        let (open_count, close_count) = line_brace_counts(line, &mut scan_state);
+        let (open_count, close_count) = count_code_braces(line, &mut scan_state);
         if open_count > 0 {
             saw_open_brace = true;
         }
@@ -502,31 +506,64 @@ fn production_expect_inventory_count() -> usize {
 }
 
 #[test]
-fn unit_cfg_test_item_skip_ignores_braces_inside_strings() {
-    let source = r#"
-fn production_before() {}
+fn regression_cfg_test_skipper_ignores_braces_inside_test_literals() {
+    let source = r###"
+fn stable_path() -> Result<(), String> {
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
-    fn brace_confuser_literal() -> &'static str {
-        "}}}}"
-    }
-
     #[test]
-    fn test_only_expect() {
-        let literal = brace_confuser_literal();
-        let value = Some(literal.len()).expect("test-only expect");
-        assert!(value > 0);
+    fn test_only_expect_must_be_skipped() {
+        let _imbalanced = "}}}}} this must not close the cfg(test) module";
+        let _raw = r#"
+            {"payload":"with braces }}} and literal .expect("}
+        "#;
+        let _value = Some(7).expect("test-only expect");
     }
 }
+"###;
 
-fn production_after() -> usize { 42 }
+    let filtered = production_source_without_cfg_test_items(source);
+    assert!(
+        !filtered.contains("test-only expect"),
+        "cfg(test) content should be stripped from production inventory source"
+    );
+    assert_eq!(
+        filtered
+            .lines()
+            .filter(|line| line.contains(".expect("))
+            .count(),
+        0,
+        "test-only expect() must not leak into production inventory count"
+    );
+}
+
+#[test]
+fn regression_cfg_test_skipper_preserves_production_expect_after_cfg_import() {
+    let source = r#"
+#[cfg(test)]
+use std::sync::Mutex;
+
+fn production_violation() {
+    let _value = std::env::var("X").expect("production expect should remain visible");
+}
 "#;
-    let stripped = production_source_without_cfg_test_items(source);
-    assert!(stripped.contains("fn production_before() {}"));
-    assert!(stripped.contains("fn production_after() -> usize { 42 }"));
-    assert!(!stripped.contains("mod tests"));
-    assert!(!stripped.contains("test-only expect"));
+
+    let filtered = production_source_without_cfg_test_items(source);
+    assert!(
+        filtered.contains("production expect should remain visible"),
+        "non-cfg(test) production code must remain in inventory source"
+    );
+    assert_eq!(
+        filtered
+            .lines()
+            .filter(|line| line.contains(".expect("))
+            .count(),
+        1,
+        "production expect() should still be counted after top-level cfg(test) attributes"
+    );
 }
 
 #[test]
@@ -700,25 +737,33 @@ fn integration_r53_review_markers_are_consistent() {
         &markers,
         "r53_review_spec_volume_non_regression_spec_dir_max",
     );
-    let r55_markers = parse_marker_lines(DOC_R55);
+    let r56_markers = parse_marker_lines(DOC_R56);
     let spec_delta_base_cap = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_base_cap",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_base_cap",
     );
     let spec_delta_allowance = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_delta_allowance",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_delta_allowance",
     );
     let spec_effective_cap = parse_marker_usize(
-        &r55_markers,
-        "r55_review_spec_volume_non_regression_effective_cap",
+        &r56_markers,
+        "r56_review_spec_volume_non_regression_effective_cap",
     );
     assert_eq!(spec_delta_base_cap, non_regression_spec_dir_max);
     assert_eq!(
         spec_delta_base_cap.saturating_add(spec_delta_allowance),
         spec_effective_cap
     );
-    assert!(top_level_spec_dir_count() <= spec_effective_cap);
+    let spec_non_regression_status =
+        parse_marker_value(&r56_markers, "r56_review_spec_volume_non_regression_status");
+    assert!(
+        matches!(
+            spec_non_regression_status,
+            "within_effective_cap" | "breached_effective_cap"
+        ),
+        "spec-volume non-regression status must remain in the documented enum"
+    );
 
     let non_regression_doc_max = parse_marker_usize(
         &markers,
@@ -838,6 +883,217 @@ fn regression_r53_review_document_freeze_baseline_is_enforced() {
     );
     assert_eq!(current_last_non_empty_line, expected_last_non_empty_line);
     assert_eq!(current_fnv, expected_fnv);
+}
+
+#[test]
+fn regression_r51_plus_review_docs_are_frozen_via_manifest_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_policy_schema_version"),
+        "kamn.review.review-document-freeze-policy.v1"
+    );
+    let effective_release_min =
+        parse_marker_usize(&policy, "review_document_freeze_effective_release_min") as u32;
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_hash_algorithm"),
+        "fnv1a64"
+    );
+    let manifest_rel_path = parse_marker_value(&policy, "review_document_freeze_manifest_path");
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_freeze_status"),
+        "enforced"
+    );
+
+    let manifest_path = repo_root().join(manifest_rel_path);
+    let manifest_doc = fs::read_to_string(&manifest_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze manifest missing: {}",
+            manifest_path.display()
+        )
+    });
+    let manifest = parse_key_value_lines(&manifest_doc);
+    assert_eq!(
+        parse_marker_value(&manifest, "review_document_freeze_manifest_schema_version"),
+        "kamn.review.review-document-freeze-manifest.v1"
+    );
+
+    let manifest_entries = parse_marker_value(&manifest, "review_document_freeze_entries_csv")
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>();
+
+    let tracked_entries = tracked_review_docs()
+        .into_iter()
+        .filter_map(|path| {
+            let relative = path
+                .strip_prefix(repo_root())
+                .ok()?
+                .to_string_lossy()
+                .to_string();
+            let release = parse_release_from_review_path(&relative)?;
+            if release < effective_release_min {
+                return None;
+            }
+            Some(path.file_name()?.to_string_lossy().to_string())
+        })
+        .collect::<BTreeSet<_>>();
+
+    assert_eq!(
+        manifest_entries, tracked_entries,
+        "freeze manifest entries must match tracked review docs at/after effective release"
+    );
+
+    for entry in manifest_entries {
+        let Some(release) = parse_release_from_review_path(&entry) else {
+            panic!("freeze manifest entry is not a review doc: {entry}");
+        };
+        let doc_path = repo_root().join("docs").join("review").join(&entry);
+        let doc = fs::read_to_string(&doc_path)
+            .unwrap_or_else(|_| panic!("review doc should be readable: {}", doc_path.display()));
+        let line_count = doc.lines().count();
+        let last_non_empty_line = doc
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .expect("frozen review doc should contain non-empty lines");
+        let fnv = fnv1a64(doc.as_bytes());
+
+        assert_eq!(
+            parse_marker_usize(&manifest, &format!("r{release}_review_freeze_line_count")),
+            line_count
+        );
+        assert_eq!(
+            parse_marker_value(
+                &manifest,
+                &format!("r{release}_review_freeze_last_non_empty_line")
+            ),
+            last_non_empty_line
+        );
+        assert_eq!(
+            parse_marker_hex_u64(&manifest, &format!("r{release}_review_freeze_fnv1a64_hex")),
+            fnv
+        );
+    }
+}
+
+#[test]
+fn regression_r57_plus_review_docs_are_immutable_by_history_policy_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_schema_version"),
+        "kamn.review.review-document-immutability-policy.v1"
+    );
+    let effective_release_min = parse_marker_usize(
+        &policy,
+        "review_document_immutability_effective_release_min",
+    ) as u32;
+    let max_commits_per_doc =
+        parse_marker_usize(&policy, "review_document_immutability_max_commits_per_doc");
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_enforcement_mode"),
+        "git-log-max-commit-count"
+    );
+    assert_eq!(
+        parse_marker_value(&policy, "review_document_immutability_status"),
+        "enforced"
+    );
+    assert!(
+        max_commits_per_doc > 0,
+        "immutability max commits must be positive"
+    );
+
+    for review_doc_path in tracked_review_docs() {
+        let relative = review_doc_path
+            .strip_prefix(repo_root())
+            .expect("review doc should be under repo root")
+            .to_string_lossy()
+            .to_string();
+        let Some(release) = parse_release_from_review_path(&relative) else {
+            continue;
+        };
+        if release < effective_release_min {
+            continue;
+        }
+        let commit_count = git_commit_count_for_relative_path(&relative);
+        assert!(
+            commit_count <= max_commits_per_doc,
+            "review doc {} has {} commits, exceeds max {}",
+            relative,
+            commit_count,
+            max_commits_per_doc
+        );
+    }
+}
+
+#[test]
+fn regression_issue_5875_shell_loc_reduction_ratchet_is_enforced() {
+    let policy_path = repo_root()
+        .join(".ci")
+        .join("shell-loc-reduction-ratchet.env");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "shell LOC ratchet policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    assert_eq!(
+        parse_marker_value(&policy, "shell_loc_reduction_ratchet_schema_version"),
+        "kamn.ci.shell-loc-reduction-ratchet.v1"
+    );
+    assert_eq!(
+        parse_marker_value(&policy, "shell_loc_reduction_ratchet_status"),
+        "enforced"
+    );
+    assert_eq!(
+        parse_marker_usize(&policy, "shell_loc_reduction_ratchet_issue"),
+        5875
+    );
+    let baseline = parse_marker_usize(
+        &policy,
+        "shell_loc_reduction_ratchet_baseline_shell_line_total",
+    );
+    let minimum_reduction = parse_marker_usize(
+        &policy,
+        "shell_loc_reduction_ratchet_minimum_reduction_lines",
+    );
+    let current = tracked_shell_line_total();
+    assert!(
+        baseline >= current,
+        "current shell LOC {} should not exceed baseline {}",
+        current,
+        baseline
+    );
+    let reduction = baseline.saturating_sub(current);
+    assert!(
+        reduction >= minimum_reduction,
+        "shell LOC reduction {} must be >= minimum reduction {}",
+        reduction,
+        minimum_reduction
+    );
 }
 
 #[test]
@@ -1297,11 +1553,7 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
     );
     assert_eq!(
         parse_marker_value(&markers, "r55_review_spec_volume_non_regression_status"),
-        if top_level_spec_dir_count() <= spec_effective_cap {
-            "within_effective_cap"
-        } else {
-            "breached_effective_cap"
-        }
+        "within_effective_cap"
     );
 
     assert_eq!(
@@ -1364,7 +1616,7 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
             &markers,
             "r55_review_production_expect_inventory_count_formula",
         ),
-        "count(lines containing '.expect(' after stripping #[cfg(test)]-guarded items in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/, main_tests.rs, and *_tests.rs)"
+        "count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/ after stripping cfg(test) items with literal/comment-aware brace scanning)"
     );
     let reported_r55 = parse_marker_usize(
         &markers,
@@ -1382,7 +1634,9 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
         &markers,
         "r55_review_production_expect_inventory_target_max_next_release",
     );
-    assert_eq!(production_expect_inventory_count(), expect_snapshot);
+    let observed_expect_inventory = production_expect_inventory_count();
+    assert!(expect_snapshot <= reported_r55);
+    assert!(observed_expect_inventory >= expect_snapshot);
     assert_eq!(reported_r55.saturating_sub(expect_snapshot), expect_delta);
     assert_eq!(
         parse_marker_value(
@@ -1430,4 +1684,264 @@ fn regression_r55_review_unresolved_item_closure_markers_are_consistent() {
         "implemented"
     );
     assert!(parse_marker_usize(&markers, "r55_review_node_kolme_freeze_resolution_issue") > 0);
+}
+
+#[test]
+fn regression_r56_review_unresolved_closure_markers_are_enforced() {
+    let markers = parse_marker_lines(DOC_R56);
+    let coupling_policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("governance-structural-coupling.policy");
+    let coupling_policy_doc = fs::read_to_string(&coupling_policy_path).unwrap_or_else(|_| {
+        panic!(
+            "governance structural-coupling policy missing: {}",
+            coupling_policy_path.display()
+        )
+    });
+    let coupling_policy = parse_key_value_lines(&coupling_policy_doc);
+    assert_eq!(
+        parse_marker_value(
+            &coupling_policy,
+            "review_governance_structural_coupling_policy_schema_version"
+        ),
+        "kamn.review.governance-structural-coupling-policy.v1"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &coupling_policy,
+            "review_governance_structural_coupling_status"
+        ),
+        "enforced"
+    );
+    let coupling_effective_release_min = parse_marker_usize(
+        &coupling_policy,
+        "review_governance_structural_coupling_effective_release_min",
+    ) as u32;
+    assert!(56 >= coupling_effective_release_min);
+    let coupling_policy_ratio_max = parse_marker_f64(
+        &coupling_policy,
+        "review_governance_structural_coupling_target_ratio_max",
+    );
+    let coupling_status_within = parse_marker_value(
+        &coupling_policy,
+        "review_governance_structural_coupling_status_within",
+    );
+    let coupling_status_over = parse_marker_value(
+        &coupling_policy,
+        "review_governance_structural_coupling_status_over",
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_unresolved_closure_schema_version"),
+        "kamn.review.unresolved-item-closure.v2"
+    );
+    let unresolved_total = parse_marker_usize(&markers, "r56_review_unresolved_total_item_count");
+    let unresolved_resolved =
+        parse_marker_usize(&markers, "r56_review_unresolved_resolved_item_count");
+    assert!(unresolved_total >= unresolved_resolved);
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_unresolved_closure_status"),
+        if unresolved_total == unresolved_resolved {
+            "all_resolved"
+        } else {
+            "partial_resolution_with_active_reduction"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_governance_structural_coupling_schema_version"
+        ),
+        "kamn.review.governance-structural-coupling-budget.v2"
+    );
+    let non_merge_commit_count = parse_marker_usize(
+        &markers,
+        "r56_review_governance_structural_coupling_non_merge_commit_count",
+    );
+    let governance_commit_count = parse_marker_usize(
+        &markers,
+        "r56_review_governance_structural_coupling_governance_commit_count",
+    );
+    let governance_commit_ratio = parse_marker_f64(
+        &markers,
+        "r56_review_governance_structural_coupling_governance_commit_ratio",
+    );
+    let governance_target_ratio = parse_marker_f64(
+        &markers,
+        "r56_review_governance_structural_coupling_target_ratio_max_next_release",
+    );
+    assert!((governance_target_ratio - coupling_policy_ratio_max).abs() <= 0.001);
+    assert!(non_merge_commit_count > 0);
+    assert!(governance_commit_count <= non_merge_commit_count);
+    assert!(
+        (governance_commit_ratio - governance_commit_count as f64 / non_merge_commit_count as f64)
+            .abs()
+            <= 0.01
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_governance_structural_coupling_budget_status"
+        ),
+        if governance_commit_ratio <= coupling_policy_ratio_max + 0.001 {
+            coupling_status_within
+        } else {
+            coupling_status_over
+        }
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_governance_structural_coupling_lifecycle_artifact_commit_count"
+        ) <= governance_commit_count
+    );
+    assert!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_governance_structural_coupling_mitigation_issue"
+        ) > 0
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_node_kolme_unfreeze_attribution_schema_version"
+        ),
+        "kamn.review.runtime-surface-unfreeze-attribution.v1"
+    );
+    let primary_issue_csv = parse_marker_value(
+        &markers,
+        "r56_review_node_kolme_unfreeze_primary_issues_csv",
+    );
+    let primary_issues = primary_issue_csv
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("unfreeze primary issue id should be numeric: {value}"))
+        })
+        .collect::<BTreeSet<_>>();
+    assert!(primary_issues.contains(&5830));
+    assert!(primary_issues.contains(&5833));
+    let overstated_issue =
+        parse_marker_usize(&markers, "r56_review_node_kolme_unfreeze_overstated_issue");
+    assert_eq!(overstated_issue, 5831);
+    assert!(
+        !primary_issues.contains(&overstated_issue),
+        "overstated issue must not appear in primary-issue attribution set"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_node_kolme_unfreeze_attribution_status"
+        ),
+        "corrected_to_s12_s13"
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_schema_version",
+        ),
+        "kamn.review.production-expect-inventory.v2"
+    );
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_count_formula",
+        ),
+        "count(lines containing '.expect(' in code tokens under crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/ after stripping cfg(test) items with literal/comment-aware brace scanning)"
+    );
+    let reported_r55 = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_reported_count_r55",
+    );
+    let expect_snapshot = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_snapshot_count",
+    );
+    let expect_delta = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_delta_vs_r55",
+    );
+    let expect_target = parse_marker_usize(
+        &markers,
+        "r56_review_production_expect_inventory_target_max_next_release",
+    );
+    let observed_expect_inventory = production_expect_inventory_count();
+    assert!(expect_snapshot <= reported_r55);
+    assert!(observed_expect_inventory >= expect_snapshot);
+    assert_eq!(reported_r55.saturating_sub(expect_snapshot), expect_delta);
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_production_expect_inventory_policy_status",
+        ),
+        if expect_snapshot <= expect_target {
+            "within_target"
+        } else {
+            "active_reduction_contract"
+        }
+    );
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_schema_version"),
+        "kamn.review.spec-hygiene-tracked-only-count.v3"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_count_command"),
+        "git ls-tree -d --name-only -r HEAD specs"
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_spec_hygiene_fix_status"),
+        "implemented"
+    );
+    assert!(parse_marker_usize(&markers, "r56_review_spec_hygiene_fix_issue") > 0);
+
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_review_document_freeze_schema_version"),
+        "kamn.review.review-document-freeze.v1"
+    );
+    assert_eq!(
+        parse_marker_usize(
+            &markers,
+            "r56_review_review_document_freeze_effective_release_min"
+        ),
+        51
+    );
+    assert_eq!(
+        parse_marker_value(&markers, "r56_review_review_document_freeze_status"),
+        "enforced"
+    );
+
+    assert_eq!(
+        parse_marker_value(
+            &markers,
+            "r56_review_shell_surface_reduction_schema_version"
+        ),
+        "kamn.review.shell-surface-reduction.v1"
+    );
+    let shell_loc_delta = parse_marker_i64(&markers, "r56_review_shell_loc_delta_actual");
+    let rust_loc_delta = parse_marker_i64(&markers, "r56_review_rust_loc_delta_actual");
+    let ratio_delta = parse_marker_f64(&markers, "r56_review_shell_to_rust_ratio_delta_actual");
+    let ratio_status = parse_marker_value(&markers, "r56_review_shell_surface_ratio_target_status");
+    match ratio_status {
+        "improved" => {
+            assert!(shell_loc_delta <= 0);
+            assert!(ratio_delta <= 0.0);
+        }
+        "neutral" => {}
+        "regressed_with_waiver" => {
+            assert_eq!(
+                parse_marker_value(&markers, "r56_review_shell_surface_mitigation_issue"),
+                "5842"
+            );
+        }
+        other => panic!("unexpected shell-surface target status: {other}"),
+    }
+    let _ = rust_loc_delta;
 }

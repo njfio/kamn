@@ -82,14 +82,20 @@ fn default_fixture_path() -> PathBuf {
         .join("fixtures/ci/sbom_provenance_artifact_fixture_matrix.txt")
 }
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match std::env::var(key) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => default.to_owned(),
+    }
+}
+
 fn parse_args() -> Result<Config, String> {
     let mut config = Config {
         profile: "baseline".to_owned(),
         mode: "dry-run".to_owned(),
         ci_fast_gate: "PASS".to_owned(),
-        max_seconds: std::env::var("KAMN_SBOM_PROVENANCE_GENERATOR_MAX_SECONDS")
-            .unwrap_or_else(|_| "120".to_owned()),
-        local_opt_in: std::env::var(OPT_IN_ENV).unwrap_or_else(|_| "0".to_owned()),
+        max_seconds: env_var_or_default("KAMN_SBOM_PROVENANCE_GENERATOR_MAX_SECONDS", "120"),
+        local_opt_in: env_var_or_default(OPT_IN_ENV, "0"),
         fixture_file: default_fixture_path(),
         output_json: String::new(),
     };

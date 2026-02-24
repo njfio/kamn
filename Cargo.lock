@@ -1679,6 +1679,9 @@ dependencies = [
 [[package]]
 name = "kamn-sdk"
 version = "0.1.0"
+dependencies = [
+ "kamn-core",
+]
 
 [[package]]
 name = "lazy_static"

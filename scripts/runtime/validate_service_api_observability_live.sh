@@ -52,8 +52,39 @@ sock.close()
 PY
 )"
 api_addr="127.0.0.1:${api_port}"
+sender_did="kamn:did:agent:service-api-observability-validator"
+state_hash="service-api:kamn-devnet:v0.1.0"
+auth_private_key_hex="${KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX:-1111111111111111111111111111111111111111111111111111111111111111}"
+auth_public_key_hex="$(
+  python3 - "$auth_private_key_hex" <<'PY'
+import sys
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
+order = int(
+    "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
+)
+private_key_hex = sys.argv[1].strip()
+try:
+    private_scalar = int(private_key_hex, 16)
+except ValueError as exc:
+    raise SystemExit("invalid service auth private key hex") from exc
+if private_scalar <= 0 or private_scalar >= order:
+    raise SystemExit("service auth private key scalar must be within secp256k1 range")
+private_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+public_key_hex = private_key.public_key().public_bytes(
+    serialization.Encoding.X962, serialization.PublicFormat.CompressedPoint
+).hex()
+print(public_key_hex)
+PY
+)"
+if [ -z "$auth_public_key_hex" ]; then
+  echo "failed to derive service api auth public key hex" >&2
+  exit 1
+fi
 
 api_stdout="$TMP_DIR/service-api-observability.out"
+KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX="$auth_public_key_hex" \
 "$NODE_BIN" \
   --role processor \
   --chain-id kamn-devnet \
@@ -133,10 +164,62 @@ if ! grep -q 'kamn_service_api_observability_latency_p50_ms 0' "$metrics_file"; 
   exit 1
 fi
 
-sender_did="kamn:did:agent:service-api-observability-validator"
 nonce=1
-state_hash="service-api:kamn-devnet:v0.1.0"
-signature="sig:ed25519:baseline-v1:${sender_did}:${nonce}:${state_hash}:0"
+signature="$(
+  python3 - "$auth_private_key_hex" "$sender_did" "$nonce" "$state_hash" <<'PY'
+import hashlib
+import sys
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+
+secp256k1_order = int(
+    "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16
+)
+private_key_hex = sys.argv[1]
+sender = sys.argv[2]
+nonce = int(sys.argv[3])
+state_hash = sys.argv[4]
+payload = ""
+
+private_scalar = int(private_key_hex, 16)
+private_key = ec.derive_private_key(private_scalar, ec.SECP256K1())
+message = (
+    f"sender_len={len(sender)}\n"
+    f"sender={sender}\n"
+    f"nonce={nonce}\n"
+    f"state_hash_len={len(state_hash)}\n"
+    f"state_hash={state_hash}\n"
+    f"payload_len={len(payload)}\n"
+    f"payload={payload}"
+).encode("utf-8")
+signature_der = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+r_value, s_value = decode_dss_signature(signature_der)
+if s_value > secp256k1_order // 2:
+    s_value = secp256k1_order - s_value
+message_hash = int.from_bytes(hashlib.sha256(message).digest(), byteorder="big")
+nonce_scalar = (
+    (message_hash + (r_value * private_scalar)) * pow(s_value, -1, secp256k1_order)
+) % secp256k1_order
+if nonce_scalar == 0:
+    raise SystemExit("service api observability signature nonce scalar resolved to zero")
+ephemeral_point = (
+    ec.derive_private_key(nonce_scalar, ec.SECP256K1())
+    .public_key()
+    .public_numbers()
+)
+if ephemeral_point.x == r_value:
+    recovery_prefix = 0
+elif ephemeral_point.x - r_value == secp256k1_order:
+    recovery_prefix = 1
+else:
+    raise SystemExit(
+        "service api observability signature failed to map recovery-id domain"
+    )
+recovery_id = (recovery_prefix << 1) | (ephemeral_point.y & 1)
+print(f"sig:secp256k1:baseline-v2:{recovery_id}:{r_value:064x}{s_value:064x}")
+PY
+)"
 post_metrics_status="$(curl -sS -o "$post_metrics_file" -w '%{http_code}' \
   -X POST "http://${api_addr}/metrics" \
   -H "X-KAMN-Sender-DID: ${sender_did}" \

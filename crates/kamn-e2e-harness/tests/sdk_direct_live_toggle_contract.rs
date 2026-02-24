@@ -5,7 +5,7 @@ use kamn_e2e_harness::drivers::sdk_direct::SdkDirectDriver;
 use kamn_e2e_harness::drivers::HarnessDriver;
 
 #[test]
-fn spec_c01_sdk_direct_live_toggle_disabled_keeps_deterministic_pass_without_probe_invocation() {
+fn spec_c01_sdk_direct_live_toggle_disabled_fails_closed_without_probe_invocation() {
     let probe_calls = Arc::new(AtomicUsize::new(0));
     let probe_calls_for_closure = Arc::clone(&probe_calls);
     let driver = SdkDirectDriver::with_probe(false, move || {
@@ -14,7 +14,7 @@ fn spec_c01_sdk_direct_live_toggle_disabled_keeps_deterministic_pass_without_pro
     });
 
     let result = driver.execute("S-01");
-    assert_eq!(result.status, "pass");
+    assert_eq!(result.status, "fail");
     assert_eq!(
         probe_calls.load(Ordering::SeqCst),
         0,

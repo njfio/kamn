@@ -8,6 +8,9 @@ use std::sync::{Mutex, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
+const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
     let addr = listener.local_addr().expect("local addr should resolve");
@@ -168,7 +171,8 @@ fn run_chain_context_contract_server(
                     expected_chain_id,
                     expected_chain_version,
                     body.as_str(),
-                );
+                )
+                .map_err(|error| format!("service signature generation failed: {error}"))?;
                 if &expected_signature != signature {
                     write_http_response(
                         &mut stream,
@@ -252,6 +256,10 @@ fn spec_c01_agent_handle_chain_context_env_override_aligns_service_signature_con
         &[
             ("KAMN_AGENT_CHAIN_ID", Some("kamn-devnet")),
             ("KAMN_AGENT_CHAIN_VERSION", Some("v0.1.0")),
+            (
+                "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+                Some(TEST_SERVICE_AUTH_PRIVATE_KEY_HEX),
+            ),
         ],
         || {
             let identity = AgentIdentity::from_agent_name("chain-context-test").expect("identity");

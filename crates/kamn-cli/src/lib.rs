@@ -130,6 +130,13 @@ impl CommandOutput {
     }
 }
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match std::env::var(key) {
+        Ok(value) => value,
+        Err(_) => default.to_owned(),
+    }
+}
+
 /// Parses CLI arguments for phase-2 command surface contracts.
 pub fn parse_cli_args<I, S>(args: I) -> Result<ParsedCliArgs, String>
 where
@@ -158,8 +165,7 @@ where
     index += 1;
 
     let mut output_format = OutputFormat::Json;
-    let mut endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_owned());
+    let mut endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_ENDPOINT);
     let mut passthrough = Vec::new();
 
     while index < args.len() {

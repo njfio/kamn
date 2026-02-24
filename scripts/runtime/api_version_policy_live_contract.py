@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """API version-policy lane, policy checker, and contract lane."""
-
 from __future__ import annotations
-
 import argparse
 import contextlib
 import io
@@ -12,11 +10,9 @@ import sys
 import tempfile
 import time
 from typing import Any
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
-
 from framework.contract_framework import (  # noqa: E402
     ContractError,
     DecisionAccumulator,
@@ -26,12 +22,10 @@ from framework.contract_framework import (  # noqa: E402
     require_positive_int,
     write_json,
 )
-
 RUN_LANE_SCHEMA = "kamn.runtime.api-version-policy-report.v1"
 POLICY_SCHEMA = "kamn.runtime.api-version-policy-policy-report.v1"
 CONTRACT_LANE_SCHEMA = "kamn.runtime.api-version-policy-contract-lane-report.v1"
 FIXTURE_SCHEMA = "kamn.runtime.api-version-policy-fixture-matrix.v1"
-
 REASON_TAXONOMY_VERSION = "kamn.runtime.api-version-policy-reason-taxonomy.v1"
 REASON_CODES_CSV = ",".join(
     [
@@ -62,23 +56,19 @@ REASON_CODES_CSV = ",".join(
         "api_version_policy_docs_marker_missing",
     ]
 )
-
 FIXTURE_SCHEMA_KEY = "api_version_policy_fixture_matrix_schema_version"
 FIXTURE_REASON_TAXONOMY_KEY = "api_version_policy_reason_taxonomy_version"
 FIXTURE_REASON_CODES_KEY = "api_version_policy_reason_codes_csv"
 ROW_PREFIX = "row"
-
 OPT_IN_ENV = "KAMN_API_VERSION_POLICY_OPT_IN"
 DEFAULT_MAX_SECONDS = "180"
 DEFAULT_COMMAND_MAX_SECONDS = "120"
 MAX_BUDGET_SECONDS = 240
-
 TAMPER_REASON_CODE = "api_version_policy_fixture_row_status_mismatch"
 DOCS_MARKER_REASON_CODE = "api_version_policy_docs_marker_missing"
 EXPECTED_UNSUPPORTED_REASON = "api_version_unsupported_window"
 FIXTURE_PATH = ROOT_DIR / "fixtures/runtime/api_version_policy_fixture_matrix.txt"
 REQUIRED_ROW_IDS_CSV = "v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route"
-
 STRATEGY_REQUIRED_MARKERS: tuple[str, ...] = (
     "validate_api_version_policy_live.sh",
     "check_api_version_policy_live_policy.sh",
@@ -90,7 +80,6 @@ STRATEGY_REQUIRED_MARKERS: tuple[str, ...] = (
     "api_version_policy_fixture_path=fixtures/runtime/api_version_policy_fixture_matrix.txt",
     "api_version_policy_required_row_ids_csv=v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route",
 )
-
 OPS_REQUIRED_MARKERS: tuple[str, ...] = (
     "api_version_policy_reason_taxonomy_version=kamn.runtime.api-version-policy-reason-taxonomy.v1",
     "api_version_policy_reason_codes_csv=ci_fast_gate_failed,api_version_policy_schema_mismatch,api_version_policy_status_invalid,api_version_policy_final_decision_invalid,api_version_policy_final_decision_mismatch,api_version_policy_lane_mode_invalid,api_version_policy_fixture_schema_mismatch,api_version_policy_fixture_rows_invalid,api_version_policy_fixture_row_count_mismatch,api_version_policy_fixture_row_duplicate,api_version_policy_fixture_row_id_invalid,api_version_policy_fixture_row_missing,api_version_policy_fixture_row_status_mismatch,api_version_policy_fixture_row_decision_mismatch,api_version_policy_fixture_row_reason_code_mismatch,api_version_policy_fixture_row_version_mismatch,api_version_policy_fixture_row_window_mismatch,api_version_policy_marker_missing,api_version_policy_execution_reason_code_mismatch,api_version_policy_command_count_invalid,api_version_policy_command_count_mismatch,api_version_policy_elapsed_seconds_invalid,api_version_policy_max_seconds_invalid,api_version_policy_runtime_budget_exceeded,api_version_policy_docs_marker_missing",
@@ -98,8 +87,6 @@ OPS_REQUIRED_MARKERS: tuple[str, ...] = (
     "api_version_policy_fixture_path=fixtures/runtime/api_version_policy_fixture_matrix.txt",
     "api_version_policy_required_row_ids_csv=v1_messages_send,v2_channels_create,v0_messages_send,v3_future_route",
 )
-
-
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     output: list[str] = []
@@ -109,12 +96,8 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
         seen.add(value)
         output.append(value)
     return output
-
-
 def _is_non_negative_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
-
-
 def _parse_api_version_number(version: str, *, context: str) -> int:
     value = version.strip()
     if len(value) < 2 or not value.startswith("v"):
@@ -123,24 +106,18 @@ def _parse_api_version_number(version: str, *, context: str) -> int:
     if not version_digits.isdigit():
         fail(f"{context}: api_version must be v<integer>, got: {version}")
     return int(version_digits)
-
-
 def _parse_fixture_row(parts: list[str], *, line_number: int) -> dict[str, Any]:
     if len(parts) != 7:
         fail(
             "api version-policy fixture row must contain 7 pipe-delimited fields: "
             f"line {line_number}"
         )
-
     _, row_id, api_version, supported_window_min, supported_window_max, expected_decision, expected_reason_code = (
         part.strip() for part in parts
     )
-
     if not row_id:
         fail(f"api version-policy fixture row_id must be non-empty: line {line_number}")
-
     _parse_api_version_number(api_version, context=f"line {line_number}")
-
     try:
         min_version = int(supported_window_min)
         max_version = int(supported_window_max)
@@ -149,19 +126,16 @@ def _parse_fixture_row(parts: list[str], *, line_number: int) -> dict[str, Any]:
             "api version-policy fixture window bounds must be integers: "
             f"line {line_number}"
         )
-
     if min_version < 0 or max_version < 0 or min_version > max_version:
         fail(
             "api version-policy fixture window bounds must satisfy 0 <= min <= max: "
             f"line {line_number}"
         )
-
     expected_final_decision = require_enum(
         f"fixture row expected_final_decision (line {line_number})",
         expected_decision,
         ("GO", "NO-GO"),
     )
-
     if expected_final_decision == "GO" and expected_reason_code != "none":
         fail(
             "api version-policy fixture GO rows must use expected_reason_code=none: "
@@ -172,7 +146,6 @@ def _parse_fixture_row(parts: list[str], *, line_number: int) -> dict[str, Any]:
             "api version-policy fixture NO-GO rows must use "
             f"expected_reason_code={EXPECTED_UNSUPPORTED_REASON}: line {line_number}"
         )
-
     return {
         "row_id": row_id,
         "api_version": api_version,
@@ -181,15 +154,11 @@ def _parse_fixture_row(parts: list[str], *, line_number: int) -> dict[str, Any]:
         "expected_final_decision": expected_final_decision,
         "expected_reason_code": expected_reason_code,
     }
-
-
 def _load_fixture_matrix(fixture_file: Path) -> dict[str, Any]:
     if not fixture_file.is_file():
         fail(f"api version-policy fixture file not found: {fixture_file}")
-
     metadata: dict[str, str] = {}
     rows: list[dict[str, Any]] = []
-
     for line_number, raw_line in enumerate(fixture_file.read_text(encoding="utf-8").splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -205,7 +174,6 @@ def _load_fixture_matrix(fixture_file: Path) -> dict[str, Any]:
         if not key or not value:
             fail(f"invalid api version-policy fixture metadata line {line_number}: {raw_line}")
         metadata[key] = value
-
     if metadata.get(FIXTURE_SCHEMA_KEY) != FIXTURE_SCHEMA:
         fail(
             "api version-policy fixture schema mismatch: "
@@ -221,43 +189,34 @@ def _load_fixture_matrix(fixture_file: Path) -> dict[str, Any]:
             "api version-policy fixture reason codes mismatch: "
             f"expected {FIXTURE_REASON_CODES_KEY}={REASON_CODES_CSV}"
         )
-
     if not rows:
         fail("api version-policy fixture must include at least one row")
-
     row_ids = [row["row_id"] for row in rows]
     if len(_dedupe_preserve_order(row_ids)) != len(row_ids):
         fail("api version-policy fixture row ids must be unique")
-
     return {
         "fixture_schema_version": metadata[FIXTURE_SCHEMA_KEY],
         "reason_taxonomy_version": metadata[FIXTURE_REASON_TAXONOMY_KEY],
         "reason_codes_csv": metadata[FIXTURE_REASON_CODES_KEY],
         "rows": rows,
     }
-
-
 def _evaluate_fixture_row(row: dict[str, Any]) -> dict[str, Any]:
     version_number = _parse_api_version_number(
         str(row["api_version"]),
         context=f"row {row['row_id']}",
     )
-
     min_version = int(row["supported_window_min"])
     max_version = int(row["supported_window_max"])
     supported = min_version <= version_number <= max_version
-
     observed_final_decision = "GO" if supported else "NO-GO"
     observed_reason_code = "none" if supported else EXPECTED_UNSUPPORTED_REASON
     supported_window_status = "supported" if supported else "unsupported"
-
     row_status = "verified"
     if (
         observed_final_decision != row["expected_final_decision"]
         or observed_reason_code != row["expected_reason_code"]
     ):
         row_status = "mismatch"
-
     return {
         "row_id": row["row_id"],
         "api_version": row["api_version"],
@@ -270,15 +229,11 @@ def _evaluate_fixture_row(row: dict[str, Any]) -> dict[str, Any]:
         "observed_reason_code": observed_reason_code,
         "row_status": row_status,
     }
-
-
 def _build_fixture_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     fixture_rows: list[dict[str, Any]] = []
     for row in rows:
         fixture_rows.append(_evaluate_fixture_row(row))
     return fixture_rows
-
-
 def _run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     max_seconds = require_positive_int(
@@ -289,19 +244,14 @@ def _run_lane(args: argparse.Namespace) -> int:
         "KAMN_API_VERSION_POLICY_COMMAND_MAX_SECONDS",
         args.command_max_seconds,
     )
-
     if max_seconds > MAX_BUDGET_SECONDS:
         fail(f"max-seconds must be <= {MAX_BUDGET_SECONDS} for api version-policy lane")
-
     fixture_file = Path(args.fixture_file).resolve()
     fixture_matrix = _load_fixture_matrix(fixture_file)
-
     if mode == "run" and args.require_opt_in and args.local_opt_in != "1":
         fail(f"run mode requires explicit local-only opt-in via {OPT_IN_ENV}=1")
-
     start_epoch = int(time.time())
     commands: list[str] = []
-
     fixture_rows = _build_fixture_rows(fixture_matrix["rows"])
     mismatched_rows = [row["row_id"] for row in fixture_rows if row["row_status"] != "verified"]
     if mismatched_rows:
@@ -309,7 +259,6 @@ def _run_lane(args: argparse.Namespace) -> int:
             "api version-policy fixture expectations must match observed projection; "
             f"mismatched rows: {','.join(mismatched_rows)}"
         )
-
     supported_row_count = sum(
         1 for row in fixture_rows if row["supported_window_status"] == "supported"
     )
@@ -318,25 +267,21 @@ def _run_lane(args: argparse.Namespace) -> int:
     )
     if supported_row_count == 0 or unsupported_row_count == 0:
         fail("api version-policy fixture must include both supported and unsupported rows")
-
     window_mins = {row["supported_window_min"] for row in fixture_rows}
     window_maxes = {row["supported_window_max"] for row in fixture_rows}
     if len(window_mins) != 1 or len(window_maxes) != 1:
         fail("api version-policy fixture rows must use one deterministic supported window")
-
     execution_reason_code = (
         "dry_run_no_commands_executed"
         if mode == "dry-run"
         else "run_mode_no_commands_executed"
     )
-
     elapsed_seconds = int(time.time()) - start_epoch
     if elapsed_seconds > max_seconds:
         fail(
             "api version-policy lane exceeded runtime budget: "
             f"{elapsed_seconds}s (max={max_seconds}s)"
         )
-
     report_payload = {
         "schema_version": RUN_LANE_SCHEMA,
         "status": "pass",
@@ -364,12 +309,10 @@ def _run_lane(args: argparse.Namespace) -> int:
         "elapsed_seconds": elapsed_seconds,
         "max_seconds": max_seconds,
     }
-
     output_json = None
     if args.output_json:
         output_json = Path(args.output_json).resolve()
         write_json(output_json, report_payload)
-
     print("status=pass")
     print("final_decision=GO")
     print(f"lane_mode={mode}")
@@ -391,8 +334,6 @@ def _run_lane(args: argparse.Namespace) -> int:
     if output_json is not None:
         print(f"report_file={output_json}")
     return 0
-
-
 def _validate_fixture_rows(
     report_rows: Any,
     fixture_rows: list[dict[str, Any]],
@@ -400,33 +341,27 @@ def _validate_fixture_rows(
 ) -> None:
     expected_by_id = {row["row_id"]: row for row in fixture_rows}
     expected_count = len(expected_by_id)
-
     if not isinstance(report_rows, list):
         decision.reject_if(True, "api_version_policy_fixture_rows_invalid")
         return
-
     decision.reject_if(
         len(report_rows) != expected_count,
         "api_version_policy_fixture_row_count_mismatch",
     )
-
     observed_ids: list[str] = []
     for report_row in report_rows:
         if not isinstance(report_row, dict):
             decision.reject_if(True, "api_version_policy_fixture_rows_invalid")
             continue
-
         row_id = report_row.get("row_id")
         if not isinstance(row_id, str) or row_id.strip() == "":
             decision.reject_if(True, "api_version_policy_fixture_row_id_invalid")
             continue
-
         observed_ids.append(row_id)
         expected_row = expected_by_id.get(row_id)
         if expected_row is None:
             decision.reject_if(True, "api_version_policy_fixture_row_id_invalid")
             continue
-
         decision.reject_if(
             report_row.get("row_status") != "verified",
             "api_version_policy_fixture_row_status_mismatch",
@@ -443,7 +378,6 @@ def _validate_fixture_rows(
             report_row.get("supported_window_max") != expected_row["supported_window_max"],
             "api_version_policy_fixture_row_window_mismatch",
         )
-
         version_number = _parse_api_version_number(
             str(expected_row["api_version"]),
             context=f"row {row_id}",
@@ -454,7 +388,6 @@ def _validate_fixture_rows(
             <= int(expected_row["supported_window_max"])
         )
         expected_supported_window_status = "supported" if supported else "unsupported"
-
         decision.reject_if(
             report_row.get("supported_window_status") != expected_supported_window_status,
             "api_version_policy_fixture_row_window_mismatch",
@@ -475,7 +408,6 @@ def _validate_fixture_rows(
             report_row.get("observed_reason_code") != expected_row["expected_reason_code"],
             "api_version_policy_fixture_row_reason_code_mismatch",
         )
-
     deduped_ids = _dedupe_preserve_order(observed_ids)
     decision.reject_if(
         len(deduped_ids) != len(observed_ids),
@@ -486,13 +418,10 @@ def _validate_fixture_rows(
             expected_id not in observed_ids,
             "api_version_policy_fixture_row_missing",
         )
-
-
 def _check_policy(args: argparse.Namespace) -> int:
     report_file = Path(args.report_file).resolve()
     if not report_file.is_file():
         fail(f"report file not found: {report_file}")
-
     report = load_json(report_file)
     fixture_file = Path(args.fixture_file).resolve()
     fixture_matrix = _load_fixture_matrix(fixture_file)
@@ -503,7 +432,6 @@ def _check_policy(args: argparse.Namespace) -> int:
         ("GO", "NO-GO"),
     )
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate, ("PASS", "FAIL"))
-
     required_fields = [
         "schema_version",
         "status",
@@ -533,7 +461,6 @@ def _check_policy(args: argparse.Namespace) -> int:
     missing_fields = [field_name for field_name in required_fields if field_name not in report]
     if missing_fields:
         fail(f"missing required report fields: {','.join(missing_fields)}")
-
     decision = DecisionAccumulator()
     decision.reject_if(
         report.get("schema_version") != RUN_LANE_SCHEMA,
@@ -570,13 +497,11 @@ def _check_policy(args: argparse.Namespace) -> int:
             report.get(marker_name) != "verified",
             "api_version_policy_marker_missing",
         )
-
     lane_mode = report.get("lane_mode")
     decision.reject_if(
         lane_mode not in {"dry-run", "run"},
         "api_version_policy_lane_mode_invalid",
     )
-
     decision.reject_if(
         report.get("fixture_schema_version") != FIXTURE_SCHEMA,
         "api_version_policy_fixture_schema_mismatch",
@@ -589,9 +514,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         report.get("required_row_ids_csv") != REQUIRED_ROW_IDS_CSV,
         "api_version_policy_fixture_schema_mismatch",
     )
-
     _validate_fixture_rows(report.get("fixture_rows"), fixture_rows, decision)
-
     fixture_row_count = report.get("fixture_row_count")
     decision.reject_if(
         not _is_non_negative_int(fixture_row_count),
@@ -602,7 +525,6 @@ def _check_policy(args: argparse.Namespace) -> int:
             fixture_row_count != len(fixture_rows),
             "api_version_policy_fixture_row_count_mismatch",
         )
-
     supported_row_count = report.get("supported_row_count")
     unsupported_row_count = report.get("unsupported_row_count")
     decision.reject_if(
@@ -618,7 +540,6 @@ def _check_policy(args: argparse.Namespace) -> int:
             expected_supported_count += 1
         else:
             expected_unsupported_count += 1
-
     if isinstance(supported_row_count, int):
         decision.reject_if(
             supported_row_count != expected_supported_count,
@@ -629,7 +550,6 @@ def _check_policy(args: argparse.Namespace) -> int:
             unsupported_row_count != expected_unsupported_count,
             "api_version_policy_fixture_row_count_mismatch",
         )
-
     decision.reject_if(
         report.get("supported_window_min")
         != fixture_rows[0]["supported_window_min"],
@@ -640,13 +560,11 @@ def _check_policy(args: argparse.Namespace) -> int:
         != fixture_rows[0]["supported_window_max"],
         "api_version_policy_fixture_row_window_mismatch",
     )
-
     command_count = report.get("command_count")
     decision.reject_if(
         not _is_non_negative_int(command_count),
         "api_version_policy_command_count_invalid",
     )
-
     execution_reason_code = report.get("execution_reason_code")
     if lane_mode == "dry-run":
         decision.reject_if(
@@ -666,7 +584,6 @@ def _check_policy(args: argparse.Namespace) -> int:
             command_count != 0,
             "api_version_policy_command_count_mismatch",
         )
-
     elapsed_seconds = report.get("elapsed_seconds")
     decision.reject_if(
         not _is_non_negative_int(elapsed_seconds),
@@ -686,13 +603,10 @@ def _check_policy(args: argparse.Namespace) -> int:
             max_seconds > MAX_BUDGET_SECONDS,
             "api_version_policy_runtime_budget_exceeded",
         )
-
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
-
     final_decision, reason_codes = decision.finalize("none")
     status = "pass" if final_decision == "GO" else "fail"
     policy_status = "verified" if final_decision == "GO" else "rejected"
-
     policy_report = {
         "schema_version": POLICY_SCHEMA,
         "status": status,
@@ -708,12 +622,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "source_fixture_file": str(fixture_file),
         "generated_at_epoch": int(time.time()),
     }
-
     output_json = None
     if args.output_json:
         output_json = Path(args.output_json).resolve()
         write_json(output_json, policy_report)
-
     reason_codes_csv = ",".join(reason_codes)
     print(f"status={'ok' if final_decision == 'GO' else 'error'}")
     print(f"final_decision={final_decision}")
@@ -723,12 +635,9 @@ def _check_policy(args: argparse.Namespace) -> int:
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
         print(f"policy_report_file={output_json}")
-
     if final_decision != "GO":
         fail(f"api version-policy policy rejected: {reason_codes_csv}")
     return 0
-
-
 def _require_doc_markers(
     *,
     doc_file: Path,
@@ -741,8 +650,6 @@ def _require_doc_markers(
     for marker in required_markers:
         if marker not in doc_text:
             fail(f"{reason_code}: missing documentation marker: {marker}")
-
-
 def _invoke_with_captured_output(
     handler: Any,
     args: argparse.Namespace,
@@ -751,8 +658,6 @@ def _invoke_with_captured_output(
     with contextlib.redirect_stdout(buffer):
         handler(args)
     return buffer.getvalue()
-
-
 def _invoke_with_captured_output_allow_failure(
     handler: Any,
     args: argparse.Namespace,
@@ -764,14 +669,10 @@ def _invoke_with_captured_output_allow_failure(
         except ContractError as exc:
             return buffer.getvalue(), exc
     return buffer.getvalue(), None
-
-
 def _require_output_markers(output: str, markers: tuple[str, ...], context: str) -> None:
     for marker in markers:
         if marker not in output:
             fail(f"{context} missing expected marker: {marker}")
-
-
 def _run_contract_lane(args: argparse.Namespace) -> int:
     max_seconds = require_positive_int(
         "KAMN_API_VERSION_POLICY_CONTRACT_MAX_SECONDS",
@@ -785,14 +686,11 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
         fail(
             f"max-seconds must be <= {MAX_BUDGET_SECONDS} for api version-policy contract lane"
         )
-
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate, ("PASS", "FAIL"))
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
-
     fixture_file = Path(args.fixture_file).resolve()
     strategy_doc = Path(args.strategy_doc).resolve()
     ops_doc = Path(args.ops_doc).resolve()
-
     start_epoch = int(time.time())
     with tempfile.TemporaryDirectory(prefix="api-version-policy-contract-lane-") as tmp_dir_raw:
         tmp_dir = Path(tmp_dir_raw)
@@ -800,7 +698,6 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
         policy_report = tmp_dir / "api-version-policy-live-policy.json"
         tampered_report = tmp_dir / "api-version-policy-live-summary.tampered.json"
         tampered_policy_report = tmp_dir / "api-version-policy-live-policy.tampered.json"
-
         lane_output = _invoke_with_captured_output(
             _run_lane,
             argparse.Namespace(
@@ -824,7 +721,6 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             ),
             "api version-policy lane output",
         )
-
         policy_output = _invoke_with_captured_output(
             _check_policy,
             argparse.Namespace(
@@ -844,7 +740,6 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             ),
             "api version-policy policy output",
         )
-
         tampered_payload = dict(load_json(summary_report))
         tampered_rows = tampered_payload.get("fixture_rows")
         if not isinstance(tampered_rows, list) or not tampered_rows:
@@ -855,7 +750,6 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
         first_row["row_status"] = "missing"
         tampered_payload["fixture_rows"] = tampered_rows
         write_json(tampered_report, tampered_payload)
-
         tampered_output, tampered_error = _invoke_with_captured_output_allow_failure(
             _check_policy,
             argparse.Namespace(
@@ -882,7 +776,6 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             ),
             "api version-policy tampered policy output",
         )
-
         _require_doc_markers(
             doc_file=strategy_doc,
             required_markers=STRATEGY_REQUIRED_MARKERS,
@@ -893,14 +786,12 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             required_markers=OPS_REQUIRED_MARKERS,
             reason_code=DOCS_MARKER_REASON_CODE,
         )
-
         elapsed_seconds = int(time.time()) - start_epoch
         if elapsed_seconds > max_seconds:
             fail(
                 "api version-policy contract lane exceeded runtime budget: "
                 f"{elapsed_seconds}s (max={max_seconds}s)"
             )
-
         policy_payload = load_json(policy_report)
         lane_report = {
             "schema_version": CONTRACT_LANE_SCHEMA,
@@ -919,12 +810,10 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
             "elapsed_seconds": elapsed_seconds,
             "max_seconds": max_seconds,
         }
-
         if args.output_json:
             write_json(Path(args.output_json).resolve(), lane_report)
         if args.policy_output_json:
             write_json(Path(args.policy_output_json).resolve(), policy_payload)
-
     print("status=pass")
     print("final_decision=GO")
     print("api_version_policy_contract_status=verified")
@@ -939,14 +828,11 @@ def _run_contract_lane(args: argparse.Namespace) -> int:
     if args.policy_output_json:
         print(f"policy_report_file={Path(args.policy_output_json).resolve()}")
     return 0
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="API version-policy lane and policy contracts."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-
     run_lane_parser = subparsers.add_parser(
         "run-lane",
         help="Execute API version-policy lane in dry-run or run mode.",
@@ -1000,7 +886,6 @@ def main() -> int:
         help="Disable explicit local-only run-mode opt-in guard.",
     )
     run_lane_parser.set_defaults(handler=_run_lane, require_opt_in=True)
-
     check_policy_parser = subparsers.add_parser(
         "check-policy",
         help="Validate API version-policy report policy.",
@@ -1015,7 +900,6 @@ def main() -> int:
     check_policy_parser.add_argument("--ci-fast-gate", default="PASS")
     check_policy_parser.add_argument("--output-json", default="")
     check_policy_parser.set_defaults(handler=_check_policy)
-
     contract_lane_parser = subparsers.add_parser(
         "run-contract-lane",
         help="Run API version-policy contract lane composition checks.",
@@ -1080,7 +964,6 @@ def main() -> int:
         help="Disable explicit local-only run-mode opt-in guard.",
     )
     contract_lane_parser.set_defaults(handler=_run_contract_lane, require_opt_in=True)
-
     args = parser.parse_args()
     if hasattr(args, "mode"):
         args.mode = args.mode.strip()
@@ -1089,8 +972,6 @@ def main() -> int:
     if hasattr(args, "command_max_seconds"):
         args.command_max_seconds = args.command_max_seconds.strip()
     return args.handler(args)
-
-
 if __name__ == "__main__":
     try:
         raise SystemExit(main())

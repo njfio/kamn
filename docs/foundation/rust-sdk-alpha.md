@@ -67,8 +67,8 @@ The SDK now includes a deterministic TCP relay adapter demo backed by reusable w
   - `status=ok` (sender and listener)
   - `verified=true`
   - `adapter=tcp`
-  - `signature=sig:ed25519:baseline-v1:...`
-  - handshake profile validation uses `ed25519:baseline-v1`
+  - `signature=sig:secp256k1:baseline-v2:...`
+  - handshake profile validation uses `secp256k1:baseline-v2`
 
 Security guard behavior now fails closed across reconnect cycles:
 

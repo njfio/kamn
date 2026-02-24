@@ -26,14 +26,13 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("## Transaction Path Integration"));
     assert!(DOC.contains("SigningRequest::for_transaction(...)"));
-    assert!(DOC.contains("baseline_signature_for_fields(...)"));
-    assert!(DOC.contains("signature_profile_compatibility_fixtures_for_fields(...)"));
-    assert!(DOC.contains("legacy-unversioned"));
-    assert!(DOC.contains("baseline-v0"));
-    assert!(DOC.contains("secp256k1+baseline-v1"));
-    assert!(DOC.contains("baseline signature algorithm: `ed25519`."));
-    assert!(DOC.contains("baseline signature profile id: `baseline-v1`"));
-    assert!(DOC.contains("parse_signature_profile_metadata(...)"));
+    assert!(DOC.contains("sig:secp256k1:baseline-v2"));
+    assert!(DOC.contains("Verification binds sender + nonce + state hash + full payload bytes"));
+    assert!(DOC.contains("KAMN_SIGNER_PRIVATE_KEY_HEX__<NORMALIZED_KEY_ID>"));
+    assert!(DOC.contains("KAMN_SIGNER_PRIVATE_KEY_HEX"));
+    assert!(DOC.contains("KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX"));
+    assert!(DOC.contains("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1"));
+    assert!(DOC.contains("sig:ed25519:baseline-v1"));
 }
 
 #[test]
@@ -55,8 +54,9 @@ fn doc_contains_signer_emulator_contract_lane_policy() {
     assert!(
         DOC.contains("regression_provider_client_backend_mismatch_is_rejected_without_fallback")
     );
+    assert!(DOC.contains("regression_signer_backend_rejects_baseline_v1_signature_by_default"));
     assert!(DOC.contains(
-        "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards"
+        "integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch"
     ));
 }
 
@@ -77,12 +77,11 @@ fn doc_contains_production_style_secure_provider_adapter_rules() {
 fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     // Regression: #160
     assert!(DOC.contains("does not fallback on hard request errors"));
-    assert!(DOC.contains("canonical signature-profile helper consumed by both paths"));
-    assert!(DOC.contains("non-versioned signature profile is rejected (`Regression: #404`)"));
-    assert!(DOC.contains("algorithm/profile drift is rejected (`Regression: #677`)."));
     assert!(DOC.contains(
-        "signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`)."
+        "Legacy baseline-v1 verification (`sig:ed25519:baseline-v1:...`) is disabled by default."
     ));
+    assert!(DOC.contains("non-versioned legacy profile remains rejected (`Regression: #404`)."));
+    assert!(DOC.contains("algorithm/profile drift remains rejected (`Regression: #677`)."));
     assert!(DOC.contains("Contract lane guards remain required for signer provider compatibility (`Regression: #619`)."));
     assert!(DOC.contains(
         "Privileged-role fallback and handshake policy bypass attempts remain fail-closed (`Regression: #987`)."

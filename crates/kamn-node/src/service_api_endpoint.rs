@@ -1,8 +1,12 @@
 mod auth;
+mod message_store;
 mod middleware_impl;
 mod payload;
 mod scope_fixture;
 mod server;
+mod state_io;
+#[cfg(test)]
+mod tests;
 mod websocket;
 
 use crate::{
@@ -23,7 +27,7 @@ use axum::{
 };
 use kamn_core::{
     cross_store_replay_reason_codes_csv, cross_store_replay_reason_taxonomy_version,
-    data_layer_m9_gateway_project_presence_event, signature_matches_supported_profile_for_fields,
+    data_layer_m9_gateway_project_presence_event, service_auth_verify_with_public_key_hex,
     AgentDid, AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamRejection,
     DataLayerM9GatewayBridgeError, DataLayerM9GatewayPresenceProjectionRequest,
     DataLayerM9PresenceConnectRequest, DataLayerM9PresenceQuery, DataLayerM9RealtimeDeliveryError,
@@ -36,7 +40,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
-use std::io::BufReader;
 use std::net::SocketAddr;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -45,6 +48,14 @@ use std::sync::{
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
+
+use message_store::ServiceApiMessageStore;
+pub(crate) use state_io::{
+    append_service_api_relay_spool_entry,
+    default_service_api_relay_spool_file_path_from_state_file,
+    default_service_api_state_file_path_for_bind_addr, drain_service_api_relay_spool_entries,
+    project_service_api_relayed_message_statuses,
+};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -83,6 +94,7 @@ const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgr
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
 const REASON_CODE_ROUTE_NOT_FOUND: &str = "service_api_route_not_found";
 const REASON_CODE_REQUEST_READ_FAILED: &str = "service_api_request_read_failed";
+const REASON_CODE_STATE_PERSISTENCE_FAILED: &str = "service_api_state_persistence_failed";
 const REASON_CODE_INGRESS_BODY_SIZE_LIMIT_EXCEEDED: &str =
     "service_api_ingress_body_size_limit_exceeded";
 const REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED: &str =
@@ -173,6 +185,9 @@ const SERVICE_API_TLS_CERT_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CERT_FILE";
 const SERVICE_API_TLS_KEY_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_KEY_FILE";
 const SERVICE_API_TLS_MODE_DISABLED: &str = "disabled";
 const SERVICE_API_TLS_MODE_REQUIRE: &str = "require";
+const SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV: &str = "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX";
+const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
+pub(crate) const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointConfig {
@@ -270,6 +285,22 @@ pub(crate) struct ServiceApiMessageCreateBody {
 pub(crate) struct ServiceApiMessageGetBody {
     pub(crate) message_id: String,
     pub(crate) status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) sender_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) recipient_did: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) body: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiRelaySpoolEntry {
+    pub(crate) message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) sender_did: Option<String>,
+    pub(crate) recipient_did: String,
+    pub(crate) body: String,
+    pub(crate) queued_at_unix: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -436,6 +467,9 @@ struct ServiceApiRuntimeState {
     concurrency_limiter: Arc<Semaphore>,
     ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
     sender_anti_spam: Arc<Mutex<AntiSpamEngine>>,
+    auth_public_key_hex: Option<String>,
+    message_store: Arc<Mutex<ServiceApiMessageStore>>,
+    relay_spool_file: Option<String>,
 }
 
 #[derive(Debug)]
@@ -769,11 +803,11 @@ fn header_value<'a>(headers: &'a BTreeMap<String, String>, name: &str) -> Option
 }
 
 fn authorize_service_api_request(
-    snapshot: &ServiceApiSnapshot,
+    state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
     replay_guard: &mut BTreeSet<(String, u64)>,
 ) -> Result<(), RequestAuthFailure> {
-    auth::authorize_service_api_request(snapshot, request, replay_guard)
+    auth::authorize_service_api_request(state, request, replay_guard)
 }
 
 async fn enforce_sender_anti_spam(
@@ -831,65 +865,4 @@ fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
 
 fn deterministic_body_tag(payload: &[u8]) -> u64 {
     payload::deterministic_body_tag(payload)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        auth::map_anti_spam_rejection_to_reasoned_error, AntiSpamRejection,
-        REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
-        REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
-        REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
-    };
-
-    #[test]
-    fn anti_spam_rate_limit_rejection_maps_to_sender_rate_limit_reason_code() {
-        let error =
-            map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::RateLimitExceeded {
-                limit: 3,
-                observed: 3,
-                window_seconds: 5,
-            });
-        assert_eq!(
-            error.reason_code,
-            REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED
-        );
-        assert!(error.message.contains("observed=3"));
-    }
-
-    #[test]
-    fn anti_spam_sender_suspension_maps_to_sender_suspended_reason_code() {
-        let error = map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::SenderSuspended {
-            until_unix: 123_456,
-        });
-        assert_eq!(error.reason_code, REASON_CODE_INGRESS_SENDER_SUSPENDED);
-        assert!(error.message.contains("123456"));
-    }
-
-    #[test]
-    fn anti_spam_insufficient_deposit_maps_to_sender_deposit_reason_code() {
-        let error =
-            map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::InsufficientDeposit {
-                required: 9,
-                provided: 4,
-            });
-        assert_eq!(
-            error.reason_code,
-            REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT
-        );
-        assert!(error.message.contains("required=9"));
-        assert!(error.message.contains("provided=4"));
-    }
-
-    #[test]
-    fn anti_spam_duplicate_message_maps_to_sender_duplicate_reason_code() {
-        let error = map_anti_spam_rejection_to_reasoned_error(
-            AntiSpamRejection::DuplicateMessageId("message-1".to_owned()),
-        );
-        assert_eq!(
-            error.reason_code,
-            REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID
-        );
-        assert!(error.message.contains("message-1"));
-    }
 }

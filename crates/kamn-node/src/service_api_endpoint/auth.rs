@@ -9,7 +9,7 @@ pub(super) fn header_value<'a>(
 }
 
 pub(super) fn authorize_service_api_request(
-    snapshot: &ServiceApiSnapshot,
+    state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
     replay_guard: &mut BTreeSet<(String, u64)>,
 ) -> Result<(), RequestAuthFailure> {
@@ -56,14 +56,23 @@ pub(super) fn authorize_service_api_request(
                 format!("missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"),
             ))
         })?;
-    let state_hash = service_api_signature_state_hash(snapshot);
-    if !signature_matches_supported_profile_for_fields(
-        signature,
-        sender_did,
-        nonce,
-        state_hash.as_str(),
-        request.body.as_str(),
-    ) {
+    let state_hash = service_api_signature_state_hash(&state.snapshot);
+    let crypto_verified = state
+        .auth_public_key_hex
+        .as_deref()
+        .map(|public_key_hex| {
+            service_auth_verify_with_public_key_hex(
+                signature,
+                sender_did,
+                nonce,
+                state_hash.as_str(),
+                request.body.as_str(),
+                public_key_hex,
+            )
+            .is_ok()
+        })
+        .unwrap_or(false);
+    if !crypto_verified {
         return Err(RequestAuthFailure::Unauthorized(
             ServiceApiReasonedError::new(
                 REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,

@@ -1,6 +1,9 @@
 use kamn_sdk::{AgentDid, SdkError, TcpSignedEnvelope, TcpTransportAdapter, TcpTransportConfig};
 use std::env;
 
+const DEFAULT_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
 #[derive(Debug, Clone)]
 struct SenderConfig {
     addr: String,
@@ -9,6 +12,7 @@ struct SenderConfig {
     nonce: u64,
     state_hash: String,
     body: String,
+    private_key_hex: String,
 }
 
 fn parse_args() -> Result<SenderConfig, SdkError> {
@@ -18,6 +22,7 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
     let mut nonce: u64 = 1;
     let mut state_hash = "state:tcp-relay-demo".to_owned();
     let mut body = "hello-from-tcp-relay-demo".to_owned();
+    let mut private_key_hex = DEFAULT_PRIVATE_KEY_HEX.to_owned();
 
     let mut args = env::args().skip(1);
     while let Some(flag) = args.next() {
@@ -37,6 +42,7 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
             }
             "--state-hash" => state_hash = value,
             "--body" => body = value,
+            "--private-key-hex" => private_key_hex = value,
             _ => {
                 return Err(SdkError::InvalidInput {
                     field: "cli",
@@ -58,6 +64,12 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
             reason: "must not be empty",
         });
     }
+    if private_key_hex.trim().is_empty() {
+        return Err(SdkError::InvalidInput {
+            field: "signer_private_key",
+            reason: "must not be empty",
+        });
+    }
 
     Ok(SenderConfig {
         addr,
@@ -66,6 +78,7 @@ fn parse_args() -> Result<SenderConfig, SdkError> {
         nonce,
         state_hash,
         body,
+        private_key_hex,
     })
 }
 
@@ -85,6 +98,7 @@ fn run() -> Result<(), SdkError> {
         config.nonce,
         config.state_hash,
         config.body,
+        config.private_key_hex.as_str(),
     )?;
 
     adapter.send(&envelope)?;
@@ -97,6 +111,7 @@ fn run() -> Result<(), SdkError> {
     println!("nonce={}", envelope.nonce);
     println!("state_hash={}", envelope.state_hash);
     println!("body={}", envelope.body);
+    println!("signer_public_key={}", envelope.signer_public_key);
     println!("signature={}", envelope.signature);
     Ok(())
 }

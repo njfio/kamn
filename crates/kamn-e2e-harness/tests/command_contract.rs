@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 #[cfg(unix)]
 use std::{fs, os::unix::fs::PermissionsExt};
 
@@ -48,6 +49,67 @@ fn set_non_executable(path: &PathBuf) {
         .permissions();
     permissions.set_mode(0o644);
     fs::set_permissions(path, permissions).expect("binary should become non-executable");
+}
+
+fn external_component_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn with_external_component_binaries<R>(f: impl FnOnce() -> R) -> R {
+    let _env_guard = external_component_env_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+
+    let processor_binary = temp_path("kamn-processor-binary");
+    let listener_binary = temp_path("kamn-listener-binary");
+    let approver_binary = temp_path("kamn-approver-binary");
+
+    write_stub_binary(&processor_binary);
+    write_stub_binary(&listener_binary);
+    write_stub_binary(&approver_binary);
+    #[cfg(unix)]
+    {
+        set_executable(&processor_binary);
+        set_executable(&listener_binary);
+        set_executable(&approver_binary);
+    }
+
+    let vars = [
+        (
+            "KAMN_E2E_EXTERNAL_KAMN_PROCESSOR_BINARY",
+            processor_binary.display().to_string(),
+        ),
+        (
+            "KAMN_E2E_EXTERNAL_KAMN_LISTENER_BINARY",
+            listener_binary.display().to_string(),
+        ),
+        (
+            "KAMN_E2E_EXTERNAL_KAMN_APPROVER_BINARY",
+            approver_binary.display().to_string(),
+        ),
+    ];
+    let previous = vars
+        .iter()
+        .map(|(key, _)| ((*key).to_owned(), std::env::var(key).ok()))
+        .collect::<Vec<_>>();
+    for (key, value) in vars {
+        std::env::set_var(key, value);
+    }
+
+    let result = f();
+
+    for (key, previous_value) in previous {
+        if let Some(value) = previous_value {
+            std::env::set_var(key, value);
+        } else {
+            std::env::remove_var(key);
+        }
+    }
+    let _ = std::fs::remove_file(processor_binary);
+    let _ = std::fs::remove_file(listener_binary);
+    let _ = std::fs::remove_file(approver_binary);
+    result
 }
 
 #[test]
@@ -991,10 +1053,15 @@ fn spec_c53_runtime_orchestration_markers_pass_when_external_enabled() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("run output should render");
-    assert!(output.contains(
-        "\"runtime_orchestration\":{\"postgres\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kolme\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_processor\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_listener\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"},\"kamn_approver\":{\"requested\":true,\"status\":\"PASS\",\"detail\":\"external orchestration scaffold\"}}"
-    ));
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
+    assert!(output.contains("\"runtime_orchestration\":"));
+    assert!(output.contains("\"postgres\":{\"requested\":true,\"status\":\"PASS\""));
+    assert!(output.contains("\"kolme\":{\"requested\":true,\"status\":\"PASS\""));
+    assert!(output.contains("\"kamn_processor\":{\"requested\":true,\"status\":\"PASS\""));
+    assert!(output.contains("\"kamn_listener\":{\"requested\":true,\"status\":\"PASS\""));
+    assert!(output.contains("\"kamn_approver\":{\"requested\":true,\"status\":\"PASS\""));
 
     let _ = std::fs::remove_file(kolme_binary);
 }
@@ -1052,7 +1119,9 @@ fn spec_c56_runtime_lifecycle_execution_markers_pass_when_external_enabled() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(
         output.contains(
             "\"runtime_lifecycle_execution\":{\"postgres\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kolme\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_processor\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_listener\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"},\"kamn_approver\":{\"init\":\"PASS\",\"spawn\":\"PASS\",\"health_check\":\"PASS\",\"ready\":\"PASS\"}}"
@@ -1100,7 +1169,7 @@ fn spec_c58_runtime_validation_execution_markers_skip_when_external_disabled() {
 }
 
 #[test]
-fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
+fn spec_c59_runtime_validation_execution_markers_fail_closed_when_live_validation_fails() {
     let kolme_binary = temp_path("kolme-node");
     write_stub_binary(&kolme_binary);
     #[cfg(unix)]
@@ -1113,10 +1182,12 @@ fn spec_c59_runtime_validation_execution_markers_pass_when_external_enabled() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(
         output.contains(
-            "\"runtime_validation_execution\":{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"PASS\",\"evidence_contract\":\"PASS\",\"overall\":\"PASS\"}"
+            "\"runtime_validation_execution\":{\"requested\":true,\"orchestration_contract\":\"PASS\",\"lifecycle_contract\":\"PASS\",\"live_validation_contract\":\"FAIL\",\"evidence_contract\":\"PASS\",\"overall\":\"FAIL\"}"
         ),
         "runtime_validation_execution marker drift: {output}"
     );
@@ -1193,7 +1264,9 @@ fn spec_c62_external_execution_executable_binaries_pass_preflight() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("executable binaries should pass preflight");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("executable binaries should pass preflight")
+    });
     assert!(output.contains("\"runtime_external_execution\":{\"requested\":true"));
     let _ = std::fs::remove_file(kolme_binary);
     let _ = std::fs::remove_file(agent_binary);
@@ -1258,8 +1331,9 @@ fn spec_c65_external_execution_executable_regular_file_still_passes_preflight() 
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output =
-        execute_run_contract(&config).expect("executable regular file should pass preflight");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("executable regular file should pass preflight")
+    });
     assert!(output.contains("\"runtime_external_execution\":{\"requested\":true"));
     let _ = std::fs::remove_file(kolme_binary);
 }
@@ -1322,7 +1396,9 @@ fn spec_c68_external_execution_absolute_paths_still_pass_preflight() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("absolute paths should pass preflight");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("absolute paths should pass preflight")
+    });
     assert!(output.contains("\"runtime_external_execution\":{\"requested\":true"));
     let _ = std::fs::remove_file(kolme_binary);
     let _ = std::fs::remove_file(agent_binary);
@@ -1359,7 +1435,9 @@ fn spec_c70_integration_config_flags_map_for_sdk_direct_external_enabled() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(output.contains("\"integration_config\":"));
     assert!(output.contains("\"agent_binary_required\":false"));
     assert!(output.contains("\"external_execution_enabled\":true"));
@@ -1386,7 +1464,9 @@ fn spec_c71_integration_config_flags_map_for_mcp_tau_external_enabled() {
         evidence_dir: "/tmp/evidence".to_owned(),
         scenario_ids: vec!["S-01".to_owned()],
     };
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(output.contains("\"integration_config\":"));
     assert!(output.contains("\"agent_binary_required\":true"));
     assert!(output.contains("\"external_execution_enabled\":true"));
@@ -2355,7 +2435,9 @@ fn spec_c107_external_execution_probe_failure_marks_runtime_orchestration_fail()
         scenario_ids: vec!["S-01".to_owned()],
     };
 
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(output.contains("\"runtime_orchestration\":"));
     assert!(output.contains("\"status\":\"FAIL\""));
     assert!(output.contains("probe failed"));
@@ -2379,7 +2461,9 @@ fn spec_c108_external_execution_probe_failure_marks_validation_fail() {
         scenario_ids: vec!["S-01".to_owned()],
     };
 
-    let output = execute_run_contract(&config).expect("run output should render");
+    let output = with_external_component_binaries(|| {
+        execute_run_contract(&config).expect("run output should render")
+    });
     assert!(output.contains("\"runtime_validation_execution\":"));
     assert!(output.contains("\"orchestration_contract\":\"FAIL\""));
     assert!(output.contains("\"lifecycle_contract\":\"FAIL\""));
@@ -2414,4 +2498,80 @@ fn spec_c109_run_output_contains_ordered_scenario_contract_projection() {
         s03_index < s01_index,
         "scenario contracts should preserve selected order"
     );
+}
+
+#[test]
+fn spec_c110_run_command_persists_manifest_chain_dump_and_scenario_artifact_on_pass() {
+    let evidence_dir = temp_path("evidence-persist-pass");
+    std::fs::create_dir_all(&evidence_dir).expect("evidence dir should be created");
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: evidence_dir.display().to_string(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"evidence_contract\":{\"expected_artifacts\":4,\"recorded_artifacts\":4,\"status\":\"PASS\"}"));
+
+    let manifest_path = evidence_dir.join("manifest.json");
+    let chain_dump_path = evidence_dir.join("kolme_chain_dump.json");
+    let scenario_artifact_path = evidence_dir.join("scenario-s01").join("artifact.json");
+    assert!(manifest_path.is_file(), "manifest should be persisted");
+    assert!(chain_dump_path.is_file(), "chain dump should be persisted");
+    assert!(
+        scenario_artifact_path.is_file(),
+        "scenario artifact should be persisted"
+    );
+
+    let manifest =
+        std::fs::read_to_string(&manifest_path).expect("manifest content should be readable");
+    assert!(manifest.contains("\"schema_version\":\"kamn.e2e.evidence-manifest.v3\""));
+    assert!(manifest.contains("\"id\":\"S-01\""));
+    assert!(manifest.contains("scenario-s01/artifact.json"));
+    let scenario_artifact = std::fs::read_to_string(&scenario_artifact_path)
+        .expect("scenario artifact content should be readable");
+    assert!(scenario_artifact.contains("\"_verification\":"));
+    assert!(scenario_artifact.contains("\"finality\":\"FINAL\""));
+
+    let _ = std::fs::remove_dir_all(evidence_dir);
+}
+
+#[test]
+fn spec_c111_run_command_evidence_fail_path_omits_chain_dump_and_scenario_artifacts() {
+    let evidence_dir = temp_path("evidence-fail-persist");
+    std::fs::create_dir_all(&evidence_dir).expect("evidence dir should be created");
+    let stale_chain_dump = evidence_dir.join("kolme_chain_dump.json");
+    std::fs::write(&stale_chain_dump, valid_chain_dump_json())
+        .expect("stale chain dump should be written");
+
+    let config = RunCommandConfig {
+        mode: "sdk-direct".to_owned(),
+        kolme_binary: "/tmp/kolme-node".to_owned(),
+        agent_binary: None,
+        external_execution: false,
+        evidence_dir: evidence_dir.display().to_string(),
+        scenario_ids: vec!["S-01".to_owned()],
+    };
+    let output = execute_run_contract(&config).expect("run output should render");
+    assert!(output.contains("\"evidence_contract\":{\"expected_artifacts\":4,\"recorded_artifacts\":3,\"status\":\"FAIL\"}"));
+
+    let manifest_path = evidence_dir.join("manifest.json");
+    let chain_dump_path = evidence_dir.join("kolme_chain_dump.json");
+    let scenario_artifact_path = evidence_dir.join("scenario-s01").join("artifact.json");
+    assert!(
+        manifest_path.is_file(),
+        "manifest should still be persisted"
+    );
+    assert!(
+        !chain_dump_path.exists(),
+        "chain dump should be removed on fail path"
+    );
+    assert!(
+        !scenario_artifact_path.exists(),
+        "scenario artifacts should not be persisted on fail path"
+    );
+
+    let _ = std::fs::remove_dir_all(evidence_dir);
 }

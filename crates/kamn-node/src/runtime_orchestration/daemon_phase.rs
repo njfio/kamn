@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::{Duration, Instant};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
@@ -468,6 +469,8 @@ pub(super) fn execute_daemon_runtime(
         daemon_shutdown_timeout_ticks,
         daemon_peer_id,
         daemon_lifecycle_events,
+        service_api_state_file,
+        service_api_relay_spool_file,
     } = options;
     let max_ticks =
         daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
@@ -525,9 +528,16 @@ pub(super) fn execute_daemon_runtime(
             daemon_shutdown_timeout_ticks,
         )
     };
+    let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+        daemon_completion.executed_ticks,
+        tick_interval_ms,
+        service_api_state_file.as_deref(),
+        service_api_relay_spool_file.as_deref(),
+    )?;
     let daemon_observability = build_daemon_observability_telemetry(
         tick_interval_ms,
         daemon_completion.completion_reason.as_str(),
+        &runtime_processing,
     )
     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     validate_shutdown_checkpoint_reconciliation(
@@ -587,6 +597,9 @@ pub(super) fn execute_daemon_runtime(
         project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
             multi_host_execution_bundle_selector_rows.as_slice(),
         );
+    let relay_drained_count_label = runtime_processing.relay_drained_count.to_string();
+    let relay_projected_state_count_label =
+        runtime_processing.relay_projected_state_count.to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -719,6 +732,14 @@ pub(super) fn execute_daemon_runtime(
                 "multi_host_execution_bundle_selector_rows_fingerprint",
                 multi_host_execution_bundle_selector_rows_fingerprint.as_str(),
             ),
+            (
+                "service_api_relay_drained_count",
+                relay_drained_count_label.as_str(),
+            ),
+            (
+                "service_api_relay_projected_state_count",
+                relay_projected_state_count_label.as_str(),
+            ),
             ("execution_id", execution_id),
         ],
     )?;
@@ -768,4 +789,153 @@ pub(super) fn execute_daemon_runtime(
         live_postgres_multi_host_execution_bundle_selector_rows_fingerprint:
             multi_host_execution_bundle_selector_rows_fingerprint,
     })
+}
+
+fn execute_daemon_service_api_relay_tick_loop(
+    executed_ticks: u64,
+    tick_interval_ms: u64,
+    service_api_state_file: Option<&str>,
+    service_api_relay_spool_file: Option<&str>,
+) -> Result<crate::daemon_observability::DaemonRuntimeProcessingTelemetry, ConfigError> {
+    let mut runtime_processing = crate::daemon_observability::DaemonRuntimeProcessingTelemetry {
+        executed_ticks,
+        ..crate::daemon_observability::DaemonRuntimeProcessingTelemetry::default()
+    };
+    let relay_enabled = service_api_relay_spool_file.is_some();
+    if executed_ticks == 0 {
+        return Ok(runtime_processing);
+    }
+
+    let tick_duration = Duration::from_millis(tick_interval_ms.max(1));
+    for tick in 0..executed_ticks {
+        let tick_started_at = Instant::now();
+        if relay_enabled {
+            let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
+                service_api_relay_spool_file,
+            )
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            runtime_processing.relay_drained_count = runtime_processing
+                .relay_drained_count
+                .saturating_add(relay_entries.len() as u64);
+            let relay_message_ids: Vec<String> = relay_entries
+                .iter()
+                .map(|entry| entry.message_id.clone())
+                .collect();
+            let relay_projected_state_count =
+                crate::service_api_endpoint::project_service_api_relayed_message_statuses(
+                    service_api_state_file,
+                    relay_message_ids.as_slice(),
+                )
+                .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            runtime_processing.relay_projected_state_count = runtime_processing
+                .relay_projected_state_count
+                .saturating_add(relay_projected_state_count as u64);
+        }
+        let elapsed_ms = tick_started_at.elapsed().as_millis();
+        runtime_processing
+            .tick_processing_samples_ms
+            .push((elapsed_ms.min(u128::from(u64::MAX)) as u64).max(1));
+
+        if let Some(remaining_sleep) = daemon_tick_remaining_sleep_duration(
+            tick,
+            executed_ticks,
+            tick_duration,
+            tick_started_at.elapsed(),
+        ) {
+            std::thread::sleep(remaining_sleep);
+            runtime_processing.tick_sleep_count =
+                runtime_processing.tick_sleep_count.saturating_add(1);
+        }
+    }
+
+    Ok(runtime_processing)
+}
+
+fn daemon_tick_remaining_sleep_duration(
+    tick: u64,
+    executed_ticks: u64,
+    tick_duration: Duration,
+    elapsed: Duration,
+) -> Option<Duration> {
+    if tick + 1 >= executed_ticks {
+        return None;
+    }
+    let remaining = tick_duration.checked_sub(elapsed)?;
+    if remaining.is_zero() {
+        return None;
+    }
+    Some(remaining)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{daemon_tick_remaining_sleep_duration, execute_daemon_service_api_relay_tick_loop};
+    use std::time::Duration;
+
+    #[test]
+    fn unit_daemon_relay_tick_loop_sleeps_between_ticks_when_interval_budget_remains() {
+        let runtime_processing =
+            execute_daemon_service_api_relay_tick_loop(3, 50, None, None).expect("tick loop");
+        assert_eq!(runtime_processing.executed_ticks, 3);
+        assert_eq!(runtime_processing.tick_processing_samples_ms.len(), 3);
+        assert_eq!(
+            runtime_processing.tick_sleep_count, 2,
+            "daemon tick loop must sleep exactly between ticks and never after last tick"
+        );
+    }
+
+    #[test]
+    fn regression_daemon_relay_tick_loop_single_tick_never_sleeps() {
+        // Regression: #5895
+        let runtime_processing =
+            execute_daemon_service_api_relay_tick_loop(1, 50, None, None).expect("tick loop");
+        assert_eq!(
+            runtime_processing.tick_sleep_count, 0,
+            "single-tick daemon loop must not execute sleep branch"
+        );
+        assert_eq!(runtime_processing.tick_processing_samples_ms.len(), 1);
+    }
+
+    #[test]
+    fn unit_daemon_tick_remaining_sleep_duration_contract_is_deterministic() {
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                0,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(20),
+            ),
+            Some(Duration::from_millis(30))
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                1,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(50),
+            ),
+            None,
+            "equal elapsed and tick duration must not emit zero-duration sleeps"
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                1,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(60),
+            ),
+            None,
+            "elapsed values over tick duration must not underflow remaining sleep"
+        );
+        assert_eq!(
+            daemon_tick_remaining_sleep_duration(
+                2,
+                3,
+                Duration::from_millis(50),
+                Duration::from_millis(1),
+            ),
+            None,
+            "last tick must not sleep"
+        );
+    }
 }

@@ -31,13 +31,31 @@ PANIC_REASON_CODES = frozenset(
     }
 )
 
+DEFAULT_RUNTIME_ROOTS = (
+    "crates/kamn-agent-lib/src",
+    "crates/kamn-core/src",
+    "crates/kamn-node/src",
+    "crates/kamn-cli/src",
+    "crates/kamn-mcp-server/src",
+    "crates/kamn-sdk/src",
+    "crates/kamn-kolme/src",
+    "crates/kamn-e2e-harness/src",
+)
+
 
 def is_excluded(path: Path) -> bool:
     path_str = path.as_posix()
+    file_name = path.name
     return (
         "/main_tests/" in path_str
-        or path.name.endswith("_tests.rs")
-        or path.name == "main_tests.rs"
+        or "/tests/" in path_str
+        or ("/src/" in path_str and file_name == "tests.rs")
+        or "/test_utils/" in path_str
+        or file_name.endswith("_tests.rs")
+        or "_tests_" in file_name
+        or file_name.startswith("runtime_tests")
+        or file_name.startswith("cli_tests")
+        or file_name == "main_tests.rs"
     )
 
 
@@ -52,133 +70,96 @@ def is_test_cfg_attribute(line: str) -> bool:
 
 @dataclass
 class BraceScanState:
-    block_comment_depth: int = 0
-    string_delimiter: str | None = None
-    raw_string_hashes: int | None = None
+    in_block_comment: bool = False
+    in_string: bool = False
     escape_next: bool = False
+    raw_string_hashes: int | None = None
 
 
-def is_ident_byte(ch: str) -> bool:
-    return ch.isalnum() or ch == "_"
-
-
-def parse_raw_string_start(line: str, index: int) -> tuple[int, int] | None:
-    if index >= len(line):
+def match_raw_string_start(line: str, index: int) -> tuple[int, int] | None:
+    if line[index] != "r":
         return None
-
-    prefix_len = 0
-    if line.startswith("br", index):
-        prefix_len = 2
-    elif line[index] == "r":
-        prefix_len = 1
-    else:
-        return None
-
-    if index > 0 and is_ident_byte(line[index - 1]):
-        return None
-
-    cursor = index + prefix_len
-    hash_count = 0
+    cursor = index + 1
+    hashes = 0
     while cursor < len(line) and line[cursor] == "#":
-        hash_count += 1
+        hashes += 1
         cursor += 1
-
     if cursor < len(line) and line[cursor] == '"':
-        return hash_count, cursor + 1
+        return hashes, cursor + 1
     return None
 
 
-def starts_char_literal(line: str, index: int) -> bool:
-    if index >= len(line) or line[index] != "'":
-        return False
-    if index + 1 >= len(line):
-        return False
-    next_ch = line[index + 1]
-    return not (next_ch.isalpha() or next_ch == "_")
+def match_raw_string_end(line: str, index: int, hashes: int) -> int | None:
+    if line[index] != '"':
+        return None
+    cursor = index + 1
+    for _ in range(hashes):
+        if cursor >= len(line) or line[cursor] != "#":
+            return None
+        cursor += 1
+    return cursor
 
 
-def scan_line_brace_counts(line: str, state: BraceScanState) -> tuple[int, int]:
+def count_code_braces(line: str, state: BraceScanState) -> tuple[int, int]:
     open_count = 0
     close_count = 0
     index = 0
-    line_len = len(line)
 
-    while index < line_len:
-        ch = line[index]
-
+    while index < len(line):
         if state.raw_string_hashes is not None:
-            if ch == '"':
-                suffix = "#" * state.raw_string_hashes
-                if line.startswith(suffix, index + 1):
-                    index += 1 + state.raw_string_hashes
+            if line[index] == '"':
+                raw_end = match_raw_string_end(line, index, state.raw_string_hashes)
+                if raw_end is not None:
                     state.raw_string_hashes = None
+                    index = raw_end
                     continue
             index += 1
             continue
 
-        if state.string_delimiter is not None:
+        if state.in_block_comment:
+            if line.startswith("*/", index):
+                state.in_block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+
+        if state.in_string:
             if state.escape_next:
                 state.escape_next = False
                 index += 1
                 continue
-            if ch == "\\":
+            if line[index] == "\\":
                 state.escape_next = True
                 index += 1
                 continue
-            if ch == state.string_delimiter:
-                state.string_delimiter = None
-            index += 1
-            continue
-
-        if state.block_comment_depth > 0:
-            if line.startswith("/*", index):
-                state.block_comment_depth += 1
-                index += 2
-                continue
-            if line.startswith("*/", index):
-                state.block_comment_depth -= 1
-                index += 2
-                continue
+            if line[index] == '"':
+                state.in_string = False
             index += 1
             continue
 
         if line.startswith("//", index):
             break
+
         if line.startswith("/*", index):
-            state.block_comment_depth += 1
+            state.in_block_comment = True
             index += 2
             continue
 
-        raw_string = parse_raw_string_start(line, index)
-        if raw_string is not None:
-            state.raw_string_hashes, index = raw_string
-            state.escape_next = False
+        raw_start = match_raw_string_start(line, index)
+        if raw_start is not None:
+            state.raw_string_hashes, index = raw_start
             continue
 
-        if line.startswith('b"', index) and (index == 0 or not is_ident_byte(line[index - 1])):
-            state.string_delimiter = '"'
-            state.escape_next = False
-            index += 2
-            continue
-        if line.startswith("b'", index) and (index == 0 or not is_ident_byte(line[index - 1])):
-            state.string_delimiter = "'"
-            state.escape_next = False
-            index += 2
-            continue
-        if ch == '"':
-            state.string_delimiter = ch
-            state.escape_next = False
-            index += 1
-            continue
-        if ch == "'" and starts_char_literal(line, index):
-            state.string_delimiter = ch
+        if line[index] == '"':
+            state.in_string = True
             state.escape_next = False
             index += 1
             continue
 
-        if ch == "{":
+        if line[index] == "{":
             open_count += 1
-        elif ch == "}":
+        elif line[index] == "}":
             close_count += 1
         index += 1
 
@@ -195,12 +176,12 @@ def skip_cfg_test_item(lines: list[str], index: int) -> int:
     if index >= len(lines):
         return index
 
-    scan_state = BraceScanState()
     brace_depth = 0
     saw_open_brace = False
+    scan_state = BraceScanState()
     while index < len(lines):
         line = lines[index]
-        open_count, close_count = scan_line_brace_counts(line, scan_state)
+        open_count, close_count = count_code_braces(line, scan_state)
         if open_count > 0:
             saw_open_brace = True
         brace_depth += open_count - close_count
@@ -315,7 +296,10 @@ def parse_args() -> argparse.Namespace:
         "--root",
         action="append",
         default=[],
-        help="Rust source root to scan (repeatable). Default: crates/kamn-node/src",
+        help=(
+            "Rust source root to scan (repeatable). Default: "
+            + ",".join(DEFAULT_RUNTIME_ROOTS)
+        ),
     )
     parser.add_argument(
         "--output-json",
@@ -327,7 +311,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    roots = args.root or ["crates/kamn-node/src"]
+    roots = args.root or list(DEFAULT_RUNTIME_ROOTS)
 
     report: dict[str, object] = {
         "schema_version": "kamn.ci.no-production-expect-report.v1",

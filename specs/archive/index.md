@@ -2,8 +2,8 @@
 
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
-- archived_on: 2026-02-18
-- archived_issue_count: 229
+- archived_on: 2026-02-23
+- archived_issue_count: 226
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -20,11 +20,6 @@
 | 3926 | `Subtask: add regression tests for Accept/Reject/Suspend backpressure decisions and reason codes` | 2026-02-18 | `specs/archive/3926` | `specs/3926/ARCHIVED.md` |
 | 3963 | Epic: R27.7 reduce script-surface sprawl and accelerate docs graduation closure | 2026-02-18 | `specs/archive/3963` | `specs/3963/ARCHIVED.md` |
 | 3969 | Task: publish architecture navigation artifacts and rustdoc build contract checks | 2026-02-18 | `specs/archive/3969` | `specs/3969/ARCHIVED.md` |
-| 3971 | Subtask: add wrapper dispatch parity harness and legacy entrypoint compatibility assertions | 2026-02-18 | `specs/archive/3971` | `specs/3971/ARCHIVED.md` |
-| 3972 | Subtask: implement shell-surface decline trajectory checker with deterministic fail codes | 2026-02-18 | `specs/archive/3972` | `specs/3972/ARCHIVED.md` |
-| 3973 | Subtask: add wrapper-duplication and script-to-rust ratio guardrail checker for CI-fast governance | 2026-02-18 | `specs/archive/3973` | `specs/3973/ARCHIVED.md` |
-| 3974 | Subtask: graduate first missing-docs module batch with complete public API doc coverage | 2026-02-18 | `specs/archive/3974` | `specs/3974/ARCHIVED.md` |
-| 3975 | Subtask: add docs coverage contracts preventing missing-docs exemption regressions for graduated modules | 2026-02-18 | `specs/archive/3975` | `specs/3975/ARCHIVED.md` |
 | 3977 | Subtask: add rustdoc smoke lane and low-cost CI contract checks for documentation build integrity | 2026-02-18 | `specs/archive/3977` | `specs/3977/ARCHIVED.md` |
 | 4113 | Epic: R27.17 close structured logging and telemetry emission governance gaps | 2026-02-18 | `specs/archive/4113` | `specs/4113/ARCHIVED.md` |
 | 4115 | Story: expose deterministic metrics health-stream evidence and operational alert contracts | 2026-02-18 | `specs/archive/4115` | `specs/4115/ARCHIVED.md` |
@@ -236,3 +231,5 @@
 | 5107 | Task: integrate M2 gateway DID contracts with canonical AgentDid parsing | 2026-02-18 | `specs/archive/5107` | `specs/5107/ARCHIVED.md` |
 | 5109 | Task: integrate M9 realtime delivery DID contracts with canonical parser taxonomy | 2026-02-18 | `specs/archive/5109` | `specs/5109/ARCHIVED.md` |
 | 5111 | Task: execute implemented-spec archival wave and reduce active spec surface | 2026-02-18 | `specs/archive/5111` | `specs/5111/ARCHIVED.md` |
+| 5670 | Issue 5670 | 2026-02-23 | `specs/archive/5670` | `specs/5670/ARCHIVED.md` |
+| 5672 | Issue 5672 | 2026-02-23 | `specs/archive/5672` | `specs/5672/ARCHIVED.md` |

@@ -13,6 +13,13 @@ const DEFAULT_CHAIN_VERSION: &str = "1";
 const AGENT_CHAIN_ID_ENV: &str = "KAMN_AGENT_CHAIN_ID";
 const AGENT_CHAIN_VERSION_ENV: &str = "KAMN_AGENT_CHAIN_VERSION";
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match env::var(key) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => default.to_owned(),
+    }
+}
+
 /// Typed Service API HTTP client wrapper used by `KamnAgentHandle`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceApiHttpClient {
@@ -24,9 +31,8 @@ pub struct ServiceApiHttpClient {
 impl ServiceApiHttpClient {
     /// Connects to a KAMN service endpoint with default chain-signature context.
     pub fn connect(endpoint: &str) -> Result<Self, AgentLibError> {
-        let chain_id = env::var(AGENT_CHAIN_ID_ENV).unwrap_or_else(|_| DEFAULT_CHAIN_ID.to_owned());
-        let chain_version =
-            env::var(AGENT_CHAIN_VERSION_ENV).unwrap_or_else(|_| DEFAULT_CHAIN_VERSION.to_owned());
+        let chain_id = env_var_or_default(AGENT_CHAIN_ID_ENV, DEFAULT_CHAIN_ID);
+        let chain_version = env_var_or_default(AGENT_CHAIN_VERSION_ENV, DEFAULT_CHAIN_VERSION);
         Self::connect_with_chain_context(endpoint, chain_id.as_str(), chain_version.as_str())
     }
 
@@ -69,7 +75,7 @@ impl ServiceApiHttpClient {
             self.chain_id.as_str(),
             self.chain_version.as_str(),
             body,
-        );
+        )?;
         Ok(ServiceRequestAuth::new_with_scope(
             sender_did.clone(),
             nonce,

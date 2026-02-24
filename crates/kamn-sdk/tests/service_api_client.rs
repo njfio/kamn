@@ -4,12 +4,26 @@ use kamn_sdk::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
 const CHAIN_ID: &str = "kolme-localnet";
 const CHAIN_VERSION: &str = "v0";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
+const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
+const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
+fn ensure_test_service_auth_private_key() {
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        std::env::set_var(
+            SERVICE_AUTH_PRIVATE_KEY_ENV,
+            TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+        );
+    });
+}
 
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -159,6 +173,7 @@ fn validate_auth(
     headers: &BTreeMap<String, String>,
     replay_guard: &mut BTreeSet<(String, u64)>,
 ) -> Result<(), (u16, &'static str, &'static str, &'static str)> {
+    ensure_test_service_auth_private_key();
     let did = headers
         .get("x-kamn-sender-did")
         .ok_or((
@@ -220,7 +235,15 @@ fn validate_auth(
         CHAIN_ID,
         CHAIN_VERSION,
         body,
-    );
+    )
+    .map_err(|_| {
+        (
+            401,
+            "unauthorized",
+            "service_api_auth_signature_verification_failed",
+            "signature verification failed for request envelope",
+        )
+    })?;
     if &expected != signature {
         return Err((
             401,
@@ -521,10 +544,12 @@ fn wait_for_server_ready(addr: &str) {
 }
 
 fn auth_with_scope(sender: &AgentDid, nonce: u64, body: &str, scope: &str) -> ServiceRequestAuth {
+    ensure_test_service_auth_private_key();
     ServiceRequestAuth::new_with_scope(
         sender.clone(),
         nonce,
-        service_signature_for_fields(sender, nonce, CHAIN_ID, CHAIN_VERSION, body),
+        service_signature_for_fields(sender, nonce, CHAIN_ID, CHAIN_VERSION, body)
+            .expect("service signature should build"),
         Some(scope),
     )
     .expect("request auth with scope should build")

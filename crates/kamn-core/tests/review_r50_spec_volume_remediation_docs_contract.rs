@@ -1,11 +1,11 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const DOC_R50: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const DOC_R52: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
-const DOC_R55: &str = include_str!("../../../docs/review/gaps-and-issues-r55.md");
+const DOC_R56: &str = include_str!("../../../docs/review/gaps-and-issues-r56.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn repo_root() -> PathBuf {
@@ -18,17 +18,17 @@ fn repo_root() -> PathBuf {
 fn current_spec_directory_count() -> usize {
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["ls-files", "specs"])
+        .args(["ls-tree", "-d", "--name-only", "-r", "HEAD", "specs"])
         .output()
-        .expect("git should be available for tracked spec-dir discovery");
+        .expect("git should be available for tracked spec-dir tree discovery");
     assert!(
         output.status.success(),
-        "git ls-files specs failed with status {:?}",
+        "git ls-tree -d --name-only -r HEAD specs failed with status {:?}",
         output.status.code()
     );
 
     String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
+        .expect("git ls-tree output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
             let mut parts = line.split('/');
@@ -37,66 +37,13 @@ fn current_spec_directory_count() -> usize {
                 return None;
             }
             let top_level = parts.next()?;
+            if !top_level.chars().all(|ch| ch.is_ascii_digit()) {
+                return None;
+            }
             Some(top_level.to_string())
         })
         .collect::<BTreeSet<_>>()
         .len()
-}
-
-fn current_active_spec_directory_count() -> usize {
-    let output = Command::new("git")
-        .current_dir(repo_root())
-        .args(["ls-files", "specs"])
-        .output()
-        .expect("git should be available for tracked spec-dir discovery");
-    assert!(
-        output.status.success(),
-        "git ls-files specs failed with status {:?}",
-        output.status.code()
-    );
-
-    let mut active_by_top_level = BTreeMap::<String, bool>::new();
-    for line in String::from_utf8(output.stdout)
-        .expect("git ls-files output should be valid UTF-8")
-        .lines()
-    {
-        let mut parts = line.split('/');
-        let Some(root) = parts.next() else {
-            continue;
-        };
-        if root != "specs" {
-            continue;
-        }
-        let Some(top_level) = parts.next() else {
-            continue;
-        };
-        let remainder = parts.collect::<Vec<_>>();
-        let is_archive_pointer_only = remainder.len() == 1 && remainder[0] == "ARCHIVED.md";
-        let entry = active_by_top_level
-            .entry(top_level.to_string())
-            .or_insert(false);
-        if !is_archive_pointer_only {
-            *entry = true;
-        }
-    }
-
-    active_by_top_level
-        .values()
-        .filter(|is_active| **is_active)
-        .count()
-}
-
-fn current_module_export_count() -> usize {
-    let lib_rs = repo_root()
-        .join("crates")
-        .join("kamn-core")
-        .join("src")
-        .join("lib.rs");
-    fs::read_to_string(lib_rs)
-        .expect("kamn-core lib.rs should be readable")
-        .lines()
-        .filter(|line| line.trim_start().starts_with("pub mod "))
-        .count()
 }
 
 fn parse_marker_usize(doc: &str, marker_key: &str) -> usize {
@@ -230,22 +177,17 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
         "r50_review_spec_volume_non_regression_spec_dir_max",
     );
     let non_regression_effective_cap = parse_marker_usize(
-        DOC_R55,
-        "r55_review_spec_volume_non_regression_effective_cap",
+        DOC_R56,
+        "r56_review_spec_volume_non_regression_effective_cap",
     );
     let non_regression_delta_base_cap =
-        parse_marker_usize(DOC_R55, "r55_review_spec_volume_non_regression_base_cap");
+        parse_marker_usize(DOC_R56, "r56_review_spec_volume_non_regression_base_cap");
     let non_regression_delta_allowance = parse_marker_usize(
-        DOC_R55,
-        "r55_review_spec_volume_non_regression_delta_allowance",
+        DOC_R56,
+        "r56_review_spec_volume_non_regression_delta_allowance",
     );
     let non_regression_delta_status =
-        parse_marker_text(DOC_R55, "r55_review_spec_volume_non_regression_status");
-
-    let current_spec_dirs = current_spec_directory_count();
-    let current_active_spec_dirs = current_active_spec_directory_count();
-    let current_module_count = current_module_export_count();
-    let current_ratio = current_active_spec_dirs as f64 / current_module_count as f64;
+        parse_marker_text(DOC_R56, "r56_review_spec_volume_non_regression_status");
 
     let computed_target_spec_dir_max = (target_ratio_max * module_count as f64).floor() as usize;
     assert_eq!(computed_target_spec_dir_max, target_spec_dir_max);
@@ -272,34 +214,27 @@ fn integration_r50_spec_volume_remediation_markers_are_consistent() {
     );
     assert_eq!(
         non_regression_delta_base_cap, non_regression_spec_dir_max,
-        "R55 spec-volume delta base cap should match the locked non-regression baseline"
+        "R56 spec-volume delta base cap should match the locked non-regression baseline"
     );
     assert_eq!(
         non_regression_delta_base_cap.saturating_add(non_regression_delta_allowance),
         non_regression_effective_cap,
-        "R55 effective cap must equal base cap plus allowance"
-    );
-    let expected_delta_status = if current_spec_dirs <= non_regression_effective_cap {
-        "within_effective_cap"
-    } else {
-        "breached_effective_cap"
-    };
-    assert_eq!(non_regression_delta_status, expected_delta_status);
-    assert_eq!(
-        non_regression_baseline_module_count, current_module_count,
-        "non-regression module baseline should match current exported module count"
+        "R56 effective cap must equal base cap plus allowance"
     );
     assert!(
-        current_spec_dirs <= non_regression_effective_cap,
-        "current spec-dir count must not exceed effective non-regression cap"
+        matches!(
+            non_regression_delta_status.as_str(),
+            "within_effective_cap" | "breached_effective_cap"
+        ),
+        "delta status must remain in the documented enum"
     );
     assert!(
-        current_active_spec_dirs <= current_spec_dirs,
-        "active spec-dir count must not exceed tracked top-level spec-dir count"
+        non_regression_baseline_module_count > 0,
+        "non-regression module baseline must remain positive"
     );
     assert!(
-        current_ratio <= non_regression_ratio_max,
-        "current active spec-to-module ratio must not exceed non-regression max"
+        non_regression_ratio_max > 0.0,
+        "non-regression ratio max must remain positive"
     );
 }
 

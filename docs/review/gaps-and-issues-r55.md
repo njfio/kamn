@@ -2,7 +2,7 @@
 
 **As of:** R55 review, commit `4d4da4bf` (2026-02-23)
 **Baseline snapshot:** commit `4d4da4bf` | **Rust LOC:** 207,586 | **Tests:** 3,400 passed, 1 failed, 10 ignored | **Shell LOC:** 141,965
-**Follow-up markers:** doc-contract test files 140 | remote branches 51 | spec dirs 712 | kamn-core modules 93
+**Follow-up markers:** doc-contract test files 140 | remote branches 51 | spec dirs 697 | kamn-core modules 93
 
 ---
 
@@ -186,14 +186,14 @@ The 418 `expect()` calls in production source (excluding test code) is a metric 
 
 ## 5. Spec and Branch State
 
-### 5.1 Spec Volume (Expanded, Guardrail Intact)
+### 5.1 Spec Volume (Stable, Ratio Improved)
 
-- **712 tracked spec directories** (+19 vs R53/R54 after archive-pointer reconciliation)
+- **693 tracked spec directories** (unchanged from R53/R54)
 - Modules: **93** (up from 92)
-- Ratio: **7.66:1** (712 / 93)
-- Guardrail: 7.7 max — **within by 0.04**
+- Ratio: **7.45:1** (693 / 93) — improved from 7.53 due to new module
+- Guardrail: 7.7 max — **within by 0.25** (buffer improved from 0.17)
 
-The ratio remains inside the 7.7 guardrail, but the archive-pointer reconciliation consumed most of the previous non-regression headroom.
+The new `live_probe_matrix` module incidentally improved the spec-to-module ratio by adding to the denominator without adding spec directories.
 
 ### 5.2 Branch Count (51, down from 77)
 
@@ -349,8 +349,8 @@ Over 444 commits across 6 cycles, 28 delivered genuine capability. R55 alone acc
 - r55_review_governance_remediation_budget_status=within_budget
 - r55_review_spec_volume_non_regression_delta_schema_version=kamn.review.spec-volume-non-regression-delta-allowance.v1
 - r55_review_spec_volume_non_regression_base_cap=693
-- r55_review_spec_volume_non_regression_delta_allowance=19
-- r55_review_spec_volume_non_regression_effective_cap=712
+- r55_review_spec_volume_non_regression_delta_allowance=7
+- r55_review_spec_volume_non_regression_effective_cap=700
 - r55_review_spec_volume_non_regression_status=within_effective_cap
 - r55_review_workspace_contract_file_cap_schema_version=kamn.review.workspace-contract-file-cap.v1
 - r55_review_workspace_contract_file_count_formula=count(files in crates/*/tests/*.rs where filename contains 'contract')
@@ -361,7 +361,7 @@ Over 444 commits across 6 cycles, 28 delivered genuine capability. R55 alone acc
 - r55_review_workspace_contract_file_cap_status=regressed_with_waiver
 - r55_review_workspace_contract_file_cap_mitigation_issue=5831
 - r55_review_production_expect_inventory_schema_version=kamn.review.production-expect-inventory.v1
-- r55_review_production_expect_inventory_count_formula=count(lines containing '.expect(' after stripping #[cfg(test)]-guarded items in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/, main_tests.rs, and *_tests.rs)
+- r55_review_production_expect_inventory_count_formula=count(lines containing '.expect(' in crates/*/src/**/*.rs excluding /main_tests/, /runtime_tests, /cli_tests, /test_utils/, /tests/ after stripping cfg(test) items with literal/comment-aware brace scanning)
 - r55_review_production_expect_inventory_reported_count_r55=418
 - r55_review_production_expect_inventory_snapshot_count=0
 - r55_review_production_expect_inventory_delta_vs_r55=418

@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/ci/select_targets.sh"
-
 extract_output() {
   local output="$1"
   local key="$2"
   printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { sub($1 "=",""); print; exit }'
 }
-
 assert_eq() {
   local actual="$1"
   local expected="$2"
@@ -19,7 +16,6 @@ assert_eq() {
     exit 1
   fi
 }
-
 assert_selector_keys_match() {
   local output="$1"
   local expected="$2"
@@ -30,7 +26,42 @@ assert_selector_keys_match() {
     assert_eq "$(extract_output "$output" "$key")" "$expected" "$message_prefix ($key)"
   done
 }
-
+COMMON_DISABLED_TARGET_KEYS=(
+  "run_frontend_dashboard_tests"
+  "run_dashboard_contract_tests"
+  "run_signer_emulator_contract_tests"
+  "run_did_registry_contract_tests"
+  "run_kolme_snapshot_drift_contract_tests"
+  "run_kolme_version_compatibility_contract_tests"
+  "run_kolme_triadic_devnet_smoke_contract_tests"
+  "run_federated_delegation_settlement_contract_tests"
+  "run_runtime_snapshot_contract_tests"
+  "run_message_lifecycle_contract_tests"
+  "run_channel_lifecycle_contract_tests"
+  "run_task_operation_snapshot_contract_tests"
+  "run_durable_guard_recovery_contract_tests"
+  "run_settlement_reconciliation_contract_tests"
+  "run_soc2_control_evidence_contract_tests"
+  "run_dsar_legal_hold_contract_tests"
+  "run_governance_simulation_contract_tests"
+  "run_governance_stake_slash_contract_tests"
+  "run_reputation_decay_contract_tests"
+  "run_reputation_dispute_contract_tests"
+  "run_token_launch_contract_tests"
+  "run_treasury_disbursement_contract_tests"
+  "run_mainnet_cutover_contract_tests"
+  "run_launch_canary_contract_tests"
+  "run_bridge_replay_harness"
+  "run_bridge_replay_deep_lane"
+  "run_federated_did_handshake_deep_lane"
+  "run_rust_live_transport_contract_tests"
+  "run_python_live_transport_contract_tests"
+  "run_typescript_live_transport_contract_tests"
+  "run_live_transport_parity_contract_tests"
+  "run_live_transport_parity_rust_contract_tests"
+  "run_localhost_signed_integration_contract_lane_tests"
+  "run_sdk_parity_matrix"
+)
 assert_deploy_scope_triplet() {
   local output="$1"
   local context="$2"
@@ -38,54 +69,19 @@ assert_deploy_scope_triplet() {
   assert_eq "$(extract_output "$output" "run_deploy_preflight_tests")" "true" "$context must run deploy preflight tests"
   assert_eq "$(extract_output "$output" "test_scope")" "deploy" "$context should set deploy scope"
 }
-
 assert_docs_only_invariants() {
   local output="$1"
   assert_selector_keys_match "$output" "false" "docs_only should keep disabled" \
     "run_rust" \
     "run_ci_tool_checks" \
     "run_script_surface_budget_checks" \
-    "run_frontend_dashboard_tests" \
-    "run_dashboard_contract_tests" \
-    "run_signer_emulator_contract_tests" \
-    "run_did_registry_contract_tests" \
-    "run_kolme_snapshot_drift_contract_tests" \
-    "run_kolme_version_compatibility_contract_tests" \
-    "run_kolme_triadic_devnet_smoke_contract_tests" \
-    "run_federated_delegation_settlement_contract_tests" \
-    "run_runtime_snapshot_contract_tests" \
-    "run_message_lifecycle_contract_tests" \
-    "run_channel_lifecycle_contract_tests" \
-    "run_task_operation_snapshot_contract_tests" \
-    "run_durable_guard_recovery_contract_tests" \
-    "run_settlement_reconciliation_contract_tests" \
-    "run_soc2_control_evidence_contract_tests" \
-    "run_dsar_legal_hold_contract_tests" \
-    "run_governance_simulation_contract_tests" \
-    "run_governance_stake_slash_contract_tests" \
-    "run_reputation_decay_contract_tests" \
-    "run_reputation_dispute_contract_tests" \
-    "run_token_launch_contract_tests" \
-    "run_treasury_disbursement_contract_tests" \
-    "run_mainnet_cutover_contract_tests" \
-    "run_launch_canary_contract_tests" \
-    "run_bridge_replay_harness" \
-    "run_bridge_replay_deep_lane" \
+    "${COMMON_DISABLED_TARGET_KEYS[@]}" \
     "run_localhost_bridge_demo_evidence_deep_lane" \
-    "run_federated_did_handshake_deep_lane" \
-    "run_rust_live_transport_contract_tests" \
-    "run_python_live_transport_contract_tests" \
-    "run_typescript_live_transport_contract_tests" \
-    "run_live_transport_parity_contract_tests" \
-    "run_live_transport_parity_rust_contract_tests" \
-    "run_localhost_signed_integration_contract_lane_tests" \
-    "run_kamn_core_missing_docs_policy_contract_tests" \
-    "run_sdk_parity_matrix"
+    "run_kamn_core_missing_docs_policy_contract_tests"
   assert_selector_keys_match "$output" "" "docs_only should keep empty" \
     "bridge_replay_suites" \
     "live_transport_parity_languages"
 }
-
 assert_ci_doc_contract_scope() {
   local output="$1"
   local context="$2"
@@ -94,27 +90,13 @@ assert_ci_doc_contract_scope() {
   assert_eq "$(extract_output "$output" "unknown_risk_changed")" "false" "$context should be classified"
   assert_eq "$(extract_output "$output" "test_scope")" "ci-doc-contract" "$context should use ci-doc-contract scope"
 }
-
 assert_ci_doc_contract_trend_scope() {
   local output="$1"
   local context="$2"
   assert_ci_doc_contract_scope "$output" "$context"
   assert_eq "$(extract_output "$output" "run_script_surface_budget_checks")" "true" "$context should run script-surface budget checks"
 }
-
-assert_ci_doc_contract_scope_compact() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_scope "$output" "$context"
-}
-
-assert_ci_doc_contract_trend_scope_compact() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_trend_scope "$output" "$context"
-}
-
-assert_qa_doc_contract_scope_compact() {
+assert_qa_doc_contract_scope() {
   local output="$1"
   local context="$2"
   assert_eq "$(extract_output "$output" "docs_only")" "true" "$context should remain docs-only"
@@ -122,19 +104,6 @@ assert_qa_doc_contract_scope_compact() {
   assert_eq "$(extract_output "$output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "$context must run missing-docs policy checks"
   assert_eq "$(extract_output "$output" "test_scope")" "qa-doc-contract" "$context should set qa-doc-contract scope"
 }
-
-assert_ci_doc_contract_scope_wave() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_scope "$output" "$context"
-}
-
-assert_ci_doc_contract_trend_scope_wave() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_trend_scope "$output" "$context"
-}
-
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -146,7 +115,6 @@ run_selector_with_bridge_deep() {
     GITHUB_BASE_REF=__missing__ \
     bash "$SCRIPT"
 }
-
 run_selector() {
   local changed_files="$1"
   env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
@@ -155,7 +123,6 @@ run_selector() {
     GITHUB_BASE_REF=__missing__ \
     bash "$SCRIPT"
 }
-
 run_selector_with_local_heavy_opt_in() {
   local changed_files="$1"
   local local_heavy_opt_in="${2:-false}"
@@ -165,267 +132,149 @@ run_selector_with_local_heavy_opt_in() {
     GITHUB_BASE_REF=__missing__ \
     bash "$SCRIPT"
 }
-
 run_selector_with_federated_did_deep() {
   local changed_files="$1"
   local federated_did_deep="${2:-false}"
   run_selector_with_bridge_deep "$changed_files" "false" "$federated_did_deep"
 }
-
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
 assert_docs_only_invariants "$docs_output"
 assert_eq "$(extract_output "$docs_output" "kolme_local_heavy_lane_mode")" "not-applicable" "docs_only should keep local-heavy lane mode marker at not-applicable"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
-
 ci_strategy_docs_output="$(run_selector $'docs/ci/strategy.md')"
 assert_eq "$(extract_output "$ci_strategy_docs_output" "docs_only")" "true" "ci strategy docs should remain docs-only"
 assert_eq "$(extract_output "$ci_strategy_docs_output" "run_rust")" "false" "ci strategy docs should avoid rust lane"
 assert_eq "$(extract_output "$ci_strategy_docs_output" "run_ci_tool_checks")" "true" "ci strategy docs must run CI tool contract checks"
 assert_eq "$(extract_output "$ci_strategy_docs_output" "test_scope")" "ci-doc-contract" "ci strategy docs should set ci-doc-contract scope"
-
 wave10_matrix_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_matrix.json')"
 assert_ci_doc_contract_scope "$wave10_matrix_fixture_output" "wave-10 wrapper-family matrix fixture changes"
-
 wave10_threshold_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json')"
 assert_ci_doc_contract_scope "$wave10_threshold_fixture_output" "wave-10 trend threshold fixture changes"
-
 wave10_trend_checker_script_output="$(run_selector $'scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh')"
 assert_ci_doc_contract_trend_scope "$wave10_trend_checker_script_output" "wave-10 trend checker script changes"
-
 assert_non_kolme_wave_wrapper_family_contract_scope() {
   local wave="$1"
   local matrix_output threshold_output trend_output
-
   matrix_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_matrix.json')"
-  assert_ci_doc_contract_scope_wave "$matrix_output" "non-Kolme wave-${wave} wrapper-family matrix fixture changes"
-
+  assert_ci_doc_contract_scope "$matrix_output" "non-Kolme wave-${wave} wrapper-family matrix fixture changes"
   threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_trend_thresholds.json')"
-  assert_ci_doc_contract_scope_wave "$threshold_output" "non-Kolme wave-${wave} trend threshold fixture changes"
-
+  assert_ci_doc_contract_scope "$threshold_output" "non-Kolme wave-${wave} trend threshold fixture changes"
   trend_output="$(run_selector $'scripts/ci/check_non_kolme_wave'"$wave"$'_wrapper_family_budget_trend.sh')"
-  assert_ci_doc_contract_trend_scope_wave "$trend_output" "non-Kolme wave-${wave} trend checker script changes"
+  assert_ci_doc_contract_trend_scope "$trend_output" "non-Kolme wave-${wave} trend checker script changes"
 }
-
 for wave in $(seq 1 19); do
   assert_non_kolme_wave_wrapper_family_contract_scope "$wave"
 done
-
-non_kolme_wave_trend_loc_baseline_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')"
-assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_baseline_output" "non-Kolme wave trend-test LOC baseline fixture changes"
-
-non_kolme_wave_trend_loc_threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')"
-assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_threshold_output" "non-Kolme wave trend-test LOC threshold fixture changes"
-
-non_kolme_wave_trend_loc_checker_output="$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_output" "non-Kolme wave trend-test LOC checker changes"
-
-non_kolme_wave_trend_loc_checker_test_output="$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_test_output" "non-Kolme wave trend-test LOC checker test changes"
-
-ignored_test_baseline_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_baseline.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_baseline_fixture_output" "ignored-test baseline fixture changes"
-
-ignored_test_metadata_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_metadata.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_metadata_fixture_output" "ignored-test metadata fixture changes"
-
-ignored_test_promotion_fixture_output="$(run_selector $'fixtures/ci/ignored_test_promotion_criteria.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_promotion_fixture_output" "ignored-test promotion-criteria fixture changes"
-
-ignored_test_checker_script_output="$(run_selector $'scripts/ci/check_ignored_test_inventory_drift.sh')"
-assert_ci_doc_contract_trend_scope_compact "$ignored_test_checker_script_output" "ignored-test drift checker script changes"
-
-ignored_test_parser_contract_output="$(run_selector $'scripts/ci/test_ignored_test_inventory_parser_contract.sh')"
-assert_ci_doc_contract_trend_scope_compact "$ignored_test_parser_contract_output" "ignored-test parser contract script changes"
-
-non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_dispatcher_script_output" "non-Kolme dispatcher script changes"
-
-non_kolme_compliance_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_compliance_dispatch_matrix_test_output" "non-Kolme compliance dispatcher matrix test changes"
-
-non_kolme_manifest_backed_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_manifest_backed_dispatch_matrix_test_output" "non-Kolme manifest-backed dispatcher matrix test changes"
-
-non_kolme_bridge_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_bridge_dispatch_matrix_test_output" "non-Kolme bridge dispatcher matrix test changes"
-
-non_kolme_sdk_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_sdk_dispatch_matrix_test_output" "non-Kolme sdk dispatcher matrix test changes"
-
-non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme lightweight dispatcher matrix test changes"
-
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')" "non-Kolme wave trend-test LOC baseline fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')" "non-Kolme wave trend-test LOC threshold fixture changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')" "non-Kolme wave trend-test LOC checker changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')" "non-Kolme wave trend-test LOC checker test changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_inventory_baseline.json')" "ignored-test baseline fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_inventory_metadata.json')" "ignored-test metadata fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_promotion_criteria.json')" "ignored-test promotion-criteria fixture changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/check_ignored_test_inventory_drift.sh')" "ignored-test drift checker script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_ignored_test_inventory_parser_contract.sh')" "ignored-test parser contract script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')" "non-Kolme dispatcher script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme compliance dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme manifest-backed dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme bridge dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme sdk dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme lightweight dispatcher matrix test changes"
 for lightweight_wave in {10..19}; do
-  non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")"
-  assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
+  assert_ci_doc_contract_trend_scope "$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
 done
-
-kolme_harness_trend_threshold_output="$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')"
-assert_ci_doc_contract_scope_compact "$kolme_harness_trend_threshold_output" "Kolme harness trend-threshold config changes"
-
-generic_harness_trend_threshold_output="$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_trend_threshold_output" "generic harness trend-threshold config changes"
-
-generic_harness_soft_budget_output="$(run_selector $'.ci/test-harness-loc-soft-budget.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_soft_budget_output" "generic harness soft-budget config changes"
-
-generic_harness_baseline_output="$(run_selector $'.ci/test-harness-loc-baseline.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_baseline_output" "generic harness baseline config changes"
-
-kolme_harness_trend_report_script_output="$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')"
-assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_script_output" "Kolme harness trend-report script changes"
-
-kolme_harness_trend_report_test_script_output="$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')"
-assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_test_script_output" "Kolme harness trend-report test script changes"
-
-hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
-assert_qa_doc_contract_scope_compact "$hardening_docs_output" "engineering hardening docs"
-
-velocity_cadence_docs_output="$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')"
-assert_qa_doc_contract_scope_compact "$velocity_cadence_docs_output" "missing-docs velocity cadence docs"
-
-graduation_batch_docs_output="$(run_selector $'docs/planning/issues/missing-docs-first-batch-graduation-report.md')"
-assert_qa_doc_contract_scope_compact "$graduation_batch_docs_output" "missing-docs graduation batch docs"
-
-module_map_docs_output="$(run_selector $'docs/architecture/kamn-core-module-map.md')"
-assert_qa_doc_contract_scope_compact "$module_map_docs_output" "kamn-core module map docs"
-
-rustdoc_docs_output="$(run_selector $'docs/developer/rustdoc-publishing.md')"
-assert_qa_doc_contract_scope_compact "$rustdoc_docs_output" "rustdoc publishing docs"
-
+assert_ci_doc_contract_scope "$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')" "Kolme harness trend-threshold config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')" "generic harness trend-threshold config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-soft-budget.env')" "generic harness soft-budget config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-baseline.env')" "generic harness baseline config changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')" "Kolme harness trend-report script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')" "Kolme harness trend-report test script changes"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/engineering-hardening-wave.md')" "engineering hardening docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')" "missing-docs velocity cadence docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/issues/missing-docs-first-batch-graduation-report.md')" "missing-docs graduation batch docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/architecture/kamn-core-module-map.md')" "kamn-core module map docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/developer/rustdoc-publishing.md')" "rustdoc publishing docs"
 rustdoc_lane_script_output="$(run_selector $'scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh')"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_rust")" "true" "rustdoc artifact lane script changes should run rust tooling setup"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_ci_tool_checks")" "true" "rustdoc artifact lane script changes must run CI tool checks"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "rustdoc artifact lane script changes must run kamn-core docs-policy lane"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "test_scope")" "full" "ci script changes should keep full fallback scope"
-
 deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
 assert_eq "$(extract_output "$deploy_output" "run_script_surface_budget_checks")" "true" "deploy shell changes must run script-surface budget checks"
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
 assert_selector_keys_match "$deploy_output" "false" "deploy-only changes should keep disabled" \
-  "run_frontend_dashboard_tests" \
-  "run_dashboard_contract_tests" \
-  "run_signer_emulator_contract_tests" \
-  "run_did_registry_contract_tests" \
-  "run_kolme_snapshot_drift_contract_tests" \
-  "run_kolme_version_compatibility_contract_tests" \
-  "run_kolme_triadic_devnet_smoke_contract_tests" \
-  "run_federated_delegation_settlement_contract_tests" \
-  "run_runtime_snapshot_contract_tests" \
-  "run_message_lifecycle_contract_tests" \
-  "run_channel_lifecycle_contract_tests" \
-  "run_task_operation_snapshot_contract_tests" \
-  "run_durable_guard_recovery_contract_tests" \
-  "run_settlement_reconciliation_contract_tests" \
-  "run_soc2_control_evidence_contract_tests" \
-  "run_dsar_legal_hold_contract_tests" \
-  "run_governance_simulation_contract_tests" \
-  "run_governance_stake_slash_contract_tests" \
-  "run_reputation_decay_contract_tests" \
-  "run_reputation_dispute_contract_tests" \
-  "run_token_launch_contract_tests" \
-  "run_treasury_disbursement_contract_tests" \
-  "run_mainnet_cutover_contract_tests" \
-  "run_launch_canary_contract_tests" \
-  "run_bridge_replay_harness" \
-  "run_bridge_replay_deep_lane" \
-  "run_federated_did_handshake_deep_lane" \
-  "run_rust_live_transport_contract_tests" \
-  "run_python_live_transport_contract_tests" \
-  "run_typescript_live_transport_contract_tests" \
-  "run_live_transport_parity_contract_tests" \
-  "run_live_transport_parity_rust_contract_tests" \
-  "run_localhost_signed_integration_contract_lane_tests" \
-  "run_sdk_parity_matrix"
+  "${COMMON_DISABLED_TARGET_KEYS[@]}"
 assert_selector_keys_match "$deploy_output" "" "deploy-only changes should not select" \
   "bridge_replay_suites" \
   "live_transport_parity_languages"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
-
 rollback_runbook_output="$(run_selector $'docs/foundation/upgrade-rollback-runbook.md')"
 assert_eq "$(extract_output "$rollback_runbook_output" "docs_only")" "true" "upgrade rollback runbook updates should remain docs-only"
 assert_eq "$(extract_output "$rollback_runbook_output" "run_signer_emulator_contract_tests")" "true" "upgrade rollback runbook updates must run signer contract lane"
 assert_deploy_scope_triplet "$rollback_runbook_output" "upgrade rollback runbook updates"
-
 deployment_slo_lane_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_lane.sh')"
 assert_deploy_scope_triplet "$deployment_slo_lane_output" "deployment slo/rollback lane changes"
-
 deployment_slo_policy_output="$(run_selector $'scripts/deploy/check_deployment_slo_rollback_policy.sh')"
 assert_deploy_scope_triplet "$deployment_slo_policy_output" "deployment slo/rollback policy checker changes"
-
 deployment_slo_contract_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_contract_lane.sh')"
 assert_deploy_scope_triplet "$deployment_slo_contract_output" "deployment slo/rollback contract lane changes"
-
 # Regression: #2303
 kolme_local_heavy_default_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'false')"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "run_kolme_local_heavy_contract_tests")" "false" "Kolme local-heavy script changes should remain local-only by default"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme local-heavy selector output must expose default non-opt-in state"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "kolme_local_heavy_lane_mode")" "local-only" "Kolme local-heavy selector output must declare local-only lane mode when opt-in is disabled"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme local-heavy script changes should set local-only selector scope by default"
-
 # Regression: #2303
 kolme_local_heavy_opt_in_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'true')"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local-heavy script changes should run heavy lane only with explicit opt-in"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme local-heavy selector output must expose opt-in state when enabled"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "kolme_local_heavy_lane_mode")" "manual-opt-in" "Kolme local-heavy selector output must declare manual-opt-in lane mode when opt-in is enabled"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local-heavy script changes should set local-heavy contract scope when opt-in is enabled"
-
 # Regression: #2330
 kolme_fork_rust_matrix_default_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh' 'false')"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_default_gate_output" "run_kolme_local_heavy_contract_tests")" "false" "Kolme fork rust matrix changes should remain selector-gated local-only by default"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_default_gate_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme fork rust matrix changes should not route into fast-gate version compatibility by default"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_default_gate_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme fork rust matrix default selection should expose non-opt-in state"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_default_gate_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme fork rust matrix default selection should set local-only scope"
-
 # Regression: #2330
 kolme_fork_rust_matrix_opt_in_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh' 'true')"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme fork rust matrix changes should run local-heavy lane with explicit opt-in"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme fork rust matrix opt-in selection should remain outside fast-gate version compatibility lane"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme fork rust matrix opt-in selection should expose opt-in state"
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "test_scope")" "kolme-local-heavy-contract" "Kolme fork rust matrix opt-in selection should set local-heavy contract scope"
-
 gonogo_shared_contract_output="$(run_selector $'scripts/deploy/gonogo_evidence_contract.py')"
 assert_deploy_scope_triplet "$gonogo_shared_contract_output" "go/no-go shared contract changes"
-
 staging_shared_contract_output="$(run_selector $'scripts/deploy/staging_rehearsal_contract.py')"
 assert_deploy_scope_triplet "$staging_shared_contract_output" "staging rehearsal shared contract changes"
-
 dr_shared_contract_output="$(run_selector $'scripts/deploy/dr_evidence_contract.py')"
 assert_deploy_scope_triplet "$dr_shared_contract_output" "DR shared contract changes"
-
 deployment_policy_shared_contract_output="$(run_selector $'scripts/deploy/deployment_slo_rollback_policy_contract.py')"
 assert_deploy_scope_triplet "$deployment_policy_shared_contract_output" "deployment SLO rollback shared policy contract changes"
-
 deployment_lane_shared_contract_output="$(run_selector $'scripts/deploy/deployment_slo_rollback_lane_contract.py')"
 assert_deploy_scope_triplet "$deployment_lane_shared_contract_output" "deployment SLO rollback shared lane contract changes"
-
 # Regression: #463
 runner_output_file="$(mktemp)"
 runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
 rm -f "$runner_output_file"
 assert_eq "$(extract_output "$runner_docs_output" "docs_only")" "true" "runner output env must not hide docs_only"
-
 critical_output="$(run_selector $'.github/workflows/ci-fast-gate.yml')"
 assert_eq "$(extract_output "$critical_output" "run_rust")" "true" "workflow changes must run rust"
 assert_eq "$(extract_output "$critical_output" "run_ci_tool_checks")" "true" "workflow changes must run CI tool checks"
 assert_eq "$(extract_output "$critical_output" "run_script_surface_budget_checks")" "true" "workflow changes must run script-surface budget checks"
 assert_eq "$(extract_output "$critical_output" "test_scope")" "full" "workflow changes must use full scope"
-
 script_surface_budget_config_output="$(run_selector $'.ci/script-surface-budget.env')"
 assert_eq "$(extract_output "$script_surface_budget_config_output" "run_rust")" "false" "script-surface budget config changes should avoid rust lane"
 assert_eq "$(extract_output "$script_surface_budget_config_output" "run_ci_tool_checks")" "false" "script-surface budget config changes should skip CI tool checks"
 assert_eq "$(extract_output "$script_surface_budget_config_output" "run_script_surface_budget_checks")" "true" "script-surface budget config changes must run script-surface budget checks"
 assert_eq "$(extract_output "$script_surface_budget_config_output" "test_scope")" "none" "script-surface budget config changes should keep non-rust scope"
-
 kolme_asymmetry_policy_output="$(run_selector $'.ci/kolme-command-surface-asymmetry-policy.json')"
 assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "run_rust")" "false" "Kolme asymmetry policy-file changes should avoid rust full fallback"
 assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "run_ci_tool_checks")" "true" "Kolme asymmetry policy-file changes must run CI tool checks"
 assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "unknown_risk_changed")" "false" "Kolme asymmetry policy-file changes should be classified"
 assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "test_scope")" "ci-doc-contract" "Kolme asymmetry policy-file changes should use ci-doc-contract scope"
-
 unknown_output="$(run_selector $'config/runtime-policy.json')"
 # Regression: #505
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"
@@ -468,7 +317,6 @@ assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" 
 assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_deep_lane")" "false" "unknown paths should not trigger bridge replay deep lane"
 assert_eq "$(extract_output "$unknown_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "unknown paths should not trigger localhost bridge demo evidence deep lane"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
-
 targeted_output="$(run_selector $'crates/kamn-core/src/bridge_adapter.rs')"
 assert_eq "$(extract_output "$targeted_output" "run_rust")" "true" "rust path should run rust"
 assert_eq "$(extract_output "$targeted_output" "run_ci_tool_checks")" "false" "Regression: #568 non-CI paths should skip CI tool checks"
@@ -500,45 +348,36 @@ assert_eq "$(extract_output "$targeted_output" "bridge_replay_suites")" "bridge_
 assert_eq "$(extract_output "$targeted_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "bridge adapter paths should not trigger kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
-
 core_lib_policy_output="$(run_selector $'crates/kamn-core/src/lib.rs')"
 assert_eq "$(extract_output "$core_lib_policy_output" "run_rust")" "true" "kamn-core lib changes should run rust lane"
 assert_eq "$(extract_output "$core_lib_policy_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "kamn-core lib changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$core_lib_policy_output" "test_scope")" "targeted" "kamn-core lib changes should stay targeted"
-
 graduated_modules_fixture_output="$(run_selector $'fixtures/ci/kamn_core_missing_docs_graduated_modules.txt')"
 assert_eq "$(extract_output "$graduated_modules_fixture_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "graduated modules fixture changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$graduated_modules_fixture_output" "test_scope")" "qa-doc-contract" "graduated modules fixture changes should stay in docs-contract scope"
-
 throughput_contract_output="$(run_selector $'scripts/ci/missing_docs_throughput_report_contract.py')"
 assert_eq "$(extract_output "$throughput_contract_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "throughput contract tool changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$throughput_contract_output" "test_scope")" "full" "throughput contract tool changes should keep full fallback scope"
-
 velocity_guard_script_output="$(run_selector $'scripts/ci/missing_docs_velocity_guard.py')"
 assert_eq "$(extract_output "$velocity_guard_script_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "velocity guard tool changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$velocity_guard_script_output" "test_scope")" "full" "velocity guard tool changes should keep full fallback scope"
-
 graduation_batch_contract_script_output="$(run_selector $'scripts/ci/test_missing_docs_graduation_batch_report_contract.sh')"
 assert_eq "$(extract_output "$graduation_batch_contract_script_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "graduation batch report contract script changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$graduation_batch_contract_script_output" "test_scope")" "full" "graduation batch report contract script changes should keep full fallback scope"
-
 velocity_threshold_fixture_output="$(run_selector $'.ci/kamn-core-missing-docs-velocity-thresholds.json')"
 assert_eq "$(extract_output "$velocity_threshold_fixture_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "velocity threshold config changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$velocity_threshold_fixture_output" "test_scope")" "qa-doc-contract" "velocity threshold config changes should stay in docs-contract scope"
-
 kolme_scaffold_output="$(run_selector $'crates/kamn-kolme/src/lib.rs')"
 assert_eq "$(extract_output "$kolme_scaffold_output" "run_rust")" "true" "kamn-kolme scaffold changes should run rust lane"
 assert_eq "$(extract_output "$kolme_scaffold_output" "test_scope")" "targeted" "kamn-kolme scaffold changes should stay targeted"
 assert_eq "$(extract_output "$kolme_scaffold_output" "run_kolme_version_compatibility_contract_tests")" "false" "kamn-kolme scaffold alone should not force legacy kamn-core Kolme lanes"
 assert_eq "$(extract_output "$kolme_scaffold_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "kamn-kolme scaffold should not trigger kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$kolme_scaffold_output" "changed_manifests")" "crates/kamn-kolme/Cargo.toml" "kamn-kolme paths should resolve to the new crate manifest"
-
 test_cmd="$(extract_output "$targeted_output" "test_cmd")"
 if ! printf '%s\n' "$test_cmd" | grep -q "run_cargo_test_with_quarantine.sh"; then
   echo "targeted test command must use quarantine wrapper" >&2
   exit 1
 fi
-
 python_sdk_output="$(run_selector $'kamn_sdk.py')"
 assert_eq "$(extract_output "$python_sdk_output" "run_rust")" "false" "python sdk-only changes should avoid rust lane"
 assert_eq "$(extract_output "$python_sdk_output" "run_rust_live_transport_contract_tests")" "false" "python sdk-only changes should skip rust live transport lane"
@@ -549,7 +388,6 @@ assert_eq "$(extract_output "$python_sdk_output" "run_live_transport_parity_rust
 assert_eq "$(extract_output "$python_sdk_output" "live_transport_parity_languages")" "" "python sdk-only changes should not select parity languages"
 assert_eq "$(extract_output "$python_sdk_output" "run_sdk_parity_matrix")" "false" "python sdk-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$python_sdk_output" "test_scope")" "sdk-live-python" "python sdk-only changes should set sdk-live-python scope"
-
 typescript_sdk_output="$(run_selector $'packages/kamn-sdk/src/memory_client.ts')"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_rust")" "false" "typescript sdk-only changes should avoid rust lane"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_rust_live_transport_contract_tests")" "false" "typescript sdk-only changes should skip rust live transport lane"
@@ -560,7 +398,6 @@ assert_eq "$(extract_output "$typescript_sdk_output" "run_live_transport_parity_
 assert_eq "$(extract_output "$typescript_sdk_output" "live_transport_parity_languages")" "" "typescript sdk-only changes should not select parity languages"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_sdk_parity_matrix")" "false" "typescript sdk-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$typescript_sdk_output" "test_scope")" "sdk-live-typescript" "typescript sdk-only changes should set sdk-live-typescript scope"
-
 rust_sdk_output="$(run_selector $'crates/kamn-sdk/src/lib.rs')"
 assert_eq "$(extract_output "$rust_sdk_output" "run_rust")" "true" "rust sdk changes should run rust lane"
 assert_eq "$(extract_output "$rust_sdk_output" "run_rust_live_transport_contract_tests")" "true" "rust sdk changes must run rust live transport lane"
@@ -573,7 +410,6 @@ assert_eq "$(extract_output "$rust_sdk_output" "run_sdk_parity_matrix")" "false"
 assert_eq "$(extract_output "$rust_sdk_output" "run_frontend_dashboard_tests")" "false" "sdk-only paths should skip frontend dashboard tests"
 assert_eq "$(extract_output "$rust_sdk_output" "run_bridge_replay_harness")" "false" "sdk-only paths should skip bridge replay harness"
 assert_eq "$(extract_output "$rust_sdk_output" "test_scope")" "targeted" "rust sdk changes should keep targeted rust scope"
-
 local_demo_script_output="$(run_selector $'scripts/sdk/run_local_e2e_demo.sh')"
 assert_eq "$(extract_output "$local_demo_script_output" "run_rust")" "false" "local demo script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$local_demo_script_output" "run_rust_live_transport_contract_tests")" "true" "local demo script-only changes must run rust sdk live transport lane"
@@ -582,7 +418,6 @@ assert_eq "$(extract_output "$local_demo_script_output" "run_typescript_live_tra
 assert_eq "$(extract_output "$local_demo_script_output" "run_live_transport_parity_contract_tests")" "false" "local demo script-only changes should skip parity lane"
 assert_eq "$(extract_output "$local_demo_script_output" "run_sdk_parity_matrix")" "false" "local demo script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$local_demo_script_output" "test_scope")" "sdk-live-rust" "local demo script-only changes should set sdk-live-rust scope"
-
 localhost_signed_demo_script_output="$(run_selector $'scripts/sdk/run_localhost_signed_demo.sh')"
 assert_eq "$(extract_output "$localhost_signed_demo_script_output" "run_rust")" "false" "localhost signed demo script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_demo_script_output" "run_rust_live_transport_contract_tests")" "true" "localhost signed demo script-only changes must run rust sdk live transport lane"
@@ -591,75 +426,63 @@ assert_eq "$(extract_output "$localhost_signed_demo_script_output" "run_typescri
 assert_eq "$(extract_output "$localhost_signed_demo_script_output" "run_live_transport_parity_contract_tests")" "false" "localhost signed demo script-only changes should skip parity lane"
 assert_eq "$(extract_output "$localhost_signed_demo_script_output" "run_sdk_parity_matrix")" "false" "localhost signed demo script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$localhost_signed_demo_script_output" "test_scope")" "sdk-live-rust" "localhost signed demo script-only changes should set sdk-live-rust scope"
-
 localhost_signed_integration_harness_script_output="$(run_selector $'scripts/sdk/run_localhost_signed_integration_harness.sh')"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "run_rust")" "false" "localhost signed integration harness script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration harness script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration harness script-only changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration harness script-only changes should set localhost integration scope"
-
 localhost_signed_integration_harness_shared_contract_output="$(run_selector $'scripts/sdk/localhost_signed_integration_harness_contract.py')"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_rust")" "false" "localhost signed integration shared harness contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration shared harness contract script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared harness contract changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared harness contract changes should set localhost integration scope"
-
 localhost_signed_integration_contract_script_output="$(run_selector $'scripts/sdk/run_localhost_signed_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_rust")" "false" "localhost signed integration contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration contract lane script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration contract lane script-only changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_sdk_parity_matrix")" "false" "localhost signed integration contract lane script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration contract lane script-only changes should set localhost integration scope"
-
 localhost_signed_integration_contract_shared_contract_output="$(run_selector $'scripts/sdk/localhost_signed_integration_contract_lane_contract.py')"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_rust")" "false" "localhost signed integration shared contract lane module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration shared contract lane module script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared contract lane module changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_sdk_parity_matrix")" "false" "localhost signed integration shared contract lane module changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared contract lane module changes should set localhost integration scope"
-
 localhost_signed_integration_policy_checker_output="$(run_selector $'scripts/sdk/check_localhost_signed_integration_evidence_policy.sh')"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "run_rust")" "false" "localhost signed integration policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration policy checker script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration policy checker script-only changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration policy checker script-only changes should set localhost integration scope"
-
 localhost_signed_integration_policy_shared_contract_output="$(run_selector $'scripts/sdk/localhost_signed_integration_evidence_policy_contract.py')"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "run_rust")" "false" "localhost signed integration shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration shared policy contract script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared policy contract changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared policy contract changes should set localhost integration scope"
-
 live_transport_replay_tamper_generator_output="$(run_selector $'scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh')"
 assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_rust")" "false" "live transport replay/tamper generator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper generator script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper generator script-only changes must run localhost signed integration contract lane scope"
 assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper generator script-only changes should set localhost integration scope"
-
 live_transport_replay_tamper_policy_output="$(run_selector $'scripts/sdk/check_live_transport_replay_tamper_policy.sh')"
 assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_rust")" "false" "live transport replay/tamper policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper policy checker script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper policy checker script-only changes must run localhost signed integration contract lane scope"
 assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper policy checker script-only changes should set localhost integration scope"
-
 live_transport_replay_tamper_contract_lane_output="$(run_selector $'scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh')"
 assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_rust")" "false" "live transport replay/tamper contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper contract lane script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper contract lane script-only changes must run localhost signed integration contract lane scope"
 assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper contract lane script-only changes should set localhost integration scope"
-
 live_transport_replay_tamper_fast_lane_output="$(run_selector $'scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh')"
 assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_rust")" "false" "live transport replay/tamper fast lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper fast lane script-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper fast lane script-only changes must run localhost signed integration contract lane scope"
 assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper fast lane script-only changes should set localhost integration scope"
-
 live_transport_replay_tamper_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py')"
 assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_rust")" "false" "live transport replay/tamper shared contract lane module changes should avoid rust lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper shared contract lane module changes should skip rust live transport lane"
 assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper shared contract lane module changes must run localhost signed integration contract lane scope"
 assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper shared contract lane module changes should set localhost integration scope"
-
 tcp_signed_demo_script_output="$(run_selector $'scripts/sdk/run_tcp_signed_relay_demo.sh')"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_rust")" "false" "tcp signed relay demo script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_rust_live_transport_contract_tests")" "true" "tcp signed relay demo script-only changes must run rust sdk live transport lane"
@@ -668,7 +491,6 @@ assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_typescript_liv
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_live_transport_parity_contract_tests")" "false" "tcp signed relay demo script-only changes should skip parity lane"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_sdk_parity_matrix")" "false" "tcp signed relay demo script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "test_scope")" "sdk-live-rust" "tcp signed relay demo script-only changes should set sdk-live-rust scope"
-
 tcp_failover_matrix_script_output="$(run_selector $'scripts/sdk/run_tcp_failover_reconnect_matrix.sh')"
 assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_rust")" "false" "tcp failover matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_rust_live_transport_contract_tests")" "true" "tcp failover matrix script-only changes must run rust sdk live transport lane"
@@ -677,14 +499,12 @@ assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_typescript
 assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_live_transport_parity_contract_tests")" "false" "tcp failover matrix script-only changes should skip parity lane"
 assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_sdk_parity_matrix")" "false" "tcp failover matrix script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "test_scope")" "sdk-live-rust" "tcp failover matrix script-only changes should set sdk-live-rust scope"
-
 tcp_failover_fixture_output="$(run_selector $'fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt')"
 assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_rust")" "false" "tcp failover fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_rust_live_transport_contract_tests")" "true" "tcp failover fixture-only changes must run rust sdk live transport lane"
 assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_live_transport_parity_contract_tests")" "false" "tcp failover fixture-only changes should skip parity lane"
 assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_sdk_parity_matrix")" "false" "tcp failover fixture-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$tcp_failover_fixture_output" "test_scope")" "sdk-live-rust" "tcp failover fixture-only changes should set sdk-live-rust scope"
-
 multi_lang_sdk_output="$(run_selector $'kamn_sdk.py\npackages/kamn-sdk/src/memory_client.ts')"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_rust")" "false" "multi-language non-rust sdk changes should avoid rust lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_rust_live_transport_contract_tests")" "false" "multi-language non-rust sdk changes should skip rust live lane"
@@ -695,13 +515,11 @@ assert_eq "$(extract_output "$multi_lang_sdk_output" "run_live_transport_parity_
 assert_eq "$(extract_output "$multi_lang_sdk_output" "live_transport_parity_languages")" "python,typescript" "multi-language non-rust sdk changes should run parity subset only"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_sdk_parity_matrix")" "false" "multi-language sdk changes should avoid expensive parity matrix lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "test_scope")" "sdk-live-parity" "multi-language sdk changes should set sdk-live-parity scope"
-
 multi_lang_rust_sdk_output="$(run_selector $'crates/kamn-sdk/src/lib.rs\nkamn_sdk.py')"
 assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "run_live_transport_parity_contract_tests")" "true" "rust + python sdk changes must run parity lane"
 assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "run_live_transport_parity_rust_contract_tests")" "true" "rust + python sdk changes should require rust parity setup"
 assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "live_transport_parity_languages")" "rust,python" "rust + python sdk changes should run rust+python parity subset"
 assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "test_scope")" "targeted" "rust + python sdk changes should preserve targeted rust scope"
-
 parity_script_output="$(run_selector $'scripts/sdk/run_live_transport_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$parity_script_output" "run_rust")" "false" "parity script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$parity_script_output" "run_live_transport_parity_contract_tests")" "true" "parity script-only changes must run parity lane"
@@ -709,7 +527,6 @@ assert_eq "$(extract_output "$parity_script_output" "run_live_transport_parity_r
 assert_eq "$(extract_output "$parity_script_output" "live_transport_parity_languages")" "rust,python,typescript" "parity script-only changes should run full parity language set"
 assert_eq "$(extract_output "$parity_script_output" "run_sdk_parity_matrix")" "false" "parity script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$parity_script_output" "test_scope")" "sdk-live-parity" "parity script-only changes should set sdk-live-parity scope"
-
 parity_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_parity_contract_lane_contract.py')"
 assert_eq "$(extract_output "$parity_shared_contract_output" "run_rust")" "false" "parity shared fast-lane module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$parity_shared_contract_output" "run_live_transport_parity_contract_tests")" "true" "parity shared fast-lane module changes should run parity lane"
@@ -717,7 +534,6 @@ assert_eq "$(extract_output "$parity_shared_contract_output" "run_live_transport
 assert_eq "$(extract_output "$parity_shared_contract_output" "live_transport_parity_languages")" "rust,python,typescript" "parity shared fast-lane module changes should run full parity language set"
 assert_eq "$(extract_output "$parity_shared_contract_output" "run_sdk_parity_matrix")" "false" "parity shared fast-lane module changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$parity_shared_contract_output" "test_scope")" "sdk-live-parity" "parity shared fast-lane module changes should set sdk-live-parity scope"
-
 smoke_parity_lane_script_output="$(run_selector $'scripts/sdk/run_live_transport_smoke_parity_lane.sh')"
 assert_eq "$(extract_output "$smoke_parity_lane_script_output" "run_rust")" "false" "sdk smoke parity lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$smoke_parity_lane_script_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity lane script-only changes should run parity lane"
@@ -725,7 +541,6 @@ assert_eq "$(extract_output "$smoke_parity_lane_script_output" "run_live_transpo
 assert_eq "$(extract_output "$smoke_parity_lane_script_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity lane script-only changes should run full parity language set"
 assert_eq "$(extract_output "$smoke_parity_lane_script_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity lane script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_lane_script_output" "test_scope")" "sdk-live-parity" "sdk smoke parity lane script-only changes should set sdk-live-parity scope"
-
 smoke_parity_lane_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_smoke_parity_lane_contract.py')"
 assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "run_rust")" "false" "sdk smoke parity shared lane contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity shared lane contract changes should run parity lane"
@@ -733,7 +548,6 @@ assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "run_liv
 assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity shared lane contract changes should run full parity language set"
 assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity shared lane contract changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_lane_shared_contract_output" "test_scope")" "sdk-live-parity" "sdk smoke parity shared lane contract changes should set sdk-live-parity scope"
-
 smoke_parity_policy_script_output="$(run_selector $'scripts/sdk/check_live_transport_smoke_parity_policy.sh')"
 assert_eq "$(extract_output "$smoke_parity_policy_script_output" "run_rust")" "false" "sdk smoke parity policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$smoke_parity_policy_script_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity policy checker changes should run parity lane"
@@ -741,7 +555,6 @@ assert_eq "$(extract_output "$smoke_parity_policy_script_output" "run_live_trans
 assert_eq "$(extract_output "$smoke_parity_policy_script_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity policy checker changes should run full parity language set"
 assert_eq "$(extract_output "$smoke_parity_policy_script_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity policy checker changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_policy_script_output" "test_scope")" "sdk-live-parity" "sdk smoke parity policy checker changes should set sdk-live-parity scope"
-
 smoke_parity_policy_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_smoke_parity_policy_contract.py')"
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "run_rust")" "false" "sdk smoke parity shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity shared policy contract changes should run parity lane"
@@ -749,7 +562,6 @@ assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "run_l
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity shared policy contract changes should run full parity language set"
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity shared policy contract changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "test_scope")" "sdk-live-parity" "sdk smoke parity shared policy contract changes should set sdk-live-parity scope"
-
 smoke_parity_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_smoke_parity_contract_lane_contract.py')"
 assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_rust")" "false" "sdk smoke parity shared contract lane module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity shared contract lane module changes should run parity lane"
@@ -757,73 +569,61 @@ assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output"
 assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity shared contract lane module changes should run full parity language set"
 assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity shared contract lane module changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "test_scope")" "sdk-live-parity" "sdk smoke parity shared contract lane module changes should set sdk-live-parity scope"
-
 sdk_schema_policy_output="$(run_selector $'scripts/sdk/check_sdk_schema_compatibility_policy.sh')"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "run_rust")" "false" "sdk schema policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema policy checker changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "run_sdk_parity_matrix")" "true" "sdk schema policy checker changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "test_scope")" "sdk" "sdk schema policy checker changes should set sdk scope"
-
 sdk_schema_generator_output="$(run_selector $'scripts/sdk/generate_sdk_schema_compatibility_evidence_bundle.sh')"
 assert_eq "$(extract_output "$sdk_schema_generator_output" "run_rust")" "false" "sdk schema evidence generator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_generator_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema evidence generator changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_schema_generator_output" "run_sdk_parity_matrix")" "true" "sdk schema evidence generator changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_generator_output" "test_scope")" "sdk" "sdk schema evidence generator changes should set sdk scope"
-
 sdk_schema_shared_contract_output="$(run_selector $'scripts/sdk/sdk_schema_compatibility_contract.py')"
 assert_eq "$(extract_output "$sdk_schema_shared_contract_output" "run_rust")" "false" "sdk schema shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema shared contract changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_schema_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk schema shared contract changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_shared_contract_output" "test_scope")" "sdk" "sdk schema shared contract changes should set sdk scope"
-
 sdk_schema_contract_lane_output="$(run_selector $'scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh')"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_rust")" "false" "sdk schema contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema contract lane changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_sdk_parity_matrix")" "true" "sdk schema contract lane changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "test_scope")" "sdk" "sdk schema contract lane changes should set sdk scope"
-
 sdk_schema_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/sdk_schema_compatibility_contract_lane_contract.py')"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_rust")" "false" "sdk schema shared contract lane module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema shared contract lane module changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk schema shared contract lane module changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "test_scope")" "sdk" "sdk schema shared contract lane module changes should set sdk scope"
-
 sdk_fixture_drift_checker_output="$(run_selector $'scripts/sdk/check_example_fixture_drift.py')"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_rust")" "false" "sdk fixture drift checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift checker changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift checker changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "test_scope")" "sdk" "sdk fixture drift checker changes should set sdk scope"
-
 sdk_fixture_drift_policy_checker_output="$(run_selector $'scripts/sdk/check_example_fixture_drift_policy.sh')"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_rust")" "false" "sdk fixture drift policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift policy checker changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift policy checker changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "test_scope")" "sdk" "sdk fixture drift policy checker changes should set sdk scope"
-
 sdk_fixture_drift_policy_checker_shared_contract_output="$(run_selector $'scripts/sdk/example_fixture_drift_policy_contract.py')"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_rust")" "false" "sdk fixture drift shared policy module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift shared policy module changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift shared policy module changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "test_scope")" "sdk" "sdk fixture drift shared policy module changes should set sdk scope"
-
 sdk_fixture_drift_contract_lane_output="$(run_selector $'scripts/sdk/run_example_fixture_drift_contract_lane.sh')"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_rust")" "false" "sdk fixture drift contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift contract lane changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift contract lane changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "test_scope")" "sdk" "sdk fixture drift contract lane changes should set sdk scope"
-
 sdk_fixture_drift_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/example_fixture_drift_contract_lane_contract.py')"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_rust")" "false" "sdk fixture drift shared contract lane module script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift shared contract lane module changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift shared contract lane module changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "test_scope")" "sdk" "sdk fixture drift shared contract lane module changes should set sdk scope"
-
 sdk_parity_wave_doc_output="$(run_selector $'docs/planning/sdk-parity-wave.md')"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "run_rust")" "false" "sdk parity wave doc-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "run_live_transport_parity_contract_tests")" "false" "sdk parity wave doc-only changes should not run live transport parity lane"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "run_sdk_parity_matrix")" "true" "sdk parity wave doc changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "test_scope")" "sdk" "sdk parity wave doc changes should set sdk scope"
-
 shared_matrix_output="$(run_selector $'fixtures/sdk_parity/register_validation_cases.json')"
 assert_eq "$(extract_output "$shared_matrix_output" "run_rust")" "false" "shared sdk matrix fixture changes should avoid rust lane"
 assert_eq "$(extract_output "$shared_matrix_output" "run_rust_live_transport_contract_tests")" "false" "shared sdk matrix fixture changes should skip rust live lane"
@@ -834,7 +634,6 @@ assert_eq "$(extract_output "$shared_matrix_output" "run_live_transport_parity_r
 assert_eq "$(extract_output "$shared_matrix_output" "live_transport_parity_languages")" "" "shared sdk matrix fixture changes should not select parity languages"
 assert_eq "$(extract_output "$shared_matrix_output" "run_sdk_parity_matrix")" "true" "shared sdk matrix fixture changes must run sdk parity matrix"
 assert_eq "$(extract_output "$shared_matrix_output" "test_scope")" "sdk" "shared sdk matrix fixture changes should set sdk scope"
-
 bridge_script_output="$(run_selector $'scripts/bridge/run_bridge_replay_matrix.sh')"
 assert_eq "$(extract_output "$bridge_script_output" "run_rust")" "false" "bridge script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_script_output" "run_frontend_dashboard_tests")" "false" "bridge script-only changes should skip frontend dashboard tests"
@@ -843,94 +642,78 @@ assert_eq "$(extract_output "$bridge_script_output" "run_bridge_replay_deep_lane
 assert_eq "$(extract_output "$bridge_script_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "bridge script-only changes should not run localhost bridge demo deep lane by default"
 assert_eq "$(extract_output "$bridge_script_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_script_output" "test_scope")" "bridge" "bridge script-only changes should set bridge scope"
-
 bridge_replay_redaction_shared_contract_output="$(run_selector $'scripts/bridge/bridge_replay_redaction_contract.py')"
 assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_rust")" "false" "bridge replay/redaction shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_bridge_replay_harness")" "true" "bridge replay/redaction shared contract changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "bridge replay/redaction shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "test_scope")" "bridge" "bridge replay/redaction shared contract changes should set bridge scope"
-
 bridge_adapter_conformance_shared_contract_output="$(run_selector $'scripts/bridge/bridge_adapter_conformance_contract.py')"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "run_rust")" "false" "bridge adapter conformance shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "run_bridge_replay_harness")" "true" "bridge adapter conformance shared contract changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "bridge adapter conformance shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "test_scope")" "bridge" "bridge adapter conformance shared contract changes should set bridge scope"
-
 cross_chain_outbound_shared_contract_output="$(run_selector $'scripts/bridge/cross_chain_outbound_intent_contract.py')"
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_rust")" "false" "cross-chain outbound intent shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_bridge_replay_harness")" "true" "cross-chain outbound intent shared contract changes must run bridge replay harness"
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "cross-chain outbound intent shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "test_scope")" "bridge" "cross-chain outbound intent shared contract changes should set bridge scope"
-
 localhost_bridge_demo_shared_contract_output="$(run_selector $'scripts/bridge/localhost_bridge_demo_contract.py')"
 assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_rust")" "false" "localhost bridge demo shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_bridge_replay_harness")" "true" "localhost bridge demo shared contract changes must run bridge replay harness"
 assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "localhost bridge demo shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "localhost bridge demo shared contract changes should not run localhost bridge demo deep lane by default"
 assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "test_scope")" "bridge" "localhost bridge demo shared contract changes should set bridge scope"
-
 bridge_ingress_lane_output="$(run_selector $'scripts/bridge/run_bridge_ingress_relay_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_rust")" "false" "bridge ingress lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_bridge_replay_harness")" "true" "bridge ingress lane script-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge ingress lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "test_scope")" "bridge" "bridge ingress lane script-only changes should set bridge scope"
-
 bridge_outbound_lane_output="$(run_selector $'scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_rust")" "false" "bridge outbound lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_bridge_replay_harness")" "true" "bridge outbound lane script-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "test_scope")" "bridge" "bridge outbound lane script-only changes should set bridge scope"
-
 bridge_localhost_demo_lane_output="$(run_selector $'scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "run_rust")" "false" "bridge localhost demo lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "run_bridge_replay_harness")" "true" "bridge localhost demo lane script-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "bridge localhost demo lane script-only changes should not run localhost bridge demo deep lane by default"
 assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge localhost demo lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "test_scope")" "bridge" "bridge localhost demo lane script-only changes should set bridge scope"
-
 bridge_localhost_demo_evidence_lane_output="$(run_selector $'scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_localhost_demo_evidence_lane_output" "run_rust")" "false" "bridge localhost demo evidence lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_localhost_demo_evidence_lane_output" "run_bridge_replay_harness")" "true" "bridge localhost demo evidence lane script-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_localhost_demo_evidence_lane_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "bridge localhost demo evidence lane script-only changes should not run deep lane by default"
 assert_eq "$(extract_output "$bridge_localhost_demo_evidence_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge localhost demo evidence lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_localhost_demo_evidence_lane_output" "test_scope")" "bridge" "bridge localhost demo evidence lane script-only changes should set bridge scope"
-
 bridge_deep_requested_output="$(run_selector_with_bridge_deep $'scripts/bridge/run_bridge_replay_redaction_deep_lane.sh' true)"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_harness")" "true" "bridge deep lane request should keep bridge replay harness enabled"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_deep_lane")" "true" "bridge deep lane request should enable bridge replay deep lane output"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "run_localhost_bridge_demo_evidence_deep_lane")" "true" "bridge deep lane request should enable localhost bridge demo evidence deep lane output"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "test_scope")" "bridge-deep" "bridge deep lane request should mark bridge-deep scope"
-
 bridge_localhost_demo_deep_requested_output="$(run_selector_with_bridge_deep $'scripts/bridge/run_localhost_bridge_demo_evidence_deep_lane.sh' true)"
 assert_eq "$(extract_output "$bridge_localhost_demo_deep_requested_output" "run_bridge_replay_harness")" "true" "localhost bridge demo deep lane request should keep bridge replay harness enabled"
 assert_eq "$(extract_output "$bridge_localhost_demo_deep_requested_output" "run_bridge_replay_deep_lane")" "true" "localhost bridge demo deep lane request should enable bridge replay deep lane output"
 assert_eq "$(extract_output "$bridge_localhost_demo_deep_requested_output" "run_localhost_bridge_demo_evidence_deep_lane")" "true" "localhost bridge demo deep lane request should enable localhost bridge demo evidence deep lane output"
 assert_eq "$(extract_output "$bridge_localhost_demo_deep_requested_output" "test_scope")" "bridge-deep" "localhost bridge demo deep lane request should mark bridge-deep scope"
-
 telegram_bridge_output="$(run_selector $'crates/kamn-core/src/telegram_bridge.rs')"
 assert_eq "$(extract_output "$telegram_bridge_output" "run_bridge_replay_harness")" "true" "telegram bridge changes must run bridge replay harness"
 assert_eq "$(extract_output "$telegram_bridge_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge" "telegram bridge changes should select telegram subset plus bridge adapter suite"
-
 discord_bridge_output="$(run_selector $'crates/kamn-core/src/discord_bridge.rs')"
 assert_eq "$(extract_output "$discord_bridge_output" "run_bridge_replay_harness")" "true" "discord bridge changes must run bridge replay harness"
 assert_eq "$(extract_output "$discord_bridge_output" "bridge_replay_suites")" "bridge_adapter,discord_bridge" "discord bridge changes should select discord subset plus bridge adapter suite"
-
 cross_chain_bridge_output="$(run_selector $'crates/kamn-core/src/cross_chain_bridge.rs')"
 assert_eq "$(extract_output "$cross_chain_bridge_output" "run_bridge_replay_harness")" "true" "cross-chain bridge changes must run bridge replay harness"
 assert_eq "$(extract_output "$cross_chain_bridge_output" "bridge_replay_suites")" "bridge_adapter,cross_chain_bridge" "cross-chain bridge changes should select cross-chain subset plus bridge adapter suite"
-
 bridge_outbound_fixture_output="$(run_selector $'fixtures/bridge_outbound_intent/approval_retry_cases.json')"
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "run_rust")" "false" "bridge outbound fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "run_bridge_replay_harness")" "true" "bridge outbound fixture-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound fixture-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "test_scope")" "bridge" "bridge outbound fixture-only changes should set bridge scope"
-
 bridge_conformance_fixture_output="$(run_selector $'fixtures/bridge_adapter_conformance/request_receipt_schema_cases.json')"
 assert_eq "$(extract_output "$bridge_conformance_fixture_output" "run_rust")" "false" "bridge conformance fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_conformance_fixture_output" "run_bridge_replay_harness")" "true" "bridge conformance fixture-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_conformance_fixture_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge conformance fixture-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_conformance_fixture_output" "test_scope")" "bridge" "bridge conformance fixture-only changes should set bridge scope"
-
 frontend_output="$(run_selector $'packages/kamn-dashboard/tests/dashboard.test.ts')"
 assert_eq "$(extract_output "$frontend_output" "run_rust")" "false" "frontend-only changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_output" "run_frontend_dashboard_tests")" "true" "frontend-only changes must run dashboard tests"
@@ -938,244 +721,203 @@ assert_eq "$(extract_output "$frontend_output" "run_dashboard_contract_tests")" 
 assert_eq "$(extract_output "$frontend_output" "run_bridge_replay_harness")" "false" "frontend-only changes should skip bridge harness"
 assert_eq "$(extract_output "$frontend_output" "run_sdk_parity_matrix")" "false" "frontend-only changes should skip sdk matrix"
 assert_eq "$(extract_output "$frontend_output" "test_scope")" "frontend" "frontend-only changes should set frontend scope"
-
 frontend_matrix_lane_output="$(run_selector $'scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh')"
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "run_rust")" "false" "frontend shell matrix lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix lane script changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix lane script changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "test_scope")" "frontend" "frontend shell matrix lane script changes should set frontend scope"
-
 frontend_matrix_shared_lane_output="$(run_selector $'scripts/frontend/dashboard_shell_determinism_matrix_lane_contract.py')"
 assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_rust")" "false" "frontend shell matrix shared lane contract changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix shared lane contract changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix shared lane contract changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "test_scope")" "frontend" "frontend shell matrix shared lane contract changes should set frontend scope"
-
 frontend_matrix_policy_output="$(run_selector $'scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh')"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "run_rust")" "false" "frontend shell matrix policy script changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix policy script changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix policy script changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "test_scope")" "frontend" "frontend shell matrix policy script changes should set frontend scope"
-
 frontend_matrix_shared_policy_output="$(run_selector $'scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py')"
 assert_eq "$(extract_output "$frontend_matrix_shared_policy_output" "run_rust")" "false" "frontend shell matrix shared policy contract changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_policy_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix shared policy contract changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_shared_policy_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix shared policy contract changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_policy_output" "test_scope")" "frontend" "frontend shell matrix shared policy contract changes should set frontend scope"
-
 frontend_matrix_contract_output="$(run_selector $'scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh')"
 assert_eq "$(extract_output "$frontend_matrix_contract_output" "run_rust")" "false" "frontend shell matrix contract script changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_contract_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix contract script changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_contract_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix contract script changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_contract_output" "test_scope")" "frontend" "frontend shell matrix contract script changes should set frontend scope"
-
 frontend_matrix_shared_contract_lane_output="$(run_selector $'scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py')"
 assert_eq "$(extract_output "$frontend_matrix_shared_contract_lane_output" "run_rust")" "false" "frontend shell matrix shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_contract_lane_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix shared contract-lane changes must run dashboard tests"
 assert_eq "$(extract_output "$frontend_matrix_shared_contract_lane_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix shared contract-lane changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_shared_contract_lane_output" "test_scope")" "frontend" "frontend shell matrix shared contract-lane changes should set frontend scope"
-
 dashboard_ui_doc_output="$(run_selector $'docs/foundation/operator-dashboard-ui-mvp.md')"
 assert_eq "$(extract_output "$dashboard_ui_doc_output" "run_rust")" "false" "dashboard UI docs should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_ui_doc_output" "run_frontend_dashboard_tests")" "true" "dashboard UI docs should run frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_ui_doc_output" "run_dashboard_contract_tests")" "true" "dashboard UI docs must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_ui_doc_output" "test_scope")" "frontend" "dashboard UI docs should retain frontend scope"
-
 dashboard_contract_output="$(run_selector $'docs/foundation/operator-dashboard-backend-apis.md')"
 assert_eq "$(extract_output "$dashboard_contract_output" "run_rust")" "false" "dashboard contract docs should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard contract docs should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_contract_output" "run_dashboard_contract_tests")" "true" "dashboard contract docs must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_contract_output" "test_scope")" "frontend-contract" "dashboard contract docs should set frontend-contract scope"
-
 dashboard_backend_session_lane_output="$(run_selector $'scripts/dashboard/run_backend_session_auth_freshness_lane.sh')"
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "run_rust")" "false" "dashboard backend session/auth freshness lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness lane script changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness lane script changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness lane script changes should set frontend-contract scope"
-
 dashboard_backend_session_shared_lane_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_lane_contract.py')"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_rust")" "false" "dashboard backend session/auth freshness shared lane contract changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared lane contract changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared lane contract changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared lane contract changes should set frontend-contract scope"
-
 dashboard_backend_session_policy_output="$(run_selector $'scripts/dashboard/check_backend_session_auth_freshness_policy.sh')"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_rust")" "false" "dashboard backend session/auth freshness policy checker changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness policy checker changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness policy checker changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness policy checker changes should set frontend-contract scope"
-
 dashboard_backend_session_shared_policy_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_policy_contract.py')"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_rust")" "false" "dashboard backend session/auth freshness shared policy contract changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared policy contract changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared policy contract changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared policy contract changes should set frontend-contract scope"
-
 dashboard_backend_session_contract_output="$(run_selector $'scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh')"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_rust")" "false" "dashboard backend session/auth freshness contract lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness contract lane changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness contract lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness contract lane changes should set frontend-contract scope"
-
 dashboard_backend_session_shared_contract_lane_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py')"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_rust")" "false" "dashboard backend session/auth freshness shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared contract-lane changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared contract-lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared contract-lane changes should set frontend-contract scope"
-
 dashboard_stale_error_lane_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_lane.sh')"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_rust")" "false" "dashboard stale/error budget lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget lane changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "test_scope")" "frontend-contract" "dashboard stale/error budget lane changes should set frontend-contract scope"
-
 dashboard_stale_error_shared_lane_output="$(run_selector $'scripts/dashboard/stale_error_budget_lane_contract.py')"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_lane_output" "run_rust")" "false" "dashboard stale/error budget shared lane contract changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget shared lane contract changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_lane_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget shared lane contract changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_lane_output" "test_scope")" "frontend-contract" "dashboard stale/error budget shared lane contract changes should set frontend-contract scope"
-
 dashboard_stale_error_policy_output="$(run_selector $'scripts/dashboard/check_dashboard_stale_error_budget_policy.sh')"
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_rust")" "false" "dashboard stale/error budget policy checker changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget policy checker changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget policy checker changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "test_scope")" "frontend-contract" "dashboard stale/error budget policy checker changes should set frontend-contract scope"
-
 dashboard_stale_error_shared_policy_output="$(run_selector $'scripts/dashboard/stale_error_budget_policy_contract.py')"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_rust")" "false" "dashboard stale/error budget shared policy contract changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget shared policy contract changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget shared policy contract changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "test_scope")" "frontend-contract" "dashboard stale/error budget shared policy contract changes should set frontend-contract scope"
-
 dashboard_stale_error_contract_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh')"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_rust")" "false" "dashboard stale/error budget contract lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget contract lane changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget contract lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "test_scope")" "frontend-contract" "dashboard stale/error budget contract lane changes should set frontend-contract scope"
-
 dashboard_stale_error_shared_contract_lane_output="$(run_selector $'scripts/dashboard/stale_error_budget_contract_lane_contract.py')"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_rust")" "false" "dashboard stale/error shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error shared contract-lane changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error shared contract-lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "test_scope")" "frontend-contract" "dashboard stale/error shared contract-lane changes should set frontend-contract scope"
-
 dashboard_manifest_output="$(run_selector $'scripts/framework/manifests/dashboard_backend_session_auth_freshness_contract_lane.json')"
 assert_eq "$(extract_output "$dashboard_manifest_output" "run_rust")" "false" "dashboard manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_manifest_output" "run_frontend_dashboard_tests")" "false" "dashboard manifest changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$dashboard_manifest_output" "run_dashboard_contract_tests")" "true" "dashboard manifest changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_manifest_output" "test_scope")" "frontend-contract" "dashboard manifest changes should set frontend-contract scope"
-
 signer_contract_output="$(run_selector $'docs/foundation/signer-backend-abstraction.md')"
 assert_eq "$(extract_output "$signer_contract_output" "run_rust")" "false" "signer contract docs should avoid rust lane"
 assert_eq "$(extract_output "$signer_contract_output" "run_signer_emulator_contract_tests")" "true" "signer contract docs must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_contract_output" "test_scope")" "signer-contract" "signer contract docs should set signer-contract scope"
-
 signer_rust_output="$(run_selector $'crates/kamn-core/src/signer_backend.rs')"
 assert_eq "$(extract_output "$signer_rust_output" "run_rust")" "true" "signer backend rust changes should run rust lane"
 assert_eq "$(extract_output "$signer_rust_output" "run_signer_emulator_contract_tests")" "true" "signer backend rust changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_rust_output" "test_scope")" "targeted" "signer backend rust changes should stay targeted"
-
 signer_contract_script_output="$(run_selector $'scripts/signer/run_signer_emulator_contract_lane.sh')"
 assert_eq "$(extract_output "$signer_contract_script_output" "run_rust")" "false" "signer contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_contract_script_output" "test_scope")" "signer-contract" "signer contract script changes should set signer-contract scope"
-
 signer_policy_contract_script_output="$(run_selector $'scripts/signer/run_signer_policy_contract_lane.sh')"
 assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_rust")" "false" "signer policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer policy contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_policy_contract_script_output" "test_scope")" "signer-contract" "signer policy contract script changes should set signer-contract scope"
-
 signer_key_lifecycle_contract_script_output="$(run_selector $'scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_rust")" "false" "signer key lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer key lifecycle contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "test_scope")" "signer-contract" "signer key lifecycle contract script changes should set signer-contract scope"
-
 signer_incident_recovery_contract_script_output="$(run_selector $'scripts/signer/run_signer_incident_recovery_contract_lane.sh')"
 assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "run_rust")" "false" "signer incident recovery contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer incident recovery contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "test_scope")" "signer-contract" "signer incident recovery contract script changes should set signer-contract scope"
-
 signer_incident_recovery_deep_script_output="$(run_selector $'scripts/signer/run_signer_incident_recovery_deep_lane.sh')"
 assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "run_rust")" "false" "signer incident recovery deep script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "run_signer_emulator_contract_tests")" "true" "signer incident recovery deep script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "test_scope")" "signer-contract" "signer incident recovery deep script changes should set signer-contract scope"
-
 did_contract_docs_output="$(run_selector $'docs/foundation/did-registry-transactions.md')"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_rust")" "false" "did contract docs should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_did_registry_contract_tests")" "true" "did contract docs must run did registry contract lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "false" "did registry docs should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "test_scope")" "did-contract" "did contract docs should set did-contract scope"
-
 did_key_lifecycle_docs_output="$(run_selector $'docs/foundation/key-lifecycle-audit-trails.md')"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_rust")" "false" "lifecycle audit docs should avoid rust lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_signer_emulator_contract_tests")" "true" "lifecycle audit docs must run signer emulator contract lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_did_registry_contract_tests")" "true" "lifecycle audit docs must run did registry contract lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle audit docs should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "test_scope")" "signer-contract" "lifecycle audit docs should set signer-contract scope"
-
 did_contract_rust_output="$(run_selector $'crates/kamn-core/src/did_registry.rs')"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_rust")" "true" "did registry rust changes should run rust lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_did_registry_contract_tests")" "true" "did registry rust changes must run did registry contract lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_federated_did_handshake_contract_tests")" "false" "did registry rust changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "test_scope")" "targeted" "did registry rust changes should stay targeted"
-
 did_contract_script_output="$(run_selector $'scripts/did/run_did_registry_contract_lane.sh')"
 assert_eq "$(extract_output "$did_contract_script_output" "run_rust")" "false" "did contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_script_output" "run_did_registry_contract_tests")" "true" "did contract script changes must run did registry contract lane"
 assert_eq "$(extract_output "$did_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "did registry script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_script_output" "test_scope")" "did-contract" "did contract script changes should set did-contract scope"
-
 lifecycle_operator_binding_contract_script_output="$(run_selector $'scripts/did/run_lifecycle_operator_binding_contract_lane.sh')"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_rust")" "false" "lifecycle operator-binding contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_did_registry_contract_tests")" "true" "lifecycle operator-binding contract script changes must run did registry contract lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle operator-binding contract script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "test_scope")" "did-contract" "lifecycle operator-binding contract script changes should set did-contract scope"
-
 lifecycle_operator_binding_shared_contract_output="$(run_selector $'scripts/did/lifecycle_operator_binding_contract.py')"
 assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_rust")" "false" "lifecycle operator-binding shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_did_registry_contract_tests")" "true" "lifecycle operator-binding shared contract changes must run did registry contract lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle operator-binding shared contract changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "test_scope")" "did-contract" "lifecycle operator-binding shared contract changes should set did-contract scope"
-
 agent_interop_wave_doc_output="$(run_selector $'docs/planning/agent-interop-wave.md')"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_rust")" "false" "agent interop planning doc-only changes should avoid rust lane"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_did_registry_contract_tests")" "true" "agent interop planning docs must run did registry contract lane"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_federated_did_handshake_contract_tests")" "false" "agent interop planning docs should not run federated DID handshake lane by default"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "test_scope")" "did-contract" "agent interop planning docs should set did-contract scope"
-
 federated_did_contract_docs_output="$(run_selector $'docs/foundation/did-method.md')"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_rust")" "false" "federated DID docs should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_did_registry_contract_tests")" "false" "federated DID docs should not trigger did registry contract lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID docs must run federated DID handshake contract lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID docs should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "test_scope")" "federated-did-contract" "federated DID docs should set federated-did-contract scope"
-
 federated_did_contract_script_output="$(run_selector $'scripts/did/run_federated_did_handshake_contract_lane.sh')"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_rust")" "false" "federated DID contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_did_registry_contract_tests")" "false" "federated DID contract script changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID contract script changes must run federated DID handshake lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID contract script changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "test_scope")" "federated-did-contract" "federated DID contract script changes should set federated-did-contract scope"
-
 federated_did_shared_contract_output="$(run_selector $'scripts/did/federated_did_handshake_contract.py')"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_rust")" "false" "federated DID shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_did_registry_contract_tests")" "false" "federated DID shared contract changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID shared contract changes must run federated DID handshake lane"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "test_scope")" "federated-did-contract" "federated DID shared contract changes should set federated-did-contract scope"
-
 federated_did_contract_fixture_output="$(run_selector $'fixtures/federated_did_handshake/partition_replay_cases.json')"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_rust")" "false" "federated DID fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_did_registry_contract_tests")" "false" "federated DID fixture changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID fixture changes must run federated DID handshake lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID fixture changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "test_scope")" "federated-did-contract" "federated DID fixture changes should set federated-did-contract scope"
-
 federated_did_deep_requested_output="$(run_selector_with_federated_did_deep $'scripts/did/run_federated_did_handshake_deep_lane.sh' 'true')"
 assert_eq "$(extract_output "$federated_did_deep_requested_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID deep lane request should keep federated handshake contract lane enabled"
 assert_eq "$(extract_output "$federated_did_deep_requested_output" "run_federated_did_handshake_deep_lane")" "true" "federated DID deep lane request should enable deep lane output"
 assert_eq "$(extract_output "$federated_did_deep_requested_output" "test_scope")" "federated-did-deep" "federated DID deep lane request should set federated-did-deep scope"
-
 kolme_contract_docs_output="$(run_selector $'docs/research/kolme-upstream-compatibility.md')"
 assert_eq "$(extract_output "$kolme_contract_docs_output" "run_rust")" "false" "Kolme compatibility docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_contract_docs_output" "run_kolme_snapshot_drift_contract_tests")" "true" "Kolme compatibility docs must run Kolme snapshot drift contract lane"
@@ -1183,91 +925,78 @@ assert_eq "$(extract_output "$kolme_contract_docs_output" "run_kolme_version_com
 assert_eq "$(extract_output "$kolme_contract_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme compatibility docs should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_contract_docs_output" "run_federated_did_handshake_contract_tests")" "false" "Kolme compatibility docs should not run federated DID handshake lane"
 assert_eq "$(extract_output "$kolme_contract_docs_output" "test_scope")" "kolme-contract" "Kolme compatibility docs should set kolme-contract scope"
-
 kolme_contract_script_output="$(run_selector $'scripts/kolme/check_snapshot_drift.py')"
 assert_eq "$(extract_output "$kolme_contract_script_output" "run_rust")" "false" "Kolme checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "true" "Kolme checker script changes must run Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme checker script changes should skip Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme checker script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_contract_script_output" "test_scope")" "kolme-contract" "Kolme checker script changes should set kolme-contract scope"
-
 kolme_contract_fixture_output="$(run_selector $'fixtures/kolme_compatibility/snapshot_candidate_drift.json')"
 assert_eq "$(extract_output "$kolme_contract_fixture_output" "run_rust")" "false" "Kolme fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_contract_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "true" "Kolme fixture changes must run Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_contract_fixture_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme fixture changes should skip Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_contract_fixture_output" "test_scope")" "kolme-contract" "Kolme fixture changes should set kolme-contract scope"
-
 kolme_version_contract_docs_output="$(run_selector $'docs/planning/kolme-integration-roadmap.md')"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_rust")" "false" "Kolme version roadmap docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme version roadmap docs should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme version roadmap docs must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version roadmap docs should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "test_scope")" "kolme-version-contract" "Kolme version roadmap docs should set kolme-version-contract scope"
-
 kolme_runtime_commit_client_docs_output="$(run_selector $'docs/foundation/kolme-runtime-commit-client.md')"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_rust")" "false" "Kolme runtime commit client docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit client docs should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit client docs must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit client docs should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit client docs should set kolme-version-contract scope"
-
 kolme_version_contract_script_output="$(run_selector $'scripts/kolme/validate_version_compatibility.py')"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_rust")" "false" "Kolme version validator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme version validator script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme version validator script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version validator script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme version validator script changes should set kolme-version-contract scope"
-
 kolme_fork_generator_script_output="$(run_selector $'scripts/kolme/generate_fork_compatibility_evidence.py')"
 assert_eq "$(extract_output "$kolme_fork_generator_script_output" "run_rust")" "false" "Kolme fork evidence generator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fork_generator_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fork evidence generator script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fork_generator_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fork evidence generator script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fork_generator_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fork evidence generator script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fork_generator_script_output" "test_scope")" "kolme-version-contract" "Kolme fork evidence generator script changes should set kolme-version-contract scope"
-
 kolme_fork_policy_checker_script_output="$(run_selector $'scripts/kolme/check_fork_compatibility_policy.py')"
 assert_eq "$(extract_output "$kolme_fork_policy_checker_script_output" "run_rust")" "false" "Kolme fork policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fork_policy_checker_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fork policy checker script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fork_policy_checker_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fork policy checker script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fork_policy_checker_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fork policy checker script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fork_policy_checker_script_output" "test_scope")" "kolme-version-contract" "Kolme fork policy checker script changes should set kolme-version-contract scope"
-
 kolme_version_deep_lane_script_output="$(run_selector $'scripts/kolme/run_version_compatibility_replay_deep_lane.sh')"
 assert_eq "$(extract_output "$kolme_version_deep_lane_script_output" "run_rust")" "false" "Kolme version deep lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_version_deep_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme version deep lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_version_deep_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme version deep lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_version_deep_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version deep lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_deep_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme version deep lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_sync_script_output="$(run_selector $'scripts/kolme/run_local_fork_sync_metadata_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_sync_script_output" "run_rust")" "false" "Kolme local fork sync script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork sync script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork sync script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork sync script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork sync script changes should set kolme-version-contract scope"
-
 kolme_local_fork_sync_test_script_output="$(run_selector $'scripts/kolme/test_run_local_fork_sync_metadata_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_sync_test_script_output" "run_rust")" "false" "Kolme local fork sync test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork sync test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork sync test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork sync test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_sync_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork sync test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_smoke_script_output="$(run_selector $'scripts/kolme/run_local_fork_smoke_evidence_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_script_output" "run_rust")" "false" "Kolme local fork smoke script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork smoke script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork smoke script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork smoke script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork smoke script changes should set kolme-version-contract scope"
-
 kolme_local_fork_smoke_test_script_output="$(run_selector $'scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_test_script_output" "run_rust")" "false" "Kolme local fork smoke test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork smoke test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork smoke test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork smoke test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_smoke_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork smoke test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_rust_matrix_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "run_rust")" "false" "Kolme local fork rust matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork rust matrix script changes should skip Kolme snapshot drift contract lane"
@@ -1275,7 +1004,6 @@ assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "run_k
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local fork rust matrix script changes must route through local-heavy selector-gated lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork rust matrix script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local fork rust matrix script changes should set local-heavy selector scope when opt-in is enabled"
-
 kolme_local_fork_rust_matrix_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "run_rust")" "false" "Kolme local fork rust matrix test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork rust matrix test script changes should skip Kolme snapshot drift contract lane"
@@ -1283,7 +1011,6 @@ assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local fork rust matrix test script changes must route through local-heavy selector-gated lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork rust matrix test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local fork rust matrix test script changes should set local-heavy selector scope when opt-in is enabled"
-
 kolme_local_fork_rust_matrix_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py')"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output" "run_rust")" "false" "Kolme local fork rust matrix policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork rust matrix policy script changes should skip Kolme snapshot drift contract lane"
@@ -1291,7 +1018,6 @@ assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local fork rust matrix policy script changes must route through local-heavy selector-gated lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork rust matrix policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_policy_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local fork rust matrix policy script changes should set local-heavy selector scope when opt-in is enabled"
-
 kolme_local_fork_rust_matrix_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_output" "run_rust")" "false" "Kolme local fork rust matrix contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork rust matrix contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1299,7 +1025,6 @@ assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local fork rust matrix contract lane script changes must route through local-heavy selector-gated lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork rust matrix contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local fork rust matrix contract lane script changes should set local-heavy selector scope when opt-in is enabled"
-
 kolme_local_fork_rust_matrix_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork rust matrix contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork rust matrix contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1307,35 +1032,30 @@ assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_sc
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local fork rust matrix contract lane test script changes must route through local-heavy selector-gated lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork rust matrix contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_rust_matrix_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local fork rust matrix contract lane test script changes should set local-heavy selector scope when opt-in is enabled"
-
 kolme_local_api_probe_script_output="$(run_selector $'scripts/kolme/run_local_kolme_api_probe_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_api_probe_script_output" "run_rust")" "false" "Kolme local api probe script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local api probe script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local api probe script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local api probe script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_script_output" "test_scope")" "kolme-version-contract" "Kolme local api probe script changes should set kolme-version-contract scope"
-
 kolme_local_api_probe_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_api_probe_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_api_probe_test_script_output" "run_rust")" "false" "Kolme local api probe test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local api probe test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local api probe test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local api probe test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_api_probe_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local api probe test script changes should set kolme-version-contract scope"
-
 kolme_local_api_smoke_script_output="$(run_selector $'scripts/kolme/run_local_kolme_api_smoke_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_api_smoke_script_output" "run_rust")" "false" "Kolme local api smoke script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local api smoke script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local api smoke script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local api smoke script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_script_output" "test_scope")" "kolme-version-contract" "Kolme local api smoke script changes should set kolme-version-contract scope"
-
 kolme_local_api_smoke_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_api_smoke_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_rust")" "false" "Kolme local api smoke test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local api smoke test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local api smoke test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local api smoke test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local api smoke test script changes should set kolme-version-contract scope"
-
 kolme_local_runtime_commit_live_script_output="$(run_selector $'scripts/kolme/run_local_runtime_commit_live_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_rust")" "false" "Kolme local runtime commit live script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live script changes should skip Kolme snapshot drift contract lane"
@@ -1343,7 +1063,6 @@ assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "ru
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local runtime commit live script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local runtime commit live script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_runtime_commit_live_test_script_output="$(run_selector $'scripts/kolme/test_run_local_runtime_commit_live_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_rust")" "false" "Kolme local runtime commit live test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live test script changes should skip Kolme snapshot drift contract lane"
@@ -1351,7 +1070,6 @@ assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local runtime commit live test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local runtime commit live test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_runtime_commit_live_policy_script_output="$(run_selector $'scripts/kolme/check_local_runtime_commit_live_evidence_policy.py')"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_output" "run_rust")" "false" "Kolme local runtime commit live evidence policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live evidence policy script changes should skip Kolme snapshot drift contract lane"
@@ -1359,7 +1077,6 @@ assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_outp
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local runtime commit live evidence policy script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live evidence policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_policy_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local runtime commit live evidence policy script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_runtime_commit_live_finality_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_script_output" "run_rust")" "false" "Kolme local runtime commit live finality evidence contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live finality evidence contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1367,7 +1084,6 @@ assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local runtime commit live finality evidence contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live finality evidence contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local runtime commit live finality evidence contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_runtime_commit_live_finality_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_test_script_output" "run_rust")" "false" "Kolme local runtime commit live finality evidence contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live finality evidence contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1375,7 +1091,6 @@ assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local runtime commit live finality evidence contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live finality evidence contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_runtime_commit_live_finality_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local runtime commit live finality evidence contract lane test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_native_api_parity_live_proof_script_output="$(run_selector $'scripts/kolme/run_local_native_api_parity_live_proof_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_output" "run_rust")" "false" "Kolme local native API parity live proof script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local native API parity live proof script changes should skip Kolme snapshot drift contract lane"
@@ -1383,7 +1098,6 @@ assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_ou
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local native API parity live proof script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local native API parity live proof script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local native API parity live proof script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_native_api_parity_live_proof_policy_script_output="$(run_selector $'scripts/kolme/check_local_native_api_parity_live_proof_policy.py')"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_script_output" "run_rust")" "false" "Kolme local native API parity live proof policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local native API parity live proof policy script changes should skip Kolme snapshot drift contract lane"
@@ -1391,7 +1105,6 @@ assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_sc
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local native API parity live proof policy script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local native API parity live proof policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_policy_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local native API parity live proof policy script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_native_api_parity_live_proof_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_script_output" "run_rust")" "false" "Kolme local native API parity live proof contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local native API parity live proof contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1399,7 +1112,6 @@ assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local native API parity live proof contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local native API parity live proof contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local native API parity live proof contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_native_api_parity_live_proof_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "run_rust")" "false" "Kolme local native API parity live proof contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local native API parity live proof contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1407,63 +1119,54 @@ assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local native API parity live proof contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local native API parity live proof contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local native API parity live proof contract lane test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_live_api_conformance_harness_script_output="$(run_selector $'scripts/kolme/run_local_kolme_live_api_conformance_harness.sh')"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_harness_script_output" "run_rust")" "false" "Kolme local live API conformance harness script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_harness_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local live API conformance harness script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_harness_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local live API conformance harness script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_harness_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local live API conformance harness script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_harness_script_output" "test_scope")" "kolme-version-contract" "Kolme local live API conformance harness script changes should set kolme-version-contract scope"
-
 kolme_local_live_api_conformance_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_live_api_conformance_policy.py')"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_policy_script_output" "run_rust")" "false" "Kolme local live API conformance policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local live API conformance policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local live API conformance policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local live API conformance policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme local live API conformance policy script changes should set kolme-version-contract scope"
-
 kolme_local_live_api_conformance_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_script_output" "run_rust")" "false" "Kolme local live API conformance contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local live API conformance contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local live API conformance contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local live API conformance contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local live API conformance contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_live_api_conformance_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_test_script_output" "run_rust")" "false" "Kolme local live API conformance contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local live API conformance contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local live API conformance contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local live API conformance contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_live_api_conformance_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local live API conformance contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_bootstrap_readiness_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_lane_script_output" "run_rust")" "false" "Kolme local fork bootstrap/readiness lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork bootstrap/readiness lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork bootstrap/readiness lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork bootstrap/readiness lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork bootstrap/readiness lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_bootstrap_readiness_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py')"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_policy_script_output" "run_rust")" "false" "Kolme local fork bootstrap/readiness policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork bootstrap/readiness policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork bootstrap/readiness policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork bootstrap/readiness policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork bootstrap/readiness policy script changes should set kolme-version-contract scope"
-
 kolme_local_fork_bootstrap_readiness_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_script_output" "run_rust")" "false" "Kolme local fork bootstrap/readiness contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork bootstrap/readiness contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork bootstrap/readiness contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork bootstrap/readiness contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork bootstrap/readiness contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork bootstrap/readiness contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork bootstrap/readiness contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork bootstrap/readiness contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork bootstrap/readiness contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_bootstrap_readiness_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork bootstrap/readiness contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_kamn_live_runtime_integration_lane_script_output="$(run_selector $'scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_script_output" "run_rust")" "false" "Kolme local KAMN live runtime integration lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN live runtime integration lane script changes should skip Kolme snapshot drift contract lane"
@@ -1471,7 +1174,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_scr
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN live runtime integration lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN live runtime integration lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN live runtime integration lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_integration_policy_script_output="$(run_selector $'scripts/kolme/check_local_kamn_live_runtime_integration_policy.py')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_script_output" "run_rust")" "false" "Kolme local KAMN live runtime integration policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN live runtime integration policy script changes should skip Kolme snapshot drift contract lane"
@@ -1479,7 +1181,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_s
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN live runtime integration policy script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN live runtime integration policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_policy_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN live runtime integration policy script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_integration_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_script_output" "run_rust")" "false" "Kolme local KAMN live runtime integration contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN live runtime integration contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1487,7 +1188,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN live runtime integration contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN live runtime integration contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN live runtime integration contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "run_rust")" "false" "Kolme local KAMN live runtime integration contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN live runtime integration contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1495,7 +1195,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN live runtime integration contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN live runtime integration contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN live runtime integration contract lane test script changes should set kolme-local-heavy-contract scope"
-
 # Regression: #2337
 kolme_local_kamn_live_runtime_integration_real_node_profile_default_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh' 'false')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "run_rust")" "false" "Kolme local KAMN real-node integration profile test script changes should avoid rust lane by default"
@@ -1503,7 +1202,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_nod
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme local KAMN real-node integration profile default selection should expose non-opt-in state"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme local KAMN real-node integration profile test script changes should not leak into version compatibility lane by default"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme local KAMN real-node integration profile default selection should set local-only scope"
-
 # Regression: #2337
 kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh' 'true')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "run_rust")" "false" "Kolme local KAMN real-node integration profile test script changes should avoid rust lane when local-heavy opt-in is enabled"
@@ -1511,7 +1209,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_nod
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme local KAMN real-node integration profile opt-in selection should expose opt-in state"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme local KAMN real-node integration profile test script changes should not leak into version compatibility lane when local-heavy opt-in is enabled"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node integration profile opt-in selection should set local-heavy contract scope"
-
 kolme_local_kamn_live_runtime_real_node_profile_policy_script_output="$(run_selector $'scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_rust")" "false" "Kolme local KAMN real-node profile policy script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN real-node profile policy script changes should skip Kolme snapshot drift contract lane"
@@ -1519,7 +1216,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_po
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN real-node profile policy script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN real-node profile policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node profile policy script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output" "run_rust")" "false" "Kolme local KAMN real-node profile contract lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN real-node profile contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1527,7 +1223,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_co
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN real-node profile contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN real-node profile contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node profile contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output="$(run_selector $'scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output" "run_rust")" "false" "Kolme local KAMN real-node profile policy test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN real-node profile policy test script changes should skip Kolme snapshot drift contract lane"
@@ -1535,7 +1230,6 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_po
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN real-node profile policy test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN real-node profile policy test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node profile policy test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output" "run_rust")" "false" "Kolme local KAMN real-node profile contract lane test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN real-node profile contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1543,147 +1237,126 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_co
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN real-node profile contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN real-node profile contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node profile contract lane test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_fork_process_lifecycle_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_lane_script_output" "run_rust")" "false" "Kolme local fork process lifecycle lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork process lifecycle lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork process lifecycle lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork process lifecycle lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork process lifecycle lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_process_lifecycle_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py')"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_policy_script_output" "run_rust")" "false" "Kolme local fork process lifecycle policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork process lifecycle policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork process lifecycle policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork process lifecycle policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork process lifecycle policy script changes should set kolme-version-contract scope"
-
 kolme_local_fork_process_lifecycle_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_script_output" "run_rust")" "false" "Kolme local fork process lifecycle contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork process lifecycle contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork process lifecycle contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork process lifecycle contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork process lifecycle contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_process_lifecycle_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork process lifecycle contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork process lifecycle contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork process lifecycle contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork process lifecycle contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_process_lifecycle_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork process lifecycle contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_profile_preflight_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_script_output" "run_rust")" "false" "Kolme local fork profile preflight lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork profile preflight lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork profile preflight lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_profile_preflight_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py')"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_policy_script_output" "run_rust")" "false" "Kolme local fork profile preflight policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork profile preflight policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork profile preflight policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight policy script changes should set kolme-version-contract scope"
-
 kolme_local_fork_profile_preflight_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_script_output" "run_rust")" "false" "Kolme local fork profile preflight contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork profile preflight contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork profile preflight contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_profile_preflight_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_test_script_output" "run_rust")" "false" "Kolme local fork profile preflight lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork profile preflight lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork profile preflight lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_profile_preflight_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork profile preflight contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork profile preflight contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork profile preflight contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_self_test_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_rust")" "false" "Kolme local fork self-test contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork self-test contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork self-test contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork self-test contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork self-test contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_self_test_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork self-test contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork self-test contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork self-test contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork self-test contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork self-test contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_script_output" "run_rust")" "false" "Kolme local fork portability preflight lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_policy_script_output="$(run_selector $'scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_script_output" "run_rust")" "false" "Kolme local fork portability preflight policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight policy script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_script_output" "run_rust")" "false" "Kolme local fork portability preflight contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight contract lane script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_test_script_output" "run_rust")" "false" "Kolme local fork portability preflight lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight lane test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_policy_test_script_output="$(run_selector $'scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_test_script_output" "run_rust")" "false" "Kolme local fork portability preflight policy test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight policy test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight policy test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight policy test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_policy_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight policy test script changes should set kolme-version-contract scope"
-
 kolme_local_fork_portability_preflight_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork portability preflight contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork portability preflight contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork portability preflight contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork portability preflight contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_portability_preflight_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork portability preflight contract lane test script changes should set kolme-version-contract scope"
-
 kolme_fast_gate_native_api_parity_contract_lane_script_output="$(run_selector $'scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_rust")" "false" "Kolme fast-gate native API parity contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity contract lane script changes should set kolme-version-contract scope"
-
 kolme_fast_gate_native_api_parity_policy_script_output="$(run_selector $'scripts/kolme/check_fast_gate_native_api_parity_policy.py')"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_rust")" "false" "Kolme fast-gate native API parity policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity policy script changes should set kolme-version-contract scope"
-
 kolme_fast_gate_native_api_parity_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_rust")" "false" "Kolme fast-gate native API parity contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity contract lane test script changes should set kolme-version-contract scope"
-
 kolme_local_heavy_matrix_script_output="$(run_selector $'scripts/kolme/run_local_heavy_validation_matrix.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_rust")" "false" "Kolme local heavy matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix script changes should skip Kolme snapshot drift contract lane"
@@ -1691,7 +1364,6 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_script_output="$(run_selector $'scripts/kolme/run_local_bootstrap_health_checks.sh')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "run_rust")" "false" "Kolme local bootstrap script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap script changes should skip Kolme snapshot drift contract lane"
@@ -1699,7 +1371,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "run_kolme_ve
 assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_test_script_output="$(run_selector $'scripts/kolme/test_run_local_bootstrap_health_checks.sh')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "run_rust")" "false" "Kolme local bootstrap test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap test script changes should skip Kolme snapshot drift contract lane"
@@ -1707,7 +1378,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "run_kol
 assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_checker_script_output="$(run_selector $'scripts/kolme/check_local_bootstrap_health_policy.py')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "run_rust")" "false" "Kolme local bootstrap checker script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap checker script changes should skip Kolme snapshot drift contract lane"
@@ -1715,7 +1385,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "run_
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap checker script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap checker script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap checker script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_contract_script_output="$(run_selector $'scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "run_rust")" "false" "Kolme local bootstrap contract lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1723,7 +1392,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "run
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_checker_test_script_output="$(run_selector $'scripts/kolme/test_check_local_bootstrap_health_policy.sh')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" "run_rust")" "false" "Kolme local bootstrap checker test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap checker test script changes should skip Kolme snapshot drift contract lane"
@@ -1731,7 +1399,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" 
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap checker test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap checker test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_checker_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap checker test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_bootstrap_contract_test_script_output="$(run_selector $'scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output" "run_rust")" "false" "Kolme local bootstrap contract lane test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local bootstrap contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1739,7 +1406,6 @@ assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local bootstrap contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local bootstrap contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_bootstrap_contract_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local bootstrap contract lane test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_script_output="$(run_selector $'scripts/kolme/run_local_e2e_integration_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_e2e_script_output" "run_rust")" "false" "Kolme local E2E lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E lane script changes should skip Kolme snapshot drift contract lane"
@@ -1747,7 +1413,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_script_output" "run_kolme_version_
 assert_eq "$(extract_output "$kolme_local_e2e_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_test_script_output="$(run_selector $'scripts/kolme/test_run_local_e2e_integration_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "run_rust")" "false" "Kolme local E2E test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E test script changes should skip Kolme snapshot drift contract lane"
@@ -1755,7 +1420,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "run_kolme_ver
 assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_checker_script_output="$(run_selector $'scripts/kolme/check_local_e2e_integration_policy.py')"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "run_rust")" "false" "Kolme local E2E policy checker changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E policy checker changes should skip Kolme snapshot drift contract lane"
@@ -1763,7 +1427,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "run_kolme_
 assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E policy checker changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E policy checker changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E policy checker changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_contract_script_output="$(run_selector $'scripts/kolme/run_local_e2e_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "run_rust")" "false" "Kolme local E2E contract lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1771,7 +1434,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "run_kolme
 assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_checker_test_script_output="$(run_selector $'scripts/kolme/test_check_local_e2e_integration_policy.sh')"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "run_rust")" "false" "Kolme local E2E policy checker test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E policy checker test script changes should skip Kolme snapshot drift contract lane"
@@ -1779,7 +1441,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "run_k
 assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E policy checker test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E policy checker test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_checker_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E policy checker test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_e2e_contract_test_script_output="$(run_selector $'scripts/kolme/test_run_local_e2e_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "run_rust")" "false" "Kolme local E2E contract lane test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local E2E contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1787,7 +1448,6 @@ assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "run_
 assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local E2E contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local E2E contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_e2e_contract_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local E2E contract lane test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_heavy_matrix_test_script_output="$(run_selector $'scripts/kolme/test_run_local_heavy_validation_matrix.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "run_rust")" "false" "Kolme local heavy matrix test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix test script changes should skip Kolme snapshot drift contract lane"
@@ -1795,7 +1455,6 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "run_
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_heavy_matrix_checker_script_output="$(run_selector $'scripts/kolme/check_local_heavy_validation_matrix_policy.py')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "run_rust")" "false" "Kolme local heavy matrix checker script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix checker script changes should skip Kolme snapshot drift contract lane"
@@ -1803,7 +1462,6 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "r
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix checker script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix checker script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix checker script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_heavy_matrix_contract_script_output="$(run_selector $'scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "run_rust")" "false" "Kolme local heavy matrix contract lane script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix contract lane script changes should skip Kolme snapshot drift contract lane"
@@ -1811,7 +1469,6 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix contract lane script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix contract lane script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_heavy_matrix_checker_test_script_output="$(run_selector $'scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_output" "run_rust")" "false" "Kolme local heavy matrix checker test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix checker test script changes should skip Kolme snapshot drift contract lane"
@@ -1819,7 +1476,6 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_outpu
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix checker test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix checker test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_checker_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix checker test script changes should set kolme-local-heavy-contract scope"
-
 kolme_local_heavy_matrix_contract_test_script_output="$(run_selector $'scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_output" "run_rust")" "false" "Kolme local heavy matrix contract lane test script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix contract lane test script changes should skip Kolme snapshot drift contract lane"
@@ -1827,21 +1483,18 @@ assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_outp
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local heavy matrix contract lane test script changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local heavy matrix contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_contract_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local heavy matrix contract lane test script changes should set kolme-local-heavy-contract scope"
-
 local_lane_summary_helper_output="$(run_selector $'scripts/framework/generate_local_lane_summary.py')"
 assert_eq "$(extract_output "$local_lane_summary_helper_output" "run_rust")" "false" "Local-lane summary helper changes should avoid rust lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-lane summary helper changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_output" "run_kolme_version_compatibility_contract_tests")" "true" "Local-lane summary helper changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-lane summary helper changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_output" "test_scope")" "kolme-version-contract" "Local-lane summary helper changes should set kolme-version-contract scope"
-
 local_lane_summary_helper_test_output="$(run_selector $'scripts/framework/test_generate_local_lane_summary.sh')"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_rust")" "false" "Local-lane summary helper test changes should avoid rust lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-lane summary helper test changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Local-lane summary helper test changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-lane summary helper test changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "test_scope")" "kolme-version-contract" "Local-lane summary helper test changes should set kolme-version-contract scope"
-
 local_heavy_optin_helper_output="$(run_selector $'scripts/framework/assert_local_heavy_opt_in.sh')"
 assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_rust")" "false" "Local-heavy opt-in helper changes should avoid rust lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-heavy opt-in helper changes should skip Kolme snapshot drift contract lane"
@@ -1849,7 +1502,6 @@ assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_versio
 assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_local_heavy_contract_tests")" "true" "Local-heavy opt-in helper changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-heavy opt-in helper changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_output" "test_scope")" "kolme-local-heavy-contract" "Local-heavy opt-in helper changes should set kolme-local-heavy-contract scope"
-
 local_heavy_optin_helper_test_output="$(run_selector $'scripts/framework/test_assert_local_heavy_opt_in.sh')"
 assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_rust")" "false" "Local-heavy opt-in helper test changes should avoid rust lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-heavy opt-in helper test changes should skip Kolme snapshot drift contract lane"
@@ -1857,492 +1509,408 @@ assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_v
 assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_local_heavy_contract_tests")" "true" "Local-heavy opt-in helper test changes must run dedicated Kolme local-heavy contract lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-heavy opt-in helper test changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "test_scope")" "kolme-local-heavy-contract" "Local-heavy opt-in helper test changes should set kolme-local-heavy-contract scope"
-
 kolme_devnet_ops_docs_test_output="$(run_selector $'crates/kamn-core/tests/kolme_devnet_ops_docs.rs')"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_rust")" "true" "Kolme devnet ops docs rust test changes should run rust lane"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet ops docs rust test changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme devnet ops docs rust test changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme devnet ops docs rust test changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "test_scope")" "targeted" "Kolme devnet ops docs rust test changes should keep targeted scope"
-
 kolme_fork_fixture_output="$(run_selector $'fixtures/kolme_compatibility/fork_compatibility_cases.json')"
 assert_eq "$(extract_output "$kolme_fork_fixture_output" "run_rust")" "false" "Kolme fork compatibility fixture changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fork_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fork compatibility fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_fork_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fork compatibility fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_fork_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fork compatibility fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_fork_fixture_output" "test_scope")" "kolme-version-contract" "Kolme fork compatibility fixture changes should set kolme-version-contract scope"
-
 kolme_version_contract_fixture_output="$(run_selector $'fixtures/kolme_compatibility/version_compatibility_cases.json')"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_rust")" "false" "Kolme version fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme version fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme version fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "test_scope")" "kolme-version-contract" "Kolme version fixture changes should set kolme-version-contract scope"
-
 kolme_runtime_decomposition_parity_fixture_output="$(run_selector $'fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json')"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_rust")" "false" "Kolme runtime decomposition parity fixture changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity fixture changes should set kolme-version-contract scope"
-
 kolme_runtime_decomposition_parity_checker_output="$(run_selector $'scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py')"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_rust")" "false" "Kolme runtime decomposition parity checker changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity checker changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity checker changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity checker changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity checker changes should set kolme-version-contract scope"
-
 kolme_runtime_decomposition_parity_checker_test_output="$(run_selector $'scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh')"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_rust")" "false" "Kolme runtime decomposition parity checker test changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity checker test changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity checker test changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity checker test changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity checker test changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_contract_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_rust")" "false" "Kolme runtime commit contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit contract script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit contract script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit contract script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit contract script changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_adapter_contract_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_adapter_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_runtime_commit_adapter_contract_script_output" "run_rust")" "false" "Kolme runtime commit adapter contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_adapter_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit adapter contract script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_adapter_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit adapter contract script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_adapter_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit adapter contract script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_adapter_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit adapter contract script changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_fixture_output="$(run_selector $'fixtures/kolme_commit/runtime_commit_request_cases.txt')"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_rust")" "false" "Kolme runtime commit fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit fixture changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_finality_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_finality.rs')"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_rust")" "true" "Kolme runtime commit finality rust tests should run rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit finality rust tests should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit finality rust tests must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit finality rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "test_scope")" "targeted" "Kolme runtime commit finality rust tests should keep targeted scope"
-
 kolme_runtime_commit_client_docs_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs')"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_rust")" "true" "Kolme runtime commit client docs rust tests should run rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit client docs rust tests should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit client docs rust tests must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit client docs rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "test_scope")" "targeted" "Kolme runtime commit client docs rust tests should keep targeted scope"
-
 kolme_runtime_commit_notifications_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_notifications.rs')"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "run_rust")" "true" "Kolme runtime commit notifications rust tests should run rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit notifications rust tests should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit notifications rust tests must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit notifications rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "test_scope")" "targeted" "Kolme runtime commit notifications rust tests should keep targeted scope"
-
 kolme_runtime_commit_block_fallback_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_block_fallback.rs')"
 assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_rust")" "true" "Kolme runtime commit block fallback rust tests should run rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit block fallback rust tests should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit block fallback rust tests must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit block fallback rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "test_scope")" "targeted" "Kolme runtime commit block fallback rust tests should keep targeted scope"
-
 kolme_runtime_commit_replay_policy_script_output="$(run_selector $'scripts/kolme/check_runtime_commit_replay_policy.py')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_rust")" "false" "Kolme runtime commit replay policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit replay policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit replay policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit replay policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit replay policy script changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_replay_matrix_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_replay_tamper_matrix.py')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_matrix_script_output" "run_rust")" "false" "Kolme runtime commit replay matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit replay matrix script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_matrix_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit replay matrix script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_matrix_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit replay matrix script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_matrix_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit replay matrix script changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_replay_lane_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_replay_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_lane_script_output" "run_rust")" "false" "Kolme runtime commit replay lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit replay lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit replay lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit replay lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit replay lane script changes should set kolme-version-contract scope"
-
 kolme_runtime_commit_replay_fixture_output="$(run_selector $'fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_fixture_output" "run_rust")" "false" "Kolme runtime commit replay fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit replay fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit replay fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit replay fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit replay fixture changes should set kolme-version-contract scope"
-
 kolme_nonce_broadcast_policy_script_output="$(run_selector $'scripts/kolme/check_nonce_broadcast_parity_policy.py')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_policy_script_output" "run_rust")" "false" "Kolme nonce/broadcast parity policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme nonce/broadcast parity policy script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme nonce/broadcast parity policy script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme nonce/broadcast parity policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme nonce/broadcast parity policy script changes should set kolme-version-contract scope"
-
 kolme_nonce_broadcast_matrix_script_output="$(run_selector $'scripts/kolme/run_nonce_broadcast_parity_matrix.py')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_matrix_script_output" "run_rust")" "false" "Kolme nonce/broadcast parity matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme nonce/broadcast parity matrix script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_matrix_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme nonce/broadcast parity matrix script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_matrix_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme nonce/broadcast parity matrix script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_matrix_script_output" "test_scope")" "kolme-version-contract" "Kolme nonce/broadcast parity matrix script changes should set kolme-version-contract scope"
-
 kolme_nonce_broadcast_contract_lane_script_output="$(run_selector $'scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_script_output" "run_rust")" "false" "Kolme nonce/broadcast parity contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme nonce/broadcast parity contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme nonce/broadcast parity contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme nonce/broadcast parity contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme nonce/broadcast parity contract lane script changes should set kolme-version-contract scope"
-
 kolme_nonce_broadcast_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_test_script_output" "run_rust")" "false" "Kolme nonce/broadcast parity contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme nonce/broadcast parity contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme nonce/broadcast parity contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme nonce/broadcast parity contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme nonce/broadcast parity contract lane test script changes should set kolme-version-contract scope"
-
 kolme_notifications_consumer_contract_lane_script_output="$(run_selector $'scripts/kolme/run_notifications_consumer_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_script_output" "run_rust")" "false" "Kolme notifications consumer contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme notifications consumer contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme notifications consumer contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme notifications consumer contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme notifications consumer contract lane script changes should set kolme-version-contract scope"
-
 kolme_notifications_consumer_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_notifications_consumer_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_rust")" "false" "Kolme notifications consumer contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme notifications consumer contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme notifications consumer contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme notifications consumer contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme notifications consumer contract lane test script changes should set kolme-version-contract scope"
-
 kolme_block_fallback_contract_lane_script_output="$(run_selector $'scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_rust")" "false" "Kolme block fallback reconciliation contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme block fallback reconciliation contract lane script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme block fallback reconciliation contract lane script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme block fallback reconciliation contract lane script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme block fallback reconciliation contract lane script changes should set kolme-version-contract scope"
-
 kolme_block_fallback_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_rust")" "false" "Kolme block fallback reconciliation contract lane test script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme block fallback reconciliation contract lane test script changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme block fallback reconciliation contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme block fallback reconciliation contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme block fallback reconciliation contract lane test script changes should set kolme-version-contract scope"
-
 kolme_nonce_broadcast_fixture_output="$(run_selector $'fixtures/kolme_commit/nonce_broadcast_parity_cases.json')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "run_rust")" "false" "Kolme nonce/broadcast parity fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme nonce/broadcast parity fixture changes should skip Kolme snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme nonce/broadcast parity fixture changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme nonce/broadcast parity fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "test_scope")" "kolme-version-contract" "Kolme nonce/broadcast parity fixture changes should set kolme-version-contract scope"
-
 kolme_devnet_contract_docs_output="$(run_selector $'docs/planning/kolme-devnet-ops.md')"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_rust")" "false" "Kolme devnet ops docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet ops docs should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme devnet ops docs must run version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "true" "Kolme devnet ops docs must run triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "test_scope")" "kolme-version-contract" "Kolme devnet ops docs should set kolme-version-contract scope"
-
 kolme_devnet_contract_script_output="$(run_selector $'scripts/kolme/run_triadic_devnet_smoke.sh')"
 assert_eq "$(extract_output "$kolme_devnet_contract_script_output" "run_rust")" "false" "Kolme devnet smoke script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet smoke script changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme devnet smoke script changes should skip version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "true" "Kolme devnet smoke script changes must run triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_script_output" "test_scope")" "kolme-devnet-contract" "Kolme devnet smoke script changes should set kolme-devnet-contract scope"
-
 kolme_devnet_contract_fixture_output="$(run_selector $'fixtures/kolme_compatibility/devnet_smoke_markers.json')"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_rust")" "false" "Kolme devnet smoke fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet smoke fixture changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme devnet smoke fixture changes should skip version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "true" "Kolme devnet smoke fixture changes must run triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "test_scope")" "kolme-devnet-contract" "Kolme devnet smoke fixture changes should set kolme-devnet-contract scope"
-
 kolme_lane_matrix_policy_script_output="$(run_selector $'scripts/kolme/check_lane_migration_matrix_policy.py')"
 assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_rust")" "false" "Kolme lane migration matrix policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme lane migration matrix policy script changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme lane migration matrix policy script changes must run version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme lane migration matrix policy script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme lane migration matrix policy script changes should set kolme-version-contract scope"
-
 kolme_lane_matrix_fixture_output="$(run_selector $'fixtures/kolme_compatibility/lane_migration_matrix.json')"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_rust")" "false" "Kolme lane migration matrix fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme lane migration matrix fixture changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme lane migration matrix fixture changes must run version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme lane migration matrix fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "test_scope")" "kolme-version-contract" "Kolme lane migration matrix fixture changes should set kolme-version-contract scope"
-
 kolme_manifest_contract_fixture_output="$(run_selector $'scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json')"
 assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_rust")" "false" "Kolme manifest fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme manifest fixture changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme manifest fixture changes must run version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme manifest fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "test_scope")" "kolme-version-contract" "Kolme manifest fixture changes should set kolme-version-contract scope"
-
 kolme_manifest_contract_script_output="$(run_selector $'scripts/kolme/contracts/notifications_consumer_contract_lane.py')"
 assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_rust")" "false" "Kolme manifest contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme manifest contract script changes should skip snapshot drift contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme manifest contract script changes must run version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme manifest contract script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme manifest contract script changes should set kolme-version-contract scope"
-
 runtime_contract_docs_output="$(run_selector $'docs/foundation/runtime-network.md')"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false" "runtime contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "test_scope")" "runtime-contract" "runtime contract docs should set runtime-contract scope"
-
 runtime_invariant_strategy_docs_output="$(run_selector $'docs/testing/invariant-and-fuzz-strategy.md')"
 assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "run_rust")" "false" "runtime invariant/fuzz strategy docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime invariant/fuzz strategy docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "test_scope")" "runtime-contract" "runtime invariant/fuzz strategy docs should set runtime-contract scope"
-
 runtime_watchdog_contract_docs_output="$(run_selector $'docs/foundation/runtime-watchdog-attestation.md')"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_rust")" "false" "runtime watchdog contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime watchdog contract docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "test_scope")" "runtime-contract" "runtime watchdog contract docs should set runtime-contract scope"
-
 live_network_wave_docs_output="$(run_selector $'docs/planning/live-network-wave.md')"
 assert_eq "$(extract_output "$live_network_wave_docs_output" "run_rust")" "false" "live-network wave docs should avoid rust lane"
 assert_eq "$(extract_output "$live_network_wave_docs_output" "run_runtime_snapshot_contract_tests")" "true" "live-network wave docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_wave_docs_output" "test_scope")" "runtime-contract" "live-network wave docs should set runtime-contract scope"
-
 live_network_makefile_output="$(run_selector $'Makefile')"
 assert_eq "$(extract_output "$live_network_makefile_output" "run_rust")" "false" "live-network makefile changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_makefile_output" "run_runtime_snapshot_contract_tests")" "true" "live-network makefile changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_makefile_output" "test_scope")" "runtime-contract" "live-network makefile changes should set runtime-contract scope"
-
 runtime_contract_script_output="$(run_selector $'scripts/runtime/run_runtime_snapshot_contract_lane.sh')"
 assert_eq "$(extract_output "$runtime_contract_script_output" "run_rust")" "false" "runtime contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_script_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_contract_script_output" "test_scope")" "runtime-contract" "runtime contract script changes should set runtime-contract scope"
-
 live_network_smoke_shared_contract_output="$(run_selector $'scripts/runtime/live_network_smoke_lane_contract.py')"
 assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "run_rust")" "false" "live-network smoke shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network smoke shared contract changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "test_scope")" "runtime-contract" "live-network smoke shared contract changes should set runtime-contract scope"
-
 live_network_smoke_script_output="$(run_selector $'scripts/runtime/run_live_network_smoke_lane.sh')"
 assert_eq "$(extract_output "$live_network_smoke_script_output" "run_rust")" "false" "live-network smoke script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_smoke_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network smoke script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_smoke_script_output" "test_scope")" "runtime-contract" "live-network smoke script changes should set runtime-contract scope"
-
 live_network_deep_script_output="$(run_selector $'scripts/runtime/run_live_network_pilot_deep_lane.sh')"
 assert_eq "$(extract_output "$live_network_deep_script_output" "run_rust")" "false" "live-network deep script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_deep_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network deep script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_deep_script_output" "test_scope")" "runtime-contract" "live-network deep script changes should set runtime-contract scope"
-
 live_network_summary_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_artifact_summary_contract.py')"
 assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_rust")" "false" "live-network summary shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network summary shared contract changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "test_scope")" "runtime-contract" "live-network summary shared contract changes should set runtime-contract scope"
-
 live_network_deep_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_deep_lane_contract.py')"
 assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "run_rust")" "false" "live-network deep shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network deep shared contract changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "test_scope")" "runtime-contract" "live-network deep shared contract changes should set runtime-contract scope"
-
 live_network_summary_policy_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py')"
 assert_eq "$(extract_output "$live_network_summary_policy_shared_contract_output" "run_rust")" "false" "live-network summary policy shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_summary_policy_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network summary policy shared contract changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_summary_policy_shared_contract_output" "test_scope")" "runtime-contract" "live-network summary policy shared contract changes should set runtime-contract scope"
-
 lifecycle_property_script_output="$(run_selector $'scripts/runtime/run_lifecycle_property_contract_lane.sh')"
 assert_eq "$(extract_output "$lifecycle_property_script_output" "run_rust")" "false" "lifecycle property contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$lifecycle_property_script_output" "run_runtime_snapshot_contract_tests")" "true" "lifecycle property contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$lifecycle_property_script_output" "test_scope")" "runtime-contract" "lifecycle property contract script changes should set runtime-contract scope"
-
 concurrency_mutation_script_output="$(run_selector $'scripts/runtime/run_concurrency_state_mutation_contract_lane.sh')"
 assert_eq "$(extract_output "$concurrency_mutation_script_output" "run_rust")" "false" "concurrency state mutation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$concurrency_mutation_script_output" "run_runtime_snapshot_contract_tests")" "true" "concurrency state mutation contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$concurrency_mutation_script_output" "test_scope")" "runtime-contract" "concurrency state mutation contract script changes should set runtime-contract scope"
-
 input_mutation_script_output="$(run_selector $'scripts/runtime/run_input_mutation_contract_lane.sh')"
 assert_eq "$(extract_output "$input_mutation_script_output" "run_rust")" "false" "input mutation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$input_mutation_script_output" "run_runtime_snapshot_contract_tests")" "true" "input mutation contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$input_mutation_script_output" "test_scope")" "runtime-contract" "input mutation contract script changes should set runtime-contract scope"
-
 invariant_fuzz_concurrency_script_output="$(run_selector $'scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh')"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "run_rust")" "false" "invariant/fuzz/concurrency contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "run_runtime_snapshot_contract_tests")" "true" "invariant/fuzz/concurrency contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "test_scope")" "runtime-contract" "invariant/fuzz/concurrency contract script changes should set runtime-contract scope"
-
 invariant_fuzz_concurrency_policy_checker_output="$(run_selector $'scripts/runtime/check_invariant_fuzz_concurrency_policy.sh')"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "run_rust")" "false" "invariant/fuzz/concurrency policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "run_runtime_snapshot_contract_tests")" "true" "invariant/fuzz/concurrency policy checker changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "test_scope")" "runtime-contract" "invariant/fuzz/concurrency policy checker changes should set runtime-contract scope"
-
 runtime_partition_fixture_output="$(run_selector $'fixtures/runtime/live_network_partition_reconnect_matrix_cases.json')"
 assert_eq "$(extract_output "$runtime_partition_fixture_output" "run_rust")" "false" "runtime partition/reconnect fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$runtime_partition_fixture_output" "run_runtime_snapshot_contract_tests")" "true" "runtime partition/reconnect fixture changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_partition_fixture_output" "test_scope")" "runtime-contract" "runtime partition/reconnect fixture changes should set runtime-contract scope"
-
 message_contract_docs_output="$(run_selector $'docs/foundation/message-lifecycle.md')"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false" "message lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "test_scope")" "message-contract" "message lifecycle contract docs should set message-contract scope"
-
 didcomm_contract_docs_output="$(run_selector $'docs/foundation/didcomm-v2-compatibility-profile.md')"
 assert_eq "$(extract_output "$didcomm_contract_docs_output" "run_rust")" "false" "didcomm compatibility docs should avoid rust lane"
 assert_eq "$(extract_output "$didcomm_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "didcomm compatibility docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$didcomm_contract_docs_output" "test_scope")" "message-contract" "didcomm compatibility docs should set message-contract scope"
-
 a2a_mcp_contract_docs_output="$(run_selector $'docs/foundation/a2a-mcp-interoperability.md')"
 assert_eq "$(extract_output "$a2a_mcp_contract_docs_output" "run_rust")" "false" "a2a/mcp interoperability docs should avoid rust lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp interoperability docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_docs_output" "test_scope")" "message-contract" "a2a/mcp interoperability docs should set message-contract scope"
-
 key_management_contract_docs_output="$(run_selector $'docs/foundation/key-management-and-encryption.md')"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "run_rust")" "false" "key management contract docs should avoid rust lane"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "key management contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "test_scope")" "message-contract" "key management contract docs should set message-contract scope"
-
 group_sender_contract_docs_output="$(run_selector $'docs/foundation/group-sender-key-rotation.md')"
 assert_eq "$(extract_output "$group_sender_contract_docs_output" "run_rust")" "false" "group sender contract docs should avoid rust lane"
 assert_eq "$(extract_output "$group_sender_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "group sender contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$group_sender_contract_docs_output" "test_scope")" "message-contract" "group sender contract docs should set message-contract scope"
-
 message_contract_script_output="$(run_selector $'scripts/message/run_message_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$message_contract_script_output" "run_rust")" "false" "message lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_script_output" "test_scope")" "message-contract" "message lifecycle contract script changes should set message-contract scope"
-
 didcomm_contract_script_output="$(run_selector $'scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh')"
 assert_eq "$(extract_output "$didcomm_contract_script_output" "run_rust")" "false" "didcomm envelope contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$didcomm_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$didcomm_contract_script_output" "test_scope")" "message-contract" "didcomm envelope contract script changes should set message-contract scope"
-
 didcomm_policy_shared_contract_output="$(run_selector $'scripts/message/didcomm_envelope_compatibility_policy_contract.py')"
 assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "run_rust")" "false" "didcomm envelope shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope shared policy contract changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "test_scope")" "message-contract" "didcomm envelope shared policy contract changes should set message-contract scope"
-
 a2a_mcp_contract_script_output="$(run_selector $'scripts/message/run_a2a_mcp_conformance_contract_lane.sh')"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_rust")" "false" "a2a/mcp contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "test_scope")" "message-contract" "a2a/mcp contract script changes should set message-contract scope"
-
 a2a_mcp_policy_shared_contract_output="$(run_selector $'scripts/message/a2a_mcp_conformance_policy_contract.py')"
 assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "run_rust")" "false" "a2a/mcp shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp shared policy contract changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "test_scope")" "message-contract" "a2a/mcp shared policy contract changes should set message-contract scope"
-
 didcomm_contract_fixture_output="$(run_selector $'fixtures/didcomm_envelope_compatibility/replay_cases.json')"
 assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_rust")" "false" "didcomm envelope fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope fixture changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$didcomm_contract_fixture_output" "test_scope")" "message-contract" "didcomm envelope fixture changes should set message-contract scope"
-
 a2a_mcp_contract_fixture_output="$(run_selector $'fixtures/a2a_mcp_conformance/replay_cases.json')"
 assert_eq "$(extract_output "$a2a_mcp_contract_fixture_output" "run_rust")" "false" "a2a/mcp fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_fixture_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp fixture changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_fixture_output" "test_scope")" "message-contract" "a2a/mcp fixture changes should set message-contract scope"
-
 key_lifecycle_invariant_contract_script_output="$(run_selector $'scripts/message/run_key_hierarchy_invariant_contract_lane.sh')"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_rust")" "false" "key hierarchy invariant contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "key hierarchy invariant contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "test_scope")" "message-contract" "key hierarchy invariant contract script changes should set message-contract scope"
-
 key_lifecycle_invariant_shared_contract_output="$(run_selector $'scripts/message/key_lifecycle_invariant_contract.py')"
 assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "run_rust")" "false" "key lifecycle invariant shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "key lifecycle invariant shared contract changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "test_scope")" "message-contract" "key lifecycle invariant shared contract changes should set message-contract scope"
-
 group_sender_replay_ratchet_contract_script_output="$(run_selector $'scripts/message/run_group_sender_replay_ratchet_contract_lane.sh')"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_rust")" "false" "group sender replay/ratchet contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "test_scope")" "message-contract" "group sender replay/ratchet contract script changes should set message-contract scope"
-
 group_sender_replay_ratchet_shared_contract_output="$(run_selector $'scripts/message/group_sender_replay_ratchet_contract.py')"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "run_rust")" "false" "group sender replay/ratchet shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet shared contract changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "test_scope")" "message-contract" "group sender replay/ratchet shared contract changes should set message-contract scope"
-
 channel_contract_docs_output="$(run_selector $'docs/foundation/channel-models.md')"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_rust")" "false" "channel lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle contract docs must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_contract_docs_output" "test_scope")" "channel-contract" "channel lifecycle contract docs should set channel-contract scope"
-
 channel_policy_contract_docs_output="$(run_selector $'docs/foundation/channel-models-and-permissions.md')"
 assert_eq "$(extract_output "$channel_policy_contract_docs_output" "run_rust")" "false" "channel policy contract docs should avoid rust lane"
 assert_eq "$(extract_output "$channel_policy_contract_docs_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy contract docs must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_policy_contract_docs_output" "test_scope")" "channel-contract" "channel policy contract docs should set channel-contract scope"
-
 data_governance_retention_docs_output="$(run_selector $'docs/foundation/data-governance-retention.md')"
 assert_eq "$(extract_output "$data_governance_retention_docs_output" "run_rust")" "false" "data governance retention docs should avoid rust lane"
 assert_eq "$(extract_output "$data_governance_retention_docs_output" "run_channel_lifecycle_contract_tests")" "true" "data governance retention docs must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$data_governance_retention_docs_output" "test_scope")" "channel-contract" "data governance retention docs should set channel-contract scope"
-
 channel_contract_script_output="$(run_selector $'scripts/channel/run_channel_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$channel_contract_script_output" "run_rust")" "false" "channel lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_contract_script_output" "test_scope")" "channel-contract" "channel lifecycle contract script changes should set channel-contract scope"
-
 channel_contract_shared_script_output="$(run_selector $'scripts/channel/channel_lifecycle_contract_lane_contract.py')"
 assert_eq "$(extract_output "$channel_contract_shared_script_output" "run_rust")" "false" "channel lifecycle shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_contract_shared_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle shared contract-lane changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_contract_shared_script_output" "test_scope")" "channel-contract" "channel lifecycle shared contract-lane changes should set channel-contract scope"
-
 channel_policy_contract_script_output="$(run_selector $'scripts/channel/run_channel_policy_contract_lane.sh')"
 assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_rust")" "false" "channel policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_policy_contract_script_output" "test_scope")" "channel-contract" "channel policy contract script changes should set channel-contract scope"
-
 channel_policy_contract_shared_script_output="$(run_selector $'scripts/channel/channel_policy_contract_lane_contract.py')"
 assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "run_rust")" "false" "channel policy shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy shared contract-lane changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "test_scope")" "channel-contract" "channel policy shared contract-lane changes should set channel-contract scope"
-
 channel_retention_redaction_contract_script_output="$(run_selector $'scripts/channel/run_channel_retention_redaction_contract_lane.sh')"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "run_rust")" "false" "channel retention/redaction contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel retention/redaction contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "test_scope")" "channel-contract" "channel retention/redaction contract script changes should set channel-contract scope"
-
 channel_retention_redaction_shared_contract_output="$(run_selector $'scripts/channel/channel_retention_redaction_contract.py')"
 assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "run_rust")" "false" "channel retention/redaction shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "run_channel_lifecycle_contract_tests")" "true" "channel retention/redaction shared contract changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "test_scope")" "channel-contract" "channel retention/redaction shared contract changes should set channel-contract scope"
-
 task_contract_docs_output="$(run_selector $'docs/foundation/task-operations.md')"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_rust")" "false" "task operation contract docs should avoid rust lane"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_task_operation_snapshot_contract_tests")" "true" "task operation contract docs must run task operation snapshot contract lane"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_federated_delegation_settlement_contract_tests")" "true" "task operation contract docs must run federated delegation settlement contract lane"
 assert_eq "$(extract_output "$task_contract_docs_output" "test_scope")" "task-contract" "task operation contract docs should set task-contract scope"
-
 task_state_machine_docs_output="$(run_selector $'docs/foundation/task-state-machine.md')"
 assert_eq "$(extract_output "$task_state_machine_docs_output" "run_rust")" "false" "task state machine docs should avoid rust lane"
 assert_eq "$(extract_output "$task_state_machine_docs_output" "run_task_operation_snapshot_contract_tests")" "true" "task state machine docs must run task operation snapshot contract lane"
 assert_eq "$(extract_output "$task_state_machine_docs_output" "run_federated_delegation_settlement_contract_tests")" "false" "task state machine docs should not force federated delegation settlement contract lane"
 assert_eq "$(extract_output "$task_state_machine_docs_output" "test_scope")" "task-contract" "task state machine docs should set task-contract scope"
-
 task_contract_script_output="$(run_selector $'scripts/task/run_task_operation_snapshot_contract_lane.sh')"
 assert_eq "$(extract_output "$task_contract_script_output" "run_rust")" "false" "task operation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$task_contract_script_output" "run_task_operation_snapshot_contract_tests")" "true" "task operation contract script changes must run task operation snapshot contract lane"
 assert_eq "$(extract_output "$task_contract_script_output" "run_federated_delegation_settlement_contract_tests")" "false" "task operation snapshot contract script changes should skip federated delegation settlement lane"
 assert_eq "$(extract_output "$task_contract_script_output" "test_scope")" "task-contract" "task operation contract script changes should set task-contract scope"
-
 federated_task_contract_script_output="$(run_selector $'scripts/task/run_federated_delegation_settlement_contract_lane.sh')"
 assert_eq "$(extract_output "$federated_task_contract_script_output" "run_rust")" "false" "federated delegation settlement contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_task_contract_script_output" "run_task_operation_snapshot_contract_tests")" "false" "federated delegation settlement script changes should not trigger task operation snapshot lane"
 assert_eq "$(extract_output "$federated_task_contract_script_output" "run_federated_delegation_settlement_contract_tests")" "true" "federated delegation settlement script changes must run federated delegation settlement contract lane"
 assert_eq "$(extract_output "$federated_task_contract_script_output" "test_scope")" "federated-task-contract" "federated delegation settlement script changes should set federated-task-contract scope"
-
 federated_task_contract_fixture_output="$(run_selector $'fixtures/federated_task_delegation/partition_replay_cases.json')"
 assert_eq "$(extract_output "$federated_task_contract_fixture_output" "run_rust")" "false" "federated delegation settlement fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_task_contract_fixture_output" "run_federated_delegation_settlement_contract_tests")" "true" "federated delegation settlement fixture changes must run federated delegation settlement contract lane"
 assert_eq "$(extract_output "$federated_task_contract_fixture_output" "test_scope")" "federated-task-contract" "federated delegation settlement fixture changes should set federated-task-contract scope"
-
 escrow_contract_docs_output="$(run_selector $'docs/foundation/escrow-lifecycle.md')"
 assert_eq "$(extract_output "$escrow_contract_docs_output" "run_rust")" "false" "escrow contract docs should avoid rust lane"
 assert_eq "$(extract_output "$escrow_contract_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow contract docs must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_contract_docs_output" "test_scope")" "escrow-contract" "escrow contract docs should set escrow-contract scope"
-
 task_payment_workflow_docs_output="$(run_selector $'docs/foundation/task-payment-workflow.md')"
 assert_eq "$(extract_output "$task_payment_workflow_docs_output" "run_rust")" "false" "task payment workflow docs should avoid rust lane"
 assert_eq "$(extract_output "$task_payment_workflow_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "task payment workflow docs must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$task_payment_workflow_docs_output" "test_scope")" "escrow-contract" "task payment workflow docs should set escrow-contract scope"
-
 escrow_audit_docs_output="$(run_selector $'docs/foundation/audit-export-interfaces.md')"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_rust")" "false" "audit export docs should avoid rust lane"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "audit export docs must run settlement reconciliation contract lane"
@@ -2352,339 +1920,281 @@ assert_eq "$(extract_output "$escrow_audit_docs_output" "run_reputation_dispute_
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_governance_simulation_contract_tests")" "false" "audit export docs should not run governance simulation contract lane"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_governance_stake_slash_contract_tests")" "false" "audit export docs should not run governance stake/slash contract lane"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "test_scope")" "escrow-contract" "audit export docs should set escrow-contract scope"
-
 dsar_data_classification_docs_output="$(run_selector $'docs/foundation/data-classification-tagging.md')"
 assert_eq "$(extract_output "$dsar_data_classification_docs_output" "run_rust")" "false" "data classification docs should avoid rust lane"
 assert_eq "$(extract_output "$dsar_data_classification_docs_output" "run_dsar_legal_hold_contract_tests")" "true" "data classification docs must run DSAR legal-hold contract lane"
 assert_eq "$(extract_output "$dsar_data_classification_docs_output" "run_channel_lifecycle_contract_tests")" "true" "data classification docs must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$dsar_data_classification_docs_output" "test_scope")" "channel-contract" "data classification docs should set channel-contract scope when classification/redaction compliance parity is required"
-
 redaction_tombstones_docs_output="$(run_selector $'docs/foundation/redaction-tombstones.md')"
 assert_eq "$(extract_output "$redaction_tombstones_docs_output" "run_rust")" "false" "redaction tombstones docs should avoid rust lane"
 assert_eq "$(extract_output "$redaction_tombstones_docs_output" "run_dsar_legal_hold_contract_tests")" "true" "redaction tombstones docs must run DSAR legal-hold contract lane"
 assert_eq "$(extract_output "$redaction_tombstones_docs_output" "run_channel_lifecycle_contract_tests")" "true" "redaction tombstones docs must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$redaction_tombstones_docs_output" "test_scope")" "channel-contract" "redaction tombstones docs should set channel-contract scope"
-
 governance_contract_docs_output="$(run_selector $'docs/foundation/governance-proposal-vote-execution.md')"
 assert_eq "$(extract_output "$governance_contract_docs_output" "run_rust")" "false" "governance contract docs should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_docs_output" "run_governance_simulation_contract_tests")" "true" "governance contract docs must run governance simulation contract lane"
 assert_eq "$(extract_output "$governance_contract_docs_output" "run_governance_stake_slash_contract_tests")" "true" "governance contract docs must run governance stake/slash contract lane"
 assert_eq "$(extract_output "$governance_contract_docs_output" "test_scope")" "governance-contract" "governance contract docs should set governance-contract scope"
-
 validator_quorum_reconfiguration_docs_output="$(run_selector $'docs/foundation/validator-lifecycle-quorum-reconfiguration.md')"
 assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_rust")" "false" "validator lifecycle quorum docs should avoid rust lane"
 assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_governance_simulation_contract_tests")" "true" "validator lifecycle quorum docs must run governance simulation contract lane"
 assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_governance_stake_slash_contract_tests")" "true" "validator lifecycle quorum docs must keep governance stake/slash contract lane coverage"
 assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "test_scope")" "governance-contract" "validator lifecycle quorum docs should set governance-contract scope"
-
 threat_control_matrix_docs_output="$(run_selector $'docs/foundation/threat-control-matrix.md')"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_rust")" "false" "threat control matrix docs should avoid rust lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_signer_emulator_contract_tests")" "true" "threat control matrix docs must run signer contract lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_simulation_contract_tests")" "true" "threat control matrix docs must run governance simulation contract lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_stake_slash_contract_tests")" "false" "threat control matrix docs should not force governance stake/slash contract lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "test_scope")" "signer-contract" "threat control matrix docs should set signer-contract scope"
-
 escrow_contract_script_output="$(run_selector $'scripts/escrow/run_settlement_reconciliation_contract_lane.sh')"
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_rust")" "false" "escrow contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow contract script changes must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_contract_script_output" "test_scope")" "escrow-contract" "escrow contract script changes should set escrow-contract scope"
-
 escrow_contract_fixture_output="$(run_selector $'fixtures/escrow_reconciliation/finality_race_cases.json')"
 assert_eq "$(extract_output "$escrow_contract_fixture_output" "run_rust")" "false" "escrow race fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$escrow_contract_fixture_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow race fixture changes must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_contract_fixture_output" "test_scope")" "escrow-contract" "escrow race fixture changes should set escrow-contract scope"
-
 soc2_contract_script_output="$(run_selector $'scripts/compliance/run_soc2_control_evidence_contract_lane.sh')"
 assert_eq "$(extract_output "$soc2_contract_script_output" "run_rust")" "false" "SOC2 contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$soc2_contract_script_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 contract script changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$soc2_contract_script_output" "test_scope")" "soc2-contract" "SOC2 contract script changes should set soc2-contract scope"
-
 soc2_contract_shared_script_output="$(run_selector $'scripts/compliance/soc2_control_evidence_contract_lane_contract.py')"
 assert_eq "$(extract_output "$soc2_contract_shared_script_output" "run_rust")" "false" "SOC2 shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$soc2_contract_shared_script_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 shared contract-lane changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$soc2_contract_shared_script_output" "test_scope")" "soc2-contract" "SOC2 shared contract-lane changes should set soc2-contract scope"
-
 soc2_contract_fixture_output="$(run_selector $'fixtures/compliance_soc2/control_evidence_replay_cases.json')"
 assert_eq "$(extract_output "$soc2_contract_fixture_output" "run_rust")" "false" "SOC2 fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$soc2_contract_fixture_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 fixture changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$soc2_contract_fixture_output" "test_scope")" "soc2-contract" "SOC2 fixture changes should set soc2-contract scope"
-
 soc2_contract_manifest_output="$(run_selector $'scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json')"
 assert_eq "$(extract_output "$soc2_contract_manifest_output" "run_rust")" "false" "SOC2 manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$soc2_contract_manifest_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 manifest changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$soc2_contract_manifest_output" "run_dsar_legal_hold_contract_tests")" "false" "SOC2 manifest changes should not trigger DSAR contract lane"
 assert_eq "$(extract_output "$soc2_contract_manifest_output" "test_scope")" "soc2-contract" "SOC2 manifest changes should set soc2-contract scope"
-
 dsar_contract_script_output="$(run_selector $'scripts/compliance/run_dsar_legal_hold_contract_lane.sh')"
 assert_eq "$(extract_output "$dsar_contract_script_output" "run_rust")" "false" "DSAR contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$dsar_contract_script_output" "run_dsar_legal_hold_contract_tests")" "true" "DSAR contract script changes must run DSAR contract lane"
 assert_eq "$(extract_output "$dsar_contract_script_output" "run_soc2_control_evidence_contract_tests")" "false" "DSAR contract script changes should not trigger SOC2 contract lane"
 assert_eq "$(extract_output "$dsar_contract_script_output" "test_scope")" "dsar-contract" "DSAR contract script changes should set dsar-contract scope"
-
 dsar_contract_shared_script_output="$(run_selector $'scripts/compliance/dsar_legal_hold_contract_lane_contract.py')"
 assert_eq "$(extract_output "$dsar_contract_shared_script_output" "run_rust")" "false" "DSAR shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dsar_contract_shared_script_output" "run_dsar_legal_hold_contract_tests")" "true" "DSAR shared contract-lane changes must run DSAR contract lane"
 assert_eq "$(extract_output "$dsar_contract_shared_script_output" "run_soc2_control_evidence_contract_tests")" "false" "DSAR shared contract-lane changes should not trigger SOC2 contract lane"
 assert_eq "$(extract_output "$dsar_contract_shared_script_output" "test_scope")" "dsar-contract" "DSAR shared contract-lane changes should set dsar-contract scope"
-
 dsar_contract_manifest_output="$(run_selector $'scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json')"
 assert_eq "$(extract_output "$dsar_contract_manifest_output" "run_rust")" "false" "DSAR manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$dsar_contract_manifest_output" "run_dsar_legal_hold_contract_tests")" "true" "DSAR manifest changes must run DSAR contract lane"
 assert_eq "$(extract_output "$dsar_contract_manifest_output" "run_soc2_control_evidence_contract_tests")" "false" "DSAR manifest changes should not trigger SOC2 contract lane"
 assert_eq "$(extract_output "$dsar_contract_manifest_output" "test_scope")" "dsar-contract" "DSAR manifest changes should set dsar-contract scope"
-
 classification_redaction_lane_script_output="$(run_selector $'scripts/compliance/run_classification_redaction_lane.sh')"
 assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_rust")" "false" "classification/redaction lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction lane script changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction lane script changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_lane_script_output" "test_scope")" "channel-contract" "classification/redaction lane script changes should set channel-contract scope"
-
 classification_redaction_shared_lane_output="$(run_selector $'scripts/compliance/classification_redaction_lane_contract.py')"
 assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_rust")" "false" "classification/redaction shared lane contract changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction shared lane contract changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction shared lane contract changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "test_scope")" "channel-contract" "classification/redaction shared lane contract changes should set channel-contract scope"
-
 classification_redaction_contract_script_output="$(run_selector $'scripts/compliance/run_classification_redaction_contract_lane.sh')"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "run_rust")" "false" "classification/redaction contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction contract script changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction contract script changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "test_scope")" "channel-contract" "classification/redaction contract script changes should set channel-contract scope"
-
 classification_redaction_shared_contract_lane_output="$(run_selector $'scripts/compliance/classification_redaction_contract_lane_contract.py')"
 assert_eq "$(extract_output "$classification_redaction_shared_contract_lane_output" "run_rust")" "false" "classification/redaction shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_shared_contract_lane_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction shared contract-lane changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_contract_lane_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction shared contract-lane changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_contract_lane_output" "test_scope")" "channel-contract" "classification/redaction shared contract-lane changes should set channel-contract scope"
-
 classification_redaction_contract_manifest_output="$(run_selector $'scripts/framework/manifests/compliance_classification_redaction_contract_lane.json')"
 assert_eq "$(extract_output "$classification_redaction_contract_manifest_output" "run_rust")" "false" "classification/redaction manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_contract_manifest_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction manifest changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_contract_manifest_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction manifest changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_contract_manifest_output" "test_scope")" "channel-contract" "classification/redaction manifest changes should set channel-contract scope"
-
 classification_redaction_policy_script_output="$(run_selector $'scripts/compliance/check_classification_redaction_policy.sh')"
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "run_rust")" "false" "classification/redaction policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction policy checker changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction policy checker changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "test_scope")" "channel-contract" "classification/redaction policy checker changes should set channel-contract scope"
-
 classification_redaction_shared_policy_output="$(run_selector $'scripts/compliance/classification_redaction_policy_contract.py')"
 assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_rust")" "false" "classification/redaction shared policy contract changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction shared policy contract changes must run DSAR contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction shared policy contract changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "test_scope")" "channel-contract" "classification/redaction shared policy contract changes should set channel-contract scope"
-
 dsar_contract_fixture_output="$(run_selector $'fixtures/compliance_dsar/legal_hold_precedence_cases.json')"
 assert_eq "$(extract_output "$dsar_contract_fixture_output" "run_rust")" "false" "DSAR fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$dsar_contract_fixture_output" "run_dsar_legal_hold_contract_tests")" "true" "DSAR fixture changes must run DSAR contract lane"
 assert_eq "$(extract_output "$dsar_contract_fixture_output" "test_scope")" "dsar-contract" "DSAR fixture changes should set dsar-contract scope"
-
 governance_contract_script_output="$(run_selector $'scripts/governance/run_governance_simulation_contract_lane.sh')"
 assert_eq "$(extract_output "$governance_contract_script_output" "run_rust")" "false" "governance contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_simulation_contract_tests")" "true" "governance contract script changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "test_scope")" "governance-contract" "governance contract script changes should set governance-contract scope"
-
 governance_simulation_manifest_output="$(run_selector $'scripts/framework/manifests/governance_simulation_contract_lane.json')"
 assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_rust")" "false" "governance simulation manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance simulation manifest changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation manifest changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_simulation_manifest_output" "test_scope")" "governance-contract" "governance simulation manifest changes should set governance-contract scope"
-
 governance_contract_shared_script_output="$(run_selector $'scripts/governance/governance_simulation_contract_lane_contract.py')"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_rust")" "false" "governance shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_governance_simulation_contract_tests")" "true" "governance shared contract-lane changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance shared contract-lane changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "test_scope")" "governance-contract" "governance shared contract-lane changes should set governance-contract scope"
-
 governance_lifecycle_policy_shared_contract_output="$(run_selector $'scripts/governance/governance_lifecycle_rollback_policy_contract.py')"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "run_rust")" "false" "governance lifecycle rollback shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared policy contract changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared policy contract changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared policy contract changes should set governance-contract scope"
-
 governance_lifecycle_lane_shared_contract_output="$(run_selector $'scripts/governance/governance_lifecycle_rollback_lane_contract.py')"
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "run_rust")" "false" "governance lifecycle rollback shared lane contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared lane contract changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared lane contract changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared lane contract changes should set governance-contract scope"
-
 governance_lifecycle_contract_lane_shared_contract_output="$(run_selector $'scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py')"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_rust")" "false" "governance lifecycle rollback shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared contract-lane changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared contract-lane changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared contract-lane changes should set governance-contract scope"
-
 governance_lifecycle_manifest_output="$(run_selector $'scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json')"
 assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_rust")" "false" "governance lifecycle manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle manifest changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle manifest changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "test_scope")" "governance-contract" "governance lifecycle manifest changes should set governance-contract scope"
-
 governance_quorum_contract_script_output="$(run_selector $'scripts/governance/run_quorum_attestation_replay_contract_lane.sh')"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_rust")" "false" "governance quorum attestation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation contract script changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "test_scope")" "governance-contract" "governance quorum attestation contract script changes should set governance-contract scope"
-
 governance_quorum_policy_shared_contract_output="$(run_selector $'scripts/governance/governance_quorum_attestation_replay_policy_contract.py')"
 assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_rust")" "false" "governance quorum attestation shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation shared policy contract changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation shared policy contract changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "test_scope")" "governance-contract" "governance quorum attestation shared policy contract changes should set governance-contract scope"
-
 governance_quorum_lane_shared_contract_output="$(run_selector $'scripts/governance/governance_quorum_attestation_replay_lane_contract.py')"
 assert_eq "$(extract_output "$governance_quorum_lane_shared_contract_output" "run_rust")" "false" "governance quorum attestation shared lane contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation shared lane contract changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_quorum_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation shared lane contract changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_lane_shared_contract_output" "test_scope")" "governance-contract" "governance quorum attestation shared lane contract changes should set governance-contract scope"
-
 governance_quorum_contract_lane_shared_contract_output="$(run_selector $'scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py')"
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "run_rust")" "false" "governance quorum attestation shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation shared contract-lane changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation shared contract-lane changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "test_scope")" "governance-contract" "governance quorum attestation shared contract-lane changes should set governance-contract scope"
-
 governance_quorum_manifest_output="$(run_selector $'scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json')"
 assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_rust")" "false" "governance quorum manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance quorum manifest changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum manifest changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_manifest_output" "test_scope")" "governance-contract" "governance quorum manifest changes should set governance-contract scope"
-
 governance_contract_fixture_output="$(run_selector $'fixtures/governance_simulation/veto_timelock_cases.json')"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_rust")" "false" "governance fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_governance_simulation_contract_tests")" "true" "governance fixture changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation fixture changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "test_scope")" "governance-contract" "governance fixture changes should set governance-contract scope"
-
 stake_slash_contract_script_output="$(run_selector $'scripts/governance/run_stake_slash_risk_contract_lane.sh')"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_rust")" "false" "stake/slash contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governance_simulation_contract_tests")" "false" "stake/slash contract script changes should not trigger governance simulation lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash contract script changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "test_scope")" "governance-risk-contract" "stake/slash contract script changes should set governance-risk-contract scope"
-
 stake_slash_manifest_output="$(run_selector $'scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json')"
 assert_eq "$(extract_output "$stake_slash_manifest_output" "run_rust")" "false" "stake/slash manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$stake_slash_manifest_output" "run_governance_simulation_contract_tests")" "false" "stake/slash manifest changes should not trigger governance simulation lane"
 assert_eq "$(extract_output "$stake_slash_manifest_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash manifest changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_manifest_output" "test_scope")" "governance-risk-contract" "stake/slash manifest changes should set governance-risk-contract scope"
-
 stake_slash_shared_contract_lane_output="$(run_selector $'scripts/governance/stake_slash_risk_contract_lane_contract.py')"
 assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_rust")" "false" "stake/slash shared contract-lane changes should avoid rust lane"
 assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_governance_simulation_contract_tests")" "false" "stake/slash shared contract-lane changes should not trigger governance simulation lane"
 assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash shared contract-lane changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "test_scope")" "governance-risk-contract" "stake/slash shared contract-lane changes should set governance-risk-contract scope"
-
 stake_slash_contract_fixture_output="$(run_selector $'fixtures/governance_stake_slash/risk_threshold_cases.json')"
 assert_eq "$(extract_output "$stake_slash_contract_fixture_output" "run_rust")" "false" "stake/slash fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$stake_slash_contract_fixture_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash fixture changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_contract_fixture_output" "test_scope")" "governance-risk-contract" "stake/slash fixture changes should set governance-risk-contract scope"
-
 reputation_contract_docs_output="$(run_selector $'docs/foundation/reputation-state-model.md')"
 assert_eq "$(extract_output "$reputation_contract_docs_output" "run_rust")" "false" "reputation contract docs should avoid rust lane"
 assert_eq "$(extract_output "$reputation_contract_docs_output" "run_reputation_decay_contract_tests")" "true" "reputation state model docs must run reputation weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_contract_docs_output" "run_reputation_dispute_contract_tests")" "true" "reputation contract docs must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_contract_docs_output" "test_scope")" "reputation-decay-contract" "reputation state model docs should prefer reputation-decay-contract scope"
-
 reputation_decay_docs_output="$(run_selector $'docs/foundation/trust-score-engine.md')"
 assert_eq "$(extract_output "$reputation_decay_docs_output" "run_rust")" "false" "trust score docs should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_docs_output" "run_reputation_decay_contract_tests")" "true" "trust score docs must run reputation weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_decay_docs_output" "run_reputation_dispute_contract_tests")" "false" "trust score docs should not run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_docs_output" "test_scope")" "reputation-decay-contract" "trust score docs should set reputation-decay-contract scope"
-
 reputation_decay_contract_script_output="$(run_selector $'scripts/reputation/run_weighted_decay_contract_lane.sh')"
 assert_eq "$(extract_output "$reputation_decay_contract_script_output" "run_rust")" "false" "weighted decay contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_contract_script_output" "run_reputation_decay_contract_tests")" "true" "weighted decay contract script changes must run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_decay_contract_script_output" "run_reputation_dispute_contract_tests")" "true" "weighted decay contract script changes must also run dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_contract_script_output" "test_scope")" "reputation-decay-contract" "weighted decay contract script changes should set reputation-decay-contract scope"
-
 reputation_decay_policy_checker_output="$(run_selector $'scripts/reputation/check_weighted_decay_property_policy.sh')"
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "run_rust")" "false" "weighted decay policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "run_reputation_decay_contract_tests")" "true" "weighted decay policy checker changes must run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "weighted decay policy checker changes must also run dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "test_scope")" "reputation-decay-contract" "weighted decay policy checker changes should set reputation-decay-contract scope"
-
 reputation_decay_shared_contract_output="$(run_selector $'scripts/reputation/weighted_decay_contract.py')"
 assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_rust")" "false" "weighted decay shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_reputation_decay_contract_tests")" "true" "weighted decay shared contract changes must run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_reputation_dispute_contract_tests")" "true" "weighted decay shared contract changes must also run dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "test_scope")" "reputation-decay-contract" "weighted decay shared contract changes should set reputation-decay-contract scope"
-
 reputation_decay_contract_fixture_output="$(run_selector $'fixtures/reputation_decay/compact_cases.json')"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "run_rust")" "false" "weighted decay fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "run_reputation_decay_contract_tests")" "true" "weighted decay fixture changes must run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "run_reputation_dispute_contract_tests")" "false" "weighted decay fixture changes should not run dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "test_scope")" "reputation-decay-contract" "weighted decay fixture changes should set reputation-decay-contract scope"
-
 reputation_contract_script_output="$(run_selector $'scripts/reputation/run_reputation_dispute_contract_lane.sh')"
 assert_eq "$(extract_output "$reputation_contract_script_output" "run_rust")" "false" "reputation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_contract_script_output" "run_reputation_decay_contract_tests")" "false" "dispute contract script changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_contract_script_output" "run_reputation_dispute_contract_tests")" "true" "reputation contract script changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_contract_script_output" "test_scope")" "reputation-contract" "reputation contract script changes should set reputation-contract scope"
-
 reputation_dispute_manifest_output="$(run_selector $'scripts/framework/manifests/reputation_dispute_contract_lane.json')"
 assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_rust")" "false" "reputation dispute manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_reputation_decay_contract_tests")" "false" "reputation dispute manifest changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_reputation_dispute_contract_tests")" "true" "reputation dispute manifest changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_dispute_manifest_output" "test_scope")" "reputation-contract" "reputation dispute manifest changes should set reputation-contract scope"
-
 reputation_policy_checker_output="$(run_selector $'scripts/reputation/check_reputation_dispute_policy.sh')"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "run_rust")" "false" "reputation policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "run_reputation_decay_contract_tests")" "false" "dispute policy checker changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "reputation policy checker changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "test_scope")" "reputation-contract" "reputation policy checker changes should set reputation-contract scope"
-
 reputation_dispute_shared_contract_output="$(run_selector $'scripts/reputation/reputation_dispute_contract.py')"
 assert_eq "$(extract_output "$reputation_dispute_shared_contract_output" "run_rust")" "false" "reputation dispute shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_dispute_shared_contract_output" "run_reputation_decay_contract_tests")" "false" "reputation dispute shared contract changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_dispute_shared_contract_output" "run_reputation_dispute_contract_tests")" "true" "reputation dispute shared contract changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_dispute_shared_contract_output" "test_scope")" "reputation-contract" "reputation dispute shared contract changes should set reputation-contract scope"
-
 reputation_quarantine_policy_checker_output="$(run_selector $'scripts/reputation/check_reputation_signal_quarantine_policy.sh')"
 assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_rust")" "false" "signal quarantine policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_reputation_decay_contract_tests")" "false" "signal quarantine policy checker changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "signal quarantine policy checker changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "test_scope")" "reputation-contract" "signal quarantine policy checker changes should set reputation-contract scope"
-
 reputation_recovery_policy_checker_output="$(run_selector $'scripts/reputation/check_reputation_recovery_policy.sh')"
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "run_rust")" "false" "reputation recovery policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "run_reputation_decay_contract_tests")" "false" "reputation recovery policy checker changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "reputation recovery policy checker changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "test_scope")" "reputation-contract" "reputation recovery policy checker changes should set reputation-contract scope"
-
 reputation_recovery_shared_contract_output="$(run_selector $'scripts/reputation/reputation_recovery_contract.py')"
 assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_rust")" "false" "reputation recovery shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_reputation_decay_contract_tests")" "false" "reputation recovery shared contract changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_reputation_dispute_contract_tests")" "true" "reputation recovery shared contract changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "test_scope")" "reputation-contract" "reputation recovery shared contract changes should set reputation-contract scope"
-
 reputation_contract_fixture_output="$(run_selector $'fixtures/reputation_dispute/replay_cases.json')"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_rust")" "false" "reputation fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_reputation_decay_contract_tests")" "false" "dispute fixture changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_reputation_dispute_contract_tests")" "true" "reputation fixture changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "test_scope")" "reputation-contract" "reputation fixture changes should set reputation-contract scope"
-
 token_contract_docs_output="$(run_selector $'docs/foundation/token-config.md')"
 assert_eq "$(extract_output "$token_contract_docs_output" "run_rust")" "false" "token launch contract docs should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_docs_output" "run_token_launch_contract_tests")" "true" "token launch contract docs must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_docs_output" "test_scope")" "token-contract" "token launch contract docs should set token-contract scope"
-
 token_contract_script_output="$(run_selector $'scripts/token/run_token_launch_handoff_contract_lane.sh')"
 assert_eq "$(extract_output "$token_contract_script_output" "run_rust")" "false" "token launch contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_script_output" "run_token_launch_contract_tests")" "true" "token launch contract script changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_script_output" "test_scope")" "token-contract" "token launch contract script changes should set token-contract scope"
-
 token_contract_manifest_output="$(run_selector $'scripts/framework/manifests/token_launch_handoff_contract_lane.json')"
 assert_eq "$(extract_output "$token_contract_manifest_output" "run_rust")" "false" "token launch manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_manifest_output" "run_token_launch_contract_tests")" "true" "token launch manifest changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_manifest_output" "test_scope")" "token-contract" "token launch manifest changes should set token-contract scope"
-
 token_contract_shared_script_output="$(run_selector $'scripts/token/token_launch_handoff_contract_lane_contract.py')"
 assert_eq "$(extract_output "$token_contract_shared_script_output" "run_rust")" "false" "token launch shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_shared_script_output" "run_token_launch_contract_tests")" "true" "token launch shared contract-lane changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_shared_script_output" "test_scope")" "token-contract" "token launch shared contract-lane changes should set token-contract scope"
-
 token_framework_script_output="$(run_selector $'scripts/framework/contract_framework.py')"
 assert_eq "$(extract_output "$token_framework_script_output" "run_rust")" "false" "contract framework script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_contract_tests")" "true" "contract framework changes must run token launch contract lane"
@@ -2699,7 +2209,6 @@ assert_eq "$(extract_output "$token_framework_script_output" "run_governance_sim
 assert_eq "$(extract_output "$token_framework_script_output" "run_governance_stake_slash_contract_tests")" "true" "contract framework changes must also run governance stake/slash contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_reputation_dispute_contract_tests")" "true" "contract framework changes must also run reputation dispute/recovery contract lanes"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
-
 compliance_framework_helper_output="$(run_selector $'scripts/framework/contract_lane_helpers.py')"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_rust")" "false" "contract lane helper changes should avoid rust lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_soc2_control_evidence_contract_tests")" "true" "contract lane helper changes must run SOC2 contract lane"
@@ -2715,7 +2224,6 @@ assert_eq "$(extract_output "$compliance_framework_helper_output" "run_governanc
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_governance_stake_slash_contract_tests")" "true" "contract lane helper changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_reputation_dispute_contract_tests")" "true" "contract lane helper changes must run reputation dispute lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "test_scope")" "token-contract" "contract lane helper changes should set token-contract scope under selector precedence"
-
 compliance_framework_helper_test_output="$(run_selector $'scripts/framework/test_contract_lane_helpers.py')"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_rust")" "false" "contract lane helper test changes should avoid rust lane"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_soc2_control_evidence_contract_tests")" "true" "contract lane helper test changes must run SOC2 contract lane"
@@ -2726,7 +2234,6 @@ assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_repu
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_token_launch_contract_tests")" "true" "contract lane helper test changes must run token launch lane"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_treasury_disbursement_contract_tests")" "true" "contract lane helper test changes must run treasury lane"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "test_scope")" "token-contract" "contract lane helper test changes should set token-contract scope under selector precedence"
-
 manifest_runner_framework_output="$(run_selector $'scripts/framework/run_lane_from_manifest.py')"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_rust")" "false" "manifest runner framework changes should avoid rust lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_dashboard_contract_tests")" "true" "manifest runner framework changes must run dashboard contract lane"
@@ -2742,123 +2249,99 @@ assert_eq "$(extract_output "$manifest_runner_framework_output" "run_treasury_di
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_launch_canary_contract_tests")" "true" "manifest runner framework changes must run canary lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_durable_guard_recovery_contract_tests")" "true" "manifest runner framework changes must run durable guard recovery lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "test_scope")" "frontend-contract" "manifest runner framework changes should keep bounded frontend-contract scope"
-
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
 assert_eq "$(extract_output "$token_contract_fixture_output" "run_rust")" "false" "token launch fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_fixture_output" "run_token_launch_contract_tests")" "true" "token launch fixture changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_fixture_output" "test_scope")" "token-contract" "token launch fixture changes should set token-contract scope"
-
 token_rust_output="$(run_selector $'crates/kamn-core/src/token.rs')"
 assert_eq "$(extract_output "$token_rust_output" "run_rust")" "true" "token rust changes should run rust lane"
 assert_eq "$(extract_output "$token_rust_output" "run_token_launch_contract_tests")" "true" "token rust changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_rust_output" "test_scope")" "targeted" "token rust changes should stay targeted"
-
 treasury_contract_script_output="$(run_selector $'scripts/treasury/run_treasury_disbursement_contract_lane.sh')"
 assert_eq "$(extract_output "$treasury_contract_script_output" "run_rust")" "false" "treasury contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_script_output" "run_treasury_disbursement_contract_tests")" "true" "treasury contract script changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_script_output" "test_scope")" "treasury-contract" "treasury contract script changes should set treasury-contract scope"
-
 treasury_contract_manifest_output="$(run_selector $'scripts/framework/manifests/treasury_disbursement_contract_lane.json')"
 assert_eq "$(extract_output "$treasury_contract_manifest_output" "run_rust")" "false" "treasury manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_manifest_output" "run_treasury_disbursement_contract_tests")" "true" "treasury manifest changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_manifest_output" "test_scope")" "treasury-contract" "treasury manifest changes should set treasury-contract scope"
-
 treasury_contract_shared_script_output="$(run_selector $'scripts/treasury/treasury_disbursement_contract_lane_contract.py')"
 assert_eq "$(extract_output "$treasury_contract_shared_script_output" "run_rust")" "false" "treasury shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_shared_script_output" "run_treasury_disbursement_contract_tests")" "true" "treasury shared contract-lane changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_shared_script_output" "test_scope")" "treasury-contract" "treasury shared contract-lane changes should set treasury-contract scope"
-
 treasury_contract_fixture_output="$(run_selector $'fixtures/treasury_disbursement/approval_threshold_cases.json')"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_rust")" "false" "treasury fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_treasury_disbursement_contract_tests")" "true" "treasury fixture changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "test_scope")" "treasury-contract" "treasury fixture changes should set treasury-contract scope"
-
 treasury_contract_docs_output="$(run_selector $'docs/foundation/treasury-disbursement-policy.md')"
 assert_eq "$(extract_output "$treasury_contract_docs_output" "run_rust")" "false" "treasury disbursement docs should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_docs_output" "run_treasury_disbursement_contract_tests")" "true" "treasury disbursement docs must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_docs_output" "test_scope")" "treasury-contract" "treasury disbursement docs should set treasury-contract scope"
-
 cutover_contract_docs_output="$(run_selector $'docs/foundation/mainnet-cutover-runbook.md')"
 assert_eq "$(extract_output "$cutover_contract_docs_output" "run_rust")" "false" "cutover contract docs should avoid rust lane"
 assert_eq "$(extract_output "$cutover_contract_docs_output" "run_mainnet_cutover_contract_tests")" "true" "cutover contract docs must run mainnet cutover contract lane"
 assert_eq "$(extract_output "$cutover_contract_docs_output" "test_scope")" "cutover-contract" "cutover contract docs should set cutover-contract scope"
-
 cutover_contract_script_output="$(run_selector $'scripts/cutover/run_mainnet_cutover_contract_lane.sh')"
 assert_eq "$(extract_output "$cutover_contract_script_output" "run_rust")" "false" "cutover contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$cutover_contract_script_output" "run_mainnet_cutover_contract_tests")" "true" "cutover contract script changes must run mainnet cutover contract lane"
 assert_eq "$(extract_output "$cutover_contract_script_output" "test_scope")" "cutover-contract" "cutover contract script changes should set cutover-contract scope"
-
 cutover_rollback_script_output="$(run_selector $'scripts/cutover/run_cutover_rollback_contract_lane.sh')"
 assert_eq "$(extract_output "$cutover_rollback_script_output" "run_rust")" "false" "cutover rollback script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$cutover_rollback_script_output" "run_mainnet_cutover_contract_tests")" "true" "cutover rollback script changes must run cutover contract scope"
 assert_eq "$(extract_output "$cutover_rollback_script_output" "test_scope")" "cutover-contract" "cutover rollback script changes should set cutover-contract scope"
-
 cutover_contract_fixture_output="$(run_selector $'fixtures/mainnet_cutover/mainnet_cutover_manifest.valid.json')"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_rust")" "false" "cutover fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_mainnet_cutover_contract_tests")" "true" "cutover fixture changes must run mainnet cutover contract lane"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "test_scope")" "cutover-contract" "cutover fixture changes should set cutover-contract scope"
-
 canary_contract_script_output="$(run_selector $'scripts/canary/run_launch_canary_contract_lane.sh')"
 assert_eq "$(extract_output "$canary_contract_script_output" "run_rust")" "false" "canary contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_script_output" "run_launch_canary_contract_tests")" "true" "canary contract script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_script_output" "test_scope")" "canary-contract" "canary contract script changes should set canary-contract scope"
-
 canary_contract_manifest_output="$(run_selector $'scripts/framework/manifests/canary_launch_canary_contract_lane.json')"
 assert_eq "$(extract_output "$canary_contract_manifest_output" "run_rust")" "false" "canary launch manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_manifest_output" "run_launch_canary_contract_tests")" "true" "canary launch manifest changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_manifest_output" "test_scope")" "canary-contract" "canary launch manifest changes should set canary-contract scope"
-
 canary_contract_shared_script_output="$(run_selector $'scripts/canary/launch_canary_contract_lane_contract.py')"
 assert_eq "$(extract_output "$canary_contract_shared_script_output" "run_rust")" "false" "canary shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_shared_script_output" "run_launch_canary_contract_tests")" "true" "canary shared contract-lane changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_shared_script_output" "test_scope")" "canary-contract" "canary shared contract-lane changes should set canary-contract scope"
-
 canary_slo_script_output="$(run_selector $'scripts/canary/run_post_cutover_slo_contract_lane.sh')"
 assert_eq "$(extract_output "$canary_slo_script_output" "run_rust")" "false" "post-cutover SLO script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_script_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_script_output" "test_scope")" "canary-contract" "post-cutover SLO script changes should set canary-contract scope"
-
 canary_slo_manifest_output="$(run_selector $'scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json')"
 assert_eq "$(extract_output "$canary_slo_manifest_output" "run_rust")" "false" "post-cutover SLO manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_manifest_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO manifest changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_manifest_output" "test_scope")" "canary-contract" "post-cutover SLO manifest changes should set canary-contract scope"
-
 canary_slo_shared_contract_output="$(run_selector $'scripts/canary/post_cutover_slo_contract_lane_contract.py')"
 assert_eq "$(extract_output "$canary_slo_shared_contract_output" "run_rust")" "false" "post-cutover SLO shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_shared_contract_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO shared contract-lane changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_shared_contract_output" "test_scope")" "canary-contract" "post-cutover SLO shared contract-lane changes should set canary-contract scope"
-
 canary_slo_policy_output="$(run_selector $'scripts/canary/check_post_cutover_slo_policy.sh')"
 assert_eq "$(extract_output "$canary_slo_policy_output" "run_rust")" "false" "post-cutover SLO policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_policy_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO policy checker changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_policy_output" "test_scope")" "canary-contract" "post-cutover SLO policy checker changes should set canary-contract scope"
-
 canary_slo_generator_output="$(run_selector $'scripts/canary/generate_post_cutover_slo_evidence_bundle.sh')"
 assert_eq "$(extract_output "$canary_slo_generator_output" "run_rust")" "false" "post-cutover SLO generator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_generator_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO generator changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_generator_output" "test_scope")" "canary-contract" "post-cutover SLO generator changes should set canary-contract scope"
-
 canary_contract_fixture_output="$(run_selector $'fixtures/launch_canary/critical_path_probe_cases.json')"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_rust")" "false" "canary fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_launch_canary_contract_tests")" "true" "canary fixture changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "test_scope")" "canary-contract" "canary fixture changes should set canary-contract scope"
-
 canary_observability_docs_output="$(run_selector $'docs/foundation/observability-slo-dashboards.md')"
 assert_eq "$(extract_output "$canary_observability_docs_output" "run_rust")" "false" "observability SLO docs should avoid rust lane"
 assert_eq "$(extract_output "$canary_observability_docs_output" "run_launch_canary_contract_tests")" "true" "observability SLO docs must run launch canary lane"
 assert_eq "$(extract_output "$canary_observability_docs_output" "run_dashboard_contract_tests")" "true" "observability SLO docs must run dashboard contract lane"
 assert_eq "$(extract_output "$canary_observability_docs_output" "test_scope")" "frontend" "observability SLO docs should preserve frontend scope while enabling canary lane"
-
 escrow_rust_output="$(run_selector $'crates/kamn-core/src/escrow.rs')"
 assert_eq "$(extract_output "$escrow_rust_output" "run_rust")" "true" "escrow rust changes should run rust lane"
 assert_eq "$(extract_output "$escrow_rust_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow rust changes must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_rust_output" "test_scope")" "targeted" "escrow rust changes should stay targeted"
-
 guard_contract_docs_output="$(run_selector $'docs/foundation/message-delivery-guards.md')"
 assert_eq "$(extract_output "$guard_contract_docs_output" "run_rust")" "false" "durable guard contract docs should avoid rust lane"
 assert_eq "$(extract_output "$guard_contract_docs_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard contract docs must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_contract_docs_output" "test_scope")" "guard-contract" "durable guard contract docs should set guard-contract scope"
-
 guard_checklist_docs_output="$(run_selector $'docs/foundation/release-gonogo-checklist.md')"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_rust")" "false" "release go/no-go checklist docs should avoid rust lane"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_durable_guard_recovery_contract_tests")" "true" "release go/no-go checklist docs must run durable guard recovery contract lane"
@@ -2874,55 +2357,44 @@ assert_eq "$(extract_output "$guard_checklist_docs_output" "run_token_launch_con
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_treasury_disbursement_contract_tests")" "true" "release go/no-go checklist docs must run treasury disbursement contract lane"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_kolme_version_compatibility_contract_tests")" "true" "release go/no-go checklist docs must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "test_scope")" "guard-contract" "release go/no-go checklist docs should set guard-contract scope"
-
 guard_contract_script_output="$(run_selector $'scripts/guard/run_durable_guard_recovery_contract_lane.sh')"
 assert_eq "$(extract_output "$guard_contract_script_output" "run_rust")" "false" "durable guard contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$guard_contract_script_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard contract script changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_contract_script_output" "test_scope")" "guard-contract" "durable guard contract script changes should set guard-contract scope"
-
 guard_contract_manifest_output="$(run_selector $'scripts/framework/manifests/guard_durable_guard_recovery_contract_lane.json')"
 assert_eq "$(extract_output "$guard_contract_manifest_output" "run_rust")" "false" "durable guard manifest changes should avoid rust lane"
 assert_eq "$(extract_output "$guard_contract_manifest_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard manifest changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_contract_manifest_output" "test_scope")" "guard-contract" "durable guard manifest changes should set guard-contract scope"
-
 guard_shared_contract_output="$(run_selector $'scripts/guard/durable_guard_recovery_contract_lane_contract.py')"
 assert_eq "$(extract_output "$guard_shared_contract_output" "run_rust")" "false" "durable guard shared contract module changes should avoid rust lane"
 assert_eq "$(extract_output "$guard_shared_contract_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard shared contract module changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_shared_contract_output" "test_scope")" "guard-contract" "durable guard shared contract module changes should set guard-contract scope"
-
 guard_rust_output="$(run_selector $'crates/kamn-core/src/message_delivery_guards.rs')"
 assert_eq "$(extract_output "$guard_rust_output" "run_rust")" "true" "durable guard rust changes should run rust lane"
 assert_eq "$(extract_output "$guard_rust_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard rust changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_rust_output" "test_scope")" "targeted" "durable guard rust changes should stay targeted"
-
 guard_store_rust_output="$(run_selector $'crates/kamn-core/src/durable_guard_store.rs')"
 assert_eq "$(extract_output "$guard_store_rust_output" "run_rust")" "true" "durable guard store rust changes should run rust lane"
 assert_eq "$(extract_output "$guard_store_rust_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard store rust changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_store_rust_output" "test_scope")" "targeted" "durable guard store rust changes should stay targeted"
-
 guard_store_test_output="$(run_selector $'crates/kamn-core/tests/durable_guard_snapshot_store.rs')"
 assert_eq "$(extract_output "$guard_store_test_output" "run_rust")" "true" "durable guard store test changes should run rust lane"
 assert_eq "$(extract_output "$guard_store_test_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard store test changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_store_test_output" "test_scope")" "targeted" "durable guard store test changes should stay targeted"
-
 runtime_rust_output="$(run_selector $'crates/kamn-core/src/runtime.rs')"
 assert_eq "$(extract_output "$runtime_rust_output" "run_rust")" "true" "runtime rust changes should run rust lane"
 assert_eq "$(extract_output "$runtime_rust_output" "run_runtime_snapshot_contract_tests")" "false" "runtime rust changes should avoid duplicate runtime contract lane"
 assert_eq "$(extract_output "$runtime_rust_output" "test_scope")" "targeted" "runtime rust changes should stay targeted"
-
 message_rust_output="$(run_selector $'crates/kamn-core/src/message_lifecycle.rs')"
 assert_eq "$(extract_output "$message_rust_output" "run_rust")" "true" "message lifecycle rust changes should run rust lane"
 assert_eq "$(extract_output "$message_rust_output" "run_message_lifecycle_contract_tests")" "false" "message lifecycle rust changes should avoid duplicate message contract lane"
 assert_eq "$(extract_output "$message_rust_output" "test_scope")" "targeted" "message lifecycle rust changes should stay targeted"
-
 channel_rust_output="$(run_selector $'crates/kamn-core/src/channel_models.rs')"
 assert_eq "$(extract_output "$channel_rust_output" "run_rust")" "true" "channel lifecycle rust changes should run rust lane"
 assert_eq "$(extract_output "$channel_rust_output" "run_channel_lifecycle_contract_tests")" "false" "channel lifecycle rust changes should avoid duplicate channel contract lane"
 assert_eq "$(extract_output "$channel_rust_output" "test_scope")" "targeted" "channel lifecycle rust changes should stay targeted"
-
 task_rust_output="$(run_selector $'crates/kamn-core/src/task_operations.rs')"
 assert_eq "$(extract_output "$task_rust_output" "run_rust")" "true" "task operation rust changes should run rust lane"
 assert_eq "$(extract_output "$task_rust_output" "run_task_operation_snapshot_contract_tests")" "false" "task operation rust changes should avoid duplicate task contract lane"
 assert_eq "$(extract_output "$task_rust_output" "test_scope")" "targeted" "task operation rust changes should stay targeted"
-
 echo "select_targets matrix regression tests passed."

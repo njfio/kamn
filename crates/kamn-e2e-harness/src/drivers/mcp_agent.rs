@@ -59,6 +59,23 @@ const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveMcpProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
 
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match env::var(key) {
+        Ok(value) => value,
+        Err(_) => default.to_owned(),
+    }
+}
+
+fn env_var_or_else<F>(key: &str, fallback: F) -> String
+where
+    F: FnOnce() -> String,
+{
+    match env::var(key) {
+        Ok(value) => value,
+        Err(_) => fallback(),
+    }
+}
+
 /// MCP-agent driver for Tau and generic MCP runtimes.
 #[derive(Clone)]
 pub struct McpAgentDriver {
@@ -239,10 +256,16 @@ impl HarnessDriver for McpAgentDriver {
     }
 
     fn execute(&self, scenario_id: &'static str) -> DriverExecutionResult {
-        let status = match self.live_probe_for_scenario(scenario_id) {
-            Some(result) if result.is_ok() => "pass",
-            Some(_) => "fail",
-            None => "pass",
+        let status = if !is_live_bound_scenario_id(scenario_id) {
+            "pass"
+        } else if !self.live_execution_enabled {
+            "fail"
+        } else {
+            match self.live_probe_for_scenario(scenario_id) {
+                Some(result) if result.is_ok() => "pass",
+                Some(_) => "fail",
+                None => "fail",
+            }
         };
         DriverExecutionResult {
             scenario_id,
@@ -253,9 +276,6 @@ impl HarnessDriver for McpAgentDriver {
 
 impl McpAgentDriver {
     fn live_probe_for_scenario(&self, scenario_id: &'static str) -> Option<Result<(), String>> {
-        if !self.live_execution_enabled {
-            return None;
-        }
         match scenario_id {
             "S-01" => Some((self.discovery_probe)()),
             "S-02" => Some((self.direct_message_probe)()),
@@ -277,6 +297,27 @@ impl McpAgentDriver {
     }
 }
 
+fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
+    matches!(
+        scenario_id,
+        "S-01"
+            | "S-02"
+            | "S-03"
+            | "S-04"
+            | "S-05"
+            | "S-06"
+            | "S-07"
+            | "S-08"
+            | "S-09"
+            | "S-10"
+            | "S-11"
+            | "S-12"
+            | "S-13"
+            | "S-14"
+            | "S-15"
+    )
+}
+
 fn live_execution_enabled_from_env() -> bool {
     env::var(MCP_AGENT_LIVE_ENV)
         .ok()
@@ -292,13 +333,10 @@ fn parse_bool_flag(value: &str) -> bool {
 }
 
 fn run_live_s01_mcp_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
 
     let mut child = Command::new(binary.as_str())
         .arg("--endpoint")
@@ -359,13 +397,10 @@ fn run_live_s01_mcp_probe() -> Result<(), String> {
 }
 
 fn run_live_s02_mcp_direct_message_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let message_payload = env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S02_MESSAGE_PAYLOAD.to_owned());
     let reply_payload = env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
@@ -508,13 +543,10 @@ fn run_live_s02_mcp_direct_message_probe() -> Result<(), String> {
 }
 
 fn run_live_s03_mcp_group_channel_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let channel_payload = env::var("KAMN_E2E_S03_CHANNEL_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S03_CHANNEL_PAYLOAD.to_owned());
     let message_payload = env::var("KAMN_E2E_S03_MESSAGE_PAYLOAD")
@@ -646,13 +678,10 @@ fn run_live_s03_mcp_group_channel_probe() -> Result<(), String> {
 }
 
 fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let create_task_payload = env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
     let create_agent_name = format!("{agent_name}-s04-create");
@@ -775,13 +804,10 @@ fn run_live_s04_mcp_task_lifecycle_probe() -> Result<(), String> {
 }
 
 fn run_live_s05_mcp_escrow_settlement_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let fund_payload = env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S05_FUND_ESCROW_PAYLOAD.to_owned());
     let fund_agent_name = format!("{agent_name}-s05-fund");
@@ -864,17 +890,13 @@ fn validate_live_s05_release_escrow_response(
 }
 
 fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let agent_name =
-        env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_MCP_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_MCP_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let message_id = env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
         .unwrap_or_else(|_| DEFAULT_S06_MESSAGE_ID.to_owned());
-    let tx_hash =
-        env::var("KAMN_E2E_S06_PROOF_TX_HASH").unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
+    let tx_hash = env_var_or_default("KAMN_E2E_S06_PROOF_TX_HASH", DEFAULT_S06_TX_HASH);
     let block_height = env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
         .ok()
         .map(|raw| {
@@ -884,8 +906,7 @@ fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
         })
         .transpose()?
         .unwrap_or(DEFAULT_S06_BLOCK_HEIGHT);
-    let finality =
-        env::var("KAMN_E2E_S06_PROOF_FINALITY").unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
+    let finality = env_var_or_default("KAMN_E2E_S06_PROOF_FINALITY", DEFAULT_S06_FINALITY);
 
     let proof_arguments = format!(
         "{{\"message_id\":\"{}\",\"tx_hash\":\"{}\",\"block_height\":\"{}\",\"finality\":\"{}\"}}",
@@ -932,13 +953,10 @@ fn run_live_s06_mcp_proof_verification_probe() -> Result<(), String> {
 }
 
 fn run_live_s07_mcp_replay_protection_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S07_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S07_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S07_AGENT_NAME", DEFAULT_S07_AGENT_NAME);
     let message_payload = env::var("KAMN_E2E_S07_REPLAY_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S07_MESSAGE_PAYLOAD.to_owned());
     let replay_agent_name = format!(
@@ -995,13 +1013,10 @@ fn run_live_s07_mcp_replay_protection_probe() -> Result<(), String> {
 }
 
 fn run_live_s08_mcp_crash_recovery_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S08_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S08_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S08_AGENT_NAME", DEFAULT_S08_AGENT_NAME);
     let pre_message_payload = env::var("KAMN_E2E_S08_PRE_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S08_PRE_MESSAGE_PAYLOAD.to_owned());
     let post_message_payload = env::var("KAMN_E2E_S08_POST_MESSAGE_PAYLOAD")
@@ -1100,16 +1115,13 @@ fn run_live_s08_mcp_crash_recovery_probe() -> Result<(), String> {
 }
 
 fn run_live_s09_mcp_transport_failover_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let primary_endpoint =
-        env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let failover_endpoint =
-        env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S09_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let primary_endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let failover_endpoint = env_var_or_else("KAMN_E2E_S09_FAILOVER_ENDPOINT", || {
+        primary_endpoint.clone()
+    });
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S09_AGENT_NAME", DEFAULT_S09_AGENT_NAME);
     let pre_message_payload = env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S09_PRE_MESSAGE_PAYLOAD.to_owned());
     let post_message_payload = env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
@@ -1217,19 +1229,18 @@ fn run_live_s09_mcp_transport_failover_probe() -> Result<(), String> {
 }
 
 fn run_live_s10_mcp_topology_coherence_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
     let primary_endpoint = env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
         .or_else(|_| env::var("KAMN_ENDPOINT"))
         .unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let secondary_endpoint =
-        env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
-    let tertiary_endpoint =
-        env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT").unwrap_or_else(|_| secondary_endpoint.clone());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S10_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
+    let secondary_endpoint = env_var_or_else("KAMN_E2E_S10_SECONDARY_ENDPOINT", || {
+        primary_endpoint.clone()
+    });
+    let tertiary_endpoint = env_var_or_else("KAMN_E2E_S10_TERTIARY_ENDPOINT", || {
+        secondary_endpoint.clone()
+    });
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S10_AGENT_NAME", DEFAULT_S10_AGENT_NAME);
     let message_payload = env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S10_MESSAGE_PAYLOAD.to_owned());
 
@@ -1331,11 +1342,9 @@ fn run_live_s10_mcp_topology_coherence_probe() -> Result<(), String> {
 }
 
 fn run_live_s11_mcp_signer_rotation_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let primary_agent_name = env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
         .unwrap_or_else(|_| DEFAULT_S11_PRIMARY_AGENT_NAME.to_owned());
     let rotated_agent_name = env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
@@ -1448,13 +1457,10 @@ fn run_live_s11_mcp_signer_rotation_probe() -> Result<(), String> {
 }
 
 fn run_live_s12_mcp_retention_deletion_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S12_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S12_AGENT_NAME", DEFAULT_S12_AGENT_NAME);
     let register_payload = env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S12_REGISTER_CONTENT_PAYLOAD.to_owned());
 
@@ -1632,13 +1638,10 @@ fn run_live_s12_mcp_retention_deletion_probe() -> Result<(), String> {
 }
 
 fn run_live_s13_mcp_bridge_forwarding_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S13_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S13_AGENT_NAME", DEFAULT_S13_AGENT_NAME);
     let submit_payload = env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD.to_owned());
 
@@ -1817,13 +1820,10 @@ fn run_live_s13_mcp_bridge_forwarding_probe() -> Result<(), String> {
 }
 
 fn run_live_s14_mcp_batch_merkle_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S14_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S14_AGENT_NAME", DEFAULT_S14_AGENT_NAME);
     let batch_message_payload_a = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
         .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A.to_owned());
     let batch_message_payload_b = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
@@ -1837,8 +1837,7 @@ fn run_live_s14_mcp_batch_merkle_probe() -> Result<(), String> {
         })
         .transpose()?
         .unwrap_or(DEFAULT_S14_BLOCK_HEIGHT);
-    let finality =
-        env::var("KAMN_E2E_S14_FINALITY").unwrap_or_else(|_| DEFAULT_S14_FINALITY.to_owned());
+    let finality = env_var_or_default("KAMN_E2E_S14_FINALITY", DEFAULT_S14_FINALITY);
 
     let batch_a_send_arguments = format!(
         "{{\"payload\":\"{}\"}}",
@@ -1971,13 +1970,10 @@ fn run_live_s14_mcp_batch_merkle_probe() -> Result<(), String> {
 }
 
 fn run_live_s15_mcp_performance_smoke_probe() -> Result<(), String> {
-    let binary =
-        env::var(MCP_AGENT_BINARY_ENV).unwrap_or_else(|_| DEFAULT_MCP_AGENT_BINARY.to_owned());
-    let endpoint = env::var("KAMN_ENDPOINT").unwrap_or_else(|_| DEFAULT_KAMN_ENDPOINT.to_owned());
-    let base_agent_name =
-        env::var("KAMN_E2E_S15_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S15_AGENT_NAME.to_owned());
-    let key_file =
-        env::var("KAMN_AGENT_KEY_FILE").unwrap_or_else(|_| DEFAULT_MCP_AGENT_KEY_FILE.to_owned());
+    let binary = env_var_or_default(MCP_AGENT_BINARY_ENV, DEFAULT_MCP_AGENT_BINARY);
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", DEFAULT_KAMN_ENDPOINT);
+    let base_agent_name = env_var_or_default("KAMN_E2E_S15_AGENT_NAME", DEFAULT_S15_AGENT_NAME);
+    let key_file = env_var_or_default("KAMN_AGENT_KEY_FILE", DEFAULT_MCP_AGENT_KEY_FILE);
     let message_payload = env::var("KAMN_E2E_S15_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S15_MESSAGE_PAYLOAD.to_owned());
     let iterations = env::var("KAMN_E2E_S15_ITERATIONS")
@@ -4192,6 +4188,30 @@ sys.stdout.write(frame(init_payload) + frame(tool_payload))
         assert!(debug.contains("McpAgentDriver"));
         assert!(debug.contains("mode"));
         assert!(debug.contains("live_execution_enabled"));
+    }
+
+    #[test]
+    fn spec_c00_live_disabled_driver_path_fails_closed_without_probe_invocation() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let probe_calls = Arc::new(AtomicUsize::new(0));
+        let probe_calls_for_closure = Arc::clone(&probe_calls);
+        let driver = McpAgentDriver::with_probe(ExecutionMode::McpTau, false, move || {
+            probe_calls_for_closure.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+        .expect("driver should build");
+        let result = crate::drivers::HarnessDriver::execute(&driver, "S-01");
+        assert_eq!(
+            result.status, "fail",
+            "live-disabled S-01 must fail closed instead of reporting pass",
+        );
+        assert_eq!(
+            probe_calls.load(Ordering::SeqCst),
+            0,
+            "live probe should not be invoked when toggle is disabled",
+        );
     }
 
     #[test]

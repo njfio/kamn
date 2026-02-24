@@ -518,11 +518,11 @@ fn unit_observability_endpoint_maps_daemon_telemetry_into_snapshot() {
         build_runtime_observability_snapshot(&report).expect("daemon report should map snapshot");
     assert_eq!(snapshot.source, "daemon");
     assert_eq!(snapshot.runtime_mode, "daemon");
-    assert_eq!(snapshot.latency_p50_ms, 25);
-    assert_eq!(snapshot.latency_p99_ms, 50);
-    assert_eq!(snapshot.throughput_tps, 2_000);
-    assert_eq!(snapshot.error_rate_bps, 50);
-    assert_eq!(snapshot.availability_bps, 9_990);
+    assert_eq!(snapshot.latency_p50_ms, 1);
+    assert_eq!(snapshot.latency_p99_ms, 1);
+    assert_eq!(snapshot.throughput_tps, 1_000);
+    assert_eq!(snapshot.error_rate_bps, 0);
+    assert_eq!(snapshot.availability_bps, 10_000);
     assert_eq!(snapshot.health, "healthy");
     assert_eq!(snapshot.alert_count, 0);
 }
@@ -548,9 +548,7 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     let metrics = render_observability_endpoint_response(&snapshot, "/metrics");
     assert_eq!(metrics.status_code, 200);
     assert_eq!(metrics.content_type, "text/plain; version=0.0.4");
-    assert!(metrics
-        .body
-        .contains("kamn_observability_latency_p50_ms 25"));
+    assert!(metrics.body.contains("kamn_observability_latency_p50_ms 1"));
     assert!(metrics
         .body
         .contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
@@ -872,7 +870,7 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
         metrics_response.contains("HTTP/1.1 200 OK"),
         "metrics endpoint should return 200 response"
     );
-    assert!(metrics_response.contains("kamn_observability_latency_p50_ms 25"));
+    assert!(metrics_response.contains("kamn_observability_latency_p50_ms 1"));
     assert!(metrics_response.contains("kamn_observability_reason_code{reason_code=\"none\"} 1"));
     assert!(metrics_response
         .contains("kamn_observability_readiness_reason_code{readiness_reason_code=\"none\"} 1"));
