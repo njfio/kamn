@@ -2,9 +2,25 @@ use kamn_core::{
     classify_smoke_error, classify_transaction_guard_error, invariant_catalog, validate_catalog,
     BaselineTransaction, InvariantFailureCode, RoleSmokeNetwork, SmokeError, TransactionGuardError,
 };
+use std::sync::OnceLock;
+
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+
+fn ensure_default_signer_key_env() {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        std::env::set_var("KAMN_SIGNER_PRIVATE_KEY_HEX", TEST_SIGNER_PRIVATE_KEY_A_HEX);
+        std::env::set_var(
+            "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+            TEST_SIGNER_PRIVATE_KEY_A_HEX,
+        );
+    });
+}
 
 #[test]
 fn functional_nonce_violation_maps_to_canonical_taxonomy() {
+    ensure_default_signer_key_env();
     let mut network = RoleSmokeNetwork::new(true);
     let tx = BaselineTransaction::signed(
         "tx-1",
@@ -49,6 +65,7 @@ fn integration_non_guard_smoke_errors_do_not_produce_taxonomy() {
 #[test]
 fn regression_stale_state_hash_maps_to_expected_invariant_id() {
     // Regression: #77
+    ensure_default_signer_key_env();
     let mut network = RoleSmokeNetwork::new(true);
     let stale_hash = network.expected_state_hash().to_owned();
     let tx1 = BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", &stale_hash);

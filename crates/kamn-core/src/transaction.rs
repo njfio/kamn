@@ -1,8 +1,8 @@
 use crate::signature_profile::{
-    baseline_signature_for_fields, debug_fallback_signer_private_key_hex,
-    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
-    service_auth_verify_with_public_key_hex, signature_matches_supported_profile_for_fields,
-    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV,
+    baseline_signature_for_fields, service_auth_public_key_hex_from_private_key_hex,
+    service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
+    signature_matches_supported_profile_for_fields, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    SERVICE_AUTH_SIGNATURE_PUBLIC_KEY_ENV,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -145,10 +145,6 @@ fn resolve_transaction_signer_private_key_hex() -> Option<String> {
                 return Some(trimmed.to_owned());
             }
         }
-    }
-
-    if cfg!(debug_assertions) {
-        return debug_fallback_signer_private_key_hex().map(str::to_owned);
     }
 
     None
@@ -429,19 +425,19 @@ impl std::error::Error for TransactionGuardError {}
 #[cfg(test)]
 mod tests {
     use super::{
-        signer_legacy_baseline_v1_compat_enabled,
+        resolve_transaction_signer_private_key_hex, signer_legacy_baseline_v1_compat_enabled,
         signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value, BaselineTransaction,
         TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
-        SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV, SIGNER_PRIVATE_KEY_ENV,
+        SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV,
+        SIGNER_PRIVATE_KEY_ENV,
     };
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::Mutex;
 
     const TEST_SIGNER_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
     fn signer_env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
+        crate::signer_test_env_lock()
     }
 
     fn lock_signer_env() -> std::sync::MutexGuard<'static, ()> {
@@ -506,6 +502,34 @@ mod tests {
         assert!(
             !signer_legacy_baseline_v1_compat_enabled(),
             "wrapper should default to fail-closed when compatibility env is unset"
+        );
+    }
+
+    #[test]
+    fn regression_transaction_key_resolution_requires_explicit_env() {
+        // Regression: #5913
+        let _lock = lock_signer_env();
+        let _private_key_guard = EnvVarGuard::set(SIGNER_PRIVATE_KEY_ENV, None);
+        let _service_private_key_guard =
+            EnvVarGuard::set(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, None);
+        assert!(
+            resolve_transaction_signer_private_key_hex().is_none(),
+            "transaction key resolution must fail closed without explicit key env"
+        );
+    }
+
+    #[test]
+    fn regression_transaction_key_resolution_uses_explicit_env() {
+        // Regression: #5913
+        let _lock = lock_signer_env();
+        let _private_key_guard =
+            EnvVarGuard::set(SIGNER_PRIVATE_KEY_ENV, Some(TEST_SIGNER_PRIVATE_KEY_HEX));
+        let _service_private_key_guard =
+            EnvVarGuard::set(SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV, None);
+        assert_eq!(
+            resolve_transaction_signer_private_key_hex().as_deref(),
+            Some(TEST_SIGNER_PRIVATE_KEY_HEX),
+            "transaction key resolution must honor explicit signer private key env"
         );
     }
 

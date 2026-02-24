@@ -1,8 +1,23 @@
 use std::collections::BTreeSet;
+use std::sync::OnceLock;
 
 use kamn_core::{
     classify_smoke_error, BaselineTransaction, InvariantFailureCode, RoleSmokeNetwork,
 };
+
+const TEST_SIGNER_PRIVATE_KEY_A_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
+
+fn ensure_default_signer_key_env() {
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        std::env::set_var("KAMN_SIGNER_PRIVATE_KEY_HEX", TEST_SIGNER_PRIVATE_KEY_A_HEX);
+        std::env::set_var(
+            "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+            TEST_SIGNER_PRIVATE_KEY_A_HEX,
+        );
+    });
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Scenario {
@@ -38,6 +53,7 @@ fn scenario_from_seed(value: u64) -> Scenario {
 }
 
 fn run_scenario(scenario: Scenario, index: usize) -> Option<InvariantFailureCode> {
+    ensure_default_signer_key_env();
     let mut network = RoleSmokeNetwork::new(true);
 
     match scenario {

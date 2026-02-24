@@ -588,6 +588,8 @@ mod tests {
 
     const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE: &str =
         "secure:aws-kms:role-operator/key-live-ops-primary";
+    const TEST_CORE_SIGNER_PRIVATE_KEY_HEX: &str =
+        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
     fn managed_backend_env_lock() -> &'static Mutex<()> {
         crate::signer_test_env_lock()
@@ -624,6 +626,14 @@ mod tests {
         let _lock = managed_backend_env_lock()
             .lock()
             .unwrap_or_else(|error| error.into_inner());
+        let _core_signer_key_guard = EnvVarGuard::set(
+            "KAMN_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_CORE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let _core_service_key_guard = EnvVarGuard::set(
+            "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+            Some(TEST_CORE_SIGNER_PRIVATE_KEY_HEX),
+        );
         let request = KolmeRuntimeCommitRequest::deterministic(
             "op-node-live-3955-provenance",
             "state:node-live-3955-provenance",

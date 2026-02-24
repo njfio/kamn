@@ -1,5 +1,18 @@
 use super::*;
 
+fn managed_external_core_signer_env_guards() -> (EnvVarGuard, EnvVarGuard) {
+    (
+        EnvVarGuard::set(
+            "KAMN_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        ),
+        EnvVarGuard::set(
+            "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        ),
+    )
+}
+
 #[test]
 fn unit_kolme_live_signer_builds_direct_signed_wire_payload() {
     let _lock = lock_signer_env_guard();
@@ -692,6 +705,8 @@ fn integration_runtime_kolme_live_renders_secondary_signer_selection_markers() {
 fn integration_runtime_kolme_live_renders_managed_external_signer_selection_markers() {
     // Regression: #2323
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1175,6 +1190,8 @@ fn regression_kolme_live_managed_external_requires_backend_command_without_requi
 fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection() {
     // Regression: #2323
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1254,6 +1271,8 @@ fn integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer
 fn regression_kolme_live_managed_external_backend_response_requires_signer_public_key_marker() {
     // Regression: #2509
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1452,6 +1471,8 @@ fn regression_kolme_live_managed_external_rejects_invalid_runtime_signer_public_
 fn regression_kolme_live_managed_external_backend_response_rejects_signer_public_key_mismatch() {
     // Regression: #2509
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _key_ref_guard = EnvVarGuard::set(
@@ -1561,6 +1582,8 @@ fn regression_kolme_live_managed_external_maps_provider_unavailable_reason_code(
 fn regression_kolme_live_managed_external_backend_timeout_maps_reason_code() {
     // Regression: #2423
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _backend_command_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", Some("sleep 2"));
     let _backend_timeout_guard =
@@ -1599,6 +1622,8 @@ fn regression_kolme_live_managed_external_backend_timeout_maps_reason_code() {
 fn regression_kolme_live_managed_external_backend_malformed_response_maps_reason_code() {
     // Regression: #2423
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _backend_command_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
         Some("printf 'signature_hex=zzzz\\nrecovery_id=9\\nsigner_public_key_hex=03af446f76cf36092a4e45864210a1dbf03e872756eec21de61910859f8a607dd2\\n'"),
@@ -1639,6 +1664,8 @@ fn regression_kolme_live_managed_external_backend_malformed_response_maps_reason
 fn regression_kolme_live_managed_external_backend_unavailable_maps_reason_code() {
     // Regression: #2423
     let _lock = lock_signer_env_guard();
+    let (_core_signer_key_guard, _core_service_key_guard) =
+        managed_external_core_signer_env_guards();
     let _backend_command_guard = EnvVarGuard::set(
         "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
         Some("this-command-should-not-exist-2423"),
