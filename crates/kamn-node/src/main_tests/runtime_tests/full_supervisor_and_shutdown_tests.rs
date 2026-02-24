@@ -499,6 +499,10 @@ fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
         "--daemon-shutdown-signal-tick".to_owned(),
         "1".to_owned(),
         "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
         "5".to_owned(),
         "--daemon-shutdown-timeout-ticks".to_owned(),
         "1".to_owned(),
@@ -677,4 +681,111 @@ fn regression_runtime_full_os_signal_timeout_stop_markers_project_shutdown_field
         extract_json_string_field(stop_complete_line, "shutdown_ignored_signals").is_some(),
         "timeout stop marker should include shutdown_ignored_signals parity field"
     );
+}
+
+#[test]
+fn integration_runtime_daemon_drains_service_api_relay_spool_entries() {
+    let _lock = log_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let relay_spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-runtime-daemon-relay-spool-{}-{}.ndjson",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    std::fs::write(
+        relay_spool_file.as_path(),
+        concat!(
+            "{\"message_id\":\"msg-relay-1\",\"sender_did\":\"kamn:did:agent:sender\",\"recipient_did\":\"kamn:did:agent:recipient\",\"body\":\"{\\\"message\\\":\\\"hello\\\"}\",\"queued_at_unix\":1700000001}\n",
+            "{\"message_id\":\"msg-relay-2\",\"sender_did\":\"kamn:did:agent:sender\",\"recipient_did\":\"kamn:did:agent:recipient\",\"body\":\"{\\\"message\\\":\\\"world\\\"}\",\"queued_at_unix\":1700000002}\n"
+        ),
+    )
+    .expect("relay spool fixture should write");
+    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+    let _relay_spool_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(relay_spool_file_str.as_str()),
+    );
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
+    ])
+    .expect("daemon args should parse");
+    let report = execute(parsed).expect("daemon runtime should succeed");
+    assert_eq!(report.runtime_mode, "daemon");
+
+    let relay_contents = std::fs::read_to_string(relay_spool_file.as_path())
+        .expect("relay spool should remain readable after daemon execution");
+    assert!(
+        relay_contents.trim().is_empty(),
+        "daemon runtime should drain relay spool entries"
+    );
+    let _ = std::fs::remove_file(relay_spool_file);
+}
+
+#[test]
+fn regression_runtime_daemon_relay_spool_drain_is_idempotent_when_empty() {
+    // Regression: #5861
+    let _lock = log_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let relay_spool_file = std::env::temp_dir().join(format!(
+        "kamn-node-runtime-daemon-empty-relay-spool-{}-{}.ndjson",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    std::fs::write(relay_spool_file.as_path(), "").expect("empty relay spool fixture should write");
+    let relay_spool_file_str = relay_spool_file.to_string_lossy().to_string();
+    let _relay_spool_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_API_RELAY_SPOOL_FILE",
+        Some(relay_spool_file_str.as_str()),
+    );
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
+    ])
+    .expect("daemon args should parse");
+    let report = execute(parsed).expect("daemon runtime should succeed");
+    assert_eq!(report.runtime_mode, "daemon");
+    let relay_contents = std::fs::read_to_string(relay_spool_file.as_path())
+        .expect("empty relay spool should remain readable after daemon execution");
+    assert!(
+        relay_contents.is_empty(),
+        "daemon runtime empty-drain path should preserve empty spool state"
+    );
+    let _ = std::fs::remove_file(relay_spool_file);
 }

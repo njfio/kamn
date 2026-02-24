@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader, Write};
 use std::net::SocketAddr;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -181,6 +181,7 @@ const SERVICE_API_TLS_MODE_DISABLED: &str = "disabled";
 const SERVICE_API_TLS_MODE_REQUIRE: &str = "require";
 const SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV: &str = "KAMN_SERVICE_API_AUTH_PUBLIC_KEY_HEX";
 const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
+pub(crate) const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointConfig {
@@ -284,6 +285,16 @@ pub(crate) struct ServiceApiMessageGetBody {
     pub(crate) recipient_did: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) body: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiRelaySpoolEntry {
+    pub(crate) message_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) sender_did: Option<String>,
+    pub(crate) recipient_did: String,
+    pub(crate) body: String,
+    pub(crate) queued_at_unix: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -452,6 +463,7 @@ struct ServiceApiRuntimeState {
     sender_anti_spam: Arc<Mutex<AntiSpamEngine>>,
     auth_public_key_hex: Option<String>,
     message_store: Arc<Mutex<ServiceApiMessageStore>>,
+    relay_spool_file: Option<String>,
 }
 
 #[derive(Debug)]
@@ -615,6 +627,102 @@ pub(crate) fn render_service_api_endpoint_response(
     body: &str,
 ) -> ServiceApiEndpointResponse {
     payload::render_service_api_endpoint_response(snapshot, method, path, body)
+}
+
+pub(crate) fn default_service_api_state_file_path_for_bind_addr(bind_addr: &str) -> String {
+    let mut path = env::temp_dir();
+    let bind_label = sanitize_service_api_state_file_component(bind_addr);
+    path.push(format!("kamn-node-service-api-state-{bind_label}.json"));
+    path.to_string_lossy().to_string()
+}
+
+pub(crate) fn default_service_api_relay_spool_file_path_from_state_file(
+    state_file: &str,
+) -> String {
+    format!("{state_file}.relay.ndjson")
+}
+
+pub(crate) fn append_service_api_relay_spool_entry(
+    relay_spool_file: Option<&str>,
+    entry: &ServiceApiRelaySpoolEntry,
+) -> Result<(), String> {
+    let Some(path) = relay_spool_file else {
+        return Ok(());
+    };
+    let payload = serde_json::to_string(entry)
+        .map_err(|error| format!("service api relay spool serialization failed: {error}"))?;
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|error| format!("service api relay spool open failed: {path}: {error}"))?;
+    writeln!(file, "{payload}")
+        .map_err(|error| format!("service api relay spool append failed: {path}: {error}"))?;
+    Ok(())
+}
+
+pub(crate) fn drain_service_api_relay_spool_entries(
+    relay_spool_file: Option<&str>,
+) -> Result<Vec<ServiceApiRelaySpoolEntry>, String> {
+    let Some(path) = relay_spool_file else {
+        return Ok(Vec::new());
+    };
+    let file = match fs::File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => {
+            return Err(format!(
+                "service api relay spool read failed: {path}: {error}"
+            ));
+        }
+    };
+    let mut entries = Vec::new();
+    let reader = BufReader::new(file);
+    for (line_index, line_result) in reader.lines().enumerate() {
+        let line = line_result
+            .map_err(|error| format!("service api relay spool read failed: {path}: {error}"))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let entry =
+            serde_json::from_str::<ServiceApiRelaySpoolEntry>(line.as_str()).map_err(|error| {
+                format!(
+                    "service api relay spool parse failed: {path}: line {}: {error}",
+                    line_index + 1
+                )
+            })?;
+        entries.push(entry);
+    }
+    fs::write(path, "")
+        .map_err(|error| format!("service api relay spool truncate failed: {path}: {error}"))?;
+    Ok(entries)
+}
+
+fn sanitize_service_api_state_file_component(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    let mut last_was_separator = false;
+    for ch in value.chars() {
+        let normalized = if ch.is_ascii_alphanumeric() {
+            ch.to_ascii_lowercase()
+        } else {
+            '-'
+        };
+        if normalized == '-' {
+            if !last_was_separator {
+                output.push(normalized);
+            }
+            last_was_separator = true;
+            continue;
+        }
+        output.push(normalized);
+        last_was_separator = false;
+    }
+    let trimmed = output.trim_matches('-');
+    if trimmed.is_empty() {
+        "default".to_owned()
+    } else {
+        trimmed.to_owned()
+    }
 }
 
 pub(crate) fn serve_service_api_endpoint(

@@ -468,6 +468,7 @@ pub(super) fn execute_daemon_runtime(
         daemon_shutdown_timeout_ticks,
         daemon_peer_id,
         daemon_lifecycle_events,
+        service_api_relay_spool_file,
     } = options;
     let max_ticks =
         daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
@@ -587,6 +588,11 @@ pub(super) fn execute_daemon_runtime(
         project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
             multi_host_execution_bundle_selector_rows.as_slice(),
         );
+    let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
+        service_api_relay_spool_file.as_deref(),
+    )
+    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    let relay_drained_count_label = relay_entries.len().to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -718,6 +724,10 @@ pub(super) fn execute_daemon_runtime(
             (
                 "multi_host_execution_bundle_selector_rows_fingerprint",
                 multi_host_execution_bundle_selector_rows_fingerprint.as_str(),
+            ),
+            (
+                "service_api_relay_drained_count",
+                relay_drained_count_label.as_str(),
             ),
             ("execution_id", execution_id),
         ],
