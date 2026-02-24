@@ -2,6 +2,7 @@ mod auth;
 mod message_store;
 mod middleware_impl;
 mod payload;
+mod runtime_observability;
 mod scope_fixture;
 mod server;
 mod state_io;
@@ -50,6 +51,7 @@ use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
 use message_store::ServiceApiMessageStore;
+use runtime_observability::ServiceApiRuntimeObservability;
 pub(crate) use state_io::{
     append_service_api_relay_spool_entry,
     default_service_api_relay_spool_file_path_from_state_file,
@@ -465,6 +467,7 @@ struct ServiceApiRuntimeState {
     replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
     request_budget: Arc<ServiceApiRequestBudget>,
     websocket_events: ServiceApiWebsocketEventFanout,
+    runtime_observability: Arc<Mutex<ServiceApiRuntimeObservability>>,
     body_limit_bytes: usize,
     concurrency_limiter: Arc<Semaphore>,
     ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
