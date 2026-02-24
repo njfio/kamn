@@ -206,10 +206,11 @@ impl TransactionGuards {
 
     #[cfg(test)]
     fn with_limits(max_tracked_tx_ids: usize, max_tracked_senders: usize) -> Self {
-        let mut guards = Self::default();
-        guards.max_tracked_tx_ids = max_tracked_tx_ids;
-        guards.max_tracked_senders = max_tracked_senders;
-        guards
+        Self {
+            max_tracked_tx_ids,
+            max_tracked_senders,
+            ..Self::default()
+        }
     }
 
     /// Returns the state hash expected by the next transaction validation.
