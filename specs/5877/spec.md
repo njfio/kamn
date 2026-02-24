@@ -1,7 +1,7 @@
 # Spec: Issue #5877 - Production Expect Checker Test-Only Path Hardening
 
 - Issue: #5877
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
