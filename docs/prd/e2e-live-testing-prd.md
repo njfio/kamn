@@ -172,7 +172,7 @@ impl AgentIdentity {
 // crates/kamn-agent-lib/src/auth.rs
 
 /// KAMN signature format:
-///   sig:ed25519:baseline-v1:{sender_did}:{nonce}:{state_hash}:{body_len}
+///   sig:deterministic-v1:baseline-v1:{sender_did}:{nonce}:{state_hash}:{body_len}
 pub struct KamnAuthHeaders {
     pub sender_did: String,
     pub request_nonce: String,
@@ -1443,7 +1443,7 @@ For implementers of `kamn-agent-lib` and for understanding the MCP server intern
 ### 19.1 Signature Format
 
 ```
-sig:ed25519:baseline-v1:{sender_did}:{nonce}:{state_hash}:{body_len}
+sig:deterministic-v1:baseline-v1:{sender_did}:{nonce}:{state_hash}:{body_len}
 ```
 
 - `{sender_did}`: KAMN DID (`kamn:did:agent:{name}`)

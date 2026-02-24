@@ -5,12 +5,14 @@
 
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::fmt;
 
 /// Key-derivation algorithm identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "SenderKey-v1";
-/// Cipher algorithm identifier stamped on group ciphertext envelopes.
-pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
+/// Deterministic cipher profile identifier for non-cryptographic group-message fixtures.
+pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "KAMN-Deterministic-XOR-v1";
+const ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO";
 const GROUP_CHANNEL_CRYPTO_INVALID_SENDER_DID_REASON_CODE: &str =
     "group_channel_crypto_invalid_sender_did";
 const GROUP_CHANNEL_CRYPTO_INVALID_RECIPIENT_DID_REASON_CODE: &str =
@@ -68,6 +70,9 @@ pub struct GroupChannelCryptoEngine {
 impl GroupChannelCryptoEngine {
     /// Constructs an engine for a specific channel identifier.
     pub fn new(channel_id: &str) -> Result<Self, GroupChannelCryptoError> {
+        if !insecure_group_message_crypto_enabled() {
+            return Err(GroupChannelCryptoError::InsecureCryptoDisabled);
+        }
         if channel_id.trim().is_empty() {
             return Err(GroupChannelCryptoError::EmptyChannelId);
         }
@@ -298,6 +303,8 @@ impl GroupChannelCryptoEngine {
 /// Error surface for group channel sender-key and ciphertext validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GroupChannelCryptoError {
+    /// Insecure deterministic group-message crypto is disabled by policy.
+    InsecureCryptoDisabled,
     /// Channel identifier was empty.
     EmptyChannelId,
     /// Recipient allowlist was empty.
@@ -357,6 +364,10 @@ pub enum GroupChannelCryptoError {
 impl fmt::Display for GroupChannelCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::InsecureCryptoDisabled => write!(
+                f,
+                "deterministic group-message crypto is disabled; use production cryptographic transport or set KAMN_ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO=1 for local-only fixtures"
+            ),
             Self::EmptyChannelId => write!(f, "channel_id must not be empty"),
             Self::EmptyRecipients => write!(f, "recipient allowlist must not be empty"),
             Self::EmptyPayload => write!(f, "plaintext payload must not be empty"),
@@ -398,6 +409,19 @@ impl fmt::Display for GroupChannelCryptoError {
 }
 
 impl std::error::Error for GroupChannelCryptoError {}
+
+fn insecure_group_message_crypto_enabled() -> bool {
+    if cfg!(debug_assertions) {
+        return true;
+    }
+    match env::var(ALLOW_INSECURE_GROUP_MESSAGE_CRYPTO_ENV) {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => false,
+    }
+}
 
 fn validate_did(
     value: &str,

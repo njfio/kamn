@@ -23,7 +23,7 @@ Protected routes fail closed unless the request includes:
 
 Signature verification uses baseline profile matching:
 
-- Signature format: `sig:ed25519:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`
+- Signature format: `sig:deterministic-v1:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`
 - State hash: `service-api:<chain_id>:<chain_version>`
 - Payload input: raw request body
 

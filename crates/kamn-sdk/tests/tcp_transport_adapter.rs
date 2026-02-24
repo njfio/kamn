@@ -83,7 +83,7 @@ fn unit_tcp_envelope_roundtrip_is_cryptographic() {
 
 #[test]
 fn unit_tcp_envelope_rejects_duplicate_keys() {
-    let payload = "from=kamn:did:agent:sender-1\nfrom=kamn:did:agent:sender-1\nto=kamn:did:agent:listener-1\nnonce=1\nstate_hash=state:dup\nbody=dup\nsignature=sig:ed25519:baseline-v1:kamn:did:agent:sender-1:1:state:dup:3\n";
+    let payload = "from=kamn:did:agent:sender-1\nfrom=kamn:did:agent:sender-1\nto=kamn:did:agent:listener-1\nnonce=1\nstate_hash=state:dup\nbody=dup\nsignature=sig:deterministic-v1:baseline-v1:kamn:did:agent:sender-1:1:state:dup:3\n";
 
     assert_eq!(
         TcpSignedEnvelope::parse_wire_payload(payload),

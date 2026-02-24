@@ -90,7 +90,7 @@ fn signature_for_fields(
     body: &str,
 ) -> String {
     format!(
-        "sig:ed25519:baseline-v1:{from}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{}",
+        "sig:deterministic-v1:baseline-v1:{from}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{}",
         body.len()
     )
 }

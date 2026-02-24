@@ -126,7 +126,7 @@ fn functional_router_uses_custom_provider_client_mapping_for_secure_provider() {
     assert_eq!(signed.backend, "secure-aws-kms-emulator");
     assert!(signed
         .signature
-        .starts_with("provider-client:sig:ed25519:baseline-v1"));
+        .starts_with("provider-client:sig:deterministic-v1:baseline-v1"));
 }
 
 #[test]

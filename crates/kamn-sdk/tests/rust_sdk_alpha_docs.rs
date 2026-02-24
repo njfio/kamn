@@ -77,7 +77,7 @@ const DOC_CONTRACT_CASES: &[DocContractCase] = &[
         required_markers: &[
             "`Regression: #807`",
             "verified=true",
-            "signature=sig:ed25519:baseline-v1:...",
+            "signature=sig:deterministic-v1:baseline-v1:...",
         ],
     },
     DocContractCase {

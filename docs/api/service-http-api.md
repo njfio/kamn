@@ -80,7 +80,7 @@ Auth policy:
 
 Signature profile:
 
-- Signature contract uses baseline profile matcher (`sig:ed25519:baseline-v1:...`).
+- Signature contract uses baseline profile matcher (`sig:deterministic-v1:baseline-v1:...`).
 - State hash input is deterministic: `service-api:<chain_id>:<chain_version>`.
 - Replay key is `<sender_did, nonce>`.
 

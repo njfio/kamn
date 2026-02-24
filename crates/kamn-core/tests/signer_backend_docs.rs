@@ -32,7 +32,7 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
     assert!(DOC.contains("KAMN_SIGNER_PRIVATE_KEY_HEX"));
     assert!(DOC.contains("KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX"));
     assert!(DOC.contains("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1"));
-    assert!(DOC.contains("sig:ed25519:baseline-v1"));
+    assert!(DOC.contains("sig:deterministic-v1:baseline-v1"));
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     // Regression: #160
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains(
-        "Legacy baseline-v1 verification (`sig:ed25519:baseline-v1:...`) is disabled by default."
+        "Legacy baseline-v1 verification (`sig:deterministic-v1:baseline-v1:...`) is disabled by default."
     ));
     assert!(DOC.contains("non-versioned legacy profile remains rejected (`Regression: #404`)."));
     assert!(DOC.contains("algorithm/profile drift remains rejected (`Regression: #677`)."));
