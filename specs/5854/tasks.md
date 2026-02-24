@@ -12,7 +12,7 @@
   - `cargo test -p kamn-node regression_run_path_service_api_runtime_mode_classifier_rejects_non_api_non_full_modes -- --nocapture` (failed pre-implementation with unresolved helper symbols).
 - GREEN/Regression:
   - `cargo test -p kamn-node run_path_ -- --nocapture`
-  - `cargo test -p kamn-node --test runtime_entrypoint_mutation_contract -- --nocapture`
+  - `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode -- --nocapture`
   - `cargo test -p kamn-node regression_runtime_full_supervisor_rejects_service_api_lane_max_requests_drift -- --nocapture`
 - Verify:
   - `cargo fmt --check`

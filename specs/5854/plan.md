@@ -11,7 +11,7 @@
 - `crates/kamn-node/src/main_tests.rs`
 - `crates/kamn-node/src/main_tests/runtime_tests.rs`
 - `crates/kamn-node/src/main_tests/runtime_tests/*` (new run-path mutation guard test file)
-- `crates/kamn-node/tests/runtime_entrypoint_mutation_contract.rs` (new integration test)
+- `crates/kamn-node/tests/runtime_entrypoint_invalid_mode.rs` (new integration test)
 - `specs/5854/spec.md`
 - `specs/5854/plan.md`
 - `specs/5854/tasks.md`

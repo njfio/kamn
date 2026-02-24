@@ -42,7 +42,7 @@ Out of scope:
 - `cargo test -p kamn-node regression_run_path_service_api_runtime_mode_classifier_rejects_non_api_non_full_modes`
 - `cargo test -p kamn-node regression_run_path_service_api_runtime_mode_classifier_routes_api_and_full_modes_deterministically`
 - `cargo test -p kamn-node regression_run_path_observability_full_supervisor_skip_gate_is_explicit`
-- `cargo test -p kamn-node --test runtime_entrypoint_mutation_contract`
+- `cargo test -p kamn-node --test runtime_entrypoint_invalid_mode`
 - `cargo mutants --in-diff /tmp/issue5854.diff -p kamn-node`
 
 ## Success Metrics / Observable Signals
