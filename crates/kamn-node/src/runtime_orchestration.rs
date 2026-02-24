@@ -249,8 +249,29 @@ fn build_full_supervisor_provisional_observability_snapshot(
     }
 }
 
-fn resolve_daemon_service_api_relay_spool_file(
+fn resolve_daemon_service_api_state_file(
     api_bind_addr: Option<&str>,
+) -> Result<Option<String>, ConfigError> {
+    match env::var(SERVICE_API_STATE_FILE_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                    "{SERVICE_API_STATE_FILE_ENV} must not be empty when present"
+                )));
+            }
+            Ok(Some(normalized.to_owned()))
+        }
+        Err(env::VarError::NotPresent) => Ok(api_bind_addr
+            .map(super::service_api_endpoint::default_service_api_state_file_path_for_bind_addr)),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_STATE_FILE_ENV} must be valid utf-8 when present"
+        ))),
+    }
+}
+
+fn resolve_daemon_service_api_relay_spool_file(
+    state_file: Option<&str>,
 ) -> Result<Option<String>, ConfigError> {
     match env::var(SERVICE_API_RELAY_SPOOL_FILE_ENV) {
         Ok(value) => {
@@ -260,40 +281,15 @@ fn resolve_daemon_service_api_relay_spool_file(
                     "{SERVICE_API_RELAY_SPOOL_FILE_ENV} must not be empty when present"
                 )));
             }
-            return Ok(Some(normalized.to_owned()));
+            Ok(Some(normalized.to_owned()))
         }
-        Err(env::VarError::NotUnicode(_)) => {
-            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-                "{SERVICE_API_RELAY_SPOOL_FILE_ENV} must be valid utf-8 when present"
-            )));
-        }
-        Err(env::VarError::NotPresent) => {}
+        Err(env::VarError::NotPresent) => Ok(state_file.map(
+            super::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file,
+        )),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "{SERVICE_API_RELAY_SPOOL_FILE_ENV} must be valid utf-8 when present"
+        ))),
     }
-
-    let state_file = match env::var(SERVICE_API_STATE_FILE_ENV) {
-        Ok(value) => {
-            let normalized = value.trim();
-            if normalized.is_empty() {
-                return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-                    "{SERVICE_API_STATE_FILE_ENV} must not be empty when present"
-                )));
-            }
-            Some(normalized.to_owned())
-        }
-        Err(env::VarError::NotPresent) => api_bind_addr
-            .map(super::service_api_endpoint::default_service_api_state_file_path_for_bind_addr),
-        Err(env::VarError::NotUnicode(_)) => {
-            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
-                "{SERVICE_API_STATE_FILE_ENV} must be valid utf-8 when present"
-            )));
-        }
-    };
-
-    Ok(state_file.map(|path| {
-        super::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file(
-            path.as_str(),
-        )
-    }))
 }
 
 fn start_full_supervisor_observability_lane(
@@ -963,8 +959,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             }
         }
         RuntimeModeKind::Daemon => {
+            let service_api_state_file =
+                resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
             let service_api_relay_spool_file =
-                resolve_daemon_service_api_relay_spool_file(api_bind_addr.as_deref())?;
+                resolve_daemon_service_api_relay_spool_file(service_api_state_file.as_deref())?;
             let daemon_execution = execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
@@ -977,6 +975,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_shutdown_timeout_ticks,
                     daemon_peer_id,
                     daemon_lifecycle_events,
+                    service_api_state_file,
                     service_api_relay_spool_file,
                 },
             )?;
@@ -1073,8 +1072,10 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 )?);
             }
 
+            let service_api_state_file =
+                resolve_daemon_service_api_state_file(api_bind_addr.as_deref())?;
             let service_api_relay_spool_file =
-                resolve_daemon_service_api_relay_spool_file(api_bind_addr.as_deref())?;
+                resolve_daemon_service_api_relay_spool_file(service_api_state_file.as_deref())?;
             let daemon_execution = match execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
@@ -1087,6 +1088,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_shutdown_timeout_ticks,
                     daemon_peer_id,
                     daemon_lifecycle_events,
+                    service_api_state_file,
                     service_api_relay_spool_file,
                 },
             ) {

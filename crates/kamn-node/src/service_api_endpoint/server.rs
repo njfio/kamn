@@ -1,4 +1,5 @@
 use super::*;
+use std::io::BufReader;
 
 fn resolve_service_api_auth_public_key_hex() -> Result<Option<String>, String> {
     match env::var(SERVICE_API_AUTH_PUBLIC_KEY_HEX_ENV) {
