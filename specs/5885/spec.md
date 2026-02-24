@@ -1,7 +1,7 @@
 # Spec: Issue #5885 - Shell LOC Reduction Wave 3 (Batched Capability Delivery)
 
 - Issue: #5885
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
