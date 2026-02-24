@@ -2,8 +2,8 @@
 
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
-- archived_on: 2026-02-18
-- archived_issue_count: 229
+- archived_on: 2026-02-23
+- archived_issue_count: 231
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -236,3 +236,5 @@
 | 5107 | Task: integrate M2 gateway DID contracts with canonical AgentDid parsing | 2026-02-18 | `specs/archive/5107` | `specs/5107/ARCHIVED.md` |
 | 5109 | Task: integrate M9 realtime delivery DID contracts with canonical parser taxonomy | 2026-02-18 | `specs/archive/5109` | `specs/5109/ARCHIVED.md` |
 | 5111 | Task: execute implemented-spec archival wave and reduce active spec surface | 2026-02-18 | `specs/archive/5111` | `specs/5111/ARCHIVED.md` |
+| 5670 | Issue 5670 | 2026-02-23 | `specs/archive/5670` | `specs/5670/ARCHIVED.md` |
+| 5672 | Issue 5672 | 2026-02-23 | `specs/archive/5672` | `specs/5672/ARCHIVED.md` |

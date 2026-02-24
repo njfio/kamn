@@ -37,6 +37,9 @@ fn current_spec_directory_count() -> usize {
                 return None;
             }
             let top_level = parts.next()?;
+            if !top_level.chars().all(|ch| ch.is_ascii_digit()) {
+                return None;
+            }
             Some(top_level.to_string())
         })
         .collect::<BTreeSet<_>>()
