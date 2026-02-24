@@ -149,12 +149,15 @@ impl ServiceRequestAuth {
                 reason: "must be greater than zero",
             });
         }
-        if signature.trim().is_empty() {
+        let normalized_signature = signature.trim();
+        if normalized_signature.is_empty() {
             return Err(SdkError::InvalidInput {
                 field: "request_auth.signature",
                 reason: "must not be empty",
             });
         }
+        validate_http_header_value("request_auth.sender_did", sender_did.as_str())?;
+        validate_http_header_value("request_auth.signature", normalized_signature)?;
         let scope = match scope {
             Some(scope) => {
                 let normalized = scope.trim();
@@ -164,6 +167,7 @@ impl ServiceRequestAuth {
                         reason: "must not be empty when set",
                     });
                 }
+                validate_http_header_value("request_auth.scope", normalized)?;
                 Some(normalized.to_owned())
             }
             None => None,
@@ -171,7 +175,7 @@ impl ServiceRequestAuth {
         Ok(Self {
             sender_did,
             nonce,
-            signature,
+            signature: normalized_signature.to_owned(),
             scope,
         })
     }
@@ -412,12 +416,7 @@ impl ServiceApiClient {
         message_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceMessageStatus, SdkError> {
-        if message_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "message_id",
-                reason: "must not be empty",
-            });
-        }
+        let message_id = normalize_route_segment("message_id", message_id)?;
         let route = format!("/v1/messages/{message_id}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -447,12 +446,7 @@ impl ServiceApiClient {
         channel_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceChannelMessages, SdkError> {
-        if channel_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "channel_id",
-                reason: "must not be empty",
-            });
-        }
+        let channel_id = normalize_route_segment("channel_id", channel_id)?;
         let route = format!("/v1/channels/{channel_id}/messages");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -482,12 +476,7 @@ impl ServiceApiClient {
         task_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, SdkError> {
-        if task_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "task_id",
-                reason: "must not be empty",
-            });
-        }
+        let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -503,12 +492,7 @@ impl ServiceApiClient {
         task_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, SdkError> {
-        if task_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "task_id",
-                reason: "must not be empty",
-            });
-        }
+        let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/accept");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -524,12 +508,7 @@ impl ServiceApiClient {
         task_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceTaskStatus, SdkError> {
-        if task_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "task_id",
-                reason: "must not be empty",
-            });
-        }
+        let task_id = normalize_route_segment("task_id", task_id)?;
         let route = format!("/v1/tasks/{task_id}/complete");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -559,12 +538,7 @@ impl ServiceApiClient {
         escrow_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceEscrowStatus, SdkError> {
-        if escrow_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "escrow_id",
-                reason: "must not be empty",
-            });
-        }
+        let escrow_id = normalize_route_segment("escrow_id", escrow_id)?;
         let route = format!("/v1/escrow/{escrow_id}/release");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -596,12 +570,7 @@ impl ServiceApiClient {
         content_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceContentStatus, SdkError> {
-        if content_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "content_id",
-                reason: "must not be empty",
-            });
-        }
+        let content_id = normalize_route_segment("content_id", content_id)?;
         let route = format!("/v1/content/{content_id}/expire");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -618,12 +587,7 @@ impl ServiceApiClient {
         content_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceContentStatus, SdkError> {
-        if content_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "content_id",
-                reason: "must not be empty",
-            });
-        }
+        let content_id = normalize_route_segment("content_id", content_id)?;
         let route = format!("/v1/content/{content_id}/tombstone");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -640,12 +604,7 @@ impl ServiceApiClient {
         content_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceContentStatus, SdkError> {
-        if content_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "content_id",
-                reason: "must not be empty",
-            });
-        }
+        let content_id = normalize_route_segment("content_id", content_id)?;
         let route = format!("/v1/content/{content_id}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -677,12 +636,7 @@ impl ServiceApiClient {
         bridge_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceBridgeStatus, SdkError> {
-        if bridge_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "bridge_id",
-                reason: "must not be empty",
-            });
-        }
+        let bridge_id = normalize_route_segment("bridge_id", bridge_id)?;
         let route = format!("/v1/bridge/{bridge_id}/forward");
         let response = self.request("POST", route.as_str(), "{}", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -700,12 +654,7 @@ impl ServiceApiClient {
         bridge_id: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceBridgeStatus, SdkError> {
-        if bridge_id.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "bridge_id",
-                reason: "must not be empty",
-            });
-        }
+        let bridge_id = normalize_route_segment("bridge_id", bridge_id)?;
         let route = format!("/v1/bridge/{bridge_id}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -723,12 +672,7 @@ impl ServiceApiClient {
         did: &str,
         auth: &ServiceRequestAuth,
     ) -> Result<ServiceAgentProfile, SdkError> {
-        if did.trim().is_empty() {
-            return Err(SdkError::InvalidInput {
-                field: "did",
-                reason: "must not be empty",
-            });
-        }
+        let did = normalize_route_segment("did", did)?;
         let route = format!("/v1/agents/{did}");
         let response = self.request("GET", route.as_str(), "", Some(auth))?;
         expect_status(response.status, 200)?;
@@ -771,20 +715,12 @@ impl ServiceApiClient {
     ) -> Result<ServiceRouteEvent, SdkError> {
         let mut stream = self.endpoint.connect_stream()?;
         let route = self.endpoint.route_path(SERVICE_WS_ROUTE);
+        validate_request_path(route.as_str())?;
         let authority = format!("{}:{}", self.endpoint.host, self.endpoint.port);
-        let scope_header = auth
-            .scope()
-            .map(|scope| format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n"))
-            .unwrap_or_default();
+        validate_http_header_value("service.endpoint.authority", authority.as_str())?;
+        let auth_headers = render_auth_headers(Some(auth))?;
         let request = format!(
-            "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{}: {}\r\n{}: {}\r\n{}: {}\r\n{}Content-Length: 0\r\n\r\n",
-            REQUEST_AUTH_SENDER_DID_HEADER,
-            auth.sender_did().as_str(),
-            REQUEST_AUTH_NONCE_HEADER,
-            auth.nonce(),
-            REQUEST_AUTH_SIGNATURE_HEADER,
-            auth.signature(),
-            scope_header,
+            "GET {route} HTTP/1.1\r\nHost: {authority}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: kamn-sdk-test-key\r\nSec-WebSocket-Version: 13\r\n{auth_headers}Content-Length: 0\r\n\r\n",
         );
         stream
             .write_all(request.as_bytes())
@@ -850,26 +786,12 @@ impl ServiceApiClient {
         auth: Option<&ServiceRequestAuth>,
     ) -> Result<HttpResponse, SdkError> {
         let mut stream = self.endpoint.connect_stream()?;
+        validate_request_method(method)?;
         let path = self.endpoint.route_path(route);
+        validate_request_path(path.as_str())?;
         let authority = format!("{}:{}", self.endpoint.host, self.endpoint.port);
-        let mut auth_headers = String::new();
-        if let Some(auth) = auth {
-            auth_headers.push_str(
-                format!(
-                    "{REQUEST_AUTH_SENDER_DID_HEADER}: {}\r\n",
-                    auth.sender_did().as_str()
-                )
-                .as_str(),
-            );
-            auth_headers
-                .push_str(format!("{REQUEST_AUTH_NONCE_HEADER}: {}\r\n", auth.nonce()).as_str());
-            auth_headers.push_str(
-                format!("{REQUEST_AUTH_SIGNATURE_HEADER}: {}\r\n", auth.signature()).as_str(),
-            );
-            if let Some(scope) = auth.scope() {
-                auth_headers.push_str(format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n").as_str());
-            }
-        }
+        validate_http_header_value("service.endpoint.authority", authority.as_str())?;
+        let auth_headers = render_auth_headers(auth)?;
         let request = format!(
             "{method} {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\n{auth_headers}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
             body.len(),
@@ -891,6 +813,7 @@ fn parse_host_port(authority: &str, default_port: u16) -> Result<(String, u16), 
             reason: "unterminated ipv6 host",
         })?;
         let host = authority[..=closing].to_owned();
+        validate_endpoint_host(host.as_str())?;
         let suffix = &authority[closing + 1..];
         if suffix.is_empty() {
             return Ok((host, default_port));
@@ -911,6 +834,7 @@ fn parse_host_port(authority: &str, default_port: u16) -> Result<(String, u16), 
 
     match authority.rsplit_once(':') {
         Some((host, raw_port)) if !host.is_empty() => {
+            validate_endpoint_host(host)?;
             let port = raw_port
                 .parse::<u16>()
                 .map_err(|_| SdkError::InvalidInput {
@@ -919,8 +843,112 @@ fn parse_host_port(authority: &str, default_port: u16) -> Result<(String, u16), 
                 })?;
             Ok((host.to_owned(), port))
         }
-        _ => Ok((authority.to_owned(), default_port)),
+        _ => {
+            validate_endpoint_host(authority)?;
+            Ok((authority.to_owned(), default_port))
+        }
     }
+}
+
+fn normalize_route_segment(field: &'static str, value: &str) -> Result<String, SdkError> {
+    let normalized = value.trim();
+    if normalized.is_empty() {
+        return Err(SdkError::InvalidInput {
+            field,
+            reason: "must not be empty",
+        });
+    }
+    if normalized
+        .bytes()
+        .any(|byte| !matches!(byte, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b':'))
+    {
+        return Err(SdkError::InvalidInput {
+            field,
+            reason: "contains characters not allowed in route segment",
+        });
+    }
+    Ok(normalized.to_owned())
+}
+
+fn validate_http_header_value(field: &'static str, value: &str) -> Result<(), SdkError> {
+    if value.bytes().any(|byte| !matches!(byte, 0x20..=0x7e)) {
+        return Err(SdkError::InvalidInput {
+            field,
+            reason: "contains invalid http header characters",
+        });
+    }
+    Ok(())
+}
+
+fn validate_endpoint_host(host: &str) -> Result<(), SdkError> {
+    if host.trim().is_empty() {
+        return Err(SdkError::InvalidInput {
+            field: "service.endpoint",
+            reason: "host is required",
+        });
+    }
+    if host
+        .bytes()
+        .any(|byte| byte <= 0x20 || byte == 0x7f || matches!(byte, b'/' | b'\\' | b'?' | b'#'))
+    {
+        return Err(SdkError::InvalidInput {
+            field: "service.endpoint",
+            reason: "host contains invalid characters",
+        });
+    }
+    Ok(())
+}
+
+fn validate_request_method(method: &str) -> Result<(), SdkError> {
+    if method.bytes().all(|byte| byte.is_ascii_uppercase()) {
+        return Ok(());
+    }
+    Err(SdkError::InvalidInput {
+        field: "service.request_method",
+        reason: "contains invalid http method characters",
+    })
+}
+
+fn validate_request_path(path: &str) -> Result<(), SdkError> {
+    if !path.starts_with('/') {
+        return Err(SdkError::InvalidInput {
+            field: "service.request_path",
+            reason: "must start with '/'",
+        });
+    }
+    if path
+        .bytes()
+        .any(|byte| byte <= 0x20 || byte == 0x7f || matches!(byte, b'?' | b'#'))
+    {
+        return Err(SdkError::InvalidInput {
+            field: "service.request_path",
+            reason: "contains invalid path characters",
+        });
+    }
+    Ok(())
+}
+
+fn render_auth_headers(auth: Option<&ServiceRequestAuth>) -> Result<String, SdkError> {
+    let Some(auth) = auth else {
+        return Ok(String::new());
+    };
+    validate_http_header_value("request_auth.sender_did", auth.sender_did().as_str())?;
+    validate_http_header_value("request_auth.signature", auth.signature())?;
+    let mut headers = String::new();
+    headers.push_str(
+        format!(
+            "{REQUEST_AUTH_SENDER_DID_HEADER}: {}\r\n",
+            auth.sender_did().as_str()
+        )
+        .as_str(),
+    );
+    headers.push_str(format!("{REQUEST_AUTH_NONCE_HEADER}: {}\r\n", auth.nonce()).as_str());
+    headers.push_str(format!("{REQUEST_AUTH_SIGNATURE_HEADER}: {}\r\n", auth.signature()).as_str());
+    if let Some(scope) = auth.scope() {
+        validate_http_header_value("request_auth.scope", scope)?;
+        headers.push_str(format!("{REQUEST_AUTH_SCOPE_HEADER}: {scope}\r\n").as_str());
+    }
+    Ok(headers)
 }
 
 fn read_response_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, SdkError> {
