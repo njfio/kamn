@@ -148,13 +148,44 @@ jobs:
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
 
-          cargo run --release -p kamn-e2e-harness -- \
+          run_output_file="/tmp/e2e-live-run-output.json"
+          cargo run --quiet --release -p kamn-e2e-harness -- \
             run \
             --mode sdk-direct \
             --kolme-binary /tmp/kolme/target/release/example-p2p \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15 \
+            | tee "$run_output_file"
+          python3 - "$run_output_file" <<'PY'
+          import json
+          import sys
+
+          output_path = sys.argv[1]
+          with open(output_path, "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          overall_status = payload.get("live_execution", {}).get("overall_status")
+          if overall_status != "PASS":
+              raise SystemExit(
+                  f"live execution overall_status must be PASS (got: {overall_status})"
+              )
+
+          scenario_results = payload.get("scenario_results", [])
+          if not scenario_results:
+              raise SystemExit("live execution must include non-empty scenario_results")
+
+          failed_scenarios = [
+              item.get("id", "<missing>")
+              for item in scenario_results
+              if item.get("status") != "PASS"
+          ]
+          if failed_scenarios:
+              raise SystemExit(
+                  "scenario result status must be PASS for all scenarios; failing: "
+                  + ",".join(failed_scenarios)
+              )
+          PY
 
       - name: Verify evidence bundle
         run: |
@@ -295,14 +326,45 @@ jobs:
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
 
-          cargo run --release -p kamn-e2e-harness -- \
+          run_output_file="/tmp/e2e-live-run-output.json"
+          cargo run --quiet --release -p kamn-e2e-harness -- \
             run \
             --mode mcp-tau \
             --kolme-binary /tmp/kolme/target/release/example-p2p \
             --agent-binary "$GITHUB_WORKSPACE/target/release/kamn-mcp-server" \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15
+            --scenarios S-01,S-02,S-03,S-04,S-05,S-06,S-07,S-08,S-09,S-10,S-11,S-12,S-13,S-14,S-15 \
+            | tee "$run_output_file"
+          python3 - "$run_output_file" <<'PY'
+          import json
+          import sys
+
+          output_path = sys.argv[1]
+          with open(output_path, "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          overall_status = payload.get("live_execution", {}).get("overall_status")
+          if overall_status != "PASS":
+              raise SystemExit(
+                  f"live execution overall_status must be PASS (got: {overall_status})"
+              )
+
+          scenario_results = payload.get("scenario_results", [])
+          if not scenario_results:
+              raise SystemExit("live execution must include non-empty scenario_results")
+
+          failed_scenarios = [
+              item.get("id", "<missing>")
+              for item in scenario_results
+              if item.get("status") != "PASS"
+          ]
+          if failed_scenarios:
+              raise SystemExit(
+                  "scenario result status must be PASS for all scenarios; failing: "
+                  + ",".join(failed_scenarios)
+              )
+          PY
 
   e2e-cli-smoke:
     name: E2E CLI Smoke
@@ -428,10 +490,41 @@ jobs:
           wait_for_port 127.0.0.1 3000
           wait_for_http "http://127.0.0.1:3000/healthz"
 
-          cargo run --release -p kamn-e2e-harness -- \
+          run_output_file="/tmp/e2e-live-run-output.json"
+          cargo run --quiet --release -p kamn-e2e-harness -- \
             run \
             --mode cli-scripted \
             --kolme-binary /tmp/kolme/target/release/example-p2p \
             --enable-external-execution \
             --evidence-dir /tmp/evidence \
-            --scenarios S-01,S-02
+            --scenarios S-01,S-02 \
+            | tee "$run_output_file"
+          python3 - "$run_output_file" <<'PY'
+          import json
+          import sys
+
+          output_path = sys.argv[1]
+          with open(output_path, "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          overall_status = payload.get("live_execution", {}).get("overall_status")
+          if overall_status != "PASS":
+              raise SystemExit(
+                  f"live execution overall_status must be PASS (got: {overall_status})"
+              )
+
+          scenario_results = payload.get("scenario_results", [])
+          if not scenario_results:
+              raise SystemExit("live execution must include non-empty scenario_results")
+
+          failed_scenarios = [
+              item.get("id", "<missing>")
+              for item in scenario_results
+              if item.get("status") != "PASS"
+          ]
+          if failed_scenarios:
+              raise SystemExit(
+                  "scenario result status must be PASS for all scenarios; failing: "
+                  + ",".join(failed_scenarios)
+              )
+          PY

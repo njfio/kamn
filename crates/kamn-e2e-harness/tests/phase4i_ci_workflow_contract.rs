@@ -77,3 +77,14 @@ fn spec_c11_milestone_index_references_active_phase4i_issue() {
     .expect("milestone index should exist");
     assert!(milestone_index.contains("#5580"));
 }
+
+#[test]
+fn spec_c15_workflow_enforces_fail_closed_live_execution_gate_markers() {
+    let root = repo_root();
+    let workflow = std::fs::read_to_string(root.join(".github/workflows/e2e-live.yml"))
+        .expect("e2e-live workflow should exist");
+    assert!(workflow.contains("run_output_file=\"/tmp/e2e-live-run-output.json\""));
+    assert!(workflow.contains("json.load(handle)"));
+    assert!(workflow.contains("live execution overall_status must be PASS"));
+    assert!(workflow.contains("scenario result status must be PASS"));
+}
