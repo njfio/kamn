@@ -63,10 +63,18 @@ fn signed_tx(
     )
 }
 
+fn default_signer_private_key_guard() -> EnvVarGuard {
+    EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    )
+}
+
 #[test]
 fn functional_transaction_guards_advance_state_hash_after_commit() {
     let _lock = lock_signer_env();
     let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let _private_key_guard = default_signer_private_key_guard();
     let mut network = RoleSmokeNetwork::new(true);
     let initial_state_hash = network.expected_state_hash().to_owned();
 
@@ -84,6 +92,7 @@ fn functional_transaction_guards_advance_state_hash_after_commit() {
 fn integration_rejects_stale_state_hash_after_block_commit() {
     let _lock = lock_signer_env();
     let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let _private_key_guard = default_signer_private_key_guard();
     let mut network = RoleSmokeNetwork::new(true);
     let stale_state_hash = network.expected_state_hash().to_owned();
 
@@ -108,6 +117,7 @@ fn integration_rejects_stale_state_hash_after_block_commit() {
 fn integration_rejects_out_of_sequence_nonce_per_sender() {
     let _lock = lock_signer_env();
     let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let _private_key_guard = default_signer_private_key_guard();
     let mut network = RoleSmokeNetwork::new(true);
 
     let out_of_sequence = BaselineTransaction::signed(
@@ -180,6 +190,7 @@ fn regression_signature_profile_matches_transaction_expected_signature() {
     // Regression: #400
     let _lock = lock_signer_env();
     let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", None);
+    let _private_key_guard = default_signer_private_key_guard();
     let tx = BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
     assert_eq!(tx.signature, tx.expected_signature());
     assert!(

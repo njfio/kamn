@@ -43,48 +43,67 @@ impl Drop for EnvVarGuard {
     }
 }
 
+fn with_default_signer_key_env<T>(run: impl FnOnce() -> T) -> T {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _generic_key_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    );
+    let _service_key_guard = EnvVarGuard::set(
+        "KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX",
+        Some(TEST_SIGNER_PRIVATE_KEY_A_HEX),
+    );
+    run()
+}
+
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("secure backend should sign");
-    assert_eq!(signed.backend, "secure-mock");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("secure backend should sign");
+        assert_eq!(signed.backend, "secure-mock");
 
-    router
-        .verify_with_backend(&signed.backend, &request, &signed.signature)
-        .expect("signature should verify");
+        router
+            .verify_with_backend(&signed.backend, &request, &signed.signature)
+            .expect("signature should verify");
+    });
 }
 
 #[test]
 fn functional_aws_kms_provider_routes_to_production_adapter_backend() {
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("secure backend should sign");
-    assert_eq!(signed.backend, "secure-aws-kms-emulator");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("secure backend should sign");
+        assert_eq!(signed.backend, "secure-aws-kms-emulator");
 
-    router
-        .verify_with_backend(&signed.backend, &request, &signed.signature)
-        .expect("signature should verify");
+        router
+            .verify_with_backend(&signed.backend, &request, &signed.signature)
+            .expect("signature should verify");
+    });
 }
 
 #[test]
@@ -131,9 +150,44 @@ fn functional_router_uses_custom_provider_client_mapping_for_secure_provider() {
 
 #[test]
 fn functional_secure_unavailable_falls_back_to_local_backend() {
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::with_secure_availability(false);
+        let request = SigningRequest::new(
+            "secure:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
+
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("fallback should sign");
+        assert_eq!(signed.backend, "local-software");
+
+        router
+            .verify_with_backend(&signed.backend, &request, &signed.signature)
+            .expect("fallback signature should verify");
+    });
+}
+
+#[test]
+fn regression_local_backend_signing_requires_explicit_key_material() {
+    // Regression: #5913
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _generic_key_guard = EnvVarGuard::set("KAMN_SIGNER_PRIVATE_KEY_HEX", None);
+    let _service_key_guard = EnvVarGuard::set("KAMN_SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_HEX", None);
+    let _key_specific_guard = EnvVarGuard::set(
+        "KAMN_SIGNER_PRIVATE_KEY_HEX__SECURE_KEY_REGRESSION_5913_MISSING",
+        None,
+    );
+
     let router = SignerBackendRouter::with_secure_availability(false);
     let request = SigningRequest::new(
-        "secure:key-ops-1",
+        "secure:key-regression-5913-missing",
         "agent-a",
         1,
         "payload-1",
@@ -141,108 +195,117 @@ fn functional_secure_unavailable_falls_back_to_local_backend() {
     )
     .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("fallback should sign");
-    assert_eq!(signed.backend, "local-software");
-
-    router
-        .verify_with_backend(&signed.backend, &request, &signed.signature)
-        .expect("fallback signature should verify");
+    let result = router.sign_with_secure_fallback(&request);
+    assert!(
+        matches!(
+            result,
+            Err(SignerBackendError::MissingSigningKeyMaterial { key_id, .. })
+                if key_id == "secure:key-regression-5913-missing"
+        ),
+        "local signing must fail closed when signer key env is not provisioned"
+    );
 }
 
 #[test]
 fn functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider() {
-    let router = SignerBackendRouter::with_provider_handshake_matrix(
-        SignerProviderHandshakeMatrix::with_statuses(
-            SignerProviderHandshakeStatus::Available,
-            SignerProviderHandshakeStatus::Unavailable,
-        ),
-    );
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_statuses(
+                SignerProviderHandshakeStatus::Available,
+                SignerProviderHandshakeStatus::Unavailable,
+            ),
+        );
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("operator fallback should sign when provider is unavailable");
-    assert_eq!(signed.backend, "local-software");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("operator fallback should sign when provider is unavailable");
+        assert_eq!(signed.backend, "local-software");
+    });
 }
 
 #[test]
 fn integration_router_signed_transaction_passes_transaction_guards() {
-    let router = SignerBackendRouter::default();
-    let mut guards = TransactionGuards::new();
-    let mut tx = BaselineTransaction::signed(
-        "tx-sign-1",
-        "agent-a",
-        1,
-        "payload-sign-1",
-        guards.expected_state_hash(),
-    );
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let mut guards = TransactionGuards::new();
+        let mut tx = BaselineTransaction::signed(
+            "tx-sign-1",
+            "agent-a",
+            1,
+            "payload-sign-1",
+            guards.expected_state_hash(),
+        );
 
-    let request = SigningRequest::for_transaction("secure:key-ops-2", &tx)
-        .expect("request should map from transaction");
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signing should succeed");
-    tx.signature = signed.signature;
+        let request = SigningRequest::for_transaction("secure:key-ops-2", &tx)
+            .expect("request should map from transaction");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signing should succeed");
+        tx.signature = signed.signature;
 
-    guards
-        .validate_and_record(&tx)
-        .expect("signed transaction should validate");
+        guards
+            .validate_and_record(&tx)
+            .expect("signed transaction should validate");
+    });
 }
 
 #[test]
 fn integration_aws_kms_signed_transaction_passes_transaction_guards() {
-    let router = SignerBackendRouter::default();
-    let mut guards = TransactionGuards::new();
-    let mut tx = BaselineTransaction::signed(
-        "tx-sign-aws-1",
-        "agent-a",
-        1,
-        "payload-sign-1",
-        guards.expected_state_hash(),
-    );
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let mut guards = TransactionGuards::new();
+        let mut tx = BaselineTransaction::signed(
+            "tx-sign-aws-1",
+            "agent-a",
+            1,
+            "payload-sign-1",
+            guards.expected_state_hash(),
+        );
 
-    let request = SigningRequest::for_transaction("secure:aws-kms:key-ops-2", &tx)
-        .expect("request should map from transaction");
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signing should succeed");
-    assert_eq!(signed.backend, "secure-aws-kms-emulator");
-    tx.signature = signed.signature;
+        let request = SigningRequest::for_transaction("secure:aws-kms:key-ops-2", &tx)
+            .expect("request should map from transaction");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signing should succeed");
+        assert_eq!(signed.backend, "secure-aws-kms-emulator");
+        tx.signature = signed.signature;
 
-    guards
-        .validate_and_record(&tx)
-        .expect("signed transaction should validate");
+        guards
+            .validate_and_record(&tx)
+            .expect("signed transaction should validate");
+    });
 }
 
 #[test]
 fn functional_admin_role_key_signs_when_sender_role_matches() {
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:aws-kms:role-admin/key-ops-1",
-        "admin-agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:aws-kms:role-admin/key-ops-1",
+            "admin-agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signing should succeed");
-    assert_eq!(signed.backend, "secure-aws-kms-emulator");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signing should succeed");
+        assert_eq!(signed.backend, "secure-aws-kms-emulator");
 
-    router
-        .verify_with_backend(&signed.backend, &request, &signed.signature)
-        .expect("signature should verify");
+        router
+            .verify_with_backend(&signed.backend, &request, &signed.signature)
+            .expect("signature should verify");
+    });
 }
 
 #[test]
@@ -489,27 +552,29 @@ fn regression_signer_backend_rejects_baseline_v1_signature_by_default() {
 #[test]
 fn regression_local_backend_rejects_tampered_signature() {
     // Regression: #5897
-    let router = SignerBackendRouter::with_secure_availability(false);
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("local fallback should sign");
-    assert_eq!(signed.backend, "local-software");
-    let tampered_signature = format!("{}ff", signed.signature);
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::with_secure_availability(false);
+        let request = SigningRequest::new(
+            "secure:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("local fallback should sign");
+        assert_eq!(signed.backend, "local-software");
+        let tampered_signature = format!("{}ff", signed.signature);
 
-    assert!(
-        router
-            .verify_with_backend("local-software", &request, tampered_signature.as_str())
-            .is_err(),
-        "local backend must reject tampered signatures"
-    );
+        assert!(
+            router
+                .verify_with_backend("local-software", &request, tampered_signature.as_str())
+                .is_err(),
+            "local backend must reject tampered signatures"
+        );
+    });
 }
 
 #[test]
@@ -575,27 +640,29 @@ fn regression_local_backend_rejects_baseline_v1_signature_without_compat_switch(
 #[test]
 fn regression_secure_provider_backend_mismatch_is_rejected() {
     // Regression: #619
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:aws-kms:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signing should succeed");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signing should succeed");
 
-    assert_eq!(
-        router.verify_with_backend("secure-mock", &request, &signed.signature),
-        Err(SignerBackendError::SecureProviderBackendMismatch {
-            expected_backend: "secure-aws-kms-emulator".to_owned(),
-            provided_backend: "secure-mock".to_owned(),
-            key_id: "secure:aws-kms:key-ops-1".to_owned(),
-        })
-    );
+        assert_eq!(
+            router.verify_with_backend("secure-mock", &request, &signed.signature),
+            Err(SignerBackendError::SecureProviderBackendMismatch {
+                expected_backend: "secure-aws-kms-emulator".to_owned(),
+                provided_backend: "secure-mock".to_owned(),
+                key_id: "secure:aws-kms:key-ops-1".to_owned(),
+            })
+        );
+    });
 }
 
 #[test]
@@ -618,116 +685,124 @@ fn for_transaction_rejects_empty_transaction_id() {
 #[test]
 fn regression_signing_request_matches_canonical_signature_profile() {
     // Regression: #400
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signature should be produced");
-    assert!(
-        signed.signature.starts_with("sig:secp256k1:baseline-v2:"),
-        "default signer path must emit cryptographic baseline-v2 signatures"
-    );
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signature should be produced");
+        assert!(
+            signed.signature.starts_with("sig:secp256k1:baseline-v2:"),
+            "default signer path must emit cryptographic baseline-v2 signatures"
+        );
+    });
 }
 
 #[test]
 fn regression_signatures_include_profile_identifier_segment() {
     // Regression: #404
-    let router = SignerBackendRouter::default();
-    let request = SigningRequest::new(
-        "secure:key-ops-1",
-        "agent-a",
-        1,
-        "payload-1",
-        GENESIS_STATE_HASH,
-    )
-    .expect("request should be valid");
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let request = SigningRequest::new(
+            "secure:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
 
-    let signed = router
-        .sign_with_secure_fallback(&request)
-        .expect("signature should be produced");
-    assert!(signed.signature.starts_with("sig:secp256k1:baseline-v2:"));
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signature should be produced");
+        assert!(signed.signature.starts_with("sig:secp256k1:baseline-v2:"));
+    });
 }
 
 #[test]
 fn performance_signer_emulator_contract_lane_stays_within_budget() {
-    let router = SignerBackendRouter::default();
-    let start = Instant::now();
+    with_default_signer_key_env(|| {
+        let router = SignerBackendRouter::default();
+        let start = Instant::now();
 
-    for nonce in 1..=256 {
-        let key_id = if nonce % 2 == 0 {
-            "secure:key-ops-perf"
-        } else {
-            "secure:aws-kms:key-ops-perf"
-        };
-        let request = SigningRequest::new(
-            key_id,
-            "agent-a",
-            nonce,
-            &format!("payload-perf-{nonce}"),
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signature should be produced");
-        let expected_backend = if nonce % 2 == 0 {
-            "secure-mock"
-        } else {
-            "secure-aws-kms-emulator"
-        };
-        assert_eq!(signed.backend, expected_backend);
-    }
-
-    let elapsed_millis = start.elapsed().as_millis();
-    let budget_millis = std::env::var("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS")
-        .ok()
-        .and_then(|value| value.parse::<u128>().ok())
-        .unwrap_or_else(|| {
-            if std::env::var_os("CI").is_some() {
-                600
+        for nonce in 1..=256 {
+            let key_id = if nonce % 2 == 0 {
+                "secure:key-ops-perf"
             } else {
-                250
-            }
-        });
-    assert!(
-        elapsed_millis < budget_millis,
-        "signer emulator contract lane exceeded budget: elapsed={elapsed_millis}ms budget={budget_millis}ms"
-    );
+                "secure:aws-kms:key-ops-perf"
+            };
+            let request = SigningRequest::new(
+                key_id,
+                "agent-a",
+                nonce,
+                &format!("payload-perf-{nonce}"),
+                GENESIS_STATE_HASH,
+            )
+            .expect("request should be valid");
+            let signed = router
+                .sign_with_secure_fallback(&request)
+                .expect("signature should be produced");
+            let expected_backend = if nonce % 2 == 0 {
+                "secure-mock"
+            } else {
+                "secure-aws-kms-emulator"
+            };
+            assert_eq!(signed.backend, expected_backend);
+        }
+
+        let elapsed_millis = start.elapsed().as_millis();
+        let budget_millis = std::env::var("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS")
+            .ok()
+            .and_then(|value| value.parse::<u128>().ok())
+            .unwrap_or_else(|| {
+                if std::env::var_os("CI").is_some() {
+                    600
+                } else {
+                    250
+                }
+            });
+        assert!(
+            elapsed_millis < budget_millis,
+            "signer emulator contract lane exceeded budget: elapsed={elapsed_millis}ms budget={budget_millis}ms"
+        );
+    });
 }
 
 #[test]
 #[ignore = "scheduled provider integration lane"]
 fn performance_signer_emulator_bulk_signing_deep_lane() {
-    let secure_router = SignerBackendRouter::default();
-    let fallback_router = SignerBackendRouter::with_secure_availability(false);
+    with_default_signer_key_env(|| {
+        let secure_router = SignerBackendRouter::default();
+        let fallback_router = SignerBackendRouter::with_secure_availability(false);
 
-    for nonce in 1..=5000 {
-        let request = SigningRequest::new(
-            "secure:key-ops-deep",
-            "agent-a",
-            nonce,
-            &format!("payload-deep-{nonce}"),
-            GENESIS_STATE_HASH,
-        )
-        .expect("request should be valid");
+        for nonce in 1..=5000 {
+            let request = SigningRequest::new(
+                "secure:key-ops-deep",
+                "agent-a",
+                nonce,
+                &format!("payload-deep-{nonce}"),
+                GENESIS_STATE_HASH,
+            )
+            .expect("request should be valid");
 
-        let (router, expected_backend) = if nonce % 10 == 0 {
-            (&fallback_router, "local-software")
-        } else {
-            (&secure_router, "secure-mock")
-        };
+            let (router, expected_backend) = if nonce % 10 == 0 {
+                (&fallback_router, "local-software")
+            } else {
+                (&secure_router, "secure-mock")
+            };
 
-        let signed = router
-            .sign_with_secure_fallback(&request)
-            .expect("signature should be produced");
-        assert_eq!(signed.backend, expected_backend);
-    }
+            let signed = router
+                .sign_with_secure_fallback(&request)
+                .expect("signature should be produced");
+            assert_eq!(signed.backend, expected_backend);
+        }
+    });
 }

@@ -1,9 +1,9 @@
 //! Signer backend contracts for local and secure-provider signing flows.
 
 use crate::signature_profile::{
-    debug_fallback_signer_private_key_hex, service_auth_public_key_hex_from_private_key_hex,
-    service_auth_sign_with_private_key_hex, service_auth_verify_with_public_key_hex,
-    signature_matches_supported_profile_for_fields, SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+    service_auth_verify_with_public_key_hex, signature_matches_supported_profile_for_fields,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 use crate::transaction::BaselineTransaction;
 use std::env;
@@ -148,12 +148,6 @@ fn resolve_signer_private_key_hex(key_id: &str) -> Result<String, SignerBackendE
             if !trimmed.is_empty() {
                 return Ok(trimmed.to_owned());
             }
-        }
-    }
-
-    if cfg!(debug_assertions) {
-        if let Some(value) = debug_fallback_signer_private_key_hex() {
-            return Ok(value.to_owned());
         }
     }
 
