@@ -3,7 +3,7 @@
 - schema_version: kamn.specs.archive-index-report.v1
 - migration_wave_id: r27-44-initial-archive-wave
 - archived_on: 2026-02-23
-- archived_issue_count: 227
+- archived_issue_count: 226
 
 | issue_id | title | archived_on | archive_path | pointer_path |
 |---|---|---|---|---|
@@ -20,7 +20,6 @@
 | 3926 | `Subtask: add regression tests for Accept/Reject/Suspend backpressure decisions and reason codes` | 2026-02-18 | `specs/archive/3926` | `specs/3926/ARCHIVED.md` |
 | 3963 | Epic: R27.7 reduce script-surface sprawl and accelerate docs graduation closure | 2026-02-18 | `specs/archive/3963` | `specs/3963/ARCHIVED.md` |
 | 3969 | Task: publish architecture navigation artifacts and rustdoc build contract checks | 2026-02-18 | `specs/archive/3969` | `specs/3969/ARCHIVED.md` |
-| 3975 | Subtask: add docs coverage contracts preventing missing-docs exemption regressions for graduated modules | 2026-02-18 | `specs/archive/3975` | `specs/3975/ARCHIVED.md` |
 | 3977 | Subtask: add rustdoc smoke lane and low-cost CI contract checks for documentation build integrity | 2026-02-18 | `specs/archive/3977` | `specs/3977/ARCHIVED.md` |
 | 4113 | Epic: R27.17 close structured logging and telemetry emission governance gaps | 2026-02-18 | `specs/archive/4113` | `specs/4113/ARCHIVED.md` |
 | 4115 | Story: expose deterministic metrics health-stream evidence and operational alert contracts | 2026-02-18 | `specs/archive/4115` | `specs/4115/ARCHIVED.md` |
