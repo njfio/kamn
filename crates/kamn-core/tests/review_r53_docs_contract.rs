@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -164,6 +165,152 @@ fn git_commit_count_for_relative_path(relative_path: &str) -> usize {
         .to_string();
     raw.parse::<usize>()
         .unwrap_or_else(|_| panic!("git rev-list count should be an unsigned integer: {raw}"))
+}
+
+fn git_revision_exists(revision: &str) -> bool {
+    let commit_revision = format!("{revision}^{{commit}}");
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["rev-parse", "--verify", "--quiet", commit_revision.as_str()])
+        .output()
+        .unwrap_or_else(|error| panic!("git rev-parse should run for {revision}: {error}"));
+    output.status.success()
+}
+
+fn git_fetch_base_branch(base_branch: &str) -> bool {
+    let fetch_refspec = format!("+refs/heads/{base_branch}:refs/remotes/origin/{base_branch}");
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args([
+            "fetch",
+            "--no-tags",
+            "--depth=1",
+            "origin",
+            fetch_refspec.as_str(),
+        ])
+        .output()
+        .unwrap_or_else(|error| {
+            panic!("git fetch should run for base branch {base_branch}: {error}")
+        });
+    output.status.success()
+}
+
+fn resolve_review_doc_diff_base_ref() -> String {
+    let mut candidates = vec![
+        "origin/main".to_owned(),
+        "main".to_owned(),
+        "HEAD^1".to_owned(),
+    ];
+    let github_base_ref = env::var("GITHUB_BASE_REF")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty());
+    if let Some(github_base_ref) = github_base_ref.as_ref() {
+        for candidate in [
+            format!("origin/{github_base_ref}"),
+            github_base_ref.to_owned(),
+        ] {
+            if !candidates.contains(&candidate) {
+                candidates.push(candidate);
+            }
+        }
+    }
+
+    for candidate in &candidates {
+        if git_revision_exists(candidate.as_str()) {
+            return candidate.to_owned();
+        }
+    }
+
+    let running_in_github_actions = env::var("GITHUB_ACTIONS")
+        .ok()
+        .map(|value| value == "true")
+        .unwrap_or(false);
+    if running_in_github_actions {
+        if let Some(base_branch) = github_base_ref.as_deref() {
+            if git_fetch_base_branch(base_branch) {
+                let fetched_ref = format!("origin/{base_branch}");
+                if git_revision_exists(fetched_ref.as_str()) {
+                    return fetched_ref;
+                }
+            }
+        }
+        if git_fetch_base_branch("main") && git_revision_exists("origin/main") {
+            return "origin/main".to_owned();
+        }
+    }
+
+    for candidate in candidates {
+        if git_revision_exists(candidate.as_str()) {
+            return candidate;
+        }
+    }
+    panic!("unable to resolve branch-diff base ref: expected one of origin/main, main, origin/$GITHUB_BASE_REF, $GITHUB_BASE_REF, or HEAD^1 (including CI fetch fallback)");
+}
+
+#[derive(Debug, Clone)]
+struct NameStatusEntry {
+    status: String,
+    paths: Vec<String>,
+}
+
+fn git_name_status_entries(base_ref: &str, pathspec: &str) -> Vec<NameStatusEntry> {
+    fn diff_name_status_for_range(revision_range: &str, pathspec: &str) -> std::process::Output {
+        Command::new("git")
+            .current_dir(repo_root())
+            .args([
+                "diff",
+                "--name-status",
+                "--find-renames",
+                revision_range,
+                "--",
+                pathspec,
+            ])
+            .output()
+            .unwrap_or_else(|error| panic!("git diff --name-status should run: {error}"))
+    }
+
+    let revision_range = format!("{base_ref}...HEAD");
+    let mut output = diff_name_status_for_range(revision_range.as_str(), pathspec);
+
+    if !output.status.success() {
+        // Shallow CI checkouts can miss merge-base history for triple-dot ranges.
+        let fallback_range = format!("{base_ref}..HEAD");
+        let fallback_output = diff_name_status_for_range(fallback_range.as_str(), pathspec);
+        if fallback_output.status.success() {
+            output = fallback_output;
+        } else {
+            let primary_stderr = String::from_utf8_lossy(&output.stderr);
+            let fallback_stderr = String::from_utf8_lossy(&fallback_output.stderr);
+            panic!(
+                "git diff --name-status failed for {revision_range} (status {:?}, stderr: {}) and fallback {fallback_range} (status {:?}, stderr: {})",
+                output.status.code(),
+                primary_stderr.trim(),
+                fallback_output.status.code(),
+                fallback_stderr.trim()
+            );
+        }
+    }
+
+    String::from_utf8(output.stdout)
+        .expect("git diff --name-status output should be valid UTF-8")
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\t');
+            let status = fields.next()?.trim().to_owned();
+            if status.is_empty() {
+                return None;
+            }
+            let paths = fields
+                .filter(|field| !field.trim().is_empty())
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            if paths.is_empty() {
+                return None;
+            }
+            Some(NameStatusEntry { status, paths })
+        })
+        .collect()
 }
 
 fn tracked_shell_line_total() -> usize {
@@ -1046,6 +1193,52 @@ fn regression_r57_plus_review_docs_are_immutable_by_history_policy_contract() {
             max_commits_per_doc
         );
     }
+}
+
+#[test]
+fn regression_r51_plus_review_docs_are_immutable_in_branch_diff_policy_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    let effective_release_min =
+        parse_marker_usize(&policy, "review_document_freeze_effective_release_min") as u32;
+    let base_ref = resolve_review_doc_diff_base_ref();
+    let diff_entries = git_name_status_entries(base_ref.as_str(), "docs/review");
+
+    let mut violations = Vec::new();
+    for entry in diff_entries {
+        let status_code = entry.status.chars().next().unwrap_or('?');
+        for path in entry.paths {
+            if !path.starts_with("docs/review/gaps-and-issues-r") || !path.ends_with(".md") {
+                continue;
+            }
+            let Some(release) = parse_release_from_review_path(path.as_str()) else {
+                continue;
+            };
+            if release < effective_release_min {
+                continue;
+            }
+            if status_code != 'A' {
+                violations.push(format!("{}:{}", entry.status, path));
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "frozen review docs (r{}+) may not be modified in branch diff against {} (only status A allowed): {}",
+        effective_release_min,
+        base_ref,
+        violations.join(", ")
+    );
 }
 
 #[test]
