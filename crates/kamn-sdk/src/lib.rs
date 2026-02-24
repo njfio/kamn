@@ -5,7 +5,7 @@
 pub mod agent;
 /// Shared SDK error types.
 pub mod error;
-/// Live transport adapter backed by endpoint-keyed shared in-memory state.
+/// Live transport adapter backed by networked Service API routes.
 pub mod live;
 /// In-memory reference client used for deterministic local flows and tests.
 pub mod memory;

@@ -18,7 +18,8 @@ This document describes the first implementation slice for the Rust SDK aligned 
 - No new third-party dependencies were introduced.
 - The implementation is dependency-light and optimized for fast local/CI feedback.
 - The in-memory adapter is intentionally deterministic and suitable for early SDK contract validation.
-- Live transport adapter uses endpoint-scoped shared state to provide deterministic contract coverage without introducing new runtime dependencies.
+- Live transport adapter executes network-backed Service API routes for message send and agent profile/reputation lookups.
+- Unsupported `KamnAgent` operations in live mode fail closed with explicit `SdkError::NotImplemented` (no in-memory fallback simulation).
 
 ## Local Validation
 Run from repository root:
@@ -111,7 +112,7 @@ The SDK now includes a deterministic one-command demo for first-run validation:
 `Regression: #770` ensures the command remains executable and emits lifecycle markers.
 
 ## Follow-up
-- Replace endpoint-scoped deterministic live adapter with real network transport client implementation in a later slice.
+- Extend live transport coverage from current route-mapped operations (send/resolve/reputation) to the full `KamnAgent` surface as Service API route parity expands.
 - Extend stream API parity to Python and TypeScript SDK implementations.
 
 ## Shared SDK Parity Fixture Matrix
