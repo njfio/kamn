@@ -4112,6 +4112,15 @@ Required demo lane command contract:
 - `scripts/framework/manifests/kolme_local_e2e_integration_lane.json`
 - `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
 - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json --phase contract --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
+
+## E2E Live Workflow Contract
+- `python3 scripts/ci/check_e2e_live_workflow_contract.py --workflow-file .github/workflows/e2e-live.yml --strategy-doc docs/ci/strategy.md`
+- `bash scripts/ci/test_check_e2e_live_workflow_contract.sh`
+- `e2e_live_workflow_reason_taxonomy_version=kamn.ci.e2e-live-workflow-contract-reason-taxonomy.v1`
+- `e2e_live_workflow_reason_codes_csv=workflow_file_missing,strategy_doc_missing,sdk_direct_job_missing,sdk_direct_live_toggle_missing,sdk_direct_external_execution_flag_missing,sdk_direct_scenarios_not_full_matrix,kolme_bootstrap_step_missing,kamn_runtime_bootstrap_missing,service_health_wait_marker_missing,ci_strategy_markers_missing`
+- `e2e_live_workflow_contract_status=verified|violation`
+- `Regression: #5849`
+
 - `bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json`
 - `python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-heavy-validation-policy.json`
 - `bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json --phase contract --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
