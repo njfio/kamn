@@ -177,20 +177,67 @@ fn git_revision_exists(revision: &str) -> bool {
     output.status.success()
 }
 
+fn git_fetch_base_branch(base_branch: &str) -> bool {
+    let fetch_refspec = format!("+refs/heads/{base_branch}:refs/remotes/origin/{base_branch}");
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args([
+            "fetch",
+            "--no-tags",
+            "--depth=1",
+            "origin",
+            fetch_refspec.as_str(),
+        ])
+        .output()
+        .unwrap_or_else(|error| {
+            panic!("git fetch should run for base branch {base_branch}: {error}")
+        });
+    output.status.success()
+}
+
 fn resolve_review_doc_diff_base_ref() -> String {
-    let mut candidates = vec!["origin/main".to_owned(), "main".to_owned()];
-    if let Ok(github_base_ref) = env::var("GITHUB_BASE_REF") {
+    let mut candidates = vec![
+        "origin/main".to_owned(),
+        "main".to_owned(),
+        "HEAD^1".to_owned(),
+    ];
+    let github_base_ref = env::var("GITHUB_BASE_REF")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty());
+    if let Some(github_base_ref) = github_base_ref.as_ref() {
         for candidate in [
             format!("origin/{github_base_ref}"),
-            github_base_ref,
-            "HEAD^1".to_owned(),
+            github_base_ref.to_owned(),
         ] {
             if !candidates.contains(&candidate) {
                 candidates.push(candidate);
             }
         }
-    } else if !candidates.iter().any(|candidate| candidate == "HEAD^1") {
-        candidates.push("HEAD^1".to_owned());
+    }
+
+    for candidate in &candidates {
+        if git_revision_exists(candidate.as_str()) {
+            return candidate.to_owned();
+        }
+    }
+
+    let running_in_github_actions = env::var("GITHUB_ACTIONS")
+        .ok()
+        .map(|value| value == "true")
+        .unwrap_or(false);
+    if running_in_github_actions {
+        if let Some(base_branch) = github_base_ref.as_deref() {
+            if git_fetch_base_branch(base_branch) {
+                let fetched_ref = format!("origin/{base_branch}");
+                if git_revision_exists(fetched_ref.as_str()) {
+                    return fetched_ref;
+                }
+            }
+        }
+        if git_fetch_base_branch("main") && git_revision_exists("origin/main") {
+            return "origin/main".to_owned();
+        }
     }
 
     for candidate in candidates {
@@ -198,7 +245,7 @@ fn resolve_review_doc_diff_base_ref() -> String {
             return candidate;
         }
     }
-    panic!("unable to resolve branch-diff base ref: expected one of origin/main, main, origin/$GITHUB_BASE_REF, $GITHUB_BASE_REF, or HEAD^1");
+    panic!("unable to resolve branch-diff base ref: expected one of origin/main, main, origin/$GITHUB_BASE_REF, $GITHUB_BASE_REF, or HEAD^1 (including CI fetch fallback)");
 }
 
 #[derive(Debug, Clone)]
