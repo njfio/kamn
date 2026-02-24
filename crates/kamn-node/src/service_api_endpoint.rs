@@ -38,7 +38,7 @@ use kamn_core::{
 #[cfg(test)]
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::env;
 use std::fs;
 use std::net::SocketAddr;
@@ -65,6 +65,8 @@ pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
 pub(crate) const DEFAULT_SERVICE_API_BODY_LIMIT_BYTES: u64 = 64 * 1024;
 pub(crate) const DEFAULT_SERVICE_API_CONCURRENCY_LIMIT: u64 = 32;
 pub(crate) const DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND: u64 = 120;
+pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES: usize = 65_536;
+pub(crate) const DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS: u64 = 900;
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
@@ -464,7 +466,7 @@ impl ServiceApiIngressRateWindow {
 #[derive(Debug)]
 struct ServiceApiRuntimeState {
     snapshot: ServiceApiSnapshot,
-    replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
+    replay_guard: Arc<Mutex<ServiceApiReplayGuard>>,
     request_budget: Arc<ServiceApiRequestBudget>,
     websocket_events: ServiceApiWebsocketEventFanout,
     runtime_observability: Arc<Mutex<ServiceApiRuntimeObservability>>,
@@ -482,6 +484,62 @@ struct ServiceApiIngressRateWindow {
     window_start: Instant,
     accepted_requests: u64,
     max_requests_per_second: u64,
+}
+
+#[derive(Debug)]
+struct ServiceApiReplayGuard {
+    entries: BTreeSet<(String, u64)>,
+    insertion_order: VecDeque<(String, u64, Instant)>,
+    max_entries: usize,
+    ttl: Duration,
+}
+
+impl ServiceApiReplayGuard {
+    fn new(max_entries: usize, ttl: Duration) -> Self {
+        Self {
+            entries: BTreeSet::new(),
+            insertion_order: VecDeque::new(),
+            max_entries: max_entries.max(1),
+            ttl,
+        }
+    }
+
+    fn record_nonce_if_fresh(&mut self, sender_did: &str, nonce: u64, now: Instant) -> bool {
+        self.evict_expired(now);
+        let entry = (sender_did.to_owned(), nonce);
+        if self.entries.contains(&entry) {
+            return false;
+        }
+        self.entries.insert(entry.clone());
+        self.insertion_order.push_back((entry.0, entry.1, now));
+        self.evict_over_capacity();
+        true
+    }
+
+    #[cfg(test)]
+    fn tracked_entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn evict_expired(&mut self, now: Instant) {
+        while let Some((sender_did, nonce, recorded_at)) = self.insertion_order.front() {
+            if now.saturating_duration_since(*recorded_at) < self.ttl {
+                break;
+            }
+            let key = (sender_did.clone(), *nonce);
+            self.insertion_order.pop_front();
+            self.entries.remove(&key);
+        }
+    }
+
+    fn evict_over_capacity(&mut self) {
+        while self.entries.len() > self.max_entries {
+            let Some((sender_did, nonce, _)) = self.insertion_order.pop_front() else {
+                break;
+            };
+            self.entries.remove(&(sender_did, nonce));
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -810,7 +868,7 @@ fn header_value<'a>(headers: &'a BTreeMap<String, String>, name: &str) -> Option
 fn authorize_service_api_request(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
-    replay_guard: &mut BTreeSet<(String, u64)>,
+    replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), RequestAuthFailure> {
     auth::authorize_service_api_request(state, request, replay_guard)
 }

@@ -2,18 +2,19 @@
 
 - Issue: #5928
 - Spec: `specs/5928/spec.md`
-- Status: Draft
+- Status: Implemented
 - Last Updated: 2026-02-24
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5928/spec.md.
-2. Implement: Implement bounded replay cache with TTL and capacity eviction policy.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: Added replay-guard capacity and TTL regression tests in `crates/kamn-node/src/service_api_endpoint/auth.rs`.
+2. Implemented bounded replay cache (`ServiceApiReplayGuard`) with capacity + TTL eviction policy.
+3. Wired middleware auth path to use bounded replay cache instead of unbounded `BTreeSet`.
+4. Verified targeted replay regressions + scoped formatting/clippy checks.
 
 ## Affected Modules (Initial)
 - `crates/kamn-node/src/service_api_endpoint.rs`
-- `crates/kamn-core/src/transaction.rs`
+- `crates/kamn-node/src/service_api_endpoint/auth.rs`
+- `crates/kamn-node/src/service_api_endpoint/server.rs`
 - `crates/kamn-node/src/main_tests/`
 
 ## Risks + Mitigations
@@ -30,4 +31,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Not required (no dependency or protocol/wire-format change).

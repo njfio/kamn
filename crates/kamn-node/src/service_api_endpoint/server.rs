@@ -185,7 +185,10 @@ pub(super) async fn serve_service_api_endpoint_async(
 
     let runtime_state = Arc::new(ServiceApiRuntimeState {
         snapshot,
-        replay_guard: Arc::new(Mutex::new(BTreeSet::new())),
+        replay_guard: Arc::new(Mutex::new(ServiceApiReplayGuard::new(
+            DEFAULT_SERVICE_API_REPLAY_GUARD_MAX_ENTRIES,
+            Duration::from_secs(DEFAULT_SERVICE_API_REPLAY_GUARD_TTL_SECS),
+        ))),
         request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
         websocket_events: ServiceApiWebsocketEventFanout::new(),
         runtime_observability: Arc::new(Mutex::new(ServiceApiRuntimeObservability::new(
