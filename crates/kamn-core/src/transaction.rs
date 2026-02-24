@@ -106,14 +106,32 @@ fn signing_key_error_signature_for_fields(
     )
 }
 
-fn signer_legacy_baseline_v1_compat_enabled() -> bool {
-    match env::var(SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV) {
-        Ok(value) => matches!(
+fn signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value(
+    debug_assertions: bool,
+    env_value: Option<&str>,
+) -> bool {
+    if !debug_assertions {
+        return false;
+    }
+    match env_value {
+        Some(value) => matches!(
             value.trim().to_ascii_lowercase().as_str(),
             "1" | "true" | "yes" | "on"
         ),
-        Err(_) => false,
+        None => false,
     }
+}
+
+fn signer_legacy_baseline_v1_compat_enabled_for_mode(debug_assertions: bool) -> bool {
+    let env_value = env::var(SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV).ok();
+    signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value(
+        debug_assertions,
+        env_value.as_deref(),
+    )
+}
+
+fn signer_legacy_baseline_v1_compat_enabled() -> bool {
+    signer_legacy_baseline_v1_compat_enabled_for_mode(cfg!(debug_assertions))
 }
 
 fn resolve_transaction_signer_private_key_hex() -> Option<String> {
@@ -411,8 +429,10 @@ impl std::error::Error for TransactionGuardError {}
 #[cfg(test)]
 mod tests {
     use super::{
-        BaselineTransaction, TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
-        SIGNER_PRIVATE_KEY_ENV,
+        signer_legacy_baseline_v1_compat_enabled,
+        signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value, BaselineTransaction,
+        TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
+        SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV, SIGNER_PRIVATE_KEY_ENV,
     };
     use std::sync::{Mutex, OnceLock};
 
@@ -458,6 +478,35 @@ mod tests {
 
     fn signed_tx(id: &str, sender: &str, nonce: u64, state_hash: &str) -> BaselineTransaction {
         BaselineTransaction::signed(id, sender, nonce, &format!("payload-{id}"), state_hash)
+    }
+
+    #[test]
+    fn regression_legacy_baseline_compat_helper_fails_closed_for_non_debug_policy() {
+        // Regression: #5911
+        assert!(
+            !signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value(false, Some("1")),
+            "non-debug policy branch must not permit legacy baseline compatibility even with truthy env"
+        );
+    }
+
+    #[test]
+    fn regression_legacy_baseline_compat_helper_accepts_truthy_env_for_debug_policy() {
+        // Regression: #5911
+        assert!(
+            signer_legacy_baseline_v1_compat_enabled_for_mode_with_env_value(true, Some("1")),
+            "debug policy branch should preserve explicit legacy baseline compatibility opt-in"
+        );
+    }
+
+    #[test]
+    fn regression_legacy_baseline_compat_wrapper_defaults_false_without_env() {
+        // Regression: #5911
+        let _lock = lock_signer_env();
+        let _compat_guard = EnvVarGuard::set(SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV, None);
+        assert!(
+            !signer_legacy_baseline_v1_compat_enabled(),
+            "wrapper should default to fail-closed when compatibility env is unset"
+        );
     }
 
     #[test]
