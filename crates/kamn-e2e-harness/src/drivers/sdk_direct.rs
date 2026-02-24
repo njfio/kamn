@@ -1,6 +1,7 @@
 use crate::drivers::{DriverExecutionResult, HarnessDriver};
 use crate::ExecutionMode;
 use kamn_agent_lib::{KamnAgentHandle, KolmeProofReceipt};
+use std::env;
 use std::sync::Arc;
 
 const SDK_DIRECT_LIVE_ENV: &str = "KAMN_E2E_SDK_DIRECT_LIVE";
@@ -53,6 +54,23 @@ const DEFAULT_S06_BLOCK_HEIGHT: u64 = 1;
 const DEFAULT_S06_FINALITY: &str = "final";
 
 type LiveProbe = dyn Fn() -> Result<(), String> + Send + Sync + 'static;
+
+fn env_var_or_default(key: &str, default: &str) -> String {
+    match env::var(key) {
+        Ok(value) => value,
+        Err(_) => default.to_owned(),
+    }
+}
+
+fn env_var_or_else<F>(key: &str, fallback: F) -> String
+where
+    F: FnOnce() -> String,
+{
+    match env::var(key) {
+        Ok(value) => value,
+        Err(_) => fallback(),
+    }
+}
 
 /// SDK-direct driver with optional live execution for S-01 through S-15.
 #[derive(Clone)]
@@ -281,7 +299,7 @@ fn is_live_bound_scenario_id(scenario_id: &str) -> bool {
 }
 
 fn live_execution_enabled_from_env() -> bool {
-    std::env::var(SDK_DIRECT_LIVE_ENV)
+    env::var(SDK_DIRECT_LIVE_ENV)
         .ok()
         .map(|value| parse_bool_flag(value.as_str()))
         .unwrap_or(false)
@@ -295,12 +313,9 @@ fn parse_bool_flag(value: &str) -> bool {
 }
 
 fn run_live_s01_discovery_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
 
     let handle = KamnAgentHandle::connect(
         endpoint.as_str(),
@@ -325,15 +340,12 @@ fn run_live_s01_discovery_probe() -> Result<(), String> {
 }
 
 fn run_live_s02_direct_message_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let message_payload = std::env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let message_payload = env::var("KAMN_E2E_S02_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S02_MESSAGE_PAYLOAD.to_owned());
-    let reply_payload = std::env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
+    let reply_payload = env::var("KAMN_E2E_S02_REPLY_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S02_REPLY_PAYLOAD.to_owned());
 
     let send_handle = KamnAgentHandle::connect(
@@ -410,15 +422,12 @@ fn run_live_s02_direct_message_probe() -> Result<(), String> {
 }
 
 fn run_live_s03_group_channel_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let channel_payload = std::env::var("KAMN_E2E_S03_CHANNEL_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let channel_payload = env::var("KAMN_E2E_S03_CHANNEL_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S03_CHANNEL_PAYLOAD.to_owned());
-    let message_payload = std::env::var("KAMN_E2E_S03_MESSAGE_PAYLOAD")
+    let message_payload = env::var("KAMN_E2E_S03_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S03_MESSAGE_PAYLOAD.to_owned());
 
     let create_channel_handle = KamnAgentHandle::connect(
@@ -516,13 +525,10 @@ fn validate_live_s03_list_messages_response(
 }
 
 fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let create_task_payload = std::env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let create_task_payload = env::var("KAMN_E2E_S04_CREATE_TASK_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S04_CREATE_TASK_PAYLOAD.to_owned());
 
     let create_handle = KamnAgentHandle::connect(
@@ -599,13 +605,10 @@ fn run_live_s04_task_lifecycle_probe() -> Result<(), String> {
 }
 
 fn run_live_s05_escrow_settlement_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let fund_payload = std::env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let fund_payload = env::var("KAMN_E2E_S05_FUND_ESCROW_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S05_FUND_ESCROW_PAYLOAD.to_owned());
 
     let fund_handle = KamnAgentHandle::connect(
@@ -659,17 +662,14 @@ fn validate_live_s05_release_escrow_receipt(
 }
 
 fn run_live_s06_proof_verification_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let agent_name =
-        std::env::var("KAMN_AGENT_NAME").unwrap_or_else(|_| DEFAULT_AGENT_NAME.to_owned());
-    let message_id = std::env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let agent_name = env_var_or_default("KAMN_AGENT_NAME", DEFAULT_AGENT_NAME);
+    let message_id = env::var("KAMN_E2E_S06_PROOF_MESSAGE_ID")
         .unwrap_or_else(|_| DEFAULT_S06_MESSAGE_ID.to_owned());
-    let tx_hash = std::env::var("KAMN_E2E_S06_PROOF_TX_HASH")
-        .unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
-    let block_height = std::env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
+    let tx_hash =
+        env::var("KAMN_E2E_S06_PROOF_TX_HASH").unwrap_or_else(|_| DEFAULT_S06_TX_HASH.to_owned());
+    let block_height = env::var("KAMN_E2E_S06_PROOF_BLOCK_HEIGHT")
         .ok()
         .map(|raw| {
             raw.trim()
@@ -678,8 +678,8 @@ fn run_live_s06_proof_verification_probe() -> Result<(), String> {
         })
         .transpose()?
         .unwrap_or(DEFAULT_S06_BLOCK_HEIGHT);
-    let finality = std::env::var("KAMN_E2E_S06_PROOF_FINALITY")
-        .unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
+    let finality =
+        env::var("KAMN_E2E_S06_PROOF_FINALITY").unwrap_or_else(|_| DEFAULT_S06_FINALITY.to_owned());
 
     let handle = KamnAgentHandle::connect(
         endpoint.as_str(),
@@ -711,13 +711,11 @@ fn run_live_s06_proof_verification_probe() -> Result<(), String> {
 }
 
 fn run_live_s07_replay_protection_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S07_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S07_AGENT_NAME.to_owned());
-    let message_payload = std::env::var("KAMN_E2E_S07_REPLAY_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S07_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S07_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S07_REPLAY_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S07_MESSAGE_PAYLOAD.to_owned());
     let replay_agent_name = format!(
         "{base_agent_name}-{}",
@@ -764,15 +762,13 @@ fn run_live_s07_replay_protection_probe() -> Result<(), String> {
 }
 
 fn run_live_s08_crash_recovery_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S08_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S08_AGENT_NAME.to_owned());
-    let pre_message_payload = std::env::var("KAMN_E2E_S08_PRE_MESSAGE_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S08_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S08_AGENT_NAME.to_owned());
+    let pre_message_payload = env::var("KAMN_E2E_S08_PRE_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S08_PRE_MESSAGE_PAYLOAD.to_owned());
-    let post_message_payload = std::env::var("KAMN_E2E_S08_POST_MESSAGE_PAYLOAD")
+    let post_message_payload = env::var("KAMN_E2E_S08_POST_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S08_POST_MESSAGE_PAYLOAD.to_owned());
 
     let pre_send_handle = KamnAgentHandle::connect(
@@ -867,17 +863,15 @@ fn run_live_s08_crash_recovery_probe() -> Result<(), String> {
 }
 
 fn run_live_s09_transport_failover_probe() -> Result<(), String> {
-    let primary_endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let failover_endpoint = std::env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT")
-        .unwrap_or_else(|_| primary_endpoint.clone());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S09_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
-    let pre_message_payload = std::env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
+    let primary_endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let failover_endpoint =
+        env::var("KAMN_E2E_S09_FAILOVER_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S09_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S09_AGENT_NAME.to_owned());
+    let pre_message_payload = env::var("KAMN_E2E_S09_PRE_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S09_PRE_MESSAGE_PAYLOAD.to_owned());
-    let post_message_payload = std::env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
+    let post_message_payload = env::var("KAMN_E2E_S09_POST_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S09_POST_MESSAGE_PAYLOAD.to_owned());
 
     let pre_send_handle = KamnAgentHandle::connect(
@@ -974,18 +968,17 @@ fn run_live_s09_transport_failover_probe() -> Result<(), String> {
 }
 
 fn run_live_s10_topology_coherence_probe() -> Result<(), String> {
-    let primary_endpoint = std::env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
-        .or_else(|_| std::env::var("KAMN_ENDPOINT"))
+    let primary_endpoint = env::var("KAMN_E2E_S10_PRIMARY_ENDPOINT")
+        .or_else(|_| env::var("KAMN_ENDPOINT"))
         .unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let secondary_endpoint = std::env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT")
-        .unwrap_or_else(|_| primary_endpoint.clone());
-    let tertiary_endpoint = std::env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT")
-        .unwrap_or_else(|_| secondary_endpoint.clone());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S10_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
-    let message_payload = std::env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
+    let secondary_endpoint =
+        env::var("KAMN_E2E_S10_SECONDARY_ENDPOINT").unwrap_or_else(|_| primary_endpoint.clone());
+    let tertiary_endpoint =
+        env::var("KAMN_E2E_S10_TERTIARY_ENDPOINT").unwrap_or_else(|_| secondary_endpoint.clone());
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S10_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S10_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S10_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S10_MESSAGE_PAYLOAD.to_owned());
 
     let primary_send_handle = KamnAgentHandle::connect(
@@ -1065,19 +1058,17 @@ fn run_live_s10_topology_coherence_probe() -> Result<(), String> {
 }
 
 fn run_live_s11_signer_rotation_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let primary_agent_name = std::env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let primary_agent_name = env::var("KAMN_E2E_S11_PRIMARY_AGENT_NAME")
         .unwrap_or_else(|_| DEFAULT_S11_PRIMARY_AGENT_NAME.to_owned());
-    let rotated_agent_name = std::env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
+    let rotated_agent_name = env::var("KAMN_E2E_S11_ROTATED_AGENT_NAME")
         .unwrap_or_else(|_| format!("{primary_agent_name}-rotated"));
-    let message_payload = std::env::var("KAMN_E2E_S11_MESSAGE_PAYLOAD")
+    let message_payload = env::var("KAMN_E2E_S11_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S11_MESSAGE_PAYLOAD.to_owned());
-    let rotated_message_payload = std::env::var("KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD")
+    let rotated_message_payload = env::var("KAMN_E2E_S11_ROTATED_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S11_ROTATED_MESSAGE_PAYLOAD.to_owned());
-    let stale_message_payload = std::env::var("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD")
+    let stale_message_payload = env::var("KAMN_E2E_S11_STALE_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S11_STALE_MESSAGE_PAYLOAD.to_owned());
 
     let primary_send_handle = KamnAgentHandle::connect(
@@ -1168,13 +1159,11 @@ fn run_live_s11_signer_rotation_probe() -> Result<(), String> {
 }
 
 fn run_live_s12_retention_deletion_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S12_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
-    let register_payload = std::env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S12_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S12_AGENT_NAME.to_owned());
+    let register_payload = env::var("KAMN_E2E_S12_REGISTER_CONTENT_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S12_REGISTER_CONTENT_PAYLOAD.to_owned());
 
     let register_handle = KamnAgentHandle::connect(
@@ -1284,13 +1273,11 @@ fn run_live_s12_retention_deletion_probe() -> Result<(), String> {
 }
 
 fn run_live_s13_bridge_forwarding_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S13_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
-    let submit_payload = std::env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S13_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S13_AGENT_NAME.to_owned());
+    let submit_payload = env::var("KAMN_E2E_S13_SUBMIT_BRIDGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S13_SUBMIT_BRIDGE_PAYLOAD.to_owned());
 
     let submit_handle = KamnAgentHandle::connect(
@@ -1386,17 +1373,15 @@ fn run_live_s13_bridge_forwarding_probe() -> Result<(), String> {
 }
 
 fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S14_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
-    let batch_message_payload_a = std::env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S14_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S14_AGENT_NAME.to_owned());
+    let batch_message_payload_a = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_A")
         .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_A.to_owned());
-    let batch_message_payload_b = std::env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
+    let batch_message_payload_b = env::var("KAMN_E2E_S14_BATCH_MESSAGE_PAYLOAD_B")
         .unwrap_or_else(|_| DEFAULT_S14_BATCH_MESSAGE_PAYLOAD_B.to_owned());
-    let block_height = std::env::var("KAMN_E2E_S14_BLOCK_HEIGHT")
+    let block_height = env::var("KAMN_E2E_S14_BLOCK_HEIGHT")
         .ok()
         .map(|raw| {
             raw.trim()
@@ -1405,8 +1390,7 @@ fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
         })
         .transpose()?
         .unwrap_or(DEFAULT_S14_BLOCK_HEIGHT);
-    let finality =
-        std::env::var("KAMN_E2E_S14_FINALITY").unwrap_or_else(|_| DEFAULT_S14_FINALITY.to_owned());
+    let finality = env_var_or_default("KAMN_E2E_S14_FINALITY", DEFAULT_S14_FINALITY);
 
     let batch_sender_a_handle = KamnAgentHandle::connect(
         endpoint.as_str(),
@@ -1469,7 +1453,7 @@ fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
         "sdk-direct live s14 batch-b query-message",
     )?;
 
-    let batch_root = std::env::var("KAMN_E2E_S14_BATCH_ROOT").unwrap_or_else(|_| {
+    let batch_root = env_var_or_else("KAMN_E2E_S14_BATCH_ROOT", || {
         format!(
             "sha256:s14:{}:{}",
             batch_a_receipt.message_id, batch_b_receipt.message_id
@@ -1519,15 +1503,13 @@ fn run_live_s14_batch_merkle_probe() -> Result<(), String> {
 }
 
 fn run_live_s15_performance_smoke_probe() -> Result<(), String> {
-    let endpoint =
-        std::env::var("KAMN_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_owned());
-    let kolme_endpoint =
-        std::env::var("KAMN_KOLME_ENDPOINT").unwrap_or_else(|_| DEFAULT_KOLME_ENDPOINT.to_owned());
-    let base_agent_name = std::env::var("KAMN_E2E_S15_AGENT_NAME")
-        .unwrap_or_else(|_| DEFAULT_S15_AGENT_NAME.to_owned());
-    let message_payload = std::env::var("KAMN_E2E_S15_MESSAGE_PAYLOAD")
+    let endpoint = env_var_or_default("KAMN_ENDPOINT", "http://localhost:8080");
+    let kolme_endpoint = env_var_or_default("KAMN_KOLME_ENDPOINT", DEFAULT_KOLME_ENDPOINT);
+    let base_agent_name =
+        env::var("KAMN_E2E_S15_AGENT_NAME").unwrap_or_else(|_| DEFAULT_S15_AGENT_NAME.to_owned());
+    let message_payload = env::var("KAMN_E2E_S15_MESSAGE_PAYLOAD")
         .unwrap_or_else(|_| DEFAULT_S15_MESSAGE_PAYLOAD.to_owned());
-    let iterations = std::env::var("KAMN_E2E_S15_ITERATIONS")
+    let iterations = env::var("KAMN_E2E_S15_ITERATIONS")
         .ok()
         .map(|raw| {
             raw.trim()
@@ -1740,7 +1722,7 @@ fn parse_s15_budget_env_u128(
     default_value: u128,
     step: &str,
 ) -> Result<u128, String> {
-    let parsed = std::env::var(env_key)
+    let parsed = env::var(env_key)
         .ok()
         .map(|raw| {
             raw.trim()

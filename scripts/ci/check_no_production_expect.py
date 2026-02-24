@@ -38,6 +38,7 @@ DEFAULT_RUNTIME_ROOTS = (
     "crates/kamn-mcp-server/src",
     "crates/kamn-sdk/src",
     "crates/kamn-kolme/src",
+    "crates/kamn-e2e-harness/src",
 )
 
 
