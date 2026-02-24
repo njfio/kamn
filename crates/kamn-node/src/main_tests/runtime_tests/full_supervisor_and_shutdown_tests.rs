@@ -143,6 +143,168 @@ fn regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason() {
 }
 
 #[test]
+fn integration_runtime_full_supervisor_starts_service_api_lane_before_daemon_stop() {
+    let _lock = log_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "10".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19086".to_owned(),
+        "--api-idle-timeout-ms".to_owned(),
+        "100".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("full supervisor runtime should succeed");
+    assert_eq!(report.runtime_mode, "full");
+
+    let endpoint_start_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.service_api.endpoint.start\""))
+        .expect("full supervisor should emit service-api endpoint start marker");
+    let supervisor_stop_complete_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .expect("full supervisor should emit stop-complete marker");
+    let endpoint_complete_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.service_api.endpoint.complete\""))
+        .expect("full supervisor should emit service-api endpoint complete marker");
+    assert!(
+        endpoint_start_idx < supervisor_stop_complete_idx,
+        "service-api lane must start before full supervisor stop completion"
+    );
+    assert!(
+        supervisor_stop_complete_idx < endpoint_complete_idx,
+        "service-api lane should finish cleanly after full supervisor stop completion"
+    );
+}
+
+#[test]
+fn integration_runtime_full_supervisor_starts_observability_lane_before_daemon_stop() {
+    let _lock = log_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "10".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19090".to_owned(),
+        "--api-idle-timeout-ms".to_owned(),
+        "100".to_owned(),
+        "--observability-endpoint-bind".to_owned(),
+        "127.0.0.1:19091".to_owned(),
+        "--observability-endpoint-idle-timeout-ms".to_owned(),
+        "100".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("full supervisor runtime should succeed");
+    assert_eq!(report.runtime_mode, "full");
+
+    let endpoint_start_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.observability.endpoint.start\""))
+        .expect("full supervisor should emit observability endpoint start marker");
+    let supervisor_stop_complete_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .expect("full supervisor should emit stop-complete marker");
+    let endpoint_complete_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.observability.endpoint.complete\""))
+        .expect("full supervisor should emit observability endpoint complete marker");
+    assert!(
+        endpoint_start_idx < supervisor_stop_complete_idx,
+        "observability lane must start before full supervisor stop completion"
+    );
+    assert!(
+        supervisor_stop_complete_idx < endpoint_complete_idx,
+        "observability lane should finish cleanly after full supervisor stop completion"
+    );
+}
+
+#[test]
+fn regression_runtime_full_supervisor_rejects_service_api_lane_max_requests_drift() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19087".to_owned(),
+        "--api-max-requests".to_owned(),
+        "2".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let error = execute(parsed).expect_err(
+        "full supervisor must fail closed when service-api lane max-request contract drifts",
+    );
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("full_supervisor_service_api_lane_max_requests_contract_violation")),
+        "service-api lane max-request drift must emit deterministic full-supervisor reason code"
+    );
+}
+
+#[test]
+fn regression_runtime_full_supervisor_rejects_observability_lane_max_requests_drift() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19089".to_owned(),
+        "--observability-endpoint-bind".to_owned(),
+        "127.0.0.1:19088".to_owned(),
+        "--observability-endpoint-max-requests".to_owned(),
+        "2".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let error = execute(parsed).expect_err(
+        "full supervisor must fail closed when observability lane max-request contract drifts",
+    );
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("full_supervisor_observability_lane_max_requests_contract_violation")),
+        "observability lane max-request drift must emit deterministic full-supervisor reason code"
+    );
+}
+
+#[test]
 fn unit_full_supervisor_bootstrap_component_contract_rejects_order_drift() {
     let reason = classify_full_bootstrap_component_contract_violation(&[
         "daemon",
