@@ -1,6 +1,7 @@
 use super::{
-    auth::map_anti_spam_rejection_to_reasoned_error, project_service_api_relayed_message_statuses,
-    AntiSpamRejection, REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+    auth::map_anti_spam_rejection_to_reasoned_error, drain_service_api_relay_spool_entries,
+    project_service_api_relayed_message_statuses, AntiSpamRejection,
+    REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
     REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
     REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
 };
@@ -171,6 +172,108 @@ fn service_api_relay_projection_is_idempotent_for_relayed_messages() {
     assert_eq!(
         state_json["messages"]["msg-projection-relayed-1"]["status"],
         "relayed"
+    );
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
+fn service_api_relay_spool_drain_errors_for_non_not_found_paths() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let directory_path = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-spool-dir-{unique_suffix}"
+    ));
+    std::fs::create_dir_all(directory_path.as_path()).expect("directory fixture should exist");
+    let error = drain_service_api_relay_spool_entries(directory_path.to_str())
+        .expect_err("directory path must fail relay spool open");
+    assert!(
+        error.contains("service api relay spool read failed"),
+        "relay spool path errors should fail closed with read failure marker"
+    );
+    let _ = std::fs::remove_dir(directory_path);
+}
+
+#[test]
+fn service_api_relay_projection_missing_state_file_is_noop() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let missing_state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-projection-missing-{unique_suffix}.json"
+    ));
+    let message_ids = vec!["msg-projection-missing-1".to_owned()];
+    let projected_count = project_service_api_relayed_message_statuses(
+        missing_state_file.to_str(),
+        message_ids.as_slice(),
+    )
+    .expect("missing state file should be treated as no-op");
+    assert_eq!(projected_count, 0);
+}
+
+#[test]
+fn service_api_relay_projection_errors_for_non_not_found_paths() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let directory_path = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-projection-dir-{unique_suffix}"
+    ));
+    std::fs::create_dir_all(directory_path.as_path()).expect("directory fixture should exist");
+    let message_ids = vec!["msg-projection-error-1".to_owned()];
+    let error = project_service_api_relayed_message_statuses(
+        directory_path.to_str(),
+        message_ids.as_slice(),
+    )
+    .expect_err("directory path should fail state file read");
+    assert!(
+        error.contains("service api state file read failed"),
+        "state projection should fail closed for non-not-found read failures"
+    );
+    let _ = std::fs::remove_dir(directory_path);
+}
+
+#[test]
+fn service_api_relay_projection_does_not_rewrite_when_no_records_promoted() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-relay-projection-no-rewrite-{unique_suffix}.json"
+    ));
+    let initial_payload = r#"{"schema_version":"kamn.runtime.service-api-message-store.v2","messages":{"msg-projection-stable-1":{"message_id":"msg-projection-stable-1","status":"relayed","channel_id":null,"sender_did":"kamn:did:agent:sender","recipient_did":"kamn:did:agent:recipient","body":"{\"message\":\"stable\"}"}},"channel_messages":{},"tasks":{},"escrows":{}}"#;
+    std::fs::write(state_file.as_path(), initial_payload).expect("state fixture should write");
+
+    let message_ids = vec!["msg-projection-stable-1".to_owned()];
+    let projected_count =
+        project_service_api_relayed_message_statuses(state_file.to_str(), message_ids.as_slice())
+            .expect("projection should succeed");
+    assert_eq!(projected_count, 0);
+    let final_payload = std::fs::read_to_string(state_file.as_path())
+        .expect("state payload should remain readable");
+    assert_eq!(
+        final_payload, initial_payload,
+        "non-promoting projections must not rewrite the state file"
     );
     let _ = std::fs::remove_file(state_file);
 }
