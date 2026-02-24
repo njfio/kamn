@@ -187,6 +187,7 @@ pub(super) async fn serve_service_api_endpoint_async(
         snapshot,
         replay_guard: Arc::new(Mutex::new(BTreeSet::new())),
         request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
+        websocket_events: ServiceApiWebsocketEventFanout::new(),
         body_limit_bytes: config.body_limit_bytes as usize,
         concurrency_limiter: Arc::new(Semaphore::new(config.concurrency_limit as usize)),
         ingress_rate_window: Arc::new(Mutex::new(ServiceApiIngressRateWindow::new(
