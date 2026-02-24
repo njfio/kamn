@@ -660,6 +660,15 @@ fn parse_error_envelope_from_http_response(response: &str) -> ServiceApiErrorEnv
     parse_error_envelope(extract_http_response_body(response))
 }
 
+fn parse_scalar_metric_value(response: &str, metric_name: &str) -> Option<u64> {
+    let body = extract_http_response_body(response);
+    let expected_prefix = format!("{metric_name} ");
+    body.lines().find_map(|line| {
+        let value = line.trim().strip_prefix(expected_prefix.as_str())?;
+        value.parse::<u64>().ok()
+    })
+}
+
 fn read_single_http_response(stream: &mut TcpStream) -> String {
     let mut response = Vec::new();
     let mut chunk = [0_u8; 1024];
@@ -1771,8 +1780,142 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_code_count {expected_lifecycle_rejection_reason_code_count}"
     )));
+    assert!(metrics_response
+        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
     assert!(
-        metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn regression_service_api_runtime_observability_projects_live_metrics_under_traffic() {
+    // Regression: #5903
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34057".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 4,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let message_body = "{\"message\":\"runtime-observability\"}";
+    let sender_did = "kamn:did:agent:runtime-observability";
+    let sender_nonce = 1_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = service_api_request_signature_for_fields(
+        sender_did,
+        sender_nonce,
+        state_hash.as_str(),
+        message_body,
+    );
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "1"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+            ("X-KAMN-Authz-Scope", "messages:write"),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+
+    let unauth_response = send_http_request(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        "{\"message\":\"unauth\"}",
+    );
+    assert!(unauth_response.contains("HTTP/1.1 401 Unauthorized"));
+
+    let health_response = send_http_request(bind_addr.as_str(), "GET", "/healthz", "");
+    let metrics_response = send_http_request(bind_addr.as_str(), "GET", "/metrics", "");
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+
+    let health_payload: ServiceApiHealthBody =
+        parse_service_api_payload(extract_http_response_body(health_response.as_str()))
+            .expect("health payload should deserialize");
+    assert_eq!(
+        health_payload.observability_source, "service-api-runtime",
+        "health should expose runtime observability source once traffic is recorded"
+    );
+    assert!(
+        matches!(
+            health_payload.observability_health.as_str(),
+            "healthy" | "degraded" | "critical"
+        ),
+        "runtime health must map to known observability taxonomy"
+    );
+
+    let throughput_tps = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_observability_throughput_tps",
+    )
+    .expect("throughput metric should be present");
+    assert!(throughput_tps > 0, "throughput should be traffic-derived");
+
+    let error_rate_bps = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_observability_error_rate_bps",
+    )
+    .expect("error rate metric should be present");
+    assert!(
+        error_rate_bps > 0,
+        "error rate should capture unauthorized request outcomes"
+    );
+
+    let latency_p50_ms = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_observability_latency_p50_ms",
+    )
+    .expect("latency p50 metric should be present");
+    let latency_p99_ms = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_observability_latency_p99_ms",
+    )
+    .expect("latency p99 metric should be present");
+    assert!(latency_p50_ms > 0, "latency p50 should be runtime-derived");
+    assert!(latency_p99_ms > 0, "latency p99 should be runtime-derived");
+
+    let availability_bps = parse_scalar_metric_value(
+        metrics_response.as_str(),
+        "kamn_service_api_observability_availability_bps",
+    )
+    .expect("availability metric should be present");
+    assert!(
+        availability_bps < 10_000,
+        "availability should decrease when error outcomes occur"
     );
 
     let server_result = server.join().expect("endpoint thread should complete");
@@ -2098,9 +2241,8 @@ fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
     assert!(metrics_response.contains(&format!(
         "kamn_service_api_lifecycle_rejection_reason_code_count {expected_lifecycle_rejection_reason_code_count}"
     )));
-    assert!(
-        metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
-    );
+    assert!(metrics_response
+        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -2287,7 +2429,8 @@ fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_conne
         .expect("second request should write over keep-alive connection");
     let second_response = read_single_http_response(&mut stream);
     assert!(second_response.contains("HTTP/1.1 200 OK"));
-    assert!(second_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1"));
+    assert!(second_response
+        .contains("kamn_service_api_observability_source{source=\"service-api-runtime\"} 1"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -6396,5 +6539,103 @@ fn performance_service_api_endpoint_lifecycle_projection_loop_stays_within_local
     assert!(
         started.elapsed() <= Duration::from_secs(2),
         "lifecycle projection loop exceeded local budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_unauthorized_ingress_consumes_request_budget() {
+    // Regression: #5903
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34069".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 80,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let response = send_http_request(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        "{\"message\":\"unsigned\"}",
+    );
+    let server_result = server.join().expect("endpoint thread should complete");
+
+    assert!(
+        response.contains("HTTP/1.1 401 Unauthorized"),
+        "unsigned ingress must fail closed with unauthorized status: {response}"
+    );
+    let payload = parse_error_envelope_from_http_response(response.as_str());
+    assert_eq!(
+        payload.reason_code,
+        SERVICE_API_AUTH_MISSING_HEADER_REASON_CODE
+    );
+    assert!(
+        server_result.is_ok(),
+        "unauthorized ingress must still consume request budget for graceful shutdown"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_returns_timeout_error_when_no_requests_arrive() {
+    // Regression: #5903
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34070".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr,
+        max_requests: 1,
+        idle_timeout_ms: 40,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let started = Instant::now();
+    let result = serve_service_api_endpoint(&endpoint_config, &snapshot);
+    assert!(
+        result.is_err(),
+        "endpoint must fail closed with timeout when request budget is never consumed"
+    );
+    let error = result.expect_err("timeout error should be returned");
+    assert!(
+        error.contains("service api timed out after 40 ms waiting for requests"),
+        "timeout error should include configured budget: {error}"
+    );
+    assert!(
+        started.elapsed() <= Duration::from_secs(1),
+        "timeout regression should complete quickly for local tests"
     );
 }
