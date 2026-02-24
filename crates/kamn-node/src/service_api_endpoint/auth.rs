@@ -11,7 +11,7 @@ pub(super) fn header_value<'a>(
 pub(super) fn authorize_service_api_request(
     state: &ServiceApiRuntimeState,
     request: &ParsedRequest,
-    replay_guard: &mut BTreeSet<(String, u64)>,
+    replay_guard: &mut ServiceApiReplayGuard,
 ) -> Result<(), RequestAuthFailure> {
     if !super::route_requires_auth(request.method.as_str(), request.path.as_str()) {
         return Ok(());
@@ -80,7 +80,7 @@ pub(super) fn authorize_service_api_request(
             ),
         ));
     }
-    if !replay_guard.insert((sender_did.to_owned(), nonce)) {
+    if !replay_guard.record_nonce_if_fresh(sender_did, nonce, Instant::now()) {
         return Err(RequestAuthFailure::Replay(ServiceApiReasonedError::new(
             REASON_CODE_AUTH_REPLAY_NONCE_DETECTED,
             "request nonce replay detected for sender",
@@ -414,5 +414,57 @@ mod tests {
         let unknown_error = parse_scope("content:admin").expect_err("unknown scope should fail");
         assert_eq!(unknown_error.reason_code, REASON_CODE_AUTH_SCOPE_INVALID);
         assert!(unknown_error.message.contains("value is invalid"));
+    }
+
+    #[test]
+    fn regression_replay_guard_capacity_eviction_bounds_memory_and_releases_oldest_nonce() {
+        // Regression: #5928
+        let start = Instant::now();
+        let mut guard = ServiceApiReplayGuard::new(3, Duration::from_secs(300));
+
+        assert!(guard.record_nonce_if_fresh("kamn:did:agent:alice", 1, start));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            2,
+            start + Duration::from_secs(1)
+        ));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            3,
+            start + Duration::from_secs(2)
+        ));
+        assert_eq!(guard.tracked_entry_count(), 3);
+
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            4,
+            start + Duration::from_secs(3)
+        ));
+        assert_eq!(guard.tracked_entry_count(), 3);
+
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:alice",
+            1,
+            start + Duration::from_secs(4)
+        ));
+    }
+
+    #[test]
+    fn regression_replay_guard_ttl_eviction_rejects_only_within_active_window() {
+        // Regression: #5928
+        let start = Instant::now();
+        let mut guard = ServiceApiReplayGuard::new(8, Duration::from_secs(2));
+
+        assert!(guard.record_nonce_if_fresh("kamn:did:agent:bob", 9, start));
+        assert!(!guard.record_nonce_if_fresh(
+            "kamn:did:agent:bob",
+            9,
+            start + Duration::from_secs(1)
+        ));
+        assert!(guard.record_nonce_if_fresh(
+            "kamn:did:agent:bob",
+            9,
+            start + Duration::from_secs(3)
+        ));
     }
 }
