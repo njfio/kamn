@@ -1,7 +1,7 @@
 # Spec: Issue #5857 - Enforce Push-Executed Live E2E CI Lane
 
 - Issue: #5857
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`

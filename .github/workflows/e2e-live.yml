@@ -1,6 +1,9 @@
 name: E2E Live Tests
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -304,6 +307,7 @@ jobs:
   e2e-cli-smoke:
     name: E2E CLI Smoke
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
 

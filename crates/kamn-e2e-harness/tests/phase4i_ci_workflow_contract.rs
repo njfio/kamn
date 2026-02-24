@@ -12,6 +12,9 @@ fn spec_c01_workflow_contains_required_triggers() {
     let root = repo_root();
     let workflow = std::fs::read_to_string(root.join(".github/workflows/e2e-live.yml"))
         .expect("e2e-live workflow should exist");
+    assert!(workflow.contains("push:"));
+    assert!(workflow.contains("branches:"));
+    assert!(workflow.contains("- main"));
     assert!(workflow.contains("workflow_dispatch:"));
     assert!(workflow.contains("schedule:"));
     assert!(workflow.contains("cron: '0 6 * * 1'"));
