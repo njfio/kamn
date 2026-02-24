@@ -1,7 +1,7 @@
 # Spec: Issue #5866 - Service API Durable Persistence Continuity
 
 - Issue: #5866
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
@@ -36,7 +36,8 @@ Out of scope:
 
 ## Test Mapping
 - `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_persists_task_and_escrow_state_across_routes -- --exact`
-- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_persists_message_state_across_restart -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::integration_service_api_endpoint_persists_task_and_escrow_state_across_restart -- --exact`
+- `cargo test -p kamn-node main_tests::service_api_endpoint_tests::regression_service_api_endpoint_rejects_unknown_task_and_escrow_resource_transitions -- --exact`
 - `cargo test -p kamn-node service_api_endpoint::tests::service_api_relay_projection_does_not_rewrite_when_no_records_promoted -- --exact`
 
 ## Success Metrics / Observable Signals
