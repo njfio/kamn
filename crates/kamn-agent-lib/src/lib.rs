@@ -7,7 +7,7 @@ use auth::KamnAuthHeaders;
 use client::ServiceApiHttpClient;
 use envelope::{build_and_sign_envelope, CanonicalMessageEnvelope};
 use kolme::KolmeClient;
-use nonce::NonceTracker;
+use nonce::{NonceTracker, NonceTrackerError};
 
 pub use errors::AgentLibError;
 pub use identity::AgentIdentity;
@@ -341,13 +341,18 @@ impl KamnAgentHandle {
             .nonce_tracker
             .lock()
             .map_err(|error| AgentLibError::Internal(format!("nonce lock poisoned: {error}")))?;
-        Ok(tracker.next_nonce())
+        tracker.next_nonce().map_err(|error| match error {
+            NonceTrackerError::Exhausted => AgentLibError::InvalidInput {
+                field: "nonce",
+                reason: "nonce tracker exhausted at u64::MAX".to_owned(),
+            },
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentIdentity, KamnAgentHandle};
+    use super::{AgentIdentity, AgentLibError, KamnAgentHandle, NonceTracker};
 
     #[test]
     fn unit_kamn_agent_handle_exposes_identity_after_connect() {
@@ -360,5 +365,33 @@ mod tests {
         .expect("handle");
 
         assert_eq!(handle.identity().did(), identity.did());
+    }
+
+    #[test]
+    fn regression_kamn_agent_handle_rejects_nonce_overflow() {
+        // Regression: #5907
+        let identity = AgentIdentity::from_agent_name("overflow-agent").expect("identity");
+        let handle = KamnAgentHandle::with_identity(
+            "http://localhost:8080",
+            "http://localhost:3000",
+            identity,
+        )
+        .expect("handle");
+
+        {
+            let mut tracker = handle.nonce_tracker.lock().expect("nonce lock");
+            *tracker = NonceTracker::new(u64::MAX);
+        }
+
+        let error = handle
+            .build_auth_headers("state:overflow", b"{}", Some("messages:write"))
+            .expect_err("nonce overflow must fail closed");
+        assert_eq!(
+            error,
+            AgentLibError::InvalidInput {
+                field: "nonce",
+                reason: "nonce tracker exhausted at u64::MAX".to_owned(),
+            }
+        );
     }
 }
