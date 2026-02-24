@@ -1,7 +1,7 @@
 # Spec: Issue #5897 - Replace Baseline Pseudo-Signatures with Cryptographic Signatures in Core Signer Path
 
 - Issue: #5897
-- Status: Accepted
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
