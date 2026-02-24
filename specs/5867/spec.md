@@ -1,7 +1,7 @@
 # Spec: Issue #5867 - End-to-End Message Delivery Continuity
 
 - Issue: #5867
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
