@@ -21,5 +21,6 @@ include!("runtime_tests/arg_and_signer_policy_tests.rs");
 include!("runtime_tests/logging_and_bootstrap_tests.rs");
 include!("runtime_tests/runtime_mode_and_transport_profile_tests.rs");
 include!("runtime_tests/full_supervisor_and_shutdown_tests.rs");
+include!("runtime_tests/run_path_mutation_guard_tests.rs");
 include!("runtime_tests/profile_and_config_layering_tests.rs");
 include!("runtime_tests/kolme_live_execution_tests.rs");
