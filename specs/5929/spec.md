@@ -1,7 +1,7 @@
 # Spec: Issue #5929 - Task: Harden SDK HTTP request construction against path/header injection
 
 - Issue: #5929
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P0
 - Area: sdk
@@ -29,16 +29,17 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify CRLF and delimiter injection payloads are rejected or safely encoded.
-- C-02 (Functional, AC-2): Verify No direct raw interpolation of untrusted IDs into HTTP request line/headers remains.
-- C-03 (Functional, AC-3): Verify Integration tests validate malformed input is fail-closed.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Regression, AC-1): `regression_service_api_client_rejects_crlf_route_identifier_payload` verifies CRLF route-segment payload is rejected fail-closed.
+- C-02 (Regression, AC-1): `regression_service_request_auth_rejects_crlf_signature_payload` verifies CRLF header payload in auth signature is rejected fail-closed.
+- C-03 (Functional, AC-2): `functional_service_api_client_executes_signed_http_route_contracts` verifies canonical SDK request paths/headers continue to function after sanitization.
+- C-04 (Integration, AC-3): `integration_service_api_client_reads_websocket_event_frame` verifies websocket request path/header hardening does not regress websocket handshake flow.
+- C-05 (Conformance, AC-4): `cargo test -p kamn-sdk --test service_api_client` passes full SDK service-client contract matrix.
+- C-06 (Verify, AC-4): `cargo fmt --check` and strict `kamn-sdk` clippy pass.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- Malformed route IDs and header values with control characters are rejected before request emission.
+- SDK no longer interpolates unchecked dynamic route IDs or auth header values into HTTP request lines.
+- Full service API SDK integration suite remains green.
 
 
 ## Required Test Categories
@@ -50,4 +51,3 @@ Out of scope:
 
 ## Dependencies
 - #5918
-

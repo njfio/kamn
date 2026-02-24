@@ -2,18 +2,17 @@
 
 - Issue: #5929
 - Spec: `specs/5929/spec.md`
-- Status: Draft
+- Status: Implemented
 - Last Updated: 2026-02-24
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5929/spec.md.
-2. Implement: Apply strict path-segment encoding and header-value validation (or safe client migration).
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: added CRLF route/header injection regression tests to `crates/kamn-sdk/tests/service_api_client.rs`.
+2. Implemented route-segment validation and HTTP header sanitization in `crates/kamn-sdk/src/service.rs`.
+3. Refactored SDK request building (`request` + `read_event_once`) to use shared validated auth-header rendering.
+4. Verified service-client contract suite, formatting, and strict sdk clippy.
 
 ## Affected Modules (Initial)
 - `crates/kamn-sdk/src/service.rs`
-- `crates/kamn-sdk/src/http_client.rs`
 - `crates/kamn-sdk/tests/`
 
 ## Risks + Mitigations
@@ -30,4 +29,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Not required (no dependency or protocol/wire-format change).
