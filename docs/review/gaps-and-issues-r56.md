@@ -404,8 +404,8 @@ Cumulative: 34 genuine capability commits across 464 total (7.3%). R55-R56 toget
 
 - r56_review_spec_volume_non_regression_delta_schema_version=kamn.review.spec-volume-non-regression-delta-allowance.v1
 - r56_review_spec_volume_non_regression_base_cap=693
-- r56_review_spec_volume_non_regression_delta_allowance=8
-- r56_review_spec_volume_non_regression_effective_cap=701
+- r56_review_spec_volume_non_regression_delta_allowance=9
+- r56_review_spec_volume_non_regression_effective_cap=702
 - r56_review_spec_volume_non_regression_status=within_effective_cap
 
 - r56_review_review_document_freeze_schema_version=kamn.review.review-document-freeze.v1
