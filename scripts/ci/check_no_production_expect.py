@@ -38,6 +38,7 @@ def is_excluded(path: Path) -> bool:
     return (
         "/main_tests/" in path_str
         or "/tests/" in path_str
+        or ("/src/" in path_str and file_name == "tests.rs")
         or "/test_utils/" in path_str
         or file_name.endswith("_tests.rs")
         or "_tests_" in file_name

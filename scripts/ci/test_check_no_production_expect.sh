@@ -1,25 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/test_harness.sh"
 CHECKER="$ROOT_DIR/scripts/ci/check_no_production_expect.sh"
 PY_CHECKER="$ROOT_DIR/scripts/ci/check_no_production_expect.py"
-
 test_harness_require_executable "$CHECKER" "expected production expect checker wrapper to be executable"
-
 test_harness_require_executable "$PY_CHECKER" "expected production expect checker module to be executable"
-
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
 EXPECTED_REASON_TAXONOMY_VERSION="kamn.ci.production-panic-replacement-reason-taxonomy.v1"
 EXPECTED_REASON_CODES_CSV="scan_root_not_found,production_expect_reachable,production_panic_macro_reachable,production_unreachable_macro_reachable,production_unsafe_env_fallback_default"
 EXPECTED_RUNTIME_EVIDENCE_OUTPUTS_CSV="runtime_panic_replacement_evidence_status,runtime_panic_replacement_evidence_violation_count,runtime_panic_replacement_evidence_files_csv"
-
 BASELINE_REPORT="$TMP_DIR/no-production-expect-baseline-report.json"
 baseline_output="$(bash "$CHECKER" --output-json "$BASELINE_REPORT")"
-
 if ! printf '%s\n' "$baseline_output" | grep -q '^status=ok$'; then
   echo "expected status=ok for baseline production panic checker path" >&2
   exit 1
@@ -294,5 +287,12 @@ RS
 python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 
 rm -f "$TMP_DIR/cfg_test_brace_heavy_literals.rs"
+
+mkdir -p "$TMP_DIR/src/service_api_endpoint"
+cat <<'RS' > "$TMP_DIR/src/service_api_endpoint/tests.rs"
+fn src_tests_module_fixture() { let _value = Some(9).expect("src/**/tests.rs should be treated as test-only"); }
+RS
+python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
+rm -rf "$TMP_DIR/src"
 
 echo "production expect checker tests passed."
