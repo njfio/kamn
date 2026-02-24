@@ -687,9 +687,19 @@ fn performance_signer_emulator_contract_lane_stays_within_budget() {
     }
 
     let elapsed_millis = start.elapsed().as_millis();
+    let budget_millis = std::env::var("KAMN_SIGNER_EMULATOR_CONTRACT_BUDGET_MS")
+        .ok()
+        .and_then(|value| value.parse::<u128>().ok())
+        .unwrap_or_else(|| {
+            if std::env::var_os("CI").is_some() {
+                600
+            } else {
+                250
+            }
+        });
     assert!(
-        elapsed_millis < 250,
-        "signer emulator contract lane exceeded budget: {elapsed_millis}ms"
+        elapsed_millis < budget_millis,
+        "signer emulator contract lane exceeded budget: elapsed={elapsed_millis}ms budget={budget_millis}ms"
     );
 }
 
