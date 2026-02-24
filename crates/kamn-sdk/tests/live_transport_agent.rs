@@ -1,11 +1,12 @@
 use kamn_sdk::{
-    service_signature_for_fields, AgentDid, AgentMetadata, KamnAgent, KamnTransport,
-    LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TransportMode,
+    service_signature_for_fields, AgentDid, AgentMetadata, AgentQuery, EscrowId, KamnAgent,
+    KamnTransport, LiveTransportConfig, LiveTransportKamnClient, Message, SdkError, TaskId,
+    TransportMode,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -14,6 +15,7 @@ const CHAIN_VERSION: &str = "1";
 const LIVE_CHAIN_ID_ENV: &str = "KAMN_SDK_LIVE_CHAIN_ID";
 const LIVE_CHAIN_VERSION_ENV: &str = "KAMN_SDK_LIVE_CHAIN_VERSION";
 const LIVE_REQUESTER_DID_ENV: &str = "KAMN_SDK_LIVE_REQUESTER_DID";
+const DEFAULT_LIVE_REQUESTER_DID: &str = "kamn:did:agent:live-sdk";
 const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
@@ -35,16 +37,26 @@ fn metadata(agent_type: &str, model: &str, capabilities: &[&str]) -> AgentMetada
 }
 
 fn ensure_live_test_env() {
-    static ONCE: OnceLock<()> = OnceLock::new();
-    ONCE.get_or_init(|| {
-        std::env::set_var(
-            SERVICE_AUTH_PRIVATE_KEY_ENV,
-            TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
-        );
-        std::env::set_var(LIVE_CHAIN_ID_ENV, CHAIN_ID);
-        std::env::set_var(LIVE_CHAIN_VERSION_ENV, CHAIN_VERSION);
-        std::env::set_var(LIVE_REQUESTER_DID_ENV, "kamn:did:agent:live-tester");
-    });
+    std::env::set_var(
+        SERVICE_AUTH_PRIVATE_KEY_ENV,
+        TEST_SERVICE_AUTH_PRIVATE_KEY_HEX,
+    );
+    std::env::set_var(LIVE_CHAIN_ID_ENV, CHAIN_ID);
+    std::env::set_var(LIVE_CHAIN_VERSION_ENV, CHAIN_VERSION);
+    std::env::set_var(LIVE_REQUESTER_DID_ENV, "kamn:did:agent:live-tester");
+}
+
+fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn with_env_lock<T>(callback: impl FnOnce() -> T) -> T {
+    let lock = env_lock();
+    let guard = lock.lock().expect("env lock should not be poisoned");
+    let output = callback();
+    drop(guard);
+    output
 }
 
 fn reserve_loopback_addr() -> String {
@@ -181,6 +193,7 @@ fn validate_auth(
     body: &str,
     headers: &BTreeMap<String, String>,
     replay_guard: &mut BTreeSet<(String, u64)>,
+    expected_agent_sender_did: &str,
 ) -> Result<(), (u16, &'static str, &'static str, &'static str)> {
     ensure_live_test_env();
     let did_value = headers
@@ -249,6 +262,18 @@ fn validate_auth(
         ));
     }
 
+    if method == "GET"
+        && path.starts_with("/v1/agents/")
+        && did.as_str() != expected_agent_sender_did
+    {
+        return Err((
+            401,
+            "unauthorized",
+            "service_api_auth_sender_did_invalid",
+            "agent route sender did mismatch",
+        ));
+    }
+
     if let Some(expected_scope) = required_scope_for_route(method, path) {
         let scope = headers.get(REQUEST_AUTH_SCOPE_HEADER).ok_or((
             401,
@@ -268,7 +293,12 @@ fn validate_auth(
     Ok(())
 }
 
-fn run_live_transport_contract_server(bind_addr: String, max_requests: u64) -> Result<(), String> {
+fn run_live_transport_contract_server(
+    bind_addr: String,
+    max_requests: u64,
+    expected_agent_sender_did: &str,
+    expected_message_body: Option<String>,
+) -> Result<(), String> {
     let listener =
         TcpListener::bind(bind_addr.as_str()).map_err(|error| format!("bind failed: {error}"))?;
     listener
@@ -291,6 +321,7 @@ fn run_live_transport_contract_server(bind_addr: String, max_requests: u64) -> R
                     body.as_str(),
                     &headers,
                     &mut replay_guard,
+                    expected_agent_sender_did,
                 ) {
                     let payload = format!(
                         "{{\"error\":\"{error}\",\"reason_code\":\"{reason_code}\",\"message\":\"{message}\"}}"
@@ -301,6 +332,13 @@ fn run_live_transport_contract_server(bind_addr: String, max_requests: u64) -> R
                 }
 
                 if method == "POST" && path == "/v1/messages/send" {
+                    if let Some(expected_body) = expected_message_body.as_ref() {
+                        if body != *expected_body {
+                            return Err(format!(
+                                "message payload mismatch, expected `{expected_body}` got `{body}`"
+                            ));
+                        }
+                    }
                     let payload = r#"{"message_id":"msg-live-contract-001","status":"created","runtime_mode":"api"}"#;
                     write_http_response(&mut stream, 202, payload)?;
                 } else if method == "GET" && path.starts_with("/v1/agents/") {
@@ -335,133 +373,292 @@ fn deterministic_message_id(service_message_id: &str) -> u64 {
 
 #[test]
 fn unit_live_transport_config_rejects_non_http_endpoint() {
-    assert_eq!(
-        LiveTransportConfig::new("wss://live.kamn.testnet"),
-        Err(SdkError::InvalidInput {
-            field: "transport.endpoint",
-            reason: "must start with http:// or https://",
-        })
-    );
+    with_env_lock(|| {
+        assert_eq!(
+            LiveTransportConfig::new("wss://live.kamn.testnet"),
+            Err(SdkError::InvalidInput {
+                field: "transport.endpoint",
+                reason: "must start with http:// or https://",
+            })
+        );
+    });
 }
 
 #[test]
 fn spec_c01_live_transport_source_has_no_global_in_memory_registry() {
-    let source = include_str!("../src/live.rs");
-    assert!(
-        !source.contains("InMemoryKamnClient"),
-        "live transport must not proxy through in-memory client simulation"
-    );
-    assert!(
-        !source.contains("OnceLock"),
-        "live transport must not use process-global endpoint registry"
-    );
+    with_env_lock(|| {
+        let source = include_str!("../src/live.rs");
+        assert!(
+            !source.contains("InMemoryKamnClient"),
+            "live transport must not proxy through in-memory client simulation"
+        );
+        assert!(
+            !source.contains("OnceLock"),
+            "live transport must not use process-global endpoint registry"
+        );
+    });
 }
 
 #[test]
 fn spec_c02_live_transport_send_executes_network_contract() {
-    ensure_live_test_env();
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_live_transport_contract_server(server_addr, 1));
-    wait_for_server_ready(bind_addr.as_str());
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 1, "kamn:did:agent:live-tester", None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
 
-    let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
-        .expect("live client should connect");
-    let message_id = client
-        .send(Message {
-            from: did("sender-live-contract"),
-            to: did("recipient-live-contract"),
-            body: "live contract payload".to_owned(),
-            channel: None,
-        })
-        .expect("live send should succeed");
-    assert_eq!(
-        message_id.0,
-        deterministic_message_id("msg-live-contract-001")
-    );
+        let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let message_id = client
+            .send(Message {
+                from: did("sender-live-contract"),
+                to: did("recipient-live-contract"),
+                body: "live contract payload".to_owned(),
+                channel: None,
+            })
+            .expect("live send should succeed");
+        assert_eq!(
+            message_id.0,
+            deterministic_message_id("msg-live-contract-001")
+        );
 
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "test service contract server should satisfy request budget"
-    );
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "test service contract server should satisfy request budget"
+        );
+    });
 }
 
 #[test]
 fn spec_c03_live_transport_resolve_and_reputation_use_network_contract() {
-    ensure_live_test_env();
-    let bind_addr = reserve_loopback_addr();
-    let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_live_transport_contract_server(server_addr, 2));
-    wait_for_server_ready(bind_addr.as_str());
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 2, "kamn:did:agent:live-tester", None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
 
-    let client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
-        .expect("live client should connect");
-    let target = did("agent-profile-target");
+        let client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let target = did("agent-profile-target");
 
-    let document = client.resolve(&target).expect("resolve should succeed");
-    assert_eq!(document.id, target);
-    assert_eq!(document.metadata.agent_type, "service-agent");
-    assert_eq!(document.metadata.model_family, "service-api");
-    assert_eq!(document.service_endpoint, format!("http://{bind_addr}"));
+        let document = client.resolve(&target).expect("resolve should succeed");
+        assert_eq!(document.id, target);
+        assert_eq!(document.metadata.agent_type, "service-agent");
+        assert_eq!(document.metadata.model_family, "service-api");
+        assert_eq!(document.service_endpoint, format!("http://{bind_addr}"));
 
-    let reputation = client
-        .get_reputation(&did("agent-profile-target"))
-        .expect("reputation query should succeed");
-    assert_eq!(reputation.did, did("agent-profile-target"));
-    assert_eq!(reputation.score, 777);
+        let reputation = client
+            .get_reputation(&did("agent-profile-target"))
+            .expect("reputation query should succeed");
+        assert_eq!(reputation.did, did("agent-profile-target"));
+        assert_eq!(reputation.score, 777);
 
-    let server_result = server.join().expect("server thread should join");
-    assert!(
-        server_result.is_ok(),
-        "test service contract server should satisfy request budget"
-    );
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "test service contract server should satisfy request budget"
+        );
+    });
 }
 
 #[test]
 fn regression_live_transport_unreachable_endpoint_fails_closed() {
-    ensure_live_test_env();
-    let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:1")
-        .expect("endpoint format should be accepted");
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:1")
+            .expect("endpoint format should be accepted");
 
-    let error = client
-        .send(Message {
-            from: did("unreachable-sender"),
-            to: did("unreachable-recipient"),
-            body: "payload".to_owned(),
-            channel: None,
-        })
-        .expect_err("send should fail when endpoint is unavailable");
-    assert_eq!(
-        error,
-        SdkError::TransportFailure("failed to connect to service endpoint")
-    );
+        let error = client
+            .send(Message {
+                from: did("unreachable-sender"),
+                to: did("unreachable-recipient"),
+                body: "payload".to_owned(),
+                channel: None,
+            })
+            .expect_err("send should fail when endpoint is unavailable");
+        assert_eq!(
+            error,
+            SdkError::TransportFailure("failed to connect to service endpoint")
+        );
+    });
 }
 
 #[test]
-fn spec_c04_live_transport_unsupported_methods_fail_closed() {
-    ensure_live_test_env();
-    let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
-        .expect("endpoint format should be accepted");
+fn regression_live_transport_duplicate_service_message_id_reuses_alias() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 2, "kamn:did:agent:live-tester", None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
 
-    assert_eq!(
-        client.register(metadata("assistant", "gpt-5", &["text"])),
-        Err(SdkError::NotImplemented(
-            "live transport register route is not available via service api"
-        ))
-    );
-    assert_eq!(client.assert_transport_mode(TransportMode::Live), Ok(()));
+        let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let first = client
+            .send(Message {
+                from: did("sender-live-contract"),
+                to: did("recipient-live-contract"),
+                body: "live contract payload one".to_owned(),
+                channel: None,
+            })
+            .expect("first send should succeed");
+        let second = client
+            .send(Message {
+                from: did("sender-live-contract"),
+                to: did("recipient-live-contract"),
+                body: "live contract payload two".to_owned(),
+                channel: None,
+            })
+            .expect("second send should succeed");
+        assert_eq!(first, second, "same service id must map to same sdk alias");
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "test service contract server should satisfy request budget"
+        );
+    });
+}
+
+#[test]
+fn spec_c04_live_transport_send_escapes_json_payload_contract() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let expected_payload = "{\"from\":\"kamn:did:agent:sender-escape\",\"to\":\"kamn:did:agent:recipient-escape\",\"body\":\"line\\n\\t\\\"slash\\\\bell\\u0007\",\"channel_id\":\"ops\\\"lane\"}".to_owned();
+        let expected_for_server = expected_payload.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(
+                server_addr,
+                1,
+                "kamn:did:agent:live-tester",
+                Some(expected_for_server),
+            )
+        });
+        wait_for_server_ready(bind_addr.as_str());
+
+        let mut client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should connect");
+        let message_id = client
+            .send(Message {
+                from: did("sender-escape"),
+                to: did("recipient-escape"),
+                body: "line\n\t\"slash\\bell\u{0007}".to_owned(),
+                channel: Some(kamn_sdk::ChannelId("ops\"lane".to_owned())),
+            })
+            .expect("send should succeed");
+        assert_eq!(
+            message_id.0,
+            deterministic_message_id("msg-live-contract-001")
+        );
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "message payload must match json-escaped contract"
+        );
+        assert!(
+            expected_payload.contains("\\u0007"),
+            "expected payload fixture should include control-char escape marker"
+        );
+    });
+}
+
+#[test]
+fn regression_live_transport_whitespace_requester_did_falls_back_to_default() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        std::env::set_var(LIVE_REQUESTER_DID_ENV, "   ");
+        let bind_addr = reserve_loopback_addr();
+        let server_addr = bind_addr.clone();
+        let server = thread::spawn(move || {
+            run_live_transport_contract_server(server_addr, 1, DEFAULT_LIVE_REQUESTER_DID, None)
+        });
+        wait_for_server_ready(bind_addr.as_str());
+
+        let client = LiveTransportKamnClient::connect(format!("http://{bind_addr}").as_str())
+            .expect("live client should use default requester did when env is whitespace");
+        let _ = client
+            .resolve(&did("agent-profile-target"))
+            .expect("resolve should succeed with default requester did");
+
+        let server_result = server.join().expect("server thread should join");
+        assert!(
+            server_result.is_ok(),
+            "whitespace requester did env should fallback to default requester did"
+        );
+    });
+}
+
+#[test]
+fn spec_c05_live_transport_unsupported_methods_fail_closed() {
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let mut client = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
+            .expect("endpoint format should be accepted");
+
+        assert_eq!(
+            client.register(metadata("assistant", "gpt-5", &["text"])),
+            Err(SdkError::NotImplemented(
+                "live transport register route is not available via service api"
+            ))
+        );
+        assert_eq!(
+            client.receive(&did("receiver")),
+            Err(SdkError::NotImplemented(
+                "live transport receive route is not available via service api"
+            ))
+        );
+        assert_eq!(
+            client.accept_task(&TaskId(7), &did("assignee")),
+            Err(SdkError::NotImplemented(
+                "live transport task routes are not yet mapped in sdk kamn-agent surface"
+            ))
+        );
+        assert_eq!(
+            client.complete_task(&TaskId(7)),
+            Err(SdkError::NotImplemented(
+                "live transport task routes are not yet mapped in sdk kamn-agent surface"
+            ))
+        );
+        assert_eq!(
+            client.release_escrow(&EscrowId(9)),
+            Err(SdkError::NotImplemented(
+                "live transport escrow routes are not yet mapped in sdk kamn-agent surface"
+            ))
+        );
+        assert_eq!(
+            client.search_agents(AgentQuery::default()),
+            Err(SdkError::NotImplemented(
+                "live transport agent search route is not available via service api"
+            ))
+        );
+        assert_eq!(client.assert_transport_mode(TransportMode::Live), Ok(()));
+    });
 }
 
 #[test]
 fn regression_transport_mode_mismatch_is_rejected() {
-    let live = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
-        .expect("connect live should succeed");
-    assert_eq!(
-        live.assert_transport_mode(TransportMode::InMemory),
-        Err(SdkError::TransportModeMismatch {
-            expected: "in-memory",
-            found: "live",
-        })
-    );
+    with_env_lock(|| {
+        ensure_live_test_env();
+        let live = LiveTransportKamnClient::connect("http://127.0.0.1:65535")
+            .expect("connect live should succeed");
+        assert_eq!(
+            live.assert_transport_mode(TransportMode::InMemory),
+            Err(SdkError::TransportModeMismatch {
+                expected: "in-memory",
+                found: "live",
+            })
+        );
+    });
 }
