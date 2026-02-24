@@ -295,4 +295,11 @@ python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
 
 rm -f "$TMP_DIR/cfg_test_brace_heavy_literals.rs"
 
+mkdir -p "$TMP_DIR/src/service_api_endpoint"
+cat <<'RS' > "$TMP_DIR/src/service_api_endpoint/tests.rs"
+fn src_tests_module_fixture() { let _value = Some(9).expect("src/**/tests.rs should be treated as test-only"); }
+RS
+python3 "$PY_CHECKER" --root "$TMP_DIR" >/dev/null
+rm -rf "$TMP_DIR/src"
+
 echo "production expect checker tests passed."
