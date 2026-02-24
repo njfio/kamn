@@ -230,19 +230,16 @@ impl ServiceApiMessageStore {
         &mut self,
         task_id: &str,
         state: &str,
-    ) -> Result<ServiceApiTaskTransitionBody, String> {
-        let record = self.snapshot.tasks.entry(task_id.to_owned()).or_insert(
-            ServiceApiPersistedTaskRecord {
-                task_id: task_id.to_owned(),
-                state: "submitted".to_owned(),
-            },
-        );
+    ) -> Result<Option<ServiceApiTaskTransitionBody>, String> {
+        let Some(record) = self.snapshot.tasks.get_mut(task_id) else {
+            return Ok(None);
+        };
         record.state = state.to_owned();
         self.persist()?;
-        Ok(ServiceApiTaskTransitionBody {
+        Ok(Some(ServiceApiTaskTransitionBody {
             task_id: task_id.to_owned(),
             state: state.to_owned(),
-        })
+        }))
     }
 
     pub(super) fn fund_escrow(
@@ -276,19 +273,16 @@ impl ServiceApiMessageStore {
     pub(super) fn release_escrow(
         &mut self,
         escrow_id: &str,
-    ) -> Result<ServiceApiEscrowStatusBody, String> {
-        let record = self.snapshot.escrows.entry(escrow_id.to_owned()).or_insert(
-            ServiceApiPersistedEscrowRecord {
-                escrow_id: escrow_id.to_owned(),
-                state: "funded".to_owned(),
-            },
-        );
+    ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        let Some(record) = self.snapshot.escrows.get_mut(escrow_id) else {
+            return Ok(None);
+        };
         record.state = "released".to_owned();
         self.persist()?;
-        Ok(ServiceApiEscrowStatusBody {
+        Ok(Some(ServiceApiEscrowStatusBody {
             escrow_id: escrow_id.to_owned(),
             state: "released".to_owned(),
-        })
+        }))
     }
 }
 

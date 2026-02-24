@@ -424,11 +424,17 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.transition_task(task_id, "accepted")
             };
             return match transition_result {
-                Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
+                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 }),
+                Ok(None) => super::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
                 Err(error) => super::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
@@ -445,11 +451,17 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.transition_task(task_id, "completed")
             };
             return match transition_result {
-                Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
+                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 }),
+                Ok(None) => super::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
                 Err(error) => super::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
@@ -466,11 +478,17 @@ pub(super) async fn handle_service_api_http_route(
                 message_store.release_escrow(escrow_id)
             };
             return match release_result {
-                Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
+                Ok(Some(payload)) => super::contract_response(ServiceApiEndpointResponse {
                     status_code: 200,
                     content_type: "application/json",
                     body: super::serialize_service_api_json(&payload),
                 }),
+                Ok(None) => super::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
                 Err(error) => super::json_error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
@@ -526,20 +544,23 @@ pub(super) async fn handle_service_api_http_route(
             });
         }
         if let Some(task_id) = super::payload::task_path_id(context.parsed_request.path.as_str()) {
-            let payload = {
+            let task_payload = {
                 let message_store = state.message_store.lock().await;
-                message_store
-                    .get_task(task_id)
-                    .unwrap_or(ServiceApiTaskGetBody {
-                        task_id: task_id.to_owned(),
-                        state: "submitted".to_owned(),
-                    })
+                message_store.get_task(task_id)
             };
-            return super::contract_response(ServiceApiEndpointResponse {
-                status_code: 200,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            });
+            return match task_payload {
+                Some(payload) => super::contract_response(ServiceApiEndpointResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                }),
+                None => super::json_error_response(
+                    StatusCode::NOT_FOUND,
+                    "not-found",
+                    REASON_CODE_ROUTE_NOT_FOUND,
+                    "not found",
+                ),
+            };
         }
     }
     let rendered = super::render_service_api_endpoint_response(
