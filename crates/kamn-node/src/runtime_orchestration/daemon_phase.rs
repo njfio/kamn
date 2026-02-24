@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::{Duration, Instant};
 
 const DAEMON_PHASE6_RUNTIME_REASON_TAXONOMY_VERSION: &str =
     "kamn.runtime.daemon.phase6.reason-taxonomy.v1";
@@ -527,9 +528,16 @@ pub(super) fn execute_daemon_runtime(
             daemon_shutdown_timeout_ticks,
         )
     };
+    let runtime_processing = execute_daemon_service_api_relay_tick_loop(
+        daemon_completion.executed_ticks,
+        tick_interval_ms,
+        service_api_state_file.as_deref(),
+        service_api_relay_spool_file.as_deref(),
+    )?;
     let daemon_observability = build_daemon_observability_telemetry(
         tick_interval_ms,
         daemon_completion.completion_reason.as_str(),
+        &runtime_processing,
     )
     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     validate_shutdown_checkpoint_reconciliation(
@@ -589,22 +597,9 @@ pub(super) fn execute_daemon_runtime(
         project_live_postgres_multi_host_execution_bundle_selector_rows_fingerprint(
             multi_host_execution_bundle_selector_rows.as_slice(),
         );
-    let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
-        service_api_relay_spool_file.as_deref(),
-    )
-    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-    let relay_message_ids: Vec<String> = relay_entries
-        .iter()
-        .map(|entry| entry.message_id.clone())
-        .collect();
-    let relay_projected_state_count =
-        crate::service_api_endpoint::project_service_api_relayed_message_statuses(
-            service_api_state_file.as_deref(),
-            relay_message_ids.as_slice(),
-        )
-        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-    let relay_drained_count_label = relay_entries.len().to_string();
-    let relay_projected_state_count_label = relay_projected_state_count.to_string();
+    let relay_drained_count_label = runtime_processing.relay_drained_count.to_string();
+    let relay_projected_state_count_label =
+        runtime_processing.relay_projected_state_count.to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -794,4 +789,60 @@ pub(super) fn execute_daemon_runtime(
         live_postgres_multi_host_execution_bundle_selector_rows_fingerprint:
             multi_host_execution_bundle_selector_rows_fingerprint,
     })
+}
+
+fn execute_daemon_service_api_relay_tick_loop(
+    executed_ticks: u64,
+    tick_interval_ms: u64,
+    service_api_state_file: Option<&str>,
+    service_api_relay_spool_file: Option<&str>,
+) -> Result<crate::daemon_observability::DaemonRuntimeProcessingTelemetry, ConfigError> {
+    let mut runtime_processing = crate::daemon_observability::DaemonRuntimeProcessingTelemetry {
+        executed_ticks,
+        ..crate::daemon_observability::DaemonRuntimeProcessingTelemetry::default()
+    };
+    let relay_enabled = service_api_relay_spool_file.is_some();
+    if executed_ticks == 0 {
+        return Ok(runtime_processing);
+    }
+
+    let tick_duration = Duration::from_millis(tick_interval_ms.max(1));
+    for tick in 0..executed_ticks {
+        let tick_started_at = Instant::now();
+        if relay_enabled {
+            let relay_entries = crate::service_api_endpoint::drain_service_api_relay_spool_entries(
+                service_api_relay_spool_file,
+            )
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            runtime_processing.relay_drained_count = runtime_processing
+                .relay_drained_count
+                .saturating_add(relay_entries.len() as u64);
+            let relay_message_ids: Vec<String> = relay_entries
+                .iter()
+                .map(|entry| entry.message_id.clone())
+                .collect();
+            let relay_projected_state_count =
+                crate::service_api_endpoint::project_service_api_relayed_message_statuses(
+                    service_api_state_file,
+                    relay_message_ids.as_slice(),
+                )
+                .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            runtime_processing.relay_projected_state_count = runtime_processing
+                .relay_projected_state_count
+                .saturating_add(relay_projected_state_count as u64);
+        }
+        let elapsed_ms = tick_started_at.elapsed().as_millis();
+        runtime_processing
+            .tick_processing_samples_ms
+            .push((elapsed_ms.min(u128::from(u64::MAX)) as u64).max(1));
+
+        if tick + 1 < executed_ticks {
+            let elapsed = tick_started_at.elapsed();
+            if elapsed < tick_duration {
+                std::thread::sleep(tick_duration - elapsed);
+            }
+        }
+    }
+
+    Ok(runtime_processing)
 }

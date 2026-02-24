@@ -450,11 +450,11 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
     assert!(rendered.contains("\"daemon_executed_ticks\":3"));
     assert!(rendered
         .contains("\"daemon_completion_reason\":\"tick-budget-exhausted;ignored_signals=1\""));
-    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":25"));
-    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":50"));
-    assert!(rendered.contains("\"daemon_observability_throughput_tps\":2000"));
-    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":50"));
-    assert!(rendered.contains("\"daemon_observability_availability_bps\":9990"));
+    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":1"));
+    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":1"));
+    assert!(rendered.contains("\"daemon_observability_throughput_tps\":1000"));
+    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":0"));
+    assert!(rendered.contains("\"daemon_observability_availability_bps\":10000"));
     assert!(rendered.contains("\"daemon_observability_health\":\"healthy\""));
     assert!(rendered.contains("\"daemon_observability_alert_count\":0"));
     assert!(rendered.contains("\"daemon_observability_reason_code\":\"none\""));
@@ -532,13 +532,13 @@ fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
     assert!(rendered.contains(
         "\"daemon_completion_reason\":\"graceful-shutdown-timeout:signal@7;drain_ticks=4;timeout_ticks=2;ignored_signals=0\""
     ));
-    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":145"));
-    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":425"));
-    assert!(rendered.contains("\"daemon_observability_throughput_tps\":900"));
-    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":250"));
-    assert!(rendered.contains("\"daemon_observability_availability_bps\":9800"));
+    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":1"));
+    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":1"));
+    assert!(rendered.contains("\"daemon_observability_throughput_tps\":1000"));
+    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":500"));
+    assert!(rendered.contains("\"daemon_observability_availability_bps\":9500"));
     assert!(rendered.contains("\"daemon_observability_health\":\"critical\""));
-    assert!(rendered.contains("\"daemon_observability_alert_count\":4"));
+    assert!(rendered.contains("\"daemon_observability_alert_count\":2"));
     assert!(rendered.contains("\"daemon_observability_reason_code\":\"daemon_shutdown_timeout\""));
     assert!(rendered.contains("\"daemon_observability_transport_checkpoint_failures\":0"));
     assert!(rendered.contains("\"daemon_observability_signer_checkpoint_failures\":0"));

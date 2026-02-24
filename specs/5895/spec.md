@@ -2,7 +2,7 @@
 
 - Issue: #5895
 - Milestone: `r52-e2e-live-runtime-integration-hardening`
-- Status: Accepted
+- Status: Implemented
 - Priority: P0
 
 ## Problem Statement

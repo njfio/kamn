@@ -698,7 +698,7 @@ fn read_single_http_response(stream: &mut TcpStream) -> String {
     String::from_utf8(response).expect("http response should be utf-8")
 }
 
-fn parse_websocket_response(response: &[u8]) -> (String, String) {
+fn parse_websocket_response_frames(response: &[u8]) -> (String, Vec<String>) {
     let header_end = response
         .windows(4)
         .position(|window| window == b"\r\n\r\n")
@@ -707,50 +707,81 @@ fn parse_websocket_response(response: &[u8]) -> (String, String) {
     let header = std::str::from_utf8(&response[..header_end])
         .expect("websocket header should be utf-8")
         .to_owned();
-    let frame = &response[header_end..];
-    assert!(
-        frame.len() >= 2,
-        "websocket response should include at least one frame"
-    );
-    assert_eq!(
-        frame[0], 0x81,
-        "expected single-frame text websocket opcode"
-    );
-    assert_eq!(
-        frame[1] & 0x80,
-        0,
-        "server websocket frame must be unmasked"
-    );
-    let mut payload_index = 2;
-    let payload_len = match frame[1] & 0x7f {
-        value @ 0..=125 => value as usize,
-        126 => {
-            assert!(
-                frame.len() >= 4,
-                "websocket frame extended payload length must be available"
-            );
-            payload_index = 4;
-            u16::from_be_bytes([frame[2], frame[3]]) as usize
+    let mut frames = Vec::new();
+    let frame_bytes = &response[header_end..];
+    let mut frame_index = 0_usize;
+
+    while frame_index + 2 <= frame_bytes.len() {
+        let first = frame_bytes[frame_index];
+        let second = frame_bytes[frame_index + 1];
+        let opcode = first & 0x0f;
+        assert_eq!(
+            first & 0x80,
+            0x80,
+            "fragmented websocket frames are not supported by test parser"
+        );
+        assert_eq!(second & 0x80, 0, "server websocket frame must be unmasked");
+
+        let mut payload_index = frame_index + 2;
+        let payload_len = match second & 0x7f {
+            value @ 0..=125 => value as usize,
+            126 => {
+                assert!(
+                    frame_bytes.len() >= frame_index + 4,
+                    "websocket frame extended payload length must be available"
+                );
+                payload_index = frame_index + 4;
+                u16::from_be_bytes([frame_bytes[frame_index + 2], frame_bytes[frame_index + 3]])
+                    as usize
+            }
+            127 => {
+                assert!(
+                    frame_bytes.len() >= frame_index + 10,
+                    "websocket frame 64-bit payload length must be available"
+                );
+                payload_index = frame_index + 10;
+                u64::from_be_bytes([
+                    frame_bytes[frame_index + 2],
+                    frame_bytes[frame_index + 3],
+                    frame_bytes[frame_index + 4],
+                    frame_bytes[frame_index + 5],
+                    frame_bytes[frame_index + 6],
+                    frame_bytes[frame_index + 7],
+                    frame_bytes[frame_index + 8],
+                    frame_bytes[frame_index + 9],
+                ]) as usize
+            }
+            _ => unreachable!("websocket payload marker is constrained to 7 bits"),
+        };
+
+        assert!(
+            frame_bytes.len() >= payload_index + payload_len,
+            "websocket frame payload length must be available"
+        );
+        let payload_slice = &frame_bytes[payload_index..payload_index + payload_len];
+        frame_index = payload_index + payload_len;
+
+        if opcode == 0x8 {
+            break;
         }
-        127 => {
-            assert!(
-                frame.len() >= 10,
-                "websocket frame 64-bit payload length must be available"
+        if opcode == 0x1 {
+            frames.push(
+                std::str::from_utf8(payload_slice)
+                    .expect("websocket payload should be utf-8")
+                    .to_owned(),
             );
-            payload_index = 10;
-            u64::from_be_bytes([
-                frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[8], frame[9],
-            ]) as usize
         }
-        _ => unreachable!("websocket payload marker is constrained to 7 bits"),
-    };
-    assert!(
-        frame.len() >= payload_len + payload_index,
-        "websocket frame payload length must be available"
-    );
-    let payload = std::str::from_utf8(&frame[payload_index..payload_index + payload_len])
-        .expect("websocket payload should be utf-8")
-        .to_owned();
+    }
+
+    (header, frames)
+}
+
+fn parse_websocket_response(response: &[u8]) -> (String, String) {
+    let (header, frames) = parse_websocket_response_frames(response);
+    let payload = frames
+        .into_iter()
+        .next()
+        .expect("websocket response should include at least one text frame");
     (header, payload)
 }
 
@@ -5530,6 +5561,82 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_websocket_upgrade_streams_multiple_state_transition_events() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34065".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-client-multi";
+    let nonce = 57_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        service_api_request_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "57"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ],
+    );
+    let (_header, frames) = parse_websocket_response_frames(response.as_slice());
+    assert!(
+        frames.len() >= 2,
+        "websocket stream should emit multiple state-transition frames on one upgraded connection"
+    );
+
+    let first: Value =
+        serde_json::from_str(frames[0].as_str()).expect("first websocket frame should be json");
+    let second: Value =
+        serde_json::from_str(frames[1].as_str()).expect("second websocket frame should be json");
+    assert_eq!(
+        first.get("event").and_then(Value::as_str),
+        Some("state-transition")
+    );
+    assert_eq!(
+        second.get("event").and_then(Value::as_str),
+        Some("state-transition")
+    );
+    assert_eq!(first.get("sequence").and_then(Value::as_u64), Some(1));
+    assert_eq!(second.get("sequence").and_then(Value::as_u64), Some(2));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after websocket multi-frame stream test"
     );
 }
 

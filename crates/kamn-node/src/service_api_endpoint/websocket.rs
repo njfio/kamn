@@ -4,6 +4,7 @@ const WS_EVENTS_MODE_STATE_TRANSITION: &str = "state-transition";
 const WS_EVENTS_MODE_PRESENCE: &str = "presence";
 const WS_PRESENCE_DEFAULT_GATEWAY_NODE: &str = "service-api-gateway";
 const WS_PRESENCE_DEFAULT_CONNECTED_SINCE_EPOCH_SECONDS: u64 = 1_709_000_000;
+const WS_STATE_TRANSITION_STREAM_FRAME_COUNT: u64 = 2;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct ServiceApiWebsocketPresenceBody {
@@ -141,7 +142,16 @@ pub(super) fn websocket_upgrade_response(
 }
 
 pub(super) async fn stream_websocket_event(mut socket: WebSocket, event_payload: String) {
-    let _ = socket.send(Message::Text(event_payload.into())).await;
+    for frame_payload in project_stream_frames(event_payload.as_str()) {
+        if socket
+            .send(Message::Text(frame_payload.into()))
+            .await
+            .is_err()
+        {
+            return;
+        }
+    }
+    let _ = socket.send(Message::Close(None)).await;
 }
 
 fn serialize_state_transition_payload(snapshot: &ServiceApiSnapshot) -> String {
@@ -239,6 +249,28 @@ fn project_presence_mode_payload(
         sequence: 1,
     };
     Ok(super::serialize_service_api_json(&payload))
+}
+
+fn project_stream_frames(event_payload: &str) -> Vec<String> {
+    let Ok(mut payload_json) = serde_json::from_str::<serde_json::Value>(event_payload) else {
+        return vec![event_payload.to_owned()];
+    };
+    let Some(event_name) = payload_json
+        .get("event")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return vec![event_payload.to_owned()];
+    };
+    if event_name != WS_EVENTS_MODE_STATE_TRANSITION {
+        return vec![event_payload.to_owned()];
+    }
+
+    let mut frames = Vec::with_capacity(WS_STATE_TRANSITION_STREAM_FRAME_COUNT as usize);
+    for sequence in 1..=WS_STATE_TRANSITION_STREAM_FRAME_COUNT {
+        payload_json["sequence"] = serde_json::Value::from(sequence);
+        frames.push(super::serialize_service_api_json(&payload_json));
+    }
+    frames
 }
 
 fn required_presence_header<'a>(
