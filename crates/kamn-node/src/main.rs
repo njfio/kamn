@@ -444,6 +444,7 @@ struct DaemonRuntimeOptions {
     daemon_shutdown_timeout_ticks: Option<u64>,
     daemon_peer_id: Option<String>,
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
+    service_api_relay_spool_file: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

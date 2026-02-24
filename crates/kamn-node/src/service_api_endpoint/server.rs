@@ -46,36 +46,38 @@ fn resolve_service_api_state_file_from_env(
 }
 
 fn default_service_api_state_file_path(config: &ServiceApiEndpointConfig) -> String {
-    let mut path = env::temp_dir();
-    let bind_label = sanitize_service_api_state_file_component(config.bind_addr.as_str());
-    path.push(format!("kamn-node-service-api-state-{bind_label}.json"));
-    path.to_string_lossy().to_string()
+    super::default_service_api_state_file_path_for_bind_addr(config.bind_addr.as_str())
 }
 
-fn sanitize_service_api_state_file_component(value: &str) -> String {
-    let mut output = String::with_capacity(value.len());
-    let mut last_was_separator = false;
-    for ch in value.chars() {
-        let normalized = if ch.is_ascii_alphanumeric() {
-            ch.to_ascii_lowercase()
-        } else {
-            '-'
-        };
-        if normalized == '-' {
-            if !last_was_separator {
-                output.push(normalized);
+fn resolve_service_api_relay_spool_file(
+    state_file: Option<&str>,
+) -> Result<Option<String>, String> {
+    resolve_service_api_relay_spool_file_from_env(
+        env::var(SERVICE_API_RELAY_SPOOL_FILE_ENV),
+        state_file,
+    )
+}
+
+fn resolve_service_api_relay_spool_file_from_env(
+    env_value: Result<String, env::VarError>,
+    state_file: Option<&str>,
+) -> Result<Option<String>, String> {
+    match env_value {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(format!(
+                    "service api relay spool env must not be empty: {SERVICE_API_RELAY_SPOOL_FILE_ENV}"
+                ));
             }
-            last_was_separator = true;
-            continue;
+            Ok(Some(normalized.to_owned()))
         }
-        output.push(normalized);
-        last_was_separator = false;
-    }
-    let trimmed = output.trim_matches('-');
-    if trimmed.is_empty() {
-        "default".to_owned()
-    } else {
-        trimmed.to_owned()
+        Err(env::VarError::NotPresent) => {
+            Ok(state_file.map(super::default_service_api_relay_spool_file_path_from_state_file))
+        }
+        Err(env::VarError::NotUnicode(_)) => Err(format!(
+            "service api relay spool env must be utf-8: {SERVICE_API_RELAY_SPOOL_FILE_ENV}"
+        )),
     }
 }
 
@@ -175,6 +177,7 @@ pub(super) async fn serve_service_api_endpoint_async(
     let tls_mode = resolve_service_api_tls_mode()?;
     let auth_public_key_hex = resolve_service_api_auth_public_key_hex()?;
     let state_file = resolve_service_api_state_file(&config)?;
+    let relay_spool_file = resolve_service_api_relay_spool_file(state_file.as_deref())?;
     let message_store = ServiceApiMessageStore::from_optional_state_file(state_file)?;
     let sender_anti_spam = build_service_api_sender_anti_spam_engine()
         .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
@@ -191,6 +194,7 @@ pub(super) async fn serve_service_api_endpoint_async(
         sender_anti_spam: Arc::new(Mutex::new(sender_anti_spam)),
         auth_public_key_hex,
         message_store: Arc::new(Mutex::new(message_store)),
+        relay_spool_file,
     });
     let request_budget_shared = runtime_state.request_budget.clone();
     let timeout_reached = Arc::new(AtomicBool::new(false));
@@ -343,6 +347,29 @@ mod tests {
         assert!(
             resolved_path.contains("kamn-node-service-api-state-127-0-0-1-34079.json"),
             "default path should encode sanitized bind address: {resolved_path}"
+        );
+    }
+
+    #[test]
+    fn unit_service_api_relay_spool_resolution_prefers_explicit_env_override() {
+        let resolved = resolve_service_api_relay_spool_file_from_env(
+            Ok("  /tmp/custom-relay-spool.ndjson  ".to_owned()),
+            Some("/tmp/state.json"),
+        )
+        .expect("relay spool should resolve from explicit env");
+        assert_eq!(resolved, Some("/tmp/custom-relay-spool.ndjson".to_owned()));
+    }
+
+    #[test]
+    fn unit_service_api_relay_spool_resolution_derives_from_state_path() {
+        let resolved = resolve_service_api_relay_spool_file_from_env(
+            Err(env::VarError::NotPresent),
+            Some("/tmp/state-store.json"),
+        )
+        .expect("state-derived relay spool should resolve");
+        assert_eq!(
+            resolved,
+            Some("/tmp/state-store.json.relay.ndjson".to_owned())
         );
     }
 }

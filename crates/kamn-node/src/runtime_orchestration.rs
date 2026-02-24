@@ -81,6 +81,8 @@ const FULL_SUPERVISOR_OBSERVABILITY_LANE_JOIN_FAILED: &str =
     "full_supervisor_observability_lane_join_failed";
 const FULL_SUPERVISOR_PROVISIONAL_OBSERVABILITY_REASON_CODE: &str =
     "full_supervisor_bootstrap_in_progress";
+const SERVICE_API_STATE_FILE_ENV: &str = "KAMN_SERVICE_API_STATE_FILE";
+const SERVICE_API_RELAY_SPOOL_FILE_ENV: &str = "KAMN_SERVICE_API_RELAY_SPOOL_FILE";
 
 struct FullSupervisorServiceApiLane {
     config: ServiceApiEndpointConfig,
@@ -245,6 +247,53 @@ fn build_full_supervisor_provisional_observability_snapshot(
         signer_checkpoint_failures: 0,
         commit_checkpoint_failures: 0,
     }
+}
+
+fn resolve_daemon_service_api_relay_spool_file(
+    api_bind_addr: Option<&str>,
+) -> Result<Option<String>, ConfigError> {
+    match env::var(SERVICE_API_RELAY_SPOOL_FILE_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                    "{SERVICE_API_RELAY_SPOOL_FILE_ENV} must not be empty when present"
+                )));
+            }
+            return Ok(Some(normalized.to_owned()));
+        }
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_RELAY_SPOOL_FILE_ENV} must be valid utf-8 when present"
+            )));
+        }
+        Err(env::VarError::NotPresent) => {}
+    }
+
+    let state_file = match env::var(SERVICE_API_STATE_FILE_ENV) {
+        Ok(value) => {
+            let normalized = value.trim();
+            if normalized.is_empty() {
+                return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                    "{SERVICE_API_STATE_FILE_ENV} must not be empty when present"
+                )));
+            }
+            Some(normalized.to_owned())
+        }
+        Err(env::VarError::NotPresent) => api_bind_addr
+            .map(super::service_api_endpoint::default_service_api_state_file_path_for_bind_addr),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+                "{SERVICE_API_STATE_FILE_ENV} must be valid utf-8 when present"
+            )));
+        }
+    };
+
+    Ok(state_file.map(|path| {
+        super::service_api_endpoint::default_service_api_relay_spool_file_path_from_state_file(
+            path.as_str(),
+        )
+    }))
 }
 
 fn start_full_supervisor_observability_lane(
@@ -914,6 +963,8 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
             }
         }
         RuntimeModeKind::Daemon => {
+            let service_api_relay_spool_file =
+                resolve_daemon_service_api_relay_spool_file(api_bind_addr.as_deref())?;
             let daemon_execution = execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
@@ -926,6 +977,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_shutdown_timeout_ticks,
                     daemon_peer_id,
                     daemon_lifecycle_events,
+                    service_api_relay_spool_file,
                 },
             )?;
             RuntimeExecutionBundle {
@@ -1021,6 +1073,8 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                 )?);
             }
 
+            let service_api_relay_spool_file =
+                resolve_daemon_service_api_relay_spool_file(api_bind_addr.as_deref())?;
             let daemon_execution = match execute_daemon_runtime(
                 runtime_mode,
                 execution_id.as_str(),
@@ -1033,6 +1087,7 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
                     daemon_shutdown_timeout_ticks,
                     daemon_peer_id,
                     daemon_lifecycle_events,
+                    service_api_relay_spool_file,
                 },
             ) {
                 Ok(execution) => execution,

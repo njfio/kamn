@@ -376,11 +376,37 @@ pub(super) async fn handle_service_api_http_route(
             )
         };
         return match create_result {
-            Ok(payload) => super::contract_response(ServiceApiEndpointResponse {
-                status_code: 202,
-                content_type: "application/json",
-                body: super::serialize_service_api_json(&payload),
-            }),
+            Ok(payload) => {
+                if let Some(recipient_did_value) = recipient_did.as_deref() {
+                    let queued_at_unix = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map(|duration| duration.as_secs())
+                        .unwrap_or(0);
+                    let relay_entry = ServiceApiRelaySpoolEntry {
+                        message_id: payload.message_id.clone(),
+                        sender_did: sender_did.map(str::to_owned),
+                        recipient_did: recipient_did_value.to_owned(),
+                        body: context.parsed_request.body.clone(),
+                        queued_at_unix,
+                    };
+                    if let Err(error) = super::append_service_api_relay_spool_entry(
+                        state.relay_spool_file.as_deref(),
+                        &relay_entry,
+                    ) {
+                        return super::json_error_response(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "internal",
+                            REASON_CODE_STATE_PERSISTENCE_FAILED,
+                            format!("service api relay spool append failed: {error}").as_str(),
+                        );
+                    }
+                }
+                super::contract_response(ServiceApiEndpointResponse {
+                    status_code: 202,
+                    content_type: "application/json",
+                    body: super::serialize_service_api_json(&payload),
+                })
+            }
             Err(error) => super::json_error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal",
