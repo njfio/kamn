@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -166,22 +167,38 @@ fn git_commit_count_for_relative_path(relative_path: &str) -> usize {
         .unwrap_or_else(|_| panic!("git rev-list count should be an unsigned integer: {raw}"))
 }
 
-fn git_ref_exists(ref_name: &str) -> bool {
+fn git_revision_exists(revision: &str) -> bool {
+    let commit_revision = format!("{revision}^{{commit}}");
     let output = Command::new("git")
         .current_dir(repo_root())
-        .args(["rev-parse", "--verify", "--quiet", ref_name])
+        .args(["rev-parse", "--verify", "--quiet", commit_revision.as_str()])
         .output()
-        .unwrap_or_else(|error| panic!("git rev-parse should run for {ref_name}: {error}"));
+        .unwrap_or_else(|error| panic!("git rev-parse should run for {revision}: {error}"));
     output.status.success()
 }
 
 fn resolve_review_doc_diff_base_ref() -> String {
-    for candidate in ["origin/main", "main"] {
-        if git_ref_exists(candidate) {
-            return candidate.to_owned();
+    let mut candidates = vec!["origin/main".to_owned(), "main".to_owned()];
+    if let Ok(github_base_ref) = env::var("GITHUB_BASE_REF") {
+        for candidate in [
+            format!("origin/{github_base_ref}"),
+            github_base_ref,
+            "HEAD^1".to_owned(),
+        ] {
+            if !candidates.contains(&candidate) {
+                candidates.push(candidate);
+            }
+        }
+    } else if !candidates.iter().any(|candidate| candidate == "HEAD^1") {
+        candidates.push("HEAD^1".to_owned());
+    }
+
+    for candidate in candidates {
+        if git_revision_exists(candidate.as_str()) {
+            return candidate;
         }
     }
-    panic!("unable to resolve branch-diff base ref: expected origin/main or main");
+    panic!("unable to resolve branch-diff base ref: expected one of origin/main, main, origin/$GITHUB_BASE_REF, $GITHUB_BASE_REF, or HEAD^1");
 }
 
 #[derive(Debug, Clone)]
