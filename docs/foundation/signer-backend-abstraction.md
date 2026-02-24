@@ -1,6 +1,6 @@
 # Pluggable Signer Backend Abstraction (Issue #160)
 
-This document captures the first implementation slice for signer backend abstraction with deterministic secure-to-local fallback behavior.
+This document captures the signer backend abstraction with cryptographic secure-to-local fallback behavior.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/signer_backend.rs` with:
@@ -15,7 +15,7 @@ This document captures the first implementation slice for signer backend abstrac
 
 ## Backend Compatibility Rules
 - `local-software` backend:
-  - signs and verifies deterministic signatures for valid requests.
+  - signs and verifies cryptographic signatures for valid requests.
 - secure provider adapters:
   - `secure-mock` for deterministic mock custody.
   - `secure-aws-kms-emulator` for production-style provider adapter coverage.
@@ -46,17 +46,16 @@ This document captures the first implementation slice for signer backend abstrac
 ## Transaction Path Integration
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.
 - Signed output remains compatible with `TransactionGuards::validate_and_record(...)`.
-- `baseline_signature_for_fields(...)` provides the canonical signature-profile helper consumed by both paths.
-- baseline signatures carry explicit metadata prefix: `sig:ed25519:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`.
-- `signature_profile_compatibility_fixtures_for_fields(...)` defines migration fixtures for signer/transaction parity:
-  - `baseline-v1` fixture is accepted.
-  - `legacy-unversioned`, `baseline-v0`, and `secp256k1+baseline-v1` fixtures are rejected.
-- parsed signature metadata is enforced through shared profile verification (`parse_signature_profile_metadata(...)`).
-- baseline signature algorithm: `ed25519`.
-- baseline signature profile id: `baseline-v1`.
-- non-versioned signature profile is rejected (`Regression: #404`).
-- algorithm/profile drift is rejected (`Regression: #677`).
-- signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`).
+- Default signer output is cryptographic: `sig:secp256k1:baseline-v2:<recovery_id>:<signature_hex>`.
+- Verification binds sender + nonce + state hash + full payload bytes and rejects tampering.
+- Key material resolution contract:
+  - key-specific private key env: `KAMN_SIGNER_PRIVATE_KEY_HEX__<NORMALIZED_KEY_ID>`
+  - shared private key env fallback: `KAMN_SIGNER_PRIVATE_KEY_HEX`
+  - service-auth private key env fallback: `KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX`
+- Legacy baseline-v1 verification (`sig:ed25519:baseline-v1:...`) is disabled by default.
+- Legacy baseline-v1 can be explicitly enabled with `KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1=1`.
+- non-versioned legacy profile remains rejected (`Regression: #404`).
+- algorithm/profile drift remains rejected (`Regression: #677`).
 
 ## Signer Emulator Contract Lanes
 - Fast PR lane (low-cost):
@@ -66,7 +65,8 @@ This document captures the first implementation slice for signer backend abstrac
     - `cargo test -p kamn-core --test signer_backend functional_router_uses_custom_provider_client_mapping_for_secure_provider`
     - `cargo test -p kamn-core --test signer_backend regression_provider_handshake_policy_block_rejects_without_fallback`
     - `cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback`
-    - `cargo test -p kamn-core --test signer_backend integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards`
+    - `cargo test -p kamn-core --test signer_backend regression_signer_backend_rejects_baseline_v1_signature_by_default`
+    - `cargo test -p kamn-core --test signer_backend integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch`
 - Scheduled provider-integration deep lane:
   - `bash scripts/signer/run_signer_provider_deep_lane.sh`
 - Signer policy fast lane:
