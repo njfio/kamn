@@ -255,24 +255,42 @@ struct NameStatusEntry {
 }
 
 fn git_name_status_entries(base_ref: &str, pathspec: &str) -> Vec<NameStatusEntry> {
+    fn diff_name_status_for_range(revision_range: &str, pathspec: &str) -> std::process::Output {
+        Command::new("git")
+            .current_dir(repo_root())
+            .args([
+                "diff",
+                "--name-status",
+                "--find-renames",
+                revision_range,
+                "--",
+                pathspec,
+            ])
+            .output()
+            .unwrap_or_else(|error| panic!("git diff --name-status should run: {error}"))
+    }
+
     let revision_range = format!("{base_ref}...HEAD");
-    let output = Command::new("git")
-        .current_dir(repo_root())
-        .args([
-            "diff",
-            "--name-status",
-            "--find-renames",
-            revision_range.as_str(),
-            "--",
-            pathspec,
-        ])
-        .output()
-        .unwrap_or_else(|error| panic!("git diff --name-status should run: {error}"));
-    assert!(
-        output.status.success(),
-        "git diff --name-status failed with status {:?}",
-        output.status.code()
-    );
+    let mut output = diff_name_status_for_range(revision_range.as_str(), pathspec);
+
+    if !output.status.success() {
+        // Shallow CI checkouts can miss merge-base history for triple-dot ranges.
+        let fallback_range = format!("{base_ref}..HEAD");
+        let fallback_output = diff_name_status_for_range(fallback_range.as_str(), pathspec);
+        if fallback_output.status.success() {
+            output = fallback_output;
+        } else {
+            let primary_stderr = String::from_utf8_lossy(&output.stderr);
+            let fallback_stderr = String::from_utf8_lossy(&fallback_output.stderr);
+            panic!(
+                "git diff --name-status failed for {revision_range} (status {:?}, stderr: {}) and fallback {fallback_range} (status {:?}, stderr: {})",
+                output.status.code(),
+                primary_stderr.trim(),
+                fallback_output.status.code(),
+                fallback_stderr.trim()
+            );
+        }
+    }
 
     String::from_utf8(output.stdout)
         .expect("git diff --name-status output should be valid UTF-8")
