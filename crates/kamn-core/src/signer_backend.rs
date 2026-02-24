@@ -1,13 +1,21 @@
 //! Signer backend contracts for local and secure-provider signing flows.
 
 use crate::signature_profile::{
-    baseline_signature_for_fields, signature_matches_supported_profile_for_fields,
+    service_auth_public_key_hex_from_private_key_hex, service_auth_sign_with_private_key_hex,
+    service_auth_verify_with_public_key_hex, signature_matches_supported_profile_for_fields,
+    SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
 };
 use crate::transaction::BaselineTransaction;
+use std::env;
 
 const LOCAL_BACKEND_NAME: &str = "local-software";
 const SECURE_MOCK_BACKEND_NAME: &str = "secure-mock";
 const SECURE_AWS_KMS_BACKEND_NAME: &str = "secure-aws-kms-emulator";
+const SIGNER_PRIVATE_KEY_ENV: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX";
+const SIGNER_PRIVATE_KEY_ENV_PREFIX: &str = "KAMN_SIGNER_PRIVATE_KEY_HEX__";
+const SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV: &str = "KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1";
+const DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX: &str =
+    "7f2dcf2ef6bcf53b1af2359954f04eb6d25688fd87cbf09f7f9db4c6522f4c6b";
 
 /// Canonical payload sent to signer backends for signature generation and verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,9 +77,72 @@ impl SigningRequest {
         Self::new(key_id, &tx.sender, tx.nonce, &tx.payload, &tx.state_hash)
     }
 
-    fn expected_signature(&self) -> String {
-        baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
+    fn expected_signature(&self) -> Result<String, SignerBackendError> {
+        let private_key_hex = resolve_signer_private_key_hex(&self.key_id)?;
+        service_auth_sign_with_private_key_hex(
+            &self.sender,
+            self.nonce,
+            &self.state_hash,
+            &self.payload,
+            private_key_hex.as_str(),
+        )
+        .map_err(|_| SignerBackendError::InvalidSigningKeyMaterial {
+            key_id: self.key_id.clone(),
+        })
     }
+}
+
+fn signer_key_id_private_key_env_name(key_id: &str) -> String {
+    let mut normalized = String::with_capacity(key_id.len());
+    for byte in key_id.bytes() {
+        if byte.is_ascii_alphanumeric() {
+            normalized.push((byte as char).to_ascii_uppercase());
+        } else {
+            normalized.push('_');
+        }
+    }
+    format!("{SIGNER_PRIVATE_KEY_ENV_PREFIX}{normalized}")
+}
+
+fn signer_legacy_baseline_v1_compat_enabled() -> bool {
+    match env::var(SIGNER_LEGACY_BASELINE_V1_COMPAT_ENV) {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => false,
+    }
+}
+
+fn resolve_signer_private_key_hex(key_id: &str) -> Result<String, SignerBackendError> {
+    let key_specific_env = signer_key_id_private_key_env_name(key_id);
+    if let Ok(value) = env::var(key_specific_env.as_str()) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Ok(trimmed.to_owned());
+        }
+    }
+
+    for env_name in [
+        SIGNER_PRIVATE_KEY_ENV,
+        SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV,
+    ] {
+        if let Ok(value) = env::var(env_name) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Ok(trimmed.to_owned());
+            }
+        }
+    }
+
+    if cfg!(debug_assertions) {
+        return Ok(DEV_FALLBACK_SIGNER_PRIVATE_KEY_HEX.to_owned());
+    }
+
+    Err(SignerBackendError::MissingSigningKeyMaterial {
+        key_id: key_id.to_owned(),
+        key_specific_env,
+    })
 }
 
 /// Backend-tagged signature payload returned by routing/signing APIs.
@@ -335,9 +406,10 @@ impl SecureSignerProviderClient for DeterministicSecureSignerProviderClient {
         request: &SigningRequest,
         key_reference: &CanonicalSecureKeyReference,
     ) -> Result<BackendSignature, SignerBackendError> {
+        let signature = request.expected_signature()?;
         Ok(BackendSignature {
             backend: key_reference.provider.backend_name().to_owned(),
-            signature: request.expected_signature(),
+            signature,
         })
     }
 }
@@ -365,18 +437,41 @@ impl SignerBackend for LocalSignerBackend {
     }
 
     fn sign(&self, request: &SigningRequest) -> Result<String, SignerBackendError> {
-        Ok(request.expected_signature())
+        request.expected_signature()
     }
 
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
-        let expected = request.expected_signature();
-        if !signature_matches_supported_profile_for_fields(
+        if signer_legacy_baseline_v1_compat_enabled()
+            && signature_matches_supported_profile_for_fields(
+                signature,
+                &request.sender,
+                request.nonce,
+                &request.state_hash,
+                &request.payload,
+            )
+        {
+            return Ok(());
+        }
+
+        let expected = request.expected_signature()?;
+        let private_key_hex = resolve_signer_private_key_hex(request.key_id.as_str())?;
+        let expected_public_key_hex = service_auth_public_key_hex_from_private_key_hex(
+            private_key_hex.as_str(),
+        )
+        .map_err(|_| SignerBackendError::InvalidSigningKeyMaterial {
+            key_id: request.key_id.clone(),
+        })?;
+
+        if service_auth_verify_with_public_key_hex(
             signature,
             &request.sender,
             request.nonce,
             &request.state_hash,
             &request.payload,
-        ) {
+            expected_public_key_hex.as_str(),
+        )
+        .is_err()
+        {
             return Err(SignerBackendError::SignatureMismatch {
                 backend: self.backend_name().to_owned(),
                 expected,
@@ -516,14 +611,37 @@ impl SignerBackend for SecureSignerBackend {
         self.enforce_key_role_segregation(request, &secure_key)?;
         self.enforce_provider_handshake(secure_key.provider)?;
 
-        let expected = request.expected_signature();
-        if !signature_matches_supported_profile_for_fields(
+        if signer_legacy_baseline_v1_compat_enabled()
+            && signature_matches_supported_profile_for_fields(
+                signature,
+                &request.sender,
+                request.nonce,
+                &request.state_hash,
+                &request.payload,
+            )
+        {
+            return Ok(());
+        }
+
+        let expected = request.expected_signature()?;
+        let private_key_hex = resolve_signer_private_key_hex(request.key_id.as_str())?;
+        let expected_public_key_hex = service_auth_public_key_hex_from_private_key_hex(
+            private_key_hex.as_str(),
+        )
+        .map_err(|_| SignerBackendError::InvalidSigningKeyMaterial {
+            key_id: request.key_id.clone(),
+        })?;
+
+        if service_auth_verify_with_public_key_hex(
             signature,
             &request.sender,
             request.nonce,
             &request.state_hash,
             &request.payload,
-        ) {
+            expected_public_key_hex.as_str(),
+        )
+        .is_err()
+        {
             return Err(SignerBackendError::SignatureMismatch {
                 backend: secure_key.provider.backend_name().to_owned(),
                 expected,
@@ -636,6 +754,18 @@ pub enum SignerBackendError {
     },
     /// Nonce must be positive.
     InvalidNonce,
+    /// Signer key material is required but missing from the environment.
+    MissingSigningKeyMaterial {
+        /// Key reference for which key material was requested.
+        key_id: String,
+        /// Key-specific environment variable name derived from key_id.
+        key_specific_env: String,
+    },
+    /// Signer key material was present but malformed.
+    InvalidSigningKeyMaterial {
+        /// Key reference for which key material was invalid.
+        key_id: String,
+    },
     /// Sender-derived role does not match role encoded in secure key reference.
     KeyRoleMismatch {
         /// Role encoded by key reference.
@@ -727,6 +857,16 @@ impl std::fmt::Display for SignerBackendError {
                 "secure fallback denied for key role {key_role} ({key_id})"
             ),
             Self::InvalidNonce => write!(f, "nonce must be positive"),
+            Self::MissingSigningKeyMaterial {
+                key_id,
+                key_specific_env,
+            } => write!(
+                f,
+                "missing signer key material for {key_id}; set {key_specific_env} or {SIGNER_PRIVATE_KEY_ENV} or {SERVICE_AUTH_SIGNATURE_PRIVATE_KEY_ENV}"
+            ),
+            Self::InvalidSigningKeyMaterial { key_id } => {
+                write!(f, "invalid signer key material for key reference {key_id}")
+            }
             Self::KeyRoleMismatch {
                 key_role,
                 sender_role,
@@ -991,9 +1131,10 @@ mod tests {
             request: &SigningRequest,
             _key_reference: &CanonicalSecureKeyReference,
         ) -> Result<super::BackendSignature, SignerBackendError> {
+            let signature = request.expected_signature()?;
             Ok(super::BackendSignature {
                 backend: "secure-mock".to_owned(),
-                signature: request.expected_signature(),
+                signature,
             })
         }
 

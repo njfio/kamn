@@ -1,11 +1,42 @@
 use kamn_core::signer_backend::CanonicalSecureKeyReference;
 use kamn_core::{
-    baseline_signature_for_fields, signature_profile_compatibility_fixtures_for_fields,
-    BackendSignature, BaselineTransaction, RoleSmokeNetwork, SignerBackendError,
+    baseline_signature_for_fields, BackendSignature, BaselineTransaction, SignerBackendError,
     SignerBackendRouter, SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
     SigningRequest, TransactionGuards, GENESIS_STATE_HASH,
 };
+use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
+
+fn signer_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: Option<&str>) -> Self {
+        let previous = std::env::var(key).ok();
+        match value {
+            Some(value) => std::env::set_var(key, value),
+            None => std::env::remove_var(key),
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        if let Some(previous) = self.previous.as_deref() {
+            std::env::set_var(self.key, previous);
+        } else {
+            std::env::remove_var(self.key);
+        }
+    }
+}
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
@@ -403,7 +434,11 @@ fn regression_provider_client_backend_mismatch_is_rejected_without_fallback() {
 }
 
 #[test]
-fn integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards() {
+fn integration_signer_backend_accepts_baseline_v1_only_with_explicit_compatibility_switch() {
+    let _lock = signer_env_lock()
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let _compat_guard = EnvVarGuard::set("KAMN_SIGNER_ALLOW_LEGACY_BASELINE_V1", Some("1"));
     let router = SignerBackendRouter::default();
     let request = SigningRequest::new(
         "secure:key-ops-1",
@@ -413,46 +448,86 @@ fn integration_signature_profile_fixture_matrix_remains_consistent_with_transact
         GENESIS_STATE_HASH,
     )
     .expect("request should be valid");
+    let baseline_v1_signature =
+        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
+    assert!(
+        router
+            .verify_with_backend("secure-mock", &request, baseline_v1_signature.as_str())
+            .is_ok(),
+        "baseline-v1 signatures should be accepted only when explicit compatibility switch is enabled"
+    );
+}
 
-    let fixtures = signature_profile_compatibility_fixtures_for_fields(
+#[test]
+fn regression_signer_backend_rejects_baseline_v1_signature_by_default() {
+    // Regression: #5897
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
         "agent-a",
         1,
-        GENESIS_STATE_HASH,
         "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+    let baseline_v1_signature =
+        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
+
+    assert!(
+        router
+            .verify_with_backend("secure-mock", &request, baseline_v1_signature.as_str())
+            .is_err(),
+        "baseline-v1 signatures must be rejected by default"
     );
+}
 
-    for fixture in fixtures {
-        let signer_accepts = router
-            .verify_with_backend("secure-mock", &request, &fixture.signature)
-            .is_ok();
+#[test]
+fn regression_local_backend_rejects_tampered_signature() {
+    // Regression: #5897
+    let router = SignerBackendRouter::with_secure_availability(false);
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("local fallback should sign");
+    assert_eq!(signed.backend, "local-software");
+    let tampered_signature = format!("{}ff", signed.signature);
 
-        let mut tx_network = RoleSmokeNetwork::new(true);
-        let mut tx = BaselineTransaction::signed(
-            "tx-profile-fixture",
-            "agent-a",
-            1,
-            "payload-1",
-            GENESIS_STATE_HASH,
-        );
-        tx.signature = fixture.signature.clone();
-        let transaction_accepts = tx_network.submit_transaction(tx).is_ok();
+    assert!(
+        router
+            .verify_with_backend("local-software", &request, tampered_signature.as_str())
+            .is_err(),
+        "local backend must reject tampered signatures"
+    );
+}
 
-        assert_eq!(
-            signer_accepts, fixture.should_verify,
-            "signer compatibility fixture {} should remain deterministic",
-            fixture.fixture_id
-        );
-        assert_eq!(
-            transaction_accepts, fixture.should_verify,
-            "transaction compatibility fixture {} should remain deterministic",
-            fixture.fixture_id
-        );
-        assert_eq!(
-            signer_accepts, transaction_accepts,
-            "signer and transaction compatibility decisions must stay aligned for fixture {}",
-            fixture.fixture_id
-        );
-    }
+#[test]
+fn regression_local_backend_rejects_baseline_v1_signature_without_compat_switch() {
+    // Regression: #5897
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+    let baseline_v1_signature =
+        baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
+
+    assert!(
+        router
+            .verify_with_backend("local-software", &request, baseline_v1_signature.as_str())
+            .is_err(),
+        "baseline-v1 must not bypass local backend verification when compat switch is disabled"
+    );
 }
 
 #[test]
@@ -514,8 +589,10 @@ fn regression_signing_request_matches_canonical_signature_profile() {
     let signed = router
         .sign_with_secure_fallback(&request)
         .expect("signature should be produced");
-    let canonical = baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
-    assert_eq!(signed.signature, canonical);
+    assert!(
+        signed.signature.starts_with("sig:secp256k1:baseline-v2:"),
+        "default signer path must emit cryptographic baseline-v2 signatures"
+    );
 }
 
 #[test]
@@ -534,7 +611,7 @@ fn regression_signatures_include_profile_identifier_segment() {
     let signed = router
         .sign_with_secure_fallback(&request)
         .expect("signature should be produced");
-    assert!(signed.signature.starts_with("sig:ed25519:baseline-v1:"));
+    assert!(signed.signature.starts_with("sig:secp256k1:baseline-v2:"));
 }
 
 #[test]
