@@ -1,7 +1,7 @@
 # Spec: Issue #5853 - Full-Mode Supervisor Concurrent Endpoint Lanes
 
 - Issue: #5853
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
