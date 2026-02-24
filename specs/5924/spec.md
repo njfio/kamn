@@ -1,7 +1,7 @@
 # Spec: Issue #5924 - Task: Replace kamn-core wipe_bytes loop with compiler-safe zeroization
 
 - Issue: #5924
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: security
@@ -29,16 +29,17 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify All sensitive buffers in kamn-core signing paths are zeroized using proven primitives.
-- C-02 (Functional, AC-2): Verify Failure-path tests verify no secret leaks in error output.
-- C-03 (Functional, AC-3): Verify Static checks prevent reintroduction of manual wipe loops in sensitive modules.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Unit, AC-1): `signature_profile::tests::regression_wipe_bytes_zeroizes_secret_material_buffer` verifies `wipe_bytes` erases in-memory secret buffers.
+- C-02 (Functional, AC-2): `signature_profile::tests::regression_invalid_private_key_signing_error_does_not_echo_secret_material` verifies private-key input never leaks in error text.
+- C-03 (Regression, AC-3): `regression_issue_5924_signature_profile_wipe_bytes_uses_zeroize_trait` verifies `wipe_bytes` keeps `zeroize` usage and blocks manual-loop regressions.
+- C-04 (Integration, AC-4): `integration_issue_5924_service_auth_round_trip_remains_valid` verifies service-auth sign/verify flow remains stable after zeroization refactor.
+- C-05 (Verify, AC-4): `cargo fmt --check` and strict `kamn-core` clippy pass for touched modules.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- `wipe_bytes` uses `zeroize`-backed erasure in `signature_profile` signing flows.
+- Failure-path errors remain secret-safe for invalid private key input.
+- Static regression contract and integration round-trip tests pass.
+- Scoped `kamn-core` formatting and strict clippy checks pass.
 
 
 ## Required Test Categories
@@ -50,4 +51,3 @@ Out of scope:
 
 ## Dependencies
 - #5916
-

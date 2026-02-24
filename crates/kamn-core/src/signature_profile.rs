@@ -1,5 +1,6 @@
 use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
 use k256::elliptic_curve::rand_core::OsRng;
+use k256::elliptic_curve::zeroize::Zeroize;
 use std::sync::OnceLock;
 
 /// Canonical algorithm identifier for supported baseline signatures.
@@ -145,9 +146,7 @@ fn encode_hex_lower(bytes: &[u8]) -> String {
 }
 
 fn wipe_bytes(bytes: &mut [u8]) {
-    for byte in bytes {
-        *byte = 0;
-    }
+    bytes.zeroize();
 }
 
 /// Generates an ephemeral secp256k1 private key (hex) for non-production fallback flows.
@@ -677,5 +676,29 @@ mod tests {
             public_key_hex.as_str(),
         );
         assert!(legacy_result.is_err());
+    }
+
+    #[test]
+    fn regression_wipe_bytes_zeroizes_secret_material_buffer() {
+        // Regression: #5924
+        let mut secret = [0x41_u8, 0x42, 0x43, 0x44];
+        super::wipe_bytes(&mut secret);
+        assert_eq!(secret, [0_u8; 4]);
+    }
+
+    #[test]
+    fn regression_invalid_private_key_signing_error_does_not_echo_secret_material() {
+        // Regression: #5924
+        let private_key_hex = "deadbeefdeadbeefdeadbeefdeadbeef";
+        let error = service_auth_sign_with_private_key_hex(
+            "agent-a",
+            1,
+            "service-api:chain:1",
+            "{\"message\":\"hello\"}",
+            private_key_hex,
+        )
+        .expect_err("invalid private key input should fail");
+        let rendered = error.to_string();
+        assert!(!rendered.contains(private_key_hex));
     }
 }
