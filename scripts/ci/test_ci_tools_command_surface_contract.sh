@@ -206,14 +206,14 @@ for snippet in "${required_wave_loop_snippets[@]}"; do
 done
 
 wave_helper_invocation_count="$(grep -Ec '^[[:space:]]*run_non_kolme_wave_wrapper_family_contracts$' "$CI_TOOLS_SCRIPT")"
-if [ "$wave_helper_invocation_count" -ne 2 ]; then
-  echo "expected ci tools regression lane to invoke run_non_kolme_wave_wrapper_family_contracts exactly twice; found $wave_helper_invocation_count" >&2
+if [ "$wave_helper_invocation_count" -ne 1 ]; then
+  echo "expected ci tools regression lane to invoke run_non_kolme_wave_wrapper_family_contracts exactly once after de-duplication; found $wave_helper_invocation_count" >&2
   exit 1
 fi
 
 lightweight_wave_helper_invocation_count="$(grep -Ec '^[[:space:]]*run_non_kolme_lightweight_wave_wrapper_matrix_contracts$' "$CI_TOOLS_SCRIPT")"
-if [ "$lightweight_wave_helper_invocation_count" -ne 2 ]; then
-  echo "expected ci tools regression lane to invoke run_non_kolme_lightweight_wave_wrapper_matrix_contracts exactly twice; found $lightweight_wave_helper_invocation_count" >&2
+if [ "$lightweight_wave_helper_invocation_count" -ne 1 ]; then
+  echo "expected ci tools regression lane to invoke run_non_kolme_lightweight_wave_wrapper_matrix_contracts exactly once after de-duplication; found $lightweight_wave_helper_invocation_count" >&2
   exit 1
 fi
 
