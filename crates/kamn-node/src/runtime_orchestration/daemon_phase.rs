@@ -468,6 +468,7 @@ pub(super) fn execute_daemon_runtime(
         daemon_shutdown_timeout_ticks,
         daemon_peer_id,
         daemon_lifecycle_events,
+        service_api_state_file,
         service_api_relay_spool_file,
     } = options;
     let max_ticks =
@@ -592,7 +593,18 @@ pub(super) fn execute_daemon_runtime(
         service_api_relay_spool_file.as_deref(),
     )
     .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    let relay_message_ids: Vec<String> = relay_entries
+        .iter()
+        .map(|entry| entry.message_id.clone())
+        .collect();
+    let relay_projected_state_count =
+        crate::service_api_endpoint::project_service_api_relayed_message_statuses(
+            service_api_state_file.as_deref(),
+            relay_message_ids.as_slice(),
+        )
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
     let relay_drained_count_label = relay_entries.len().to_string();
+    let relay_projected_state_count_label = relay_projected_state_count.to_string();
     let convergence_projection = execute_daemon_convergence_projection(DaemonConvergenceInput {
         schema_gate_passed: phase6_projection.total_cycles > 0
             && phase6_projection.reason_code != "m10_phase6_scheduler_signal_invalid",
@@ -728,6 +740,10 @@ pub(super) fn execute_daemon_runtime(
             (
                 "service_api_relay_drained_count",
                 relay_drained_count_label.as_str(),
+            ),
+            (
+                "service_api_relay_projected_state_count",
+                relay_projected_state_count_label.as_str(),
             ),
             ("execution_id", execution_id),
         ],

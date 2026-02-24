@@ -698,6 +698,64 @@ pub(crate) fn drain_service_api_relay_spool_entries(
     Ok(entries)
 }
 
+pub(crate) fn project_service_api_relayed_message_statuses(
+    state_file: Option<&str>,
+    message_ids: &[String],
+) -> Result<usize, String> {
+    let Some(path) = state_file else {
+        return Ok(0);
+    };
+    if message_ids.is_empty() {
+        return Ok(0);
+    }
+    let state_payload = match fs::read_to_string(path) {
+        Ok(payload) => payload,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(error) => {
+            return Err(format!(
+                "service api state file read failed: {path}: {error}"
+            ));
+        }
+    };
+    let mut state_json: serde_json::Value = serde_json::from_str(state_payload.as_str())
+        .map_err(|error| format!("service api state file parse failed: {path}: {error}"))?;
+    let Some(messages) = state_json
+        .get_mut("messages")
+        .and_then(serde_json::Value::as_object_mut)
+    else {
+        return Err(format!(
+            "service api state file parse failed: {path}: missing messages object"
+        ));
+    };
+
+    let unique_ids: BTreeSet<&str> = message_ids.iter().map(String::as_str).collect();
+    let mut projected_count = 0_usize;
+    for message_id in unique_ids {
+        let Some(record) = messages
+            .get_mut(message_id)
+            .and_then(serde_json::Value::as_object_mut)
+        else {
+            continue;
+        };
+        let status = record.get("status").and_then(serde_json::Value::as_str);
+        if status == Some("created") {
+            record.insert(
+                "status".to_owned(),
+                serde_json::Value::String("relayed".to_owned()),
+            );
+            projected_count = projected_count.saturating_add(1);
+        }
+    }
+
+    if projected_count > 0 {
+        let rendered = serde_json::to_string_pretty(&state_json)
+            .map_err(|error| format!("service api state serialization failed: {error}"))?;
+        fs::write(path, rendered)
+            .map_err(|error| format!("service api state file write failed: {path}: {error}"))?;
+    }
+    Ok(projected_count)
+}
+
 fn sanitize_service_api_state_file_component(value: &str) -> String {
     let mut output = String::with_capacity(value.len());
     let mut last_was_separator = false;

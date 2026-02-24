@@ -150,7 +150,7 @@ impl ServiceApiMessageStore {
         let Some(record) = self.snapshot.messages.get_mut(message_id) else {
             return Ok(None);
         };
-        let should_mark_delivered = record.status == "created"
+        let should_mark_delivered = matches!(record.status.as_str(), "created" | "relayed")
             && requester_did.is_some()
             && record.recipient_did.as_deref() == requester_did;
         let payload = if should_mark_delivered {
