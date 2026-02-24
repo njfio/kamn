@@ -1,7 +1,18 @@
 use kamn_core::{DirectMessageCryptoEngine, DirectMessageCryptoError};
+use std::sync::OnceLock;
+
+const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
+
+fn enable_direct_message_crypto_fixture_mode() {
+    static ENABLED: OnceLock<()> = OnceLock::new();
+    ENABLED.get_or_init(|| {
+        std::env::set_var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, "1");
+    });
+}
 
 #[test]
 fn encrypt_decrypt_round_trip_preserves_plaintext() {
+    enable_direct_message_crypto_fixture_mode();
     let mut engine = DirectMessageCryptoEngine::new(
         "kamn:did:agent:alice#key-agreement-1",
         "kamn:did:agent:bob#key-agreement-1",
@@ -18,6 +29,7 @@ fn encrypt_decrypt_round_trip_preserves_plaintext() {
 
 #[test]
 fn tampered_ciphertext_fails_integrity_check() {
+    enable_direct_message_crypto_fixture_mode();
     let mut engine = DirectMessageCryptoEngine::new(
         "kamn:did:agent:alice#key-agreement-1",
         "kamn:did:agent:bob#key-agreement-1",
@@ -36,6 +48,7 @@ fn tampered_ciphertext_fails_integrity_check() {
 
 #[test]
 fn nonce_reuse_is_rejected() {
+    enable_direct_message_crypto_fixture_mode();
     let mut engine = DirectMessageCryptoEngine::new(
         "kamn:did:agent:alice#key-agreement-1",
         "kamn:did:agent:bob#key-agreement-1",
@@ -53,6 +66,7 @@ fn nonce_reuse_is_rejected() {
 
 #[test]
 fn empty_payload_is_rejected() {
+    enable_direct_message_crypto_fixture_mode();
     let mut engine = DirectMessageCryptoEngine::new(
         "kamn:did:agent:alice#key-agreement-1",
         "kamn:did:agent:bob#key-agreement-1",
@@ -66,6 +80,7 @@ fn empty_payload_is_rejected() {
 
 #[test]
 fn tampered_auth_tag_is_rejected() {
+    enable_direct_message_crypto_fixture_mode();
     let mut engine = DirectMessageCryptoEngine::new(
         "kamn:did:agent:alice#key-agreement-1",
         "kamn:did:agent:bob#key-agreement-1",

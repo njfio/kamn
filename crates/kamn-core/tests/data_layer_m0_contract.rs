@@ -9,6 +9,16 @@ use kamn_core::{
     DATA_LAYER_M0_CONFORMANCE_MATRIX_STABLE_REASON_CODE,
 };
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
+
+const ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV: &str = "KAMN_ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO";
+
+fn enable_direct_message_crypto_fixture_mode() {
+    static ENABLED: OnceLock<()> = OnceLock::new();
+    ENABLED.get_or_init(|| {
+        std::env::set_var(ALLOW_INSECURE_DIRECT_MESSAGE_CRYPTO_ENV, "1");
+    });
+}
 
 fn valid_envelope(message_id: &str, recipients: Vec<&str>) -> CanonicalMessageEnvelope {
     let mut body = BTreeMap::new();
@@ -55,6 +65,7 @@ fn valid_input(
     recipients: Vec<&str>,
     wrapped_keys: Vec<(&str, &str)>,
 ) -> DataLayerM0RecordInput {
+    enable_direct_message_crypto_fixture_mode();
     let envelope = valid_envelope(message_id, recipients);
     let mut crypto = DirectMessageCryptoEngine::new(
         "did:key:z6Mksender#key-agreement-1",
