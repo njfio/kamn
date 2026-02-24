@@ -479,8 +479,8 @@ fn validate_cid(cid: &str) -> Result<(), ContentStorageError> {
 fn fnv1a_hex(payload: &[u8]) -> String {
     let mut acc: u64 = 0xcbf29ce484222325;
     for byte in payload {
-        acc = acc.wrapping_mul(0x00000100000001B3);
         acc ^= u64::from(*byte);
+        acc = acc.wrapping_mul(0x00000100000001B3);
     }
     format!("{acc:016x}")
 }
@@ -520,5 +520,11 @@ mod tests {
     #[test]
     fn fnv1a_hex_produces_expected_width() {
         assert_eq!(fnv1a_hex(b"abc").len(), 16);
+    }
+
+    #[test]
+    fn regression_fnv1a_hex_matches_canonical_test_vector() {
+        // Regression: #5899
+        assert_eq!(fnv1a_hex(b"abc"), "e71fa2190541574b");
     }
 }
