@@ -31,6 +31,43 @@ assert_selector_keys_match() {
   done
 }
 
+COMMON_DISABLED_TARGET_KEYS=(
+  "run_frontend_dashboard_tests"
+  "run_dashboard_contract_tests"
+  "run_signer_emulator_contract_tests"
+  "run_did_registry_contract_tests"
+  "run_kolme_snapshot_drift_contract_tests"
+  "run_kolme_version_compatibility_contract_tests"
+  "run_kolme_triadic_devnet_smoke_contract_tests"
+  "run_federated_delegation_settlement_contract_tests"
+  "run_runtime_snapshot_contract_tests"
+  "run_message_lifecycle_contract_tests"
+  "run_channel_lifecycle_contract_tests"
+  "run_task_operation_snapshot_contract_tests"
+  "run_durable_guard_recovery_contract_tests"
+  "run_settlement_reconciliation_contract_tests"
+  "run_soc2_control_evidence_contract_tests"
+  "run_dsar_legal_hold_contract_tests"
+  "run_governance_simulation_contract_tests"
+  "run_governance_stake_slash_contract_tests"
+  "run_reputation_decay_contract_tests"
+  "run_reputation_dispute_contract_tests"
+  "run_token_launch_contract_tests"
+  "run_treasury_disbursement_contract_tests"
+  "run_mainnet_cutover_contract_tests"
+  "run_launch_canary_contract_tests"
+  "run_bridge_replay_harness"
+  "run_bridge_replay_deep_lane"
+  "run_federated_did_handshake_deep_lane"
+  "run_rust_live_transport_contract_tests"
+  "run_python_live_transport_contract_tests"
+  "run_typescript_live_transport_contract_tests"
+  "run_live_transport_parity_contract_tests"
+  "run_live_transport_parity_rust_contract_tests"
+  "run_localhost_signed_integration_contract_lane_tests"
+  "run_sdk_parity_matrix"
+)
+
 assert_deploy_scope_triplet() {
   local output="$1"
   local context="$2"
@@ -45,42 +82,9 @@ assert_docs_only_invariants() {
     "run_rust" \
     "run_ci_tool_checks" \
     "run_script_surface_budget_checks" \
-    "run_frontend_dashboard_tests" \
-    "run_dashboard_contract_tests" \
-    "run_signer_emulator_contract_tests" \
-    "run_did_registry_contract_tests" \
-    "run_kolme_snapshot_drift_contract_tests" \
-    "run_kolme_version_compatibility_contract_tests" \
-    "run_kolme_triadic_devnet_smoke_contract_tests" \
-    "run_federated_delegation_settlement_contract_tests" \
-    "run_runtime_snapshot_contract_tests" \
-    "run_message_lifecycle_contract_tests" \
-    "run_channel_lifecycle_contract_tests" \
-    "run_task_operation_snapshot_contract_tests" \
-    "run_durable_guard_recovery_contract_tests" \
-    "run_settlement_reconciliation_contract_tests" \
-    "run_soc2_control_evidence_contract_tests" \
-    "run_dsar_legal_hold_contract_tests" \
-    "run_governance_simulation_contract_tests" \
-    "run_governance_stake_slash_contract_tests" \
-    "run_reputation_decay_contract_tests" \
-    "run_reputation_dispute_contract_tests" \
-    "run_token_launch_contract_tests" \
-    "run_treasury_disbursement_contract_tests" \
-    "run_mainnet_cutover_contract_tests" \
-    "run_launch_canary_contract_tests" \
-    "run_bridge_replay_harness" \
-    "run_bridge_replay_deep_lane" \
+    "${COMMON_DISABLED_TARGET_KEYS[@]}" \
     "run_localhost_bridge_demo_evidence_deep_lane" \
-    "run_federated_did_handshake_deep_lane" \
-    "run_rust_live_transport_contract_tests" \
-    "run_python_live_transport_contract_tests" \
-    "run_typescript_live_transport_contract_tests" \
-    "run_live_transport_parity_contract_tests" \
-    "run_live_transport_parity_rust_contract_tests" \
-    "run_localhost_signed_integration_contract_lane_tests" \
-    "run_kamn_core_missing_docs_policy_contract_tests" \
-    "run_sdk_parity_matrix"
+    "run_kamn_core_missing_docs_policy_contract_tests"
   assert_selector_keys_match "$output" "" "docs_only should keep empty" \
     "bridge_replay_suites" \
     "live_transport_parity_languages"
@@ -102,37 +106,13 @@ assert_ci_doc_contract_trend_scope() {
   assert_eq "$(extract_output "$output" "run_script_surface_budget_checks")" "true" "$context should run script-surface budget checks"
 }
 
-assert_ci_doc_contract_scope_compact() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_scope "$output" "$context"
-}
-
-assert_ci_doc_contract_trend_scope_compact() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_trend_scope "$output" "$context"
-}
-
-assert_qa_doc_contract_scope_compact() {
+assert_qa_doc_contract_scope() {
   local output="$1"
   local context="$2"
   assert_eq "$(extract_output "$output" "docs_only")" "true" "$context should remain docs-only"
   assert_eq "$(extract_output "$output" "run_rust")" "false" "$context should avoid rust lane"
   assert_eq "$(extract_output "$output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "$context must run missing-docs policy checks"
   assert_eq "$(extract_output "$output" "test_scope")" "qa-doc-contract" "$context should set qa-doc-contract scope"
-}
-
-assert_ci_doc_contract_scope_wave() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_scope "$output" "$context"
-}
-
-assert_ci_doc_contract_trend_scope_wave() {
-  local output="$1"
-  local context="$2"
-  assert_ci_doc_contract_trend_scope "$output" "$context"
 }
 
 run_selector_with_bridge_deep() {
@@ -196,103 +176,49 @@ assert_ci_doc_contract_trend_scope "$wave10_trend_checker_script_output" "wave-1
 assert_non_kolme_wave_wrapper_family_contract_scope() {
   local wave="$1"
   local matrix_output threshold_output trend_output
-
   matrix_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_matrix.json')"
-  assert_ci_doc_contract_scope_wave "$matrix_output" "non-Kolme wave-${wave} wrapper-family matrix fixture changes"
-
+  assert_ci_doc_contract_scope "$matrix_output" "non-Kolme wave-${wave} wrapper-family matrix fixture changes"
   threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_trend_thresholds.json')"
-  assert_ci_doc_contract_scope_wave "$threshold_output" "non-Kolme wave-${wave} trend threshold fixture changes"
-
+  assert_ci_doc_contract_scope "$threshold_output" "non-Kolme wave-${wave} trend threshold fixture changes"
   trend_output="$(run_selector $'scripts/ci/check_non_kolme_wave'"$wave"$'_wrapper_family_budget_trend.sh')"
-  assert_ci_doc_contract_trend_scope_wave "$trend_output" "non-Kolme wave-${wave} trend checker script changes"
+  assert_ci_doc_contract_trend_scope "$trend_output" "non-Kolme wave-${wave} trend checker script changes"
 }
 
 for wave in $(seq 1 19); do
   assert_non_kolme_wave_wrapper_family_contract_scope "$wave"
 done
 
-non_kolme_wave_trend_loc_baseline_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')"
-assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_baseline_output" "non-Kolme wave trend-test LOC baseline fixture changes"
-
-non_kolme_wave_trend_loc_threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')"
-assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_threshold_output" "non-Kolme wave trend-test LOC threshold fixture changes"
-
-non_kolme_wave_trend_loc_checker_output="$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_output" "non-Kolme wave trend-test LOC checker changes"
-
-non_kolme_wave_trend_loc_checker_test_output="$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_test_output" "non-Kolme wave trend-test LOC checker test changes"
-
-ignored_test_baseline_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_baseline.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_baseline_fixture_output" "ignored-test baseline fixture changes"
-
-ignored_test_metadata_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_metadata.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_metadata_fixture_output" "ignored-test metadata fixture changes"
-
-ignored_test_promotion_fixture_output="$(run_selector $'fixtures/ci/ignored_test_promotion_criteria.json')"
-assert_ci_doc_contract_scope_compact "$ignored_test_promotion_fixture_output" "ignored-test promotion-criteria fixture changes"
-
-ignored_test_checker_script_output="$(run_selector $'scripts/ci/check_ignored_test_inventory_drift.sh')"
-assert_ci_doc_contract_trend_scope_compact "$ignored_test_checker_script_output" "ignored-test drift checker script changes"
-
-ignored_test_parser_contract_output="$(run_selector $'scripts/ci/test_ignored_test_inventory_parser_contract.sh')"
-assert_ci_doc_contract_trend_scope_compact "$ignored_test_parser_contract_output" "ignored-test parser contract script changes"
-
-non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_dispatcher_script_output" "non-Kolme dispatcher script changes"
-
-non_kolme_compliance_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_compliance_dispatch_matrix_test_output" "non-Kolme compliance dispatcher matrix test changes"
-
-non_kolme_manifest_backed_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_manifest_backed_dispatch_matrix_test_output" "non-Kolme manifest-backed dispatcher matrix test changes"
-
-non_kolme_bridge_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_bridge_dispatch_matrix_test_output" "non-Kolme bridge dispatcher matrix test changes"
-
-non_kolme_sdk_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_sdk_dispatch_matrix_test_output" "non-Kolme sdk dispatcher matrix test changes"
-
-non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme lightweight dispatcher matrix test changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')" "non-Kolme wave trend-test LOC baseline fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')" "non-Kolme wave trend-test LOC threshold fixture changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')" "non-Kolme wave trend-test LOC checker changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')" "non-Kolme wave trend-test LOC checker test changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_inventory_baseline.json')" "ignored-test baseline fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_inventory_metadata.json')" "ignored-test metadata fixture changes"
+assert_ci_doc_contract_scope "$(run_selector $'fixtures/ci/ignored_test_promotion_criteria.json')" "ignored-test promotion-criteria fixture changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/check_ignored_test_inventory_drift.sh')" "ignored-test drift checker script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_ignored_test_inventory_parser_contract.sh')" "ignored-test parser contract script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')" "non-Kolme dispatcher script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme compliance dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme manifest-backed dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme bridge dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme sdk dispatcher matrix test changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')" "non-Kolme lightweight dispatcher matrix test changes"
 
 for lightweight_wave in {10..19}; do
-  non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")"
-  assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
+  assert_ci_doc_contract_trend_scope "$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
 done
 
-kolme_harness_trend_threshold_output="$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')"
-assert_ci_doc_contract_scope_compact "$kolme_harness_trend_threshold_output" "Kolme harness trend-threshold config changes"
-
-generic_harness_trend_threshold_output="$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_trend_threshold_output" "generic harness trend-threshold config changes"
-
-generic_harness_soft_budget_output="$(run_selector $'.ci/test-harness-loc-soft-budget.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_soft_budget_output" "generic harness soft-budget config changes"
-
-generic_harness_baseline_output="$(run_selector $'.ci/test-harness-loc-baseline.env')"
-assert_ci_doc_contract_scope_compact "$generic_harness_baseline_output" "generic harness baseline config changes"
-
-kolme_harness_trend_report_script_output="$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')"
-assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_script_output" "Kolme harness trend-report script changes"
-
-kolme_harness_trend_report_test_script_output="$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')"
-assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_test_script_output" "Kolme harness trend-report test script changes"
-
-hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
-assert_qa_doc_contract_scope_compact "$hardening_docs_output" "engineering hardening docs"
-
-velocity_cadence_docs_output="$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')"
-assert_qa_doc_contract_scope_compact "$velocity_cadence_docs_output" "missing-docs velocity cadence docs"
-
-graduation_batch_docs_output="$(run_selector $'docs/planning/issues/missing-docs-first-batch-graduation-report.md')"
-assert_qa_doc_contract_scope_compact "$graduation_batch_docs_output" "missing-docs graduation batch docs"
-
-module_map_docs_output="$(run_selector $'docs/architecture/kamn-core-module-map.md')"
-assert_qa_doc_contract_scope_compact "$module_map_docs_output" "kamn-core module map docs"
-
-rustdoc_docs_output="$(run_selector $'docs/developer/rustdoc-publishing.md')"
-assert_qa_doc_contract_scope_compact "$rustdoc_docs_output" "rustdoc publishing docs"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')" "Kolme harness trend-threshold config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')" "generic harness trend-threshold config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-soft-budget.env')" "generic harness soft-budget config changes"
+assert_ci_doc_contract_scope "$(run_selector $'.ci/test-harness-loc-baseline.env')" "generic harness baseline config changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')" "Kolme harness trend-report script changes"
+assert_ci_doc_contract_trend_scope "$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')" "Kolme harness trend-report test script changes"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/engineering-hardening-wave.md')" "engineering hardening docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')" "missing-docs velocity cadence docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/planning/issues/missing-docs-first-batch-graduation-report.md')" "missing-docs graduation batch docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/architecture/kamn-core-module-map.md')" "kamn-core module map docs"
+assert_qa_doc_contract_scope "$(run_selector $'docs/developer/rustdoc-publishing.md')" "rustdoc publishing docs"
 
 rustdoc_lane_script_output="$(run_selector $'scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh')"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_rust")" "true" "rustdoc artifact lane script changes should run rust tooling setup"
@@ -306,40 +232,7 @@ assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only c
 assert_eq "$(extract_output "$deploy_output" "run_script_surface_budget_checks")" "true" "deploy shell changes must run script-surface budget checks"
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
 assert_selector_keys_match "$deploy_output" "false" "deploy-only changes should keep disabled" \
-  "run_frontend_dashboard_tests" \
-  "run_dashboard_contract_tests" \
-  "run_signer_emulator_contract_tests" \
-  "run_did_registry_contract_tests" \
-  "run_kolme_snapshot_drift_contract_tests" \
-  "run_kolme_version_compatibility_contract_tests" \
-  "run_kolme_triadic_devnet_smoke_contract_tests" \
-  "run_federated_delegation_settlement_contract_tests" \
-  "run_runtime_snapshot_contract_tests" \
-  "run_message_lifecycle_contract_tests" \
-  "run_channel_lifecycle_contract_tests" \
-  "run_task_operation_snapshot_contract_tests" \
-  "run_durable_guard_recovery_contract_tests" \
-  "run_settlement_reconciliation_contract_tests" \
-  "run_soc2_control_evidence_contract_tests" \
-  "run_dsar_legal_hold_contract_tests" \
-  "run_governance_simulation_contract_tests" \
-  "run_governance_stake_slash_contract_tests" \
-  "run_reputation_decay_contract_tests" \
-  "run_reputation_dispute_contract_tests" \
-  "run_token_launch_contract_tests" \
-  "run_treasury_disbursement_contract_tests" \
-  "run_mainnet_cutover_contract_tests" \
-  "run_launch_canary_contract_tests" \
-  "run_bridge_replay_harness" \
-  "run_bridge_replay_deep_lane" \
-  "run_federated_did_handshake_deep_lane" \
-  "run_rust_live_transport_contract_tests" \
-  "run_python_live_transport_contract_tests" \
-  "run_typescript_live_transport_contract_tests" \
-  "run_live_transport_parity_contract_tests" \
-  "run_live_transport_parity_rust_contract_tests" \
-  "run_localhost_signed_integration_contract_lane_tests" \
-  "run_sdk_parity_matrix"
+  "${COMMON_DISABLED_TARGET_KEYS[@]}"
 assert_selector_keys_match "$deploy_output" "" "deploy-only changes should not select" \
   "bridge_replay_suites" \
   "live_transport_parity_languages"
