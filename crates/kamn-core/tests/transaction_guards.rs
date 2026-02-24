@@ -225,8 +225,8 @@ fn regression_signature_profile_fixture_matrix_matches_transaction_guard_expecta
             BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
         tx.signature = fixture.signature.clone();
         let accepted = network.submit_transaction(tx).is_ok();
-        assert_eq!(
-            accepted, false,
+        assert!(
+            !accepted,
             "transaction guard compatibility fixture {} should be rejected in default fail-closed mode",
             fixture.fixture_id
         );
