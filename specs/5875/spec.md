@@ -1,7 +1,7 @@
 # Spec: Issue #5875 - Immutable Review Docs + Shell LOC Reduction
 
 - Issue: #5875
-- Status: Reviewed
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Milestone: `specs/milestones/r52-e2e-live-runtime-integration-hardening/index.md`
