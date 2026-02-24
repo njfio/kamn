@@ -31,6 +31,15 @@ PANIC_REASON_CODES = frozenset(
     }
 )
 
+DEFAULT_RUNTIME_ROOTS = (
+    "crates/kamn-core/src",
+    "crates/kamn-node/src",
+    "crates/kamn-cli/src",
+    "crates/kamn-mcp-server/src",
+    "crates/kamn-sdk/src",
+    "crates/kamn-kolme/src",
+)
+
 
 def is_excluded(path: Path) -> bool:
     path_str = path.as_posix()
@@ -285,7 +294,10 @@ def parse_args() -> argparse.Namespace:
         "--root",
         action="append",
         default=[],
-        help="Rust source root to scan (repeatable). Default: crates/kamn-node/src",
+        help=(
+            "Rust source root to scan (repeatable). Default: "
+            + ",".join(DEFAULT_RUNTIME_ROOTS)
+        ),
     )
     parser.add_argument(
         "--output-json",
@@ -297,7 +309,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    roots = args.root or ["crates/kamn-node/src"]
+    roots = args.root or list(DEFAULT_RUNTIME_ROOTS)
 
     report: dict[str, object] = {
         "schema_version": "kamn.ci.no-production-expect-report.v1",
