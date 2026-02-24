@@ -166,6 +166,71 @@ fn git_commit_count_for_relative_path(relative_path: &str) -> usize {
         .unwrap_or_else(|_| panic!("git rev-list count should be an unsigned integer: {raw}"))
 }
 
+fn git_ref_exists(ref_name: &str) -> bool {
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args(["rev-parse", "--verify", "--quiet", ref_name])
+        .output()
+        .unwrap_or_else(|error| panic!("git rev-parse should run for {ref_name}: {error}"));
+    output.status.success()
+}
+
+fn resolve_review_doc_diff_base_ref() -> String {
+    for candidate in ["origin/main", "main"] {
+        if git_ref_exists(candidate) {
+            return candidate.to_owned();
+        }
+    }
+    panic!("unable to resolve branch-diff base ref: expected origin/main or main");
+}
+
+#[derive(Debug, Clone)]
+struct NameStatusEntry {
+    status: String,
+    paths: Vec<String>,
+}
+
+fn git_name_status_entries(base_ref: &str, pathspec: &str) -> Vec<NameStatusEntry> {
+    let revision_range = format!("{base_ref}...HEAD");
+    let output = Command::new("git")
+        .current_dir(repo_root())
+        .args([
+            "diff",
+            "--name-status",
+            "--find-renames",
+            revision_range.as_str(),
+            "--",
+            pathspec,
+        ])
+        .output()
+        .unwrap_or_else(|error| panic!("git diff --name-status should run: {error}"));
+    assert!(
+        output.status.success(),
+        "git diff --name-status failed with status {:?}",
+        output.status.code()
+    );
+
+    String::from_utf8(output.stdout)
+        .expect("git diff --name-status output should be valid UTF-8")
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\t');
+            let status = fields.next()?.trim().to_owned();
+            if status.is_empty() {
+                return None;
+            }
+            let paths = fields
+                .filter(|field| !field.trim().is_empty())
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            if paths.is_empty() {
+                return None;
+            }
+            Some(NameStatusEntry { status, paths })
+        })
+        .collect()
+}
+
 fn tracked_shell_line_total() -> usize {
     let output = Command::new("git")
         .current_dir(repo_root())
@@ -1046,6 +1111,52 @@ fn regression_r57_plus_review_docs_are_immutable_by_history_policy_contract() {
             max_commits_per_doc
         );
     }
+}
+
+#[test]
+fn regression_r51_plus_review_docs_are_immutable_in_branch_diff_policy_contract() {
+    let policy_path = repo_root()
+        .join("docs")
+        .join("review")
+        .join("review-document-freeze.policy");
+    let policy_doc = fs::read_to_string(&policy_path).unwrap_or_else(|_| {
+        panic!(
+            "review-document freeze policy missing: {}",
+            policy_path.display()
+        )
+    });
+    let policy = parse_key_value_lines(&policy_doc);
+    let effective_release_min =
+        parse_marker_usize(&policy, "review_document_freeze_effective_release_min") as u32;
+    let base_ref = resolve_review_doc_diff_base_ref();
+    let diff_entries = git_name_status_entries(base_ref.as_str(), "docs/review");
+
+    let mut violations = Vec::new();
+    for entry in diff_entries {
+        let status_code = entry.status.chars().next().unwrap_or('?');
+        for path in entry.paths {
+            if !path.starts_with("docs/review/gaps-and-issues-r") || !path.ends_with(".md") {
+                continue;
+            }
+            let Some(release) = parse_release_from_review_path(path.as_str()) else {
+                continue;
+            };
+            if release < effective_release_min {
+                continue;
+            }
+            if status_code != 'A' {
+                violations.push(format!("{}:{}", entry.status, path));
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "frozen review docs (r{}+) may not be modified in branch diff against {} (only status A allowed): {}",
+        effective_release_min,
+        base_ref,
+        violations.join(", ")
+    );
 }
 
 #[test]

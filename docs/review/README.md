@@ -400,6 +400,7 @@ Contract invariants:
 - Every tracked `docs/review/gaps-and-issues-rNN.md` with `NN >= effective_release_min` appears in the manifest CSV.
 - For each manifest entry, `line_count`, `last_non_empty_line`, and `fnv1a64` markers match file contents exactly.
 - For each tracked review file with `NN >= review_document_immutability_effective_release_min`, git commit count must remain `<= review_document_immutability_max_commits_per_doc`.
+- In branch diff (`origin/main...HEAD` with `main` fallback), review-doc entries with `NN >= review_document_freeze_effective_release_min` must be `A`-status additions only; modifying/deleting/renaming existing frozen review docs is forbidden.
 
 This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
 
