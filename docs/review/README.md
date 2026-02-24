@@ -384,6 +384,11 @@ Contract marker keys (policy/manifest):
 - `review_document_freeze_hash_algorithm=fnv1a64`
 - `review_document_freeze_manifest_path=docs/review/review-document-freeze.manifest`
 - `review_document_freeze_status=enforced`
+- `review_document_immutability_schema_version=kamn.review.review-document-immutability-policy.v1`
+- `review_document_immutability_effective_release_min=<integer>`
+- `review_document_immutability_enforcement_mode=git-log-max-commit-count`
+- `review_document_immutability_max_commits_per_doc=<integer>`
+- `review_document_immutability_status=enforced`
 - `review_document_freeze_manifest_schema_version=kamn.review.review-document-freeze-manifest.v1`
 - `review_document_freeze_entries_csv=<csv of gaps-and-issues-rNN.md>`
 - `r<release>_review_freeze_line_count=<integer>`
@@ -394,6 +399,7 @@ Contract invariants:
 
 - Every tracked `docs/review/gaps-and-issues-rNN.md` with `NN >= effective_release_min` appears in the manifest CSV.
 - For each manifest entry, `line_count`, `last_non_empty_line`, and `fnv1a64` markers match file contents exactly.
+- For each tracked review file with `NN >= review_document_immutability_effective_release_min`, git commit count must remain `<= review_document_immutability_max_commits_per_doc`.
 
 This schema is enforced by `crates/kamn-core/tests/review_r53_docs_contract.rs`.
 
