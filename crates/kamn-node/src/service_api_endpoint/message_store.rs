@@ -97,6 +97,12 @@ struct ServiceApiPersistedBridgeRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiPersistedAgentRecord {
+    did: String,
+    reputation_score: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ServiceApiPersistedMessageStoreSnapshot {
     schema_version: String,
     messages: BTreeMap<String, ServiceApiPersistedMessageRecord>,
@@ -109,6 +115,8 @@ struct ServiceApiPersistedMessageStoreSnapshot {
     contents: BTreeMap<String, ServiceApiPersistedContentRecord>,
     #[serde(default)]
     bridges: BTreeMap<String, ServiceApiPersistedBridgeRecord>,
+    #[serde(default)]
+    agents: BTreeMap<String, ServiceApiPersistedAgentRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
@@ -121,6 +129,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             escrows: BTreeMap::new(),
             contents: BTreeMap::new(),
             bridges: BTreeMap::new(),
+            agents: BTreeMap::new(),
         }
     }
 }
@@ -693,6 +702,39 @@ impl ServiceApiMessageStore {
             target_message_id: record.target_message_id.clone(),
             forward_tx_hash: record.forward_tx_hash.clone(),
         }))
+    }
+
+    pub(super) fn get_or_create_agent_profile(
+        &mut self,
+        agent_did: &str,
+    ) -> Result<ServiceApiAgentGetBody, String> {
+        self.refresh_from_disk()?;
+        let normalized_did = agent_did.trim();
+        if normalized_did.is_empty() {
+            return Err("agent did must not be empty".to_owned());
+        }
+
+        let payload = if let Some(record) = self.snapshot.agents.get(normalized_did) {
+            ServiceApiAgentGetBody {
+                did: record.did.clone(),
+                reputation_score: record.reputation_score,
+            }
+        } else {
+            self.snapshot.agents.insert(
+                normalized_did.to_owned(),
+                ServiceApiPersistedAgentRecord {
+                    did: normalized_did.to_owned(),
+                    reputation_score: 500,
+                },
+            );
+            self.persist()?;
+            ServiceApiAgentGetBody {
+                did: normalized_did.to_owned(),
+                reputation_score: 500,
+            }
+        };
+
+        Ok(payload)
     }
 }
 

@@ -1,7 +1,7 @@
 # Spec: Issue #5998 - Persist service-api agent profile query state across restart
 
 - Issue: #5998
-- Status: Reviewed (agent-authored P1; implementation proceeding)
+- Status: Implemented
 - Type: story
 - Priority: P1
 - Area: backend
