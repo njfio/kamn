@@ -451,15 +451,15 @@ fn spawn_server_with_chunked_raw_response(
     format!("http://{addr}")
 }
 
+type KeepAliveRequestLog = Arc<Mutex<Vec<String>>>;
+type KeepAliveServerHandle = thread::JoinHandle<(usize, usize)>;
+type KeepAliveServerSpawnResult = (String, KeepAliveRequestLog, KeepAliveServerHandle);
+
 fn spawn_keep_alive_multi_request_server(
     response_body: String,
     status_line: &str,
     expected_requests: usize,
-) -> (
-    String,
-    Arc<Mutex<Vec<String>>>,
-    thread::JoinHandle<(usize, usize)>,
-) {
+) -> KeepAliveServerSpawnResult {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
     listener
         .set_nonblocking(true)
