@@ -1,12 +1,12 @@
 # Spec: Issue #5937 - Task: Add async and real HTTP/WebSocket/TLS integration coverage for service/runtime
 
 - Issue: #5937
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: qa
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5920
 
 ## Problem Statement
@@ -40,6 +40,16 @@ Out of scope:
 - AC-3 verification tests pass in scoped CI runs.
 - AC-4 verification tests pass in scoped CI runs.
 
+## Implementation Evidence
+- `integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes`
+- `integration_service_api_endpoint_tls_mode_serves_required_https_routes`
+- `integration_service_api_endpoint_websocket_upgrade_streams_state_transition_event`
+- `integration_service_api_endpoint_websocket_upgrade_keeps_connection_open_after_initial_event`
+- `integration_service_api_client_reads_websocket_event_frame`
+- CI fast-gate selector/output + lane step wiring:
+  - `scripts/ci/select_targets.sh` (`run_service_runtime_network_integration_tests`)
+  - `.github/workflows/ci-fast-gate.yml` (`Run service/runtime HTTP+WS+TLS integration lane`)
+
 
 ## Required Test Categories
 - Unit: async helper/fixture utilities
@@ -50,4 +60,3 @@ Out of scope:
 
 ## Dependencies
 - #5920
-
