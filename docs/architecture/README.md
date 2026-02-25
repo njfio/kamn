@@ -2,7 +2,7 @@
 
 schema_version=kamn.docs.architecture-navigation-index.v1
 diagram_catalog_status=active
-index_last_reviewed=2026-02-16
+index_last_reviewed=2026-02-25
 
 This index is the canonical navigation entrypoint for architecture artifacts and
 diagram references.
@@ -27,6 +27,7 @@ diagram references.
 ## Decision Records
 
 - `docs/architecture/adr-kamn-core-live-tls-transport.md`
+- `docs/architecture/adr-kamn-sdk-service-https-transport.md`
 - `docs/architecture/adr-001-production-message-crypto-primitives.md`
 
 ## Diagram Catalog

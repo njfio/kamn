@@ -2,19 +2,20 @@
 
 - Issue: #5930
 - Spec: `specs/5930/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
-1. RED: Add/extend failing tests for conformance cases defined in specs/5930/spec.md.
-2. Implement: Implement HTTPS scheme support with certificate validation and clear configuration controls.
-3. REGRESSION: Execute targeted + scoped suite for touched modules and close all failing deltas.
-4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
+1. RED: added HTTPS fixture-conformance tests to `crates/kamn-sdk/tests/service_api_client.rs` and confirmed failure on the legacy `NotImplemented` path.
+2. Implemented rustls-backed HTTPS transport in `crates/kamn-sdk/src/service.rs` with strict certificate validation and deterministic TLS error mapping.
+3. Added explicit custom trust-root control via `KAMN_SERVICE_API_TLS_CA_FILE` (with fail-closed validation for empty/invalid/missing CA bundle inputs).
+4. REGRESSION: ran full `kamn-sdk` test suite and scoped service-client contract suite.
+5. VERIFY: ran `cargo fmt --check` and strict `cargo clippy -p kamn-sdk -- -D warnings`.
 
 ## Affected Modules (Initial)
 - `crates/kamn-sdk/src/service.rs`
-- `crates/kamn-sdk/src/tcp.rs`
-- `crates/kamn-sdk/tests/`
+- `crates/kamn-sdk/tests/service_api_client.rs`
+- `crates/kamn-sdk/Cargo.toml`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -30,4 +31,4 @@
 - Protocol/API/schema changes require explicit documentation updates and linked follow-up issues when out of scope.
 
 ## ADR Requirement
-- ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+- Required and satisfied: `docs/architecture/adr-kamn-sdk-service-https-transport.md`.

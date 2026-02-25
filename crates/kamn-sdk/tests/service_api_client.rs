@@ -2,16 +2,20 @@ use kamn_sdk::{
     service_signature_for_fields, AgentDid, SdkError, ServiceApiClient, ServiceRequestAuth,
 };
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{ErrorKind, Read, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::OnceLock;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 
 const CHAIN_ID: &str = "kolme-localnet";
 const CHAIN_VERSION: &str = "v0";
 const REQUEST_AUTH_SCOPE_HEADER: &str = "x-kamn-authz-scope";
 const SERVICE_AUTH_PRIVATE_KEY_ENV: &str = "KAMN_SERVICE_API_AUTH_PRIVATE_KEY_HEX";
+const SERVICE_TLS_CA_FILE_ENV: &str = "KAMN_SERVICE_API_TLS_CA_FILE";
 const TEST_SERVICE_AUTH_PRIVATE_KEY_HEX: &str =
     "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
@@ -30,6 +34,256 @@ fn reserve_loopback_addr() -> String {
     let addr = listener.local_addr().expect("local addr should resolve");
     drop(listener);
     addr.to_string()
+}
+
+fn tls_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: Option<&str>) -> Self {
+        let previous = env::var(key).ok();
+        match value {
+            Some(value) => env::set_var(key, value),
+            None => env::remove_var(key),
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        if let Some(previous) = self.previous.as_deref() {
+            env::set_var(self.key, previous);
+        } else {
+            env::remove_var(self.key);
+        }
+    }
+}
+
+struct HttpsSingleRequestServer {
+    base_url: String,
+    ca_cert_path: PathBuf,
+    child: Child,
+    temp_dir: PathBuf,
+}
+
+impl HttpsSingleRequestServer {
+    fn wait_for_exit(&mut self) {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            match self.child.try_wait() {
+                Ok(Some(_)) => return,
+                Ok(None) => {
+                    if Instant::now() >= deadline {
+                        let _ = self.child.kill();
+                        let _ = self.child.wait();
+                        panic!("https test server did not exit after handling request");
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to wait for https test server exit: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for HttpsSingleRequestServer {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        let _ = fs::remove_dir_all(&self.temp_dir);
+    }
+}
+
+fn unique_temp_dir(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let path = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+    fs::create_dir_all(&path).expect("temporary directory should be created");
+    path
+}
+
+fn generate_test_ca_signed_certificate_chain(temp_dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
+    let ca_cert_path = temp_dir.join("ca-cert.pem");
+    let ca_key_path = temp_dir.join("ca-key.pem");
+    let server_key_path = temp_dir.join("server-key.pem");
+    let server_csr_path = temp_dir.join("server.csr");
+    let server_cert_path = temp_dir.join("server-cert.pem");
+    let server_extensions_path = temp_dir.join("server-ext.cnf");
+
+    let ca_status = Command::new("openssl")
+        .arg("req")
+        .arg("-x509")
+        .arg("-newkey")
+        .arg("rsa:2048")
+        .arg("-keyout")
+        .arg(ca_key_path.as_os_str())
+        .arg("-out")
+        .arg(ca_cert_path.as_os_str())
+        .arg("-days")
+        .arg("1")
+        .arg("-nodes")
+        .arg("-subj")
+        .arg("/CN=kamn-test-ca")
+        .arg("-addext")
+        .arg("basicConstraints = critical,CA:TRUE")
+        .arg("-addext")
+        .arg("keyUsage = critical,keyCertSign,cRLSign")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run for CA certificate generation");
+    assert!(
+        ca_status.success(),
+        "openssl CA certificate generation should succeed"
+    );
+
+    let csr_status = Command::new("openssl")
+        .arg("req")
+        .arg("-new")
+        .arg("-newkey")
+        .arg("rsa:2048")
+        .arg("-keyout")
+        .arg(server_key_path.as_os_str())
+        .arg("-out")
+        .arg(server_csr_path.as_os_str())
+        .arg("-nodes")
+        .arg("-subj")
+        .arg("/CN=127.0.0.1")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run for server csr generation");
+    assert!(
+        csr_status.success(),
+        "openssl server csr generation should succeed"
+    );
+
+    fs::write(
+        server_extensions_path.as_path(),
+        "subjectAltName = DNS:localhost,IP:127.0.0.1\nbasicConstraints = critical,CA:FALSE\nkeyUsage = critical,digitalSignature,keyEncipherment\nextendedKeyUsage = serverAuth\n",
+    )
+    .expect("server extension file should be written");
+
+    let sign_status = Command::new("openssl")
+        .arg("x509")
+        .arg("-req")
+        .arg("-in")
+        .arg(server_csr_path.as_os_str())
+        .arg("-CA")
+        .arg(ca_cert_path.as_os_str())
+        .arg("-CAkey")
+        .arg(ca_key_path.as_os_str())
+        .arg("-CAcreateserial")
+        .arg("-out")
+        .arg(server_cert_path.as_os_str())
+        .arg("-days")
+        .arg("1")
+        .arg("-sha256")
+        .arg("-extfile")
+        .arg(server_extensions_path.as_os_str())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run for server certificate signing");
+    assert!(
+        sign_status.success(),
+        "openssl server certificate signing should succeed"
+    );
+
+    (ca_cert_path, server_cert_path, server_key_path)
+}
+
+fn spawn_https_single_request_server(
+    status_code: u16,
+    response_body: &str,
+) -> HttpsSingleRequestServer {
+    let temp_dir = unique_temp_dir("sdk-https-server");
+    let (ca_cert_path, server_cert_path, server_key_path) =
+        generate_test_ca_signed_certificate_chain(temp_dir.as_path());
+    let server_script = r#"
+import http.server
+import ssl
+import sys
+
+port = int(sys.argv[1])
+cert_file = sys.argv[2]
+key_file = sys.argv[3]
+status_code = int(sys.argv[4])
+response_body = sys.argv[5].encode("utf-8")
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def _reply(self):
+        if "Content-Length" in self.headers:
+            _ = self.rfile.read(int(self.headers["Content-Length"]))
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response_body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(response_body)
+
+    def do_POST(self):
+        self._reply()
+
+    def do_GET(self):
+        self._reply()
+
+    def log_message(self, _format, *args):
+        return
+
+httpd = http.server.HTTPServer(("127.0.0.1", port), Handler)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+print(httpd.server_address[1], flush=True)
+httpd.handle_request()
+"#;
+
+    let mut child = Command::new("python3")
+        .arg("-u")
+        .arg("-c")
+        .arg(server_script)
+        .arg("0")
+        .arg(server_cert_path.as_os_str())
+        .arg(server_key_path.as_os_str())
+        .arg(status_code.to_string())
+        .arg(response_body)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("python https test server should spawn");
+
+    let stdout = child
+        .stdout
+        .take()
+        .expect("python https test server stdout should be piped");
+    let mut stdout_reader = BufReader::new(stdout);
+    let mut port_line = String::new();
+    stdout_reader
+        .read_line(&mut port_line)
+        .expect("python https test server should emit bound port");
+    child.stdout = Some(stdout_reader.into_inner());
+
+    let port = port_line
+        .trim()
+        .parse::<u16>()
+        .expect("python https test server should emit a valid port");
+    HttpsSingleRequestServer {
+        base_url: format!("https://127.0.0.1:{port}"),
+        ca_cert_path,
+        child,
+        temp_dir,
+    }
 }
 
 fn parse_http_request(
@@ -563,6 +817,78 @@ fn unit_service_api_client_rejects_invalid_endpoint_scheme() {
             field: "service.endpoint",
             reason: "must start with http:// or https://",
         })
+    );
+}
+
+#[test]
+fn spec_c01_service_api_client_executes_https_health_route_with_trusted_ca() {
+    let _tls_env_lock = tls_env_lock()
+        .lock()
+        .expect("tls env lock should not be poisoned");
+    let mut server = spawn_https_single_request_server(
+        200,
+        r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
+    );
+    let ca_file = server.ca_cert_path.to_string_lossy().to_string();
+    let _ca_guard = EnvVarGuard::set(SERVICE_TLS_CA_FILE_ENV, Some(ca_file.as_str()));
+
+    let client =
+        ServiceApiClient::connect(server.base_url.as_str()).expect("https client should construct");
+    let health = client
+        .health()
+        .expect("trusted CA should allow https service route request");
+    assert_eq!(health.status, "ok");
+    assert_eq!(health.runtime_mode, "api");
+
+    server.wait_for_exit();
+}
+
+#[test]
+fn spec_c02_service_api_client_rejects_untrusted_https_certificate_chain() {
+    let _tls_env_lock = tls_env_lock()
+        .lock()
+        .expect("tls env lock should not be poisoned");
+    let server = spawn_https_single_request_server(
+        200,
+        r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
+    );
+    let _ca_guard = EnvVarGuard::set(SERVICE_TLS_CA_FILE_ENV, None);
+
+    let client =
+        ServiceApiClient::connect(server.base_url.as_str()).expect("https client should construct");
+    let error = client
+        .health()
+        .expect_err("untrusted cert chain must fail closed");
+    assert_eq!(
+        error,
+        SdkError::TransportFailure("service tls certificate verification failed")
+    );
+}
+
+#[test]
+fn spec_c02_service_api_client_rejects_missing_tls_ca_bundle_path() {
+    let _tls_env_lock = tls_env_lock()
+        .lock()
+        .expect("tls env lock should not be poisoned");
+    let server = spawn_https_single_request_server(
+        200,
+        r#"{"status":"ok","runtime_mode":"api","role":"processor","observability_source":"unknown","observability_health":"unknown"}"#,
+    );
+    let missing_ca_file = server
+        .temp_dir
+        .join("missing-ca.pem")
+        .to_string_lossy()
+        .to_string();
+    let _ca_guard = EnvVarGuard::set(SERVICE_TLS_CA_FILE_ENV, Some(missing_ca_file.as_str()));
+
+    let client =
+        ServiceApiClient::connect(server.base_url.as_str()).expect("https client should construct");
+    let error = client
+        .health()
+        .expect_err("missing TLS CA bundle path must fail closed");
+    assert_eq!(
+        error,
+        SdkError::TransportFailure("service tls ca file read failed")
     );
 }
 
