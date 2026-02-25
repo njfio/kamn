@@ -1,12 +1,12 @@
 # Spec: Issue #5932 - Task: Networking transport hardening (pooling, health validation, multi-thread runtime, websocket keepalive)
 
 - Issue: #5932
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: networking
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5918
 
 ## Problem Statement
@@ -40,6 +40,12 @@ Out of scope:
 - AC-3 verification tests pass in scoped CI runs.
 - AC-4 verification tests pass in scoped CI runs.
 
+## Implementation Evidence (2026-02-25)
+- AC-1: `serve_service_api_endpoint` and `serve_observability_endpoint` now build multi-thread Tokio runtimes with explicit worker-thread contracts.
+- AC-2: `run_full_supervisor_http_probe` now fails closed on non-2xx HTTP status and `KolmeRuntimeCommitHttpTransport` now reuses keep-alive HTTP connections via bounded pooling.
+- AC-3: Websocket persistent stream + ping/pong + idle cleanup behavior remained active and covered by existing websocket endpoint tests; no regression path introduced by this issue.
+- AC-4: Added/updated unit and regression tests for probe classification, runtime threading contracts, and HTTP keep-alive pooling behavior.
+
 
 ## Required Test Categories
 - Unit: transport config and health-check classifiers
@@ -50,4 +56,3 @@ Out of scope:
 
 ## Dependencies
 - #5918
-
