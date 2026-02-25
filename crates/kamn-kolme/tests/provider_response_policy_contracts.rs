@@ -59,3 +59,27 @@ fn unit_parse_provider_key_value_fields_rejects_empty_body() {
         }
     );
 }
+
+#[test]
+fn spec_c02_provider_response_fields_support_unicode_escape_sequences() {
+    let fields = parse_provider_response_fields(
+        "{\"provider\":\"kolme\",\"status\":\"ok\",\"symbol\":\"\\u03B1\\u03B2\"}",
+    )
+    .expect("unicode escape payload should parse");
+    assert_eq!(fields.get("symbol"), Some(&"αβ".to_owned()));
+}
+
+#[test]
+fn spec_c02_provider_response_fields_reject_malformed_unicode_escape_sequences() {
+    let error = parse_provider_response_fields(
+        "{\"provider\":\"kolme\",\"status\":\"ok\",\"symbol\":\"\\u03G1\"}",
+    )
+    .expect_err("malformed unicode escape payload must fail");
+    assert!(
+        matches!(
+            error,
+            KolmeProviderResponsePolicyError::MalformedResponse { .. }
+        ),
+        "malformed unicode escape must produce malformed response error"
+    );
+}

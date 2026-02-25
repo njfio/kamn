@@ -45,6 +45,9 @@ This milestone closes production-readiness blockers across cryptography correctn
 - #5941: `specs/5941/spec.md`, `specs/5941/plan.md`, `specs/5941/tasks.md`
 - #5947: `specs/5947/spec.md`, `specs/5947/plan.md`, `specs/5947/tasks.md`
 
+## Implementation Progress
+- #5934 delivered governance structural-coupling telemetry and policy validation in combined shell-surface trend gates, with full fast CI-tools regression passing on the updated schema.
+
 ## Exit Criteria
 1. Every R65 issue has SPECIFY/PLAN/TASKS artifacts committed and linked.
 2. Each child task is delivered via TDD evidence and mapped AC verification.
@@ -56,3 +59,4 @@ This milestone closes production-readiness blockers across cryptography correctn
 - 2026-02-25: `#5938` expands parser/protocol fuzz surfaces to signature-profile and Kolme API codec targets with deterministic corpus replay metadata and property invariants.
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
 - 2026-02-25: `#5939` adds bounded critical-path mutation/coverage gates in workspace pre-merge CI with deterministic report artifacts and fail-closed policies.
+- 2026-02-25: `#5935` deduplicates high-impact parser/helper classes through canonical shared modules in `kamn-kolme` and `kamn-mcp-server`, with unicode escape conformance tests and fail-closed duplicate inventory contracts.

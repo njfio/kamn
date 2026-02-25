@@ -1,5 +1,5 @@
+use crate::json_helpers::{escape_json, json_optional_string_field, json_required_string_field};
 use kamn_agent_lib::{AgentLibError, KamnAgentHandle, KolmeProofReceipt};
-use serde_json::Value;
 
 /// Backend abstraction used by MCP tool dispatch.
 pub trait McpToolBackend {
@@ -280,7 +280,7 @@ pub fn dispatch_tool_request_json<B: McpToolBackend>(
     backend: &B,
     request_json: &str,
 ) -> Result<String, String> {
-    let tool = json_string_field(request_json, "tool")?;
+    let tool = json_required_string_field(request_json, "tool")?;
     let request_id = json_optional_string_field(request_json, "id")
         .unwrap_or_else(|| "request-unknown".to_owned());
 
@@ -458,7 +458,7 @@ pub fn invalid_request_response_json(error_message: &str) -> String {
 }
 
 fn required_string_arg(payload: &str, key: &str) -> Result<String, String> {
-    json_string_field(payload, key)
+    json_required_string_field(payload, key)
 }
 
 fn required_u64_arg(payload: &str, key: &str) -> Result<u64, String> {
@@ -492,37 +492,4 @@ fn backend_error_response_json(request_id: &str, tool: &str, message: &str) -> S
         escape_json(tool),
         escape_json(message),
     )
-}
-
-fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
-    let root = serde_json::from_str::<Value>(payload).ok()?;
-    let value = json_field_value(&root, key)?;
-    value.as_str().map(str::to_owned)
-}
-
-fn json_string_field(payload: &str, key: &str) -> Result<String, String> {
-    json_optional_string_field(payload, key).ok_or_else(|| format!("missing required field: {key}"))
-}
-
-fn escape_json(input: &str) -> String {
-    match serde_json::to_string(input) {
-        Ok(serialized) => {
-            if serialized.starts_with('"') && serialized.ends_with('"') && serialized.len() >= 2 {
-                return serialized[1..serialized.len() - 1].to_owned();
-            }
-            serialized
-        }
-        Err(_) => String::new(),
-    }
-}
-
-fn json_field_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
-    root.get(key)
-        .or_else(|| root.get("params").and_then(|value| value.get(key)))
-        .or_else(|| {
-            root.get("params")
-                .and_then(|value| value.get("arguments"))
-                .and_then(|value| value.get(key))
-        })
-        .or_else(|| root.get("arguments").and_then(|value| value.get(key)))
 }

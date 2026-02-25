@@ -1,12 +1,12 @@
 # Spec: Issue #5935 - Task: Eliminate high-impact code duplication classes (JSON parser, helper utilities, digest/path helpers)
 
 - Issue: #5935
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: backend
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5919
 
 ## Problem Statement
@@ -40,6 +40,37 @@ Out of scope:
 - AC-3 verification tests pass in scoped CI runs.
 - AC-4 verification tests pass in scoped CI runs.
 
+## Implementation Summary
+- Added canonical JSON scalar and percent-encoding helper module:
+  - `crates/kamn-kolme/src/json_scalar_policy.rs`
+- Added canonical MCP JSON helper module:
+  - `crates/kamn-mcp-server/src/json_helpers.rs`
+- Removed duplicated helper definitions from:
+  - `crates/kamn-kolme/src/api_codec.rs`
+  - `crates/kamn-kolme/src/block_scan_policy.rs`
+  - `crates/kamn-kolme/src/endpoint_policy.rs`
+  - `crates/kamn-kolme/src/flat_json_policy.rs`
+  - `crates/kamn-kolme/src/notification_policy.rs`
+  - `crates/kamn-kolme/src/provider_response_policy.rs`
+  - `crates/kamn-mcp-server/src/protocol.rs`
+  - `crates/kamn-mcp-server/src/dispatch.rs`
+
+## Verification Evidence
+- RED (expected fail before implementation):
+  - `cargo test -p kamn-kolme spec_c02_provider_response_fields_support_unicode_escape_sequences -- --exact`
+    - failed with `invalid json value: unsupported escape sequence`
+  - `cargo test -p kamn-kolme spec_c03_kolme_json_string_helper_is_not_duplicated_across_modules -- --exact`
+    - failed with `api_codec must use canonical parse_json_string helper`
+  - `cargo test -p kamn-mcp-server spec_c03_mcp_json_escape_helper_is_not_duplicated_across_modules -- --exact`
+    - failed with `dispatch must use canonical escape_json helper`
+- GREEN/Regression:
+  - `cargo test -p kamn-kolme`
+  - `cargo test -p kamn-mcp-server`
+  - `cargo fmt --check`
+  - `cargo clippy -p kamn-kolme --tests -- -D warnings`
+  - `cargo clippy -p kamn-mcp-server --tests -- -D warnings`
+  - `cargo mutants --in-diff /tmp/issue5935.diff -p kamn-kolme -p kamn-mcp-server` (8/8 caught)
+
 
 ## Required Test Categories
 - Unit: shared helper/parser test suites
@@ -50,4 +81,3 @@ Out of scope:
 
 ## Dependencies
 - #5919
-

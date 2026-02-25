@@ -1,12 +1,12 @@
 # Spec: Issue #5934 - Task: Reduce shell/python surface below policy ceiling and improve governance ratio
 
 - Issue: #5934
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: governance
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5919
 
 ## Problem Statement
@@ -51,3 +51,32 @@ Out of scope:
 ## Dependencies
 - #5919
 
+## Implementation Summary (2026-02-25)
+- Added governance structural-coupling telemetry to `scripts/ci/generate_combined_shell_surface_trend_report.sh` by parsing review markers plus `docs/review/governance-structural-coupling.policy`.
+- Extended `scripts/ci/check_combined_shell_surface_trend_policy.sh` to validate governance metrics and emit deterministic WARN/NO-GO reason codes for over-target governance ratios.
+- Updated combined trend contract lanes and fixtures to remain fail-closed under the expanded report schema.
+
+## AC Verification
+- AC-1: ✅
+  - `bash scripts/ci/check_shell_loc_hard_ceiling.sh --ceiling-file .ci/shell-loc-hard-ceiling.env --output-json /tmp/ci-shell-loc-hard-ceiling.json`
+- AC-2: ✅
+  - `bash scripts/ci/check_shell_rust_ratio_guardrail.sh --threshold-file .ci/shell-rust-ratio-guardrail.env --output-json /tmp/ci-shell-rust-ratio-guardrail.json`
+  - `bash scripts/ci/test_generate_combined_shell_surface_trend_report.sh`
+  - `bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
+- AC-3: ✅
+  - `bash scripts/ci/test_generate_combined_shell_surface_trend_report.sh`
+  - `bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh`
+  - `bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh`
+- AC-4: ✅
+  - `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh`
+
+## TDD Evidence
+- RED:
+  - `bash scripts/ci/test_generate_combined_shell_surface_trend_report.sh` -> `expected governance_structural_coupling.status marker in combined trend report`
+  - `bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh` -> `expected ... governance_structural_coupling_status=within_target marker`
+- GREEN:
+  - `bash scripts/ci/test_generate_combined_shell_surface_trend_report.sh` -> pass
+  - `bash scripts/ci/test_check_combined_shell_surface_trend_policy.sh` -> pass
+  - `bash scripts/ci/test_collect_shell_rust_loc_telemetry.sh` -> pass
+  - `bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh` -> pass
+  - `KAMN_CI_TOOLS_FAST_MODE=true bash scripts/ci/test_ci_tools.sh` -> pass

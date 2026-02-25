@@ -37,6 +37,14 @@
 - Replace panic-style control flow with typed error propagation and deterministic error markers.
 - Replace unsafe fallback defaults with explicit fail-closed validation and actionable diagnostics.
 
+## Helper Duplication Regression Gates
+
+- canonical_helper_contract_version=kamn.security.helper-canonicalization.v1
+- duplicate_helper_reintroduction_policy=fail_closed
+- guard commands:
+  - `cargo test -p kamn-kolme --test duplicate_helper_inventory_contracts`
+  - `cargo test -p kamn-mcp-server --test duplicate_helper_inventory_contract`
+
 ## Data-Layer Runtime Evidence (Service API)
 
 - runtime_data_layer_evidence_schema_version=kamn.runtime.service-api-data-layer-runtime-evidence.v1

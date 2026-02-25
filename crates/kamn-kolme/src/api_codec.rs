@@ -1,5 +1,8 @@
 //! Typed codec contracts for Kolme nonce and broadcast APIs.
 
+use crate::json_scalar_policy::{
+    parse_json_string_token as parse_json_string, percent_encode_component as percent_encode,
+};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
@@ -554,53 +557,6 @@ fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
         break;
     }
     cursor
-}
-
-fn parse_json_string(token: &str) -> Result<String, &'static str> {
-    let trimmed = token.trim();
-    if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
-        return Err("token must be a quoted string");
-    }
-    let mut output = String::new();
-    let mut escape = false;
-    for ch in trimmed[1..trimmed.len() - 1].chars() {
-        if escape {
-            let mapped = match ch {
-                '\\' => '\\',
-                '"' => '"',
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                _ => return Err("unsupported escape sequence"),
-            };
-            output.push(mapped);
-            escape = false;
-            continue;
-        }
-        if ch == '\\' {
-            escape = true;
-            continue;
-        }
-        output.push(ch);
-    }
-    if escape {
-        return Err("unterminated escape sequence");
-    }
-    Ok(output)
-}
-
-fn percent_encode(value: &str) -> String {
-    let mut encoded = String::new();
-    for byte in value.bytes() {
-        let ch = byte as char;
-        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
-            encoded.push(ch);
-        } else {
-            encoded.push('%');
-            encoded.push_str(format!("{byte:02X}").as_str());
-        }
-    }
-    encoded
 }
 
 /// Escapes one UTF-8 string for deterministic JSON string rendering.
