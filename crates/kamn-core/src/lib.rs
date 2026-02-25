@@ -38,6 +38,8 @@ pub mod cross_chain_bridge;
 pub mod cross_chain_receipt;
 /// Cross-store replay consistency checker and deterministic divergence taxonomy contracts.
 pub mod cross_store_replay_consistency;
+#[cfg(test)]
+pub(crate) mod crypto_test_env_lock;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
 /// Shared SHA-256 helpers used by data-layer M0-M11 hash-chain contracts.
