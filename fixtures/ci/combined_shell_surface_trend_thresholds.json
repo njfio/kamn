@@ -8,6 +8,8 @@
   "fail_shell_to_rust_ratio": 0.34,
   "warn_shell_to_rust_ratio_increase": 0.005,
   "fail_shell_to_rust_ratio_increase": 0.02,
+  "warn_governance_runtime_test_ratio": 0.45,
+  "fail_governance_runtime_test_ratio": 0.5,
   "threshold_refreshed_on": "2026-01-01",
   "threshold_max_age_days": 36500,
   "warn_non_declining_window_days": 3650,

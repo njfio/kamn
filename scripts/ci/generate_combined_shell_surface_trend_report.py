@@ -9,6 +9,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+GOVERNANCE_RUNTIME_TEST_RATIO_CLASSIFICATION_VERSION = (
+    "kamn.ci.governance-runtime-test-ratio-classification.v1"
+)
+
 
 def build_parser(root_dir: Path) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -167,6 +171,67 @@ def count_rust_lines(rust_root: Path) -> int:
     return rust_line_total
 
 
+def is_governance_doc_contract_test(path: Path, content: str) -> bool:
+    name = path.name
+    if name.startswith("review_r"):
+        return True
+    if name.endswith("_docs.rs") or "docs_contract" in name or "missing_docs_policy" in name:
+        return True
+
+    governance_markers = [
+        'include_str!("../../../docs/',
+        'include_str!("../../docs/',
+        'include_str!("../../../README',
+        'read_to_string("docs/',
+        'read_to_string("tests/docs_contract',
+        "docs/review/",
+    ]
+    return any(marker in content for marker in governance_markers)
+
+
+def collect_governance_runtime_test_ratio(root_dir: Path) -> dict:
+    governance_test_file_count = 0
+    runtime_test_file_count = 0
+    governance_test_line_total = 0
+    runtime_test_line_total = 0
+
+    for path in root_dir.glob("crates/*/tests/**/*.rs"):
+        rel_parts = set(path.parts)
+        if ".git" in rel_parts or "target" in rel_parts:
+            continue
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        line_total = content.count("\n")
+        if content and not content.endswith("\n"):
+            line_total += 1
+        if is_governance_doc_contract_test(path, content):
+            governance_test_file_count += 1
+            governance_test_line_total += line_total
+        else:
+            runtime_test_file_count += 1
+            runtime_test_line_total += line_total
+
+    total_test_file_count = governance_test_file_count + runtime_test_file_count
+    total_test_line_total = governance_test_line_total + runtime_test_line_total
+    governance_test_ratio = (
+        round(governance_test_line_total / total_test_line_total, 4)
+        if total_test_line_total > 0
+        else 0.0
+    )
+    status = "computed" if total_test_file_count > 0 else "empty"
+
+    return {
+        "status": status,
+        "classification_version": GOVERNANCE_RUNTIME_TEST_RATIO_CLASSIFICATION_VERSION,
+        "test_file_count": total_test_file_count,
+        "governance_test_file_count": governance_test_file_count,
+        "runtime_test_file_count": runtime_test_file_count,
+        "governance_test_line_total": governance_test_line_total,
+        "runtime_test_line_total": runtime_test_line_total,
+        "total_test_line_total": total_test_line_total,
+        "governance_test_ratio": governance_test_ratio,
+    }
+
+
 def main() -> int:
     root_dir = Path(__file__).resolve().parents[2]
     parser = build_parser(root_dir)
@@ -282,6 +347,7 @@ def main() -> int:
                 governance_status = "reduction_contract_active"
             else:
                 governance_status = "over_target_unmitigated"
+        governance_runtime_test_ratio = collect_governance_runtime_test_ratio(root_dir)
 
         report = {
             "schema_version": "kamn.ci.combined-shell-surface-trend-report.v1",
@@ -348,6 +414,7 @@ def main() -> int:
                     "none",
                 ),
             },
+            "governance_runtime_test_ratio": governance_runtime_test_ratio,
         }
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -388,6 +455,18 @@ def main() -> int:
         print(
             "governance_mitigation_issue_marker="
             f"{report['governance_structural_coupling']['mitigation_issue_marker']}"
+        )
+        print(
+            "governance_runtime_test_ratio="
+            f"{report['governance_runtime_test_ratio']['governance_test_ratio']}"
+        )
+        print(
+            "governance_test_line_total="
+            f"{report['governance_runtime_test_ratio']['governance_test_line_total']}"
+        )
+        print(
+            "runtime_test_line_total="
+            f"{report['governance_runtime_test_ratio']['runtime_test_line_total']}"
         )
 
     return 0
