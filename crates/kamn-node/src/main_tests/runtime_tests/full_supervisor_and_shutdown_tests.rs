@@ -513,9 +513,17 @@ fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
     let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
     let report = report_result.expect("full runtime with timeout shutdown controls should succeed");
     assert_eq!(report.runtime_mode, "full");
+    let expected_execution_id = format!(
+        "node-runtime:{}:{}:{}",
+        report.runtime_mode, report.chain_id, report.role
+    );
     let stop_complete_line = captured_logs
         .iter()
-        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .find(|line| {
+            line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\"")
+                && extract_json_string_field(line, "execution_id").as_deref()
+                    == Some(expected_execution_id.as_str())
+        })
         .expect("full runtime should emit supervisor stop-complete marker");
     assert_eq!(
         extract_json_string_field(stop_complete_line, "shutdown_drain_status").as_deref(),
