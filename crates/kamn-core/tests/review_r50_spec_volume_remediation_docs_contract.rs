@@ -1,19 +1,16 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
 use std::process::Command;
+
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
+
+use review_doc_helpers::{parse_marker_f64, parse_marker_text, parse_marker_usize, repo_root};
 
 const DOC_R50: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const DOC_R52: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
 const DOC_R56: &str = include_str!("../../../docs/review/gaps-and-issues-r56.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
-
-fn repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .to_path_buf()
-}
 
 fn current_spec_directory_count() -> usize {
     let output = Command::new("git")
@@ -44,54 +41,6 @@ fn current_spec_directory_count() -> usize {
         })
         .collect::<BTreeSet<_>>()
         .len()
-}
-
-fn parse_marker_usize(doc: &str, marker_key: &str) -> usize {
-    let needle = format!("{marker_key}=");
-    let line = doc
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
-}
-
-fn parse_marker_f64(doc: &str, marker_key: &str) -> f64 {
-    let needle = format!("{marker_key}=");
-    let line = doc
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<f64>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be a number: {value}"))
-}
-
-fn parse_marker_text(doc: &str, marker_key: &str) -> String {
-    let needle = format!("{marker_key}=");
-    let line = doc
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    line.split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim()
-        .to_string()
 }
 
 #[test]

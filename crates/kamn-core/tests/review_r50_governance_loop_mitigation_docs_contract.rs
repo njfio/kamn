@@ -1,39 +1,10 @@
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
+
+use review_doc_helpers::{parse_marker_f64, parse_marker_usize};
+
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
-
-fn parse_marker_usize(marker_key: &str) -> usize {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
-}
-
-fn parse_marker_f64(marker_key: &str) -> f64 {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<f64>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be a number: {value}"))
-}
 
 #[test]
 fn functional_r50_governance_loop_mitigation_markers_present() {
@@ -79,27 +50,33 @@ fn functional_r50_governance_loop_mitigation_markers_present() {
 #[test]
 fn integration_r50_governance_loop_mitigation_marker_consistency() {
     let branch_reconciliation_chain_count =
-        parse_marker_usize("r50_review_branch_reconciliation_issue_chain_count");
+        parse_marker_usize(DOC, "r50_review_branch_reconciliation_issue_chain_count");
     let branch_reconciliation_chain_max =
-        parse_marker_usize("r50_review_branch_reconciliation_issue_chain_max");
-    let branch_count_snapshot = parse_marker_usize("r50_review_branch_remote_head_count_snapshot");
+        parse_marker_usize(DOC, "r50_review_branch_reconciliation_issue_chain_max");
+    let branch_count_snapshot =
+        parse_marker_usize(DOC, "r50_review_branch_remote_head_count_snapshot");
 
-    let baseline_issue_count = parse_marker_usize("r50_review_reconciliation_baseline_issue_count");
-    let issue_cap = parse_marker_usize("r50_review_reconciliation_followup_issue_cap");
+    let baseline_issue_count =
+        parse_marker_usize(DOC, "r50_review_reconciliation_baseline_issue_count");
+    let issue_cap = parse_marker_usize(DOC, "r50_review_reconciliation_followup_issue_cap");
     let expected_issue_reduction =
-        parse_marker_usize("r50_review_reconciliation_expected_issue_reduction");
+        parse_marker_usize(DOC, "r50_review_reconciliation_expected_issue_reduction");
 
-    let baseline_spec_artifact_count =
-        parse_marker_usize("r50_review_reconciliation_baseline_spec_artifact_count");
-    let spec_artifact_cap = parse_marker_usize("r50_review_reconciliation_spec_artifact_cap");
-    let expected_spec_artifact_reduction =
-        parse_marker_usize("r50_review_reconciliation_expected_spec_artifact_reduction");
+    let baseline_spec_artifact_count = parse_marker_usize(
+        DOC,
+        "r50_review_reconciliation_baseline_spec_artifact_count",
+    );
+    let spec_artifact_cap = parse_marker_usize(DOC, "r50_review_reconciliation_spec_artifact_cap");
+    let expected_spec_artifact_reduction = parse_marker_usize(
+        DOC,
+        "r50_review_reconciliation_expected_spec_artifact_reduction",
+    );
 
-    let baseline_spec_dirs = parse_marker_usize("r50_review_spec_volume_baseline_spec_dirs");
-    let module_count = parse_marker_usize("r50_review_spec_volume_baseline_module_count");
-    let target_ratio_max = parse_marker_f64("r50_review_spec_volume_target_ratio_max");
-    let target_spec_dir_max = parse_marker_usize("r50_review_spec_volume_target_spec_dir_max");
-    let required_reduction = parse_marker_usize("r50_review_spec_volume_required_reduction");
+    let baseline_spec_dirs = parse_marker_usize(DOC, "r50_review_spec_volume_baseline_spec_dirs");
+    let module_count = parse_marker_usize(DOC, "r50_review_spec_volume_baseline_module_count");
+    let target_ratio_max = parse_marker_f64(DOC, "r50_review_spec_volume_target_ratio_max");
+    let target_spec_dir_max = parse_marker_usize(DOC, "r50_review_spec_volume_target_spec_dir_max");
+    let required_reduction = parse_marker_usize(DOC, "r50_review_spec_volume_required_reduction");
 
     assert_eq!(
         baseline_issue_count.saturating_sub(issue_cap),

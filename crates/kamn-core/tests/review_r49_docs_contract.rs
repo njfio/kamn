@@ -1,21 +1,9 @@
-const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r49.md");
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
 
-fn parse_marker_usize(marker_key: &str) -> usize {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
-}
+use review_doc_helpers::parse_marker_usize;
+
+const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r49.md");
 
 #[test]
 fn functional_r49_review_markers_present() {
@@ -45,17 +33,20 @@ fn functional_r49_review_markers_present() {
 
 #[test]
 fn integration_r49_review_marker_consistency() {
-    let baseline_open_issue_count = parse_marker_usize("r49_review_baseline_open_issue_count");
+    let baseline_open_issue_count = parse_marker_usize(DOC, "r49_review_baseline_open_issue_count");
     let baseline_open_milestone_count =
-        parse_marker_usize("r49_review_baseline_open_milestone_count");
-    let baseline_ignored_count = parse_marker_usize("r49_review_ignored_test_inventory_count");
-    let post_open_issue_count = parse_marker_usize("r49_review_post_publication_open_issue_count");
+        parse_marker_usize(DOC, "r49_review_baseline_open_milestone_count");
+    let baseline_ignored_count = parse_marker_usize(DOC, "r49_review_ignored_test_inventory_count");
+    let post_open_issue_count =
+        parse_marker_usize(DOC, "r49_review_post_publication_open_issue_count");
     let post_open_milestone_count =
-        parse_marker_usize("r49_review_post_publication_open_milestone_count");
-    let post_ignored_count =
-        parse_marker_usize("r49_review_post_publication_ignored_test_inventory_count");
-    let post_feature_issue = parse_marker_usize("r49_review_post_publication_feature_issue");
-    let post_feature_pr = parse_marker_usize("r49_review_post_publication_feature_pr");
+        parse_marker_usize(DOC, "r49_review_post_publication_open_milestone_count");
+    let post_ignored_count = parse_marker_usize(
+        DOC,
+        "r49_review_post_publication_ignored_test_inventory_count",
+    );
+    let post_feature_issue = parse_marker_usize(DOC, "r49_review_post_publication_feature_issue");
+    let post_feature_pr = parse_marker_usize(DOC, "r49_review_post_publication_feature_pr");
 
     assert_eq!(baseline_open_issue_count, 1);
     assert_eq!(baseline_open_milestone_count, 1);
