@@ -2,8 +2,8 @@
 
 - Issue: #5933
 - Spec: `specs/5933/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5933/spec.md.
@@ -12,10 +12,26 @@
 4. VERIFY: Run cargo fmt --check, strict clippy, and issue-scoped tests; collect AC evidence for PR.
 
 ## Affected Modules (Initial)
-- `crates/kamn-core/src/lib.rs`
-- `crates/kamn-core/Cargo.toml`
-- `crates/` (new extracted phase-1 crates)
 - `Cargo.toml`
+- `crates/kamn-runtime-guards/Cargo.toml`
+- `crates/kamn-runtime-guards/src/lib.rs`
+- `crates/kamn-runtime-guards/src/anti_spam.rs`
+- `crates/kamn-runtime-guards/src/fairness_policy.rs`
+- `crates/kamn-runtime-guards/src/quota_policy.rs`
+- `crates/kamn-runtime-guards/src/message_delivery_guards.rs`
+- `crates/kamn-runtime-guards/src/retention_engine.rs`
+- `crates/kamn-runtime-guards/src/watchdog.rs`
+- `crates/kamn-core/Cargo.toml`
+- `crates/kamn-core/src/anti_spam.rs`
+- `crates/kamn-core/src/fairness_policy.rs`
+- `crates/kamn-core/src/quota_policy.rs`
+- `crates/kamn-core/src/message_delivery_guards.rs`
+- `crates/kamn-core/src/retention_engine.rs`
+- `crates/kamn-core/src/watchdog.rs`
+- `crates/kamn-core/tests/issue_5933_runtime_guards_extraction.rs`
+- `docs/architecture/kamn-core-module-map.md`
+- `docs/architecture/README.md`
+- `docs/architecture/adr-002-runtime-guards-phase1-extraction.md`
 
 ## Risks + Mitigations
 - Risk: Scope expansion across multiple crates can increase merge and verification time.
@@ -32,3 +48,16 @@
 
 ## ADR Requirement
 - ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+
+## Execution Evidence
+1. RED:
+   - `cargo test -p kamn-core --test issue_5933_runtime_guards_extraction`
+   - failed with unresolved crate `kamn_runtime_guards`.
+2. GREEN:
+   - created `kamn-runtime-guards` crate and compatibility shims in `kamn-core`.
+   - `cargo test -p kamn-core --test issue_5933_runtime_guards_extraction` passed.
+3. REGRESSION / VERIFY:
+   - `cargo test -p kamn-runtime-guards` passed.
+   - `cargo fmt --check` passed.
+   - `cargo clippy -p kamn-runtime-guards --all-targets -- -D warnings` passed.
+   - `cargo clippy -p kamn-core --tests -- -D warnings` passed.
