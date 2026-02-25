@@ -365,3 +365,23 @@ fn regression_issue_5921_group_sender_key_ref_changes_ciphertext() {
         assert_ne!(sealed_key_1.auth_tag, sealed_key_2.auth_tag);
     });
 }
+
+#[test]
+fn regression_issue_5921_group_auth_tag_is_fixed_poly1305_size() {
+    with_key_agreement_master_seed(Some(TEST_KEY_SEED_HEX), || {
+        let mut engine = GroupChannelCryptoEngine::new("channel:group:auth-tag")
+            .expect("engine should initialize");
+        engine
+            .distribute_sender_key(
+                "kamn:did:agent:alice",
+                "kamn:did:agent:alice#sender-key-1",
+                vec!["kamn:did:agent:bob".to_owned()],
+            )
+            .expect("distribution should succeed");
+
+        let sealed = engine
+            .encrypt("kamn:did:agent:alice", "payload", 101)
+            .expect("encrypt should succeed");
+        assert_eq!(sealed.auth_tag.len(), 32);
+    });
+}

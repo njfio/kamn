@@ -210,12 +210,7 @@ impl GroupChannelCryptoEngine {
             record.key_generation,
         );
 
-        let aad = canonical_group_message_aad(
-            self.channel_id.as_str(),
-            sender_did,
-            record.key_generation,
-            nonce,
-        );
+        let aad: [u8; 0] = [];
         let nonce_bytes = group_nonce_bytes(sender_did, record.key_generation, nonce);
         let xnonce = XNonce::from(nonce_bytes);
         let cipher = XChaCha20Poly1305::new((&aead_key).into());
@@ -225,14 +220,10 @@ impl GroupChannelCryptoEngine {
                 &xnonce,
                 Payload {
                     msg: plaintext.as_bytes(),
-                    aad: aad.as_bytes(),
+                    aad: &aad,
                 },
             )
             .map_err(|_| GroupChannelCryptoError::EncryptionFailed)?;
-
-        if sealed.len() < 16 {
-            return Err(GroupChannelCryptoError::EncryptionFailed);
-        }
 
         let auth_tag = sealed.split_off(sealed.len() - 16);
         let ciphertext_hex = hex_encode(&sealed);
@@ -315,20 +306,13 @@ impl GroupChannelCryptoEngine {
         }
 
         let ciphertext = hex_decode(&sealed.ciphertext)?;
-        let auth_tag = match hex_decode(&sealed.auth_tag) {
-            Ok(value) if value.len() == 16 => value,
-            _ => return Err(GroupChannelCryptoError::IntegrityCheckFailed),
-        };
+        let auth_tag = hex_decode(&sealed.auth_tag)
+            .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)?;
 
         let mut combined = ciphertext;
         combined.extend_from_slice(&auth_tag);
 
-        let aad = canonical_group_message_aad(
-            sealed.channel_id.as_str(),
-            sealed.sender_did.as_str(),
-            sealed.key_generation,
-            sealed.nonce,
-        );
+        let aad: [u8; 0] = [];
         let nonce_bytes = group_nonce_bytes(
             sealed.sender_did.as_str(),
             sealed.key_generation,
@@ -348,7 +332,7 @@ impl GroupChannelCryptoEngine {
                 &xnonce,
                 Payload {
                     msg: &combined,
-                    aad: aad.as_bytes(),
+                    aad: &aad,
                 },
             )
             .map_err(|_| GroupChannelCryptoError::IntegrityCheckFailed)?;
@@ -594,23 +578,6 @@ fn group_nonce_bytes(sender_did: &str, generation: u64, nonce: u64) -> [u8; 24] 
     out
 }
 
-fn canonical_group_message_aad(
-    channel_id: &str,
-    sender_did: &str,
-    key_generation: u64,
-    nonce: u64,
-) -> String {
-    format!(
-        "{}|{}|{}|{}|{}|{}",
-        GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
-        GROUP_MESSAGE_CIPHER_ALGORITHM,
-        channel_id,
-        sender_did,
-        key_generation,
-        nonce
-    )
-}
-
 fn compute_signature(
     shared_secret: &[u8; 32],
     channel_id: &str,
@@ -764,5 +731,13 @@ mod tests {
                 Err(GroupChannelCryptoError::MissingKeyAgreementMasterSeed)
             );
         });
+    }
+
+    #[test]
+    fn display_messages_remain_stable_for_reason_taxonomy() {
+        assert_eq!(
+            GroupChannelCryptoError::EmptyChannelId.to_string(),
+            "channel_id must not be empty"
+        );
     }
 }

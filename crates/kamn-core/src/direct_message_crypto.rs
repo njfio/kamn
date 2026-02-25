@@ -93,9 +93,6 @@ impl DirectMessageCryptoEngine {
         let mut sealed = cipher
             .encrypt(&xnonce, payload)
             .map_err(|_| DirectMessageCryptoError::EncryptionFailed)?;
-        if sealed.len() < 16 {
-            return Err(DirectMessageCryptoError::EncryptionFailed);
-        }
         let auth_tag = sealed.split_off(sealed.len() - 16);
 
         Ok(DirectMessageCiphertext {
@@ -124,10 +121,8 @@ impl DirectMessageCryptoEngine {
         }
 
         let ciphertext = hex_decode(&sealed.ciphertext)?;
-        let auth_tag = match hex_decode(&sealed.auth_tag) {
-            Ok(value) if value.len() == 16 => value,
-            _ => return Err(DirectMessageCryptoError::IntegrityCheckFailed),
-        };
+        let auth_tag = hex_decode(&sealed.auth_tag)
+            .map_err(|_| DirectMessageCryptoError::IntegrityCheckFailed)?;
 
         let mut combined = ciphertext;
         combined.extend_from_slice(&auth_tag);
@@ -418,5 +413,13 @@ mod tests {
                 Err(DirectMessageCryptoError::MissingKeyAgreementMasterSeed)
             );
         });
+    }
+
+    #[test]
+    fn display_messages_remain_stable_for_reason_taxonomy() {
+        assert_eq!(
+            DirectMessageCryptoError::InvalidKeyRef("sender").to_string(),
+            "sender key reference must include #key-agreement"
+        );
     }
 }
