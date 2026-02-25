@@ -3,7 +3,7 @@
 - Milestone: `r65-security-runtime-remediation-and-production-readiness`
 - Epic: #5915
 - Stories: #5916, #5917, #5918, #5919, #5920
-- Tasks: #5921, #5922, #5923, #5924, #5925, #5926, #5927, #5928, #5929, #5930, #5931, #5932, #5933, #5934, #5935, #5936, #5937, #5938, #5939, #5940, #5941
+- Tasks: #5921, #5922, #5923, #5924, #5925, #5926, #5927, #5928, #5929, #5930, #5931, #5932, #5933, #5934, #5935, #5936, #5937, #5938, #5939, #5940, #5941, #5947
 
 ## Problem Frame
 This milestone closes production-readiness blockers across cryptography correctness, end-to-end delivery reality, transport hardening, bounded replay protection, assurance gates, and architecture/governance sustainability.
@@ -12,7 +12,7 @@ This milestone closes production-readiness blockers across cryptography correctn
 1. Security primitives and auth correctness: #5921, #5922, #5923, #5924, #5925
 2. Real runtime delivery and bounded state: #5926, #5927, #5928
 3. SDK/service transport hardening: #5929, #5930, #5931, #5932
-4. Architecture and sustainability remediation: #5933, #5934, #5935, #5936
+4. Architecture and sustainability remediation: #5933, #5934, #5935, #5936, #5947
 5. Assurance and CI gate expansion: #5937, #5938, #5939, #5940, #5941
 
 ## Artifact Index
@@ -43,6 +43,7 @@ This milestone closes production-readiness blockers across cryptography correctn
 - #5939: `specs/5939/spec.md`, `specs/5939/plan.md`, `specs/5939/tasks.md`
 - #5940: `specs/5940/spec.md`, `specs/5940/plan.md`, `specs/5940/tasks.md`
 - #5941: `specs/5941/spec.md`, `specs/5941/plan.md`, `specs/5941/tasks.md`
+- #5947: `specs/5947/spec.md`, `specs/5947/plan.md`, `specs/5947/tasks.md`
 
 ## Exit Criteria
 1. Every R65 issue has SPECIFY/PLAN/TASKS artifacts committed and linked.
