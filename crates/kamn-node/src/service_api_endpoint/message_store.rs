@@ -80,6 +80,14 @@ struct ServiceApiPersistedEscrowRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct ServiceApiPersistedContentRecord {
+    content_id: String,
+    retention_class: String,
+    lifecycle_state: String,
+    redaction_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct ServiceApiPersistedMessageStoreSnapshot {
     schema_version: String,
     messages: BTreeMap<String, ServiceApiPersistedMessageRecord>,
@@ -88,6 +96,8 @@ struct ServiceApiPersistedMessageStoreSnapshot {
     tasks: BTreeMap<String, ServiceApiPersistedTaskRecord>,
     #[serde(default)]
     escrows: BTreeMap<String, ServiceApiPersistedEscrowRecord>,
+    #[serde(default)]
+    contents: BTreeMap<String, ServiceApiPersistedContentRecord>,
 }
 
 impl Default for ServiceApiPersistedMessageStoreSnapshot {
@@ -98,6 +108,7 @@ impl Default for ServiceApiPersistedMessageStoreSnapshot {
             channel_messages: BTreeMap::new(),
             tasks: BTreeMap::new(),
             escrows: BTreeMap::new(),
+            contents: BTreeMap::new(),
         }
     }
 }
@@ -475,6 +486,96 @@ impl ServiceApiMessageStore {
             escrow_id: escrow_id.to_owned(),
             state: "released".to_owned(),
         }))
+    }
+
+    pub(super) fn register_content(
+        &mut self,
+        payload: &str,
+    ) -> Result<ServiceApiContentRegisterBody, String> {
+        self.refresh_from_disk()?;
+        let base = format!(
+            "content-local-{:016x}",
+            deterministic_body_tag(payload.as_bytes())
+        );
+        let mut content_id = base.clone();
+        let mut suffix = 1_u64;
+        while self.snapshot.contents.contains_key(content_id.as_str()) {
+            content_id = format!("{base}-{suffix}");
+            suffix = suffix.saturating_add(1);
+        }
+        self.snapshot.contents.insert(
+            content_id.clone(),
+            ServiceApiPersistedContentRecord {
+                content_id: content_id.clone(),
+                retention_class: "standard".to_owned(),
+                lifecycle_state: "retained".to_owned(),
+                redaction_status: "none".to_owned(),
+            },
+        );
+        self.persist()?;
+        Ok(ServiceApiContentRegisterBody {
+            content_id,
+            retention_class: "standard".to_owned(),
+            lifecycle_state: "retained".to_owned(),
+            redaction_status: "none".to_owned(),
+        })
+    }
+
+    pub(super) fn get_content(
+        &mut self,
+        content_id: &str,
+    ) -> Result<Option<ServiceApiContentLifecycleBody>, String> {
+        self.refresh_from_disk()?;
+        let Some(record) = self.snapshot.contents.get(content_id) else {
+            return Ok(None);
+        };
+        Ok(Some(ServiceApiContentLifecycleBody {
+            content_id: record.content_id.clone(),
+            lifecycle_state: record.lifecycle_state.clone(),
+            redaction_status: record.redaction_status.clone(),
+        }))
+    }
+
+    pub(super) fn expire_content(
+        &mut self,
+        content_id: &str,
+    ) -> Result<Option<ServiceApiContentLifecycleBody>, String> {
+        self.refresh_from_disk()?;
+        let payload = {
+            let Some(record) = self.snapshot.contents.get_mut(content_id) else {
+                return Ok(None);
+            };
+            record.lifecycle_state = "expired".to_owned();
+            record.redaction_status = "none".to_owned();
+            ServiceApiContentLifecycleBody {
+                content_id: record.content_id.clone(),
+                lifecycle_state: record.lifecycle_state.clone(),
+                redaction_status: record.redaction_status.clone(),
+            }
+        };
+        self.persist()?;
+        Ok(Some(payload))
+    }
+
+    pub(super) fn tombstone_content(
+        &mut self,
+        content_id: &str,
+    ) -> Result<Option<ServiceApiContentLifecycleBody>, String> {
+        self.refresh_from_disk()?;
+        let payload = {
+            let Some(record) = self.snapshot.contents.get_mut(content_id) else {
+                return Ok(None);
+            };
+            record.lifecycle_state = "tombstoned".to_owned();
+            record.redaction_status = "redacted".to_owned();
+            ServiceApiContentLifecycleBody {
+                content_id: record.content_id.clone(),
+                lifecycle_state: record.lifecycle_state.clone(),
+                redaction_status: record.redaction_status.clone(),
+            }
+        };
+        self.persist()?;
+        Ok(Some(payload))
     }
 }
 
