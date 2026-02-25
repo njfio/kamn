@@ -52,5 +52,7 @@ This milestone closes production-readiness blockers across cryptography correctn
 4. Security and runtime gates are enforced in CI for sustained non-regression.
 
 ## Progress Notes
+- 2026-02-25: `#5936` wires Service API message-send runtime through M0-M11 module contracts and persists deterministic `data_layer_runtime_evidence` markers for each created message.
+- 2026-02-25: `#5938` expands parser/protocol fuzz surfaces to signature-profile and Kolme API codec targets with deterministic corpus replay metadata and property invariants.
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
 - 2026-02-25: `#5939` adds bounded critical-path mutation/coverage gates in workspace pre-merge CI with deterministic report artifacts and fail-closed policies.

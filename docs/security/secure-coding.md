@@ -37,6 +37,14 @@
 - Replace panic-style control flow with typed error propagation and deterministic error markers.
 - Replace unsafe fallback defaults with explicit fail-closed validation and actionable diagnostics.
 
+## Data-Layer Runtime Evidence (Service API)
+
+- runtime_data_layer_evidence_schema_version=kamn.runtime.service-api-data-layer-runtime-evidence.v1
+- runtime_data_layer_evidence_path=messages.<message_id>.data_layer_runtime_evidence
+- runtime_data_layer_evidence_modules_csv=m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11
+- runtime_data_layer_evidence_fail_closed=true
+- runtime_data_layer_evidence_contract_doc=`docs/architecture/data-layer-runtime-wiring.md`
+
 ## Dependency Vulnerability Gate
 
 - CI security-gate command:
@@ -63,3 +71,17 @@
   - `ci-critical-path-node-coverage.json`
   - `ci-critical-path-coverage-policy.json`
   - `ci-critical-path-mutation-report.json`
+
+## Parser And Protocol Fuzz/Property Assurance
+
+- Parser/protocol fuzz targets:
+  - `message_envelope_parser`
+  - `did_parser`
+  - `signature_profile_parser`
+  - `kolme_api_codec_parser`
+- Deterministic corpus metadata:
+  - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
+- Property invariant suites:
+  - `cargo test -p kamn-core --test parser_protocol_proptest_invariants`
+  - `cargo test -p kamn-core --test peer_lifecycle_proptest_invariants`
+  - `cargo test -p kamn-core --test task_escrow_proptest_invariants`

@@ -3774,6 +3774,113 @@ fn integration_service_api_endpoint_persists_message_state_across_restart() {
 }
 
 #[test]
+fn integration_service_api_endpoint_send_path_persists_data_layer_runtime_evidence_for_m0_to_m11() {
+    let _env = acquire_service_api_test_env();
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-data-layer-evidence-state-{}-{}.json",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    ));
+    let state_file_str = state_file.to_string_lossy().to_string();
+    let _state_file_guard =
+        EnvVarGuard::set("KAMN_SERVICE_API_STATE_FILE", Some(state_file_str.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34082".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let send_payload_body =
+        r#"{"recipient_did":"kamn:did:agent:e2e-recipient","message":"e2e-runtime-evidence"}"#;
+    let send_signature = service_api_request_signature_for_fields(
+        "kamn:did:agent:e2e-sender",
+        81,
+        state_hash.as_str(),
+        send_payload_body,
+    );
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        send_payload_body,
+        &[
+            ("X-KAMN-Sender-DID", "kamn:did:agent:e2e-sender"),
+            ("X-KAMN-Request-Nonce", "81"),
+            ("X-KAMN-Request-Signature", send_signature.as_str()),
+        ],
+    );
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after message send"
+    );
+
+    let state_payload =
+        fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value =
+        serde_json::from_str(state_payload.as_str()).expect("state file should parse");
+    let evidence =
+        &state_json["messages"][send_payload.message_id.as_str()]["data_layer_runtime_evidence"];
+    assert_eq!(
+        evidence["schema_version"],
+        "kamn.runtime.service-api-data-layer-runtime-evidence.v1"
+    );
+    assert!(evidence["m0_content_hash"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("sha256:")));
+    assert!(evidence["m1_merkle_root"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("sha256:")));
+    assert!(evidence["m2_authorization_reason_code"].as_str().is_some());
+    assert!(evidence["m3_blind_index_token"].as_str().is_some());
+    assert!(evidence["m4_transition_reason_code"].as_str().is_some());
+    assert!(evidence["m5_record_hash"].as_str().is_some());
+    assert!(evidence["m6_projection_edge_count"].as_u64().is_some());
+    assert!(evidence["m7_observability_health"].as_str().is_some());
+    assert!(evidence["m8_retention_due_count"].as_u64().is_some());
+    assert!(evidence["m9_dispatch_reason_code"].as_str().is_some());
+    assert!(evidence["m10_archived_partition_count"].as_u64().is_some());
+    assert!(evidence["m11_decision"].as_str().is_some());
+
+    let _ = fs::remove_file(state_file);
+}
+
+#[test]
 fn integration_service_api_endpoint_lists_channel_messages_from_message_store() {
     let _env = acquire_service_api_test_env();
     let state_file = std::env::temp_dir().join(format!(

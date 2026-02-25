@@ -16,6 +16,7 @@ diagram references.
 
 - `docs/architecture/runtime-layout.md`
 - `docs/architecture/service-runtime.md`
+- `docs/architecture/data-layer-runtime-wiring.md`
 - `docs/architecture/block-pipeline.md`
 - `docs/architecture/p2p-transport.md`
 - `docs/architecture/kolme-live-integration.md`
@@ -23,6 +24,7 @@ diagram references.
 - `docs/architecture/signer-lifecycle.md`
 - `docs/architecture/persistence-backends.md`
 - `docs/architecture/did-chain-adapter.md`
+- `docs/architecture/parser-protocol-assurance.md`
 
 ## Decision Records
 
