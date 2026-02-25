@@ -2,8 +2,8 @@
 
 - Issue: #5938
 - Spec: `specs/5938/spec.md`
-- Status: Draft
-- Last Updated: 2026-02-24
+- Status: Implemented
+- Last Updated: 2026-02-25
 
 ## Approach
 1. RED: Add/extend failing tests for conformance cases defined in specs/5938/spec.md.
@@ -32,3 +32,9 @@
 
 ## ADR Requirement
 - ADR required if this issue introduces a new dependency, protocol/wire-format change, or architecture boundary change.
+
+## Implementation Summary
+- RED: Expanded `cargo_fuzz_target_contract` with new parser targets/corpus assertions and replay tests (failed before new files existed).
+- GREEN: Implemented `kolme_api_codec_parser` fuzz target and corpus assets; expanded metadata/docs markers.
+- REFRACTOR: Added dedicated parser/protocol proptest suite with deterministic seed wiring.
+- REGRESSION: Added deterministic corpus replay assertions for signature-profile and Kolme codec parser seeds.

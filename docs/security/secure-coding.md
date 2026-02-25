@@ -49,3 +49,17 @@
 - Evidence artifacts:
   - `cargo-audit-report.json`
   - `ci-cargo-audit-policy.json`
+
+## Parser And Protocol Fuzz/Property Assurance
+
+- Parser/protocol fuzz targets:
+  - `message_envelope_parser`
+  - `did_parser`
+  - `signature_profile_parser`
+  - `kolme_api_codec_parser`
+- Deterministic corpus metadata:
+  - `fuzz/corpus/replay-metadata/cargo-fuzz-seed-corpus-v1.json`
+- Property invariant suites:
+  - `cargo test -p kamn-core --test parser_protocol_proptest_invariants`
+  - `cargo test -p kamn-core --test peer_lifecycle_proptest_invariants`
+  - `cargo test -p kamn-core --test task_escrow_proptest_invariants`

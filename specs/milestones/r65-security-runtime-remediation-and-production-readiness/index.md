@@ -52,4 +52,5 @@ This milestone closes production-readiness blockers across cryptography correctn
 4. Security and runtime gates are enforced in CI for sustained non-regression.
 
 ## Progress Notes
+- 2026-02-25: `#5938` expands parser/protocol fuzz surfaces to signature-profile and Kolme API codec targets with deterministic corpus replay metadata and property invariants.
 - 2026-02-25: `#5941` adds required cargo-audit CI policy enforcement with waiver-schema validation and archived security reports.
