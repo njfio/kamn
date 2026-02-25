@@ -1,12 +1,12 @@
 # Spec: Issue #5931 - Task: Harden managed signer execution and secret env handling
 
 - Issue: #5931
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: security
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5918
 
 ## Problem Statement
@@ -29,16 +29,17 @@ Out of scope:
 - AC-4: Unit, Functional, Integration, and Regression tests are present and passing.
 
 ## Conformance Cases
-- C-01 (Functional, AC-1): Verify No managed-signer execution path uses shell command interpolation.
-- C-02 (Functional, AC-2): Verify Child process environment excludes signer private key envs by default.
-- C-03 (Functional, AC-3): Verify Security tests prove command-injection payloads and env leakage attempts fail.
-- C-04 (Functional, AC-4): Verify Unit, Functional, Integration, and Regression tests are present and passing.
+- C-01 (Regression, AC-1/AC-3): `signer::managed_backend::tests::regression_managed_external_backend_command_injection_payload_is_not_interpreted` proves shell-injection payloads are not interpreted by managed signer backend execution.
+- C-02 (Regression, AC-2/AC-3): `signer::managed_backend::tests::regression_managed_external_backend_scrubs_signer_secret_env_for_child_process` proves signer secret env markers are not inherited by child process execution.
+- C-03 (Integration, AC-1/AC-4): `main_tests::signer_tests::integration_kolme_live_managed_external_adapter_provenance_consumed_by_signer_selection` verifies managed-external signing path remains functional through hardened command execution.
+- C-04 (Conformance, AC-4): `cargo test -p kamn-node --bin kamn-node signer::managed_backend::tests` and `cargo test -p kamn-node --bin kamn-node main_tests::signer_tests:: -- --nocapture`.
+- C-05 (Verify, AC-4): `cargo clippy -p kamn-node --bin kamn-node -- -D warnings` and `cargo fmt --check`.
 
 ## Success Metrics / Observable Signals
-- AC-1 verification tests pass in scoped CI runs.
-- AC-2 verification tests pass in scoped CI runs.
-- AC-3 verification tests pass in scoped CI runs.
-- AC-4 verification tests pass in scoped CI runs.
+- Managed signer subprocess execution uses argv-tokenized direct spawn path (no shell interpolation).
+- Managed signer child-process env is scrubbed to allowlist + signer context markers.
+- Security regression tests for injection payload and signer-secret env leakage are green.
+- Signer integration/doc-contract suites remain green under hardened execution path.
 
 
 ## Required Test Categories
@@ -50,4 +51,3 @@ Out of scope:
 
 ## Dependencies
 - #5918
-

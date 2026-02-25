@@ -287,6 +287,7 @@ bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifes
     - signer adapter contract: `KolmeForkSecp256k1SignerAdapter` owns secp256k1 key decode, recoverable signing, and sign-then-verify compatibility checks against the selected signer key.
     - managed-external backend command contract:
       - command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`.
+      - command value is argv-tokenized and executed directly (no shell interpolation path).
       - managed-external signer mode always requires the command marker; missing marker fails closed with `managed_signer_backend_required_missing`.
       - compatibility marker `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false` is parsed when present; invalid/empty values fail closed with `managed_signer_backend_required_invalid`.
       - marker presence does not relax mandatory managed-external backend command execution.
@@ -298,6 +299,7 @@ bash scripts/framework/run_manifest_lane.sh --manifest scripts/framework/manifes
         - missing marker fails closed with `managed_signer_public_key_marker_missing`.
         - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`.
       - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`.
+      - child process env is scrubbed to explicit allowlist + command input markers; signer private key env markers are not inherited.
       - command output contract (stdout, key-value lines): `signature_hex=<128-hex>`, `recovery_id=<0..3>`, and `signer_public_key_hex=<33-byte-compressed-secp256k1-hex>`.
       - missing signer provenance marker fails closed with `managed_signer_backend_response_provenance_missing`.
       - malformed signer provenance marker fails closed with `managed_signer_backend_response_provenance_malformed`.

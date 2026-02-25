@@ -26,12 +26,14 @@ This document defines the `kolme-live` signer lifecycle contract enforced by `ka
   non-selected profile private-key env marker to remain unset.
 - For `managed-external`, verifies:
 - managed signer command marker exists
+- managed signer command value is argv-tokenized and executed without shell interpolation
 - managed signer public key marker exists and is valid secp256k1 compressed key material
 - managed signer key reference marker exists and is valid `secure:<provider>:role-operator/...`
 - raw private-key env path for the same profile remains unset
 
 3. Per-request signing checks
 - Managed-external signature provenance is verified before payload emission.
+- Managed-external child process env is scrubbed to an allowlist plus signer request context markers.
 - Managed-external failures fail closed before nonce/network submit when markers are missing.
 
 ## Deterministic Reason Codes
