@@ -45,6 +45,9 @@ This milestone closes production-readiness blockers across cryptography correctn
 - #5941: `specs/5941/spec.md`, `specs/5941/plan.md`, `specs/5941/tasks.md`
 - #5947: `specs/5947/spec.md`, `specs/5947/plan.md`, `specs/5947/tasks.md`
 
+## Implementation Progress
+- #5934 delivered governance structural-coupling telemetry and policy validation in combined shell-surface trend gates, with full fast CI-tools regression passing on the updated schema.
+
 ## Exit Criteria
 1. Every R65 issue has SPECIFY/PLAN/TASKS artifacts committed and linked.
 2. Each child task is delivered via TDD evidence and mapped AC verification.
