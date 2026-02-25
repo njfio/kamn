@@ -1,12 +1,12 @@
 # Spec: Issue #5938 - Task: Expand fuzzing and property-based testing across parser/protocol surfaces
 
 - Issue: #5938
-- Status: Reviewed (agent-authored; explicit proceed directive on 2026-02-24)
+- Status: Implemented
 - Type: task
 - Priority: P1
 - Area: qa
 - Milestone: `specs/milestones/r65-security-runtime-remediation-and-production-readiness/index.md`
-- Last Updated: 2026-02-24
+- Last Updated: 2026-02-25
 - Parent: Parent story: #5920
 
 ## Problem Statement
@@ -51,3 +51,9 @@ Out of scope:
 ## Dependencies
 - #5920
 
+## Implementation Notes
+- Added two new fuzz targets: `signature_profile_parser` and `kolme_api_codec_parser`.
+- Added deterministic seed corpora for both targets and expanded `cargo-fuzz-seed-corpus-v1.json`.
+- Added parser/protocol property invariants in `crates/kamn-core/tests/parser_protocol_proptest_invariants.rs`.
+- Added corpus replay regression checks in `crates/kamn-core/tests/cargo_fuzz_target_contract.rs`.
+- Updated CI strategy/security/architecture docs and milestone index progress marker for R65.
