@@ -5,6 +5,7 @@
 pub mod config;
 /// MCP tool dispatch and backend adapters.
 pub mod dispatch;
+mod json_helpers;
 /// MCP stdio framing + JSON-RPC protocol handling.
 pub mod protocol;
 /// MCP tool registry scaffold.
