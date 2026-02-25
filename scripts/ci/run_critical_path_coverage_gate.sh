@@ -66,6 +66,8 @@ cargo llvm-cov -p kamn-core --lib --json --output-path "$core_json" -- \
   direct_message_crypto::tests::decrypt_rejects_algorithm_mismatch --exact
 cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
   group_channel_crypto::tests::encrypt_requires_key_agreement_seed --exact
+cargo llvm-cov -p kamn-core --lib --no-clean --json --output-path "$core_json" -- \
+  group_channel_crypto::tests::encrypt_decrypt_roundtrip_requires_authorized_recipient --exact
 cargo llvm-cov -p kamn-core --test kolme_runtime_commit_http_transport --no-clean --json --output-path "$core_json" -- \
   regression_http_transport_maps_401_to_authorization_unavailable_error --exact
 

@@ -48,13 +48,16 @@ if ! [[ "$timeout_seconds" =~ ^[0-9]+$ ]] || [ "$timeout_seconds" -le 0 ]; then
   exit 2
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "cargo is required" >&2
-  exit 2
-fi
-if ! cargo mutants --version >/dev/null 2>&1; then
-  echo "cargo mutants is required; install via cargo install cargo-mutants --locked" >&2
-  exit 2
+mutation_gate_stub="${KAMN_MUTATION_GATE_STUB:-false}"
+if [ "$mutation_gate_stub" != "true" ]; then
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "cargo is required" >&2
+    exit 2
+  fi
+  if ! cargo mutants --version >/dev/null 2>&1; then
+    echo "cargo mutants is required; install via cargo install cargo-mutants --locked" >&2
+    exit 2
+  fi
 fi
 
 tmp_dir="$(mktemp -d)"
