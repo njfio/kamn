@@ -861,66 +861,6 @@ fn resolve_service_api_observability(
     }
 }
 
-fn header_value<'a>(headers: &'a BTreeMap<String, String>, name: &str) -> Option<&'a str> {
-    auth::header_value(headers, name)
-}
-
-fn authorize_service_api_request(
-    state: &ServiceApiRuntimeState,
-    request: &ParsedRequest,
-    replay_guard: &mut ServiceApiReplayGuard,
-) -> Result<(), RequestAuthFailure> {
-    auth::authorize_service_api_request(state, request, replay_guard)
-}
-
-async fn enforce_sender_anti_spam(
-    state: &ServiceApiRuntimeState,
-    request: &ParsedRequest,
-) -> Result<(), ServiceApiReasonedError> {
-    auth::enforce_sender_anti_spam(state, request).await
-}
-
-fn validate_websocket_route_requirements(
-    is_websocket_route: bool,
-    headers: &BTreeMap<String, String>,
-) -> Result<(), ServiceApiReasonedError> {
-    websocket::validate_websocket_route_requirements(is_websocket_route, headers)
-}
-
-fn websocket_upgrade_response(
-    upgrade: WebSocketUpgrade,
-    event_payload: String,
-    websocket_events: &ServiceApiWebsocketEventFanout,
-) -> Response {
-    websocket::websocket_upgrade_response(upgrade, event_payload, websocket_events)
-}
-
-fn project_websocket_event_payload(
-    snapshot: &ServiceApiSnapshot,
-    headers: &BTreeMap<String, String>,
-) -> Result<String, ServiceApiReasonedError> {
-    websocket::project_websocket_event_payload(snapshot, headers)
-}
-
-fn project_websocket_error_response(
-    error: &ServiceApiReasonedError,
-) -> (StatusCode, &'static str, &'static str) {
-    websocket::project_websocket_error_response(error)
-}
-
-fn contract_response(response: ServiceApiEndpointResponse) -> Response {
-    payload::contract_response(response)
-}
-
-fn json_error_response(
-    status_code: StatusCode,
-    error: &str,
-    reason_code: &str,
-    message: &str,
-) -> Response {
-    payload::json_error_response(status_code, error, reason_code, message)
-}
-
 #[cfg(test)]
 pub(crate) fn parse_service_api_payload<T: DeserializeOwned>(payload: &str) -> Result<T, String> {
     payload::parse_service_api_payload(payload)
