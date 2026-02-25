@@ -144,6 +144,26 @@ impl ServiceApiMessageStore {
             .map_err(|error| format!("service api state file write failed: {path}: {error}"))
     }
 
+    fn refresh_from_disk(&mut self) -> Result<(), String> {
+        let Some(path) = self.state_file.as_deref() else {
+            return Ok(());
+        };
+        let payload = match fs::read_to_string(path) {
+            Ok(contents) => contents,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => {
+                return Err(format!(
+                    "service api state file read failed: {path}: {error}"
+                ));
+            }
+        };
+        let snapshot =
+            serde_json::from_str::<ServiceApiPersistedMessageStoreSnapshot>(payload.as_str())
+                .map_err(|error| format!("service api state file parse failed: {path}: {error}"))?;
+        self.snapshot = snapshot;
+        Ok(())
+    }
+
     pub(super) fn create_message(
         &mut self,
         payload: &str,
@@ -152,6 +172,7 @@ impl ServiceApiMessageStore {
         sender_did: Option<&str>,
         recipient_did: Option<&str>,
     ) -> Result<ServiceApiMessageCreateBody, String> {
+        self.refresh_from_disk()?;
         let base = format!(
             "msg-local-{:016x}",
             deterministic_body_tag(payload.as_bytes())
@@ -208,6 +229,7 @@ impl ServiceApiMessageStore {
         message_id: &str,
         requester_did: Option<&str>,
     ) -> Result<Option<ServiceApiMessageGetBody>, String> {
+        self.refresh_from_disk()?;
         let Some(record) = self.snapshot.messages.get_mut(message_id) else {
             return Ok(None);
         };
@@ -239,8 +261,12 @@ impl ServiceApiMessageStore {
         Ok(Some(payload))
     }
 
-    pub(super) fn list_channel_messages(&self, channel_id: &str) -> ServiceApiChannelMessagesBody {
-        ServiceApiChannelMessagesBody {
+    pub(super) fn list_channel_messages(
+        &mut self,
+        channel_id: &str,
+    ) -> Result<ServiceApiChannelMessagesBody, String> {
+        self.refresh_from_disk()?;
+        Ok(ServiceApiChannelMessagesBody {
             channel_id: channel_id.to_owned(),
             messages: self
                 .snapshot
@@ -248,13 +274,14 @@ impl ServiceApiMessageStore {
                 .get(channel_id)
                 .cloned()
                 .unwrap_or_default(),
-        }
+        })
     }
 
     pub(super) fn create_task(
         &mut self,
         payload: &str,
     ) -> Result<ServiceApiTaskCreateBody, String> {
+        self.refresh_from_disk()?;
         let base = format!(
             "task-local-{:016x}",
             deterministic_body_tag(payload.as_bytes())
@@ -279,12 +306,18 @@ impl ServiceApiMessageStore {
         })
     }
 
-    pub(super) fn get_task(&self, task_id: &str) -> Option<ServiceApiTaskGetBody> {
-        let record = self.snapshot.tasks.get(task_id)?;
-        Some(ServiceApiTaskGetBody {
+    pub(super) fn get_task(
+        &mut self,
+        task_id: &str,
+    ) -> Result<Option<ServiceApiTaskGetBody>, String> {
+        self.refresh_from_disk()?;
+        let Some(record) = self.snapshot.tasks.get(task_id) else {
+            return Ok(None);
+        };
+        Ok(Some(ServiceApiTaskGetBody {
             task_id: record.task_id.clone(),
             state: record.state.clone(),
-        })
+        }))
     }
 
     pub(super) fn transition_task(
@@ -292,6 +325,7 @@ impl ServiceApiMessageStore {
         task_id: &str,
         state: &str,
     ) -> Result<Option<ServiceApiTaskTransitionBody>, String> {
+        self.refresh_from_disk()?;
         let Some(record) = self.snapshot.tasks.get_mut(task_id) else {
             return Ok(None);
         };
@@ -307,6 +341,7 @@ impl ServiceApiMessageStore {
         &mut self,
         payload: &str,
     ) -> Result<ServiceApiEscrowStatusBody, String> {
+        self.refresh_from_disk()?;
         let base = format!(
             "escrow-local-{:016x}",
             deterministic_body_tag(payload.as_bytes())
@@ -335,6 +370,7 @@ impl ServiceApiMessageStore {
         &mut self,
         escrow_id: &str,
     ) -> Result<Option<ServiceApiEscrowStatusBody>, String> {
+        self.refresh_from_disk()?;
         let Some(record) = self.snapshot.escrows.get_mut(escrow_id) else {
             return Ok(None);
         };
