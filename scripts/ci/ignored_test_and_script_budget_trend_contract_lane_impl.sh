@@ -167,6 +167,12 @@ bash "$ROOT_DIR/scripts/lib/write_json_file.sh" "$combined_within_report" <<'EOF
     "governance_commit_ratio": 0.4,
     "mitigation_issue_marker": "none"
   },
+  "governance_runtime_test_ratio": {
+    "status": "computed",
+    "governance_test_line_total": 400,
+    "runtime_test_line_total": 600,
+    "governance_test_ratio": 0.4
+  },
   "schema_version": "kamn.ci.combined-shell-surface-trend-report.v1",
   "script_budget": {
     "checker_exit_code": 0,
