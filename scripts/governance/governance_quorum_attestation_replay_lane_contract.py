@@ -215,7 +215,7 @@ def main(argv: list[str]) -> int:
         "governance_quorum_attestation_replay_lane_contract.py",
         "run_quorum_attestation_replay_guard_lane.sh",
         "check_quorum_attestation_replay_policy.sh",
-        "run_quorum_attestation_replay_contract_lane.sh",
+        "governance_quorum_attestation_replay_contract_lane.json",
         "kamn.governance.quorum-attestation-replay-report.v1",
         "governance_quorum_attestation_reason_codes:GO:v1",
         "governance_quorum_attestation_reason_codes:NO-GO:v1",
