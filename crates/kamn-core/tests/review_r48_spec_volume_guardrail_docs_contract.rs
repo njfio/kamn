@@ -1,38 +1,9 @@
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
+
+use review_doc_helpers::{parse_marker_f64, parse_marker_usize};
+
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r48.md");
-
-fn parse_marker_usize(marker_key: &str) -> usize {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
-}
-
-fn parse_marker_f64(marker_key: &str) -> f64 {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<f64>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be a float: {value}"))
-}
 
 #[test]
 fn functional_r48_review_spec_volume_and_coherence_markers_present() {
@@ -64,21 +35,23 @@ fn functional_r48_review_spec_volume_and_coherence_markers_present() {
 
 #[test]
 fn integration_r48_review_spec_volume_and_coherence_markers_are_consistent() {
-    let issue_baseline = parse_marker_usize("coherence_contract_batching_issue_baseline");
-    let issue_cap = parse_marker_usize("coherence_contract_batching_target_issue_cap");
+    let issue_baseline = parse_marker_usize(DOC, "coherence_contract_batching_issue_baseline");
+    let issue_cap = parse_marker_usize(DOC, "coherence_contract_batching_target_issue_cap");
     let expected_reduction =
-        parse_marker_usize("coherence_contract_batching_expected_issue_reduction");
+        parse_marker_usize(DOC, "coherence_contract_batching_expected_issue_reduction");
     assert_eq!(
         issue_baseline.saturating_sub(issue_cap),
         expected_reduction,
         "coherence expected reduction should match baseline minus issue cap"
     );
 
-    let spec_dir_count = parse_marker_usize("spec_volume_guardrail_baseline_spec_directory_count");
-    let module_count = parse_marker_usize("spec_volume_guardrail_baseline_module_count");
-    let ratio_reported = parse_marker_f64("spec_volume_guardrail_baseline_spec_to_module_ratio");
+    let spec_dir_count =
+        parse_marker_usize(DOC, "spec_volume_guardrail_baseline_spec_directory_count");
+    let module_count = parse_marker_usize(DOC, "spec_volume_guardrail_baseline_module_count");
+    let ratio_reported =
+        parse_marker_f64(DOC, "spec_volume_guardrail_baseline_spec_to_module_ratio");
     let ratio_target_max =
-        parse_marker_f64("spec_volume_guardrail_target_spec_to_module_ratio_max");
+        parse_marker_f64(DOC, "spec_volume_guardrail_target_spec_to_module_ratio_max");
 
     let computed_ratio = spec_dir_count as f64 / module_count as f64;
     assert!(

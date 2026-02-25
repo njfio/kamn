@@ -1,39 +1,10 @@
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
+
+use review_doc_helpers::{parse_marker_f64, parse_marker_usize};
+
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r50.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
-
-fn parse_marker_usize(marker_key: &str) -> usize {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
-}
-
-fn parse_marker_f64(marker_key: &str) -> f64 {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    let value = line
-        .split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim();
-    value
-        .parse::<f64>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be a number: {value}"))
-}
 
 #[test]
 fn functional_r50_governance_feature_rebalancing_markers_present() {
@@ -89,35 +60,53 @@ fn functional_r50_governance_feature_rebalancing_markers_present() {
 
 #[test]
 fn integration_r50_governance_feature_rebalancing_markers_are_consistent() {
-    let baseline_governance =
-        parse_marker_usize("r50_review_governance_feature_rebalancing_baseline_governance_commits");
-    let baseline_feature =
-        parse_marker_usize("r50_review_governance_feature_rebalancing_baseline_feature_commits");
-    let baseline_total =
-        parse_marker_usize("r50_review_governance_feature_rebalancing_baseline_total_commits");
+    let baseline_governance = parse_marker_usize(
+        DOC,
+        "r50_review_governance_feature_rebalancing_baseline_governance_commits",
+    );
+    let baseline_feature = parse_marker_usize(
+        DOC,
+        "r50_review_governance_feature_rebalancing_baseline_feature_commits",
+    );
+    let baseline_total = parse_marker_usize(
+        DOC,
+        "r50_review_governance_feature_rebalancing_baseline_total_commits",
+    );
 
     let target_feature_ratio_min = parse_marker_f64(
+        DOC,
         "r50_review_governance_feature_rebalancing_target_feature_commit_ratio_min",
     );
     let target_governance_ratio_max = parse_marker_f64(
+        DOC,
         "r50_review_governance_feature_rebalancing_target_governance_commit_ratio_max",
     );
-    let target_feature_commit_min =
-        parse_marker_usize("r50_review_governance_feature_rebalancing_target_feature_commit_min");
+    let target_feature_commit_min = parse_marker_usize(
+        DOC,
+        "r50_review_governance_feature_rebalancing_target_feature_commit_min",
+    );
     let required_feature_delta = parse_marker_usize(
+        DOC,
         "r50_review_governance_feature_rebalancing_required_feature_commit_delta",
     );
     let governance_commit_cap = parse_marker_usize(
+        DOC,
         "r50_review_governance_feature_rebalancing_governance_commit_cap_for_ratio_target",
     );
-    let issue_cap_per_release =
-        parse_marker_usize("r50_review_governance_feature_rebalancing_issue_cap_per_release");
-    let current_governance_ratio = parse_marker_f64("governance_activity_commit_ratio");
-    let current_feature_ratio = parse_marker_f64("feature_activity_commit_ratio");
-    let non_regression_governance_ratio_max =
-        parse_marker_f64("r50_review_governance_feature_non_regression_governance_ratio_max");
-    let non_regression_feature_ratio_min =
-        parse_marker_f64("r50_review_governance_feature_non_regression_feature_ratio_min");
+    let issue_cap_per_release = parse_marker_usize(
+        DOC,
+        "r50_review_governance_feature_rebalancing_issue_cap_per_release",
+    );
+    let current_governance_ratio = parse_marker_f64(DOC, "governance_activity_commit_ratio");
+    let current_feature_ratio = parse_marker_f64(DOC, "feature_activity_commit_ratio");
+    let non_regression_governance_ratio_max = parse_marker_f64(
+        DOC,
+        "r50_review_governance_feature_non_regression_governance_ratio_max",
+    );
+    let non_regression_feature_ratio_min = parse_marker_f64(
+        DOC,
+        "r50_review_governance_feature_non_regression_feature_ratio_min",
+    );
 
     assert_eq!(baseline_governance + baseline_feature, baseline_total);
     assert!((target_feature_ratio_min + target_governance_ratio_max - 1.0).abs() <= 0.001);

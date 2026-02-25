@@ -1,32 +1,25 @@
+#[path = "review_doc_helpers.rs"]
+mod review_doc_helpers;
+
+use review_doc_helpers::{
+    parse_marker_f64 as parse_marker_f64_from_doc,
+    parse_marker_usize as parse_marker_usize_from_doc,
+    parse_marker_value as parse_marker_value_from_doc,
+};
+
 const DOC: &str = include_str!("../../../docs/review/gaps-and-issues-r52.md");
 const REVIEW_MARKER_README: &str = include_str!("../../../docs/review/README.md");
 
 fn parse_marker_value(marker_key: &str) -> String {
-    let needle = format!("{marker_key}=");
-    let line = DOC
-        .lines()
-        .find(|line| line.contains(needle.as_str()))
-        .unwrap_or_else(|| panic!("missing marker {marker_key}"));
-    line.split_once(needle.as_str())
-        .unwrap_or_else(|| panic!("marker {marker_key} missing '=' separator"))
-        .1
-        .trim_matches('`')
-        .trim()
-        .to_string()
+    parse_marker_value_from_doc(DOC, marker_key)
 }
 
 fn parse_marker_usize(marker_key: &str) -> usize {
-    let value = parse_marker_value(marker_key);
-    value
-        .parse::<usize>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be an unsigned integer: {value}"))
+    parse_marker_usize_from_doc(DOC, marker_key)
 }
 
 fn parse_marker_f64(marker_key: &str) -> f64 {
-    let value = parse_marker_value(marker_key);
-    value
-        .parse::<f64>()
-        .unwrap_or_else(|_| panic!("marker {marker_key} should be a float: {value}"))
+    parse_marker_f64_from_doc(DOC, marker_key)
 }
 
 #[test]
