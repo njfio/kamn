@@ -45,6 +45,14 @@
   - `cargo test -p kamn-kolme --test duplicate_helper_inventory_contracts`
   - `cargo test -p kamn-mcp-server --test duplicate_helper_inventory_contract`
 
+## Data-Layer Runtime Evidence (Service API)
+
+- runtime_data_layer_evidence_schema_version=kamn.runtime.service-api-data-layer-runtime-evidence.v1
+- runtime_data_layer_evidence_path=messages.<message_id>.data_layer_runtime_evidence
+- runtime_data_layer_evidence_modules_csv=m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11
+- runtime_data_layer_evidence_fail_closed=true
+- runtime_data_layer_evidence_contract_doc=`docs/architecture/data-layer-runtime-wiring.md`
+
 ## Dependency Vulnerability Gate
 
 - CI security-gate command:

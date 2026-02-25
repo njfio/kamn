@@ -1,7 +1,8 @@
 use super::{
     auth::map_anti_spam_rejection_to_reasoned_error, drain_service_api_relay_spool_entries,
-    project_service_api_relayed_message_statuses, service_api_runtime_worker_threads_for_test,
-    AntiSpamRejection, REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+    message_store::ServiceApiMessageStore, project_service_api_relayed_message_statuses,
+    service_api_runtime_worker_threads_for_test, AntiSpamRejection,
+    REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
     REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
     REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
 };
@@ -315,5 +316,103 @@ fn service_api_relay_projection_does_not_rewrite_when_no_records_promoted() {
         final_payload, initial_payload,
         "non-promoting projections must not rewrite the state file"
     );
+    let _ = std::fs::remove_file(state_file);
+}
+
+#[test]
+fn integration_message_store_persists_data_layer_runtime_evidence_for_m0_to_m11() {
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos()
+    );
+    let state_file = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-data-layer-evidence-{unique_suffix}.json"
+    ));
+    let state_path = state_file.to_string_lossy().to_string();
+
+    let mut store = ServiceApiMessageStore::from_optional_state_file(Some(state_path.clone()))
+        .expect("state-backed message store should initialize");
+    let payload =
+        r#"{"recipient_did":"kamn:did:agent:evidence-recipient","message":"wire-m0-m11"}"#;
+    let created = store
+        .create_message(
+            payload,
+            "api",
+            Some("channel-evidence"),
+            Some("kamn:did:agent:evidence-sender"),
+            Some("kamn:did:agent:evidence-recipient"),
+        )
+        .expect("message creation should persist");
+    let persisted =
+        std::fs::read_to_string(state_file.as_path()).expect("state file should remain readable");
+    let state_json: Value = serde_json::from_str(persisted.as_str()).expect("state json parses");
+    let evidence =
+        &state_json["messages"][created.message_id.as_str()]["data_layer_runtime_evidence"];
+    assert_eq!(
+        evidence["schema_version"],
+        "kamn.runtime.service-api-data-layer-runtime-evidence.v1"
+    );
+    assert!(
+        evidence["m0_content_hash"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:")),
+        "m0 evidence should include a sha256 content hash marker"
+    );
+    assert!(
+        evidence["m1_merkle_root"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:")),
+        "m1 evidence should include a merkle root"
+    );
+    assert!(
+        evidence["m2_authorization_reason_code"].as_str().is_some(),
+        "m2 evidence reason code should be persisted"
+    );
+    assert!(
+        evidence["m3_blind_index_token"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:")),
+        "m3 evidence should include blind-index token"
+    );
+    assert!(
+        evidence["m4_transition_reason_code"].as_str().is_some(),
+        "m4 evidence reason code should be persisted"
+    );
+    assert!(
+        evidence["m5_record_hash"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("sha256:")),
+        "m5 evidence should include record hash"
+    );
+    assert_eq!(
+        evidence["m6_projection_edge_count"].as_u64(),
+        Some(1),
+        "m6 graph projection should include one edge"
+    );
+    assert!(
+        evidence["m7_observability_health"].as_str().is_some(),
+        "m7 observability health should be persisted"
+    );
+    assert!(
+        evidence["m8_retention_due_count"].as_u64().is_some(),
+        "m8 retention projection count should be persisted"
+    );
+    assert!(
+        evidence["m9_dispatch_reason_code"].as_str().is_some(),
+        "m9 dispatch reason code should be persisted"
+    );
+    assert!(
+        evidence["m10_archived_partition_count"].as_u64().is_some(),
+        "m10 archived partition count should be persisted"
+    );
+    assert!(
+        evidence["m11_decision"].as_str().is_some(),
+        "m11 closure decision should be persisted"
+    );
+
     let _ = std::fs::remove_file(state_file);
 }
