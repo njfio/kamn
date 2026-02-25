@@ -30,6 +30,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Barrier, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const TEST_SERVICE_API_TLS_CERT_PEM: &str = "-----BEGIN CERTIFICATE-----
 MIIDCTCCAfGgAwIBAgIUX9dYtx2K5dX0X33CQvg4re7nVwwwDQYJKoZIhvcNAQEL
@@ -496,6 +497,54 @@ fn send_http_request_with_headers_raw(
         }
     }
     response
+}
+
+async fn send_http_request_with_headers_async(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+) -> Result<String, String> {
+    let enriched_headers = enrich_signed_headers_with_scope(method, path, headers);
+    let mut stream = tokio::net::TcpStream::connect(addr)
+        .await
+        .map_err(|error| format!("async http connect should succeed: {error}"))?;
+    let mut header_lines = String::new();
+    for (name, value) in &enriched_headers {
+        header_lines.push_str(name);
+        header_lines.push_str(": ");
+        header_lines.push_str(value);
+        header_lines.push_str("\r\n");
+    }
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: {addr}\r\nContent-Type: application/json\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+        header_lines,
+        body.len(),
+        body
+    );
+    stream
+        .write_all(request.as_bytes())
+        .await
+        .map_err(|error| format!("async http request should write: {error}"))?;
+    stream
+        .flush()
+        .await
+        .map_err(|error| format!("async http request should flush: {error}"))?;
+
+    let mut response = Vec::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match tokio::time::timeout(Duration::from_millis(150), stream.read(&mut chunk)).await {
+            Ok(Ok(0)) => break,
+            Ok(Ok(read_count)) => response.extend_from_slice(&chunk[..read_count]),
+            Ok(Err(error)) => return Err(format!("async http response read failed: {error}")),
+            Err(_) => break,
+        }
+    }
+
+    String::from_utf8(response)
+        .map_err(|error| format!("async http response was not utf-8: {error}"))
 }
 
 fn send_https_request_with_headers(
@@ -1941,6 +1990,133 @@ fn regression_service_api_runtime_observability_projects_live_metrics_under_traf
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_async_runtime_handles_concurrent_http_routes() {
+    let _env = acquire_service_api_test_env();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34066".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 5,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:async-http-client";
+    let body_one = "{\"message\":\"async-route-1\"}".to_owned();
+    let body_two = "{\"message\":\"async-route-2\"}".to_owned();
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature_one = service_api_request_signature_for_fields(
+        sender_did,
+        900,
+        state_hash.as_str(),
+        body_one.as_str(),
+    );
+    let signature_two = service_api_request_signature_for_fields(
+        sender_did,
+        901,
+        state_hash.as_str(),
+        body_two.as_str(),
+    );
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("async runtime should initialize");
+    let (health_response, metrics_response, send_one_response, send_two_response) = runtime
+        .block_on(async {
+            tokio::join!(
+                send_http_request_with_headers_async(
+                    bind_addr.as_str(),
+                    "GET",
+                    "/healthz",
+                    "",
+                    &[]
+                ),
+                send_http_request_with_headers_async(
+                    bind_addr.as_str(),
+                    "GET",
+                    "/metrics",
+                    "",
+                    &[]
+                ),
+                async {
+                    let headers = [
+                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Request-Nonce", "900"),
+                        ("X-KAMN-Request-Signature", signature_one.as_str()),
+                    ];
+                    send_http_request_with_headers_async(
+                        bind_addr.as_str(),
+                        "POST",
+                        "/v1/messages/send",
+                        body_one.as_str(),
+                        &headers,
+                    )
+                    .await
+                },
+                async {
+                    let headers = [
+                        ("X-KAMN-Sender-DID", sender_did),
+                        ("X-KAMN-Request-Nonce", "901"),
+                        ("X-KAMN-Request-Signature", signature_two.as_str()),
+                    ];
+                    send_http_request_with_headers_async(
+                        bind_addr.as_str(),
+                        "POST",
+                        "/v1/messages/send",
+                        body_two.as_str(),
+                        &headers,
+                    )
+                    .await
+                }
+            )
+        });
+
+    let health_response = health_response.expect("async health request should succeed");
+    let metrics_response = metrics_response.expect("async metrics request should succeed");
+    let send_one_response = send_one_response.expect("async send request one should succeed");
+    let send_two_response = send_two_response.expect("async send request two should succeed");
+
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(send_one_response.contains("HTTP/1.1 202 Accepted"));
+    assert!(send_two_response.contains("HTTP/1.1 202 Accepted"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    let ended_cleanly_or_timeout = match &server_result {
+        Ok(()) => true,
+        Err(error) => error.contains("service api timed out after"),
+    };
+    assert!(
+        ended_cleanly_or_timeout,
+        "service api endpoint should end via request budget completion or idle-timeout fail-close after async concurrent request lane: {server_result:?}"
     );
 }
 
